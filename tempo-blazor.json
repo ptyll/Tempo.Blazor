@@ -1265,6 +1265,12 @@
           "isRequired": false
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmCommentDraftState>",
+          "isRequired": false,
+          "description": "Fires when the comment draft state changes (editor opened/closed, edited comment changed) — value-equality deduped, so it does NOT fire on every keystroke. Consumers use TmCommentDraftState to build a dirty-guard before discarding an in-progress comment; the record carries flags only, never the draft text."
+        },
+        {
           "name": "ShowAddButton",
           "type": "bool",
           "isRequired": false,

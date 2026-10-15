@@ -133,6 +133,56 @@ public class TmActivityCommentsTests : LocalizationTestBase
         cut.FindAll(".tm-comment-time")[0].TextContent.Should().NotBeNullOrWhiteSpace();
     }
 
+    [Fact]
+    public void Comments_OnDraftChanged_FiresWhenEditorOpens()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        states.Should().HaveCount(1);
+        states[0].IsEditorOpen.Should().BeTrue();
+        states[0].EditingCommentId.Should().BeNull();
+        states[0].HasUnsavedContent.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Comments_OnDraftChanged_FiresWhenEditorCancelled()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-cancel-btn").Click();
+
+        states.Should().HaveCount(2);
+        states[1].IsEditorOpen.Should().BeFalse();
+        states[1].EditingCommentId.Should().BeNull();
+        states[1].HasUnsavedContent.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Comments_OnDraftChanged_NotSet_DoesNotThrow()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments()));
+
+        // Non-breaking guarantee: without OnDraftChanged the component behaves exactly as before.
+        var add = () => cut.Find(".tm-comments-add-btn").Click();
+        var cancel = () => cut.Find(".tm-comment-cancel-btn").Click();
+
+        add.Should().NotThrow();
+        cancel.Should().NotThrow();
+        cut.FindAll(".tm-comment-editor").Should().BeEmpty();
+    }
+
     private static TmCommentEntry Comment(
         string id,
         string authorName,

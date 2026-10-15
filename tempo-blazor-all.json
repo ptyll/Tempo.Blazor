@@ -1267,6 +1267,12 @@
               "isRequired": false
             },
             {
+              "name": "OnDraftChanged",
+              "type": "EventCallback<TmCommentDraftState>",
+              "isRequired": false,
+              "description": "Fires when the comment draft state changes (editor opened/closed, edited comment changed) — value-equality deduped, so it does NOT fire on every keystroke. Consumers use TmCommentDraftState to build a dirty-guard before discarding an in-progress comment; the record carries flags only, never the draft text."
+            },
+            {
               "name": "ShowAddButton",
               "type": "bool",
               "isRequired": false,
@@ -92173,6 +92179,36 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TmCommentDraftState",
+          "kind": "Record",
+          "category": "Shared",
+          "namespace": "Tempo.Blazor.Abstractions.Shared",
+          "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentDraftState.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "EditingCommentId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Id of the comment being edited while its inline editor is open; null when no existing comment is being edited (including the new-comment editor case)."
+            },
+            {
+              "name": "HasUnsavedContent",
+              "kind": "Property",
+              "type": "bool",
+              "description": "true when the open editor holds content that would be lost on discard. Two semantics apply: for a NEW comment it means the content is not empty; for an EDIT of an existing comment it means the content differs from the comment's original body — opening an edit without changing anything must not report an unsaved draft."
+            },
+            {
+              "name": "IsEditorOpen",
+              "kind": "Property",
+              "type": "bool",
+              "description": "true when a comment editor is visible — either the new-comment editor or the inline editor of an existing comment."
+            }
+          ]
+        },
+        {
           "itemName": "TmCommentEntry",
           "kind": "Class",
           "category": "Shared",
@@ -100318,12 +100354,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1483,
-        "manualItemCount": 1483,
-        "generatedItemCount": 1466,
+        "itemCount": 1484,
+        "manualItemCount": 1484,
+        "generatedItemCount": 1467,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1466
+        "publicApiTypeCount": 1467
       }
     },
     {
@@ -114833,10 +114869,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3204,
-    "manualItemCount": 3204,
+    "itemCount": 3205,
+    "manualItemCount": 3205,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2677
+    "publicApiTypeCount": 2678
   }
 }

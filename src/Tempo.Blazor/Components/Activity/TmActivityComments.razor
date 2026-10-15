@@ -108,7 +108,7 @@
     @if (_showEditor && _editingCommentId is null)
     {
         <div class="tm-comment-editor">
-            <TmRichEditorSimple @bind-Value="_editorContent" 
+            <TmRichEditorSimple @bind-Value="_editorContent"
                               Placeholder="@Loc["TmActivityComments_AddComment"]" />
             <div class="tm-comment-editor-actions">
                 <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
@@ -133,9 +133,23 @@
     [Parameter] public EventCallback<(string Id, string Html)> OnCommentEdited { get; set; }
     [Parameter] public bool ShowAddButton { get; set; } = true;
 
+    /// <summary>
+    /// Notifies the parent that the comment draft state changed. Fires ONLY when the
+    /// <see cref="TmCommentDraftState"/> value actually changes (value-equality dedup), never on
+    /// every keystroke — the record carries flags only, and repeated identical states are
+    /// suppressed so parents are not re-rendered while the user types. Members:
+    /// <see cref="TmCommentDraftState.IsEditorOpen"/> (an editor is visible),
+    /// <see cref="TmCommentDraftState.EditingCommentId"/> (which comment is being edited, null
+    /// for a new comment) and <see cref="TmCommentDraftState.HasUnsavedContent"/>.
+    /// </summary>
+    [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
+
     private bool _showEditor;
     private string? _editingCommentId;
     private string _editorContent = string.Empty;
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmCommentDraftState _lastDraftState = new(false, null, false);
 
     /// <summary>Public refresh hook – parents can await this after updating <see cref="Comments"/>.</summary>
     public Task RefreshAsync()
@@ -151,16 +165,47 @@
         StateHasChanged();
     }
 
-    private void ShowEditor()
+    /// <summary>
+    /// Builds the current draft snapshot. <see cref="TmCommentDraftState.HasUnsavedContent"/> is
+    /// reported as <see langword="false"/> here; its content semantics (non-empty for a new
+    /// comment, differs-from-original for an edit) are computed from the editor content.
+    /// </summary>
+    private TmCommentDraftState BuildDraftState()
+        => new(
+            _showEditor || _editingCommentId is not null,
+            _editingCommentId,
+            HasUnsavedContent: false);
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed. The dedup
+    /// is mandatory: without it the callback would fire on every keystroke once content changes
+    /// from both editors call this method, re-rendering the parent and leaking per-keystroke churn; the record's
+    /// value equality makes the comparison cheap and exact.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
+    }
+
+    private async Task ShowEditor()
     {
         _editorContent = string.Empty;
         _showEditor = true;
+        await NotifyDraftChangedAsync();
     }
 
-    private void CancelEditor()
+    private async Task CancelEditor()
     {
         _showEditor = false;
         _editorContent = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
     private void StartEdit(TmCommentEntry comment)
@@ -179,7 +224,7 @@
     {
         if (string.IsNullOrWhiteSpace(_editorContent)) return;
         await OnCommentAdded.InvokeAsync(_editorContent);
-        CancelEditor();
+        await CancelEditor();
     }
 
     private async Task SubmitEditAsync(string commentId)
