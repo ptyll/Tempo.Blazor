@@ -68,9 +68,20 @@ public class DesignTokenDefinitionTests
 
         var componentsDir = new DirectoryInfo(Path.Combine(root, "src", "Tempo.Blazor", "Components"));
         var inlineProperty = new Regex(@"(--tm-[\w-]+)\s*:", RegexOptions.Compiled);
+        // Code-behind partials count too: TmDashboard's grid variables (--tm-w-*) are emitted
+        // from the .razor.cs half of the component (F2 moved the @code there for the 1200-line
+        // ceiling), and the declaration is just as real.
         foreach (var razor in componentsDir.EnumerateFiles("*.razor", SearchOption.AllDirectories))
         {
             foreach (Match match in inlineProperty.Matches(File.ReadAllText(razor.FullName)))
+            {
+                local.Add(match.Groups[1].Value);
+            }
+        }
+
+        foreach (var codeBehind in componentsDir.EnumerateFiles("*.razor.cs", SearchOption.AllDirectories))
+        {
+            foreach (Match match in inlineProperty.Matches(File.ReadAllText(codeBehind.FullName)))
             {
                 local.Add(match.Groups[1].Value);
             }

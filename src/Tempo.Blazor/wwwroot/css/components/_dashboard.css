@@ -2,51 +2,164 @@
    TmDashboard - Modern Dashboard with Draggable Widgets
    ═══════════════════════════════════════════════════════════════ */
 
-/* Dashboard Container */
+/* Dashboard Container — F2: Plain (default) is the reference look. The dashboard paints no
+   wrapping card of its own; the root sits on the workspace and the widget cards are the only
+   surfaces. Appearance=Card (hosts embedding the dashboard on a contrasting page) adds
+   .tm-dashboard--framed and restores the surface card. */
 .tm-dashboard {
   display: flex;
   flex-direction: column;
-  gap: var(--tm-space-4);
+  gap: var(--tm-space-6);
+  background: var(--tm-bg-workspace);
+  padding: var(--tm-space-6);
+  /* G-6 (F2): the 600px floor is kept — it is the workspace's minimum, not a card style.
+     Backlog: replace with a spacing-derived value in a core follow-up. */
+  min-height: 600px;
+  /* Subtle category tint of the widget icon tiles: the global --tm-category-tint token,
+     exposed under the component alias the tile rule consumes. The dark value lives in
+     tokens-dark.css — component stylesheets carry no dark blocks (strict token audit). */
+  --tm-dashboard-category-tint: var(--tm-category-tint);
+}
+
+.tm-dashboard--framed {
   background: var(--tm-bg-surface);
   border-radius: var(--tm-radius-xl);
-  padding: var(--tm-space-6);
-  min-height: 600px;
 }
 
-.tm-dashboard--edit {
-  background: var(--tm-bg-surface-secondary);
-  border: 2px dashed var(--tm-color-primary);
-}
-
-/* Toolbar */
+/* Toolbar — one row, no underline (F2): the header is a plain flex row over the workspace. */
 .tm-dashboard-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--tm-space-4);
-  padding-bottom: var(--tm-space-4);
-  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-dashboard-toolbar-left {
   display: flex;
   align-items: center;
-  gap: var(--tm-space-3);
+  gap: var(--tm-space-4);
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .tm-dashboard-toolbar-right {
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+/* Header start (host content before the heading) and header actions (host actions before the
+   Edit button) are plain flex rows; the host supplies the interactive content. */
+.tm-dashboard-header-start {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+.tm-dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+/* Heading + optional subtitle column; min-width:0 so the ellipsised trigger next to it wins. */
+.tm-dashboard-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-0-5);
+  min-width: 0;
 }
 
 .tm-dashboard .tm-dashboard-title {
-  font-size: var(--tm-font-size-xl);
+  font-size: var(--tm-font-size-2xl);
   font-weight: var(--tm-font-weight-bold);
+  line-height: var(--tm-line-height-tight);
   color: var(--tm-text-primary);
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.tm-dashboard-subtitle {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  line-height: var(--tm-line-height-normal);
+  color: var(--tm-text-secondary);
+}
+
+/* Edit mode names the page through the host Title: the dashboard's own name moves into a
+   secondary span so the rename pencil always sits next to the text it edits. */
+.tm-dashboard-name {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Dashboard switcher (F2) — a select-like trigger showing the current dashboard's name. ── */
+.tm-dashboard-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  height: var(--tm-input-height-md);
+  padding: 0 var(--tm-space-3);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  font: inherit;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-primary);
+  cursor: pointer;
+  /* No width tokens exist for a select-like control (G-3): the trigger spans 14–20rem, which
+     keeps long names ellipsised and short dashboards from collapsing to the icon. */
+  min-inline-size: 14rem;
+  max-inline-size: 20rem;
+}
+
+.tm-dashboard-switcher:hover {
+  border-color: var(--tm-border-hover);
+  background: var(--tm-bg-surface-secondary);
+}
+
+.tm-dashboard-switcher:active {
+  background: var(--tm-bg-muted);
+}
+
+.tm-dashboard-switcher:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-dashboard-switcher[aria-expanded="true"] {
+  border-color: var(--tm-color-primary);
+}
+
+.tm-dashboard-switcher__label {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-dashboard-switcher__icon,
+.tm-dashboard-switcher__chevron {
+  color: var(--tm-text-secondary);
+  flex-shrink: 0;
+}
+
+.tm-dashboard-switcher__chevron {
+  transition: transform var(--tm-transition-fast);
+}
+
+.tm-dashboard-switcher[aria-expanded="true"] .tm-dashboard-switcher__chevron {
+  transform: rotate(180deg);
 }
 
 .tm-dashboard[data-layout="mobile"] {
@@ -74,7 +187,9 @@
 .tm-dashboard-edit-badge {
   padding: var(--tm-space-1) var(--tm-space-2);
   background: var(--tm-color-primary-subtle);
-  color: var(--tm-color-primary);
+  /* Ink through the primary-text token: full primary on the subtle fill measured too low in
+     dark, where primary-text carries the lighter step. */
+  color: var(--tm-color-primary-text);
   font-size: var(--tm-font-size-xs);
   font-weight: var(--tm-font-weight-semibold);
   border-radius: var(--tm-radius-full);
@@ -89,11 +204,14 @@
 }
 
 .tm-dashboard-menu {
-  min-width: 200px;
+  /* 18rem keeps the longest built-in demo name ("Main Dashboard") and its row actions on one
+     line; the popover also spans the trigger through MatchAnchorWidth, so shorter triggers
+     never shrink the menu below this. */
+  min-width: 18rem;
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: var(--tm-shadow-lg);
+  border-radius: var(--tm-radius-card);
+  box-shadow: var(--tm-shadow-popover);
   padding: var(--tm-space-1);
 }
 
@@ -141,33 +259,43 @@
     0deg,
     transparent,
     transparent calc(var(--row-height, 60px) - 1px),
-    var(--tm-color-border-subtle, rgba(0,0,0,0.05)) calc(var(--row-height, 60px) - 1px),
-    var(--tm-color-border-subtle, rgba(0,0,0,0.05)) var(--row-height, 60px)
+    var(--tm-color-border-subtle) calc(var(--row-height, 60px) - 1px),
+    var(--tm-color-border-subtle) var(--row-height, 60px)
   );
-  border: 1px dashed var(--tm-color-border-subtle, rgba(0,0,0,0.1));
-  border-radius: var(--tm-radius-md);
+  border: 1px dashed var(--tm-color-border-subtle);
+  border-radius: var(--tm-radius-control);
 }
 
+/* Edit mode highlight (F2): the columns tint with the primary-subtle token behind the cards —
+   no root frame, no hardcoded indigo. */
 .tm-dashboard--edit .tm-dashboard-grid-col {
-  background-color: rgba(99, 102, 241, 0.03);
+  background-color: var(--tm-color-primary-subtle);
+  border-color: var(--tm-color-primary-soft-border);
 }
 
-/* Widget Base */
+/* Widget Base — the card is the only surface (F2): card radius and shadow tokens, a hairline
+   border, no hover lift (the card is not clickable in view mode). */
 .tm-widget {
   position: relative;
   display: flex;
   flex-direction: column;
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: var(--tm-shadow-sm);
+  border-radius: var(--tm-radius-card);
+  box-shadow: var(--tm-shadow-card);
   overflow: hidden;
   transition: box-shadow var(--tm-transition-fast), transform var(--tm-transition-fast);
   z-index: 1;
 }
 
-.tm-widget:hover {
-  box-shadow: var(--tm-shadow-md);
+/* Edit mode marks every card with the soft primary border, so the grid reads as editable
+   before any hover; the hover rule then deepens it to the full primary. */
+.tm-dashboard--edit .tm-widget {
+  border-color: var(--tm-color-primary-soft-border);
+}
+
+.tm-dashboard--edit .tm-widget:hover {
+  border-color: var(--tm-color-primary);
 }
 
 .tm-widget--dragging {
@@ -183,28 +311,74 @@
   grid-row: span 1 !important;
 }
 
-/* Widget Header */
+/* Widget Header — transparent (F2): no grey band, no underline; the drag cursor only exists in
+   edit mode, where dragging is actually possible. */
 .tm-widget-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--tm-space-2);
-  padding: var(--tm-space-3) var(--tm-space-4);
-  background: var(--tm-bg-surface-secondary);
-  border-bottom: 1px solid var(--tm-border-color);
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-4) var(--tm-space-5);
+}
+
+.tm-dashboard--edit .tm-widget-header {
   cursor: grab;
 }
 
-.tm-widget-header:active {
+.tm-dashboard--edit .tm-widget-header:active {
   cursor: grabbing;
 }
 
 .tm-widget-header-left {
   display: flex;
   align-items: center;
-  gap: var(--tm-space-2);
+  gap: var(--tm-space-3);
   flex: 1;
   min-width: 0;
+}
+
+/* 40px category tile: the definition's icon over a --tm-dashboard-category-tint mix of the
+   category colour with the surface (light 12%, dark 20%). Decorative — the title carries the
+   meaning, so the tile is aria-hidden in markup. */
+.tm-widget-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-space-10);
+  block-size: var(--tm-space-10);
+  flex-shrink: 0;
+  border-radius: var(--tm-radius-control);
+  background: color-mix(in srgb, var(--category-color, var(--tm-category-fallback)) var(--tm-dashboard-category-tint, var(--tm-category-tint)), var(--tm-bg-surface));
+  color: var(--category-color, var(--tm-category-fallback));
+}
+
+/* Title + optional description column. */
+.tm-widget-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-0-5);
+  min-width: 0;
+}
+
+.tm-widget-title {
+  margin: 0;
+  font-size: var(--tm-font-size-lg);
+  font-weight: var(--tm-font-weight-semibold);
+  line-height: var(--tm-line-height-tight);
+  color: var(--tm-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-widget-description {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  line-height: var(--tm-line-height-normal);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tm-widget-drag-handle {
@@ -221,34 +395,41 @@
   background: var(--tm-bg-muted);
 }
 
-.tm-widget-title {
-  font-weight: var(--tm-font-weight-semibold);
-  font-size: var(--tm-font-size-sm);
-  color: var(--tm-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .tm-widget-header-actions {
   display: flex;
   align-items: center;
   gap: var(--tm-space-1);
+  flex-shrink: 0;
+}
+
+/* Host slot in the widget header (badge, link, period select) — the component only lays it out;
+   the host owns its content and its accessible names. */
+.tm-widget-host-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  margin-inline-end: var(--tm-space-1);
+  min-width: 0;
 }
 
 .tm-widget-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  inline-size: var(--tm-input-height-sm);
+  block-size: var(--tm-input-height-sm);
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: var(--tm-radius-md);
+  border-radius: var(--tm-radius-control);
   color: var(--tm-text-secondary);
   cursor: pointer;
-  transition: all var(--tm-transition-fast);
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-widget-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-widget-btn:hover {
@@ -261,10 +442,10 @@
   color: var(--tm-color-danger);
 }
 
-/* Widget Content */
+/* Widget Content — top padding comes from the header's own bottom padding (F2). */
 .tm-widget-content {
   flex: 1;
-  padding: var(--tm-space-4);
+  padding: 0 var(--tm-space-5) var(--tm-space-5);
   overflow: auto;
   min-height: 0;
 }
@@ -356,7 +537,7 @@
   align-items: center;
   justify-content: center;
   background: var(--tm-bg-muted);
-  border-radius: var(--tm-radius-xl);
+  border-radius: var(--tm-radius-card);
   color: var(--tm-text-secondary);
 }
 
@@ -387,6 +568,9 @@
      inner scroll areas resolve the same cap and the modal never grows two nested scrollbars. */
   --tm-widget-selector-height: min(60vh, 35rem);
   max-height: var(--tm-widget-selector-height);
+  /* Same category-tint alias the dashboard root declares, so the selector's category tiles can
+     consume the identical token wherever the modal renders. */
+  --tm-dashboard-category-tint: var(--tm-category-tint);
 }
 
 .tm-widget-selector-search {
@@ -670,7 +854,7 @@
 }
 
 .tm-dashboard-name-input input {
-  font-size: var(--tm-font-size-xl);
+  font-size: var(--tm-font-size-2xl);
   font-weight: var(--tm-font-weight-bold);
   padding: var(--tm-space-2) var(--tm-space-3);
 }
@@ -788,9 +972,17 @@
   color: var(--tm-color-danger);
 }
 
-.tm-dashboard-menu-badge {
-  color: var(--tm-color-warning);
+/* The "default" marker in the switcher menu is a visible text label with a decorative star
+   (F2) — no role="img" workaround, no title. */
+.tm-dashboard-menu-default {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: 0 var(--tm-space-2);
   font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
 }
 
 .tm-dashboard-menu-divider {
@@ -905,7 +1097,9 @@
   .tm-widget,
   .tm-widget-resize-handle,
   .tm-widget-card-add,
-  .tm-dashboard-menu-action {
+  .tm-dashboard-menu-action,
+  .tm-widget-btn,
+  .tm-dashboard-switcher__chevron {
     transition: none;
   }
 }

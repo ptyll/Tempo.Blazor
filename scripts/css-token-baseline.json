@@ -1,5 +1,5 @@
 {
-  "count": 5815,
+  "count": 5811,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2173,11 +2173,7 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_color-picker.css|background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 6px 6px;": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_context-menu.css|box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_context-menu.css|box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|background-color: rgba(99, 102, 241, 0.03);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|border: 1px dashed var(--tm-color-border-subtle, rgba(0,0,0,0.1));": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|color: white;": 3,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|var(--tm-color-border-subtle, rgba(0,0,0,0.05)) calc(var(--row-height, 60px) - 1px),": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|var(--tm-color-border-subtle, rgba(0,0,0,0.05)) var(--row-height, 60px)": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-col-pin-btn--active { color: var(--tm-color-primary, #3b82f6); }": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-col-resize-handle:hover { background: var(--tm-color-primary, #3b82f6); opacity: 0.4; }": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-data-table td.tm-col-pinned-left { box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18); }": 1,

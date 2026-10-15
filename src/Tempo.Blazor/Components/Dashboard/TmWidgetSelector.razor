@@ -78,7 +78,7 @@
                                         @onclick="() => SelectWidget(widget)">
 
                                     <span class="tm-widget-card-icon @GetCategoryColorClass(widget.Category)" style="@GetCategoryColorStyle(widget.Category)" aria-hidden="true">
-                                        <TmIcon Name="@widget.Icon" Size="IconSize.Lg" />
+                                        <TmIcon Name="@ResolveWidgetIcon(widget)" Size="IconSize.Lg" />
                                     </span>
 
                                     <span class="tm-widget-card-info">
@@ -194,23 +194,19 @@
         return WidgetRegistry?.GetWidgetsByCategory(categoryId).Count() ?? 0;
     }
 
-    // Built-in categories are rendered via theme-aware categorical tokens (--tm-category-N),
-    // exposed through a BEM colour class so dark mode gets proper values. Custom/host-supplied
-    // categories keep their inline model .Color (the model's public Color defaults are unchanged).
-    private static bool IsBuiltInCategory(string categoryId)
-        => WidgetCategories.All.Any(c => c.Id == categoryId);
-
-    // BEM colour class for a built-in category (maps to var(--tm-category-N)); empty for custom.
+    // Category → colour resolution lives in the shared DashboardCategoryStyles helper so the
+    // dashboard's widget icon tile and this selector's cards/sidebar stay one colour per category.
     private static string GetCategoryColorClass(string categoryId)
-        => IsBuiltInCategory(categoryId) ? $"tm-dashboard-category--{categoryId.ToLowerInvariant()}" : "";
+        => DashboardCategoryStyles.GetColorClass(categoryId);
 
-    // Inline --category-color for custom/unknown categories; empty for built-in (class supplies it).
     private string GetCategoryColorStyle(string categoryId)
-    {
-        if (IsBuiltInCategory(categoryId)) return "";
-        var color = GetCategories().FirstOrDefault(c => c.Id == categoryId)?.Color ?? "var(--tm-category-fallback)";
-        return $"--category-color: {color}";
-    }
+        => DashboardCategoryStyles.GetColorStyle(categoryId, GetCategories());
+
+    // Icon resolution goes through the same shared helper as the dashboard's header tile, so a
+    // definition with the model default ("widget") shows the Box glyph here too — not the
+    // empty tm-icon-unknown span.
+    private static string ResolveWidgetIcon(WidgetDefinition widget)
+        => DashboardWidgetIcons.ResolveIcon(widget.Icon);
 
     private void SelectCategory(string? categoryId)
     {

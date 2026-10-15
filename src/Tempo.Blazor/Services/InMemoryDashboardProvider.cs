@@ -26,15 +26,18 @@ public class InMemoryDashboardProvider : IDashboardProvider
             Grid = new GridConfig { Columns = 12, RowHeight = 60, Gap = 16 },
             Widgets = new List<WidgetInstance>
             {
+                // The KPI slots carry 3 rows (fix round): the demo KPI body is a bold value plus
+                // one muted line, and 2 rows left no room for it under the card header — the
+                // value clipped. The rows below re-stack so the taller KPIs never overlap.
                 new WidgetInstance
                 {
                     WidgetId = "kpi-revenue",
-                    X = 0, Y = 0, Width = 3, Height = 2
+                    X = 0, Y = 0, Width = 3, Height = 3
                 },
                 new WidgetInstance
                 {
                     WidgetId = "kpi-users",
-                    X = 3, Y = 0, Width = 3, Height = 2
+                    X = 3, Y = 0, Width = 3, Height = 3
                 },
                 new WidgetInstance
                 {
@@ -44,12 +47,12 @@ public class InMemoryDashboardProvider : IDashboardProvider
                 new WidgetInstance
                 {
                     WidgetId = "list-tasks",
-                    X = 0, Y = 2, Width = 4, Height = 6
+                    X = 0, Y = 3, Width = 4, Height = 5
                 },
                 new WidgetInstance
                 {
                     WidgetId = "calendar-mini",
-                    X = 4, Y = 2, Width = 4, Height = 5
+                    X = 4, Y = 4, Width = 4, Height = 4
                 }
             }
         };

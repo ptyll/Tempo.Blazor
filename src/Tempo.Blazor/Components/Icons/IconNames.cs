@@ -235,6 +235,10 @@ public static class IconNames
     // ─── Data & Analytics ─────────────────────────────────────────────────────
     /// <summary>Icon name for: BarChart2, Chart.</summary>
     public const string BarChart2     = "bar-chart-2";
+    /// <summary>Icon name for: DollarSign, currency, revenue.</summary>
+    public const string DollarSign    = "dollar-sign";
+    /// <summary>Icon name for: Percent, percentage, conversion.</summary>
+    public const string Percent       = "percent";
     /// <summary>Icon name for: PieChart, Chart.</summary>
     public const string PieChart      = "pie-chart";
     /// <summary>Icon name for: TrendingUp, Growth.</summary>

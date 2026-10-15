@@ -4,6 +4,114 @@
 
 ### Added
 
+- **`TmDashboard` F2 chrome redesign — the dashboard is redesigned around the reference
+  `dashboard--desktop.png`, and every part of that redesign is parameterized** (dashboard
+  redesign plan, phase F2). New parameters, all additive:
+
+  - `Appearance` (`DashboardAppearance.Plain | Card`, default `Plain`) — the chrome of the root
+    surface (see Breaking / Migration below; `Card` restores the pre-2.9.1 wrapping surface card
+    via the new `tm-dashboard--framed` class).
+  - `Title` — heading text overriding the current dashboard's name in view and edit mode.
+    Without a `Title` (and with an `IDashboardProvider`) the view-mode heading is visually
+    hidden (`tm-sr-only`), because the switcher trigger now shows the dashboard's name; the `h2`
+    stays in the DOM for screen readers and existing `.tm-dashboard-title` selectors.
+  - `Subtitle` — secondary line under the heading in view mode.
+  - `HeaderStart` — host content at the start of the header (breadcrumbs, back link).
+  - `HeaderActions` — host actions at the end of the view-mode header, rendered BEFORE the
+    Edit button so DOM order = tab order; not rendered in edit mode.
+  - `ShowHeader` (default `true`) — hides the whole toolbar in view mode; edit mode always
+    renders the toolbar (it carries Save/Cancel).
+  - `ShowWidgetIcons` (default `true`) — the widget header renders a 40px category icon tile
+    from `WidgetDefinition.Icon`, tinted with the category colour over the surface through
+    `color-mix` and the new global `--tm-category-tint` token (light 12%, dark 20%).
+  - `ShowWidgetDescriptions` (default `false`) — renders `WidgetDefinition.Description` as a
+    secondary line under the widget title.
+  - `WidgetHeaderActions` (`RenderFragment<WidgetInstance>?`) — a host slot in every widget
+    header (badge, "view all" link, period select), rendered before the collapse chevron in
+    view mode only; the host owns its content's accessible names.
+
+- **`WidgetDefinition.IsCollapsible` (default `true`)** in `Tempo.Blazor.Abstractions` — an
+  additive model property. `TmDashboard`'s collapse chevron now respects it: a widget registered
+  with `IsCollapsible = false` renders no collapse control.
+
+- New localization keys `TmDashboard_Default` ("Default" / "Výchozí" / "Predvolená" / "Par
+  défaut") and `TmDashboard_SwitcherAriaLabel` ("Dashboards: {0}" / "Nástěnky: {0}" /
+  "Nástenky: {0}" / "Tableaux de bord : {0}") in all four resource tables plus `MockTmLocalizer`.
+
+- The dashboard switcher menu's default-dashboard marker is now a visible text label
+  (`span.tm-dashboard-menu-default`, star icon + localized "Default") instead of a bare starred
+  icon announced through `role="img"`; the menu aligns to the START of the trigger and spans at
+  least its width (`MatchAnchorWidth`).
+
+- Entering edit mode moves focus to the "Add widget" button (previously focus fell to `<body>`
+  when the Edit trigger left the DOM); on a mobile layout the move is skipped silently because
+  the actions live in the mobile action bar.
+
+### Breaking / Migration
+
+- **`TmDashboard` default appearance changed from a wrapping card to `Plain`.** The component no
+  longer paints a white rounded card around itself: the root sits directly on the workspace
+  background (`--tm-bg-workspace`) and the widget cards are the only surfaces — the reference
+  look. Hosts that embed the dashboard on a contrasting page and want the old framing opt back
+  in explicitly:
+
+  ```razor
+  @* before (2.9.0) — the component rendered its own surface card *@
+  <TmDashboard DashboardId="overview" />
+
+  @* after (2.9.1) — Plain is the default; opt back into the card *@
+  <TmDashboard DashboardId="overview" Appearance="DashboardAppearance.Card" />
+  ```
+
+- **`AllowEdit=false` no longer renders the dashboard-edit button nor the empty state's
+  "Add widgets" CTA.** Previously the button (and CTA) rendered but entering edit mode did
+  nothing — a dead control advertising a disabled capability. Hosts relying on the button's
+  presence for layout or `data-testid='dashboard-edit'` selectors under `AllowEdit=false` must
+  drop the expectation; the header keeps the host's `HeaderActions` in view mode.
+
+- **The widget title is now a real heading: `h3.tm-widget-title` with a stable `id`
+  (`tm-widget-title-{InstanceId}`), sized `--tm-font-size-lg`.** 2.9.0 rendered a plain
+  `span.tm-widget-title`. Host CSS or tests keying on the `span` element must key on the class
+  (or `h3`) instead; the id is what the collapse/remove controls reference through
+  `aria-describedby`.
+
+- **`TmDashboard` widget icon tiles are rendered by default (`ShowWidgetIcons=true`).** A host
+  that wants the pre-2.9.1 bare widget headers turns them off:
+
+  ```razor
+  @* before: widget headers showed only the title *@
+  <TmDashboard />
+
+  @* after: same look as 2.9.0 *@
+  <TmDashboard ShowWidgetIcons="false" />
+  ```
+
+- **The view-mode "Edit" button is primary (`tm-btn-primary`) and lost its `title` attribute**
+  (the visible text is the accessible name). Host CSS or tests keying on `tm-btn-secondary` for
+  `[data-testid='dashboard-edit']` must key on `tm-btn-primary` (or drop the variant selector).
+
+- **Edit-mode toolbar button hierarchy swapped: "Save changes" is now primary, "Add widget"
+  secondary, "Cancel" ghost** (one primary element per region). Tests keying on
+  `tm-btn-primary` for the add-widget button must switch to the save button or the test id
+  `dashboard-add-widget`.
+
+- **Removed chrome:** the header toolbar lost its `border-bottom` underline and bottom padding;
+  the widget header lost its grey band (`--tm-bg-surface-secondary`) and `border-bottom`; edit
+  mode no longer draws a `2px dashed` frame around the root (the subtle background grid +
+  "Edit Mode" badge signal edit mode instead); widget cards no longer lift their shadow on
+  hover (the card is not clickable); the `.tm-dashboard-menu-badge` class is gone (replaced by
+  `.tm-dashboard-menu-default` with a visible label). Host CSS overriding those rules needs to
+  target the new structure.
+
+- **`ShowTitle` stays and is intentionally NOT obsoleted**: it hides the heading (and subtitle)
+  while keeping the switcher and header actions — a different concern than `ShowHeader`. Hosts
+  using `ShowTitle="false"` keep working unchanged.
+
+- The dashboard switcher trigger is a select-like control (`button.tm-dashboard-switcher`)
+  showing the current dashboard's name instead of the word "Dashboards", with the formatted
+  accessible name `TmDashboard_SwitcherAriaLabel` ("Dashboards: {0}") so the accessible name
+  contains the visible text (WCAG 2.5.3).
+
 - **Draft-guard surface for every comment composer the host cannot observe — `TmChat`,
   `TmNotionPageCommentPanel`, `TmNotionBlockCommentPanel`, `TmNotionTextCommentPanel`,
   `TmNotionPageCommentSection`, `TmDocumentCommentComposer`, `TmDocumentCommentThread`,

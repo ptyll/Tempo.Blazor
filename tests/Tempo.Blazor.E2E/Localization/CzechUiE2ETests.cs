@@ -116,9 +116,11 @@ public class CzechUiE2ETests : WasmTestBase
         await input.PressAsync("Enter");
 
         // The form's implicit submission created the dashboard: the dialog closed, the new
-        // dashboard is on screen in edit mode.
+        // dashboard is on screen in edit mode. The demo host sets Title, so the created
+        // dashboard's own name renders in the secondary .tm-dashboard-name span next to the
+        // heading (F2 §2.4) — the heading itself keeps the host title.
         await Assertions.Expect(dialog).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
-        await Assertions.Expect(page.Locator(".tm-dashboard-title")).ToHaveTextAsync("Nákupní tým");
+        await Assertions.Expect(page.Locator(".tm-dashboard-name")).ToHaveTextAsync("Nákupní tým");
         await Assertions.Expect(page.Locator(".tm-dashboard--edit").First).ToBeVisibleAsync();
 
         await SaveScreenshotAsync(page, "czech-create-dashboard-enter");

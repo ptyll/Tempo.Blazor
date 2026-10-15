@@ -34,11 +34,29 @@ public class LucideIconGeometryTests
         ("corner-up-left", "<path d='M20 20v-7a4 4 0 0 0-4-4H4'/><path d='M9 14 4 9l5-5'/>"),
     ];
 
+    // F2 review: the dashboard widget registry names dollar-sign and percent, so both must be the
+    // lucide geometry too — not a look-alike.
+    public static readonly (string Name, string Elements)[] DashboardIcons =
+    [
+        ("dollar-sign", "<line x1='12' x2='12' y1='2' y2='22'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>"),
+        ("percent", "<line x1='19' x2='5' y1='5' y2='19'/><circle cx='6.5' cy='6.5' r='2.5'/><circle cx='17.5' cy='17.5' r='2.5'/>"),
+    ];
+
     public static IEnumerable<object[]> Icons => F8Icons.Select(icon => new object[] { icon.Name, icon.Elements });
+
+    public static IEnumerable<object[]> DashboardIconsData => DashboardIcons.Select(icon => new object[] { icon.Name, icon.Elements });
 
     [Theory]
     [MemberData(nameof(Icons))]
     public void F8Icon_MatchesTheLucideReference(string name, string reference)
+    {
+        MarkupElements(TmIcon.GetBuiltInSvg(name)).Should().Equal(MarkupElements(reference),
+            "{0} must be the lucide geometry, not a look-alike", name);
+    }
+
+    [Theory]
+    [MemberData(nameof(DashboardIconsData))]
+    public void DashboardIcon_MatchesTheLucideReference(string name, string reference)
     {
         MarkupElements(TmIcon.GetBuiltInSvg(name)).Should().Equal(MarkupElements(reference),
             "{0} must be the lucide geometry, not a look-alike", name);

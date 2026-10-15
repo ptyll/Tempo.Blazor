@@ -93,6 +93,9 @@
   --tm-category-8: #14b8a6; /* Custom */
   /* Fallback for unknown/custom categories that supply no .Color (was hardcoded #6366f1). */
   --tm-category-fallback: #6366f1;
+  /* Subtle tint share for category surfaces (dashboard widget icon tiles). Dark raises it —
+     the 400-tones need a stronger mix against #1e293b to read as a tint (tokens-dark.css). */
+  --tm-category-tint: 12%;
 
   /* ── Neutrals ───────────────────────────────────────────────── */
   --tm-color-white:            #ffffff;

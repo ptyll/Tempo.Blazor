@@ -1,6 +1,10 @@
 @page "/dashboard"
 @using Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Components.Charts
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
 
 <PageTitle>Dashboard – Tempo.Blazor</PageTitle>
 
@@ -12,28 +16,121 @@
 
 <!-- Dashboard Component -->
 <section class="demo-section">
+    @* F2: Title/Subtitle name the screen, HeaderActions demo host-side header controls and the
+       WidgetHeaderActions slot demos per-widget host content. The widget BODIES below are demo
+       content rendered through WidgetTemplate — library components, not a library page widget (G12). *@
     <TmDashboard @ref="_dashboard"
                  UserId="CurrentUserId"
-                 ShowTitle="false"
+                 Title="Project Aurora"
+                 Subtitle="Current state and key metrics"
                  AllowEdit="true"
-                 OnDashboardChanged="OnDashboardChanged" />
+                 OnDashboardChanged="OnDashboardChanged">
+        <HeaderActions>
+            <TmButton Variant="ButtonVariant.Secondary" OnClick="ExportDashboard">
+                <TmIcon Name="download" Size="IconSize.Sm" />
+                <span>Export</span>
+            </TmButton>
+        </HeaderActions>
+        <WidgetHeaderActions Context="widget">
+            @if (widget.WidgetId.StartsWith("chart-"))
+            {
+                @* A library badge (not ad-hoc Tailwind): themed, dark-mode-safe, and sized for the
+                   widget header slot. *@
+                <TmBadge Variant="BadgeVariant.Primary" BadgeStyle="BadgeStyle.Subtle" Pill="true">
+                    Live
+                </TmBadge>
+            }
+        </WidgetHeaderActions>
+        <WidgetTemplate Context="widget">
+            @switch (widget.WidgetId)
+            {
+                @* Flat KPI content (fix round): the widget card is the library's surface, so the
+                    demo fills its body with a bold value and one muted line — never a nested
+                    TmStatCard, whose own border and padding clipped the value inside a 2-row slot. *@
+                case "kpi-revenue":
+                    <div class="tm-demo-kpi">
+                        <span class="tm-demo-kpi-value">€84,120</span>
+                        <span class="tm-demo-kpi-hint">+12.4% vs last month</span>
+                    </div>
+                    break;
+                case "kpi-users":
+                    <div class="tm-demo-kpi">
+                        <span class="tm-demo-kpi-value">2,845</span>
+                        <span class="tm-demo-kpi-hint">+3.1% vs last month</span>
+                    </div>
+                    break;
+                case "kpi-conversion":
+                    <div class="tm-demo-kpi">
+                        <span class="tm-demo-kpi-value">4.6%</span>
+                        <span class="tm-demo-kpi-hint">-0.2% vs last month</span>
+                    </div>
+                    break;
+                case "chart-line":
+                    <TmChart Type="ChartType.Line" Data="VisitorsData" Height="220px" Animated="false" />
+                    break;
+                case "chart-bar":
+                    <TmChart Type="ChartType.Bar" Data="RevenueData" Height="220px" Animated="false" />
+                    break;
+                case "chart-pie":
+                    <TmChart Type="ChartType.Donut" Data="TrafficData" Height="220px" Animated="false" />
+                    break;
+                case "list-tasks":
+                    <ul class="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                        <li>✔ Wireframe stencil parity</li>
+                        <li>✔ Dark-mode tint review</li>
+                        <li>☐ F3: widget DOM order by (Y, X)</li>
+                        <li>☐ Loading skeleton</li>
+                    </ul>
+                    break;
+                default:
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        Demo content for <strong>@widget.WidgetId</strong> renders here through WidgetTemplate.
+                    </p>
+                    break;
+            }
+        </WidgetTemplate>
+    </TmDashboard>
 </section>
 
 @code {
     [Inject] public IDashboardProvider DashboardProvider { get; set; } = default!;
     [Inject] public IWidgetRegistry WidgetRegistry { get; set; } = default!;
-    
+
     private TmDashboard? _dashboard;
     private string CurrentUserId => "demo-user";
-    
+
+    // Demo chart data — plain demo content (G12), not library state.
+    private static readonly ChartData VisitorsData = new()
+    {
+        Labels = ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        Datasets = [new ChartDataset { Label = "Visitors", Values = [120, 180, 150, 210, 190], Color = "#3b82f6" }],
+    };
+
+    private static readonly ChartData RevenueData = new()
+    {
+        Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        Datasets = [new ChartDataset { Label = "Revenue", Values = [12, 19, 15, 22, 18, 25], Color = "#10b981" }],
+    };
+
+    private static readonly ChartData TrafficData = new()
+    {
+        Labels = ["Desktop", "Mobile", "Tablet"],
+        Datasets = [new ChartDataset { Label = "Traffic", Values = [45, 35, 15], Color = "#8b5cf6" }],
+    };
+
     protected override async Task OnInitializedAsync()
     {
         // Widgets are already registered in InMemoryWidgetRegistry
         await base.OnInitializedAsync();
     }
-    
+
     private void OnDashboardChanged(DashboardConfig dashboard)
     {
         Console.WriteLine($"Dashboard changed: {dashboard.Name} with {dashboard.Widgets.Count} widgets");
+    }
+
+    private void ExportDashboard()
+    {
+        Console.WriteLine("Export requested (demo header action)");
     }
 }

@@ -144,7 +144,7 @@ public class TmDashboardTests : LocalizationTestBase
 
         // Act - Render and enter edit mode
         var cut = Render<TmDashboard>();
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
 
         // Assert - Should show edit mode badge and save/cancel buttons
         cut.FindAll(".tm-dashboard-edit-badge").Should().NotBeEmpty();
@@ -200,7 +200,7 @@ public class TmDashboardTests : LocalizationTestBase
 
         // Act - Enter edit mode
         var cut = Render<TmDashboard>();
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
 
         // Assert - Should show cancel button in edit mode
         var cancelButtons = cut.FindAll("button").Where(b => b.TextContent.Contains("Cancel")).ToList();
@@ -217,7 +217,7 @@ public class TmDashboardTests : LocalizationTestBase
         SetupServices(provider, registry);
 
         var cut = Render<TmDashboard>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile));
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
 
         var bar = cut.Find(".tm-mobile-action-bar__bar");
         bar.QuerySelectorAll(".tm-mobile-action-bar__action").Count.Should().Be(3);
@@ -232,7 +232,7 @@ public class TmDashboardTests : LocalizationTestBase
         SetupServices(provider, registry);
 
         var cut = Render<TmDashboard>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Desktop));
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
 
         cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty();
         cut.FindAll(".tm-dashboard-toolbar-right .tm-btn").Should().NotBeEmpty(
@@ -404,7 +404,7 @@ public class TmDashboardTests : LocalizationTestBase
         var cut = Render<TmDashboard>(parameters => parameters
             .Add(p => p.DashboardId, "d1")
             .Add(p => p.LayoutMode, TmLayoutMode.Tablet));
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
 
         cut.FindAll(".tm-dashboard-grid-bg").Should().BeEmpty(
             "the column grid is the desktop edit affordance; below desktop there is no column to show");
@@ -582,7 +582,7 @@ public class TmDashboardTests : LocalizationTestBase
         cut.Find("[data-instance-id='w1'] .tm-widget-btn").GetAttribute("title").Should().Be("Sbalit");
 
         // The inline name editor's placeholder is localized (TmTextInput puts Class on the input itself).
-        cut.Find("button[title='Upravit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
         cut.Find("button[title='Přejmenovat nástěnku']").Click();
         cut.Find("input.tm-dashboard-name-input").GetAttribute("placeholder").Should().Be("Pojmenujte nástěnku");
     }
@@ -616,7 +616,7 @@ public class TmDashboardTests : LocalizationTestBase
         cut.Find("[data-instance-id='w1'] .tm-widget-btn").GetAttribute("aria-label").Should().Be("Sbalit");
 
         // Edit mode: the rename trigger and the per-widget remove control.
-        cut.Find("button[title='Upravit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
         var rename = cut.Find("button[title='Přejmenovat nástěnku']");
         rename.GetAttribute("aria-label").Should().Be("Přejmenovat nástěnku");
         cut.Find("button[title='Odebrat widget']").GetAttribute("aria-label").Should().Be("Odebrat widget");
@@ -823,7 +823,7 @@ public class TmDashboardTests : LocalizationTestBase
         SetupDashboard(Dashboard("d1", "Alpha", isDefault: true,
             new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }));
         var cut = Render<TmDashboard>();
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
 
         var focusBefore = FocusCalls();
         cut.FindAll("button").Single(b => b.TextContent.Contains("Cancel")).Click();
@@ -840,7 +840,7 @@ public class TmDashboardTests : LocalizationTestBase
         SetupSwitcherModules();
         SetupDashboard(Dashboard("d1", "Alpha", isDefault: true));
         var cut = Render<TmDashboard>();
-        cut.Find("button[title='Edit']").Click();
+        cut.Find("[data-testid='dashboard-edit']").Click();
         cut.Find("button[title='Rename dashboard']").Click();
 
         var input = cut.Find("input.tm-dashboard-name-input");

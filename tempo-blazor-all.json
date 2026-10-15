@@ -4609,6 +4609,16 @@
           ]
         },
         {
+          "itemName": "DashboardAppearance",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Dashboard",
+          "description": "Chrome of the TmDashboard root surface. Plain (default) renders the dashboard directly on the workspace background so the widget cards are the only surfaces; Card wraps the dashboard in a rounded surface card (.tm-dashboard--framed) for hosts that embed it on a contrasting page.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Dashboard/DashboardAppearance.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "DataTablePaginationInfo",
           "kind": "Record",
           "category": "Components",
@@ -5538,6 +5548,12 @@
               "description": "Icon name for: Database."
             },
             {
+              "name": "DollarSign",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: DollarSign, currency, revenue."
+            },
+            {
               "name": "DoubleStrikethrough",
               "kind": "Field",
               "type": "string",
@@ -5626,12 +5642,6 @@
               "kind": "Field",
               "type": "string",
               "description": "Icon name for: Film, Video."
-            },
-            {
-              "name": "Filter",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: Filter."
             }
           ]
         },
@@ -7229,7 +7239,7 @@
           "kind": "Component",
           "category": "Dashboard",
           "namespace": "Tempo.Blazor.Components.Dashboard",
-          "description": "Configurable dashboard with a CSS grid layout, drag-and-drop widget positioning, resize handles, edit mode, widget selector modal, multiple saved dashboards via IDashboardProvider, and JS interop for grid interactions.",
+          "description": "Configurable dashboard with a CSS grid layout, drag-and-drop widget positioning, resize handles, edit mode, widget selector modal, multiple saved dashboards via IDashboardProvider, and JS interop for grid interactions. Renders directly on the workspace (Appearance=Plain) with a select-like dashboard switcher, optional Title/Subtitle and host HeaderActions; each widget card carries a 40px category icon tile with an optional description and a host WidgetHeaderActions slot.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Dashboard/TmDashboard.razor",
           "documentationStatus": "merged",
@@ -7245,6 +7255,13 @@
               "description": "Whether the user may enter edit mode (move, resize, add or remove widgets). Defaults to true."
             },
             {
+              "name": "Appearance",
+              "type": "DashboardAppearance",
+              "isRequired": false,
+              "default": "DashboardAppearance.Plain",
+              "description": "Chrome of the root surface. Plain (default) paints the dashboard directly on the workspace background — the widget cards are the only surfaces; Card keeps the pre-2.9.1 wrapping surface card (.tm-dashboard--framed) for hosts that embed the dashboard on a contrasting page."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
@@ -7255,6 +7272,18 @@
               "type": "string?",
               "isRequired": false,
               "description": "Id of the dashboard to load initially. When empty, the provider's default dashboard loads."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions at the end of the view-mode header, rendered BEFORE the Edit button so the DOM order matches the visual (and tab) order. Not rendered in edit mode."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host content at the start of the header, before the heading and the dashboard switcher (breadcrumbs, back link, page-level controls)."
             },
             {
               "name": "InitialMode",
@@ -7283,17 +7312,56 @@
               "description": "Raised when the rendered layout changes. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
             },
             {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the header toolbar renders in view mode. Edit mode always renders the toolbar, because it is the only surface carrying Save/Cancel."
+            },
+            {
               "name": "ShowTitle",
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Whether the dashboard title renders in the toolbar. Defaults to true."
+              "description": "Whether the heading (and subtitle) render at all. Different concern than ShowHeader: false still shows the switcher and the header actions."
+            },
+            {
+              "name": "ShowWidgetDescriptions",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the widget header renders the definition's Description as a secondary line under the title.",
+              "default": "false"
+            },
+            {
+              "name": "ShowWidgetIcons",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the widget header renders the 40px category icon tile from the widget definition."
+            },
+            {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Secondary line under the heading in view mode. Empty hides it."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Heading text in view and edit mode, overriding the current dashboard's name. Without a Title (and with a provider) the heading is visually hidden in view mode, because the switcher trigger already shows the name."
             },
             {
               "name": "UserId",
               "type": "string?",
               "isRequired": false,
               "description": "Owner id passed through to IDashboardProvider; null means the provider's default scope."
+            },
+            {
+              "name": "WidgetHeaderActions",
+              "type": "RenderFragment<WidgetInstance>?",
+              "isRequired": false,
+              "description": "Host slot in every widget header (a badge, a view-all link, a period select), receiving the WidgetInstance. Renders before the collapse chevron in view mode only; the host owns its content's accessible names."
             },
             {
               "name": "WidgetTemplate",
@@ -7305,6 +7373,7 @@
           "cssClasses": [
             "tm-dashboard",
             "tm-dashboard--edit",
+            "tm-dashboard--framed",
             "tm-dashboard--desktop",
             "tm-dashboard--tablet",
             "tm-dashboard--mobile",
@@ -7312,7 +7381,16 @@
             "tm-dashboard-toolbar",
             "tm-dashboard-toolbar-left",
             "tm-dashboard-toolbar-right",
+            "tm-dashboard-header-start",
+            "tm-dashboard-header-actions",
+            "tm-dashboard-heading",
             "tm-dashboard-title",
+            "tm-dashboard-subtitle",
+            "tm-dashboard-name",
+            "tm-dashboard-switcher",
+            "tm-dashboard-switcher__icon",
+            "tm-dashboard-switcher__label",
+            "tm-dashboard-switcher__chevron",
             "tm-dashboard-edit-badge",
             "tm-dashboard-grid-container",
             "tm-dashboard-grid",
@@ -7328,7 +7406,7 @@
             "tm-dashboard-menu-actions",
             "tm-dashboard-menu-action",
             "tm-dashboard-menu-action--danger",
-            "tm-dashboard-menu-badge",
+            "tm-dashboard-menu-default",
             "tm-dashboard-menu-divider",
             "tm-dashboard-empty",
             "tm-widget",
@@ -7338,8 +7416,12 @@
             "tm-widget-header",
             "tm-widget-header-left",
             "tm-widget-drag-handle",
+            "tm-widget-icon",
+            "tm-widget-heading",
             "tm-widget-title",
+            "tm-widget-description",
             "tm-widget-header-actions",
+            "tm-widget-host-actions",
             "tm-widget-btn",
             "tm-widget-btn--danger",
             "tm-widget-content",
@@ -7357,11 +7439,15 @@
           "examples": [
             {
               "title": "Basic dashboard with provider",
-              "code": "<TmDashboard DashboardId=\"@dashId\"\n             UserId=\"@userId\"\n             ShowTitle=\"true\"\n             AllowEdit=\"true\"\n             OnDashboardChanged=\"HandleDashboardChanged\">\n    <WidgetTemplate Context=\"widget\">\n        @switch (widget.WidgetId)\n        {\n            case \"sales-chart\":\n                <SalesChartWidget />\n                break;\n            case \"recent-orders\":\n                <RecentOrdersWidget />\n                break;\n        }\n    </WidgetTemplate>\n</TmDashboard>"
+              "code": "<TmDashboard DashboardId=\"@dashId\"\n             UserId=\"@userId\"\n             Title=\"Project Aurora\"\n             Subtitle=\"Current state and key metrics\"\n             AllowEdit=\"true\"\n             OnDashboardChanged=\"HandleDashboardChanged\">\n    <HeaderActions>\n        <TmButton Variant=\"ButtonVariant.Secondary\" OnClick=\"Export\">Export</TmButton>\n    </HeaderActions>\n    <WidgetHeaderActions Context=\"widget\">\n        <span class=\"tm-badge\">Live</span>\n    </WidgetHeaderActions>\n    <WidgetTemplate Context=\"widget\">\n        @switch (widget.WidgetId)\n        {\n            case \"sales-chart\":\n                <SalesChartWidget />\n                break;\n            case \"recent-orders\":\n                <RecentOrdersWidget />\n                break;\n        }\n    </WidgetTemplate>\n</TmDashboard>"
             },
             {
               "title": "Read-only dashboard",
               "code": "<TmDashboard DashboardId=\"overview\"\n             AllowEdit=\"false\"\n             ShowTitle=\"true\" />"
+            },
+            {
+              "title": "Embedding on a contrasting page (pre-2.9.1 look)",
+              "code": "<TmDashboard DashboardId=\"overview\"\n             Appearance=\"DashboardAppearance.Card\" />"
             }
           ]
         },
@@ -27291,12 +27377,12 @@
         }
       ],
       "summary": {
-        "itemCount": 373,
-        "manualItemCount": 373,
-        "generatedItemCount": 365,
+        "itemCount": 374,
+        "manualItemCount": 374,
+        "generatedItemCount": 366,
         "generatedOnlyItemCount": 0,
         "componentCount": 203,
-        "publicApiTypeCount": 162
+        "publicApiTypeCount": 163
       }
     },
     {
@@ -115103,10 +115189,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3209,
-    "manualItemCount": 3209,
+    "itemCount": 3210,
+    "manualItemCount": 3210,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2682
+    "publicApiTypeCount": 2683
   }
 }

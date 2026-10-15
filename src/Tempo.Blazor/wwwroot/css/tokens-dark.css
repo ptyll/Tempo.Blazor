@@ -117,6 +117,7 @@
   --tm-category-7: #9ca3af; /* System — gray-400 */
   --tm-category-8: #2dd4bf; /* Custom — teal-400 */
   --tm-category-fallback: #818cf8; /* indigo-400 */
+  --tm-category-tint: 20%;
 
   /* Neutral scale — inverted for dark mode */
   --tm-color-gray-50:        #1e293b;

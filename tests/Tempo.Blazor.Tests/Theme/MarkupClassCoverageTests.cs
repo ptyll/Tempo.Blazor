@@ -381,7 +381,12 @@ public sealed class MarkupClassCoverageTests
             // id-prefix literal ("tm-rte-editor-{Guid…}") joined the scanned population
             // (the same literal in TmRichEditorSimple stays inside the .razor @code, which
             // the sweep does not read) — 38 → 39.
-            ExpectedUnmeasurableStems: 39),
+            // F2 dashboard redesign: TmDashboard's @code moved to a .razor.cs for the 1200-line
+            // ceiling, so its id-prefix literals joined the scanned population — the three
+            // pre-existing ids ("tm-dashboard-views-", "tm-dashboard-name-", "tm-widget-content-")
+            // and the three new chrome ids ("tm-dashboard-title-", "tm-widget-title-",
+            // "tm-widget-desc-") — 39 → 45.
+            ExpectedUnmeasurableStems: 45),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

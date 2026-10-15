@@ -2031,12 +2031,14 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             DefaultWidth = 800, DefaultHeight = 500,
             Props =
             [
-                P("layoutMode",    "Layout Mode",    PropType.Enum, "auto", cat: "Behavior",
+                P("title",        "Title",         PropType.String, "Dashboard", cat: "Content"),
+                P("layoutMode",   "Layout Mode",   PropType.Enum,   "auto",      cat: "Behavior",
                     opts: ["auto", "desktop", "tablet", "mobile"]),
-                P("columns",       "Columns",        PropType.Int,  3,     cat: "Appearance"),
-                P("rows",          "Rows",           PropType.Int,  2,     cat: "Appearance"),
-                P("editable",      "Editable",       PropType.Bool, false, cat: "Behavior"),
-                P("showAddWidget", "Show Add Widget",PropType.Bool, false, cat: "Appearance"),
+                P("columns",      "Columns",       PropType.Int,    3,           cat: "Appearance"),
+                P("rows",         "Rows",          PropType.Int,    2,           cat: "Appearance"),
+                P("editable",     "Editable",      PropType.Bool,   false,       cat: "Behavior"),
+                P("showAddWidget","Show Add Widget",PropType.Bool,  false,       cat: "Appearance"),
+                P("showSwitcher", "Show Switcher", PropType.Bool,   true,        cat: "Appearance"),
             ]
         };
 
