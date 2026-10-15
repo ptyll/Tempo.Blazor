@@ -250,4 +250,68 @@ public class TmRadioGroupTests : LocalizationTestBase
         coarse.Success.Should().BeTrue("the touch target must be gated on a coarse pointer");
         coarse.Groups["body"].Value.Should().Contain("min-height: var(--tm-touch-target)");
     }
+
+    // ── error announcement (same contract as the input family) ──
+
+    [Fact]
+    public void TmRadioGroup_Error_DefaultAnnouncesViaRoleAlert()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Error, "Pick one"));
+
+        var message = cut.Find(".tm-radio-group-error");
+        message.GetAttribute("role").Should().Be("alert");
+        message.GetAttribute("id").Should().Be(cut.Instance.ErrorId,
+            "the error span has a stable id exposed on the component");
+
+        var group = cut.Find("[role='radiogroup']");
+        group.GetAttribute("aria-describedby").Should().Be(message.GetAttribute("id"));
+        group.GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void TmRadioGroup_AnnounceError_False_DropsOnlyTheRole()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Error, "Pick one")
+            .Add(c => c.AnnounceError, false));
+
+        var message = cut.Find(".tm-radio-group-error");
+        message.HasAttribute("role").Should().BeFalse(
+            "focus moved to the group lets aria-describedby read the error; role=alert would announce it a second time");
+        message.TextContent.Should().Contain("Pick one", "the message itself must still render");
+
+        var group = cut.Find("[role='radiogroup']");
+        group.GetAttribute("aria-describedby").Should().Be(message.GetAttribute("id"),
+            "aria-describedby must stay so focus reads the error");
+        group.GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void TmRadioGroup_WithoutError_HasNoAriaInvalidAndNoDescribedBy()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions));
+
+        var group = cut.Find("[role='radiogroup']");
+        group.HasAttribute("aria-invalid").Should().BeFalse();
+        group.HasAttribute("aria-describedby").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmRadioGroup_InsideFormFieldError_DescribesTheFieldError()
+    {
+        var cut = Render<Tempo.Blazor.Components.Forms.TmFormField>(p => p
+            .Add(c => c.Id, "plan")
+            .Add(c => c.ErrorMessage, "Choose a plan")
+            .AddChildContent<TmRadioGroup<string>>(child => child
+                .Add(c => c.Options, SampleOptions)));
+
+        cut.Find("[role='radiogroup']").GetAttribute("aria-describedby").Should().Be("plan-field-error",
+            "the group has no own Error, so it describes the field-level message");
+        cut.Find("[role='radiogroup']").HasAttribute("aria-invalid").Should().BeFalse(
+            "aria-invalid follows the group's own Error only, like the other inputs");
+    }
 }

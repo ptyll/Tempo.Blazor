@@ -100,10 +100,26 @@ public partial class TmMultiSelect<TItem, TValue>
     private bool IsInvalid => !string.IsNullOrEmpty(Error);
     private string ErrorId => $"{Id}-error";
     private string HelpId => $"{Id}-help";
-    private string? DescribedBy =>
-        !string.IsNullOrEmpty(Error) ? ErrorId
-        : !string.IsNullOrEmpty(HelpText) ? HelpId
-        : null;
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// <see cref="Error"/> the trigger describes the field-level message (after its help text),
+    /// so a single <c>TmFormField</c> error is reachable from the wrapped control too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private string? DescribedBy
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(Error)) return ErrorId;
+            if (FormFieldErrorId is { Length: > 0 } fieldError)
+                return !string.IsNullOrEmpty(HelpText) ? $"{HelpId} {fieldError}" : fieldError;
+            return !string.IsNullOrEmpty(HelpText) ? HelpId : null;
+        }
+    }
 
     // ── Filtering ────────────────────────────────────────────────
 

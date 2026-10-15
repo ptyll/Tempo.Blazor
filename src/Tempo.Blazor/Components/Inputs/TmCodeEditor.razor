@@ -165,7 +165,17 @@
     private string? EffectiveError => !string.IsNullOrEmpty(Error) ? Error : _jsonError;
     private bool HasError => !string.IsNullOrEmpty(EffectiveError);
     private string ErrorId => $"{Id}-error";
-    private string? DescribedBy => HasError ? ErrorId : null;
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// error the textarea describes the field-level message, so a single <c>TmFormField</c> error
+    /// is reachable from the wrapped control too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private string? DescribedBy => HasError ? ErrorId : FormFieldErrorId;
     private string HighlightLanguageClass => string.IsNullOrEmpty(Language) ? string.Empty : $"language-{Language}";
 
     /// <summary>False when <see cref="ValidateJson"/> is on and the current value is not parseable JSON.</summary>

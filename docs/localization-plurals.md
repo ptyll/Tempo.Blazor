@@ -201,7 +201,9 @@ public interface ITmRelativeTimeFormatter
   `Tm_Time_DaysAgo_*` / `Tm_Time_InDays_*`, and two format strings `Tm_Time_TimeFormat` (the clock
   time inside "yesterday at …") and `Tm_Time_DateFormat` (the absolute date). The formats are
   resources because locale conventions differ from the .NET culture default (`H:mm`, not `HH:mm`,
-  in Czech).
+  in Czech). The English table ships `"t"` — the .NET short-time pattern — so every `en` culture
+  keeps its own convention (`h:mm tt` in `en-US`, `HH:mm` in `en-GB`); a host that wants a forced
+  12-hour clock in English overrides the key with `h:mm tt`.
 - **No live refresh.** The stamp is computed when the component renders. Nothing ticks it forward from
   "5 min ago" to "6 min ago"; the host re-renders (a new item, a circuit refresh) and the formatter
   reads the clock again.

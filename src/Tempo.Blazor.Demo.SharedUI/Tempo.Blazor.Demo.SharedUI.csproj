@@ -13,6 +13,28 @@
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
+  <!-- Demo-owned localization tables (DemoTmLocalizer): demo-only keys live here, not in the
+       library's TmResources. WithCulture=false keeps the culture-suffixed files out of satellite
+       assembly generation; LogicalNames follow the library's {BaseName}.{culture}.json pattern. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\DemoResources.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.Demo.SharedUI.Resources.DemoResources.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\DemoResources.cs.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.Demo.SharedUI.Resources.DemoResources.cs.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\DemoResources.sk.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.Demo.SharedUI.Resources.DemoResources.sk.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\DemoResources.fr.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.Demo.SharedUI.Resources.DemoResources.fr.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.3" />

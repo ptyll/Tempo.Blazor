@@ -144,7 +144,17 @@
     private readonly string _ariaId = Guid.NewGuid().ToString("n")[..8];
     private bool IsInvalid => !string.IsNullOrEmpty(Error);
     private string ErrorId => $"{_ariaId}-error";
-    private string? DescribedBy => !string.IsNullOrEmpty(Error) ? ErrorId : null;
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// <see cref="Error"/> the search input describes the field-level message, so a single
+    /// <c>TmFormField</c> error is reachable from the wrapped control too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private string? DescribedBy => !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId;
 
     /// <summary>Current selected value (single-select mode).</summary>
     [Parameter] public TValue? Value { get; set; }

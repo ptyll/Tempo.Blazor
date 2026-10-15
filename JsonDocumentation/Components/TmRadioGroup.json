@@ -30,7 +30,13 @@
       "name": "Error",
       "type": "string?",
       "isRequired": false,
-      "description": "Validation error message."
+      "description": "Validation error message. When set, the radiogroup container gets aria-invalid=\"true\" and aria-describedby pointing at the rendered message's stable id."
+    },
+    {
+      "name": "AnnounceError",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true (default), the rendered Error message carries role=\"alert\" so screen readers announce it assertively. Set false when the host moves focus to the group itself: the error is then read through aria-describedby and the live region would announce the same text twice. With false the message still renders, keeps its error styling and stays referenced by aria-describedby; only the role attribute is dropped."
     },
     {
       "name": "Value",
@@ -101,6 +107,14 @@
     {
       "title": "Horizontal radio group with error",
       "code": "<TmRadioGroup T=\"int\" @bind-Value=\"priority\" Label=\"Priority\" Layout=\"RadioLayout.Horizontal\" Options=\"@priorityOptions\" Error=\"@priorityError\" />"
+    },
+    {
+      "title": "Error without live-region announcement (host focuses the group itself)",
+      "code": "<TmRadioGroup T=\"int\" @bind-Value=\"priority\" Label=\"Priority\" Options=\"@priorityOptions\" Error=\"@priorityError\" AnnounceError=\"false\" />"
     }
+  ],
+  "notes": [
+    "The error span renders with a stable id (tm-radio-error-{guid}); the radiogroup container references it through aria-describedby and sets aria-invalid=\"true\" while an Error shows.",
+    "Inside a TmFormField with a rendered error, the group additionally describes the field-level error message (cascaded as TmFormFieldErrorId) when it has no own Error."
   ]
 }

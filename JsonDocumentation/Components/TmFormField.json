@@ -29,7 +29,19 @@
       "name": "ErrorMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Explicit validation error message shown below the field in red. Takes precedence over EditContext validation. The message keeps role=\"alert\": the input-level AnnounceError=\"false\" opt-out (e.g. TmTextInput.AnnounceError) mutes only the wrapped control's own error message, never this wrapper's error display."
+      "description": "Explicit validation error message shown below the field in red. Takes precedence over EditContext validation. By default the message carries role=\"alert\"; the AnnounceError=\"false\" opt-out drops only the role, while the input-level AnnounceError (e.g. TmTextInput.AnnounceError) mutes only the wrapped control's own error message."
+    },
+    {
+      "name": "AnnounceError",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true (default), the rendered error message carries role=\"alert\" so screen readers announce it assertively. Set false when the host moves focus to the invalid control itself: the error is then read through aria-describedby on the wrapped control and the live region would announce the same text twice. With false the message still renders, keeps its error styling and its stable ErrorId; only the role attribute is dropped."
+    },
+    {
+      "name": "Id",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Base DOM id used to derive the stable ErrorId (\"{Id}-field-error\"). The suffix differs from the inputs' {Id}-error so the ids of a field and its wrapped input never collide when they share the same Id. Defaults to a per-instance generated id."
     },
     {
       "name": "ValidationFor",
@@ -95,11 +107,16 @@
     {
       "title": "Form field with FluentValidation and automatic errors",
       "code": "<EditForm Model=\"@_model\" OnValidSubmit=\"HandleSubmit\">\n    <FluentValidationValidator />\n\n    <TmFormField Label=\"Department\" Required=\"true\" ValidationFor=\"@(() => _model.Department)\">\n        <TmSelect TValue=\"string\" @bind-Value=\"_model.Department\"\n            Options=\"@_departmentOptions\" Placeholder=\"Select department\" />\n    </TmFormField>\n</EditForm>"
+    },
+    {
+      "title": "Form field whose submit focuses the first invalid control",
+      "code": "<TmFormField Label=\"Amount\" ValidationFor=\"@(() => _model.Amount)\" AnnounceError=\"false\" For=\"amount\">\n    <TmTextInput id=\"amount\" @bind-Value=\"_model.Amount\" />\n</TmFormField>\n<!-- The error still renders (id=\"{Id}-field-error\") and stays linked through the wrapped control's aria-describedby; only role=\"alert\" is dropped, so it is not announced twice when focus already moved to the field. -->"
     }
   ],
   "notes": [
     "ValidationFor and ErrorMessage can coexist — ErrorMessage always takes precedence when non-empty.",
     "Without ValidationFor the component behaves identically to the original version — fully backward compatible.",
-    "Uses Expression<Func<object>> (same as TmFormValidationMessage) so no type parameter is needed at the call site."
+    "Uses Expression<Func<object>> (same as TmFormValidationMessage) so no type parameter is needed at the call site.",
+    "The error paragraph gets a stable DOM id (ErrorId = \"{Id}-field-error\", Id defaults to a per-instance generated id; the suffix differs from the inputs' {Id}-error so the two never collide). While it renders, the id is published to the wrapped content as a cascading value named TmFormFieldErrorId — the cascade reaches every Tm input inside the field's content, and each of those inputs adds it to its own aria-describedby (after the input's help text) when the input has no own Error."
   ]
 }

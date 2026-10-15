@@ -1,6 +1,7 @@
 using System.Reflection;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Demo.Services;
+using Tempo.Blazor.Demo.SharedUI.Localization;
 using Tempo.Blazor.Demo.SharedUI.Services;
 using Tempo.Blazor.Demo.Validators;
 using Tempo.Blazor.DocumentEditor.Services;
@@ -99,6 +100,9 @@ builder.Services.AddScoped<DemoNotionImportExportProvider>();
 builder.Services.AddTempoBlazor();
 // Since 2.9.1 the relative-time stamps read the browser's time zone by default (ITmUserTimeZone,
 // tm-user-zone.js); the former AddTempoUserTimeZone() call is an obsolete no-op alias.
+// Demo-only strings (TmDemo_*, *Demo_* pages) come from SharedUI's DemoResources; everything
+// else falls through to the library's TmResources.
+builder.Services.AddTempoDemoLocalizer();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();

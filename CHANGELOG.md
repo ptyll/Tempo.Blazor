@@ -4,6 +4,16 @@
 
 ### Fixed
 
+- **Six `TmDiagramEditor_*` toolbar keys ship in English instead of raw key names, and the
+  `Tm_Time_TimeFormat` clock-format resource exists in all four languages.** `TmDiagramEditor`
+  used `TmDiagramEditor_ShowGrid` / `HideGrid` / `ShowPageView` / `HidePageView` / `EnableSnap` /
+  `DisableSnap` (toolbar tooltips and the context menu), but only the Czech table contained them —
+  English, Slovak and French users saw the raw resource keys. All four tables now carry the six
+  keys. `Tm_Time_TimeFormat` (the clock pattern inside "yesterday at …") existed only in the Czech
+  and French tables; the English table now ships `"t"` — the .NET short-time pattern, byte-identical
+  to the previous fallback, so no English output changes (`en-US` stays 12-hour, `en-GB` stays
+  24-hour) — and Slovak ships `"H:mm"` (see docs/localization-plurals.md).
+
 - **A modal/dialog close returns the focus to its opener — pointer or keyboard, first open or
   later — and can no longer land on an element inside the closing overlay.** The focus trap
   (`TmModal`, `TmDialog`, `TmDrawer`, `TmFocusScope` — the shared `tm-focus-trap.js` module)
@@ -735,14 +745,52 @@
   <TmTextInput @bind-Value="model.Amount" Label="Amount" Error="@_amountError" AnnounceError="false" />
   ```
 
-  **Scope:** the opt-out covers only the input's own `Error` message. `TmFormField`,
-  `TmFormValidationMessage` and the range pickers' own field errors (`TmTimeRangePicker`,
-  `TmDateTimeRangePicker` invalid-range messages) keep their `role="alert"`, so EditContext-driven
-  and cross-field validation keep announcing. **Only safe when the same render that shows the
-  error also moves focus to this control.** Keep the default for validation on blur or on input,
-  async/server validation, or when focus stays on the submit button — otherwise the error is not
-  announced at all. With several invalid fields, pair it with a summary (e.g.
-  `TmValidationSummary`) or focus the first invalid field.
+  **Scope:** the opt-out covers only the input's own `Error` message. `TmFormValidationMessage` and
+  the range pickers' own field errors (`TmTimeRangePicker`, `TmDateTimeRangePicker` invalid-range
+  messages) keep their `role="alert"`, so EditContext-driven and cross-field validation keep
+  announcing; `TmFormField` now exposes its own `AnnounceError` with identical semantics (see
+  below), so a host that opts out mutes the wrapper and the input independently.
+  **Only safe when the same render that shows the error also moves focus to this control.** Keep
+  the default for validation on blur or on input, async/server validation, or when focus stays on
+  the submit button — otherwise the error is not announced at all. With several invalid fields,
+  pair it with a summary (e.g. `TmValidationSummary`) or focus the first invalid field.
+
+- **`TmFormField` errors get a stable id and the same `AnnounceError` opt-out, and the id reaches
+  the wrapped control's `aria-describedby`.** The field-level error `<p>` (from `ErrorMessage` or
+  EditContext validation) had no id, so a screen reader that focus-navigates into the wrapped input
+  read only the control's own message — a field-level EditContext error was announced once by the
+  live region and then unreachable from the control. The error paragraph now renders
+  `id="{Id}-field-error"` (new optional `Id` parameter, defaulting to a per-instance generated id;
+  the suffix deliberately differs from the inputs' `{Id}-error` so a field and its wrapped input
+  can share the same `Id` without the two error ids colliding), exposed as `TmFormField.ErrorId`.
+  While the paragraph renders, the id is cascaded to the wrapped content (`TmFormFieldErrorId`) —
+  the cascade reaches every Tm input inside the field's content, and each input with no own `Error`
+  — the nine inputs above plus `TmRadioGroup` — adds it to its own `aria-describedby` (after the
+  input's help text), so the field-level message is readable from the control in every state:
+
+  ```razor
+  <TmFormField Label="Email" Id="email" ValidationFor="@(() => model.Email)" For="email">
+      <TmTextInput id="email" @bind-Value="model.Email" />
+  </TmFormField>
+  <!-- on a validation error the input renders aria-describedby="email-field-error" pointing at the field's error <p> -->
+  ```
+
+  The field also accepts `AnnounceError` (default `true`) with exactly the semantics of the inputs:
+  `false` drops only the `role="alert"` attribute — the message still renders, keeps its error
+  styling and its stable id, and stays cascaded and referenced. The default DOM is unchanged except
+  for the added `id` attribute (frozen by full-markup snapshots in
+  `TmFormFieldErrorAnnouncementTests`).
+
+- **`TmRadioGroup` errors are announced, linked and marked invalid like the input family.** The
+  error `<span>` under the radiogroup rendered as plain styled text — no `role`, no id, no
+  `aria-invalid`, no `aria-describedby` — so a screen reader never announced it and focus on the
+  group read nothing. It now renders `role="alert"` with a stable id
+  (`tm-radio-error-{guid}`, exposed as `TmRadioGroup.ErrorId`), the radiogroup container links it
+  through `aria-describedby` and sets `aria-invalid="true"` while the error shows, and the new
+  `AnnounceError` parameter (default `true`) drops only the `role` attribute under the same
+  conditions as the inputs. Inside a `TmFormField` whose field-level error is showing, the group
+  additionally describes that message through the cascaded `TmFormFieldErrorId` when it has no own
+  `Error`.
 
 - **A `TmNotificationBell` unread entry announces its state.** The blue dot was `aria-hidden`
   decoration, so a read and an unread entry were indistinguishable to a screen reader. Unread
@@ -839,6 +887,10 @@
   "Select color {name}" (see `TmColorPalette.ColorNames` for the matching and fallback rules).
 
 ### Breaking / Migration
+
+- **The 267 demo-only localization keys are no longer in the `Tempo.Blazor` resource tables.** An
+  application that read any of them through `ITmLocalizer` now gets the raw key — copy the strings
+  into your own decorator (see the demo-keys entry under `Changed` below).
 
 - **An overlay close now leaves the focus where a live element OUTSIDE the closing surface
   already holds it, and an explicit restore target INSIDE the surface is skipped.** Previously
@@ -1122,6 +1174,25 @@
   ```
 
 ### Changed
+
+- **The demo-only localization keys moved out of the `Tempo.Blazor` package into the demo
+  applications.** All 267 keys that only demo pages use — `TmDemo_*` and the `TmToolbarDemo_*`,
+  `TmEditorShellDemo_*`, `TmDiagramDemo_*`, `TmMobileActionBarDemo_*`, `TmChartDemo_*`,
+  `TmResponsiveDemo_*`, `TmSankeyChartDemo_*`, `TmDataTableDemo_*`, `TmSidePanelDemo_*`,
+  `TmCalendarHeatmapDemo_*`, `TmRichEditorDemo_*` families, plus the lone
+  `TmModelingEditor_DemoError` (en/cs/sk/fr alike) — used to ship in
+  the library's embedded `TmResources` tables, inflating every consuming application's bundle with
+  ~1,000 strings no component ever reads. They now live in the demo's own embedded
+  `DemoResources.{json,cs,sk,fr}.json` (`Tempo.Blazor.Demo.SharedUI/Resources`), served by the new
+  `DemoTmLocalizer` (`ITmLocalizer` decorator: demo keys from the demo tables, everything else
+  falls through to the built-in `TmResources`), registered in all three demo hosts — WASM, Server
+  and both InteractiveAuto sides — via `builder.Services.AddTempoDemoLocalizer()` right after
+  `AddTempoBlazor()`. Demo pages inject the same `ITmLocalizer` as before and needed no changes;
+  no library component changed; the 267 demo keys are no longer in the Tempo.Blazor resource
+  tables — an application that read any of them through `ITmLocalizer` now gets the raw key and
+  should copy the strings into its own decorator. `DemoResourceCompletenessTests` guards the
+  new tables (four-language parity, placeholder parity, every demo key visibly demo-named, and the
+  key sets of the two tables disjoint), and `MockTmLocalizer` no longer carries the moved keys.
 
 - **A `TmMobileActionBar` in-flow bar is one label line shorter (C11).** Tiles of the default
   `StickyContainer` and `Inline` bars floor at ONE label line (a ≈61px bar instead of 71px with

@@ -91,7 +91,17 @@
     // ── Accessibility ────────────────────────────────────────────
     private readonly string _ariaId = Guid.NewGuid().ToString("n")[..8];
     private string ErrorId => $"{_ariaId}-error";
-    private string? DescribedBy => Error is not null ? ErrorId : null;
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// <see cref="Error"/> the textarea describes the field-level message, so a single
+    /// <c>TmFormField</c> error is reachable from the wrapped control too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private string? DescribedBy => Error is not null ? ErrorId : FormFieldErrorId;
 
     private async Task HandleInput(ChangeEventArgs e)
     {

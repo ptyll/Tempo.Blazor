@@ -811,7 +811,7 @@ record BreadcrumbItem : IBreadcrumbItem { string Label; string? Href; string? Ic
 
 ## Localization
 
-All user-facing text uses `ITmLocalizer`. The library ships with English and Czech translations.
+All user-facing text uses `ITmLocalizer`. The library ships with English, Czech, Slovak and French translations (embedded flat JSON resource tables: `TmResources.json` (English default), `TmResources.cs.json`, `TmResources.sk.json`, `TmResources.fr.json` in `Resources/`; there are no `.resx` resources).
 
 ```csharp
 // Custom localizer
@@ -825,7 +825,7 @@ public class MyLocalizer : ITmLocalizer
 builder.Services.AddSingleton<ITmLocalizer, MyLocalizer>();
 ```
 
-Key prefixes: `Tm_*` (shared), `TmButton_*`, `TmDataTable_*`, `TmDatePicker_*`, `TmFileDropZone_*`, `TmRichEditor_*`, etc. See `TmResources.resx` for the full key list.
+Key prefixes: `Tm_*` (shared), `TmButton_*`, `TmDataTable_*`, `TmDatePicker_*`, `TmFileDropZone_*`, `TmRichEditor_*`, etc. See `Resources/TmResources.json` for the full key list (every English key must exist in the cs/sk/fr tables — `TmResourceCompletenessTests` guards this).
 
 ---
 
