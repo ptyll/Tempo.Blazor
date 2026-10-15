@@ -143,6 +143,22 @@ public partial class TmDashboard : IAsyncDisposable
     private WidgetInstance? _dropTarget;
     private string? _resizeDirection;
 
+    // F4 keyboard grab mode: Enter/Space on the drag-handle button lifts the widget, the arrow
+    // keys move it one cell, Shift+arrows resize it one step, Enter/Space drops and Escape
+    // restores the pre-grab geometry. The mirror of the JS drag, driven entirely from C#.
+    private WidgetInstance? _grabbedWidget;
+    private (int X, int Y, int Width, int Height)? _grabOriginal;
+
+    // F4 polite live region: every grab, cell move, resize step, drop and cancel is announced.
+    private string? _moveAnnouncement;
+
+    // F4 compact edit mode: a freshly added widget is scrolled into view and highlighted briefly.
+    private string? _highlightedInstanceId;
+    // F4: instance id of the widget added from the selector; cleared in OnAfterRenderAsync after
+    // the scroll-into-view interop ran (the element only exists after the re-render).
+    private string? _scrollToInstanceId;
+    private readonly string _dragInstructionsId = $"tm-dashboard-drag-instructions-{Guid.NewGuid():N}";
+
     // Dashboard switcher menu: the panel is a TmOverlayPanel, which owns the top-layer popover,
     // the Escape/outside/Tab-out dismissal and the shared menu-keyboard attachment (arrow keys/
     // typeahead). This component hands focus to the first item via OnOpened and restores the
@@ -150,6 +166,9 @@ public partial class TmDashboard : IAsyncDisposable
     private ElementReference _viewsElement;
     private MenuNavInterop? _menuNav;
     private bool _focusViewsButtonAfterClose;
+    // F4: cancels the pending highlight-clear timer on disposal so the fire-and-forget
+    // continuation never touches a disposed component.
+    private readonly CancellationTokenSource _highlightCts = new();
 
     // Focus hand-offs that land in OnAfterRenderAsync, after the re-render that changed the markup:
     private bool _focusAddWidgetButtonAfterCreate;
@@ -297,6 +316,19 @@ public partial class TmDashboard : IAsyncDisposable
             catch (InvalidOperationException) { }
         }
 
+        // F4: a widget freshly added from the selector is brought into view (it may render below
+        // the fold on a 390 px layout) before the brief highlight fades.
+        if (_scrollToInstanceId is not null)
+        {
+            _scrollToInstanceId = null;
+            try
+            {
+                await JS.InvokeVoidAsync("tempoDashboard.scrollWidgetIntoView", _dashboardElement, _highlightedInstanceId);
+            }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
+        }
+
         // The freshly opened menu hands focus to its first item from the panel's OnOpened (after
         // overlay.js displayed the popover), so the arrow keys (which the shared menu keyboard
         // listens for on the menu) are reachable — see FocusFirstMenuItemAsync.
@@ -439,6 +471,9 @@ public partial class TmDashboard : IAsyncDisposable
         _focusAddWidgetButtonAfterEditModeEntry = true;
         StateHasChanged();
     }
+
+    /// <summary>Test hook: enters edit mode without a browser (bUnit renders no measurement scope).</summary>
+    internal void EnterEditModeForTests() => EnterEditMode();
     
     private async Task SaveLayout()
     {
@@ -507,7 +542,33 @@ public partial class TmDashboard : IAsyncDisposable
         
         _widgets.Add(instance);
         _showWidgetSelector = false;
+        // F4 compact mode: highlight the fresh widget briefly so the user sees what the selector
+        // just added (the CSS keeps the highlight sub-second-quiet under prefers-reduced-motion).
+        _highlightedInstanceId = instance.InstanceId;
+        // F4: on small layouts the new card can land below the fold — scroll it into view after
+        // this render so the highlight is actually visible.
+        _scrollToInstanceId = instance.InstanceId;
+        _ = ClearHighlightLaterAsync(instance.InstanceId);
         StateHasChanged();
+    }
+
+    private async Task ClearHighlightLaterAsync(string instanceId)
+    {
+        // The fire-and-forget delay must not touch the component after disposal (a navigated-away
+        // dashboard would throw on StateHasChanged) — bail out if the cancellation fired first.
+        try
+        {
+            await Task.Delay(1600, _highlightCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+        if (_highlightedInstanceId == instanceId)
+        {
+            _highlightedInstanceId = null;
+            await InvokeAsync(StateHasChanged);
+        }
     }
     
     private (int X, int Y) FindNonOverlappingPosition(WidgetInstance newWidget)
@@ -566,8 +627,221 @@ public partial class TmDashboard : IAsyncDisposable
     private void RemoveWidget(WidgetInstance widget)
     {
         _widgets.Remove(widget);
+        if (_grabbedWidget == widget) ResetGrabState();
         StateHasChanged();
     }
+
+    // ── F4: reordering and resizing without drag ─────────────────────
+
+    /// <summary>
+    /// Whether the widget renders its compact move controls: edit mode on a layout without the
+    /// desktop grid (tablet portrait, mobile), where drag and resize handles do not exist.
+    /// </summary>
+    private bool IsCompactEditMode(TmLayoutContext layout) => _isEditMode && !layout.IsDesktop;
+
+    /// <summary>Whether another widget precedes this one in the linear (Y, X) order (Move up enabled).</summary>
+    private bool CanMoveUp(WidgetInstance widget)
+    {
+        var ordered = OrderedWidgets();
+        return ordered.IndexOf(widget) > 0;
+    }
+
+    /// <summary>Whether another widget follows this one in the linear (Y, X) order (Move down enabled).</summary>
+    private bool CanMoveDown(WidgetInstance widget)
+    {
+        var ordered = OrderedWidgets();
+        return ordered.IndexOf(widget) < ordered.Count - 1;
+    }
+
+    private List<WidgetInstance> OrderedWidgets() => _widgets
+        .OrderBy(w => w.Y).ThenBy(w => w.X).ThenBy(w => w.InstanceId, StringComparer.Ordinal)
+        .ToList();
+
+    /// <summary>
+    /// DA2 compact-mode move: swaps the widget's <c>(X, Y)</c> with the previous neighbour in the
+    /// linear (Y, X) order and pushes overlaps — the widget model (instance identity) is unchanged.
+    /// </summary>
+    private void MoveWidgetUp(WidgetInstance widget) => SwapWithNeighbour(widget, -1);
+
+    /// <summary>DA2 compact-mode move: swaps with the next neighbour in the linear (Y, X) order.</summary>
+    private void MoveWidgetDown(WidgetInstance widget) => SwapWithNeighbour(widget, +1);
+
+    private void SwapWithNeighbour(WidgetInstance widget, int direction)
+    {
+        if (!_isEditMode) return;
+
+        var ordered = OrderedWidgets();
+        var index = ordered.IndexOf(widget);
+        var neighbourIndex = index + direction;
+        if (index < 0 || neighbourIndex < 0 || neighbourIndex >= ordered.Count) return;
+
+        var neighbour = ordered[neighbourIndex];
+        (widget.X, neighbour.X) = (neighbour.X, widget.X);
+        (widget.Y, neighbour.Y) = (neighbour.Y, widget.Y);
+
+        if (_currentDashboard?.Grid.AllowOverlap == false)
+        {
+            PushOverlappingWidgets(widget);
+            PushOverlappingWidgets(neighbour);
+        }
+
+        AnnounceMove(PositionText(widget));
+        StateHasChanged();
+    }
+
+    /// <summary>Native button activation (Enter/Space, docs/keyboard-activation-convention.md): first press grabs, second press drops.</summary>
+    private void ToggleGrab(WidgetInstance widget)
+    {
+        if (!_isEditMode || !IsDraggable(widget)) return;
+
+        if (_grabbedWidget == widget)
+        {
+            DropGrabbed();
+            return;
+        }
+
+        ResetGrabState();
+        _grabbedWidget = widget;
+        _grabOriginal = (widget.X, widget.Y, widget.Width, widget.Height);
+        AnnounceMove(Loc["TmDashboard_Grabbed"] + " " + PositionText(widget));
+        StateHasChanged();
+    }
+
+    /// <summary>Arrow keys move the grabbed widget one grid cell; Shift+arrows resize one step; Escape cancels.</summary>
+    internal void HandleHandleKeyDown(KeyboardEventArgs e, WidgetInstance widget)
+    {
+        if (!_isEditMode || _grabbedWidget != widget) return;
+
+        // Shift+arrow resizes one step, a bare arrow moves one cell (spec F4 / WCAG 2.5.7).
+        if (e.ShiftKey)
+        {
+            switch (e.Key)
+            {
+                case "ArrowLeft":
+                    ResizeGrabbedBy(-1, 0);
+                    break;
+                case "ArrowRight":
+                    ResizeGrabbedBy(1, 0);
+                    break;
+                case "ArrowUp":
+                    ResizeGrabbedBy(0, -1);
+                    break;
+                case "ArrowDown":
+                    ResizeGrabbedBy(0, 1);
+                    break;
+                default:
+                    return;
+            }
+
+            StateHasChanged();
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowLeft":
+                MoveGrabbedBy(-1, 0);
+                break;
+            case "ArrowRight":
+                MoveGrabbedBy(1, 0);
+                break;
+            case "ArrowUp":
+                MoveGrabbedBy(0, -1);
+                break;
+            case "ArrowDown":
+                MoveGrabbedBy(0, 1);
+                break;
+            case "Escape":
+                CancelGrab();
+                break;
+            default:
+                return;
+        }
+
+        StateHasChanged();
+    }
+
+    private void MoveGrabbedBy(int deltaX, int deltaY)
+    {
+        if (_grabbedWidget is not { } widget) return;
+
+        widget.X = Math.Clamp(widget.X + deltaX, 0, Math.Max(0, Columns - widget.Width));
+        widget.Y = Math.Max(0, widget.Y + deltaY);
+        PushAfterGrab(widget);
+        AnnounceMove(PositionText(widget));
+    }
+
+    private void ResizeGrabbedBy(int deltaWidth, int deltaHeight)
+    {
+        if (_grabbedWidget is not { } widget) return;
+
+        var definition = WidgetRegistry?.GetWidget(widget.WidgetId);
+        var minWidth = Math.Max(1, definition?.MinWidth ?? 1);
+        var minHeight = Math.Max(1, definition?.MinHeight ?? 1);
+        // MaxWidth/MaxHeight of 0 means unlimited — the grid itself is the ceiling for the width.
+        var maxWidth = definition is { MaxWidth: > 0 } ? definition.MaxWidth : Columns;
+        var maxHeight = definition is { MaxHeight: > 0 } ? definition.MaxHeight : int.MaxValue;
+
+        widget.Width = Math.Clamp(widget.Width + deltaWidth, minWidth, Math.Min(maxWidth, Columns));
+        widget.Height = Math.Clamp(widget.Height + deltaHeight, minHeight, maxHeight);
+        // A growth at the right edge would leave the grid: pull the position back inside.
+        widget.X = Math.Clamp(widget.X, 0, Math.Max(0, Columns - widget.Width));
+        PushAfterGrab(widget);
+        AnnounceMove(PositionText(widget));
+    }
+
+    private void PushAfterGrab(WidgetInstance widget)
+    {
+        if (_currentDashboard?.Grid.AllowOverlap == false)
+        {
+            PushOverlappingWidgets(widget);
+        }
+    }
+
+    private void DropGrabbed()
+    {
+        if (_grabbedWidget is not { } widget)
+        {
+            return;
+        }
+
+        PushAfterGrab(widget);
+        ResetGrabState();
+        AnnounceMove(PositionText(widget));
+        StateHasChanged();
+    }
+
+    private void CancelGrab()
+    {
+        if (_grabbedWidget is not { } widget || _grabOriginal is not { } original)
+        {
+            ResetGrabState();
+            StateHasChanged();
+            return;
+        }
+
+        widget.X = original.X;
+        widget.Y = original.Y;
+        widget.Width = original.Width;
+        widget.Height = original.Height;
+        PushAfterGrab(widget);
+        ResetGrabState();
+        AnnounceMove(Loc["TmDashboard_MoveCancelled"] + " " + PositionText(widget));
+        StateHasChanged();
+    }
+
+    private void ResetGrabState()
+    {
+        _grabbedWidget = null;
+        _grabOriginal = null;
+    }
+
+    /// <summary>Human-readable geometry for the live region: "column 3, row 2, 4 × 3" (1-based).</summary>
+    private string PositionText(WidgetInstance widget) => string.Format(
+        Loc["TmDashboard_PositionAnnouncement"],
+        GetWidgetName(widget), widget.X + 1, widget.Y + 1, widget.Width, widget.Height);
+
+    private void AnnounceMove(string message) => _moveAnnouncement = message;
     
     private void ToggleCollapse(WidgetInstance widget)
     {
@@ -616,6 +890,8 @@ public partial class TmDashboard : IAsyncDisposable
         if (widget.IsCollapsed) classes.Add("tm-widget--collapsed");
         if (widget.IsMinimized) classes.Add("tm-widget--minimized");
         if (_isDragging && _draggedWidget == widget) classes.Add("tm-widget--dragging");
+        if (_grabbedWidget == widget) classes.Add("tm-widget--grabbed");
+        if (_highlightedInstanceId == widget.InstanceId) classes.Add("tm-widget--highlight");
         // Wider than half the desktop grid: the compact container query gives it the full row.
         if (widget.Width > Columns / 2) classes.Add("tm-widget--wide");
         return string.Join(" ", classes);
@@ -936,6 +1212,8 @@ public partial class TmDashboard : IAsyncDisposable
             catch (TaskCanceledException) { }
         }
         if (_menuNav is not null) await _menuNav.DisposeAsync();
+        _highlightCts.Cancel();
+        _highlightCts.Dispose();
         _dotNetRef?.Dispose();
     }
 }

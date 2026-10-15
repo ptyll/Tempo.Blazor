@@ -20,7 +20,7 @@
 @* A named region (F3): several dashboards on one page stay distinguishable. The h2 names it
    through aria-labelledby whenever it renders (even tm-sr-only); without a heading the resolved
    title falls back to aria-label. *@
-<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") @AppearanceClass tm-dashboard--@mode.CssModifier @Class"
+<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") @(IsCompactEditMode(mode) ? "tm-dashboard--compact-edit" : "") @AppearanceClass tm-dashboard--@mode.CssModifier @Class"
      data-layout="@mode.CssModifier"
      role="region"
      aria-labelledby="@(HasHeading ? _titleElementId : null)"
@@ -250,6 +250,11 @@
     }
 
     @* ── Grid Container ───────────────────────────────────────── *@
+    @if (_isEditMode && mode.IsDesktop)
+    {
+        @* F4: shared keyboard contract of every drag handle, referenced through aria-describedby. *@
+        <p class="tm-sr-only" id="@_dragInstructionsId">@Loc["TmDashboard_DragHandleInstructions"]</p>
+    }
     <div class="tm-dashboard-grid-container">
         <div class="tm-dashboard-grid"
              style="--grid-columns: @(_currentDashboard?.Grid.Columns ?? 12);
@@ -294,8 +299,52 @@
                         <div class="tm-widget-header-left">
                             @if (_isEditMode && CanDrag(widget, mode))
                             {
-                                <span class="tm-widget-drag-handle" title="@Loc["TmDashboard_DragToMove"]">
+                                @* F4: the drag handle is a real button — keyboard reachable, with a
+                                   grab mode (Enter/Space, arrows, Shift+arrows, Escape) announced
+                                   through the live region below. Enter/Space activate NATIVELY
+                                   (onclick — never emulated, so the onkeydown arm keeps its hands
+                                   off them); the onkeydown arm only emulates the NON-native keys
+                                   (arrows/Shift+arrows/Escape) per the container-emulation half of
+                                   docs/keyboard-activation-convention.md. Arrow keys may scroll the
+                                   page while grabbed — the widget follows the announcement, and
+                                   fencing the button would suppress the native Enter/Space click. *@
+                                <button type="button"
+                                        class="tm-widget-drag-handle"
+                                        title="@Loc["TmDashboard_DragToMove"]"
+                                        aria-label="@Loc["TmDashboard_DragToMove"]"
+                                        aria-describedby="@_dragInstructionsId"
+                                        aria-pressed="@(_grabbedWidget == widget ? "true" : "false")"
+                                        data-instance-id="@widget.InstanceId"
+                                        @onclick="() => ToggleGrab(widget)"
+                                        @onkeydown="e => HandleHandleKeyDown(e, widget)">
                                     <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
+                                </button>
+                            }
+                            @if (IsCompactEditMode(mode) && IsDraggable(widget))
+                            {
+                                @* F4 compact edit mode (tablet portrait, mobile): reorder WITHOUT
+                                    drag — Move up / Move down swap the card with its (Y, X)
+                                    neighbour. The buttons are named for the widget they act on via
+                                    aria-describedby (the title), like the collapse chevron. *@
+                                <span class="tm-widget-move-group" role="group" aria-label="@GetWidgetName(widget)">
+                                    <button type="button"
+                                            class="tm-widget-btn tm-widget-move-btn tm-widget-move-btn--up"
+                                            disabled="@(!CanMoveUp(widget))"
+                                            aria-label="@Loc["TmDashboard_MoveUp"]"
+                                            aria-describedby="@GetWidgetTitleId(widget)"
+                                            title="@Loc["TmDashboard_MoveUp"]"
+                                            @onclick="() => MoveWidgetUp(widget)">
+                                        <TmIcon Name="chevron-up" Size="IconSize.Sm" />
+                                    </button>
+                                    <button type="button"
+                                            class="tm-widget-btn tm-widget-move-btn tm-widget-move-btn--down"
+                                            disabled="@(!CanMoveDown(widget))"
+                                            aria-label="@Loc["TmDashboard_MoveDown"]"
+                                            aria-describedby="@GetWidgetTitleId(widget)"
+                                            title="@Loc["TmDashboard_MoveDown"]"
+                                            @onclick="() => MoveWidgetDown(widget)">
+                                        <TmIcon Name="chevron-down" Size="IconSize.Sm" />
+                                    </button>
                                 </span>
                             }
                             @if (ShowWidgetIcons)
@@ -417,6 +466,12 @@
                 </button>
             }
         </div>
+    }
+
+    @* ── Live region (edit mode): grabs, moves, resizes, drops and cancels ── *@
+    @if (_isEditMode)
+    {
+        <div class="tm-dashboard-live-region tm-sr-only" aria-live="polite" role="status">@_moveAnnouncement</div>
     }
 
     @* ── Mobile action bar (edit mode, mobile layout only) ────── *@

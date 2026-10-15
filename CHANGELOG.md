@@ -47,7 +47,53 @@
   when the Edit trigger left the DOM); on a mobile layout the move is skipped silently because
   the actions live in the mobile action bar.
 
+- **`TmDashboard` F4 — reordering without drag: compact edit mode and a keyboard alternative for
+  move and resize (dashboard redesign plan, phase F4; WCAG 2.1.1 / 2.5.7).**
+
+  - **Compact edit mode** (`tm-dashboard--compact-edit`, tablet portrait and mobile): the drag
+    handle and the resize handles do not render; each widget card grows **Move up / Move down**
+    icon buttons (`tm-widget-move-btn--up` / `--down`, ≥ 44 px targets, named for the widget they
+    act on through `aria-describedby` pointing at the card title) next to the existing Remove
+    button. Both moves swap the card's `(X, Y)` with its previous/next neighbour in the linear
+    `(Y, X)` order (DA2) and push overlaps when `GridConfig.AllowOverlap` is false — the
+    `WidgetInstance` model objects are reused, only their coordinates change. A freshly added
+    widget is briefly highlighted (`tm-widget--highlight`, guarded under
+    `prefers-reduced-motion`) and scrolled into view — on a 390 px layout the new card can land
+    below the fold, so `dashboard.js` gained a `tempoDashboard.scrollWidgetIntoView` helper the
+    component calls after the render that added the widget.
+  - **Keyboard grab mode (desktop)**: the drag handle (`span.tm-widget-drag-handle`) is now a
+    real `<button aria-pressed>` — Tab-reachable, with `aria-describedby` pointing at a shared
+    sr-only instruction line. Enter/Space (native activation) grab and drop; the arrow keys move
+    the grabbed widget one cell (clamped to the grid); Shift+arrow resizes one step, clamped to
+    `WidgetDefinition.MinWidth/MaxWidth/MinHeight/MaxHeight` (0 = unlimited; the grid width is
+    the width ceiling); Escape cancels and restores the pre-grab geometry. The entire move and
+    resize logic lives in C# — `dashboard.js` still supplies only raw mouse drag/resize cells.
+  - **Live announcements**: every grab, cell move, resize step, drop and cancel is announced
+    through a polite live region (`tm-dashboard-live-region`), e.g. "Widget: column 3, row 2,
+    4 × 3". New localization keys `TmDashboard_MoveUp`, `TmDashboard_MoveDown`,
+    `TmDashboard_DragHandleInstructions`, `TmDashboard_PositionAnnouncement`,
+    `TmDashboard_Grabbed` and `TmDashboard_MoveCancelled` in all four resource tables plus
+    `MockTmLocalizer`.
+
 ### Breaking / Migration
+
+- **`TmDashboard`'s drag handle is now a `<button>` (F4 keyboard alternative), not a
+  `<span>`.** The handle keeps the class `tm-widget-drag-handle` and the grip icon, but hosts
+  styling or scripting the element must account for the element change:
+
+  ```css
+  /* before (2.9.0) — handle was a span */
+  span.tm-widget-drag-handle { display: block; }
+
+  /* after (2.9.1) — handle is a button: the native reset is built in; keep host overrides on
+     the class, not on the span element selector */
+  .tm-widget-drag-handle { display: inline-flex; }
+  ```
+
+  ```js
+  // before: querySelector('span.tm-widget-drag-handle')  → null now
+  // after:  querySelector('button.tm-widget-drag-handle')
+  ```
 
 - **`TmDashboard` default appearance changed from a wrapping card to `Plain`.** The component no
   longer paints a white rounded card around itself: the root sits directly on the workspace

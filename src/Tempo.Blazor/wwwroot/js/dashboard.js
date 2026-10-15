@@ -315,6 +315,17 @@ window.tempoDashboard = {
         }
     },
 
+    // F4: a freshly added widget may land below the fold (mobile 390 px) — bring it into view
+    // so the brief highlight is actually seen. Respects prefers-reduced-motion.
+    scrollWidgetIntoView: function (element, instanceId) {
+        var widget = element.querySelector('[data-instance-id="' + instanceId + '"]');
+        if (!widget) {
+            return;
+        }
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        widget.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+    },
+
     destroy: function (element) {
         const id = element.id;
         const dashboard = this.dashboards.get(id);

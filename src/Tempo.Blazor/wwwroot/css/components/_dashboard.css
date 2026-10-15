@@ -438,18 +438,72 @@
   text-overflow: ellipsis;
 }
 
+/* F4: the handle is a real <button> — reset the native chrome, keep the grab affordance,
+   and give the keyboard focus the shared ring. */
 .tm-widget-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
   color: var(--tm-text-secondary);
   cursor: grab;
   padding: var(--tm-space-1);
   margin: calc(-1 * var(--tm-space-1));
   border-radius: var(--tm-radius-sm);
-  transition: color var(--tm-transition-fast);
+  transition: color var(--tm-transition-fast), background-color var(--tm-transition-fast);
 }
 
 .tm-widget-drag-handle:hover {
   color: var(--tm-text-primary);
   background: var(--tm-bg-muted);
+}
+
+.tm-widget-drag-handle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-widget-drag-handle[aria-pressed="true"] {
+  color: var(--tm-color-primary);
+  background: var(--tm-color-primary-subtle);
+  cursor: grabbing;
+}
+
+/* A grabbed widget paints above its siblings while the keyboard move is in progress. */
+.tm-widget--grabbed {
+  z-index: 100;
+  opacity: 0.9;
+}
+
+/* F4 compact edit mode (tablet portrait, mobile): the per-card move group. The shared
+   .tm-widget-btn grows to the 44px touch target inside the compact edit mode, whatever the
+   pointer hardware (the mobile data-layout rule already does this for every widget button). */
+.tm-dashboard--compact-edit .tm-widget-move-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin-inline-end: var(--tm-space-1);
+}
+
+.tm-dashboard--compact-edit .tm-widget-btn,
+.tm-dashboard--compact-edit .tm-widget-drag-handle {
+  min-inline-size: var(--tm-touch-target);
+  min-block-size: var(--tm-touch-target);
+}
+
+/* F4: a freshly added widget is briefly highlighted (guarded for reduced motion). */
+.tm-widget--highlight {
+  animation: tm-widget-highlight 1.5s ease-out;
+}
+
+@keyframes tm-widget-highlight {
+  0% {
+    box-shadow: 0 0 0 3px var(--tm-color-primary);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
 }
 
 .tm-widget-header-actions {
@@ -1292,8 +1346,14 @@
   .tm-widget-card-add,
   .tm-dashboard-menu-action,
   .tm-widget-btn,
+  .tm-widget-drag-handle,
   .tm-dashboard-switcher__chevron {
     transition: none;
+  }
+
+  .tm-widget--highlight {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--tm-color-primary);
   }
 }
 

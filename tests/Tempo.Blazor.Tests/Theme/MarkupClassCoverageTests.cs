@@ -132,6 +132,13 @@ public sealed class MarkupClassCoverageTests
         "tm-dod-new-folder-confirm",
         "tm-dod-rename-confirm",
         "tm-dropdown-trigger",
+        // F4 dashboard reorder: the live region is visually carried by the shared .tm-sr-only,
+        // and the compact move buttons reuse .tm-widget-btn (the compound compact-edit rules in
+        // _dashboard.css size them); the classes themselves stay intentionally rule-free.
+        "tm-dashboard-live-region",
+        "tm-widget-move-btn",
+        "tm-widget-move-btn--down",
+        "tm-widget-move-btn--up",
         "tm-entity-picker__recent-item",
         "tm-export-options-section",
         "tm-fab__item-label",
@@ -386,7 +393,9 @@ public sealed class MarkupClassCoverageTests
             // pre-existing ids ("tm-dashboard-views-", "tm-dashboard-name-", "tm-widget-content-")
             // and the three new chrome ids ("tm-dashboard-title-", "tm-widget-title-",
             // "tm-widget-desc-") — 39 → 45.
-            ExpectedUnmeasurableStems: 45),
+            // F4 dashboard reorder: the drag-handle keyboard instructions id
+            // ("tm-dashboard-drag-instructions-{Guid…}") joined the scanned population — 45 → 46.
+            ExpectedUnmeasurableStems: 46),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

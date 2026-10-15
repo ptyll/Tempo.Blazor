@@ -67,4 +67,16 @@ Sbalená karta dnes neuvolní výšku slotu — totéž F3 (F2 UX §5.10).
 `WidgetInstance.Height` se nemění, `--tm-w-rows` zůstává (dashboard.js čte Height pro náhled
 dropu). bUnit testy: `Dashboard_CollapsedWidget_ReleasesRows`,
 `Dashboard_MinimizedWidget_CarriesTheAliasClass_AndKeepsItsSlotVariables`,
-`Dashboard_Css_CollapseReleasesRows_WithoutImportant`.
+`Dashboard_Css_CollapseReleasesRows_WithoutImportant` (TmDashboardResponsiveTests).
+
+## F4+ (kompaktní edit režim)
+
+### Hlavička karty na 390 px: skupina posunu na druhý řádek (container query)
+
+Na 390 px drží hlavička karty dvě 44 px tlačítka posunu (nahoru/dolů), ikonu a tlačítko
+Odebrat — titul se zkracuje na „Active …“ (viditelné na
+`__screenshots__/dashboard/f4/mobile-390--compact-edit-after-swap.png`). Funkčně v pořádku
+(titul má ellipsis a `aria-label` tlačítek nesou význam), proto jen follow-up v pozdější fázi:
+v úzkém kontejneru (container query na kartě) zabalit skupinu `.tm-widget-move-group` na
+samostatný druhý řádek hlavičky, aby titul dostal plnou šířku. Čistě CSS změna přes tokeny,
+bez změny markupu.
