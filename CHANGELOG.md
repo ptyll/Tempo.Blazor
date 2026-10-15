@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- **`TmActivityComments`: starting an edit now closes the new-comment editor (before, it reopened
+  empty after the edit ended).** Both editors share the same draft content, so `StartEdit` now
+  clears `_showEditor` — only one draft can be open at a time — and the cancel paths
+  (`CancelEdit`/`CancelEditor`) reset `_editorOriginalContent` together with the rest of the
+  editor state, so no stale edit baseline survives between drafts.
+
 - **Six `TmDiagramEditor_*` toolbar keys ship in English instead of raw key names, and the
   `Tm_Time_TimeFormat` clock-format resource exists in all four languages.** `TmDiagramEditor`
   used `TmDiagramEditor_ShowGrid` / `HideGrid` / `ShowPageView` / `HidePageView` / `EnableSnap` /

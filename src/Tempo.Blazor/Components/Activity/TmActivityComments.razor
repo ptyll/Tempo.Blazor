@@ -148,6 +148,13 @@
     private string? _editingCommentId;
     private string _editorContent = string.Empty;
 
+    /// <summary>
+    /// Body of the comment as it was when its edit started — the baseline for the
+    /// differs-from-original semantics of <see cref="TmCommentDraftState.HasUnsavedContent"/>
+    /// on the edit path (opening an edit without changes is not an unsaved draft).
+    /// </summary>
+    private string _editorOriginalContent = string.Empty;
+
     /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
     private TmCommentDraftState _lastDraftState = new(false, null, false);
 
@@ -197,6 +204,7 @@
     private async Task ShowEditor()
     {
         _editorContent = string.Empty;
+        _editorOriginalContent = string.Empty;
         _showEditor = true;
         await NotifyDraftChangedAsync();
     }
@@ -205,25 +213,35 @@
     {
         _showEditor = false;
         _editorContent = string.Empty;
+        _editorOriginalContent = string.Empty;
         await NotifyDraftChangedAsync();
     }
 
-    private void StartEdit(TmCommentEntry comment)
+    private async Task StartEdit(TmCommentEntry comment)
     {
+        // Only one draft at a time: both editors share _editorContent, so a new-comment
+        // draft must not survive starting an edit of an existing comment.
+        _showEditor = false;
         _editingCommentId = comment.Id;
         _editorContent = comment.Body;
+        _editorOriginalContent = comment.Body;
+        await NotifyDraftChangedAsync();
     }
 
-    private void CancelEdit()
+    private async Task CancelEdit()
     {
         _editingCommentId = null;
         _editorContent = string.Empty;
+        _editorOriginalContent = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
     private async Task SubmitNewCommentAsync()
     {
         if (string.IsNullOrWhiteSpace(_editorContent)) return;
         await OnCommentAdded.InvokeAsync(_editorContent);
+        // Closes through the shared CancelEditor, which emits the closed-editor state
+        // exactly once.
         await CancelEditor();
     }
 
@@ -231,8 +249,9 @@
     {
         if (string.IsNullOrWhiteSpace(_editorContent)) return;
         await OnCommentEdited.InvokeAsync((commentId, _editorContent));
-        _editingCommentId = null;
-        _editorContent = string.Empty;
+        // Closes through the shared CancelEdit so the closed-editor state is reported
+        // exactly once — a successful submit must clear the consumer's dirty flag.
+        await CancelEdit();
     }
 
     private async Task DeleteCommentAsync(string commentId)

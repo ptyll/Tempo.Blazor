@@ -183,6 +183,127 @@ public class TmActivityCommentsTests : LocalizationTestBase
         cut.FindAll(".tm-comment-editor").Should().BeEmpty();
     }
 
+    [Fact]
+    public void Comments_OnDraftChanged_FiresWhenEditStarts()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+
+        states.Should().HaveCount(1);
+        states[0].IsEditorOpen.Should().BeTrue();
+        states[0].EditingCommentId.Should().Be("c1");
+        // Opening an edit without changing anything is NOT an unsaved draft yet.
+        states[0].HasUnsavedContent.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Comments_OnDraftChanged_FiresWhenEditCancelled()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        cut.Find(".tm-comment-cancel-btn").Click();
+
+        states.Should().HaveCount(2);
+        states[1].IsEditorOpen.Should().BeFalse();
+        states[1].EditingCommentId.Should().BeNull();
+        states[1].HasUnsavedContent.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Comments_StartEdit_ClosesNewCommentEditor()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        cut.Find(".tm-comment-cancel-btn").Click();
+
+        cut.FindAll(".tm-comment-editor").Should().BeEmpty();
+        cut.FindAll(".tm-comments-add-btn").Should().NotBeEmpty();
+        states.Should().NotBeEmpty();
+        states[^1].Should().Be(new TmCommentDraftState(false, null, false));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_ResetsAfterSubmittingNewComment()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTest("<p>Draft text</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        // The full sequence must be exactly open → closed: the last state must carry the closed
+        // editor, otherwise the consumer keeps a stale dirty flag after a successful submit.
+        states.Should().Equal(
+            new TmCommentDraftState(true, null, false),
+            new TmCommentDraftState(false, null, false));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_ResetsAfterSubmittingEdit()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTest("<p>First comment edited</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        // The full sequence must be exactly open("c1") → closed.
+        states.Should().Equal(
+            new TmCommentDraftState(true, "c1", false),
+            new TmCommentDraftState(false, null, false));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_EmitsNoDuplicateStates()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        // New-comment flow: open → type → submit.
+        cut.Find(".tm-comments-add-btn").Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTest("<p>Draft text</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        // Edit flow: start → type → submit.
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTest("<p>First comment edited</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        states.Should().NotBeEmpty();
+        for (var i = 1; i < states.Count; i++)
+        {
+            states[i].Should().NotBe(states[i - 1],
+                "OnDraftChanged fires only when the draft state value actually changes");
+        }
+    }
+
     private static TmCommentEntry Comment(
         string id,
         string authorName,
