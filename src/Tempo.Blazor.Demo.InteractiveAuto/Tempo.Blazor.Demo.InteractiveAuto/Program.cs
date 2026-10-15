@@ -133,6 +133,18 @@ builder.Services.AddTempoFluentValidation(typeof(PersonFormValidator).Assembly);
 
 var app = builder.Build();
 
+// The demo's default language is English — the neutral culture of both resource tables
+// (TmResources and DemoResources). Without an explicit default, .NET seeds request threads from the
+// ambient OS culture, so a machine whose regional format is not English (e.g. cs-CZ) prerenders (and
+// serves through the initial interactive-server leg) every string in that language, and E2E results
+// depend on the machine running the host (docs/e2e-test-lanes.md pins LANG=en_US.UTF-8 on Linux for
+// exactly this reason; Windows has no per-process equivalent). The WebAssembly leg is unaffected: it
+// picks its culture in the browser (localStorage preference → navigator language) via the Client
+// Program.cs.
+var demoDefaultCulture = new System.Globalization.CultureInfo("en");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = demoDefaultCulture;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = demoDefaultCulture;
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

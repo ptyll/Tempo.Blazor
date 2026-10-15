@@ -130,27 +130,42 @@ builder.Services.AddTempoFluentValidation(typeof(PersonFormValidator).Assembly);
 
 var app = builder.Build();
 
+// The demo's default language is English — the neutral culture of both resource tables
+// (TmResources and DemoResources). Without an explicit default, .NET seeds request threads from the
+// ambient OS culture, so a machine whose regional format is not English (e.g. cs-CZ) renders every
+// server-side string in that language and E2E results depend on the machine running the host
+// (docs/e2e-test-lanes.md pins LANG=en_US.UTF-8 on Linux for exactly this reason; Windows has no
+// per-process equivalent). Pin English here; the cookie below still overrides it per user.
+var demoDefaultCulture = new System.Globalization.CultureInfo("en");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = demoDefaultCulture;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = demoDefaultCulture;
+
 // The WASM demo reads the persisted culture from localStorage; a server host cannot see it, so
-// LanguageSwitcher also writes a tm-demo-culture cookie. Apply it here (single-user demo — setting
-// the process defaults is fine) so the Server leg honours the language switch too.
+// LanguageSwitcher also writes a tm-demo-culture cookie. Apply the cookie choice here — or, when a
+// request carries no cookie, converge back to the English default. (Single-user demo, so setting
+// the process defaults is fine — but "no preference" must mean the default again: leaving the last
+// switch stuck process-wide made every later cookie-less request render in the previous visitor's
+// language, which turned server-side E2E results into a function of test order.)
 app.Use(async (context, next) =>
 {
+    System.Globalization.CultureInfo applied = demoDefaultCulture;
     if (context.Request.Cookies.TryGetValue("tm-demo-culture", out var cultureName)
         && !string.IsNullOrWhiteSpace(cultureName))
     {
         try
         {
-            var culture = new System.Globalization.CultureInfo(cultureName);
-            System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
-            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
-            System.Globalization.CultureInfo.CurrentCulture = culture;
-            System.Globalization.CultureInfo.CurrentUICulture = culture;
+            applied = new System.Globalization.CultureInfo(cultureName);
         }
         catch (System.Globalization.CultureNotFoundException)
         {
             // Unknown cookie value — keep the default culture.
         }
     }
+
+    System.Globalization.CultureInfo.DefaultThreadCurrentCulture = applied;
+    System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = applied;
+    System.Globalization.CultureInfo.CurrentCulture = applied;
+    System.Globalization.CultureInfo.CurrentUICulture = applied;
 
     await next();
 });
