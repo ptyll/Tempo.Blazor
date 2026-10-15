@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Immutable snapshot of the unsaved-draft state in TmChat (composer, thread reply, message edit). Consumers build a dirty-guard from it (confirmation before a reload or navigation discards an in-progress message). Carries state flags only — never the draft text itself; the text is delivered in OnSendMessage/OnSend/OnEditMessage on commit. HasUnsavedContent aggregates the slots; for an open message edit it means the text differs from the message as it was when the edit started.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmChatDraftState.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmChatDraftState"
+}

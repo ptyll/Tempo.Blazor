@@ -5,10 +5,11 @@ using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Models;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Helpers;
+using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.UI;
 
-public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
+public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmDraftGuard
 {
     private const string CurrentUserId = "demo";
 
@@ -32,6 +33,32 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
 
     [Parameter] public EventCallback<string> OnMentionClicked { get; set; }
 
+    /// <summary>
+    /// Notifies the parent that the comment draft state changed. Fires ONLY when the
+    /// <see cref="TmNotionCommentDraftState"/> value actually changes (value-equality dedup),
+    /// never on every keystroke — the record carries flags only, and repeated identical states
+    /// are suppressed so parents are not re-rendered while the user types. Members:
+    /// <see cref="TmNotionCommentDraftState.HasNewCommentDraft"/>,
+    /// <see cref="TmNotionCommentDraftState.HasThreadReplyDraft"/>,
+    /// <see cref="TmNotionCommentDraftState.HasInlineReplyDraft"/>,
+    /// <see cref="TmNotionCommentDraftState.EditingEntryId"/> and the aggregate
+    /// <see cref="TmNotionCommentDraftState.HasUnsavedContent"/>.
+    /// <para>
+    /// None of the panel's composer texts is observable through a parameter — this callback is
+    /// the only push channel; pair it with <see cref="HasUnsavedDraft"/> for polling and
+    /// <see cref="DiscardDraftAsync"/> for the actual discard after the consumer's own
+    /// confirmation.
+    /// </para>
+    /// <para>
+    /// Semantics that mirror <c>TmActivityComments</c>: opening an entry edit reports the editing
+    /// id immediately but <see cref="TmNotionCommentDraftState.HasUnsavedContent"/> stays
+    /// <see langword="false"/> until the edit text differs from the entry body as it was when the
+    /// edit started; the inline reply's auto-inserted quote is likewise not user content and does
+    /// not raise the flag until the user types beyond (or changes) it.
+    /// </para>
+    /// </summary>
+    [Parameter] public EventCallback<TmNotionCommentDraftState> OnDraftChanged { get; set; }
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     private IReadOnlyList<TmCommentThread> _comments      = [];
@@ -53,6 +80,15 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
     private string? _replyingToEntryId;
     private string _inlineReplyText = string.Empty;
     private TmCommentThread? _inlineReplyComment;
+
+    /// <summary>Body of the entry as it was when its edit started — the differs-from-original baseline for the edit slot.</summary>
+    private string _editOriginalText = string.Empty;
+
+    /// <summary>Quote auto-inserted when the inline reply opened — content up to this baseline is not user input.</summary>
+    private string _inlineReplyBaseline = string.Empty;
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmNotionCommentDraftState _lastDraftState = new(false, false, false, null, false);
 
     private bool   _initialized;
     private ElementReference _panelRef;
@@ -93,6 +129,102 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
     {
         _dotNetRef?.Dispose();
         try { JS.InvokeVoidAsync("tmNotionEditor.destroyMentionClickHandler", _panelRef); } catch { }
+    }
+
+    // ── Draft guard ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Whether the panel currently holds an unsaved comment draft in ANY composer — new comment,
+    /// thread reply, inline reply (beyond its auto-inserted quote) or an entry edit whose text
+    /// differs from the entry body as it was when the edit started. The SAME value carried by the
+    /// <see cref="TmNotionCommentDraftState.HasUnsavedContent"/> flag that
+    /// <see cref="OnDraftChanged"/> reports. Read live from the current composer state (not from
+    /// the last notification), so consumers can poll it at any time, for example before a page
+    /// navigation that would silently discard the draft.
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Closes the open composers (thread reply, inline reply, entry edit) and clears every draft
+    /// text, including the new-comment input. Intended for the consumer AFTER the user confirmed
+    /// the discard in the consumer's OWN confirmation dialog — the component never shows a
+    /// confirmation itself; that is deliberately the consumer's responsibility. Typical flow:
+    /// <see cref="HasUnsavedDraft"/> reports a draft, the consumer asks, and on confirmation calls
+    /// this method so the next navigation does not ask again.
+    /// <para>
+    /// When no draft exists the call is a no-op — the state does not change and the
+    /// value-equality dedup suppresses any <see cref="OnDraftChanged"/> notification.
+    /// Safe to call from outside the render cycle; the reset, re-render and notification are
+    /// dispatched through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            _newCommentText       = string.Empty;
+            _replyingToCommentId  = null;
+            _replyText            = string.Empty;
+            _replyingToEntryId    = null;
+            _inlineReplyComment   = null;
+            _inlineReplyText      = string.Empty;
+            _inlineReplyBaseline  = string.Empty;
+            _editingEntryId       = null;
+            _editText             = string.Empty;
+            _editOriginalText     = string.Empty;
+            StateHasChanged();
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>Plain-text empty check for the draft flags (the panel's inputs are plain text, not HTML).</summary>
+    private static bool IsEffectivelyEmpty(string? text) => string.IsNullOrWhiteSpace(text);
+
+    /// <summary>
+    /// Builds the current draft snapshot. The new-comment and inline-reply slots report
+    /// not-whitespace-only text (the inline reply only beyond the auto-inserted quote); the
+    /// thread-reply slot counts only while the reply is open (<c>_replyingToCommentId</c> set),
+    /// so a closed reply can never report a draft; the edit slot reports the editing id as soon
+    /// as the edit is open, while <see cref="TmNotionCommentDraftState.HasUnsavedContent"/> counts
+    /// it only once the text differs from the original entry body (see the remarks on
+    /// <see cref="OnDraftChanged"/>).
+    /// </summary>
+    private TmNotionCommentDraftState BuildDraftState()
+    {
+        var hasNewCommentDraft  = IsEffectivelyEmpty(_newCommentText) is false;
+        var hasThreadReplyDraft = _replyingToCommentId is not null && IsEffectivelyEmpty(_replyText) is false;
+        var hasInlineReplyDraft = IsEffectivelyEmpty(_inlineReplyText) is false
+            && !string.Equals(_inlineReplyText, _inlineReplyBaseline, StringComparison.Ordinal);
+        var hasEditDraft        = _editingEntryId is not null
+            && !string.Equals(_editText, _editOriginalText, StringComparison.Ordinal);
+
+        return new TmNotionCommentDraftState(
+            hasNewCommentDraft,
+            hasThreadReplyDraft,
+            hasInlineReplyDraft,
+            _editingEntryId,
+            hasNewCommentDraft || hasThreadReplyDraft || hasInlineReplyDraft || hasEditDraft);
+    }
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed. The dedup
+    /// is mandatory: all four composers report content changes into this method (via the editors'
+    /// bind after-hook, i.e. per keystroke in real usage), and without the value-equality check
+    /// each keystroke would invoke the callback and re-render the parent; the record's value
+    /// equality makes the comparison cheap and exact.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
     }
 
     // ── Data ──────────────────────────────────────────────────────────────────
@@ -170,6 +302,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
                 await CommentMentionHelper.NotifyAsync(rawText, entry, comment.Id, PageId, Context.MentionProvider, NotificationOrchestrator);
 
             _newCommentText  = string.Empty;
+            await NotifyDraftChangedAsync();
         }
         catch
         {
@@ -189,16 +322,18 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
 
     // ── Reply to thread ───────────────────────────────────────────────────────
 
-    private void StartReply(TmCommentThread comment)
+    private async Task StartReply(TmCommentThread comment)
     {
         _replyingToCommentId = comment.Id;
         _replyText           = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
-    private void CancelReply()
+    private async Task CancelReply()
     {
         _replyingToCommentId = null;
         _replyText           = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
     private async Task SendReplyAsync()
@@ -226,6 +361,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
             _replyingToCommentId = null;
             _replyText           = string.Empty;
             await LoadAsync();
+            await NotifyDraftChangedAsync();
         }
         catch
         {
@@ -242,49 +378,55 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
         if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey))
             await SendReplyAsync();
         else if (e.Key == "Escape")
-            CancelInlineReply();
+            await CancelInlineReply();
     }
 
     // The edit wrap stops keydown propagation, so the edit input needs its own
     // Escape->cancel (it previously relied on the keydown bubbling up to the
     // entry handler). Plain Enter stays unhandled → native newline.
-    private void HandleEditKeyDownAsync(KeyboardEventArgs e)
+    private async Task HandleEditKeyDownAsync(KeyboardEventArgs e)
     {
         if (e.Key == "Escape")
-            CancelEdit();
+            await CancelEdit();
     }
 
     // ── Inline reply to entry ─────────────────────────────────────────────────
 
-    private void HandleEntryKeyDownAsync(KeyboardEventArgs e, TmCommentEntry entry, TmCommentThread comment)
+    private async Task HandleEntryKeyDownAsync(KeyboardEventArgs e, TmCommentEntry entry, TmCommentThread comment)
     {
         if (e.Key == "Enter" && _replyingToEntryId != entry.Id)
         {
-            StartReplyToEntry(entry, comment);
+            await StartReplyToEntry(entry, comment);
         }
         else if (e.Key == "Escape" && _replyingToEntryId == entry.Id)
         {
-            CancelInlineReply();
+            await CancelInlineReply();
         }
         else if (e.Key == "Escape" && _editingEntryId == entry.Id)
         {
-            CancelEdit();
+            await CancelEdit();
         }
     }
 
-    private void StartReplyToEntry(TmCommentEntry entry, TmCommentThread comment)
+    private async Task StartReplyToEntry(TmCommentEntry entry, TmCommentThread comment)
     {
         _replyingToEntryId  = entry.Id;
         _inlineReplyComment = comment;
         _inlineReplyText    = QuoteReply(entry);
+        // The auto-quote is a baseline, not user content: the draft flag rises only once the
+        // reply text moves beyond it.
+        _inlineReplyBaseline = _inlineReplyText;
         StateHasChanged();
+        await NotifyDraftChangedAsync();
     }
 
-    private void CancelInlineReply()
+    private async Task CancelInlineReply()
     {
-        _replyingToEntryId  = null;
-        _inlineReplyComment = null;
-        _inlineReplyText    = string.Empty;
+        _replyingToEntryId   = null;
+        _inlineReplyComment  = null;
+        _inlineReplyText     = string.Empty;
+        _inlineReplyBaseline = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
     private async Task SendInlineReplyAsync()
@@ -311,10 +453,12 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
             if (entry is not null)
                 await CommentMentionHelper.NotifyAsync(rawText, entry, _inlineReplyComment.Id, PageId, Context.MentionProvider, NotificationOrchestrator);
 
-            _replyingToEntryId  = null;
-            _inlineReplyComment = null;
-            _inlineReplyText    = string.Empty;
+            _replyingToEntryId   = null;
+            _inlineReplyComment  = null;
+            _inlineReplyText     = string.Empty;
+            _inlineReplyBaseline = string.Empty;
             await LoadAsync();
+            await NotifyDraftChangedAsync();
         }
         catch
         {
@@ -331,7 +475,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
         if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey))
             await SendInlineReplyAsync();
         else if (e.Key == "Escape")
-            CancelInlineReply();
+            await CancelInlineReply();
     }
 
     // ── Mark all as read ──────────────────────────────────────────────────────
@@ -385,17 +529,23 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
 
     // ── Edit ──────────────────────────────────────────────────────────────────
 
-    private void StartEdit(TmCommentEntry entry)
+    private async Task StartEdit(TmCommentEntry entry)
     {
-        _editingEntryId = entry.Id;
-        _editText       = StripHtml(entry.HtmlContent());
+        _editingEntryId   = entry.Id;
+        _editText         = StripHtml(entry.HtmlContent());
+        _editOriginalText = _editText;
         StateHasChanged();
+        // The edit state itself is a transition the consumer must see (editing id set), even
+        // though HasUnsavedContent is still false until the text changes.
+        await NotifyDraftChangedAsync();
     }
 
-    private void CancelEdit()
+    private async Task CancelEdit()
     {
-        _editingEntryId = null;
-        _editText       = string.Empty;
+        _editingEntryId   = null;
+        _editText         = string.Empty;
+        _editOriginalText = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
     private async Task SaveEditAsync()
@@ -413,9 +563,11 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable
                 return;
 
             await Context.CommentProvider.EditCommentAsync(thread.Id, _editingEntryId, encoded);
-            _editingEntryId = null;
-            _editText       = string.Empty;
+            _editingEntryId   = null;
+            _editText         = string.Empty;
+            _editOriginalText = string.Empty;
             await LoadAsync();
+            await NotifyDraftChangedAsync();
         }
         catch
         {

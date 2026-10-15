@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Notion Editor",
+  "namespace": "Tempo.Blazor.NotionEditor.Models",
+  "description": "Immutable snapshot of the unsaved-draft state in TmNotionPageCommentPanel (new comment, thread reply, inline reply, entry edit). Consumers build a dirty-guard from it (confirmation before a navigation discards an in-progress comment). Carries state flags only — never the draft text itself; the text reaches the comment provider on submit. HasUnsavedContent aggregates the slots; the inline reply's auto-inserted quote and an edit without changes are not user content and do not raise it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/TmNotionCommentDraftState.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmNotionCommentDraftState"
+}

@@ -2,7 +2,85 @@
 
 ## 2.9.1 (unreleased)
 
+### Added
+
+- **Draft-guard surface for every comment composer the host cannot observe — `TmChat`,
+  `TmNotionPageCommentPanel`, `TmNotionBlockCommentPanel`, `TmNotionTextCommentPanel`,
+  `TmNotionPageCommentSection`, `TmDocumentCommentComposer`, `TmDocumentCommentThread`,
+  `TmDocumentCommentRail`, `TmDocumentCommentThreadPanel` and `TmDocumentPageViewer` now expose
+  `OnDraftChanged`, `HasUnsavedDraft` and `DiscardDraftAsync`**, mirroring the additive pattern
+  `TmActivityComments` introduced earlier in 2.9.1. All of these components keep their composer
+  text in private fields (or child composers the host does not bind), so a host could never tell
+  that the user had typed a message or comment that a reload, a navigation or a panel close would
+  silently throw away. The new surface follows one contract across the family:
+
+  - `[Parameter] EventCallback<…> OnDraftChanged` fires ONLY when the draft-state record actually
+    changes (value-equality dedup with the last state assigned before invoking) — never on every
+    keystroke. Three records carry the flags (never the draft text itself), all in
+    `Tempo.Blazor.Abstractions`: **`TmChatDraftState`** (`HasComposerDraft`, `HasThreadReplyDraft`,
+    `EditingMessageId`, aggregate `HasUnsavedContent`) for `TmChat`, in the
+    `Tempo.Blazor.Models` namespace next to the other chat models; **`TmNotionCommentDraftState`**
+    (`HasNewCommentDraft`, `HasThreadReplyDraft`, `HasInlineReplyDraft`, `EditingEntryId`,
+    aggregate `HasUnsavedContent`) for the three Notion panels and the section pass-through, in
+    the `Tempo.Blazor.NotionEditor.Models` namespace next to the other Notion models; and
+    **`TmCommentDraftState`** (`IsEditorOpen`, `EditingCommentId`, `HasUnsavedContent`) for
+    `TmActivityComments` and the DocumentEditor and Signing components. All three implement
+    `ITmDraftState` (see below).
+  - `HasUnsavedDraft` polls the same aggregate flag live from the current composer state (not from
+    the last notification), for hosts that prefer polling over push.
+  - `DiscardDraftAsync` clears every draft slot (composer text, open reply, open edit) after the
+    consumer's OWN confirmation dialog — no component shows a confirmation itself; that remains
+    deliberately the consumer's responsibility. All of them dispatch through `InvokeAsync` and are
+    no-ops (no notification) when no draft exists.
+  - **`ITmDraftState`** (`HasUnsavedContent`) and **`ITmDraftGuard`** (`HasUnsavedDraft` +
+    `DiscardDraftAsync`) in `Tempo.Blazor.Abstractions.Shared` codify the contract:
+    `ITmDraftState` is implemented by all three records, `ITmDraftGuard` by every component with
+    the surface (`TmActivityComments`, `TmChat`, the three Notion panels plus
+    `TmNotionPageCommentSection`, `TmDocumentCommentComposer`, `TmDocumentCommentThread`,
+    `TmDocumentCommentRail`, `TmDocumentCommentThreadPanel` and `TmDocumentPageViewer`), so a
+    generic host page can hold `ITmDraftGuard?` / `ITmDraftState?` without caring which concrete
+    component it renders.
+
+  Per-component semantics worth knowing: `TmChat` reports the main composer, the open thread
+  panel's reply input and message edits (an edit opened without changes is NOT an unsaved draft —
+  the flag rises once the text differs from the message as it was when the edit started;
+  a thread panel that unmounts parameter-driven — its root message left `Messages` — clears its
+  slot and reports the cleared state); `DiscardDraftAsync` clears the text slots but leaves the
+  thread panel open (its visibility is the host's `ActiveThreadRootId` business). The Notion
+  panels treat the inline reply's auto-inserted quote the same way — content up to the auto-quote
+  is not user input — and hiding a panel (`Visible` → `false`) clears every draft slot and
+  reports the cleared state, so a host should check `HasUnsavedDraft` before hiding.
+  `TmNotionPageCommentSection` is a pure pass-through (`@ref` + delegation) of the embedded panel.
+  In the DocumentEditor stack the leaf `TmDocumentCommentComposer` carries the surface and both
+  hosts aggregate it: `TmDocumentCommentThread` over its reply/edit composers (each slot gated by
+  its mount condition, so a resolved thread or a withdrawn `CanComment` reports the closed, empty
+  state instead of a stale composer's text) and `TmDocumentCommentRail` over everything it
+  renders — its own new-comment composer AND every rendered `TmDocumentCommentThread`: the rail
+  merges the threads' reported states (IsEditorOpen = new composer or any thread editor,
+  EditingCommentId = the first thread's editing id, HasUnsavedContent = any slot), prunes
+  threads the host removes, and `DiscardDraftAsync` reaches all of them. In Signing,
+  `TmDocumentCommentThreadPanel` binds its reply/edit composers internally (the reply text is
+  cleared whenever the reply composer unmounts — selection change, clear selection, edit start —
+  and the aggregate counts it only while the reply composer is mounted), and
+  `TmDocumentPageViewer` aggregates its own new-thread draft panel with the embedded thread
+  panel (states flow in through the panel's OnDraftChanged callback, both contributions are
+  gated by `CommentsEnabled && CommentThreadPanelTemplate is null`, so a host-owned panel
+  template or a comment disable reports the closed state; `EditingCommentId` comes from the
+  panel; the viewer's own draft always creates a NEW thread).
+
+  Standalone editors that already expose their text through `Value`/`ValueChanged` binding —
+  `TmRichEditorFull`, `TmRichEditorSimple` and the Signing `TmCommentComposer` — deliberately stay
+  unchanged: a host that binds them already sees every character.
+
 ### Fixed
+
+- **Signing `TmDocumentCommentThreadPanel`: the reply composer is now bound internally and the
+  reply text is cleared when the thread selection changes** (no visible behaviour change
+  otherwise). The composer previously seeded from a parameter without a binding, so a reply draft
+  typed for one thread could resurface when another thread was selected; the panel now owns the
+  text and resets it whenever the reply composer unmounts — selection change, clear selection or
+  starting an edit — which also keeps the draft-guard surface honest (the reply slot counts only
+  while the reply composer is mounted).
 
 - **`TmActivityComments`: starting an edit now closes the new-comment editor (before, it reopened
   empty after the edit ended).** Both editors share the same draft content, so `StartEdit` now

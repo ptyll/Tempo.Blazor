@@ -28,4 +28,5 @@ namespace Tempo.Blazor.Abstractions.Shared;
 /// existing comment it means the content differs from the comment's original body — opening an
 /// edit without changing anything must not report an unsaved draft.
 /// </param>
-public sealed record TmCommentDraftState(bool IsEditorOpen, string? EditingCommentId, bool HasUnsavedContent);
+public sealed record TmCommentDraftState(bool IsEditorOpen, string? EditingCommentId, bool HasUnsavedContent)
+    : ITmDraftState;

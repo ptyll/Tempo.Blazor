@@ -923,6 +923,12 @@
           "description": "Callback invoked when editing a comment is requested."
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmCommentDraftState>",
+          "isRequired": false,
+          "description": "Notifies the parent that the panel's comment draft state changed. The reply and edit composers hold their text in private fields the host cannot observe through a parameter. Fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. IsEditorOpen is true while the reply composer is mounted (a thread is selected) or an edit is open; EditingCommentId carries the id of the comment under edit; HasUnsavedContent aggregates both - the reply text counts only while the reply composer is mounted, and for an edit it means the text differs from the comment body as it was when the edit started. The reply draft is cleared whenever the reply composer unmounts (selection change, clear selection, starting an edit). Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
+        },
+        {
           "name": "OnEditRequested",
           "type": "EventCallback<DocumentCommentEditRequest>",
           "isRequired": false,
@@ -1178,6 +1184,12 @@
           "type": "EventCallback<DocumentCommentThreadNavigateRequest>",
           "isRequired": false,
           "description": "Callback invoked when the comment panel requests navigation to a thread page."
+        },
+        {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmCommentDraftState>",
+          "isRequired": false,
+          "description": "Notifies the parent that the viewer's comment draft state changed. Neither the new-thread draft composer nor the embedded thread panel's reply/edit composers expose their text through a parameter, so this is the aggregate draft-guard surface: it merges the viewer's own new-thread draft with the last state the embedded TmDocumentCommentThreadPanel reported through its own OnDraftChanged callback and fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup). IsEditorOpen is true while the new-thread draft panel is open or the thread panel shows a composer; EditingCommentId carries the id of the comment under edit in the thread panel; HasUnsavedContent aggregates both. Both contributions are gated by the comment surfaces being owned AND mounted (comments enabled, no host panel template, a rendered page) - a host-owned panel template, a comment disable, or a loading/error/empty page reports the closed, empty state. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
         },
         {
           "name": "OnPageClick",

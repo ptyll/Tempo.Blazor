@@ -44,6 +44,7 @@
                   disabled="@Disabled"
                   @bind="_inputText"
                   @bind:event="oninput"
+                  @bind:after="NotifyDraftChangedAsync"
                   @onkeydown="HandleKeyDownAsync"></textarea>
         <button type="button"
                 class="tm-chat__send-btn"
@@ -86,6 +87,7 @@
                           disabled="@Disabled"
                           @bind="_threadInput"
                           @bind:event="oninput"
+                          @bind:after="NotifyDraftChangedAsync"
                           @onkeydown="HandleThreadKeyDownAsync"></textarea>
                 <button type="button"
                         class="tm-chat__send-btn"
@@ -161,6 +163,7 @@
                                   data-testid="@TestId("chat-edit-input")"
                                   @bind="_editText"
                                   @bind:event="oninput"
+                                  @bind:after="NotifyDraftChangedAsync"
                                   @onkeydown="HandleEditKeyDownAsync"></textarea>
                         <div class="tm-chat__edit-actions">
                             <button type="button" class="tm-chat__edit-save" data-testid="@TestId("chat-edit-save")" @onclick="CommitEditAsync">@Loc["TmChat_Save"]</button>

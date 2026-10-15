@@ -18626,6 +18626,42 @@
       ]
     },
     {
+      "itemName": "TmChatDraftState",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "Immutable snapshot of the unsaved-draft state in TmChat (composer, thread reply, message edit). Consumers build a dirty-guard from it (confirmation before a reload or navigation discards an in-progress message). Carries state flags only — never the draft text itself; the text is delivered in OnSendMessage/OnSend/OnEditMessage on commit. HasUnsavedContent aggregates the slots; for an open message edit it means the text differs from the message as it was when the edit started.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmChatDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EditingMessageId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the message whose inline edit is open; null when no edit is in progress."
+        },
+        {
+          "name": "HasComposerDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the main composer input holds text that is not whitespace-only."
+        },
+        {
+          "name": "HasThreadReplyDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open thread panel's reply input holds text that is not whitespace-only. The input exists only while a thread panel is open; closing the panel clears its reply draft."
+        },
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Aggregate draft flag: true when any slot holds content that would be lost on discard. For the two composer slots that means text that is not whitespace-only; for an open message edit it means the edit text differs from the message text as it was when the edit started — opening an edit without changing anything must not report an unsaved draft."
+        }
+      ]
+    },
+    {
       "itemName": "TmCommentProviderPdfAnnotationAdapter",
       "kind": "Class",
       "category": "Models",
@@ -26455,6 +26491,48 @@
       ]
     },
     {
+      "itemName": "TmNotionCommentDraftState",
+      "kind": "Record",
+      "category": "Notion Editor",
+      "namespace": "Tempo.Blazor.NotionEditor.Models",
+      "description": "Immutable snapshot of the unsaved-draft state in TmNotionPageCommentPanel (new comment, thread reply, inline reply, entry edit). Consumers build a dirty-guard from it (confirmation before a navigation discards an in-progress comment). Carries state flags only — never the draft text itself; the text reaches the comment provider on submit. HasUnsavedContent aggregates the slots; the inline reply's auto-inserted quote and an edit without changes are not user content and do not raise it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/TmNotionCommentDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EditingEntryId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the comment entry whose inline edit is open; null when no edit is in progress."
+        },
+        {
+          "name": "HasInlineReplyDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open inline reply holds user content beyond the quote the panel auto-inserts when the reply opens — the auto-generated quote alone is not user content and must not report an unsaved draft."
+        },
+        {
+          "name": "HasNewCommentDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the new-comment input holds text that is not whitespace-only."
+        },
+        {
+          "name": "HasThreadReplyDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open thread reply input holds text that is not whitespace-only."
+        },
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Aggregate draft flag: true when any slot holds content that would be lost on discard. For the composer slots that means user content beyond effectively-empty text (and, for the inline reply, beyond the auto-inserted quote); for an open entry edit it means the edit text differs from the entry body as it was when the edit started — opening an edit without changing anything must not report an unsaved draft."
+        }
+      ]
+    },
+    {
       "itemName": "TodoBlockContent",
       "kind": "Class",
       "category": "Notion Editor",
@@ -28043,6 +28121,48 @@
           "name": "CommitDraftsAsync",
           "type": "Task<TmFileCommitResult> CommitDraftsAsync(TmEntityRef entityRef, IReadOnlyList<string> assetIds, CancellationToken cancellationToken = default)",
           "description": "Commits draft assets that are now referenced by the saved entity."
+        }
+      ]
+    },
+    {
+      "itemName": "ITmDraftGuard",
+      "kind": "Interface",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmNotionPageCommentSection, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftGuard.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "HasUnsavedDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the component currently holds an unsaved draft that a reload, a navigation or a panel close would silently discard. The same aggregate value OnDraftChanged reports; read it on the component's dispatcher (an event handler or InvokeAsync) from background threads."
+        },
+        {
+          "name": "DiscardDraftAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Clears every draft slot (composer texts, open replies, open edits). A no-op — without any OnDraftChanged notification — when no editor is open and no draft exists. Call it AFTER the user confirmed the discard in the consumer's own confirmation dialog."
+        }
+      ]
+    },
+    {
+      "itemName": "ITmDraftState",
+      "kind": "Interface",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Aggregate dirty flag shared by every draft-state record the library reports through an OnDraftChanged parameter (TmCommentDraftState, TmChatDraftState, TmNotionCommentDraftState). Lets a consumer read the one dirty decision — 'would a reload, a navigation or a panel close throw something away?' — without caring which concrete record a component reports. The draft text itself is never carried; it reaches the consumer through the component's submit callbacks on commit.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether any draft slot currently holds content that would be lost on discard. Always false before the first user input; for an open edit it means the edited text differs from the original as it was when the edit started."
         }
       ]
     },
@@ -37145,11 +37265,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1484,
-    "manualItemCount": 1484,
-    "generatedItemCount": 1467,
+    "itemCount": 1488,
+    "manualItemCount": 1488,
+    "generatedItemCount": 1471,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1467
+    "publicApiTypeCount": 1471
   }
 }

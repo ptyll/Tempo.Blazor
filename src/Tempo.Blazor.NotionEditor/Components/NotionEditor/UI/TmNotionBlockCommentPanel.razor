@@ -312,6 +312,7 @@
                                             <TmCommentMentionInput Class="tm-nbcp__edit-input"
                                                                    Rows="3"
                                                                    @bind-Value="_editText"
+                                                                   @bind-Value:after="NotifyDraftChangedAsync"
                                                                    OnKeyDown="HandleEditKeyDownAsync"
                                                                    AriaLabel="@Loc["TmNotionBlockComment_EditLabel"]"
                                                                    MentionProvider="Context.MentionProvider" />
@@ -398,6 +399,7 @@
                                                                    Rows="2"
                                                                    Placeholder="@Loc["TmNotionBlockComment_ReplyPlaceholder"]"
                                                                    @bind-Value="_inlineReplyText"
+                                                                   @bind-Value:after="NotifyDraftChangedAsync"
                                                                    OnKeyDown="HandleInlineReplyKeyDownAsync"
                                                                    AriaLabel="@Loc["TmNotionBlockComment_ReplyLabel"]"
                                                                    MentionProvider="Context.MentionProvider" />
@@ -438,6 +440,7 @@
                                            Rows="2"
                                            Placeholder="@Loc[_isCreatingNewThread ? "TmNotionBlockComment_NewPlaceholder" : "TmNotionBlockComment_ReplyPlaceholder"]"
                                            @bind-Value="_replyText"
+                                           @bind-Value:after="NotifyDraftChangedAsync"
                                            OnKeyDown="HandleReplyKeyDownAsync"
                                            AriaLabel="@Loc["TmNotionBlockComment_ReplyLabel"]"
                                            MentionProvider="Context.MentionProvider" />

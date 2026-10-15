@@ -161,6 +161,7 @@
                                                         <TmCommentMentionInput Class="tm-npcp__edit-input"
                                                                                Rows="3"
                                                                                @bind-Value="_editText"
+                                                                               @bind-Value:after="NotifyDraftChangedAsync"
                                                                                OnKeyDown="HandleEditKeyDownAsync"
                                                                                AriaLabel="@Loc["TmNotionPageComment_EditLabel"]"
                                                                                MentionProvider="Context.MentionProvider" />
@@ -238,6 +239,7 @@
                                                                                Rows="2"
                                                                                Placeholder="@Loc["TmNotionPageComment_ReplyPlaceholder"]"
                                                                                @bind-Value="_inlineReplyText"
+                                                                               @bind-Value:after="NotifyDraftChangedAsync"
                                                                                OnKeyDown="HandleInlineReplyKeyDownAsync"
                                                                                AriaLabel="@Loc["TmNotionPageComment_ReplyLabel"]"
                                                                                MentionProvider="Context.MentionProvider" />
@@ -275,6 +277,7 @@
                                                                Rows="2"
                                                                Placeholder="@Loc["TmNotionPageComment_ReplyPlaceholder"]"
                                                                @bind-Value="_replyText"
+                                                               @bind-Value:after="NotifyDraftChangedAsync"
                                                                OnKeyDown="HandleReplyKeyDownAsync"
                                                                AriaLabel="@Loc["TmNotionPageComment_ReplyLabel"]"
                                                                MentionProvider="Context.MentionProvider" />
@@ -317,6 +320,7 @@
                                            Rows="2"
                                            Placeholder="@Loc["TmNotionPageComment_NewPlaceholder"]"
                                            @bind-Value="_newCommentText"
+                                           @bind-Value:after="NotifyDraftChangedAsync"
                                            OnKeyDown="HandleNewKeyDownAsync"
                                            AriaLabel="@Loc["TmNotionPageComment_NewLabel"]"
                                            MentionProvider="Context.MentionProvider" />

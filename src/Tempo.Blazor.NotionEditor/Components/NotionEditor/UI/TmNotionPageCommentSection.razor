@@ -2,9 +2,11 @@
 
 <section class="tm-npcs"
          aria-label="@Loc["Notion_PageComments_Title"]">
-    <TmNotionPageCommentPanel PageId="@PageId"
+    <TmNotionPageCommentPanel @ref="_panel"
+                              PageId="@PageId"
                               Expanded="Expanded"
                               OnExpandedChanged="OnExpandedChanged"
                               OnCountChanged="OnCountChanged"
-                              OnMentionClicked="OnMentionClicked" />
+                              OnMentionClicked="OnMentionClicked"
+                              OnDraftChanged="OnDraftChanged" />
 </section>

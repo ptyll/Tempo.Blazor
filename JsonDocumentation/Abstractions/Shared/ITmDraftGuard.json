@@ -1,0 +1,24 @@
+{
+  "kind": "Interface",
+  "category": "Shared",
+  "namespace": "Tempo.Blazor.Abstractions.Shared",
+  "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmNotionPageCommentSection, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftGuard.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "HasUnsavedDraft",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the component currently holds an unsaved draft that a reload, a navigation or a panel close would silently discard. The same aggregate value OnDraftChanged reports; read it on the component's dispatcher (an event handler or InvokeAsync) from background threads."
+    },
+    {
+      "name": "DiscardDraftAsync",
+      "kind": "Method",
+      "type": "Task",
+      "description": "Clears every draft slot (composer texts, open replies, open edits). A no-op — without any OnDraftChanged notification — when no editor is open and no draft exists. Call it AFTER the user confirmed the discard in the consumer's own confirmation dialog."
+    }
+  ],
+  "itemName": "ITmDraftGuard"
+}
