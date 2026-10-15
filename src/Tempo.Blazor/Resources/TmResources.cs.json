@@ -831,6 +831,8 @@
   "TmDashboard_Expand": "Rozbalit",
   "TmDashboard_MyDashboards": "Moje nástěnky",
   "TmDashboard_NamePlaceholder": "Pojmenujte nástěnku",
+  "TmDashboard_NameExample": "např. Týmový přehled",
+  "TmDashboard_DefaultCannotDelete": "Výchozí nástěnku nelze smazat.",
   "TmDashboard_NewDashboardName": "Nová nástěnka",
   "TmDashboard_NoWidgets": "Zatím žádné widgety",
   "TmDashboard_RenameDashboard": "Přejmenovat nástěnku",

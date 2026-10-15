@@ -4,6 +4,35 @@
 
 ### Added
 
+- **`TmDashboard` Fáze 7 — dialogs and the dashboard switcher on mobile (dashboard redesign
+  plan, phase 7), riding the F2/F3 foundation primitives.**
+
+  - The dashboard switcher menu (a `TmOverlayPanel`, the `TmDropdown` pattern) switched from
+    `MobilePresentation=Popover` to `MobilePresentation=Auto`: it stays the anchored popover on
+    desktop/tablet and presents as a bottom sheet titled with the localized "Dashboards" on a
+    phone. Focus returns to the switcher trigger on every close path (Done, Escape, backdrop).
+  - The delete-dashboard confirmation passes `TmDialog.Icon="trash-2"` (the destructive glyph)
+    and keeps `MobilePresentation=Auto` + `FooterLayout=Stacked`, so on the mobile sheet Delete
+    paints above Cancel (column-reverse) with ≥ 44 px targets.
+  - The switcher menu's default-dashboard row now explains WHY it cannot be deleted: a muted
+    full-width hint line (`span.tm-dashboard-menu-default-hint`, localized) under the "Default"
+    label instead of only the star marker. The hint is the row's LAST child (outside the inline
+    actions span, with `flex-wrap: wrap` on the row), so it wraps under the name instead of
+    squeezing it to zero width, and the select `menuitem` references it via `aria-describedby`
+    so screen readers moving through `role=menu` hear it. The 48px coarse-pointer footer
+    target uses `var(--tm-space-12)` instead of a raw `3rem`.
+  - New localization keys `TmDashboard_NameExample` ("e.g. Team overview" / "např. Týmový
+    přehled" / "napr. Tímový prehľad" / "p. ex. Vue d'équipe") and `TmDashboard_DefaultCannotDelete`
+    in all four resource tables plus `MockTmLocalizer`.
+  - The create dialog's name placeholder is now a concrete example (`TmDashboard_NameExample`)
+    instead of a repeat of the field label; its Cancel button is the outlined secondary variant
+    (foundation footer convention: Cancel secondary, Create primary; the sheet splits the inline
+    footer 50/50 with ≥ 48 px targets). The rename inline edit keeps the original
+    `TmDashboard_NamePlaceholder` key.
+  - New CSS class `tm-dashboard-menu-default-hint` in `_dashboard.css` (tokens only); the CSS
+    bundle was regenerated. The scoped 48px footer rule registers the deliberate
+    `.tm-btn _dashboard.css|_modal.css` pair in `UnconstrainedClassOwnershipTests`.
+
 - **`TmDashboard` F2 chrome redesign — the dashboard is redesigned around the reference
   `dashboard--desktop.png`, and every part of that redesign is parameterized** (dashboard
   redesign plan, phase F2). New parameters, all additive:

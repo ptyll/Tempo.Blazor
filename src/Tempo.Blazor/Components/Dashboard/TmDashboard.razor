@@ -125,7 +125,9 @@
                                and native per-row action buttons — Enter/Space activate natively,
                                exactly once per press (docs/keyboard-activation-convention.md).
                                Align=Start + MatchAnchorWidth: the trigger now sits on the LEFT of
-                               the header and the menu at least spans it. *@
+                               the header and the menu at least spans it. MobilePresentation=Auto
+                               (F3): the anchored popover on desktop/tablet, a bottom sheet with
+                               the "Dashboards" title on a phone. *@
                             <TmOverlayPanel Anchor="_dashboardsButton"
                                             IsOpen="_showDashboardMenu"
                                             IsOpenChanged="SetDashboardMenuOpen"
@@ -136,7 +138,7 @@
                                             Role="menu"
                                             AriaLabelledBy="@_dashboardsButtonId"
                                             Title="@Loc["TmDashboard_Dashboards"]"
-                                            MobilePresentation="PanelPresentation.Popover"
+                                            MobilePresentation="PanelPresentation.Auto"
                                             Class="tm-dashboard-menu">
                                 <div class="tm-dashboard-menu-header" role="presentation">
                                     <span>@Loc["TmDashboard_MyDashboards"]</span>
@@ -151,6 +153,7 @@
                                         <button type="button" role="menuitem" tabindex="-1"
                                                 class="tm-dashboard-menu-item__select"
                                                 aria-current="@(isCurrent ? "true" : null)"
+                                                aria-describedby="@(dash.IsDefault ? $"{_dashboardsButtonId}-default-hint" : null)"
                                                 @onclick="() => LoadDashboard(dash.Id)">
                                             <TmIcon Name="layout" Size="IconSize.Sm" />
                                             <span>@dash.Name</span>
@@ -158,9 +161,10 @@
                                         <span class="tm-dashboard-menu-actions" role="presentation">
                                             @if (dash.IsDefault)
                                             {
-                                                @* A visible text label replaces the bare starred
-                                                   icon: the meaning ("default") is readable, not a
-                                                   role="img" workaround. *@
+                                                @* A visible text label marks the default dashboard:
+                                                   the meaning ("default") is readable and the
+                                                   absence of delete is explained by the hint row
+                                                   below, not just a bare starred icon (Fáze 7). *@
                                                 <span class="tm-dashboard-menu-default">
                                                     <TmIcon Name="star" Size="IconSize.Sm" />
                                                     @Loc["TmDashboard_Default"]
@@ -190,6 +194,18 @@
                                                 </button>
                                             }
                                         </span>
+                                        @if (dash.IsDefault)
+                                        {
+                                            @* The hint is the LAST child of the row, not a child
+                                               of the inline actions span: inside the actions it
+                                               competes for the row width and squeezes the name to
+                                               zero (ellipsised away). As a full-width second line
+                                               it wraps under the name — and aria-describedby on
+                                               the select button links it to the menuitem so
+                                               screen readers hear it (Fáze 7). *@
+                                            <span class="tm-dashboard-menu-default-hint"
+                                                  id="@($"{_dashboardsButtonId}-default-hint")">@Loc["TmDashboard_DefaultCannotDelete"]</span>
+                                        }
                                     </div>
                                 }
                                 <div class="tm-dashboard-menu-divider" role="separator"></div>
@@ -503,7 +519,8 @@
          InitialFocusTargetId="@_newDashboardNameId"
          ShowFooter="true"
          ShowDefaultFooterButtons="false"
-         MobilePresentation="MobilePresentation.Auto">
+         MobilePresentation="MobilePresentation.Auto"
+         Class="tm-dashboard-create-modal">
     <ChildContent>
         @* The form is the Enter-to-create contract: implicit submission runs the same handler as
            the footer button (docs/keyboard-activation-convention.md — no emulated Enter on the input). *@
@@ -512,12 +529,14 @@
                 <TmTextInput Id="@_newDashboardNameId"
                              @bind-Value="_newDashboardName"
                              AutoFocus="true"
-                             Placeholder="@Loc["TmDashboard_NamePlaceholder"]" />
+                             Placeholder="@Loc["TmDashboard_NameExample"]" />
             </TmFormField>
         </form>
     </ChildContent>
     <Footer>
-        <TmButton Variant="ButtonVariant.Ghost" OnClick="CancelNewDashboard">@Loc["Tm_Cancel"]</TmButton>
+        @* Footer convention of the F2 foundation: Cancel secondary/outlined, Create primary —
+           the sheet presentation splits the inline footer 50/50 with ≥48px touch targets. *@
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelNewDashboard">@Loc["Tm_Cancel"]</TmButton>
         <TmButton Variant="ButtonVariant.Primary"
                   OnClick="ConfirmCreateDashboard"
                   Disabled="string.IsNullOrWhiteSpace(_newDashboardName)">@Loc["Tm_Create"]</TmButton>
@@ -536,6 +555,7 @@
           OkButtonText="@Loc["Tm_Delete"]"
           CancelButtonText="@Loc["Tm_Cancel"]"
           IsDangerous="true"
+          Icon="@IconNames.Trash2"
           MobilePresentation="MobilePresentation.Auto"
           FooterLayout="FooterLayout.Stacked" />
 </LayoutContent>

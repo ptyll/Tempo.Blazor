@@ -827,6 +827,8 @@
   "TmDashboard_Expand": "Expand",
   "TmDashboard_MyDashboards": "My Dashboards",
   "TmDashboard_NamePlaceholder": "Name your dashboard",
+  "TmDashboard_NameExample": "e.g. Team overview",
+  "TmDashboard_DefaultCannotDelete": "The default dashboard cannot be deleted.",
   "TmDashboard_NewDashboardName": "New dashboard",
   "TmDashboard_NoWidgets": "No widgets yet",
   "TmDashboard_RenameDashboard": "Rename dashboard",

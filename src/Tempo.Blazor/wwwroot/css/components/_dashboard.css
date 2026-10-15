@@ -1062,6 +1062,7 @@
    activation lives on the native buttons. */
 .tm-dashboard-menu-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--tm-space-2);
@@ -1162,6 +1163,29 @@
   font-weight: var(--tm-font-weight-medium);
   color: var(--tm-text-secondary);
   white-space: nowrap;
+}
+
+/* Fáze 7: the create dialog's footer buttons are 50/50 with full 48px touch targets on a
+   coarse pointer (the sheet splits the inline foundation footer). */
+@media (pointer: coarse) {
+  .tm-dashboard-create-modal .tm-modal-footer .tm-btn {
+    min-height: var(--tm-space-12);
+  }
+}
+
+/* Fáze 7: the default row explains WHY there is no delete control — a muted full-width line
+   under the "Default" label, readable instead of a bare star. The hint is the row's last
+   child (outside the actions span) so it cannot squeeze the dashboard name away; the left
+   padding lines it up under the name, past the select button's padding and its icon
+   (--tm-space-4 == the 1rem sm-icon box). */
+.tm-dashboard-menu-default-hint {
+  flex-basis: 100%;
+  padding: 0 var(--tm-space-3) var(--tm-space-2)
+    calc(var(--tm-space-3) + var(--tm-space-2) + var(--tm-space-4));
+  white-space: normal;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-normal);
+  color: var(--tm-text-muted);
 }
 
 .tm-dashboard-menu-divider {

@@ -829,6 +829,8 @@
   "TmDashboard_Expand": "Développer",
   "TmDashboard_MyDashboards": "Mes tableaux de bord",
   "TmDashboard_NamePlaceholder": "Nommez votre tableau de bord",
+  "TmDashboard_NameExample": "p. ex. Vue d'équipe",
+  "TmDashboard_DefaultCannotDelete": "Le tableau de bord par défaut ne peut pas être supprimé.",
   "TmDashboard_NewDashboardName": "Nouveau tableau de bord",
   "TmDashboard_NoWidgets": "Aucun widget pour le moment",
   "TmDashboard_RenameDashboard": "Renommer le tableau de bord",

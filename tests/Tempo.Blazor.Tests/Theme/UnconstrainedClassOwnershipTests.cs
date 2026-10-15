@@ -203,6 +203,12 @@ public class UnconstrainedClassOwnershipTests
         // loads after _button.css by design, and the footer rule is a strictly narrower context
         // (.tm-modal--sheet footer), which is the whole opt-in (decision F2-BTN-LABEL-SPAN).
         ".tm-btn-label Tempo.Blazor/_button.css|Tempo.Blazor/_modal.css",
+
+        // Fáze 7 (dashboard redesign): the create dialog's footer buttons opt into 48px touch
+        // targets on a coarse pointer — _dashboard.css scopes the min-height bump to the
+        // .tm-dashboard-create-modal sheet, which is strictly narrower than _modal.css's own
+        // .tm-modal-footer .tm-btn floor, so the manifest order decides nothing new.
+        ".tm-btn Tempo.Blazor/_dashboard.css|Tempo.Blazor/_modal.css",
     ];
 
     [Fact]

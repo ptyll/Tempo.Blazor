@@ -831,6 +831,8 @@
   "TmDashboard_Expand": "Rozbaliť",
   "TmDashboard_MyDashboards": "Moje nástenky",
   "TmDashboard_NamePlaceholder": "Pomenujte nástenku",
+  "TmDashboard_NameExample": "napr. Tímový prehľad",
+  "TmDashboard_DefaultCannotDelete": "Predvolenú nástenku nie je možné odstrániť.",
   "TmDashboard_NewDashboardName": "Nová nástenka",
   "TmDashboard_NoWidgets": "Zatiaľ žiadne widgety",
   "TmDashboard_RenameDashboard": "Premenovať nástenku",

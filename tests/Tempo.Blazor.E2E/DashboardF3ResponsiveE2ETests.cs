@@ -147,16 +147,21 @@ public sealed class DashboardF3ResponsiveE2ETests : WasmTestBase
         var page = await OpenDashboardAsync(320, 844, culture: "fr");
         AssertNoHorizontalScroll(page);
 
-        // The switcher popover (18rem min-width) must clamp inside the 320px viewport.
+        // Fáze 7: MobilePresentation=Auto — at 320px the switcher presents as a bottom sheet
+        // (full-viewport width, anchored to the bottom), which replaces the clamped popover.
         await page.Locator(".tm-dashboard-switcher").ClickAsync();
-        var menu = page.Locator(".tm-dashboard-menu").First;
-        await menu.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
-        var box = await menu.BoundingBoxAsync();
-        Assert.IsNotNull(box, "the switcher menu rendered");
+        var sheet = page.Locator(".tm-overlay-panel-sheet").First;
+        await sheet.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var box = await sheet.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the switcher sheet rendered");
         Assert.IsTrue(box.X >= 0 && box.X + box.Width <= 320,
-            $"the open menu ({box.X:0}..{box.X + box.Width:0}) must stay inside the 320px viewport");
+            $"the open sheet ({box.X:0}..{box.X + box.Width:0}) must stay inside the 320px viewport");
+        Assert.AreEqual(320, box.X + box.Width, 1, "the sheet spans the full viewport width");
 
-        await page.Locator("body").ClickAsync(new LocatorClickOptions { Position = new Position { X = 10, Y = 300 } });
+        await page.Locator(".tm-overlay-panel-sheet__done").First.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement && document.activeElement.classList.contains('tm-dashboard-switcher')",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
         await ShotAsync(page, "mobile-320-fr--view");
     }
 
