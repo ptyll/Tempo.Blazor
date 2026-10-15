@@ -1235,11 +1235,12 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks.",
+      "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/TmActivityComments.razor",
       "documentationStatus": "merged",
       "requiredImports": [
+        "@using Tempo.Blazor.Abstractions.Shared",
         "@using Tempo.Blazor.Components.Activity"
       ],
       "parameters": [
@@ -1268,7 +1269,7 @@
           "name": "OnDraftChanged",
           "type": "EventCallback<TmCommentDraftState>",
           "isRequired": false,
-          "description": "Fires when the comment draft state changes (editor opened/closed, edited comment changed) — value-equality deduped, so it does NOT fire on every keystroke. Consumers use TmCommentDraftState to build a dirty-guard before discarding an in-progress comment; the record carries flags only, never the draft text."
+          "description": "Fires whenever the TmCommentDraftState value changes — editor opened/closed, the edited comment changed, or HasUnsavedContent flipped (e.g. first character typed, edit reverted to the original). Value-equality deduped, so it does NOT fire on every keystroke. Consumers use TmCommentDraftState to build a dirty-guard before discarding an in-progress comment; the record carries flags only, never the draft text."
         },
         {
           "name": "ShowAddButton",
@@ -1298,6 +1299,11 @@
         {
           "title": "Comment section with add/edit/delete",
           "code": "<TmActivityComments Comments=\"@comments\"\n                     OnCommentAdded=\"HandleAdd\"\n                     OnCommentDeleted=\"HandleDelete\"\n                     OnCommentEdited=\"HandleEdit\"\n                     ShowAddButton=\"true\" />"
+        },
+        {
+          "title": "Dirty-guard from OnDraftChanged before a page refresh",
+          "description": "The record carries flags only — never the draft text. Dedup guarantees the callback does not fire on every keystroke.",
+          "code": "<TmActivityComments Comments=\"@comments\"\n                     OnCommentAdded=\"HandleAdd\"\n                     OnCommentDeleted=\"HandleDelete\"\n                     OnCommentEdited=\"HandleEdit\"\n                     OnDraftChanged=\"HandleDraftChanged\" />\n\n@code {\n    private TmCommentDraftState _draft = new(false, null, false);\n\n    private void HandleDraftChanged(TmCommentDraftState state) => _draft = state;\n\n    private async Task ReloadAsync()\n    {\n        // Dirty-guard: ask before a refresh would throw the in-progress comment away.\n        // For an edit, HasUnsavedContent means the body differs from the original;\n        // for a new comment, that the content is not empty.\n        if (_draft.HasUnsavedContent && !await ConfirmDiscardDraftAsync())\n        {\n            return;\n        }\n\n        comments = await api.GetCommentsAsync();\n    }\n}"
         },
         {
           "title": "Discarding an unsaved comment draft via @ref",

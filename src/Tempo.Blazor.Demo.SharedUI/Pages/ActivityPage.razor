@@ -46,6 +46,54 @@
     </div>
 </section>
 
+<!-- Activity Comments (standalone + draft guard) -->
+<section class="demo-section" data-testid="activity-comments-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Activity Comments</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">Standalone · Draft guard</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        Standalone comment thread with live draft tracking (local data, no API needed).
+        The panel below mirrors what a host page sees through <code>OnDraftChanged</code> —
+        the flags a dirty-guard needs before a refresh or retry throws an in-progress comment away.
+        "Discard draft" demonstrates the consumer path once the user confirmed the discard
+        (<code>DiscardDraftAsync</code> via <code>@@ref</code>; the component itself never asks).
+    </p>
+
+    <div class="max-w-3xl">
+        <div id="activity-comments-draft-state-panel"
+             class="mb-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300"
+             data-testid="activity-comments-draft-state"
+             role="status" aria-live="polite">
+            <span class="font-medium">Draft state:</span>
+            <span class="sr-only">@DraftStateSummary</span>
+            <span class="ml-2 font-mono" aria-hidden="true">editor-open=<span data-testid="activity-comments-draft-open">@FormatDraftFlag(_draftState.IsEditorOpen)</span></span>
+            <span class="ml-3 font-mono" aria-hidden="true">editing=<span data-testid="activity-comments-draft-editing">@(_draftState.EditingCommentId ?? "none")</span></span>
+            <span class="ml-3 font-mono" aria-hidden="true">unsaved=<span data-testid="activity-comments-draft-unsaved">@FormatDraftFlag(_draftState.HasUnsavedContent)</span></span>
+        </div>
+
+        <div class="mb-4">
+            <TmButton Variant="ButtonVariant.Outline"
+                      Size="ButtonSize.Sm"
+                      Disabled="@(!_draftState.IsEditorOpen)"
+                      OnClick="DiscardStandaloneDraft"
+                      aria-describedby="activity-comments-draft-state-panel"
+                      data-testid="activity-comments-discard-draft">
+                Discard draft
+            </TmButton>
+        </div>
+
+        <div class="showcase-card">
+            <TmActivityComments @ref="_commentsComponent"
+                                Comments="@_standaloneComments"
+                                OnCommentAdded="@AddStandaloneComment"
+                                OnCommentEdited="@EditStandaloneComment"
+                                OnCommentDeleted="@DeleteStandaloneComment"
+                                OnDraftChanged="@HandleDraftChanged" />
+        </div>
+    </div>
+</section>
+
 <!-- Activity Timeline -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -227,6 +275,109 @@
         string? PlainContent,
         bool IsInternal,
         IReadOnlyDictionary<string, string>? Metadata = null) : ITimelineEntry;
+
+    // Activity Comments standalone demo — local data on purpose, so the draft-guard
+    // demonstration works even when Demo.Api is not running.
+    private List<TmCommentEntry> _standaloneComments = BuildStandaloneComments();
+    private TmCommentDraftState _draftState = new(false, null, false);
+    private TmActivityComments? _commentsComponent;
+    private int _standaloneCommentSeq = 4;
+    private const string DemoCurrentUserId = "demo-user-you";
+
+    private static List<TmCommentEntry> BuildStandaloneComments() =>
+    [
+        new TmCommentEntry
+        {
+            Id = "demo-c1",
+            ThreadId = "demo-comments",
+            Author = new TmUserRef { Id = "alice", DisplayName = "Alice Nguyen" },
+            Body = "Confirmed the outage window with the provider — <strong>22:00–23:30 UTC</strong>.",
+            BodyFormat = TmCommentBodyFormat.Html,
+            CreatedAt = DateTimeOffset.Now.AddHours(-3),
+            EditedAt = DateTimeOffset.Now.AddHours(-2),
+            CanEdit = true,
+            CanDelete = true
+        },
+        new TmCommentEntry
+        {
+            Id = "demo-c2",
+            ThreadId = "demo-comments",
+            Author = new TmUserRef { Id = "bob", DisplayName = "Bob Carter" },
+            Body = "Status page updated and subscribers notified at 21:45.",
+            CreatedAt = DateTimeOffset.Now.AddMinutes(-90),
+            CanEdit = false,
+            CanDelete = true
+        },
+        new TmCommentEntry
+        {
+            Id = "demo-c3",
+            ThreadId = "demo-comments",
+            Author = new TmUserRef { Id = "carol", DisplayName = "Carol Diaz" },
+            Body = "Read-only viewer — this comment exposes no edit or delete action.",
+            CreatedAt = DateTimeOffset.Now.AddMinutes(-30)
+        }
+    ];
+
+    /// <summary>Plain-language summary for screen readers; mirrors the machine flags hidden next to it.</summary>
+    private string DraftStateSummary => _draftState switch
+    {
+        { HasUnsavedContent: true } => "Unsaved comment draft present.",
+        { IsEditorOpen: true } => "Comment editor open, no unsaved changes.",
+        _ => "No comment draft."
+    };
+
+    private static string FormatDraftFlag(bool value) => value ? "yes" : "no";
+
+    private Task HandleDraftChanged(TmCommentDraftState state)
+    {
+        _draftState = state;
+        return Task.CompletedTask;
+    }
+
+    private Task DiscardStandaloneDraft()
+    {
+        // Consumer flow after the user confirmed the discard in the host's own dialog:
+        // the demo skips the dialog and discards straight away (no-op when nothing is open).
+        return _commentsComponent?.DiscardDraftAsync() ?? Task.CompletedTask;
+    }
+
+    private Task AddStandaloneComment(string html)
+    {
+        _standaloneComments.Add(new TmCommentEntry
+        {
+            Id = $"demo-c{_standaloneCommentSeq++}",
+            ThreadId = "demo-comments",
+            Author = new TmUserRef { Id = DemoCurrentUserId, DisplayName = "You (demo viewer)" },
+            Body = html,
+            BodyFormat = TmCommentBodyFormat.Html,
+            CreatedAt = DateTimeOffset.Now,
+            CanEdit = true,
+            CanDelete = true
+        });
+        return Task.CompletedTask;
+    }
+
+    private Task EditStandaloneComment((string Id, string Html) edited)
+    {
+        var comment = _standaloneComments.FirstOrDefault(c => c.Id == edited.Id);
+        if (comment is not null)
+        {
+            comment.Body = edited.Html;
+            comment.BodyFormat = TmCommentBodyFormat.Html;
+            comment.EditedAt = DateTimeOffset.Now;
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task DeleteStandaloneComment(string id)
+    {
+        var comment = _standaloneComments.FirstOrDefault(c => c.Id == id);
+        if (comment is not null)
+        {
+            _standaloneComments.Remove(comment);
+        }
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnInitializedAsync()
     {
