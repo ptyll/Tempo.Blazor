@@ -7377,6 +7377,8 @@
         "tm-dashboard--mobile",
         "tm-dashboard-layout",
         "tm-dashboard-toolbar",
+        "tm-dashboard-toolbar--with-actions",
+        "tm-dashboard-toolbar--with-heading",
         "tm-dashboard-toolbar-left",
         "tm-dashboard-toolbar-right",
         "tm-dashboard-header-start",

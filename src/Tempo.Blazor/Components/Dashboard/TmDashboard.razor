@@ -17,8 +17,14 @@
 
 <TmLayoutObserver LayoutMode="LayoutMode" InitialMode="InitialMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false" Class="tm-dashboard-layout">
 <LayoutContent Context="mode">
+@* A named region (F3): several dashboards on one page stay distinguishable. The h2 names it
+   through aria-labelledby whenever it renders (even tm-sr-only); without a heading the resolved
+   title falls back to aria-label. *@
 <div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") @AppearanceClass tm-dashboard--@mode.CssModifier @Class"
      data-layout="@mode.CssModifier"
+     role="region"
+     aria-labelledby="@(HasHeading ? _titleElementId : null)"
+     aria-label="@(HasHeading ? null : HeaderTitle)"
      @ref="_dashboardElement">
     
     @* ── Toolbar ─────────────────────────────────────────────── *@
@@ -27,7 +33,7 @@
        state's CTA even with the header hidden). *@
     @if (ShowHeader || _isEditMode)
     {
-    <div class="tm-dashboard-toolbar">
+    <div class="tm-dashboard-toolbar @ToolbarModifiers">
         <div class="tm-dashboard-toolbar-left">
             @if (HeaderStart is not null)
             {
@@ -262,11 +268,17 @@
             }
             
             @* Widgets ───────────────────────────────────────────── *@
-            @{ var order = BuildOrder(); }
-            @foreach (var widget in _widgets)
+            @{
+                // One sort per render drives both the DOM order below and the --tm-w-order values:
+                // Tab and the screen reader follow the visual (Y, X) order in every mode (F3, M-2).
+                // Positions change only at drop/resize end, which re-render right after — so no DOM
+                // node moves under an active pointer, and @key preserves focus and child state.
+                var (orderedWidgets, widgetOrder) = WidgetLayout();
+            }
+            @foreach (var widget in orderedWidgets)
             {
                 <div class="tm-widget @GetWidgetClasses(widget)"
-                     style="@GetWidgetStyles(widget, order)"
+                     style="@GetWidgetStyles(widget, widgetOrder)"
                      @key="widget.InstanceId"
                      data-instance-id="@widget.InstanceId">
                     

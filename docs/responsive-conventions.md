@@ -159,10 +159,22 @@ that frame has no measurement yet.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid
-becomes two columns. A widget wider than half the desktop grid spans the full tablet row. Forcing
-`LayoutMode` restacks the grid, because the grid reads `data-layout`. Drag and resize are desktop
-only. The placement variables (`--tm-w-x`, `--tm-w-span`, `--tm-w-span-md`, `--tm-w-y`,
-`--tm-w-rows`, `--tm-w-order`) are scoped to `TmDashboard`; another component does not read them.
+becomes two columns — the query measures the **grid container** (`container-type` ancestor), which
+is ~48px narrower than the dashboard root because of its padding, so the six-to-two switch sits at
+about 816px of root width. A widget wider than half the desktop grid spans the full tablet row. The
+DOM renders in the visual (row, then column) order in every mode (`--tm-w-order` carries the same
+value), so Tab and screen readers match the eye. A collapsed or minimized card shrinks to its
+header: desktop keeps the saved slot reserved, tablet and mobile release the height
+(`grid-row: auto; min-height: auto`), and tablet/mobile rows are content-driven
+(`grid-auto-rows: auto`) with the card's desktop slot height as `min-height`
+(`--tm-w-min-block`, inner gaps included). The view-mode header stacks on tablet (switcher row,
+title row) and mobile (title row, switcher + Edit row) whenever a visible heading renders — the
+C#-emitted `tm-dashboard-toolbar--with-heading` / `--with-actions` modifier classes decide; the
+sr-only heading and `ShowTitle=false` keep the single row. The root is a named `role="region"`.
+Drag and resize are desktop only. On a mobile layout the header controls meet `--tm-touch-target`
+regardless of the pointer hardware. The placement variables (`--tm-w-x`, `--tm-w-span`,
+`--tm-w-span-md`, `--tm-w-y`, `--tm-w-rows`, `--tm-w-order`, `--tm-w-min-block`) are scoped to
+`TmDashboard`; another component does not read them.
 
 ## Touch
 

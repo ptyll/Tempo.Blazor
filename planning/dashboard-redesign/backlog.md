@@ -48,6 +48,11 @@ neodkazuje (F2 UX §6.3 to doporučuje). Ve F3 přidat kořeni `role="region"` +
 `aria-labelledby="@_titleElementId"` (jedna oblast na stránku; ověřit dopad na testy, které
 hledají roli/strukturu kořene, a na vnořené dashboardy).
 
+**Hotovo (F3, 2.9.1):** kořen nese `role="region"` a `aria-labelledby="@_titleElementId"`,
+když se h2 vykresluje (i jako `tm-sr-only`); bez nadpisu (ShowTitle=false ve view, ShowHeader=false)
+přebírá `aria-label="@HeaderTitle"`. bUnit testy: `Dashboard_Root_IsRegionLabelledByTitle`
+(TmDashboardResponsiveTests).
+
 ### Sbalení widgetu: `!important` → `--tm-w-rows`
 
 `.tm-widget--minimized { grid-row: span 1 !important; }` (`_dashboard.css`) bije do inline
@@ -55,3 +60,11 @@ hledají roli/strukturu kořene, a na vnořené dashboardy).
 přepsat na var pravidlo (např. `grid-row: span var(--tm-w-rows-collapsed, 1)` nebo podmíněné
 neposílání `--tm-w-rows`), aby `!important` zmizelo a mřížka zůstala řízená proměnnými.
 Sbalená karta dnes neuvolní výšku slotu — totéž F3 (F2 UX §5.10).
+
+**Hotovo (F3, 2.9.1):** `!important` pravidlo zmizelo; `IsMinimized` je layoutový alias sbalení
+(M-7) — na desktopu karta zůstane ve slotu `Y / span H` a zmenší se na hlavičku
+(`align-self: start; min-height: auto`), na tabletu/mobilu navíc `grid-row: auto` uvolní výšku.
+`WidgetInstance.Height` se nemění, `--tm-w-rows` zůstává (dashboard.js čte Height pro náhled
+dropu). bUnit testy: `Dashboard_CollapsedWidget_ReleasesRows`,
+`Dashboard_MinimizedWidget_CarriesTheAliasClass_AndKeepsItsSlotVariables`,
+`Dashboard_Css_CollapseReleasesRows_WithoutImportant`.

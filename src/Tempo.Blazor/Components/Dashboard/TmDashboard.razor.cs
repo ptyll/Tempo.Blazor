@@ -173,6 +173,33 @@ public partial class TmDashboard : IAsyncDisposable
     /// <summary>Root class of the Appearance parameter: Card wraps the dashboard in a surface card.</summary>
     private string AppearanceClass => Appearance == DashboardAppearance.Card ? "tm-dashboard--framed" : "";
 
+    /// <summary>
+    /// Whether the h2 heading renders: the toolbar renders (ShowHeader, or edit mode) and the
+    /// heading renders with it (ShowTitle, or edit mode, where it names the rename target). The
+    /// root region reads its accessible name from the heading through <c>aria-labelledby</c> when
+    /// this is true, and from <see cref="HeaderTitle"/> through <c>aria-label</c> otherwise.
+    /// </summary>
+    private bool HasHeading => (ShowHeader || _isEditMode) && (ShowTitle || _isEditMode) && !(_isEditMode && _isEditingName);
+
+    /// <summary>
+    /// F3 toolbar modifiers, computed in C# (never <c>:has()</c>): <c>tm-dashboard-toolbar--with-heading</c>
+    /// when a VISIBLE heading renders in view mode (the sr-only name and <c>ShowTitle=false</c> keep
+    /// the single-row header — an empty stacked row would only add row-gap), and
+    /// <c>tm-dashboard-toolbar--with-actions</c> when host <see cref="HeaderActions"/> render. Edit
+    /// mode emits neither: its header is the desktop flex-wrap row in every layout.
+    /// </summary>
+    private string ToolbarModifiers
+    {
+        get
+        {
+            if (_isEditMode) return "";
+            var withHeading = ShowTitle && !(Title is null && DashboardProvider is not null);
+            return (withHeading ? "tm-dashboard-toolbar--with-heading" : "")
+                   + (withHeading && HeaderActions is not null ? " " : "")
+                   + (HeaderActions is not null ? "tm-dashboard-toolbar--with-actions" : "");
+        }
+    }
+
     // DA3: a dashboard created in the dialog is unsaved until "Save changes" — cancelling the edit
     // brings the previous dashboard back instead of leaving an empty unnamed dashboard behind.
     private DashboardConfig? _dashboardBeforeCreate;
@@ -608,13 +635,26 @@ public partial class TmDashboard : IAsyncDisposable
         return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-span-md: {spanMd}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {position}; z-index: {widget.ZIndex};";
     }
 
-    /// <summary>1-based visual order, row then column, built once per render from the widgets as they are now.</summary>
-    private Dictionary<string, int> BuildOrder() => _widgets
-        .OrderBy(widget => widget.Y)
-        .ThenBy(widget => widget.X)
-        .ThenBy(widget => widget.InstanceId, StringComparer.Ordinal)
-        .Select((widget, index) => (widget.InstanceId, index + 1))
-        .ToDictionary(item => item.InstanceId, item => item.Item2, StringComparer.Ordinal);
+    /// <summary>
+    /// One sort per render: the widgets in (Y, X, InstanceId) order with their 1-based order index.
+    /// The grid renders in this order (F3, M-2 — Tab and screen readers follow the visual row-then-
+    /// column order in every mode) and <see cref="GetWidgetStyles"/> emits the same value as
+    /// <c>--tm-w-order</c>. Positions change only at a drop (<see cref="OnGridPositionChanged"/>) and
+    /// at a resize end (<see cref="OnWidgetResized"/>) — both re-render right after — so no DOM node
+    /// ever moves under an active pointer.
+    /// </summary>
+    private (List<WidgetInstance> Widgets, Dictionary<string, int> Order) WidgetLayout()
+    {
+        var sorted = _widgets
+            .OrderBy(widget => widget.Y)
+            .ThenBy(widget => widget.X)
+            .ThenBy(widget => widget.InstanceId, StringComparer.Ordinal)
+            .ToList();
+        var order = sorted
+            .Select((widget, index) => (widget.InstanceId, Index: index + 1))
+            .ToDictionary(item => item.InstanceId, item => item.Index, StringComparer.Ordinal);
+        return (sorted, order);
+    }
     
     private string GetWidgetName(WidgetInstance widget)
     {

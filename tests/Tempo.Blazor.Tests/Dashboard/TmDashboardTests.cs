@@ -243,10 +243,11 @@ public class TmDashboardTests : LocalizationTestBase
 
     #region 5. Mobile Stacking (A1)
 
-    // The desktop grid places widgets via inline `grid-column: X / span W` emitted by
-    // GetWidgetStyles. A plain `@media { .tm-dashboard-grid { grid-template-columns: 1fr } }`
-    // cannot stack them because the inline grid-column wins. The mobile rule must therefore
-    // override the widget placement itself with `grid-column: 1 / -1 !important`.
+    // The grid places widgets through the inline `--tm-w-*` variables emitted by GetWidgetStyles —
+    // never a literal grid-column, which would beat every container query. The compact modes
+    // restack through the `[data-layout]` attribute rules in _dashboard.css (mobile one column,
+    // tablet six, two inside tablet below 768px of container); placement stays variable-driven,
+    // so no `!important` is involved anywhere (F3 removed the last one).
 
     [Fact]
     public void Dashboard_Css_ContainerQuery_StacksByContainerWidth_NotViewport()

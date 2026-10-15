@@ -164,8 +164,12 @@
 
 .tm-dashboard[data-layout="mobile"] {
   padding: var(--tm-space-3);
+  /* F3: the header-to-grid gap follows the mobile padding — the desktop space-6 read as a
+     hole under the stacked header. */
+  gap: var(--tm-space-4);
 }
 
+/* Mobile wraps in every header shape (stacked, and the one-row no-heading flex). */
 .tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar,
 .tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-left,
 .tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-right {
@@ -173,8 +177,29 @@
   min-width: 0;
 }
 
-.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-right {
-  flex-basis: 100%;
+/* No visible heading (sr-only h2 or ShowTitle=false): one row — the switcher takes the free
+   space and the Edit button stays beside it; with host actions the right group wraps. The
+   stacked variants are the grid rules at the end of the file. */
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-left {
+  flex: 1 1 0;
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-views {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The F2 select-like width floor (14rem–20rem) is a desktop/tablet rule: at 320px the switcher
+   must share its row with the Edit button. */
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-switcher {
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+
+/* Mobile title steps down to xl: the reference reads ~20px and long names survive 320px. */
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-title {
+  font-size: var(--tm-font-size-xl);
 }
 
 /* Edit mode on mobile: the edit actions move into the component-scoped mobile action bar
@@ -182,6 +207,33 @@
    toolbar (the Edit entry point). */
 .tm-dashboard[data-layout="mobile"].tm-dashboard--edit .tm-dashboard-toolbar-right {
   display: none;
+}
+
+/* Mobile cards (F3 §3.3): the tighter header/content padding of the 1-column reference. */
+.tm-dashboard[data-layout="mobile"] .tm-widget-header {
+  padding: var(--tm-space-4);
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-widget-content {
+  padding: 0 var(--tm-space-4) var(--tm-space-4);
+}
+
+/* The empty state keeps its roomy feel without the desktop space-12 at 320px. */
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-empty {
+  padding: var(--tm-space-8);
+}
+
+/* The inline rename input fills the mobile edit header instead of forcing a 150px floor
+   (the desktop/tablet keep the base min-width): no overflow at 320px. The class sits on the
+   <input> itself, so the wrapper (the form's flex child) is what flexes. */
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-name-edit .tm-input-wrapper {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-name-input {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tm-dashboard-edit-badge {
@@ -241,6 +293,14 @@
   grid-column: var(--tm-w-x, 1) / span var(--tm-w-span, 1);
   grid-row: var(--tm-w-y, auto) / span var(--tm-w-rows, 1);
   order: var(--tm-w-order, 0);
+  /* Grid items default to min-width:auto — a wide chart inside could stretch the track and
+     force a horizontal scroll on narrow hosts (F3 §3.4). */
+  min-width: 0;
+  /* F3: the desktop slot height (H rows plus the H-1 inner gaps) as a component variable. The
+     compact modes use it as the card min-height, so content never clips and the row siblings
+     keep the desktop slot height. --row-height/--grid-gap are the inline GridConfig variables
+     with their pre-existing literal fallbacks — no new literals. */
+  --tm-w-min-block: calc(var(--tm-w-rows, 1) * var(--row-height, 60px) + (var(--tm-w-rows, 1) - 1) * var(--grid-gap, 16px));
 }
 
 /* Grid Background (Edit Mode) */
@@ -303,13 +363,8 @@
   z-index: 1000;
 }
 
-.tm-widget--collapsed {
-  min-height: auto;
-}
-
-.tm-widget--minimized {
-  grid-row: span 1 !important;
-}
+/* The collapsed/minimized card sizing lives at the end of the file (F3 §5), after the mode
+   rules it must outrank. */
 
 /* Widget Header — transparent (F2): no grey band, no underline; the drag cursor only exists in
    edit mode, where dragging is actually possible. */
@@ -321,11 +376,13 @@
   padding: var(--tm-space-4) var(--tm-space-5);
 }
 
-.tm-dashboard--edit .tm-widget-header {
+/* The drag cursor only exists in edit mode ON DESKTOP (F3 §7): below desktop the grid has
+   restacked and no drag exists, so a grab cursor would lie. */
+.tm-dashboard--edit[data-layout="desktop"] .tm-widget-header {
   cursor: grab;
 }
 
-.tm-dashboard--edit .tm-widget-header:active {
+.tm-dashboard--edit[data-layout="desktop"] .tm-widget-header:active {
   cursor: grabbing;
 }
 
@@ -1011,10 +1068,6 @@
   .tm-widget-selector-grid {
     grid-template-columns: 1fr;
   }
-
-  .tm-dashboard-name-input {
-    min-width: 150px;
-  }
 }
 
 /* Structural layout follows data-layout, which Blazor renders from the resolved mode. A container
@@ -1022,11 +1075,15 @@
    two columns. The query styles the grid, which is a descendant of the container. */
 .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  /* F3 (M-3): content-driven rows like mobile — the fixed span-H rows clipped narrower cards.
+     A row keeps its tallest sibling through the default align-items: stretch. */
+  grid-auto-rows: auto;
 }
 
 .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget {
   grid-column: auto / span var(--tm-w-span-md, 3);
-  grid-row: auto / span var(--tm-w-rows, 1);
+  grid-row: auto;
+  min-height: var(--tm-w-min-block);
 }
 
 .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget--wide {
@@ -1056,7 +1113,130 @@
 .tm-dashboard[data-layout="mobile"] .tm-dashboard-grid .tm-widget--wide {
   grid-column: 1 / -1;
   grid-row: auto;
-  min-height: calc(var(--tm-w-rows, 1) * var(--row-height, 60px));
+  /* M-9: the desktop slot height, inner gaps included — one definition for both compact modes. */
+  min-height: var(--tm-w-min-block);
+}
+
+/* ── F3: stacked header, view mode with a visible heading (§2) ─────────────
+   The toolbar becomes a 3-track grid: the wrapper divs promote their children through
+   display:contents (a plain div carries no role — a11y-safe), and the C#-computed modifier
+   classes decide whether the stacking applies at all. Tablet: row 1 = HeaderStart | switcher,
+   row 2 = title + subtitle | actions. Mobile: row 1 = HeaderStart | title, row 2 = switcher |
+   Edit (row 3 = actions when host actions render). Margins replace column-gap so a missing
+   HeaderStart leaves no phantom offset. */
+.tm-dashboard[data-layout="tablet"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading,
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 0;
+  row-gap: var(--tm-space-4);
+  align-items: center;
+}
+
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading {
+  row-gap: var(--tm-space-3);
+}
+
+.tm-dashboard[data-layout="tablet"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-toolbar-left,
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-toolbar-left {
+  display: contents;
+}
+
+.tm-dashboard[data-layout="tablet"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-header-start {
+  grid-row: 1;
+  grid-column: 1;
+  margin-inline-end: var(--tm-space-3);
+}
+
+.tm-dashboard[data-layout="tablet"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-views {
+  grid-row: 1;
+  grid-column: 2 / -1;
+  justify-self: start;
+}
+
+.tm-dashboard[data-layout="tablet"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-heading {
+  grid-row: 2;
+  grid-column: 1 / 3;
+  min-width: 0;
+}
+
+.tm-dashboard[data-layout="tablet"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-toolbar-right {
+  grid-row: 2;
+  grid-column: 3;
+  margin-inline-start: var(--tm-space-4);
+}
+
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-header-start {
+  grid-row: 1;
+  grid-column: 1;
+  margin-inline-end: var(--tm-space-2);
+}
+
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-heading {
+  grid-row: 1;
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-views {
+  grid-row: 2;
+  grid-column: 1 / 3;
+  min-width: 0;
+}
+
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-heading .tm-dashboard-toolbar-right {
+  grid-row: 2;
+  grid-column: 3;
+  margin-inline-start: var(--tm-space-2);
+}
+
+/* With host actions the switcher takes the full width and the right group wraps below it. */
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-actions .tm-dashboard-views {
+  grid-column: 1 / -1;
+}
+
+.tm-dashboard[data-layout="mobile"]:not(.tm-dashboard--edit) .tm-dashboard-toolbar--with-actions .tm-dashboard-toolbar-right {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-inline-start: 0;
+}
+
+/* ── F3: collapsed and minimized cards release their height (§5, M-1/M-7) ──
+   Equal specificity, placed AFTER the mode rules above so they win by order. Desktop keeps the
+   Y slot reserved (the saved layout never reflows) and only shrinks the card to its header;
+   tablet and mobile also drop the row span, so the stack closes up. IsMinimized is a layout
+   alias of collapse — the old minimized rule spanned a single row through !important and reset
+   the desktop Y as well. */
+.tm-dashboard-grid .tm-widget--collapsed,
+.tm-dashboard-grid .tm-widget--minimized {
+  align-self: start;
+  min-height: auto;
+}
+
+.tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget--collapsed,
+.tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget--minimized,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-grid .tm-widget--collapsed,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-grid .tm-widget--minimized {
+  grid-row: auto;
+  min-height: auto;
+  align-self: start;
+}
+
+/* ── F3: touch targets (§7, M-4) ───────────────────────────────────────────
+   The mobile layout gets the 44px minimum regardless of the pointer hardware — a desktop
+   window on a touch device (or an E2E at 390px) reads as a touch surface. */
+.tm-dashboard[data-layout="mobile"] .tm-widget-btn,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar .tm-btn-icon {
+  min-width: var(--tm-touch-target);
+  min-height: var(--tm-touch-target);
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-switcher,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar .tm-btn,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-empty .tm-btn {
+  min-block-size: var(--tm-touch-target);
 }
 
 /* A finger cannot aim at a 12px handle or a 24px add button, and a device without hover can
@@ -1082,6 +1262,19 @@
   .tm-widget-btn {
     min-width: var(--tm-touch-target);
     min-height: var(--tm-touch-target);
+  }
+
+  /* F3 §7: the header and the switcher menu are coarse targets too. */
+  .tm-dashboard-switcher,
+  .tm-dashboard-toolbar .tm-btn,
+  .tm-dashboard-menu-item__select,
+  .tm-dashboard-menu-item--action,
+  .tm-dashboard-empty .tm-btn {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-dashboard-toolbar .tm-btn-icon {
+    min-inline-size: var(--tm-touch-target);
   }
 }
 

@@ -107,10 +107,64 @@
   while keeping the switcher and header actions — a different concern than `ShowHeader`. Hosts
   using `ShowTitle="false"` keep working unchanged.
 
-- The dashboard switcher trigger is a select-like control (`button.tm-dashboard-switcher`)
+- **The dashboard switcher trigger is a select-like control (`button.tm-dashboard-switcher`)**
   showing the current dashboard's name instead of the word "Dashboards", with the formatted
   accessible name `TmDashboard_SwitcherAriaLabel` ("Dashboards: {0}") so the accessible name
   contains the visible text (WCAG 2.5.3).
+
+- **`TmDashboard` F3 — widget DOM order, released height after collapse, tablet/mobile header
+  and touch targets (dashboard redesign plan, phase F3).** The tablet (`data-layout="tablet"`)
+  and mobile (`data-layout="mobile"`) layouts become usable at 1024/768/390/320px:
+
+  - **Widget DOM order = visual (row, then column) order in every mode.** The grid renders its
+    widgets sorted by `(Y, X, InstanceId)` — the same key as `--tm-w-order`, which is still
+    emitted — so Tab and screen readers follow the eye (WCAG 2.4.3/1.3.2). On desktop the
+    explicit placement is unchanged; only the DOM order differs.
+  - **A collapsed or minimized card releases its height.** Desktop keeps the saved `Y` slot
+    reserved and only shrinks the card to its header; tablet and mobile also drop the row span,
+    so the stack closes up. `WidgetInstance.Height` is untouched — expanding restores the slot.
+  - **Tablet rows are content-driven**: `grid-auto-rows: auto` with the card's desktop slot
+    height as `min-height` (the new component variable `--tm-w-min-block`, inner gaps included).
+    Narrower cards no longer clip. Mobile cards use the same min-height (previously the inner
+    gaps were missing, so cards were `(H-1) × gap` shorter than their desktop slot).
+  - **The view-mode header stacks below desktop** when a visible heading renders (the new
+    C#-computed modifier classes `tm-dashboard-toolbar--with-heading` /
+    `tm-dashboard-toolbar--with-actions`): tablet puts HeaderStart + the switcher on row 1 and
+    title/subtitle + actions on row 2; mobile puts HeaderStart + title on row 1, the switcher
+    and Edit on row 2 (actions move to row 3 when `HeaderActions` renders). The sr-only heading
+    and `ShowTitle=false` keep the single-row header. On a mobile layout the switcher, the
+    header buttons and the widget chevrons meet `--tm-touch-target` (44px) regardless of the
+    pointer hardware, the switcher drops its 14–20rem width floor, and the inline rename input
+    fills the available width.
+  - **The root is a named region**: `role="region"` with `aria-labelledby` pointing at the
+    heading (visible or `tm-sr-only`), falling back to `aria-label` when no heading renders —
+    several dashboards on one page stay distinguishable.
+
+  Migration for each visible behavior change:
+
+  - **Widget DOM order.** 2.9.0 rendered widgets in the order they were added and used CSS
+    `order` to draw them correctly; Tab order and screen readers ignored that CSS. Host tests or
+    CSS selecting widgets by DOM position (`:nth-child`, sibling combinators) now see the
+    `(Y, X, InstanceId)` order instead of the insertion order — select by `data-instance-id`
+    (or another stable attribute) instead.
+  - **Collapse / minimize.** The old `tm-widget--minimized` rule forced `grid-row: span 1` via
+    `!important`, which also reset `grid-row-start` — a minimized desktop widget silently lost
+    its saved `Y` and jumped to the first free row — and no mode released a collapsed card's
+    height. Remove host overrides of `tm-widget--collapsed` / `tm-widget--minimized` sizing and
+    let the component size the card to its header (desktop keeps the slot, tablet/mobile
+    release it).
+  - **Compact-mode heights.** Host CSS that expected the fixed `span H` rows on tablet, or the
+    gap-less mobile `min-height`, must switch to overriding `--tm-w-min-block` (or
+    `--tm-w-rows` / `--row-height`) instead of the row spans.
+  - **Stacked header.** Hosts that pinned the mobile toolbar-right to its own full-width row
+    (`flex-basis: 100%`) or relied on the switcher's 14–20rem floor below desktop must drop
+    those overrides — the switcher now spans the free space and must shrink to fit 320px next
+    to the Edit button.
+  - **Root region semantics.** Host tests asserting the root has no role, or asserting the exact
+    attribute list of `.tm-dashboard`, must accept the always-named `role="region"`.
+  - **Documented (not a change):** inside tablet, the six-to-two column switch follows the grid
+    container (`@container tm-dashboard (width < 768px)`), which is ~48px narrower than the
+    dashboard root — the effective root width for the two-column step is ~816px, not 768px.
 
 - **Draft-guard surface for every comment composer the host cannot observe — `TmChat`,
   `TmNotionPageCommentPanel`, `TmNotionBlockCommentPanel`, `TmNotionTextCommentPanel`,
