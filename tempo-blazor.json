@@ -1298,6 +1298,10 @@
         {
           "title": "Comment section with add/edit/delete",
           "code": "<TmActivityComments Comments=\"@comments\"\n                     OnCommentAdded=\"HandleAdd\"\n                     OnCommentDeleted=\"HandleDelete\"\n                     OnCommentEdited=\"HandleEdit\"\n                     ShowAddButton=\"true\" />"
+        },
+        {
+          "title": "Discarding an unsaved comment draft via @ref",
+          "code": "<TmActivityComments @ref=\"_comments\"\n                     Comments=\"@comments\"\n                     OnCommentAdded=\"HandleAdd\"\n                     OnCommentDeleted=\"HandleDelete\"\n                     OnCommentEdited=\"HandleEdit\" />\n\n@code {\n    private TmActivityComments? _comments;\n\n    private async Task DiscardUnsavedDraftAsync()\n    {\n        // HasUnsavedDraft mirrors the OnDraftChanged HasUnsavedContent flag; read it on the\n        // component's dispatcher (an event handler or InvokeAsync) from background threads.\n        if (_comments is not null && _comments.HasUnsavedDraft && await Confirm())\n        {\n            await _comments.DiscardDraftAsync();\n        }\n    }\n}"
         }
       ]
     },

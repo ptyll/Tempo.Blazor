@@ -10,6 +10,15 @@
   (`CancelEdit`/`CancelEditor`) reset `_editorOriginalContent` together with the rest of the
   editor state, so no stale edit baseline survives between drafts.
 
+- **`TmActivityComments`: the Add comment button is hidden while an existing comment is being
+  edited; previously clicking it silently discarded the edit draft.** The button rendered
+  whenever no new-comment editor was open — including during an inline edit — so clicking it
+  cleared the shared `_editorContent`/`_editorOriginalContent` without opening any editor and the
+  edit draft was gone. The button is now hidden while `_editingCommentId` is set, and
+  `ShowEditor` ends any active edit first (the mirror of `StartEdit` closing the new-comment
+  editor) before opening the new-comment editor, bridging the two draft states with exactly one
+  deduped `OnDraftChanged` notification.
+
 - **Six `TmDiagramEditor_*` toolbar keys ship in English instead of raw key names, and the
   `Tm_Time_TimeFormat` clock-format resource exists in all four languages.** `TmDiagramEditor`
   used `TmDiagramEditor_ShowGrid` / `HideGrid` / `ShowPageView` / `HidePageView` / `EnableSnap` /

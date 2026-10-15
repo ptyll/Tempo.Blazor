@@ -97,7 +97,7 @@
         </ul>
     }
 
-    @if (ShowAddButton && !_showEditor)
+    @if (ShowAddButton && !_showEditor && _editingCommentId is null)
     {
         <button class="tm-btn tm-btn-outline tm-btn-sm tm-comments-add-btn"
                 type="button"
@@ -148,7 +148,10 @@
     /// share one content slot, so starting the edit replaces the new-comment content with the
     /// comment's original body. The consumer observes this as a state transition (for example
     /// <c>(true, null, true)</c> → <c>(true, "c1", false)</c>), not as a separate event — treat
-    /// any transition away from a dirty new-comment state as a discard.
+    /// any transition away from a dirty new-comment state as a discard. The inverse holds too:
+    /// while an inline edit is open the Add button is hidden, and opening the new-comment editor
+    /// by other means ends the edit and discards its content the same way (for example
+    /// <c>(true, "c1", true)</c> → <c>(true, null, false)</c>).
     /// </para>
     /// <para>
     /// The edit comparison is against the body as supplied (no HTML normalization): browser
@@ -177,6 +180,49 @@
         StateHasChanged();
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Whether the component currently holds an unsaved comment draft — the SAME value carried
+    /// by the <see cref="TmCommentDraftState.HasUnsavedContent"/> flag that
+    /// <see cref="OnDraftChanged"/> reports. Read live from the current editor state (not from
+    /// the last notification), so consumers can poll it at any time, for example before a page
+    /// refresh or retry that would silently discard the draft.
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Closes the open editor (new comment or inline edit) and clears its content. Intended for
+    /// the consumer AFTER the user confirmed the discard in the consumer's OWN confirmation
+    /// dialog — the component never shows a confirmation itself; that is deliberately the
+    /// consumer's responsibility. Typical flow: <see cref="HasUnsavedDraft"/> reports a draft,
+    /// the consumer asks, and on confirmation calls this method so the editor does not stay
+    /// open with the old text and the next reload does not ask again.
+    /// <para>
+    /// Doubles as recovery when the comment being edited was removed from <see cref="Comments"/>
+    /// by a parent refresh: the inline editor closes and the draft state resets, as if the user
+    /// had cancelled.
+    /// </para>
+    /// <para>
+    /// When nothing is open the call is a no-op — the state does not change and the
+    /// value-equality dedup suppresses any <see cref="OnDraftChanged"/> notification.
+    /// Safe to call from outside the render cycle; the reset, re-render and notification are
+    /// dispatched through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            _showEditor = false;
+            _editingCommentId = null;
+            _editorContent = string.Empty;
+            _editorOriginalContent = string.Empty;
+            StateHasChanged();
+            await NotifyDraftChangedAsync();
+        });
 
     /// <summary>Used by tests to inject content into the editor without JS.</summary>
     /// <remarks>
@@ -276,6 +322,11 @@
 
     private async Task ShowEditor()
     {
+        // Only one draft at a time — mirror of StartEdit, which closes the new-comment editor.
+        // Opening the new-comment editor during an active inline edit must END the edit first;
+        // both editors share _editorContent, so without this the edit's text would be wiped
+        // silently while the edit stayed visibly open.
+        _editingCommentId = null;
         _editorContent = string.Empty;
         _editorOriginalContent = string.Empty;
         _showEditor = true;
