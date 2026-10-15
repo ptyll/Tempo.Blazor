@@ -544,7 +544,7 @@ Key consequences:
 ## JavaScript Interop
 
 Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host pages when using the related core components:
-- `dashboard.js` — required by `TmDashboard` (drag & resize grid)
+- `dashboard.js` — required by `TmDashboard` (drag & resize grid; imports the shared `pointer-drag.js` from the same folder — no extra script tag)
 - `workflow-designer.js` — required by `TmWorkflowDesignerCanvas` (SVG drag, pan, zoom, transition creation)
 - `richEditor.js` — required by `TmRichEditorFull` / `TmRichEditorSimple` (contenteditable interop)
 - `scheduler.js` — required by `TmScheduler` (event resize; imports the shared `pointer-drag.js` from the same folder)

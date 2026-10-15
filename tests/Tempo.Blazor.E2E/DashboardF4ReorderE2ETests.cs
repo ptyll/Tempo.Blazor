@@ -30,26 +30,21 @@ public sealed class DashboardF4ReorderE2ETests : ServerTestBase
         var before = await FirstWidgetPositionAsync(page);
         Assert.AreEqual((0, 0), before, "sanity: the demo's first widget starts at (0,0)");
 
-        // Synthetic HTML5 drag through the dashboard.js contract (dragstart on the handle,
-        // dragover/drop on the grid at a far cell), then the drop commits through Blazor.
-        await page.EvaluateAsync(
-            """
-            () => {
-              const grid = document.querySelector('.tm-dashboard-grid');
-              const handle = grid.querySelector('.tm-widget-drag-handle');
-              const rect = grid.getBoundingClientRect();
-              const init = {
-                bubbles: true, cancelable: true,
-                clientX: rect.left + rect.width * 0.9,
-                clientY: rect.top + rect.height * 0.8,
-                dataTransfer: new DataTransfer(),
-              };
-              handle.dispatchEvent(new DragEvent('dragstart', init));
-              grid.dispatchEvent(new DragEvent('dragover', init));
-              grid.dispatchEvent(new DragEvent('drop', init));
-              handle.dispatchEvent(new DragEvent('dragend', init));
-            }
-            """);
+        // Fáze 5: the move gesture is pointer-drag.js now — a REAL mouse drag on the handle
+        // (Playwright's mouse dispatches pointerdown/move/up), not a synthetic HTML5 drag.
+        // The drop preview follows the pointer and the drop commits through Blazor.
+        var handle = page.Locator(".tm-widget-drag-handle").First;
+        var handleBox = await handle.BoundingBoxAsync();
+        Assert.IsNotNull(handleBox);
+        var gridBox = await page.Locator(".tm-dashboard-grid").BoundingBoxAsync();
+        Assert.IsNotNull(gridBox);
+        await page.Mouse.MoveAsync(handleBox.X + handleBox.Width / 2, handleBox.Y + handleBox.Height / 2);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(gridBox.X + gridBox.Width * 0.45), (float)(gridBox.Y + gridBox.Height * 0.4));
+        await page.Mouse.MoveAsync((float)(gridBox.X + gridBox.Width * 0.9), (float)(gridBox.Y + gridBox.Height * 0.8));
+        await page.WaitForTimeoutAsync(150);
+        await ShotAsync(page, "desktop-1440--drop-preview");
+        await page.Mouse.UpAsync();
         await page.WaitForTimeoutAsync(400);
 
         var after = await FirstWidgetPositionAsync(page);
@@ -67,7 +62,8 @@ public sealed class DashboardF4ReorderE2ETests : ServerTestBase
 
         var before = await FirstWidgetSizeAsync(page);
 
-        // dashboard.js resize: mousedown on the SE handle, move, mouseup commits via Blazor.
+        // dashboard.js resize (Fáze 5: pointer-drag.js — Playwright's mouse dispatches pointer
+        // events): press on the SE handle, move, release commits via Blazor.
         // The sibling S handle paints over the SE corner, so the hover is forced (actionability
         // would see it intercepted) — the coordinates are what matters for the drag.
         await page.Locator(".tm-widget-resize-se").First.HoverAsync(new LocatorHoverOptions

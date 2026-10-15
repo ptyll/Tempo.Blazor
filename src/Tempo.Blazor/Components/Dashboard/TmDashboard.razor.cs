@@ -138,10 +138,6 @@ public partial class TmDashboard : IAsyncDisposable
     private bool _isEditMode;
     private bool _showWidgetSelector;
     private bool _showDashboardMenu;
-    private bool _isDragging;
-    private WidgetInstance? _draggedWidget;
-    private WidgetInstance? _dropTarget;
-    private string? _resizeDirection;
 
     // F4 keyboard grab mode: Enter/Space on the drag-handle button lifts the widget, the arrow
     // keys move it one cell, Shift+arrows resize it one step, Enter/Space drops and Escape
@@ -842,54 +838,20 @@ public partial class TmDashboard : IAsyncDisposable
         GetWidgetName(widget), widget.X + 1, widget.Y + 1, widget.Width, widget.Height);
 
     private void AnnounceMove(string message) => _moveAnnouncement = message;
-    
+
     private void ToggleCollapse(WidgetInstance widget)
     {
         widget.IsCollapsed = !widget.IsCollapsed;
         StateHasChanged();
     }
-    
-    private void OnDragStart(DragEventArgs e, WidgetInstance widget)
-    {
-        if (!_isEditMode) return;
-        _isDragging = true;
-        _draggedWidget = widget;
-    }
-    
-    private void OnDragEnd(DragEventArgs e)
-    {
-        if (_draggedWidget is not null && _dropTarget is not null)
-        {
-            // Apply the drop position
-            _draggedWidget.X = _dropTarget.X;
-            _draggedWidget.Y = _dropTarget.Y;
-            
-            // Push any widgets that would overlap
-            if (_currentDashboard?.Grid.AllowOverlap == false)
-            {
-                PushOverlappingWidgets(_draggedWidget);
-            }
-        }
-        
-        _isDragging = false;
-        _draggedWidget = null;
-        _dropTarget = null;
-        StateHasChanged();
-    }
-    
-    private void OnResizeStart(MouseEventArgs e, WidgetInstance widget, string direction)
-    {
-        if (!_isEditMode) return;
-        _resizeDirection = direction;
-        _draggedWidget = widget;
-    }
-    
+
     private string GetWidgetClasses(WidgetInstance widget)
     {
         var classes = new List<string>();
         if (widget.IsCollapsed) classes.Add("tm-widget--collapsed");
         if (widget.IsMinimized) classes.Add("tm-widget--minimized");
-        if (_isDragging && _draggedWidget == widget) classes.Add("tm-widget--dragging");
+        // tm-widget--dragging / --resizing are the live pointer states painted by dashboard.js
+        // (Fáze 5, pointer-drag.js); the grab state below stays the keyboard mirror in C#.
         if (_grabbedWidget == widget) classes.Add("tm-widget--grabbed");
         if (_highlightedInstanceId == widget.InstanceId) classes.Add("tm-widget--highlight");
         // Wider than half the desktop grid: the compact container query gives it the full row.
@@ -1167,8 +1129,10 @@ public partial class TmDashboard : IAsyncDisposable
         var widget = _widgets.FirstOrDefault(w => w.InstanceId == instanceId);
         if (widget is not null)
         {
-            widget.X = x;
-            widget.Y = y;
+            // A wide widget dropped near the right edge must not overflow the grid (the JS
+            // preview clamps the same way); the row is only bounded below.
+            widget.X = Math.Clamp(x, 0, Math.Max(0, Columns - widget.Width));
+            widget.Y = Math.Max(0, y);
             
             // Push overlapping widgets
             if (_currentDashboard?.Grid.AllowOverlap == false)

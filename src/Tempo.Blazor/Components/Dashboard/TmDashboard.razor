@@ -282,19 +282,28 @@
             }
             @foreach (var widget in orderedWidgets)
             {
+                var definition = WidgetRegistry?.GetWidget(widget.WidgetId);
+                // Fáze 5: the JS resize clamps through these data-* attributes (grid cells,
+                // emitted from the WidgetDefinition / GridConfig; max 0 = unlimited). The
+                // authoritative clamp stays in C# — the values mirror it for the live preview.
+                var minWidth = Math.Max(1, definition?.MinWidth ?? 1);
+                var maxWidth = definition is { MaxWidth: > 0 } ? Math.Min(definition.MaxWidth, Columns) : Columns;
+                var minHeight = Math.Max(1, definition?.MinHeight ?? 1);
+                var maxHeight = definition is { MaxHeight: > 0 } ? definition.MaxHeight : 0;
                 <div class="tm-widget @GetWidgetClasses(widget)"
                      style="@GetWidgetStyles(widget, widgetOrder)"
                      @key="widget.InstanceId"
-                     data-instance-id="@widget.InstanceId">
-                    
+                     data-instance-id="@widget.InstanceId"
+                     data-min-w="@minWidth"
+                     data-max-w="@maxWidth"
+                     data-min-h="@minHeight"
+                     data-max-h="@maxHeight">
+
                     @* Widget Header ───────────────────────────────── *@
-                    @{
-                        var definition = WidgetRegistry?.GetWidget(widget.WidgetId);
-                    }
-                    <div class="tm-widget-header"
-                         @ondragstart="(e) => OnDragStart(e, widget)"
-                         @ondragend="OnDragEnd"
-                         draggable="@(_isEditMode && CanDrag(widget, mode) ? "true" : "false")">
+                    @* Fáze 5: no @ondragstart/@ondragend here any more — the move gesture is the
+                       shared pointer-drag.js helper attached by dashboard.js on the drag handle
+                       (mouse, touch and pen). The handle button keeps the keyboard grab mode. *@
+                    <div class="tm-widget-header">
 
                         <div class="tm-widget-header-left">
                             @if (_isEditMode && CanDrag(widget, mode))
@@ -413,36 +422,23 @@
                     }
                     
                     @* Resize Handles (edit mode only) ─────────────── *@
+                    @* Fáze 5: no @onmousedown — the resize gesture is the shared pointer-drag.js
+                       helper attached by dashboard.js (threshold 0, so every press on a handle
+                       is a resize; Escape/pointercancel roll the widget back). *@
                     @if (_isEditMode && CanResize(widget, mode))
                     {
-                        <div class="tm-widget-resize-handle tm-widget-resize-se"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "se"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-sw"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "sw"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-ne"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "ne"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-nw"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "nw"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-e"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "e"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-w"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "w"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-s"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "s"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-n"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "n"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-se"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-sw"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-ne"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-nw"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-e"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-w"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-s"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-n"></div>
                     }
                 </div>
             }
-            
-            @* Drop Zone (visible during drag) ───────────────────── *@
-            @if (_isDragging && _dropTarget is not null)
-            {
-                <div class="tm-widget-drop-preview"
-                     style="grid-column: @(_dropTarget.X + 1) / span @(_dropTarget.Width);
-                             grid-row: @(_dropTarget.Y + 1) / span @(_dropTarget.Height);">
-                </div>
-            }
+
         </div>
     </div>
     

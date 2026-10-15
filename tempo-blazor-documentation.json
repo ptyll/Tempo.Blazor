@@ -27308,6 +27308,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/dashboard-pointer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-resize.test.mjs",
       "kind": "JavaScript"
     },

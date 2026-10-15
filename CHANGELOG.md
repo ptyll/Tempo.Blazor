@@ -77,6 +77,32 @@
 
 ### Breaking / Migration
 
+- **`TmDashboard` widget move/resize no longer uses HTML5 drag-and-drop or mouse events — the
+  gesture is the shared `pointer-drag.js` helper (Pointer Events: mouse, touch and pen).**
+  Previously moving a widget only worked with a mouse (HTML5 `dragstart`/`dragover`/`drop`) and
+  resizing only with mouse events; a finger did nothing. Now a finger, a pen and the mouse all
+  drag and resize through the same core helper the Scheduler uses, Escape/pointercancel roll the
+  widget back, and the drop preview follows the pointer. Host impact:
+
+  ```html
+  <!-- before: nothing else needed — dashboard.js attached its own dragstart/mouse handlers -->
+  <script src="_content/Tempo.Blazor/js/dashboard.js"></script>
+
+  <!-- after: the same single script tag; pointer-drag.js is NOT a new script tag —
+       dashboard.js loads it with a dynamic import() from its own URL (same folder) -->
+  <script src="_content/Tempo.Blazor/js/dashboard.js"></script>
+  ```
+
+  Hosts synthesizing the old events in tests must dispatch Pointer Events instead
+  (`pointerdown`/`pointermove`/`pointerup` on the `.tm-widget-drag-handle` /
+  `.tm-widget-resize-handle`, bubbling to the grid). The widget header no longer renders
+  `draggable`, and the Razor surface carries no `@ondragstart/@ondragend/@onmousedown` handlers;
+  the resize clamps through the new `data-min-w/data-max-w/data-min-h/data-max-h` attributes the
+  component renders from the `WidgetDefinition` (grid cells; max `0` = unlimited). The JSInvokable
+  contract (`OnGridPositionChanged`/`OnWidgetResized`), `window.tempoDashboard.init/destroy` and
+  the keyboard grab mode are unchanged. `touch-action: none` now lives on the handles only, so
+  the page keeps scrolling everywhere else.
+
 - **`TmDashboard`'s drag handle is now a `<button>` (F4 keyboard alternative), not a
   `<span>`.** The handle keeps the class `tm-widget-drag-handle` and the grip icon, but hosts
   styling or scripting the element must account for the element change:

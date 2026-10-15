@@ -439,7 +439,9 @@
 }
 
 /* F4: the handle is a real <button> — reset the native chrome, keep the grab affordance,
-   and give the keyboard focus the shared ring. */
+   and give the keyboard focus the shared ring. Fáze 5: touch-action: none ONLY here, on the
+   drag handle — the pointer-drag.js move gesture starts immediately on it, and the page keeps
+   scrolling everywhere else (a finger on the header body still scrolls). */
 .tm-widget-drag-handle {
   display: inline-flex;
   align-items: center;
@@ -452,6 +454,7 @@
   margin: calc(-1 * var(--tm-space-1));
   border-radius: var(--tm-radius-sm);
   transition: color var(--tm-transition-fast), background-color var(--tm-transition-fast);
+  touch-action: none;
 }
 
 .tm-widget-drag-handle:hover {
@@ -565,12 +568,15 @@
   display: none;
 }
 
-/* Resize Handles */
+/* Resize Handles. Fáze 5: touch-action: none lives ONLY on the handles (drag + resize) —
+   the pointer-drag.js gesture starts immediately on them, and the page keeps scrolling
+   everywhere else (a finger on the widget body or the page still scrolls). */
 .tm-widget-resize-handle {
   position: absolute;
   z-index: 10;
   opacity: 0;
   transition: opacity var(--tm-transition-fast);
+  touch-action: none;
 }
 
 .tm-widget:hover .tm-widget-resize-handle,
