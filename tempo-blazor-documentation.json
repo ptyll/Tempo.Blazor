@@ -8891,23 +8891,51 @@
           "name": "ColumnKey",
           "type": "string",
           "isRequired": false,
-          "default": "\"\""
+          "default": "\"\"",
+          "description": "Column key sent with the emitted filter."
+        },
+        {
+          "name": "ColumnTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Column caption. When set, the accessible name and placeholder use TmDataTable_FilterColumn (\"Filter: {0}\"). Omitted keeps the generic Filter label."
+        },
+        {
+          "name": "FilterOperator",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Operator sent with the filter. Null or whitespace keeps the historical contains operator."
         },
         {
           "name": "FilterOptions",
           "type": "IReadOnlyList<SelectOption<string>>?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Options for a select filter."
         },
         {
           "name": "FilterType",
           "type": "FilterType",
           "isRequired": false,
-          "default": "FilterType.Text"
+          "default": "FilterType.Text",
+          "description": "Control kind. Defaults to text."
         },
         {
           "name": "OnFilterChange",
           "type": "EventCallback<DataTableFilter?>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the filter value changes. Null clears the filter."
+        },
+        {
+          "name": "Value",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Controlled filter text. When set, it overwrites the inner value on every parameter update. Null leaves the control uncontrolled."
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the new text when the user edits or clears the filter."
         }
       ],
       "cssClasses": [
@@ -9566,6 +9594,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether this column shows an inline filter input."
+        },
+        {
+          "name": "FilterOperator",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Opt-in operator sent with this column's filter. Null keeps contains so existing server providers are unchanged."
         },
         {
           "name": "FilterOptions",

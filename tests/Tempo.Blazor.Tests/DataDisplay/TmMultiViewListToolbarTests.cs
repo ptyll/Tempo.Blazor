@@ -158,4 +158,24 @@ public class TmMultiViewListToolbarTests : LocalizationTestBase
         cut.FindAll(".tm-view-manager").Should().ContainSingle();
         cut.FindAll(".tm-mvl-external-filters").Should().ContainSingle();
     }
+
+    [Fact]
+    public void ViewDialog_ShowsGroupingSection_WhenGroupableFieldExists()
+    {
+        var provider = CreateViewProvider();
+        provider.GetViewsAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IEnumerable<DataTableView>>([]));
+
+        var cut = Render<TmMultiViewList<MvlToolbarItem>>(p => p
+            .Add(c => c.Items, SampleItems())
+            .Add(c => c.ViewContext, "test-context")
+            .Add(c => c.ViewProvider, provider)
+            .Add(c => c.GroupableFields, [new GroupFieldDefinition<MvlToolbarItem> { FieldName = "Title", Label = "Title", FieldAccessor = i => i.Title }]));
+
+        cut.Find(".tm-view-manager-toggle").Click();
+        cut.Find(".tm-btn-primary").Click();
+
+        cut.FindAll(".tm-view-group-columns").Should().ContainSingle();
+        cut.Markup.Should().Contain("Title");
+    }
 }

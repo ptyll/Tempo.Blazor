@@ -46,6 +46,7 @@
                                    GetCurrentView="GetCurrentView"
                                    GetCurrentFilters="() => _externalFilters"
                                    AvailableColumns="GetAvailableColumns()"
+                                    AvailableGroupableColumns="GetAvailableGroupableColumns()"
                                    FilterDefinitions="ViewFilterDefinitions"
                                    DisplayResolver="DisplayResolver"
                                    CanCreateTenantViews="ViewCanCreateTenantViews"
@@ -317,9 +318,19 @@
                                     @if (col.Filterable)
                                     {
                                         <TmColumnFilter ColumnKey="@col.Key"
+                                                        ColumnTitle="@col.Title"
                                                         FilterType="@col.FilterType"
                                                         FilterOptions="@col.FilterOptions"
+                                                        FilterOperator="@col.FilterOperator"
+                                                        Value="@ColumnFilterValue(col.Key)"
+                                                        ValueChanged="v => OnColumnFilterValueChanged(col.Key, v)"
                                                         OnFilterChange="f => ApplyFilterAsync(col.Key, f)" />
+                                        @if (_activeFilters.Count > 0 && col.Key == _visibleColumns.Last(c => c.Filterable).Key)
+                                        {
+                                            <button type="button" class="tm-col-filter-clear-all" @onclick="ClearAllFiltersAsync">
+                                                @Loc["TmDataTable_ClearFilters"]
+                                            </button>
+                                        }
                                     }
                                 </th>
                             }

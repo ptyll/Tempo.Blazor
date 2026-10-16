@@ -175,6 +175,25 @@
 
 ### Breaking / Migration
 
+- **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
+  A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`
+  announces `Filter: {column}` (`TmDataTable_FilterColumn`) instead of the generic `Filter`.
+  Without `ColumnTitle` the label is unchanged.
+
+  ```html
+  <!-- before -->
+  <input placeholder="Filter" aria-label="Filter" />
+  <input type="radio" name="viewScope" />
+
+  <!-- after -->
+  <input placeholder="Filter: Name" aria-label="Filter: Name" />
+  <input type="radio" name="tm-view-scope-{instanceId}" />
+  ```
+
+  A selector `[name=viewScope]` no longer matches. `TmDataTableColumn.FilterOperator` is additive
+  and defaults to null, which still sends `contains` — server providers are unchanged until a
+  column opts in.
+
 - **`TmDashboard` widget move/resize no longer uses HTML5 drag-and-drop or mouse events — the
   gesture is the shared `pointer-drag.js` helper (Pointer Events: mouse, touch and pen).**
   Previously moving a widget only worked with a mouse (HTML5 `dragstart`/`dragover`/`drop`) and
@@ -429,6 +448,20 @@
   unchanged: a host that binds them already sees every character.
 
 ### Fixed
+
+- **`TmViewManager` / `TmDataTable` / `TmMultiViewList` wave 0 (no visual redesign).**
+  Saving the current view names the copy with `TmViewManager_CopySuffix` (`(copy)` / `(kopie)` /
+  `(kópia)` / `(copie)`) instead of a hardcoded `(Copy)`. The visibility radios use a per-instance
+  `tm-view-scope-{id}` name, so two managers on one page no longer share a group. Empty view
+  sections use the `tm-view-empty` class instead of an inline style. Integrated tables and
+  multi-view lists pass groupable columns into the view dialog, so the Grouping section shows
+  when a column or `GroupableFields` entry exists. `TmColumnFilter` accepts an additive
+  `ColumnTitle`, a controlled `Value`, and `FilterOperator` (null keeps `contains`); the clear
+  button is also on select filters, and `TmDataTable` feeds the input from `_activeFilters`, so
+  Clear filters empties the inputs. A multi-view card keeps its avatar when selection is on, and
+  a view that turns the Avatar column on renders that column in the table (empty cell when the
+  URL is missing). Orphan keys `TmDataTable_SaveView`, `TmDataTable_ViewName` and
+  `TmDataTable_DefaultView` stay: they are public override keys, not unused leftovers.
 
 - **`TmDashboard`: every remaining user-facing string is localized and cancelling an unsaved new
   dashboard restores the previous one.** Seven hardcoded strings moved onto resource keys

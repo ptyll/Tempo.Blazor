@@ -39,6 +39,12 @@
     /// <summary>Options for Select filter type (string-keyed values).</summary>
     [Parameter] public IReadOnlyList<SelectOption<string>>? FilterOptions { get; set; }
 
+    /// <summary>
+    /// Opt-in filter operator sent with this column's filter. Null keeps the historical "contains" operator
+    /// so existing server providers are unchanged.
+    /// </summary>
+    [Parameter] public string? FilterOperator { get; set; }
+
     /// <summary>Whether this column can be toggled via the column picker. Default true.</summary>
     [Parameter] public bool Hideable { get; set; } = true;
 

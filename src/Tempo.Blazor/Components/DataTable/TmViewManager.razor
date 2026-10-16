@@ -49,7 +49,7 @@
                     }
                     @if (!_views.Any(v => v.Scope == ViewScope.Personal))
                     {
-                        <div class="tm-empty-state" style="padding: var(--tm-space-3); font-size: var(--tm-font-size-sm);">
+                        <div class="tm-empty-state tm-view-empty">
                             @(Loc["TmViewManager_NoPersonalViews"])
                         </div>
                     }
@@ -90,7 +90,7 @@
                         }
                         @if (!_views.Any(v => v.Scope == ViewScope.Tenant))
                         {
-                            <div class="tm-empty-state" style="padding: var(--tm-space-3); font-size: var(--tm-font-size-sm);">
+                            <div class="tm-empty-state tm-view-empty">
                                 @(Loc["TmViewManager_NoTenantViews"])
                             </div>
                         }
@@ -142,7 +142,7 @@
                     <label class="tm-form-label">@(Loc["TmViewManager_Visibility"])</label>
                     <div class="tm-view-radio-group">
                         <label class="tm-view-radio-label">
-                            <input type="radio" name="viewScope" value="Personal"
+                            <input type="radio" name="@($"tm-view-scope-{_instanceId}")" value="Personal"
                                    checked="@(_viewScope == ViewScope.Personal)"
                                    @onchange="() => _viewScope = ViewScope.Personal" />
                             <span>@(Loc["TmViewManager_Personal"])</span>
@@ -150,7 +150,7 @@
                         @if (CanCreateTenantViews)
                         {
                             <label class="tm-view-radio-label">
-                                <input type="radio" name="viewScope" value="Tenant"
+                                <input type="radio" name="@($"tm-view-scope-{_instanceId}")" value="Tenant"
                                        checked="@(_viewScope == ViewScope.Tenant)"
                                        @onchange="() => _viewScope = ViewScope.Tenant" />
                                 <span>@(Loc["TmViewManager_Tenant"])</span>

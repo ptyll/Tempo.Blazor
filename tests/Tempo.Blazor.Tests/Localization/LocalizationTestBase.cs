@@ -586,6 +586,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDataTable_ManageViews"]        = "Manage views",
         ["TmDataTable_DefaultView"]        = "Default view",
         ["TmDataTable_Filter"]             = "Filter",
+        ["TmDataTable_FilterColumn"]       = "Filter: {0}",
         ["TmDataTable_ClearFilters"]       = "Clear filters",
         ["TmDataTable_SortAscending"]      = "Sort ascending",
         ["TmDataTable_MultiSortHint"]      = "Shift+Enter or Shift+click adds this column to the sort order",
@@ -924,6 +925,20 @@ public abstract class LocalizationTestBase : BunitContext
         // TmViewManager Grouping
         ["TmViewManager_Grouping"] = "Grouping",
         ["TmViewManager_GroupByColumns"] = "Group by columns",
+        ["TmViewManager_CopySuffix"] = "(copy)",
+        ["TmViewManager_Views"] = "Views",
+        ["TmViewManager_PersonalViews"] = "Personal Views",
+        ["TmViewManager_NoPersonalViews"] = "No personal views",
+        ["TmViewManager_CreateNew"] = "Create New View",
+        ["TmViewManager_SaveCurrent"] = "Save Current as New",
+        ["TmViewManager_CreateTitle"] = "Create New View",
+        ["TmViewManager_ViewName"] = "View Name",
+        ["TmViewManager_Visibility"] = "Visibility",
+        ["TmViewManager_Personal"] = "Personal (only me)",
+        ["TmViewManager_Tenant"] = "Tenant (everyone)",
+        ["TmViewManager_Columns"] = "Columns",
+        ["TmViewManager_Cancel"] = "Cancel",
+        ["TmViewManager_Create"] = "Create",
 
         // TmInlineEdit
         ["TmInlineEdit_Placeholder"] = "Click to edit",
@@ -3861,7 +3876,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRichEditor_VideoDialog_DefaultTitle"] = "Video",
     });
 
-    private static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
+    public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
     {
         ["TmNotionTableBlock_Redo"] = "Znovu provést změnu tabulky",
         ["TmNotionTableBlock_ConflictTitle"] = "Konflikt při ukládání",
@@ -4213,6 +4228,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDataTable_ManageViews"]        = "Spravovat pohledy",
         ["TmDataTable_DefaultView"]        = "Výchozí pohled",
         ["TmDataTable_Filter"]             = "Filtr",
+        ["TmDataTable_FilterColumn"]       = "Filtr: {0}",
         ["TmDataTable_ClearFilters"]       = "Zrušit filtry",
         ["TmDataTable_SortAscending"] = "Řadit vzestupně",
         ["TmDataTable_MultiSortHint"] = "Shift+Enter nebo Shift+kliknutí přidá tento sloupec do řazení",
@@ -4519,6 +4535,20 @@ public abstract class LocalizationTestBase : BunitContext
         // TmViewManager Grouping
         ["TmViewManager_Grouping"] = "Seskupování",
         ["TmViewManager_GroupByColumns"] = "Seskupit podle sloupců",
+        ["TmViewManager_CopySuffix"] = "(kopie)",
+        ["TmViewManager_Views"] = "Pohledy",
+        ["TmViewManager_PersonalViews"] = "Osobní pohledy",
+        ["TmViewManager_NoPersonalViews"] = "Žádné osobní pohledy",
+        ["TmViewManager_CreateNew"] = "Vytvořit nový pohled",
+        ["TmViewManager_SaveCurrent"] = "Uložit aktuální jako nový",
+        ["TmViewManager_CreateTitle"] = "Vytvořit nový pohled",
+        ["TmViewManager_ViewName"] = "Název pohledu",
+        ["TmViewManager_Visibility"] = "Viditelnost",
+        ["TmViewManager_Personal"] = "Osobní (pouze já)",
+        ["TmViewManager_Tenant"] = "Tenant (všichni)",
+        ["TmViewManager_Columns"] = "Sloupce",
+        ["TmViewManager_Cancel"] = "Zrušit",
+        ["TmViewManager_Create"] = "Vytvořit",
 
         // TmInlineEdit
         ["TmInlineEdit_Placeholder"] = "Klikněte pro úpravu...",

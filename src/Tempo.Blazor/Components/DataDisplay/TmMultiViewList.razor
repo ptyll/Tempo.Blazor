@@ -79,6 +79,7 @@
                                    GetCurrentView="GetCurrentView"
                                    GetCurrentFilters="() => _externalFilters"
                                    AvailableColumns="GetAvailableColumns()"
+                                    AvailableGroupableColumns="GetAvailableGroupableColumns()"
                                    FilterDefinitions="ViewFilterDefinitions"
                                    DisplayResolver="DisplayResolver"
                                    CanCreateTenantViews="ViewCanCreateTenantViews"
@@ -133,6 +134,7 @@
                             @if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Status)) { <th>@Loc["TmMvl_ColStatus"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Date)) { <th>@Loc["TmMvl_ColDate"]</th> }
+                            @if (_visibleColumns.Contains(ColumnKeys.Avatar)) { <th>@Loc["TmMvl_ColAvatar"]</th> }
                         </tr>
                     </thead>
                     <tbody>
@@ -969,6 +971,11 @@
         }).ToList()
     };
 
+    private List<ViewColumnInfo> GetAvailableGroupableColumns() =>
+        (GroupableFields ?? [])
+            .Select(f => new ViewColumnInfo { Key = f.FieldName, Title = f.Label, Visible = true })
+            .ToList();
+
     private List<ViewColumnInfo> GetAvailableColumns() =>
     [
         new ViewColumnInfo { Key = ColumnKeys.Title, Title = Loc["TmMvl_ColTitle"], Visible = _visibleColumns.Contains(ColumnKeys.Title) },
@@ -1063,7 +1070,7 @@
 
     private string GetGroupKey(DataGroup<TItem> group) => $"{group.FieldName}:{group.Key}";
 
-    private int MvlColSpan => _visibleColumns.Count;
+    private int MvlColSpan => _visibleColumns.Count + (AllowSelection ? 1 : 0);
 
     private string GetMvlScrollContainerClass() =>
         IsVirtualized ? "tm-mvl-virtual-scroll" : "";
@@ -1172,6 +1179,15 @@
                     </td>
                 }
                 if (_visibleColumns.Contains(ColumnKeys.Date)) { <td>@GetDate(item)?.ToString("d")</td> }
+                if (_visibleColumns.Contains(ColumnKeys.Avatar))
+                {
+                    <td>
+                        @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
+                        {
+                            <img class="tm-mvl-list-avatar" src="@GetAvatarUrl(item)" alt="" />
+                        }
+                    </td>
+                }
             }
         </tr>
     };
@@ -1300,7 +1316,7 @@
                         }
                     </div>
                 }
-                else if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
+                @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
                 {
                     <img class="tm-mvl-card-avatar" src="@GetAvatarUrl(item)" alt="" />
                 }

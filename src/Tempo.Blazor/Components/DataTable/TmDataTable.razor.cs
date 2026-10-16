@@ -1931,6 +1931,25 @@ public partial class TmDataTable<TItem> : IDisposable
             Visible = !_hiddenColumns.Contains(c.Key)
         }).ToList();
 
+    private List<ViewColumnInfo> GetAvailableGroupableColumns() =>
+        _columns.Where(c => c.Groupable).Select(c => new ViewColumnInfo
+        {
+            Key = c.Key,
+            Title = c.Title,
+            Visible = true
+        }).ToList();
+
+    private string ColumnFilterValue(string columnKey) =>
+        _activeFilters.TryGetValue(columnKey, out var filter)
+            ? filter.Value?.ToString() ?? string.Empty
+            : string.Empty;
+
+    private void OnColumnFilterValueChanged(string columnKey, string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            _activeFilters.Remove(columnKey);
+    }
+
     // ── Grouping ────────────────────────────────────────────────────
 
     /// <summary>Add a column to the grouping configuration.</summary>

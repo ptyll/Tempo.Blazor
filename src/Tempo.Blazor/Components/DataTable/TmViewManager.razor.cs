@@ -278,7 +278,7 @@ public partial class TmViewManager : ComponentBase
 
         var current = GetCurrentView();
         _editingView = null;
-        _viewName = $"{current.Name} (Copy)";
+        _viewName = $"{current.Name} {Loc["TmViewManager_CopySuffix"]}";
         _viewScope = ViewScope.Personal;
         _selectedColumns = current.VisibleColumns?.ToList() ?? AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
         _selectedGroupColumns = current.GroupByColumns?.ToList() ?? [];

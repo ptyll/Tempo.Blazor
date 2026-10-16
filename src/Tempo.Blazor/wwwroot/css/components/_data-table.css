@@ -743,6 +743,10 @@
 .tm-view-section:last-child { 
   margin-bottom: 0; 
 }
+.tm-view-empty {
+  padding: var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+}
 .tm-view-section-header {
   display: flex;
   align-items: center;

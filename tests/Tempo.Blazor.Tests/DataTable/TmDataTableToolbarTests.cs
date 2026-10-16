@@ -158,4 +158,27 @@ public class TmDataTableToolbarTests : LocalizationTestBase
         cut.FindAll(".tm-view-manager").Should().ContainSingle();
         cut.FindAll(".tm-data-table-external-filters").Should().ContainSingle();
     }
+
+    [Fact]
+    public void ClearAllFilters_EmptiesColumnFilterInputs()
+    {
+        var cut = Render<TmDataTable<ToolbarPerson>>(p => p
+            .Add(c => c.Items, People)
+            .AddChildContent(b =>
+            {
+                b.OpenComponent<TmDataTableColumn<ToolbarPerson>>(0);
+                b.AddAttribute(1, "Title", "Name");
+                b.AddAttribute(2, "PropertyName", "Name");
+                b.AddAttribute(3, "Filterable", true);
+                b.AddAttribute(4, "Field", (Func<ToolbarPerson, object?>)(x => x.Name));
+                b.CloseComponent();
+            }));
+
+        cut.Find("input.tm-col-filter-input").Input("Ali");
+        cut.Find("input.tm-col-filter-input").GetAttribute("value").Should().Be("Ali");
+
+        cut.Find(".tm-col-filter-clear-all").Click();
+
+        cut.Find("input.tm-col-filter-input").GetAttribute("value").Should().BeEmpty();
+    }
 }

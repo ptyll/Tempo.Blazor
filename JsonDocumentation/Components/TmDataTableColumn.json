@@ -65,6 +65,12 @@
       "description": "Options for Select filter type (string-keyed values)."
     },
     {
+      "name": "FilterOperator",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Opt-in operator sent with this column's filter. Null keeps contains so existing server providers are unchanged."
+    },
+    {
       "name": "Hideable",
       "type": "bool",
       "isRequired": false,
