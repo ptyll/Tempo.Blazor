@@ -11,7 +11,7 @@
 <div @ref="_wrapperRef" class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             @ref="_triggerRef"
-            class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn-outline" : "")"
+            class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn tm-btn-outline" : "")"
             aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
             aria-haspopup="true"
             data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"

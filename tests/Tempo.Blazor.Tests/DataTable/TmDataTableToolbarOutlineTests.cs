@@ -42,11 +42,11 @@ public class TmDataTableToolbarOutlineTests : LocalizationTestBase
     public void DropdownOutlineTrigger_IsOptIn()
     {
         var defaultDropdown = Render<TmDropdown>(p => p.Add(c => c.Text, "Default"));
-        defaultDropdown.Find(".tm-dropdown-trigger").ClassList.Should().NotContain("tm-btn-outline");
+        defaultDropdown.Find(".tm-dropdown-trigger").ClassList.Should().NotContain("tm-btn").And.NotContain("tm-btn-outline");
 
         var outlinedDropdown = Render<TmDropdown>(p => p
             .Add(c => c.Text, "Export")
             .Add(c => c.OutlineTrigger, true));
-        outlinedDropdown.Find(".tm-dropdown-trigger").ClassList.Should().Contain("tm-btn-outline");
+        outlinedDropdown.Find(".tm-dropdown-trigger").ClassList.Should().Contain("tm-btn").And.Contain("tm-btn-outline");
     }
 }
