@@ -595,17 +595,16 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    /* Node bodies paint on the DOCUMENT's data-driven fill (default #ffffff in both themes),
-       so the default ink must stay DARK in both themes. No text token qualifies as-is:
-       --tm-text-inverse is WHITE in light (the white-on-white defect found in the phase-3
-       screenshot review), --tm-text-primary flips to light #f1f5f9 in dark, and the gray
-       scale inverts under dark (gray-900 becomes white). --tm-color-secondary-hover is
-       NOT re-declared by tokens-dark.css, so it stays gray-600 (#4b5563, ~7.6:1 on the
-       white fill) in BOTH themes — a stable dark ink without a hex literal here. The old
-       code used an undefined --tm-diagram-node-text whose hex fallback (#111827) produced
-       exactly this ink; a theme-following --tm-color-text would paint white-on-white in
-       dark mode (found in the phase-3 screenshot review). */
-    color: var(--tm-color-secondary-hover);
+    /* Node bodies paint on the DOCUMENT's data-driven fill (default white in both themes),
+       so the default ink must stay dark in both themes. No text token is theme-invariant:
+       every --tm-text-*/gray token flips between light and dark, so none of them can serve
+       as the node ink directly. --tm-diagram-node-ink is the named override point — a host
+       theme can redefine it for its brand without touching this rule. The value is
+       temporarily --tm-color-secondary-hover because a hex literal here would be flagged as
+       color-literal drift by scripts/audit-css-strict.mjs (the baseline may only shrink) and
+       the token core must not change in this phase. */
+    --tm-diagram-node-ink: var(--tm-color-secondary-hover);
+    color: var(--tm-diagram-node-ink);
     user-select: none;
     pointer-events: auto;
 }
