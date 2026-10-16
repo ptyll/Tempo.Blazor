@@ -5,8 +5,11 @@
 @using Tempo.Blazor.Components.Filters
 @using Tempo.Blazor.Components.DataTable
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Services
 @inject DragDropService DragDrop
+@inject IJSRuntime JS
 
 <div class="tm-multi-view-list @Class" @attributes="AdditionalAttributes">
 
@@ -29,44 +32,57 @@
                 @if (ShouldRenderGroupPicker())
                 {
                     <div class="tm-mvl-group-picker">
-                        <button type="button" class="tm-mvl-group-btn" @onclick="ToggleGroupPicker">
+                        <button type="button" class="tm-mvl-group-btn" @ref="_groupPickerRef"
+                                aria-expanded="@(_groupPickerOpen ? "true" : "false")" aria-haspopup="dialog"
+                                @onclick="ToggleGroupPicker">
                             @Loc["TmMvl_GroupBy"]
                         </button>
-                        @if (_groupPickerOpen)
-                        {
-                            <div class="tm-mvl-group-dropdown">
-                                @foreach (var field in GroupableFields)
-                                {
-                                    <label class="tm-mvl-group-option">
-                                        <input type="checkbox"
-                                               checked="@_activeGroupFields.Contains(field.FieldName)"
-                                               @onchange="e => ToggleGroupField(field.FieldName, (bool)e.Value!)" />
-                                        @field.Label
-                                    </label>
-                                }
-                            </div>
-                        }
+                        <TmOverlayPanel Anchor="_groupPickerRef"
+                                        IsOpen="_groupPickerOpen"
+                                        IsOpenChanged="v => _groupPickerOpen = v"
+                                        Role="dialog"
+                                        Title="@Loc["TmMvl_GroupBy"]"
+                                        Class="tm-mvl-group-dropdown">
+                            @foreach (var field in GroupableFields)
+                            {
+                                <label class="tm-mvl-group-option">
+                                    <input type="checkbox"
+                                           checked="@_activeGroupFields.Contains(field.FieldName)"
+                                           @onchange="e => ToggleGroupField(field.FieldName, (bool)e.Value!)" />
+                                    @field.Label
+                                </label>
+                            }
+                        </TmOverlayPanel>
                     </div>
                 }
                 @if (ShouldRenderViewSwitcher())
                 {
-                    <div class="tm-mvl-switcher">
+                    <div class="tm-mvl-switcher" role="radiogroup" aria-label="@Loc["TmMvl_TableView"]">
                         <button type="button"
                                 class="tm-mvl-switch-table @(_viewMode == ListViewMode.Table ? "tm-mvl-switch--active" : "")"
+                                role="radio"
+                                aria-checked="@(_viewMode == ListViewMode.Table ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_TableView"]"
-                                @onclick="() => SwitchView(ListViewMode.Table)">
+                                @onclick="() => SwitchView(ListViewMode.Table)"
+                                @onkeydown="OnViewSwitcherKey">
                             <span>&#9783;</span>
                         </button>
                         <button type="button"
                                 class="tm-mvl-switch-card @(_viewMode == ListViewMode.Card ? "tm-mvl-switch--active" : "")"
+                                role="radio"
+                                aria-checked="@(_viewMode == ListViewMode.Card ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_CardView"]"
-                                @onclick="() => SwitchView(ListViewMode.Card)">
+                                @onclick="() => SwitchView(ListViewMode.Card)"
+                                @onkeydown="OnViewSwitcherKey">
                             <span>&#9645;</span>
                         </button>
                         <button type="button"
                                 class="tm-mvl-switch-list @(_viewMode == ListViewMode.List ? "tm-mvl-switch--active" : "")"
+                                role="radio"
+                                aria-checked="@(_viewMode == ListViewMode.List ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_ListView"]"
-                                @onclick="() => SwitchView(ListViewMode.List)">
+                                @onclick="() => SwitchView(ListViewMode.List)"
+                                @onkeydown="OnViewSwitcherKey">
                             <span>&#9776;</span>
                         </button>
                     </div>
@@ -126,6 +142,8 @@
                                 <th class="tm-mvl-col-select">
                                     <input type="checkbox"
                                            class="tm-mvl-checkbox"
+                                           @ref="_selectAllRef"
+                                           aria-label="@Loc["TmDataTable_SelectAll"]"
                                            checked="@AreAllVisibleSelected()"
                                            @onchange="_ => ToggleSelectAllAsync()" />
                                 </th>
@@ -487,6 +505,36 @@
     private readonly HashSet<string> _expandedGroups = new();
     private IReadOnlyList<DataGroup<TItem>>? _groupedData;
     private bool _groupPickerOpen;
+    private ElementReference _groupPickerRef;
+    private ElementReference _selectAllRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!AllowSelection) return;
+        try
+        {
+            await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, IsPartiallySelected());
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+    }
+
+    private bool IsPartiallySelected()
+    {
+        var visible = (FilteredItems ?? []).Select(GetSelectionId).Where(id => id is not null).Cast<string>().ToList();
+        var selected = visible.Count(id => _selectedIds.Contains(id));
+        return selected > 0 && selected < visible.Count;
+    }
+
+    private Task OnViewSwitcherKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        var modes = new[] { ListViewMode.Table, ListViewMode.Card, ListViewMode.List };
+        var index = Array.IndexOf(modes, _viewMode);
+        if (e.Key == "ArrowRight" || e.Key == "ArrowDown")
+            return SwitchView(modes[(index + 1) % modes.Length]);
+        if (e.Key == "ArrowLeft" || e.Key == "ArrowUp")
+            return SwitchView(modes[(index - 1 + modes.Length) % modes.Length]);
+        return Task.CompletedTask;
+    }
     private bool IsGrouped => _activeGroupFields.Count > 0 && _groupedData is not null;
     private IReadOnlyDictionary<string, GroupPagination>? _serverGroupPaging;
     private readonly Dictionary<string, int> _groupPageRequests = new();
@@ -1089,8 +1137,11 @@
 
             <tr class="tm-mvl-group-row tm-mvl-group-level-@level">
                 <td colspan="@MvlColSpan">
-                    <button type="button" class="tm-mvl-group-toggle" @onclick="() => ToggleGroupExpansion(groupKey)">
-                        @(expanded ? "▼" : "►")
+                    <button type="button" class="tm-mvl-group-toggle"
+                            aria-expanded="@(expanded ? "true" : "false")"
+                            aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc[expanded ? "TmDataTable_CollapseGroup" : "TmDataTable_ExpandGroup"], group.DisplayValue ?? group.Key)"
+                            @onclick="() => ToggleGroupExpansion(groupKey)">
+                        <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" Class="@(expanded ? "tm-data-table-group-chevron tm-data-table-group-chevron--open" : "tm-data-table-group-chevron")" />
                     </button>
                     <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
                     <span class="tm-mvl-group-count">(@group.Count)</span>
@@ -1201,8 +1252,11 @@
 
             <div class="tm-mvl-group-section tm-mvl-group-level-@level">
                 <div class="tm-mvl-group-header">
-                    <button type="button" class="tm-mvl-group-toggle" @onclick="() => ToggleGroupExpansion(groupKey)">
-                        @(expanded ? "▼" : "►")
+                    <button type="button" class="tm-mvl-group-toggle"
+                            aria-expanded="@(expanded ? "true" : "false")"
+                            aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc[expanded ? "TmDataTable_CollapseGroup" : "TmDataTable_ExpandGroup"], group.DisplayValue ?? group.Key)"
+                            @onclick="() => ToggleGroupExpansion(groupKey)">
+                        <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" Class="@(expanded ? "tm-data-table-group-chevron tm-data-table-group-chevron--open" : "tm-data-table-group-chevron")" />
                     </button>
                     <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
                     <span class="tm-mvl-group-count">(@group.Count)</span>

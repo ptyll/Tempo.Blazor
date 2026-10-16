@@ -1,17 +1,25 @@
 @namespace Tempo.Blazor.Components.DataTable
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Components.Overlay
 
 <div class="tm-view-manager">
-    <button type="button" id="@_toggleId" data-tm-id="@_toggleId" class="tm-btn tm-btn-secondary tm-view-manager-toggle" @onclick="ToggleDropdownAsync">
+    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-secondary tm-view-manager-toggle"
+            aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
         <span>@(Loc["TmViewManager_Views"])</span>
         <TmIcon Name="chevron-down" />
     </button>
 
-    @if (_isOpen)
-    {
-        <div class="tm-view-manager-panel">
+    <TmOverlayPanel Anchor="_toggleRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Role="dialog"
+                    Title="@Loc["TmViewManager_Views"]"
+                    RestoreFocusTargetId="@_toggleId"
+                    Class="tm-view-manager-panel">
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
                 <div class="tm-view-error" role="alert">@_errorMessage</div>
@@ -26,7 +34,7 @@
                 <div class="tm-view-list">
                     @foreach (var view in _views.Where(v => v.Scope == ViewScope.Personal))
                     {
-                        <div class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                        <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
                              @onclick="() => ApplyViewAsync(view)">
                             <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
                             @if (view.IsDefault)
@@ -35,17 +43,17 @@
                             }
                             @if (CanEditView(view))
                             {
-                                <button type="button" class="tm-view-edit-btn" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
+                                <button type="button" class="tm-view-edit-btn" aria-label="@Loc["TmViewManager_EditTitle"]" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
                                     <TmIcon Name="edit" Size="IconSize.Sm" />
                                 </button>
                             }
                             @if (CanDeleteView(view))
                             {
-                                <button type="button" class="tm-view-delete-btn" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
+                                <button type="button" class="tm-view-delete-btn" aria-label="@($"{Loc["TmViewManager_DeleteError"]} {view.Name}")" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
                                     <TmIcon Name="trash" Size="IconSize.Sm" />
                                 </button>
                             }
-                        </div>
+                        </button>
                     }
                     @if (!_views.Any(v => v.Scope == ViewScope.Personal))
                     {
@@ -67,7 +75,7 @@
                     <div class="tm-view-list">
                         @foreach (var view in _views.Where(v => v.Scope == ViewScope.Tenant))
                         {
-                            <div class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                            <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
                                  @onclick="() => ApplyViewAsync(view)">
                                 <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
                                 @if (view.IsDefault)
@@ -76,17 +84,17 @@
                                 }
                                 @if (CanEditView(view))
                                 {
-                                    <button type="button" class="tm-view-edit-btn" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
+                                    <button type="button" class="tm-view-edit-btn" aria-label="@Loc["TmViewManager_EditTitle"]" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
                                         <TmIcon Name="edit" Size="IconSize.Sm" />
                                     </button>
                                 }
                                 @if (CanDeleteView(view))
                                 {
-                                    <button type="button" class="tm-view-delete-btn" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
+                                    <button type="button" class="tm-view-delete-btn" aria-label="@($"{Loc["TmViewManager_DeleteError"]} {view.Name}")" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
                                         <TmIcon Name="trash" Size="IconSize.Sm" />
                                     </button>
                                 }
-                            </div>
+                            </button>
                         }
                         @if (!_views.Any(v => v.Scope == ViewScope.Tenant))
                         {
@@ -112,11 +120,7 @@
                     </button>
                 }
             </div>
-        </div>
-
-        @* Click outside to close *@
-        <div class="tm-overlay" @onclick="CloseDropdown"></div>
-    }
+    </TmOverlayPanel>
 </div>
 
 @* The create/edit view dialog. TmModal gives it the sheet presentation on a mobile viewport, the

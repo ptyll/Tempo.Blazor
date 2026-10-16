@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Filters
+@using Microsoft.JSInterop
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Pickers
 
@@ -24,7 +25,7 @@
     @* Add filter button *@
     @if (!_showFieldPicker)
     {
-        <button type="button" class="tm-filter-builder-add" @onclick="OpenFieldPicker">
+        <button type="button" @ref="_addButton" class="tm-filter-builder-add" aria-expanded="@(_showFieldPicker ? "true" : "false")" @onclick="OpenFieldPicker">
             @Loc["TmFilterBuilder_AddFilter"]
         </button>
     }
@@ -32,7 +33,7 @@
     @* Field picker *@
     @if (_showFieldPicker && _editingFilter is null)
     {
-        <div class="tm-filter-field-picker">
+        <div class="tm-filter-field-picker" @onkeydown="OnPickerKey">
             @foreach (var def in FilterDefinitions)
             {
                 var d = def;
@@ -49,10 +50,10 @@
     @* Filter editor *@
     @if (_selectedDefinition is not null)
     {
-        <div class="tm-filter-editor">
+        <div class="tm-filter-editor" @onkeydown="OnPickerKey">
             <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition)</span>
 
-            <select class="tm-filter-operator-select"
+            <select class="tm-filter-operator-select" aria-label="@Loc["TmFilterBuilder_Operator"]"
                     value="@_selectedOperator"
                     @onchange="e => _selectedOperator = Enum.Parse<FilterOperator>(e.Value!.ToString()!)">
                 @foreach (var op in GetOperatorsFor(_selectedDefinition.FieldType))
@@ -72,7 +73,7 @@
                 else if (_selectedDefinition.FieldType == FilterFieldType.Select
                       || _selectedDefinition.FieldType == FilterFieldType.MultiSelect)
                 {
-                    <select class="tm-filter-select tm-filter-value-input"
+                    <select class="tm-filter-select tm-filter-value-input" aria-label="@Loc["TmFilterBuilder_Value"]"
                             value="@_textValue"
                             @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
                         <option value="">@Loc["Tm_Select"]</option>
@@ -87,7 +88,7 @@
                 }
                 else if (_selectedDefinition.FieldType == FilterFieldType.Boolean)
                 {
-                    <select class="tm-filter-select tm-filter-value-input"
+                    <select class="tm-filter-select tm-filter-value-input" aria-label="@Loc["TmFilterBuilder_Value"]"
                             value="@_textValue"
                             @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
                         <option value="true">@Loc["Tm_Yes"]</option>
@@ -97,6 +98,7 @@
                 else
                 {
                     <input type="@GetInputType(_selectedDefinition.FieldType)"
+                           aria-label="@Loc["TmFilterBuilder_Value"]"
                            class="tm-filter-value-input"
                            value="@_textValue"
                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty" />
@@ -135,6 +137,26 @@
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPicker)
+        {
+            _focusPicker = false;
+            try { await JS.InvokeVoidAsync("eval", "document.querySelector('.tm-filter-field-option')?.focus()"); }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        }
+        else if (_restoreAddFocus)
+        {
+            _restoreAddFocus = false;
+            try { await _addButton.FocusAsync(); }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        }
+    }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+    private ElementReference _addButton;
+    private bool _focusPicker;
+    private bool _restoreAddFocus;
     private List<ActiveFilter>   _filters          = [];
     private IReadOnlyList<ActiveFilter> _lastActiveFilters = [];
     private bool                 _showFieldPicker;
@@ -156,6 +178,7 @@
     private void OpenFieldPicker()
     {
         _showFieldPicker    = true;
+        _focusPicker        = true;
         _selectedDefinition = null;
         _editingFilter      = null;
         _textValue          = string.Empty;
@@ -228,8 +251,15 @@
         await NotifyChanged();
     }
 
+    private void OnPickerKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            Cancel();
+    }
+
     private void Cancel()
     {
+        _restoreAddFocus    = true;
         _showFieldPicker    = false;
         _selectedDefinition = null;
         _editingFilter      = null;

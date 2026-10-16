@@ -765,6 +765,12 @@
   overflow-y: auto; 
 }
 .tm-view-item {
+  width: 100%;
+  text-align: start;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
@@ -1073,6 +1079,14 @@
 
 .tm-data-table-group-toggle:hover {
   background: var(--tm-bg-surface-secondary, #e5e7eb);
+}
+
+.tm-data-table-group-chevron {
+  transition: transform var(--tm-transition-fast);
+}
+
+.tm-data-table-group-chevron--open {
+  transform: rotate(90deg);
 }
 
 .tm-data-table-group-label {

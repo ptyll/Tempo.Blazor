@@ -5,6 +5,8 @@
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Services
@@ -116,6 +118,15 @@
              @ondrop="HandleGroupZoneDrop"
              @ondragenter="() => _isDragOver = true"
              @ondragleave="() => _isDragOver = false">
+            @if (ShouldRenderAddGrouping())
+            {
+                <TmDropdown Text="@Loc["TmDataTable_AddGrouping"]" Class="tm-data-table-add-grouping" OnSelect="AddGroupColumn">
+                    @foreach (var groupable in _columns.Where(c => c.Groupable && !_groupByColumns.Contains(c.Key)))
+                    {
+                        <TmDropdownItem Value="@groupable.Key">@groupable.Title</TmDropdownItem>
+                    }
+                </TmDropdown>
+            }
             @if (_groupByColumns.Count == 0)
             {
                 <span class="tm-data-table-group-placeholder">@Loc["TmDataTable_GroupDropPlaceholder"]</span>
@@ -135,7 +146,10 @@
                         <span>@(col?.Title ?? colKey)</span>
                         <button type="button"
                                 class="tm-data-table-group-chip-remove"
-                                @onclick="() => HandleRemoveGroupChip(colKey)">×</button>
+                                aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmDataTable_RemoveGrouping"], col?.Title ?? colKey)"
+                                @onclick="() => HandleRemoveGroupChip(colKey)">
+                            <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                        </button>
                     </div>
                 }
                 <div class="tm-data-table-group-actions">
@@ -163,6 +177,7 @@
                         {
                             <th class="tm-col-check">
                                 <input type="checkbox"
+                                       @ref="_selectAllRef"
                                        aria-label="@Loc["TmDataTable_SelectAll"]"
                                        checked="@IsAllSelected"
                                        @onchange="ToggleSelectAllAsync" />
@@ -485,7 +500,7 @@
                                 {
                                     <tr class="tm-data-table-row--validation">
                                         <td colspan="@ColSpan">
-                                            <span class="tm-row-edit-error" data-testid="@TestId("edit-error")">@Loc["TmDataTable_EditInvalid"]</span>
+                                            <span class="tm-row-edit-error" role="alert" data-testid="@TestId("edit-error")">@Loc["TmDataTable_EditInvalid"]</span>
                                         </td>
                                     </tr>
                                 }

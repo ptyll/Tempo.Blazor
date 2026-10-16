@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Components.Filters;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
@@ -770,6 +771,8 @@ public partial class TmDataTable<TItem> : IDisposable
     // ── Computed helpers ──────────────────────────────────────────
 
     private bool IsAllSelected => _displayedItems.Count > 0 && _displayedItems.All(IsSelected);
+    private bool IsPartiallySelected => _selectedItems.Count > 0 && !IsAllSelected;
+    private ElementReference _selectAllRef;
     private bool IsSelected(TItem item) => _selectedItems.Contains(item);
     private int ColSpan => Math.Max(1, (HasDetail ? 1 : 0) + (Selectable ? 1 : 0) + _visibleColumns.Count + (HasEditActions ? 1 : 0));
     /// <summary>
@@ -874,6 +877,9 @@ public partial class TmDataTable<TItem> : IDisposable
         !IsSearchToolbarMode;
 
     /// <summary>True when the external filter builder should be rendered.</summary>
+    private bool ShouldRenderAddGrouping() =>
+        ShowGrouping && !IsContentToolbarMode && !IsSearchToolbarMode;
+
     private bool ShouldRenderExternalFilterBuilder() =>
         IsFullToolbarMode &&
         ShowExternalFilterBuilder &&
@@ -1144,6 +1150,18 @@ public partial class TmDataTable<TItem> : IDisposable
             {
                 // JS unavailable (e.g. tests, prerender) — the drag is a no-op, the keyboard path
                 // and SetColumnWidthAsync still work.
+            }
+        }
+
+        if (Selectable)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, IsPartiallySelected);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                   or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
+            {
             }
         }
     }
@@ -2136,8 +2154,17 @@ public partial class TmDataTable<TItem> : IDisposable
             builder.OpenElement(seq++, "button");
             builder.AddAttribute(seq++, "type", "button");
             builder.AddAttribute(seq++, "class", "tm-data-table-group-toggle");
+            builder.AddAttribute(seq++, "aria-expanded", expanded ? "true" : "false");
+            builder.AddAttribute(seq++, "aria-label", string.Format(
+                System.Globalization.CultureInfo.CurrentCulture,
+                Loc[expanded ? "TmDataTable_CollapseGroup" : "TmDataTable_ExpandGroup"],
+                g.DisplayValue));
             builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleGroupExpansion(g)));
-            builder.AddContent(seq++, expanded ? "▼" : "▶");
+            builder.OpenComponent<TmIcon>(seq++);
+            builder.AddAttribute(seq++, "Name", IconNames.ChevronRight);
+            builder.AddAttribute(seq++, "Size", IconSize.Sm);
+            builder.AddAttribute(seq++, "Class", expanded ? "tm-data-table-group-chevron tm-data-table-group-chevron--open" : "tm-data-table-group-chevron");
+            builder.CloseComponent();
             builder.CloseElement(); // button
 
             // Group label

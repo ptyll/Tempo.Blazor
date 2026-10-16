@@ -266,5 +266,9 @@ window.tmDataTable = (function () {
         }
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile };
+    function setIndeterminate(el, value) {
+        if (el) el.indeterminate = !!value;
+    }
+
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate };
 })();

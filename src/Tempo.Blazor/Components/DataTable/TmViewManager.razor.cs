@@ -58,6 +58,9 @@ public partial class TmViewManager : ComponentBase
     [Parameter] public string? CurrentTenantId { get; set; }
 
     private bool _isOpen;
+    private ElementReference _toggleRef;
+
+    private void SetOpen(bool open) => _isOpen = open;
 
     // Per instance. A hardcoded id restores focus to the first manager on the page.
     private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];

@@ -449,6 +449,16 @@
 
 ### Fixed
 
+- **`TmDataTable` / `TmViewManager` / `TmMultiViewList` / `TmFilterBuilder` wave 0 accessibility.**
+  Group toggles announce expand/collapse (`TmDataTable_ExpandGroup` / `TmDataTable_CollapseGroup`)
+  and use a chevron icon instead of a glyph. Group chips remove with a labeled icon button.
+  `+ Group` is a `TmDropdown` of groupable columns and calls `AddGroupColumn` without a drag.
+  The view panel is a `TmOverlayPanel` (no private `.tm-overlay`); view rows are buttons; edit
+  and delete stay inline with an accessible name. The multi-view switcher is a radiogroup with
+  arrow keys. The group picker is an overlay. Filter add opens the field picker and Escape
+  returns focus to Add filter. Select-all sets `indeterminate` from `OnAfterRenderAsync` via
+  `tmDataTable.setIndeterminate`. Inline edit errors use `role="alert"`.
+
 - **`TmViewManager` / `TmDataTable` / `TmMultiViewList` wave 0 (no visual redesign).**
   Saving the current view names the copy with `TmViewManager_CopySuffix` (`(copy)` / `(kopie)` /
   `(kópia)` / `(copie)`) instead of a hardcoded `(Copy)`. The visibility radios use a per-instance

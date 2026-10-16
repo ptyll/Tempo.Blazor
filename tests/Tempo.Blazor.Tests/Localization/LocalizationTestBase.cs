@@ -843,6 +843,8 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmFilterBuilder chrome
         ["TmFilterBuilder_AddFilter"] = "Add filter",
+        ["TmFilterBuilder_Operator"] = "Operator",
+        ["TmFilterBuilder_Value"] = "Value",
         ["TmFilterBuilder_ClearAll"]  = "Clear all filters",
 
         // TmMultiViewList
@@ -912,7 +914,11 @@ public abstract class LocalizationTestBase : BunitContext
         // TmDataTable Grouping
         ["TmDataTable_GroupDropPlaceholder"] = "Drag column headers here to group",
         ["TmDataTable_ExpandAll"] = "Expand all",
+        ["TmDataTable_AddGrouping"] = "Add grouping",
         ["TmDataTable_CollapseAll"] = "Collapse all",
+        ["TmDataTable_CollapseGroup"] = "Collapse group {0}",
+        ["TmDataTable_ExpandGroup"] = "Expand group {0}",
+        ["TmDataTable_RemoveGrouping"] = "Remove grouping by {0}",
         ["TmDataTable_GroupCount"] = "{0} items",
         ["TmDataTable_SearchPlaceholder"] = "Search...",
         ["TmDataTable_ShowingItems"] = "{0}–{1} of {2}",
@@ -4453,6 +4459,8 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmFilterBuilder chrome
         ["TmFilterBuilder_AddFilter"] = "Přidat filtr",
+        ["TmFilterBuilder_Operator"] = "Operátor",
+        ["TmFilterBuilder_Value"] = "Hodnota",
         ["TmFilterBuilder_ClearAll"]  = "Vymazat všechny filtry",
 
         // TmMultiViewList
@@ -4522,7 +4530,11 @@ public abstract class LocalizationTestBase : BunitContext
         // TmDataTable Grouping
         ["TmDataTable_GroupDropPlaceholder"] = "Přetáhněte záhlaví sloupce pro seskupení",
         ["TmDataTable_ExpandAll"] = "Rozbalit vše",
+        ["TmDataTable_AddGrouping"] = "Přidat seskupení",
         ["TmDataTable_CollapseAll"] = "Sbalit vše",
+        ["TmDataTable_CollapseGroup"] = "Sbalit skupinu {0}",
+        ["TmDataTable_ExpandGroup"] = "Rozbalit skupinu {0}",
+        ["TmDataTable_RemoveGrouping"] = "Odebrat seskupení podle {0}",
         ["TmDataTable_GroupCount"] = "Počet: {0}",
         ["TmDataTable_SearchPlaceholder"] = "Hledat...",
         ["TmDataTable_ShowingItems"] = "{0}–{1} z {2}",
