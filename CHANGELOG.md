@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
+
+- **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
+
+- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
+
 - **`TmMultiViewList.ViewSwitcherLabels`.** Default `IconsOnly` keeps today's icon buttons.
   `IconsAndText` adds the localized Table, Card and List names. The radiogroup contract is unchanged.
 
@@ -5915,14 +5921,3 @@ C#↔engine command contract test runs with no allowlist. Fixed silent no-op too
 - Bumped published package metadata to `2.1.0` and aligned release workflows to derive manual/CI versions from the core package version.
 
 Release follow-up after review: commit the prepared changes, merge to main, tag `v2.1.0`, push, then verify NuGet.org publication with a clean-project package-install smoke.
-- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
-- **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
-
-- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
-
-- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
-
-- **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
-
-- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
-
