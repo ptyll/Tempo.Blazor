@@ -43,6 +43,7 @@
                                         IsOpenChanged="v => _groupPickerOpen = v"
                                         Role="dialog"
                                         Title="@Loc["TmMvl_GroupBy"]"
+                                        MobilePresentation="@(Responsive ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                         RestoreFocusTargetId="@_groupPickerId"
                                         Class="tm-mvl-group-dropdown">
                             @foreach (var field in GroupableFields)

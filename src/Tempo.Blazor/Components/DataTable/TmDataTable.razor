@@ -65,6 +65,7 @@
                                     Class="tm-data-table__export-control"
                                     Align="OverlayAlign.End"
                                     Offset="4"
+                                     MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                     OnSelect="HandleExportSelectionAsync">
                             <TmDropdownItem Value="csv"
                                             Icon="@IconNames.FileText"
@@ -99,6 +100,14 @@
                              OnFiltersChanged="OnExternalFiltersChanged"
                              DisplayResolver="DisplayResolver"
                              ShowClearAll="true" />
+        </div>
+    }
+
+    @if (ShowFilterSummary && _activeFilters.Count > 0)
+    {
+        <div class="tm-data-table-filter-summary">
+            <span>@Loc["TmDataTable_ActiveFilters", _activeFilters.Count]</span>
+            <button type="button" class="tm-link-button" @onclick="ClearAllFiltersAsync">@Loc["TmDataTable_ClearFilters"]</button>
         </div>
     }
 

@@ -903,6 +903,7 @@
   "TmDataTable_CancelEdit": "Annuler",
   "TmDataTable_CancelInline": "Annuler la modification",
   "TmDataTable_ClearFilters": "Effacer les filtres",
+  "TmDataTable_ActiveFilters": "Filtres : {0}",
   "TmDataTable_ClearSort": "Effacer le tri",
   "TmDataTable_AddGrouping": "Ajouter un regroupement",
   "TmDataTable_CollapseAll": "Tout réduire",

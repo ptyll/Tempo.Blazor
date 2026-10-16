@@ -900,6 +900,7 @@
   "TmDataTable_CancelEdit": "Cancel",
   "TmDataTable_CancelInline": "Cancel edit",
   "TmDataTable_ClearFilters": "Clear filters",
+  "TmDataTable_ActiveFilters": "Filters: {0}",
   "TmDataTable_ClearSort": "Clear sort",
   "TmDataTable_AddGrouping": "Add grouping",
   "TmDataTable_CollapseAll": "Collapse all",

@@ -689,6 +689,9 @@ public partial class TmDataTable<TItem> : IDisposable
     /// </summary>
     [Parameter] public bool ShowExternalFilterBuilder { get; set; } = true;
 
+    /// <summary>When true, displays a localized clear-filters control while filters are active. Default: false.</summary>
+    [Parameter] public bool ShowFilterSummary { get; set; }
+
     /// <summary>
     /// Filter definitions for the inline external filter builder (shown above the table when <see cref="ViewProvider"/> is set).
     /// When the page owns filtering, leave this empty and set <see cref="ShowExternalFilterBuilder"/> to false

@@ -906,6 +906,7 @@
   "TmDataTable_CancelEdit": "Zrušit",
   "TmDataTable_CancelInline": "Zrušit úpravy",
   "TmDataTable_ClearFilters": "Zrušit filtry",
+  "TmDataTable_ActiveFilters": "Filtry: {0}",
   "TmDataTable_ClearSort": "Zrušit řazení",
   "TmDataTable_AddGrouping": "Přidat seskupení",
   "TmDataTable_CollapseAll": "Sbalit vše",

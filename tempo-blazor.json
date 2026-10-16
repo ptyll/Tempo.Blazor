@@ -9464,6 +9464,13 @@
           "description": "When true and a ViewProvider is set, shows the inline FilterBuilder for external filtering. Default: true. Set to false when the surrounding page owns the filtering UI to avoid duplicate filters."
         },
         {
+          "name": "ShowFilterSummary",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true and column filters are active, shows a localized active-filter count and clear-filters control. Default: false.",
+          "default": "false"
+        },
+        {
           "name": "ShowGrouping",
           "type": "bool",
           "isRequired": false,
