@@ -8606,6 +8606,13 @@
           "description": "When true and a ViewProvider is set, shows the inline FilterBuilder for external filtering. Default: true. Set to false when the surrounding page owns the filtering UI to avoid duplicate filters."
         },
         {
+          "name": "ShowItemCount",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, shows the item count in the toolbar. Default: false.",
+          "default": "false"
+        },
+        {
           "name": "ShowPagination",
           "type": "bool",
           "isRequired": false,

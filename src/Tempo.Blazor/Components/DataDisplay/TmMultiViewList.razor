@@ -101,6 +101,10 @@
                         </button>
                     </div>
                 }
+                @if (ShowItemCount)
+                {
+                    <span class="tm-mvl-item-count">@Loc["TmMvl_ItemCount", FilteredItems?.Count ?? _totalCount]</span>
+                }
                 @if (ShouldRenderViewManager())
                 {
                     <TmViewManager Provider="ViewProvider"
@@ -198,7 +202,7 @@
                 }
                 else if (IsVirtualized)
                 {
-                    <div class="tm-mvl-card-grid">
+                    <div class="tm-mvl-card-grid @(IsVirtualized ? "tm-mvl-card-grid--virtualized" : null)">
                         <Virtualize Items="FilteredItems" Context="item" ItemSize="VirtualCardHeight">
                             @RenderCardItem(item)
                         </Virtualize>
@@ -206,7 +210,7 @@
                 }
                 else
                 {
-                    <div class="tm-mvl-card-grid">
+                    <div class="tm-mvl-card-grid @(IsVirtualized ? "tm-mvl-card-grid--virtualized" : null)">
                         @foreach (var item in FilteredItems!)
                         {
                             @RenderCardItem(item)
@@ -366,6 +370,9 @@
 
     /// <summary>When true, shows the view-mode switcher buttons above the list.</summary>
     [Parameter] public bool ShowViewSwitcher { get; set; } = true;
+
+    /// <summary>When true, shows the item count in the toolbar. Defaults to false.</summary>
+    [Parameter] public bool ShowItemCount { get; set; }
 
     /// <summary>When true, shows the global search input.</summary>
     [Parameter] public bool ShowSearch { get; set; } = true;
@@ -1297,7 +1304,7 @@
                     }
                     else if (viewType == "card")
                     {
-                        <div class="tm-mvl-card-grid">
+                        <div class="tm-mvl-card-grid @(IsVirtualized ? "tm-mvl-card-grid--virtualized" : null)">
                             @foreach (var item in group.Items)
                             {
                                 @RenderCardItem(item)
@@ -1517,5 +1524,6 @@
         ShouldRenderSearch() ||
         ShouldRenderGroupPicker() ||
         ShouldRenderViewSwitcher() ||
+        ShowItemCount ||
         ShouldRenderViewManager();
 }

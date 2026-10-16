@@ -9,6 +9,24 @@ namespace Tempo.Blazor.Tests.DataDisplay;
 public class TmMultiViewListToolbarTests : LocalizationTestBase
 {
     [Fact]
+    public void ItemCount_IsHiddenByDefault()
+    {
+        var cut = Render<TmMultiViewList<string>>(p => p.Add(c => c.Items, new List<string> { "one", "two" }));
+
+        cut.FindAll(".tm-mvl-item-count").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ItemCount_RendersWhenEnabled()
+    {
+        var cut = Render<TmMultiViewList<string>>(p => p
+            .Add(c => c.Items, new List<string> { "one", "two" })
+            .Add(c => c.ShowItemCount, true));
+
+        cut.Find(".tm-mvl-item-count").TextContent.Should().Be("Items: 2");
+    }
+
+    [Fact]
     public void IconsOnly_DoesNotRenderViewNames()
     {
         var cut = Render<TmMultiViewList<string>>(p => p.Add(c => c.Items, new List<string>()));

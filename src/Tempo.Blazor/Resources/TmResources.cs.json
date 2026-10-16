@@ -2929,6 +2929,7 @@
   "TmMvl_GroupNone": "Bez seskupení",
   "TmMvl_ListOptions": "Možnosti seznamu",
   "TmMvl_ListView": "Zobrazení seznamem",
+  "TmMvl_ItemCount": "Položky: {0}",
   "TmMvl_TableView": "Zobrazení tabulkou",
   "TmNotificationBell_AriaLabel": "Oznámení",
   "TmNotificationBell_MarkAllRead": "Označit vše jako přečtené",

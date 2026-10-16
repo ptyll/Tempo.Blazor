@@ -2921,6 +2921,7 @@
   "TmMvl_GroupNone": "Aucun regroupement",
   "TmMvl_ListOptions": "Options de la liste",
   "TmMvl_ListView": "Vue liste",
+  "TmMvl_ItemCount": "Articles : {0}",
   "TmMvl_TableView": "Vue tableau",
   "TmNotificationBell_AriaLabel": "Notifications",
   "TmNotificationBell_MarkAllRead": "Tout marquer comme lu",

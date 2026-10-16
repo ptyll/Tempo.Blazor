@@ -93,10 +93,14 @@
 }
 
 /* Card Grid */
-.tm-mvl-card-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); 
-  gap: var(--tm-space-4); 
+.tm-mvl-card-grid {
+  --tm-mvl-card-min: 16rem;
+  display: grid;
+  gap: var(--tm-space-4);
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--tm-mvl-card-min), calc((100% - 2 * var(--tm-space-4)) / 3)), 1fr));
+}
+.tm-mvl-card-grid--virtualized {
+  grid-template-columns: 1fr;
 }
 
 /* Card */

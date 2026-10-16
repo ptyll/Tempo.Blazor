@@ -201,6 +201,13 @@
       "description": "When true, shows the view-mode switcher buttons above the list."
     },
     {
+      "name": "ShowItemCount",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, shows the item count in the toolbar. Default: false."
+    },
+    {
       "name": "ShowSearch",
       "type": "bool",
       "isRequired": false,

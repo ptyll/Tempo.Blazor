@@ -21,6 +21,17 @@ public class TmMultiViewListCardTests : LocalizationTestBase
     private static IReadOnlyList<TestItem> Items => [new("1", "Ada Lovelace")];
 
     [Fact]
+    public void VirtualizedCards_UseSingleColumnGridModifier()
+    {
+        var cut = Render<TmMultiViewList<TestItem>>(p => p
+            .Add(c => c.Items, Items)
+            .Add(c => c.ViewMode, ListViewMode.Card)
+            .Add(c => c.ScrollMode, DataTableScrollMode.Virtualized));
+
+        cut.Find(".tm-mvl-card-grid").ClassList.Should().Contain("tm-mvl-card-grid--virtualized");
+    }
+
+    [Fact]
     public void None_DoesNotRenderAvatarWhenUrlIsMissing()
     {
         var cut = Render<TmMultiViewList<TestItem>>(p => p
