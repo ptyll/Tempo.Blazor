@@ -117,3 +117,33 @@ public enum DataTableKeyboardNavigation
     /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell.</summary>
     Grid
 }
+
+/// <summary>
+/// Surface of a data table or multi-view list.
+/// <see cref="Plain"/> is the default and keeps today's markup.
+/// <see cref="Card"/> opts into the card radius, shadow and border.
+/// </summary>
+public enum DataTableAppearance
+{
+    /// <summary>Today's flat surface. No card class.</summary>
+    Plain,
+
+    /// <summary>Card surface. Adds <c>tm-data-table-wrapper--card-surface</c>.</summary>
+    Card
+}
+
+/// <summary>
+/// Where <see cref="Filters.TmFilterBuilder"/> opens the field picker and editor.
+/// <see cref="Inline"/> is the default and keeps today's layout, including PickersPage.
+/// </summary>
+public enum FilterBuilderPresentation
+{
+    /// <summary>The picker and editor render in the document flow.</summary>
+    Inline,
+
+    /// <summary>The picker and editor render as an anchored popover.</summary>
+    Popover,
+
+    /// <summary>Same as <see cref="Inline"/> until a host opts into a breakpoint rule.</summary>
+    Auto
+}

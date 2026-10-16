@@ -744,6 +744,12 @@ public partial class TmDataTable<TItem> : IDisposable
     /// </summary>
     [Parameter] public DataTableKeyboardNavigation KeyboardNavigation { get; set; } = DataTableKeyboardNavigation.Rows;
 
+    /// <summary>
+    /// Surface. <see cref="DataTableAppearance.Plain"/> (default) keeps today's markup.
+    /// <see cref="DataTableAppearance.Card"/> adds the card class around the table, pager and group bar.
+    /// </summary>
+    [Parameter] public DataTableAppearance Appearance { get; set; } = DataTableAppearance.Plain;
+
     /// <summary>Whether to show the grouping drop zone above the table.</summary>
     [Parameter] public bool ShowGrouping { get; set; }
 
@@ -2653,6 +2659,6 @@ public partial class TmDataTable<TItem> : IDisposable
 
     private string GetScrollContainerStyle() =>
         ScrollMode == DataTableScrollMode.Virtualized
-            ? $"height: {VirtualScrollHeight ?? "600px"}; overflow-y: auto;"
+            ? $"height: {VirtualScrollHeight ?? "600px"}; overflow-y: auto; --tm-data-table-row-height: {VirtualItemSize.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;"
             : string.Empty;
 }

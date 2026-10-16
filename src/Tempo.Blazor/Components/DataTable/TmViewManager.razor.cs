@@ -69,6 +69,7 @@ public partial class TmViewManager : ComponentBase
     private bool _showModal;
     private List<DataTableView> _views = [];
     private DataTableView? _editingView;
+    private bool _saveCurrent;
     private DataTableView? _defaultView;
     private DataTableView? _activeView;
 
@@ -159,6 +160,7 @@ public partial class TmViewManager : ComponentBase
     private void OpenCreateModal()
     {
         _editingView = null;
+        _saveCurrent = false;
         _viewName = "";
         _viewScope = ViewScope.Personal;
         _selectedColumns = AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
@@ -172,6 +174,7 @@ public partial class TmViewManager : ComponentBase
     private void OpenEditModal(DataTableView view)
     {
         _editingView = view;
+        _saveCurrent = false;
         _viewName = view.Name;
         _viewScope = view.Scope;
         _selectedColumns = view.VisibleColumns?.ToList() ?? [];
@@ -281,6 +284,7 @@ public partial class TmViewManager : ComponentBase
 
         var current = GetCurrentView();
         _editingView = null;
+        _saveCurrent = true;
         _viewName = $"{current.Name} {Loc["TmViewManager_CopySuffix"]}";
         _viewScope = ViewScope.Personal;
         _selectedColumns = current.VisibleColumns?.ToList() ?? AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();

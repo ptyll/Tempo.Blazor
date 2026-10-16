@@ -17,7 +17,7 @@
                 @onclick="PrevPage"
                 disabled="@(Disabled || CurrentPage <= 1)"
                 aria-label="@Loc["Tm_Previous"]">
-            &#8249;
+            <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
         </button>
 
         @foreach (var pageNum in GetPageNumbers())
@@ -43,7 +43,7 @@
                 @onclick="NextPage"
                 disabled="@(Disabled || CurrentPage >= TotalPages)"
                 aria-label="@Loc["Tm_Next"]">
-            &#8250;
+            <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
         </button>
     </div>
 

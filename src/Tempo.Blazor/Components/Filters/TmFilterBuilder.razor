@@ -3,7 +3,7 @@
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Pickers
 
-<div class="tm-filter-builder @Class">
+<div class="tm-filter-builder @(Presentation == FilterBuilderPresentation.Popover ? "tm-filter-builder--popover" : null) @Class">
     @* Active filter chips *@
     <div class="tm-filter-chips">
         @foreach (var f in _filters)
@@ -134,6 +134,12 @@
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Picker placement. <see cref="FilterBuilderPresentation.Inline"/> (default) keeps today's layout.
+    /// <see cref="FilterBuilderPresentation.Popover"/> anchors the picker. Hosts must opt in.
+    /// </summary>
+    [Parameter] public FilterBuilderPresentation Presentation { get; set; } = FilterBuilderPresentation.Inline;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

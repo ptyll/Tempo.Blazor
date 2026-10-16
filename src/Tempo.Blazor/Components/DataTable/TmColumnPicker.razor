@@ -8,8 +8,9 @@
             aria-haspopup="true"
             aria-expanded="@_open.ToString().ToLowerInvariant()"
             @onclick="ToggleOpen">
-        <span class="tm-icon-columns"></span>
+        <TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" />
         @Loc["TmDataTable_ColumnPicker"]
+        <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
     </button>
 
     @* The panel is a TmOverlayPanel: popover="manual" puts it in the browser top layer (no

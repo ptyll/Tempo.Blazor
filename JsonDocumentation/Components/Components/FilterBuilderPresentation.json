@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataTable",
+  "description": "Where TmFilterBuilder opens the field picker. Inline is the default and keeps today's layout. Popover anchors it. Auto currently behaves as Inline.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "FilterBuilderPresentation"
+}

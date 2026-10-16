@@ -363,6 +363,13 @@
       "description": "Rows (default) keeps one Tab stop per row. Grid is opt-in roving tabindex: arrows, Home, End, PageUp and PageDown move the active cell. Grid becomes the default in the next major; set Rows to keep today's behavior."
     },
     {
+      "name": "Appearance",
+      "type": "DataTableAppearance",
+      "isRequired": false,
+      "default": "Plain",
+      "description": "Plain (default) keeps today's markup. Card adds tm-data-table-wrapper--card-surface around the table, pager and group bar."
+    },
+    {
       "name": "ShowGrouping",
       "type": "bool",
       "isRequired": false,

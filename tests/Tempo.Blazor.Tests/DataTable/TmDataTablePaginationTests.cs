@@ -332,7 +332,7 @@ public class TmDataTablePaginationTests : LocalizationTestBase
 
         // Every row is rendered, so the honest range is the whole set — "1–10 of 50" would
         // describe a slice nobody made.
-        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("1–50 of 50");
+        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("Total 50 records");
     }
 
     [Fact]
@@ -344,7 +344,7 @@ public class TmDataTablePaginationTests : LocalizationTestBase
             .Add(c => c.ShowResultSummary, true));
 
         cut.FindAll(".tm-pagination").Should().BeEmpty("one page renders no pager");
-        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("1–5 of 5");
+        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("Total 5 records");
     }
 
     [Fact]

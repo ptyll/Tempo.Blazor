@@ -1,4 +1,15 @@
 .tm-filter-builder { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tm-space-2); }
+.tm-filter-builder--popover { position: relative; }
+.tm-filter-builder--popover .tm-filter-field-picker,
+.tm-filter-builder--popover .tm-filter-editor {
+  position: absolute;
+  z-index: var(--tm-z-popover, 20);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-md);
+  padding: var(--tm-space-3);
+}
 .tm-filter-chips   { display: flex; flex-wrap: wrap; gap: var(--tm-space-2); align-items: center; }
 .tm-filter-builder-add {
   padding: var(--tm-space-1) var(--tm-space-3);

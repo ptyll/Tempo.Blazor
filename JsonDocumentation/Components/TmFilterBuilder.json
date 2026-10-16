@@ -40,6 +40,13 @@
       "isRequired": false
     },
     {
+      "name": "Presentation",
+      "type": "FilterBuilderPresentation",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "Inline (default) keeps today's layout, including PickersPage. Popover anchors the field picker and editor. Hosts must opt in."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

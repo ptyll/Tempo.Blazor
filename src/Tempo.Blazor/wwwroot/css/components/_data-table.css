@@ -3,6 +3,29 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* Wrapper */
+.tm-data-table-virtual-scroll .tm-data-table tbody tr {
+  height: var(--tm-data-table-row-height, 48px);
+}
+.tm-data-table__export-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+.tm-data-table__export-label {
+  font-weight: var(--tm-font-weight-semibold, 600);
+}
+.tm-data-table__export-description {
+  flex-basis: 100%;
+  color: var(--tm-text-muted);
+  font-size: var(--tm-font-size-sm);
+}
+.tm-data-table-wrapper--card-surface {
+  border-radius: var(--tm-radius-card);
+  box-shadow: var(--tm-shadow-card);
+  border: 1px solid var(--tm-border-color);
+  background: var(--tm-bg-surface);
+}
 .tm-data-table-wrapper {
   display: flex;
   flex-direction: column;

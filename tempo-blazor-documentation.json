@@ -4617,6 +4617,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "DataTableAppearance",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Surface of a data table. Plain is the default and keeps today's markup. Card opts into the card radius, shadow and border.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "DataTableKeyboardNavigation",
       "kind": "Enum",
       "category": "Components",
@@ -5037,6 +5047,16 @@
       "description": "Defines the position of the floating action button.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Buttons/FabItem.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "FilterBuilderPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Where TmFilterBuilder opens the field picker. Inline is the default and keeps today's layout. Popover anchors it. Auto currently behaves as Inline.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
       "documentationStatus": "merged"
     },
     {
@@ -9043,6 +9063,13 @@
       ],
       "parameters": [
         {
+          "name": "Appearance",
+          "type": "DataTableAppearance",
+          "isRequired": false,
+          "default": "DataTableAppearance.Plain",
+          "description": "Plain (default) keeps today's markup. Card adds tm-data-table-wrapper--card-surface around the table, pager and group bar."
+        },
+        {
           "name": "CardMode",
           "type": "bool",
           "isRequired": false,
@@ -12739,6 +12766,13 @@
           "type": "EventCallback<IReadOnlyList<ActiveFilter>>",
           "isRequired": false,
           "description": "Fires whenever the filter list changes."
+        },
+        {
+          "name": "Presentation",
+          "type": "FilterBuilderPresentation",
+          "isRequired": false,
+          "default": "FilterBuilderPresentation.Inline",
+          "description": "Inline (default) keeps today's layout, including PickersPage. Popover anchors the field picker and editor. Hosts must opt in."
         },
         {
           "name": "ShowClearAll",
@@ -27465,11 +27499,11 @@
     }
   ],
   "summary": {
-    "itemCount": 375,
-    "manualItemCount": 375,
-    "generatedItemCount": 367,
+    "itemCount": 377,
+    "manualItemCount": 377,
+    "generatedItemCount": 369,
     "generatedOnlyItemCount": 0,
     "componentCount": 203,
-    "publicApiTypeCount": 164
+    "publicApiTypeCount": 166
   }
 }

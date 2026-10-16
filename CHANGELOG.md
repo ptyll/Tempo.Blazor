@@ -4,6 +4,13 @@
 
 ### Added
 
+- **`TmDataTable.Appearance` and `TmFilterBuilder.Presentation`.** Both default to today's
+  look: `Plain` adds no card class, `Inline` keeps the filter editor in the flow (PickersPage
+  included). Opt in with `Card` or `Popover`. Export items now show an icon and a format
+  description. A table without a pager says "Total {0} records" instead of a page range.
+  **Migration:** the no-pager summary text changed. Keep a custom line with
+  `PaginationInfoTemplate`.
+
 - **`TmDataTable.KeyboardNavigation`.** Opt-in `Grid` uses roving tabindex: one cell is
   tabbable, arrows / Home / End / PageUp / PageDown move it, Enter activates the row once.
   Default stays `Rows` (today's Tab-per-row). **Upcoming / Migration:** `Grid` becomes the

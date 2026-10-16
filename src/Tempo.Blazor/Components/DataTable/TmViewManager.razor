@@ -130,7 +130,7 @@
 @* The create/edit view dialog. TmModal gives it the sheet presentation on a mobile viewport, the
    focus trap and the sticky footer; the inner markup stays so the form's own classes keep working. *@
 <TmModal Show="_showModal"
-         Title="@(_editingView == null ? Loc["TmViewManager_CreateTitle"] : Loc["TmViewManager_EditTitle"])"
+         Title="@(_saveCurrent ? Loc["TmViewManager_SaveCurrentTitle"] : _editingView == null ? Loc["TmViewManager_CreateTitle"] : Loc["TmViewManager_EditTitle"])"
          OnClose="CloseModal"
          ShowFooter="true"
          ShowCloseButton="true"
@@ -227,7 +227,9 @@
         </button>
         <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveViewAsync"
                 disabled="@(string.IsNullOrWhiteSpace(_viewName) || !_selectedColumns.Any())">
-            @(_editingView == null
+            @(_saveCurrent
+                ? Loc["TmViewManager_SaveChanges"]
+                : _editingView == null
                 ? (Loc["TmViewManager_Create"])
                 : (Loc["TmViewManager_Save"]))
         </button>

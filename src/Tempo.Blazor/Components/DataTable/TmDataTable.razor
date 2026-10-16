@@ -16,7 +16,7 @@
     <span style="display:none" aria-hidden="true">@ChildContent</span>
 </CascadingValue>
 
-<div class="@WrapperCssClass @Class" @attributes="AdditionalAttributes">
+<div class="@WrapperCssClass @(Appearance == DataTableAppearance.Card ? "tm-data-table-wrapper--card-surface" : null) @Class" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -66,16 +66,20 @@
                                     Offset="4"
                                     OnSelect="HandleExportSelectionAsync">
                             <TmDropdownItem Value="csv"
+                                            Icon="@IconNames.FileText"
                                             Class="tm-data-table__export-item"
                                             AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "csv" })">
-                                @Loc["TmDataTable_ExportCsv"]
+                                <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportCsv"]</span>
+                                <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportCsvDescription"]</span>
                             </TmDropdownItem>
                             @if (XlsxExporter is not null)
                             {
                                 <TmDropdownItem Value="xlsx"
+                                                Icon="@IconNames.Table"
                                                 Class="tm-data-table__export-item"
                                                 AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "xlsx" })">
-                                    @Loc["TmDataTable_ExportXlsx"]
+                                    <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportXlsx"]</span>
+                                    <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportXlsxDescription"]</span>
                                 </TmDropdownItem>
                             }
                         </TmDropdown>
@@ -636,7 +640,7 @@
             }
             else
             {
-                @Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount]
+                @Loc["TmDataTable_TotalItems", _totalCount]
             }
         </div>
     }
