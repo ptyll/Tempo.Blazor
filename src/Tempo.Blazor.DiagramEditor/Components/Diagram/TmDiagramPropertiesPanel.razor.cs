@@ -211,6 +211,12 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
 
     private string GetNodeFill() => GetCommonString(SelectedNodes.Select(n => n.Style.Fill)) ?? "#ffffff";
     private string GetNodeStroke() => GetCommonString(SelectedNodes.Select(n => n.Style.Stroke)) ?? "#111827";
+
+    /// <summary>Uppercase form of a hex colour for the read-only value next to a swatch
+    /// (mockup shows "#DBEAFE", not "#dbeafe"). Non-hex values pass through unchanged.</summary>
+    private static string FormatHex(string value) =>
+        value.StartsWith('#') ? value.ToUpperInvariant() : value;
+
     private double GetNodeStrokeWidth() => GetCommonDouble(SelectedNodes.Select(n => n.Style.StrokeWidth)) ?? 1.5;
     private double GetNodeOpacity() => (GetCommonDouble(SelectedNodes.Select(n => n.Style.Opacity)) ?? 1.0) * 100;
     private double GetNodeRadius() => GetCommonDouble(SelectedNodes.Select(n => n.Style.Radius)) ?? 0;

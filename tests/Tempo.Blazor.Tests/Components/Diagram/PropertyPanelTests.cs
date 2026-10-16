@@ -43,6 +43,35 @@ public class PropertyPanelTests : LocalizationTestBase
     }
 
     [Fact]
+    public void FillField_ShowsHexValueNextToSwatch()
+    {
+        var doc = new DiagramDocument();
+        var node = new DiagramNode
+        {
+            StencilId = "general.rectangle",
+            X = 100,
+            Y = 100,
+            W = 120,
+            H = 60,
+            Style = new DiagramStyle { Fill = "#dbeafe", Stroke = "#2563eb" }
+        };
+        doc.Nodes.Add(node);
+
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.SelectedIds, [node.Id])
+            .Add(c => c.ReadOnly, false));
+
+        // Mockup (Vzhled section): every color field shows the swatch with the hex value as
+        // readable text next to it, not just the bare color input.
+        var wraps = cut.FindAll(".tm-diagram-properties__color-wrap");
+        wraps.Should().HaveCount(2);
+        wraps[0].QuerySelector(".tm-diagram-properties__color-swatch").Should().NotBeNull();
+        wraps[0].QuerySelector(".tm-diagram-properties__color-value")!.TextContent.Should().Be("#DBEAFE");
+        wraps[1].QuerySelector(".tm-diagram-properties__color-value")!.TextContent.Should().Be("#2563EB");
+    }
+
+    [Fact]
     public void MultiSelectionNodes_ShowsMixedWhenDifferentValues()
     {
         var doc = new DiagramDocument();

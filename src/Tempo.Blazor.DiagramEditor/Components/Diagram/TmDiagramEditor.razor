@@ -343,19 +343,17 @@
                         </select>
                         @if (_canvasSizeEditing)
                         {
-                            <input class="tm-diagram-editor__props-input"
+                            <input class="tm-diagram-editor__props-input tm-diagram-editor__canvas-size-input"
                                    type="number" min="100" max="9999" step="1"
                                    aria-label="@Loc["TmDiagramEditor_CanvasWidth"]"
                                    value="@_canvasWInput"
-                                   @oninput="e => _canvasWInput = e.Value?.ToString() ?? _canvasWInput"
-                                   style="width:60px;" />
-                            <span style="font-size:12px;color:var(--tm-color-text-muted);">×</span>
-                            <input class="tm-diagram-editor__props-input"
+                                   @oninput="e => _canvasWInput = e.Value?.ToString() ?? _canvasWInput" />
+                            <span class="tm-diagram-editor__canvas-size-sep">×</span>
+                            <input class="tm-diagram-editor__props-input tm-diagram-editor__canvas-size-input"
                                    type="number" min="100" max="9999" step="1"
                                    aria-label="@Loc["TmDiagramEditor_CanvasHeight"]"
                                    value="@_canvasHInput"
-                                   @oninput="e => _canvasHInput = e.Value?.ToString() ?? _canvasHInput"
-                                   style="width:60px;" />
+                                   @oninput="e => _canvasHInput = e.Value?.ToString() ?? _canvasHInput" />
                             <TmToolbarButton Icon="@IconNames.Check"
                                              Tooltip="@Loc["TmDiagramEditor_Apply"]"
                                              OnClick="ApplyCanvasSize" />
@@ -427,7 +425,7 @@
                 {
                     <div class="tm-diagram-editor__toolbar-group" data-tm-group="@GroupName(DiagramToolbarGroups.Import)">
                         <TmDropdown Text="@Loc["TmDiagramEditor_Import"]" Icon="@IconNames.Upload" Disabled="@IsReadOnly" OnSelect="HandleImportSelect">
-                            <label class="tm-dropdown-item" style="cursor:pointer;margin:0;" title="@Loc["TmDiagramEditor_ImportJson"]" aria-label="@Loc["TmDiagramEditor_ImportJson"]">
+                            <label class="tm-dropdown-item tm-diagram-editor__import-file-label" title="@Loc["TmDiagramEditor_ImportJson"]" aria-label="@Loc["TmDiagramEditor_ImportJson"]">
                                 <TmIcon Name="@IconNames.FileText" Size="IconSize.Sm" />
                                 <span>@Loc["TmDiagramEditor_ImportJson"]</span>
                                 <InputFile style="display:none;" OnChange="OnImportFile" accept=".json,.diagram.json" />
@@ -517,7 +515,7 @@
         }
 
         @* Centre: Canvas with optional rulers *@
-        <div class="tm-diagram-editor__canvas-wrap" style="@(_showRulers ? "padding-top:24px;padding-left:24px;" : "")">
+        <div class="tm-diagram-editor__canvas-wrap @(_showRulers ? "tm-diagram-editor__canvas-wrap--rulers" : "")">
             @if (_showRulers)
             {
                 <div class="tm-diagram-editor__ruler-corner"></div>
@@ -806,13 +804,13 @@
                     <div class="tm-diagram-connect-modal__icon">
                         @if (!string.IsNullOrEmpty(stencil.IconSvg))
                         {
-                            <svg viewBox="0 0 32 32" aria-hidden="true" style="width:32px;height:32px;">
+                            <svg viewBox="0 0 32 32" aria-hidden="true">
                                 @((MarkupString)stencil.IconSvg)
                             </svg>
                         }
                         else
                         {
-                            <svg viewBox="0 0 32 32" aria-hidden="true" style="width:32px;height:32px;">
+                            <svg viewBox="0 0 32 32" aria-hidden="true">
                                 <rect x="2" y="8" width="28" height="16" rx="2"
                                       fill="var(--tm-color-surface-elevated)"
                                       stroke="var(--tm-color-text)" stroke-width="2" />

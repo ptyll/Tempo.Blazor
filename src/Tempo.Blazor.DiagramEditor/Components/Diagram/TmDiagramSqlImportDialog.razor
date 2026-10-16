@@ -35,9 +35,16 @@
 
             @if (_previewTables >= 0)
             {
+                @* Mockup: the live parse result is a summary box with one icon stat per count. *@
                 <div class="tm-diagram-sql-import__preview" role="status" aria-live="polite">
-                    <span>@Loc["TmDiagramSqlImportDialog_PreviewTables", _previewTables]</span>
-                    <span>@Loc["TmDiagramSqlImportDialog_PreviewRelations", _previewRelations]</span>
+                    <span class="tm-diagram-sql-import__stat">
+                        <TmIcon Name="@IconNames.Table" Size="IconSize.Sm" />
+                        @Loc["TmDiagramSqlImportDialog_PreviewTables", _previewTables]
+                    </span>
+                    <span class="tm-diagram-sql-import__stat">
+                        <TmIcon Name="@IconNames.Link" Size="IconSize.Sm" />
+                        @Loc["TmDiagramSqlImportDialog_PreviewRelations", _previewRelations]
+                    </span>
                 </div>
             }
 

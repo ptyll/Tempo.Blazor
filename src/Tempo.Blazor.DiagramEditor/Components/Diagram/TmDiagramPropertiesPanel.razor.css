@@ -1,4 +1,6 @@
 /* Replace Shape section inside properties panel */
+/* Tokenized (phase 3): semantic tokens only — the former [data-theme="dark"] /
+   .tm-dark overrides re-declared exactly what tokens-dark.css already provides. */
 .tm-diagram-replace-shape__list {
     max-height: 240px;
     overflow-y: auto;
@@ -10,7 +12,7 @@
 .tm-diagram-replace-shape__category-name {
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -28,16 +30,16 @@
     justify-content: center;
     gap: 2px;
     padding: var(--tm-space-1, 4px);
-    background: var(--tm-color-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .tm-diagram-replace-shape__item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-diagram-replace-shape__item svg {
@@ -47,28 +49,10 @@
 
 .tm-diagram-replace-shape__item span {
     font-size: 10px;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-}
-
-/* Dark mode adjustments */
-[data-theme="dark"] .tm-diagram-replace-shape__item,
-.tm-dark .tm-diagram-replace-shape__item {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-}
-
-[data-theme="dark"] .tm-diagram-replace-shape__item:hover,
-.tm-dark .tm-diagram-replace-shape__item:hover {
-    background: rgba(59, 130, 246, 0.15);
-    border-color: var(--tm-color-primary, #3b82f6);
-}
-
-[data-theme="dark"] .tm-diagram-replace-shape__item span,
-.tm-dark .tm-diagram-replace-shape__item span {
-    color: var(--tm-color-text, #f3f4f6);
 }

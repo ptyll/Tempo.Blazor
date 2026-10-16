@@ -3,6 +3,7 @@ using FluentAssertions;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Tests.Diagram;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
@@ -221,5 +222,25 @@ public class TmDiagramLayersPanelTests : DiagramTestBase
             .Add(x => x.DataTestId, "my-layers"));
 
         cut.Find("[data-testid='my-layers']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void SingleStyleSource()
+    {
+        // The panel's styles lived twice: in the component's scoped stylesheet AND as a legacy
+        // copy inside the package's global _diagram-editor.css. Two sources drift silently —
+        // the scoped copy wins on specificity, so edits to the global one never showed up.
+        // Freeze: every .tm-diagram-layers* rule must live in exactly ONE source, the component's
+        // own TmDiagramLayersPanel.razor.css (P21 ownership).
+        var src = Path.Combine(ThemeCss.RepositoryRoot().FullName, "src");
+        var excluded = new[] { $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}" };
+        var sources = Directory.EnumerateFiles(src, "*.css", SearchOption.AllDirectories)
+            .Where(path => !excluded.Any(path.Contains))
+            .Where(path => File.ReadAllText(path).Contains(".tm-diagram-layers"))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        sources.Should().ContainSingle("the layers panel styles must have exactly one CSS source")
+            .Which.Should().Be("TmDiagramLayersPanel.razor.css");
     }
 }

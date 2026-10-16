@@ -44,6 +44,112 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
     public async Task Mobile_320_CapturesEditorDialogsAndConnectModal() =>
         await CaptureAllStatesAsync(320, 640, touch: false, "mobile-320");
 
+    /// <summary>
+    /// Phase-3 (visual layer) theme matrix: the editor, the layers panel and the four dialogs
+    /// captured at 1440×900 in every light/dark × default/indigo combination. The phase-3
+    /// tokenization removed every component-level dark override, so each dark capture must be
+    /// produced purely by the semantic tokens (tokens-dark.css) — a broken dark capture here is
+    /// the regression signal. Files land in __screenshots__/diagram-editor/ (committed).
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1440×900 light/dark × default/indigo: editor, layers panel, gallery, SQL/CSV dialogs, connect modal")]
+    public async Task Desktop_1440_ThemeMatrix_CapturesEditorLayersAndDialogs()
+    {
+        foreach (var dark in new[] { false, true })
+        {
+            foreach (var indigo in new[] { false, true })
+            {
+                var theme = (dark ? "dark" : "light") + "-" + (indigo ? "indigo" : "default");
+                var page = await OpenDiagramEditorAsync(1440, 900, touch: false);
+                await page.EvaluateAsync(
+                    $$"""
+                    () => {
+                        document.documentElement.setAttribute('data-theme', '{{(dark ? "dark" : "light")}}');
+                        document.documentElement.setAttribute('data-tm-theme', '{{(indigo ? "indigo" : "default")}}');
+                        localStorage.setItem('tm-demo-color-theme', '{{(indigo ? "indigo" : "default")}}');
+                    }
+                    """);
+                await page.WaitForTimeoutAsync(150);
+
+                // 1. Full editor
+                await ShotAsync(page, $"desktop-1440-{theme}--editor");
+
+                // 2. Layers panel: the properties panel is flex-shrink:0 above it, so the layers
+                //    wrap only gets the LEFTOVER height (a 2px strip at 1440×900 — the demo's
+                //    default state, unchanged by phase 3). Collapse the properties panel first
+                //    (its own panels-group toggle) so the capture shows the real panel.
+                await page.Locator("[data-tm-group='panels'] button[title='Toggle properties panel']")
+                    .First.ClickAsync();
+                var layers = page.Locator(".tm-diagram-editor__layers-wrap");
+                await layers.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await page.WaitForTimeoutAsync(250);
+                await layers.ScreenshotAsync(new LocatorScreenshotOptions
+                {
+                    Path = Path.Combine(OutputDirectory, $"desktop-1440-{theme}--layers.png"),
+                    Type = ScreenshotType.Png,
+                    Timeout = 60_000,
+                });
+                await page.Locator("[data-tm-group='panels'] button[title='Toggle properties panel']")
+                    .First.ClickAsync();
+                await page.WaitForTimeoutAsync(150);
+
+                // 3. Template gallery
+                await page.Locator("[data-tm-group='templates'] button").First.ClickAsync();
+                await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
+                    new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await ShotSettledAsync(page, $"desktop-1440-{theme}--template-gallery");
+                await page.Keyboard.PressAsync("Escape");
+                await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
+
+                // 4. SQL import dialog
+                await page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First.ClickAsync();
+                await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = "Import SQL" })
+                    .First.ClickAsync();
+                await page.Locator(".tm-diagram-sql-import").WaitForAsync(
+                    new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await ShotSettledAsync(page, $"desktop-1440-{theme}--sql-import-dialog");
+                await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
+                    .First.ClickAsync();
+                await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
+
+                // 5. CSV import dialog
+                await page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First.ClickAsync();
+                await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = "Import CSV" })
+                    .First.ClickAsync();
+                await page.Locator(".tm-diagram-csv-import").WaitForAsync(
+                    new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await ShotSettledAsync(page, $"desktop-1440-{theme}--csv-import-dialog");
+                await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
+                    .First.ClickAsync();
+                await ExpectHiddenAsync(page, ".tm-diagram-csv-import");
+
+                // 6. Connect modal (JS selection entry point, same as the phase-1 baseline)
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        const canvas = document.querySelector('.tm-diagram-canvas');
+                        if (!canvas) return 'no-canvas';
+                        const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                        if (!inst || !inst.dotNetRef) return 'no-instance';
+                        const id = document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id');
+                        if (!id) return 'no-node';
+                        inst.selectedIds = new Set([id]);
+                        window.tmDiagramEditor._updateSelection(inst);
+                        inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+                        return 'ok';
+                    }
+                    """);
+                await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
+                await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
+                    new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await ShotSettledAsync(page, $"desktop-1440-{theme}--connect-modal");
+
+                await page.CloseAsync();
+            }
+        }
+    }
+
     private async Task CaptureAllStatesAsync(int width, int height, bool touch, string prefix)
     {
         var page = await OpenDiagramEditorAsync(width, height, touch);

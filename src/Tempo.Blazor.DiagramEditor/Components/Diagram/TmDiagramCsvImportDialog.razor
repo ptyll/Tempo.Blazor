@@ -95,9 +95,16 @@
 
             @if (_previewNodes >= 0)
             {
+                @* Mockup: the live parse result paints as one summary box holding icon stats. *@
                 <div class="tm-diagram-csv-import__preview" role="status" aria-live="polite">
-                    <span>@Loc["TmDiagramCsvImportDialog_PreviewNodes", _previewNodes]</span>
-                    <span>@Loc["TmDiagramCsvImportDialog_PreviewEdges", _previewEdges]</span>
+                    <span class="tm-diagram-csv-import__stat">
+                        <TmIcon Name="@IconNames.Square" Size="IconSize.Sm" />
+                        @Loc["TmDiagramCsvImportDialog_PreviewNodes", _previewNodes]
+                    </span>
+                    <span class="tm-diagram-csv-import__stat">
+                        <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Sm" />
+                        @Loc["TmDiagramCsvImportDialog_PreviewEdges", _previewEdges]
+                    </span>
                 </div>
             }
 

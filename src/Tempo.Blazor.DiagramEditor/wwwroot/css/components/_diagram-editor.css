@@ -3,26 +3,30 @@
    ════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Root editor shell ────────────────────────────────────────────────────── */
+/* The editor chrome (everything around the white page) sits on the themed workspace
+   tone — --tm-bg-workspace (F0) follows the page background in both themes and the
+   indigo theme, so no component-level dark override is needed. */
 .tm-diagram-editor {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
     min-height: 0;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-bg-workspace);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-lg, 8px);
     overflow: hidden;
 }
 
-/* ── Page tabs ────────────────────────────────────────────────────────────── */
+/* Mockup: page tabs read as flat labels on the workspace strip; the ACTIVE page is
+   marked by a primary underline instead of a raised boxed tab. */
 .tm-diagram-editor__page-tabs {
     display: flex;
     align-items: flex-end;
     gap: 2px;
     padding: 2px 8px 0;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-bg-workspace);
+    border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
     overflow-x: auto;
 }
@@ -31,37 +35,34 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: 8px 12px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text-muted, #6b7280);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid transparent;
-    border-bottom: none;
-    border-radius: var(--tm-radius-md, 6px) var(--tm-radius-md, 6px) 0 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     cursor: pointer;
     user-select: none;
-    transition: background 120ms, color 120ms;
+    transition: background 120ms, color 120ms, border-color 120ms;
     min-width: 80px;
     max-width: 180px;
 }
 
 .tm-diagram-editor__page-tab:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-editor__page-tab--drag-over {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: inset 0 0 0 1px var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    border-bottom-color: var(--tm-color-primary);
 }
 
 .tm-diagram-editor__page-tab--active {
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
-    border-color: var(--tm-color-border, #e5e7eb);
-    margin-bottom: -1px;
-    padding-bottom: 7px;
+    background: transparent;
+    color: var(--tm-color-text);
+    border-bottom-color: var(--tm-color-primary);
 }
 
 .tm-diagram-editor__page-tab-name {
@@ -73,7 +74,7 @@
 .tm-diagram-editor__page-tab-dot {
     width: 6px;
     height: 6px;
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -87,7 +88,7 @@
     padding: 0;
     font-size: 11px;
     line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     background: transparent;
     border: none;
     border-radius: var(--tm-radius-sm, 4px);
@@ -140,8 +141,8 @@
 }
 
 .tm-diagram-editor__page-tab-close:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
 }
 
 .tm-diagram-editor__page-tab-input {
@@ -149,9 +150,9 @@
     min-width: 60px;
     padding: 2px 4px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-primary);
     border-radius: var(--tm-radius-sm, 4px);
     outline: none;
 }
@@ -165,7 +166,7 @@
     padding: 0;
     font-size: 18px;
     line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--tm-radius-md, 6px);
@@ -175,18 +176,22 @@
 }
 
 .tm-diagram-editor__page-tab-add:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 /* ── Toolbar ──────────────────────────────────────────────────────────────── */
+/* Mockup: the toolbar is a flat strip on the workspace chrome; groups are NOT boxed
+   button containers — the `__toolbar-sep` rules between groups (and the group gaps)
+   carry the structure. Re-grouping itself is the phase-4 redesign; only the paint
+   changed here. The data-tm-group contract is untouched. */
 .tm-diagram-editor__toolbar {
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    gap: var(--tm-space-1, 4px);
+    padding: var(--tm-space-1, 4px) var(--tm-space-3, 12px);
+    background: var(--tm-bg-workspace);
+    border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
 }
 
@@ -196,8 +201,8 @@
     /* Groups wrap instead of clipping on narrow hosts (the Modeling preview relied on this
        before the toolbar API existed; overflow toolbar comes with the phase-4 redesign). */
     flex-wrap: wrap;
-    gap: var(--tm-space-2, 8px);
-    min-height: 28px;
+    gap: var(--tm-space-1, 4px);
+    min-height: 40px;
 }
 
 /* G9 host slots: the wrapper must not break the row's flex layout. */
@@ -209,10 +214,10 @@
 .tm-diagram-editor__title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 500;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
     padding: 4px 10px;
     min-width: 120px;
     max-width: 200px;
@@ -221,9 +226,9 @@
 
 .tm-diagram-editor__title:hover,
 .tm-diagram-editor__title:focus {
-    border-color: var(--tm-color-primary, #3b82f6);
+    border-color: var(--tm-color-primary);
     outline: none;
-    box-shadow: 0 0 0 3px var(--tm-color-primary-subtle, #dbeafe);
+    box-shadow: 0 0 0 3px var(--tm-color-primary-subtle);
 }
 
 .tm-diagram-insert-dropdown-wrapper {
@@ -232,21 +237,28 @@
 }
 
 /* ── Toolbar Button Groups ───────────────────────────────────────────────── */
+/* Flat groups (mockup): no group box, no per-button inner separators. Each button is
+   its own rounded control; the `--active` tool gets the subtle primary fill + primary
+   ink, matching the core aria-pressed convention of .tm-toolbar-btn. */
 .tm-diagram-editor__toolbar-group {
     display: inline-flex;
     align-items: center;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    overflow: hidden;
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    overflow: visible;
     flex-shrink: 0;
+    min-height: 40px;
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn {
-    border-radius: 0;
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    height: 40px;
+    min-width: 36px;
+    padding: 0 var(--tm-space-2, 8px);
+    border-radius: var(--tm-radius-control);
+    border-right: none;
     background: transparent;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-secondary);
     transition: background 120ms, color 120ms;
 }
 
@@ -255,23 +267,23 @@
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn--active {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn--active:hover:not(:disabled) {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    color: var(--tm-color-primary, #2563eb);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 /* Toolbar dropdown inside group */
 .tm-diagram-editor__toolbar-group .tm-dropdown-wrapper {
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    border-right: none;
 }
 
 .tm-diagram-editor__toolbar-group .tm-dropdown-wrapper:last-child {
@@ -282,10 +294,12 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: var(--tm-space-1) var(--tm-space-2);
+    height: 40px;
+    padding: 0 var(--tm-space-2, 8px);
+    border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-sm, 13px);
     line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-secondary);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -294,15 +308,15 @@
 }
 
 .tm-diagram-editor__toolbar-group .tm-dropdown-trigger:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-editor__toolbar-sep {
     width: 1px;
-    height: 20px;
-    background: var(--tm-color-border, #e5e7eb);
-    margin: 0 2px;
+    height: 24px;
+    background: var(--tm-color-border);
+    margin: 0 var(--tm-space-1, 4px);
     flex-shrink: 0;
 }
 
@@ -317,20 +331,43 @@
     padding: 0 6px;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     min-width: 44px;
     user-select: none;
 }
 
 .tm-diagram-editor__unit-select {
-    height: 28px;
+    height: 32px;
     padding: 0 var(--tm-space-2, 8px);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius, 6px);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     font-size: 12px;
     cursor: pointer;
+}
+
+/* Canvas-size editor (W × H): presentational values moved here from inline styles. */
+.tm-diagram-editor__canvas-size-input {
+    width: 60px;
+    padding: 4px 8px;
+    font-size: var(--tm-font-size-sm, 14px);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-diagram-editor__canvas-size-sep {
+    font-size: 12px;
+    color: var(--tm-color-text-muted);
+    user-select: none;
+}
+
+/* The file-picker label inside the Import dropdown renders as a menu item. */
+.tm-diagram-editor__import-file-label {
+    cursor: pointer;
+    margin: 0;
 }
 
 /* ── Body (toolbox + canvas + props) ─────────────────────────────────────── */
@@ -345,8 +382,8 @@
 .tm-diagram-editor__toolbox-wrap {
     width: 220px;
     flex-shrink: 0;
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    border-right: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface-elevated);
     overflow-y: auto;
 }
 
@@ -359,7 +396,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.025em;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin: var(--tm-space-3, 12px) 0 var(--tm-space-2, 8px);
 }
 
@@ -375,7 +412,7 @@
 }
 
 .tm-diagram-editor__toolbox-item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-editor__toolbox-icon {
@@ -385,12 +422,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-editor__toolbox-label {
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
 }
 
 /* ── Canvas wrap ──────────────────────────────────────────────────────────── */
@@ -399,8 +436,14 @@
     flex: 1;
     min-width: 0;
     min-height: 0;
-    background: var(--tm-color-surface, #ffffff);
+    background: var(--tm-color-surface);
     overflow: hidden;
+}
+
+/* Rulers take a fixed 24px band on the top/left (moved here from an inline style). */
+.tm-diagram-editor__canvas-wrap--rulers {
+    padding-top: 24px;
+    padding-left: 24px;
 }
 
 .tm-diagram-editor__canvas {
@@ -415,9 +458,9 @@
     left: 0;
     width: 24px;
     height: 24px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-color-border);
     z-index: 5;
 }
 
@@ -427,8 +470,8 @@
     left: 24px;
     right: 0;
     height: 24px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-color-border);
     z-index: 5;
 }
 
@@ -438,8 +481,8 @@
     left: 0;
     bottom: 0;
     width: 24px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-color-border);
     z-index: 5;
 }
 
@@ -451,29 +494,29 @@
 }
 
 .tm-diagram-ruler__tick {
-    stroke: var(--tm-color-text-muted, #6b7280);
+    stroke: var(--tm-color-text-muted);
     stroke-width: 1;
 }
 
 .tm-diagram-ruler__tick--major {
-    stroke: var(--tm-color-text, #111827);
+    stroke: var(--tm-color-text);
     stroke-width: 1.5;
 }
 
 .tm-diagram-ruler__tick--half {
-    stroke: var(--tm-color-text-muted, #6b7280);
+    stroke: var(--tm-color-text-muted);
     stroke-width: 1.2;
 }
 
 .tm-diagram-ruler__tick--sub {
-    stroke: var(--tm-color-text-muted, #6b7280);
+    stroke: var(--tm-color-text-muted);
     stroke-width: 0.75;
     opacity: 0.7;
 }
 
 .tm-diagram-ruler__text {
     font-size: 9px;
-    fill: var(--tm-color-text-muted, #6b7280);
+    fill: var(--tm-color-text-muted);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     user-select: none;
 }
@@ -484,7 +527,7 @@
 }
 
 .tm-diagram-ruler__crosshair {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1;
     pointer-events: none;
 }
@@ -519,7 +562,7 @@
  * nodes underneath. */
 .tm-diagram-group-bounds {
     fill: none;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1;
     stroke-dasharray: 4 4;
     opacity: 0.4;
@@ -552,7 +595,13 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    color: var(--tm-diagram-node-text, #111827);
+    /* Node bodies paint on the DOCUMENT's data-driven fill (default #ffffff in both themes),
+       so the default ink must stay DARK in both themes. --tm-text-inverse is the dark-ink
+       token that keeps that value in dark mode too (tokens-dark re-declares it as the dark
+       page tone, not a light ink). The old code used an undefined --tm-diagram-node-text
+       whose hex fallback (#111827) produced exactly this; a theme-following --tm-color-text
+       would paint white-on-white in dark mode (found in the phase-3 screenshot review). */
+    color: var(--tm-text-inverse);
     user-select: none;
     pointer-events: auto;
 }
@@ -604,19 +653,19 @@
  * box-shadow. */
 rect.tm-diagram-selection-outline {
     fill: none;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 2;
     rx: 4;
     ry: 4;
     pointer-events: none;
-    filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.45));
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tm-color-primary) 45%, transparent));
 }
 
 /* ── Rubber band ─────────────────────────────────────────────────────────── */
 .tm-diagram-rubber {
     position: absolute;
-    background: rgba(59, 130, 246, 0.08);
-    border: 1px dashed var(--tm-color-primary, #3b82f6);
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
+    border: 1px dashed var(--tm-color-primary);
     pointer-events: none;
 }
 
@@ -646,7 +695,7 @@ rect.tm-diagram-selection-outline {
  * group so they can tell the endpoint is not attached to anything. */
 .tm-diagram-edge-floating-marker {
     fill: transparent;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     stroke-dasharray: 2 2;
     opacity: 0;
@@ -671,13 +720,13 @@ rect.tm-diagram-selection-outline {
  * `classList.add/remove` can keep targeting the node itself — `outline` on
  * SVG elements is patchy across browsers, so the body <div> does the paint. */
 .tm-diagram-node--drop-target .tm-diagram-node__body {
-    outline: 2px solid var(--tm-color-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
     border-radius: var(--tm-radius-sm, 4px);
 }
 
 .tm-diagram-node--outline-connect .tm-diagram-node__body {
-    outline: 2px dashed var(--tm-color-success, #10b981);
+    outline: 2px dashed var(--tm-color-success);
     outline-offset: 3px;
     border-radius: var(--tm-radius-sm, 4px);
 }
@@ -694,10 +743,10 @@ rect.tm-diagram-selection-outline {
     right: 4px;
     width: 16px;
     height: 16px;
-    color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-surface, #ffffff);
+    color: var(--tm-color-primary);
+    background: var(--tm-color-surface);
     border-radius: var(--tm-radius-sm, 4px);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    box-shadow: var(--tm-shadow-sm);
     pointer-events: none;
     z-index: 2;
     display: flex;
@@ -729,7 +778,7 @@ rect.tm-diagram-selection-outline {
 
 .tm-diagram-node__divider {
     height: 1px;
-    background: var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-border);
     flex-shrink: 0;
     width: 100%;
 }
@@ -766,7 +815,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--tm-color-surface-subtle);
     flex-shrink: 0;
 }
 
@@ -795,7 +844,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: row;
     min-height: 0;
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    border-bottom: 1px solid var(--tm-color-border);
 }
 
 .tm-diagram-node__swimlane--horizontal .tm-diagram-node__swimlane-row:last-child {
@@ -807,8 +856,8 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.03);
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-subtle);
+    border-right: 1px solid var(--tm-color-border);
     flex-shrink: 0;
     writing-mode: vertical-rl;
     text-orientation: mixed;
@@ -829,7 +878,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    border-right: 1px solid var(--tm-color-border);
 }
 
 .tm-diagram-node__swimlane--vertical .tm-diagram-node__swimlane-col:last-child {
@@ -841,8 +890,8 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.03);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-subtle);
+    border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
     padding: 0 4px;
 }
@@ -870,7 +919,7 @@ rect.tm-diagram-selection-outline {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12px;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     box-sizing: border-box;
 }
 
@@ -883,8 +932,8 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__shape[data-shape="table"] {
-    background: var(--stencil-fill, #ffffff);
-    border: 1px solid var(--stencil-stroke, #111827);
+    background: var(--stencil-fill);
+    border: 1px solid var(--stencil-stroke);
 }
 
 .tm-diagram-node__section--icon {
@@ -933,10 +982,10 @@ rect.tm-diagram-selection-outline {
 
 .tm-diagram-node__inline-input,
 .tm-diagram-node__inline-textarea {
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    border: 1px solid var(--tm-color-primary);
     border-radius: 2px;
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     font: inherit;
     outline: none;
     padding: 0 2px;
@@ -946,7 +995,7 @@ rect.tm-diagram-selection-outline {
 
 .tm-diagram-node__inline-input:focus,
 .tm-diagram-node__inline-textarea:focus {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 /* ── Collapse button ─────────────────────────────────────────────────────── */
@@ -963,9 +1012,9 @@ rect.tm-diagram-selection-outline {
     font-size: 12px;
     line-height: 1;
     font-weight: 700;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm, 4px);
     cursor: pointer;
     z-index: 20;
@@ -973,8 +1022,8 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__collapse-btn:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-border-strong, #d1d5db);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-diagram-editor--readonly .tm-diagram-node__collapse-btn {
@@ -983,25 +1032,25 @@ rect.tm-diagram-selection-outline {
 
 /* ── Search highlight ────────────────────────────────────────────────────── */
 .tm-diagram-node.tm-diagram-search-match .tm-diagram-node__body {
-    outline: 2px solid var(--tm-color-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
     animation: tm-diagram-search-pulse 1.5s ease-in-out infinite;
 }
 
 path.tm-diagram-edge-path.tm-diagram-search-match {
-    stroke: var(--tm-color-primary, #3b82f6);    
+    stroke: var(--tm-color-primary);    
     animation: tm-diagram-search-pulse-svg 1.5s ease-in-out infinite;
-    filter: drop-shadow(0 0 4px var(--tm-color-primary, #3b82f6));
+    filter: drop-shadow(0 0 4px var(--tm-color-primary));
 }
 
 @keyframes tm-diagram-search-pulse {
-    0%, 100% { outline-color: var(--tm-color-primary, #3b82f6); outline-offset: 2px; }
-    50% { outline-color: var(--tm-color-success, #10b981); outline-offset: 4px; }
+    0%, 100% { outline-color: var(--tm-color-primary); outline-offset: 2px; }
+    50% { outline-color: var(--tm-color-success); outline-offset: 4px; }
 }
 
 @keyframes tm-diagram-search-pulse-svg {
-    0%, 100% { stroke: var(--tm-color-primary, #3b82f6); filter: drop-shadow(0 0 2px var(--tm-color-primary, #3b82f6)); }
-    50% { stroke: var(--tm-color-success, #10b981); filter: drop-shadow(0 0 6px var(--tm-color-success, #10b981)); }
+    0%, 100% { stroke: var(--tm-color-primary); filter: drop-shadow(0 0 2px var(--tm-color-primary)); }
+    50% { stroke: var(--tm-color-success); filter: drop-shadow(0 0 6px var(--tm-color-success)); }
 }
 
 /* ── Port styling ─────────────────────────────────────────────────────────── */
@@ -1012,8 +1061,8 @@ path.tm-diagram-edge-path.tm-diagram-search-match {
  * foreignObject. Styling therefore uses SVG presentation attributes
  * (fill/stroke) instead of CSS background/border. */
 circle.tm-diagram-port {
-    fill: var(--tm-color-surface, #ffffff);
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     cursor: crosshair;
     opacity: 0;
@@ -1031,34 +1080,34 @@ circle.tm-diagram-port {
 }
 
 circle.tm-diagram-port:hover {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 6;
 }
 
 /* ── Edge drawing ─────────────────────────────────────────────────────────── */
 .tm-diagram-edge-draw-path {
     fill: none;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 2;
     pointer-events: none;
 }
 
 circle.tm-diagram-port.tm-diagram-port--active {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 6.5;
 }
 
 circle.tm-diagram-port.tm-diagram-port--target {
-    fill: var(--tm-color-success, #10b981);
-    stroke: var(--tm-color-success, #10b981);
+    fill: var(--tm-color-success);
+    stroke: var(--tm-color-success);
     r: 7.5;
 }
 
 /* ── Connection points (draw.io style fixed constraint points) ──────────────
  * Also SVG <circle> post-F3 for the same hit-testing reason as ports. */
 circle.tm-diagram-connection-point {
-    fill: var(--tm-color-surface, #ffffff);
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     cursor: crosshair;
     opacity: 0;
@@ -1072,14 +1121,14 @@ circle.tm-diagram-connection-point {
 }
 
 circle.tm-diagram-connection-point:hover {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 5;
 }
 
 circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 5.5;
-    filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5));
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--tm-color-primary) 50%, transparent));
 }
 
 /* ── Edge path ────────────────────────────────────────────────────────────── */
@@ -1108,11 +1157,11 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 }
 
 .tm-diagram-edge-path--selected {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
 }
 
 .tm-diagram-edge-path--selected-outline {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 4px;
     stroke-dasharray: 4, 4;
     stroke-linecap: round;
@@ -1123,14 +1172,14 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 .tm-diagram-edge-cardinality {
     font-size: 12px;
     font-family: var(--tm-font-sans, sans-serif);
-    fill: var(--tm-color-text, #111827);
+    fill: var(--tm-color-text);
     pointer-events: none;
     user-select: none;
 }
 
 .tm-diagram-edge-handle {
-    fill: var(--tm-color-primary, #3b82f6);
-    stroke: #ffffff;
+    fill: var(--tm-color-primary);
+    stroke: var(--tm-color-surface);
     stroke-width: 2;
     cursor: crosshair;
     pointer-events: all;
@@ -1139,31 +1188,31 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 .tm-diagram-edge-handle--jetty {
     pointer-events: all;
     cursor: move;
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
 }
 
 .tm-diagram-edge-handle--dangling {
     pointer-events: all;
     cursor: move;
-    fill: var(--tm-color-primary, #3b82f6);
-    stroke: #ffffff;
+    fill: var(--tm-color-primary);
+    stroke: var(--tm-color-surface);
     stroke-width: 2;
 }
 
 .tm-diagram-edge--target .tm-diagram-edge-path {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 3;
-    filter: drop-shadow(0 0 4px var(--tm-color-primary, #3b82f6));
+    filter: drop-shadow(0 0 4px var(--tm-color-primary));
 }
 
 .tm-diagram-edge-toolbar {
     display: flex;
     gap: 2px;
-    background: var(--tm-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     padding: 3px;
-    box-shadow: var(--tm-shadow-md, 0 4px 6px -1px rgba(0,0,0,0.1));
+    box-shadow: var(--tm-shadow-md);
     pointer-events: none;
 }
 
@@ -1186,7 +1235,7 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-primary, #374151);
+    color: var(--tm-color-text);
     font-size: 12px;
     line-height: 1;
     cursor: pointer;
@@ -1197,11 +1246,11 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 }
 
 .tm-diagram-edge-toolbar button:hover {
-    background: var(--tm-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-edge-toolbar button:active {
-    background: var(--tm-surface-active, #e5e7eb);
+    background: var(--tm-surface-200);
 }
 
 .tm-diagram-edge-routing-picker {
@@ -1222,23 +1271,23 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     border-radius: 4px;
     cursor: pointer;
     background: transparent;
-    color: var(--tm-text-primary, #374151);
+    color: var(--tm-color-text);
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .tm-diagram-routing-preview:hover {
-    background: var(--tm-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-routing-preview--selected {
-    border-color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-primary-subtle, #eff6ff);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-diagram-edge-virtual-bend {
     pointer-events: all;
     cursor: crosshair;
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     opacity: 0.2;
     transition: opacity 0.15s ease;
 }
@@ -1249,7 +1298,7 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 
 .tm-diagram-edge-segment-handle {
     pointer-events: all;
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     opacity: 0.25;
     transition: opacity 0.15s ease;
 }
@@ -1262,11 +1311,11 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     transition: transform 0.12s, background 0.12s;
 }
 .tm-diagram-hover-connect:hover {
-    background: var(--tm-color-primary, #3b82f6) !important;
+    background: var(--tm-color-primary) !important;
     transform: scale(1.15);
 }
 .tm-diagram-hover-connect:hover span {
-    color: #fff !important;
+    color: var(--tm-color-on-primary) !important;
 }
 
 .tm-diagram-math {
@@ -1282,10 +1331,9 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     max-width: 100%;
     max-height: 100%;
 }
-}
 
 .tm-diagram-distance-label {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     font-weight: 500;
     pointer-events: none;
@@ -1299,7 +1347,7 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 
 .tm-diagram-edge-label {
     font-size: 12px;
-    fill: var(--tm-color-text, #111827);
+    fill: var(--tm-color-text);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     pointer-events: none;
     user-select: none;
@@ -1310,10 +1358,10 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     height: 100%;
     font-size: 12px;
     padding: 2px 6px;
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    border: 1px solid var(--tm-color-primary);
     border-radius: 4px;
-    background: var(--tm-color-surface-elevated, #ffffff);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-elevated);
+    color: var(--tm-color-text);
     outline: none;
     text-align: center;
 }
@@ -1324,8 +1372,8 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     flex-direction: column;
     width: 280px;
     flex-shrink: 0;
-    border-left: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    border-left: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface-elevated);
 }
 
 .tm-diagram-editor__right-wrap {
@@ -1343,19 +1391,19 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 .tm-diagram-editor__layers-wrap {
     flex: 1;
     min-height: 0;
-    border-top: 1px solid var(--tm-color-border, #e5e7eb);
+    border-top: 1px solid var(--tm-color-border);
 }
 
 .tm-diagram-editor__minimap-wrap {
     flex-shrink: 0;
-    border-top: 1px solid var(--tm-color-border, #e5e7eb);
+    border-top: 1px solid var(--tm-color-border);
     max-height: 200px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    background: var(--tm-color-surface-elevated);
 }
 
 /* ── Properties panel ────────────────────────────────────────────────────── */
 .tm-diagram-editor__props-wrap {
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    background: var(--tm-color-surface-elevated);
 }
 
 .tm-diagram-editor__props {
@@ -1365,7 +1413,7 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 .tm-diagram-editor__props-title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     margin-bottom: var(--tm-space-3, 12px);
 }
 
@@ -1377,7 +1425,7 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     display: block;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 500;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-bottom: 4px;
 }
 
@@ -1385,17 +1433,17 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     width: 100%;
     padding: 4px 8px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     box-sizing: border-box;
 }
 
 .tm-diagram-editor__props-input:focus {
     outline: none;
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 15%, transparent);
 }
 
 .tm-diagram-editor__props-textarea {
@@ -1410,8 +1458,8 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
  * background/border. Cursor hint is applied inline per handle (direction
  * depends on the handle role). */
 rect.tm-diagram-resize-handle {
-    fill: var(--tm-color-surface, #ffffff);
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     rx: 2;
     ry: 2;
@@ -1449,7 +1497,7 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-toolbox__title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     margin: 0 0 var(--tm-space-3, 12px);
 }
 
@@ -1462,7 +1510,7 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-toolbox__search input:focus-visible {
-    outline: 2px solid var(--tm-color-primary, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
 
@@ -1470,7 +1518,7 @@ rect.tm-diagram-resize-handle {
     padding: var(--tm-space-4, 16px);
     text-align: center;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-toolbox__library {
@@ -1487,67 +1535,77 @@ rect.tm-diagram-resize-handle {
     padding: 0 var(--tm-space-2, 8px);
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 700;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-toolbox__category {
     margin-bottom: var(--tm-space-2, 8px);
 }
 
+/* Mockup: palette headers are sentence-case section titles with the chevron on the
+   right; the stencils are card-like rows inside the panel. */
 .tm-diagram-toolbox__category-header {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1, 4px);
     width: 100%;
-    padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
-    font-size: var(--tm-font-size-xs, 12px);
+    padding: var(--tm-space-2, 8px) var(--tm-space-2, 8px);
+    font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text);
     background: transparent;
     border: none;
-    border-radius: var(--tm-radius-md, 6px);
+    border-radius: var(--tm-radius-control);
     cursor: pointer;
     text-align: left;
 }
 
+/* Chevron sits on the RIGHT of the header (mockup) — the markup puts the span first. */
+.tm-diagram-toolbox__category-header svg {
+    margin-left: auto;
+    color: var(--tm-color-text-muted);
+    flex-shrink: 0;
+}
+
 .tm-diagram-toolbox__category-header:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-toolbox__category-header:focus-visible {
-    outline: 2px solid var(--tm-color-primary, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-toolbox__category-body {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding-left: var(--tm-space-1, 4px);
+    gap: var(--tm-space-1, 4px);
+    padding-left: 0;
 }
 
 .tm-diagram-toolbox__item {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px);
-    border-radius: var(--tm-radius-md, 6px);
+    padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
     cursor: grab;
     user-select: none;
-    transition: background 120ms;
+    transition: background 120ms, border-color 120ms;
 }
 
 .tm-diagram-toolbox__item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-diagram-toolbox__item:focus-visible {
-    outline: 2px solid var(--tm-color-primary, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-toolbox__item:active {
@@ -1565,7 +1623,7 @@ rect.tm-diagram-resize-handle {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-toolbox__preview svg {
@@ -1580,7 +1638,7 @@ rect.tm-diagram-resize-handle {
 
 .tm-diagram-toolbox__label {
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
 }
 
 @media (max-width: 640px) {
@@ -1593,7 +1651,7 @@ rect.tm-diagram-resize-handle {
         width: 100%;
         max-height: 280px;
         border-right: none;
-        border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+        border-bottom: 1px solid var(--tm-color-border);
         overflow-y: auto;
     }
 
@@ -1645,205 +1703,12 @@ rect.tm-diagram-resize-handle {
     }
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   TmDiagramLayersPanel internal styles
-   ════════════════════════════════════════════════════════════════════════════ */
-.tm-diagram-layers {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-}
-
-.tm-diagram-layers__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--tm-space-3, 12px);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
-}
-
-.tm-diagram-layers__title {
-    margin: 0;
-    font-size: var(--tm-font-size-sm, 14px);
-    font-weight: 600;
-}
-
-.tm-diagram-layers__icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    font-size: 16px;
-    line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-}
-
-.tm-diagram-layers__icon-btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
-}
-
-.tm-diagram-layers__list {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: var(--tm-space-2, 8px);
-}
-
-.tm-diagram-layers__item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    user-select: none;
-    transition: background 120ms;
-}
-
-.tm-diagram-layers__item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-}
-
-.tm-diagram-layers__item--active {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-}
-
-.tm-diagram-layers__item--active:hover {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-}
-
-.tm-diagram-layers__visibility,
-.tm-diagram-layers__lock,
-.tm-diagram-layers__delete {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    font-size: 12px;
-    line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
-    background: transparent;
-    border: none;
-    border-radius: var(--tm-radius-sm, 4px);
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.tm-diagram-layers__visibility:hover:not(:disabled),
-.tm-diagram-layers__lock:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.tm-diagram-layers__delete {
-    margin-left: auto;
-    opacity: 0;
-    transition: opacity 120ms;
-}
-
-.tm-diagram-layers__item:hover .tm-diagram-layers__delete {
-    opacity: 1;
-}
-
-.tm-diagram-layers__delete:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--tm-color-danger, #ef4444);
-}
-
-.tm-diagram-layers__name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 2px 4px;
-    border-radius: var(--tm-radius-sm, 4px);
-}
-
-.tm-diagram-layers__name-input {
-    flex: 1;
-    min-width: 0;
-    padding: 2px 4px;
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-primary, #3b82f6);
-    border-radius: var(--tm-radius-sm, 4px);
-    outline: none;
-}
-
-.tm-diagram-layers__selected-section {
-    padding: var(--tm-space-3, 12px);
-    border-top: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface, #ffffff);
-}
-
-.tm-diagram-layers__label {
-    display: block;
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 500;
-    color: var(--tm-color-text-muted, #6b7280);
-    margin-bottom: 4px;
-}
-
-.tm-diagram-layers__select {
-    width: 100%;
-    padding: 4px 8px;
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    box-sizing: border-box;
-    margin-bottom: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-layers__select:focus {
-    outline: none;
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.tm-diagram-layers__actions {
-    display: flex;
-    gap: var(--tm-space-2, 8px);
-}
-
-.tm-diagram-layers__action-btn {
-    flex: 1;
-    padding: 4px 8px;
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 500;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    transition: background 120ms, border-color 120ms;
-}
-
-.tm-diagram-layers__action-btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-border-strong, #d1d5db);
-}
-
-.tm-diagram-layers__action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
+/* TmDiagramLayersPanel styles live ONLY in the component's scoped stylesheet
+   (Components/Diagram/TmDiagramLayersPanel.razor.css) — phase 3 merged the legacy
+   global copy that used to sit here. The dead rules for markup that no longer
+   exists (__selected-section, __select, __actions, __action-btn, __icon-btn,
+   __label) were removed with it; TmDiagramLayersPanelTests.SingleStyleSource
+   pins the single source. */
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramMinimap internal styles
    ════════════════════════════════════════════════════════════════════════════ */
@@ -1852,13 +1717,13 @@ rect.tm-diagram-resize-handle {
     flex-direction: column;
     align-items: center;
     padding: var(--tm-space-2, 8px);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    background: var(--tm-color-surface-elevated);
 }
 
 .tm-diagram-minimap__title {
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-bottom: var(--tm-space-1, 4px);
     text-transform: uppercase;
     letter-spacing: 0.025em;
@@ -1867,8 +1732,8 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-minimap__svg {
     display: block;
     border-radius: var(--tm-radius-sm, 4px);
-    background: var(--tm-color-surface, #ffffff);
-    box-shadow: inset 0 0 0 1px var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface);
+    box-shadow: inset 0 0 0 1px var(--tm-color-border);
 }
 
 .tm-diagram-minimap__viewport {
@@ -1877,7 +1742,7 @@ rect.tm-diagram-resize-handle {
 
 .tm-diagram-minimap__empty {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     padding: var(--tm-space-2, 8px);
     text-align: center;
 }
@@ -1904,30 +1769,31 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-properties__title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     margin: 0 0 var(--tm-space-3, 12px);
 }
 
 /* ── Property Cards (using TmSection) ─────────────────────────────────────── */
+/* Mockup: inspector sections are cards with the card radius (F0 token). */
 .tm-diagram-properties .tm-section {
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 8px);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
     margin-bottom: var(--tm-space-3, 12px);
     overflow: hidden;
     transition: box-shadow 150ms ease;
 }
 
 .tm-diagram-properties .tm-section:hover {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: var(--tm-shadow-sm);
 }
 
 .tm-diagram-properties .tm-section-header {
     padding: 10px 12px;
     font-size: var(--tm-font-size-sm, 13px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
     border-bottom: 1px solid transparent;
     transition: background 120ms, border-color 120ms;
     cursor: pointer;
@@ -1935,7 +1801,7 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties .tm-section--collapsible .tm-section-header {
-    border-bottom-color: var(--tm-color-border, #e5e7eb);
+    border-bottom-color: var(--tm-color-border);
 }
 
 .tm-diagram-properties .tm-section--collapsed .tm-section-header {
@@ -1943,11 +1809,11 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties .tm-section-header:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties .tm-section-header-icon {
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-right: 6px;
 }
 
@@ -1957,7 +1823,7 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties .tm-section-chevron {
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-left: auto;
     transition: transform 0.2s ease;
 }
@@ -1979,7 +1845,7 @@ rect.tm-diagram-resize-handle {
     display: block;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 500;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-bottom: 4px;
 }
 
@@ -2008,27 +1874,36 @@ rect.tm-diagram-resize-handle {
 
 .tm-diagram-properties__empty {
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin: 0;
 }
 
 /* ── Color Swatches ───────────────────────────────────────────────────────── */
+/* Mockup (Vzhled): swatch + the current hex value as readable text next to it. */
+.tm-diagram-properties__color-value {
+    font-size: var(--tm-font-size-xs, 12px);
+    font-family: var(--tm-font-mono, monospace);
+    color: var(--tm-color-text-secondary);
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
 .tm-diagram-properties__color-swatch {
     position: relative;
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid var(--tm-color-border, #e5e7eb);
+    border: 2px solid var(--tm-color-border);
     overflow: hidden;
     cursor: pointer;
     flex-shrink: 0;
     transition: transform 120ms, border-color 120ms;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tm-text-inverse) 8%, transparent);
 }
 
 .tm-diagram-properties__color-swatch:hover {
     transform: scale(1.1);
-    border-color: var(--tm-color-primary, #3b82f6);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-diagram-properties__color-swatch input[type="color"] {
@@ -2046,7 +1921,7 @@ rect.tm-diagram-resize-handle {
 /* ── Segmented Button Group ───────────────────────────────────────────────── */
 .tm-diagram-properties__segmented {
     display: inline-flex;
-    background: var(--tm-color-surface-elevated, #f3f4f6);
+    background: var(--tm-color-surface-elevated);
     border-radius: var(--tm-radius-md, 6px);
     padding: 2px;
     gap: 2px;
@@ -2058,7 +1933,7 @@ rect.tm-diagram-resize-handle {
     justify-content: center;
     padding: 4px 10px;
     font-size: var(--tm-font-size-sm, 13px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     background: transparent;
     border: none;
     border-radius: var(--tm-radius-sm, 4px);
@@ -2068,20 +1943,20 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties__segmented-btn:hover {
-    background: rgba(255,255,255,0.6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-properties__segmented-btn--active {
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-sm);
     font-weight: 600;
 }
 
 .tm-diagram-properties__segmented-btn--active:hover {
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-primary, #2563eb);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-primary);
 }
 
 /* ── Action Grid (Align, Distribute, Layout) ──────────────────────────────── */
@@ -2110,18 +1985,18 @@ rect.tm-diagram-resize-handle {
     gap: 4px;
     padding: 6px;
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text-muted);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     cursor: pointer;
     transition: background 120ms, color 120ms, border-color 120ms;
 }
 
 .tm-diagram-properties__action-btn:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-border-strong, #d1d5db);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-border-color-strong);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-properties__action-btn .tm-icon {
@@ -2130,10 +2005,10 @@ rect.tm-diagram-resize-handle {
 
 /* ── Context menu ─────────────────────────────────────────────────────────── */
 .tm-diagram-editor__context-menu {
-    background: var(--tm-color-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-md);
     min-width: 140px;
     max-height: calc(100vh - 40px);
     overflow-y: auto;
@@ -2146,7 +2021,7 @@ rect.tm-diagram-resize-handle {
     width: 100%;
     padding: 6px 12px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     background: transparent;
     border: none;
     text-align: left;
@@ -2154,21 +2029,21 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-editor__context-item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-editor__context-item--danger {
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger);
 }
 
 .tm-diagram-editor__context-item--danger:hover {
-    background: rgba(239, 68, 68, 0.08);
+    background: var(--tm-color-danger-subtle);
 }
 
 .tm-diagram-editor__context-sep {
     height: 1px;
     margin: 4px 8px;
-    background: var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-border);
 }
 
 .tm-diagram-editor__context-heading {
@@ -2176,7 +2051,7 @@ rect.tm-diagram-resize-handle {
     padding: 4px 12px 2px;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
@@ -2193,7 +2068,7 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-node__table-cell--selected {
     /* Inset ring is clipped-safe (overflow:hidden on td and parents won't cut it).
        Box-shadow wins over inline border/background-color because it layers on top. */
-    box-shadow: inset 0 0 0 2px var(--tm-color-primary, #3b82f6);
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
     position: relative;
     z-index: 1;
 }
@@ -2204,14 +2079,14 @@ rect.tm-diagram-resize-handle {
     content: "";
     position: absolute;
     inset: 0;
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     opacity: 0.12;
     pointer-events: none;
 }
 
 .tm-diagram-node__table-cell--context-target {
     /* Marks the cell that a right-click / context menu will operate on. */
-    box-shadow: inset 0 0 0 2px var(--tm-color-warning, #f59e0b);
+    box-shadow: inset 0 0 0 2px var(--tm-color-warning);
     position: relative;
     z-index: 1;
 }
@@ -2223,18 +2098,18 @@ rect.tm-diagram-resize-handle {
  * edge. Both are native SVG in the decorator-pane's per-node <g>, so they
  * inherit the node's rotation automatically. */
 circle.tm-diagram-rotate-handle {
-    fill: #fff;
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     cursor: grab;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--tm-text-inverse) 15%, transparent));
     pointer-events: auto;
 }
 circle.tm-diagram-rotate-handle:active {
     cursor: grabbing;
 }
 line.tm-diagram-rotate-handle-stem {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1;
     pointer-events: none;
 }
@@ -2256,24 +2131,24 @@ line.tm-diagram-rotate-handle-stem {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
-    border: 1.5px solid var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-surface);
+    border: 1.5px solid var(--tm-color-primary);
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-sm);
     transition: transform 0.12s, background 0.12s;
 }
 .tm-diagram-connect-arrow:hover {
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     transform: scale(1.15);
 }
 .tm-diagram-connect-arrow:hover .tm-diagram-connect-arrow__icon {
-    color: #fff;
+    color: var(--tm-color-on-primary);
 }
 .tm-diagram-connect-arrow__icon {
     font-size: 12px;
     line-height: 1;
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
     pointer-events: none;
 }
 
@@ -2306,29 +2181,36 @@ line.tm-diagram-rotate-handle-stem {
     justify-content: center;
     gap: 6px;
     padding: 10px 8px;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     cursor: pointer;
     transition: border-color 0.12s, background 0.12s;
 }
 .tm-diagram-connect-modal__item:hover {
-    border-color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-connect-modal__icon {
     width: 32px;
     height: 32px;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
+}
+
+/* The stencil preview svg fills its wrapper (moved here from inline styles). */
+.tm-diagram-connect-modal__icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 .tm-diagram-connect-modal__item:hover .tm-diagram-connect-modal__icon {
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
 }
 
 .tm-diagram-connect-modal__label {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
@@ -2338,7 +2220,7 @@ line.tm-diagram-rotate-handle-stem {
 
 /* ── Property Panel collapsible sections ───────────────────────────────── */
 .tm-diagram-properties__section--collapsible {
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    border-bottom: 1px solid var(--tm-color-border);
 }
 
 .tm-diagram-properties__section-header {
@@ -2351,12 +2233,12 @@ line.tm-diagram-rotate-handle-stem {
     border: none;
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 500;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     cursor: pointer;
 }
 
 .tm-diagram-properties__section-header:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties__section-body {
@@ -2368,7 +2250,7 @@ line.tm-diagram-rotate-handle-stem {
 
 .tm-diagram-properties__slider {
     width: 100%;
-    accent-color: var(--tm-color-primary, #3b82f6);
+    accent-color: var(--tm-color-primary);
 }
 
 .tm-diagram-properties__color-wrap {
@@ -2381,9 +2263,9 @@ line.tm-diagram-rotate-handle-stem {
     width: 44px;
     height: 28px;
     padding: 2px;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-surface, #ffffff);
+    background: var(--tm-color-surface);
     cursor: pointer;
 }
 
@@ -2398,22 +2280,22 @@ line.tm-diagram-rotate-handle-stem {
     justify-content: center;
     width: 32px;
     height: 32px;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s;
 }
 
 .tm-diagram-properties__toggle-btn:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties__toggle-btn--active {
-    border-color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    color: var(--tm-color-primary, #3b82f6);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 .tm-diagram-properties__actions {
@@ -2430,7 +2312,7 @@ line.tm-diagram-rotate-handle-stem {
 
 .tm-diagram-properties__mixed {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     font-style: italic;
 }
 
@@ -2451,9 +2333,9 @@ line.tm-diagram-rotate-handle-stem {
     min-width: 0;
     padding: 4px 2px;
     font-size: 10px;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
+    border: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2462,41 +2344,27 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 .tm-diagram-properties__table-grid-cell:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties__table-grid-cell--selected {
-    background: var(--tm-color-primary, #3b82f6);
-    color: #ffffff;
-    border-color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-diagram-properties__hint {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-top: 4px;
     line-height: 1.4;
 }
 
-/* Dark mode adjustments */
-[data-theme="dark"] .tm-diagram-properties__color,
-.tm-dark .tm-diagram-properties__color {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-}
-
-[data-theme="dark"] .tm-diagram-properties__toggle-btn,
-.tm-dark .tm-diagram-properties__toggle-btn {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-properties__toggle-btn--active,
-.tm-dark .tm-diagram-properties__toggle-btn--active {
-    background: rgba(59, 130, 246, 0.2);
-    border-color: var(--tm-color-primary, #3b82f6);
-}
+/* Dark mode needs no component overrides: every colour above is a semantic token
+   (surface/border/primary-subtle/on-primary) that tokens-dark.css re-points. The
+   former [data-theme="dark"] / .tm-dark blocks for __color, __toggle-btn, the
+   template gallery/card and the table inserter were removed with the phase-3
+   tokenization — the semantic tokens already produce those values. */
 
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramTemplateGallery & TmDiagramTemplateCard
@@ -2528,22 +2396,22 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-template-gallery__filter {
     padding: 4px 12px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     cursor: pointer;
     transition: background 120ms, border-color 120ms;
 }
 
 .tm-diagram-template-gallery__filter:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-template-gallery__filter--active {
-    background: var(--tm-color-primary, #3b82f6);
-    border-color: var(--tm-color-primary, #3b82f6);
-    color: #ffffff;
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-diagram-template-gallery__body {
@@ -2557,9 +2425,7 @@ line.tm-diagram-rotate-handle-stem {
     margin: 0 0 8px;
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-template-gallery__grid {
@@ -2571,38 +2437,39 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-template-gallery__empty {
     padding: 24px;
     text-align: center;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-sm, 14px);
 }
 
 /* ── Template card ────────────────────────────────────────────────────────── */
+/* Mockup: a VERTICAL gallery card — 16:10 preview on top, name + tags below. */
 .tm-diagram-template-card {
     display: flex;
-    flex-direction: row;
-    min-height: 96px;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
+    flex-direction: column;
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
     overflow: hidden;
     cursor: pointer;
     transition: box-shadow 120ms, border-color 120ms, transform 120ms;
 }
 
 .tm-diagram-template-card:hover {
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-md);
     transform: translateY(-2px);
 }
 
 .tm-diagram-template-card--selected {
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 .tm-diagram-template-card__thumb {
-    width: 112px;
-    min-width: 112px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 16 / 10;
+    background: var(--tm-color-surface-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2619,21 +2486,21 @@ line.tm-diagram-rotate-handle-stem {
     width: 48px;
     height: 48px;
     border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-border);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
     font-weight: 700;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-template-card__info {
     min-width: 0;
-    padding: 10px 12px;
+    padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
 }
 
@@ -2641,7 +2508,7 @@ line.tm-diagram-rotate-handle-stem {
     font-size: var(--tm-font-size-sm, 14px);
     line-height: 1.3;
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     white-space: normal;
     overflow-wrap: anywhere;
 }
@@ -2654,52 +2521,15 @@ line.tm-diagram-rotate-handle-stem {
 
 .tm-diagram-template-card__tag {
     font-size: 11px;
-    color: var(--tm-color-text-muted, #6b7280);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    color: var(--tm-color-text-muted);
+    background: var(--tm-color-surface-elevated);
     padding: 2px 6px;
     border-radius: var(--tm-radius-sm, 4px);
 }
 
-/* Dark mode adjustments */
-[data-theme="dark"] .tm-diagram-template-card,
-.tm-dark .tm-diagram-template-card {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__thumb,
-.tm-dark .tm-diagram-template-card__thumb {
-    background: var(--tm-color-surface, #111827);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__placeholder,
-.tm-dark .tm-diagram-template-card__placeholder {
-    background: var(--tm-color-border-strong, #374151);
-    color: var(--tm-color-text-muted, #9ca3af);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__name,
-.tm-dark .tm-diagram-template-card__name {
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__tag,
-.tm-dark .tm-diagram-template-card__tag {
-    background: var(--tm-color-surface, #111827);
-    color: var(--tm-color-text-muted, #9ca3af);
-}
-
-[data-theme="dark"] .tm-diagram-template-gallery__filter,
-.tm-dark .tm-diagram-template-gallery__filter {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-template-gallery__filter:hover,
-.tm-dark .tm-diagram-template-gallery__filter:hover {
-    background: var(--tm-color-surface-hover, #374151);
-}
+/* No dark overrides for the gallery/card: card, thumb, placeholder, tag and filter
+   all paint through semantic tokens that tokens-dark.css re-points (the removed
+   block re-declared exactly those tokens with stale hex fallbacks). */
 
 /* ── Table Inserter ─────────────────────────────────────────────────────── */
 
@@ -2708,10 +2538,10 @@ line.tm-diagram-rotate-handle-stem {
     top: calc(100% + 4px);
     left: 0;
     z-index: 1000;
-    background: var(--tm-color-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 8px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--tm-shadow-lg);
     padding: 12px;
 }
 
@@ -2725,7 +2555,7 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-table-inserter__title {
     font-size: 13px;
     font-weight: 600;
-    color: var(--tm-color-text, #1f2937);
+    color: var(--tm-color-text);
     margin: 0;
 }
 
@@ -2740,52 +2570,27 @@ line.tm-diagram-rotate-handle-stem {
     width: 16px;
     height: 16px;
     padding: 0;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    border: 1px solid var(--tm-color-border);
     border-radius: 2px;
-    background: var(--tm-color-surface, #ffffff);
+    background: var(--tm-color-surface);
     cursor: pointer;
     transition: background 0.1s ease, border-color 0.1s ease;
 }
 
 .tm-diagram-table-inserter__cell:hover,
 .tm-diagram-table-inserter__cell--highlighted {
-    background: var(--tm-color-primary, #3b82f6);
-    border-color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-diagram-table-inserter__dims {
     font-size: 12px;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     min-height: 18px;
 }
 
-/* Dark mode */
-[data-theme="dark"] .tm-diagram-table-inserter-popover,
-.tm-dark .tm-diagram-table-inserter-popover {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-}
+/* No [data-theme="dark"] overrides: the table inserter paints through semantic
+   tokens only (surface / border / primary / text-muted), which tokens-dark.css
+   re-points. In dark the primary step already resolves to the lighter tone the
+   removed override used to hard-code. */
 
-[data-theme="dark"] .tm-diagram-table-inserter__title,
-.tm-dark .tm-diagram-table-inserter__title {
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-table-inserter__cell,
-.tm-dark .tm-diagram-table-inserter__cell {
-    background: var(--tm-color-surface, #111827);
-    border-color: var(--tm-color-border-strong, #374151);
-}
-
-[data-theme="dark"] .tm-diagram-table-inserter__cell:hover,
-[data-theme="dark"] .tm-diagram-table-inserter__cell--highlighted,
-.tm-dark .tm-diagram-table-inserter__cell:hover,
-.tm-dark .tm-diagram-table-inserter__cell--highlighted {
-    background: var(--tm-color-primary, #60a5fa);
-    border-color: var(--tm-color-primary, #60a5fa);
-}
-
-[data-theme="dark"] .tm-diagram-table-inserter__dims,
-.tm-dark .tm-diagram-table-inserter__dims {
-    color: var(--tm-color-text-muted, #9ca3af);
-}

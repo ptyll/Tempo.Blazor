@@ -33905,7 +33905,11 @@
             "tm-diagram-editor__toolbar-group[data-tm-group]",
             "tm-diagram-editor__header-start",
             "tm-diagram-editor__header-actions",
-            "tm-diagram-editor__zoom-label"
+            "tm-diagram-editor__zoom-label",
+            "tm-diagram-editor__canvas-wrap--rulers",
+            "tm-diagram-editor__canvas-size-input",
+            "tm-diagram-editor__canvas-size-sep",
+            "tm-diagram-editor__import-file-label"
           ],
           "examples": [
             {

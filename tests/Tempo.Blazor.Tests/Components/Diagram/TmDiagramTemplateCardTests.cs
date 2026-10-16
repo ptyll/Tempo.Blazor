@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Templates;
 using Tempo.Blazor.Tests.Diagram;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
@@ -135,5 +137,32 @@ public class TmDiagramTemplateCardTests : DiagramTestBase
 
         unselected.Find(".tm-diagram-template-card").GetAttribute("aria-pressed").Should().Be("false");
         selected.Find(".tm-diagram-template-card").GetAttribute("aria-pressed").Should().Be("true");
+    }
+
+    [Fact]
+    public void Renders_Thumbnail_Above_Name()
+    {
+        const string cardCssPath = "src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css";
+        var css = File.ReadAllText(Path.Combine(ThemeCss.RepositoryRoot().FullName, cardCssPath));
+
+        var template = new DiagramTemplate { Id = "t1", Name = "Flowchart", Category = "General" };
+        var cut = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, false));
+
+        // The vertical mockup card stacks the preview above the name: thumb first in the DOM...
+        var card = cut.Find(".tm-diagram-template-card");
+        card.Children[0].ClassList.Should().Contain("tm-diagram-template-card__thumb");
+        card.Children.Skip(1).Should().Contain(c => c.ClassList.Contains("tm-diagram-template-card__info"));
+
+        // ...and the stylesheet must lay the card out as a column (not the legacy row),
+        // with a 16:10 preview area.
+        var cardRule = Regex.Match(css, @"\.tm-diagram-template-card\s*\{([^}]*)\}");
+        cardRule.Success.Should().BeTrue("the card rule must stay the single layout source");
+        cardRule.Groups[1].Value.Should().Contain("flex-direction: column");
+
+        var thumbRule = Regex.Match(css, @"\.tm-diagram-template-card__thumb\s*\{([^}]*)\}");
+        thumbRule.Success.Should().BeTrue();
+        thumbRule.Groups[1].Value.Should().Contain("aspect-ratio: 16 / 10");
     }
 }

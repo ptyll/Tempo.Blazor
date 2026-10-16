@@ -61,14 +61,21 @@
                 <div class="tm-diagram-properties__row">
                     <div class="tm-diagram-properties__field">
                         <label>@Loc["TmDiagramProperties_Fill"]</label>
-                        <div class="tm-diagram-properties__color-swatch" style="background-color:@GetNodeFill()">
-                            <input type="color" value="@GetNodeFill()" @onchange="OnNodeFillChanged" aria-label="@Loc["TmDiagramProperties_Fill"]" />
+                        @* Mockup (Vzhled): swatch with the current hex value readable next to it. *@
+                        <div class="tm-diagram-properties__color-wrap">
+                            <div class="tm-diagram-properties__color-swatch" style="background-color:@GetNodeFill()">
+                                <input type="color" value="@GetNodeFill()" @onchange="OnNodeFillChanged" aria-label="@Loc["TmDiagramProperties_Fill"]" />
+                            </div>
+                            <span class="tm-diagram-properties__color-value">@FormatHex(GetNodeFill())</span>
                         </div>
                     </div>
                     <div class="tm-diagram-properties__field">
                         <label>@Loc["TmDiagramProperties_Stroke"]</label>
-                        <div class="tm-diagram-properties__color-swatch" style="background-color:@GetNodeStroke()">
-                            <input type="color" value="@GetNodeStroke()" @onchange="OnNodeStrokeChanged" aria-label="@Loc["TmDiagramProperties_Stroke"]" />
+                        <div class="tm-diagram-properties__color-wrap">
+                            <div class="tm-diagram-properties__color-swatch" style="background-color:@GetNodeStroke()">
+                                <input type="color" value="@GetNodeStroke()" @onchange="OnNodeStrokeChanged" aria-label="@Loc["TmDiagramProperties_Stroke"]" />
+                            </div>
+                            <span class="tm-diagram-properties__color-value">@FormatHex(GetNodeStroke())</span>
                         </div>
                     </div>
                 </div>

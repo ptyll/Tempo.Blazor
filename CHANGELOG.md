@@ -1552,6 +1552,48 @@
 
 ### Breaking / Migration
 
+- **`TmDiagramLayersPanel` styles live in exactly one stylesheet now (DiagramEditor redesign
+  phase 3).** The panel's rules were duplicated: a scoped `TmDiagramLayersPanel.razor.css` AND a
+  legacy global copy inside `Tempo.Blazor.DiagramEditor`'s `_diagram-editor.css`. The global copy
+  is deleted (together with its dead rules for markup that no longer exists:
+  `.tm-diagram-layers__selected-section`, `__select`, `__actions`, `__action-btn`, `__icon-btn`,
+  `__label`); the scoped component stylesheet is the single source
+  (`TmDiagramLayersPanelTests.SingleStyleSource` pins it). No class that any markup, test or
+  consumer still uses was removed — the live class names are unchanged, so most hosts need no
+  action. Two consequences to migrate for:
+
+  ```css
+  /* before — two sources; the global copy could be "edited" with no effect
+     (the scoped copy won on specificity) */
+  wwwroot/css/components/_diagram-editor.css   .tm-diagram-layers__item { ... }   /* deleted */
+  Components/Diagram/TmDiagramLayersPanel.razor.css .tm-diagram-layers__item { ... }  /* the source */
+
+  /* after — override the scoped source (or ::deep from a parent's razor.css);
+     a host that linked ONLY the package's global stylesheet and styled
+     .tm-diagram-layers* must load the RCL scoped bundle ({App}.styles.css),
+     which the demos already do */
+  ```
+
+  ```text
+  # dead class names, removed without alias (no markup/test/consumer referenced them):
+  #   .tm-diagram-layers__selected-section / __select / __actions / __action-btn
+  #   .tm-diagram-layers__icon-btn / __label
+  ```
+
+- **`TmDiagramTemplateCard` is a vertical card (DiagramEditor redesign phase 3, mockup).** The
+  card now stacks the 16:10 preview ABOVE the name/tags (`flex-direction: column` with
+  `aspect-ratio: 16 / 10` on `.tm-diagram-template-card__thumb`); the DOM order
+  (thumb → info) is unchanged, so selectors keep matching. A host that laid the card out as a
+  horizontal row from CSS must set `flex-direction: row` on `.tm-diagram-template-card` again
+  and give `.tm-diagram-template-card__thumb` an explicit width.
+
+- **`TmDiagramEditor`/dialogs: component-level dark overrides removed (DiagramEditor redesign
+  phase 3).** Every `[data-theme="dark"]` / `.tm-dark` block and every hex/rgba literal in the
+  DiagramEditor package's CSS was replaced by semantic `--tm-*` tokens (the strict token audit
+  of the package went from 168 baseline entries to 0). Dark mode now follows `tokens-dark.css`
+  exclusively; a host that RE-Pointed one of the removed component dark values must override the
+  semantic token instead (e.g. `--tm-color-surface-elevated`), not the component class.
+
 - **`TmWidgetSelector` renders on `TmModal` — its private overlay markup is gone.** The selector
   no longer renders `.tm-widget-selector-overlay` (its own `position: fixed` root) or a private
   header/close button; the modal owns the overlay, the panel chrome, the title and the close
@@ -1894,6 +1936,33 @@
   ```
 
 ### Changed
+
+- **`TmDiagramEditor` visual layer aligned with the redesign mockups — tokenized, no structure
+  change (DiagramEditor redesign phase 3).** Paint-only pass over the package's CSS plus small
+  markup touches; the toolbar keeps its `data-tm-group` contract, no group is re-ordered (that is
+  phase 4) and no toolbar function changed:
+
+  - The editor chrome (root, page-tabs strip, toolbar) paints the themed workspace tone
+    (`--tm-bg-workspace`, F0) instead of a hardcoded surface, so the indigo theme and dark mode
+    recolor it without component overrides.
+  - Toolbar groups are FLAT (no boxed button groups); the cluster separators and the 40px row
+    height carry the structure, buttons/controls use `--tm-radius-control` and the active tool
+    paints `--tm-color-primary-subtle` + primary ink (same convention as the core
+    `aria-pressed` toolbar button).
+  - Page tabs mark the ACTIVE page with a primary underline instead of a raised boxed tab.
+  - The stencil palette reads like the mockup: sentence-case category headers with the chevron
+    on the RIGHT (markup order swapped inside the button; `aria-expanded` unchanged) and
+    card-like rows for the stencils.
+  - Inspector property sections use `--tm-radius-card`; the Fill/Stroke fields show the current
+    hex value as text next to the swatch (`.tm-diagram-properties__color-value`, mockup
+    "Vzhled" section).
+  - The SQL/CSV import dialogs paint the live parse result as a summary box with icon stats
+    (`.tm-diagram-{sql,csv}-import__stat`), the CSV preview table has a sticky `thead`, and the
+    template gallery cards are vertical (see Breaking / Migration).
+  - Everything paints through semantic tokens; translucent washes derive from tokens via
+    `color-mix()`. The package's strict token-audit baseline dropped from 168 entries to 0 and
+    `DiagramResponsiveScreenshotTests` gained a 1440×900 light/dark × default/indigo matrix
+    (editor, layers panel and the four dialogs) that fails on a dark-mode regression.
 
 - **The demo-only localization keys moved out of the `Tempo.Blazor` package into the demo
   applications.** All 267 keys that only demo pages use — `TmDemo_*` and the `TmToolbarDemo_*`,
