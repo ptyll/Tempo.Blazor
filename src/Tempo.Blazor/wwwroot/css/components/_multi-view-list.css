@@ -8,6 +8,12 @@
   border-radius: var(--tm-radius-lg);
   padding: var(--tm-space-4);
 }
+.tm-multi-view-list--plain {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
 
 /* Toolbar */
 .tm-mvl-toolbar {

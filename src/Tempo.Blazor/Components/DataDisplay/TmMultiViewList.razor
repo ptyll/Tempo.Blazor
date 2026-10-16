@@ -7,11 +7,12 @@
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Avatars
 @using Tempo.Blazor.Services
 @inject DragDropService DragDrop
 @inject IJSRuntime JS
 
-<div class="tm-multi-view-list @Class" @attributes="AdditionalAttributes">
+<div class="tm-multi-view-list @(Appearance == DataTableAppearance.Plain ? "tm-multi-view-list--plain" : null) @Class" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -351,6 +352,9 @@
 
     // ── Parameters: display ──────────────────────────────────────
 
+    /// <summary>Surface appearance. Defaults to Card to preserve the current framed look.</summary>
+    [Parameter] public DataTableAppearance Appearance { get; set; } = DataTableAppearance.Card;
+
     /// <summary>Current display mode (Table/Card/List). Two-way bindable.</summary>
     [Parameter] public ListViewMode ViewMode { get; set; } = ListViewMode.Table;
 
@@ -413,6 +417,9 @@
     /// <see cref="ViewSwitcherLabels.IconsAndText"/> adds the localized names.
     /// </summary>
     [Parameter] public ViewSwitcherLabels ViewSwitcherLabels { get; set; } = ViewSwitcherLabels.IconsOnly;
+
+    /// <summary>Fallback for missing avatar URLs in cards. Defaults to None.</summary>
+    [Parameter] public AvatarFallback AvatarFallback { get; set; } = AvatarFallback.None;
 
     /// <summary>When true, shows checkboxes and enables multi-select mode.</summary>
     [Parameter] public bool AllowSelection { get; set; }
@@ -1393,6 +1400,10 @@
                 @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
                 {
                     <img class="tm-mvl-card-avatar" src="@GetAvatarUrl(item)" alt="" />
+                }
+                else if (AvatarFallback == AvatarFallback.Initials && !string.IsNullOrWhiteSpace(GetTitle(item)))
+                {
+                    <TmAvatar Name="@GetTitle(item)" />
                 }
                 <div class="tm-mvl-card-body">
                     @if (!AllowSelection)

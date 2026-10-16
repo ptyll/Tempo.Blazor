@@ -160,3 +160,13 @@ public enum ViewSwitcherLabels
     /// <summary>Icon plus the localized view name.</summary>
     IconsAndText
 }
+
+/// <summary>Fallback rendered in a multi-view list avatar slot when an item has no avatar URL.</summary>
+public enum AvatarFallback
+{
+    /// <summary>Render no avatar when the item has no avatar URL. This is the default.</summary>
+    None,
+
+    /// <summary>Render initials derived from the item's title when the item has no avatar URL.</summary>
+    Initials
+}

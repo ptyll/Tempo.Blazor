@@ -4088,6 +4088,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "AvatarFallback",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Fallback rendered in a multi-view list avatar slot when an item has no avatar URL. None is the default; Initials derives initials from the item title.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "AvatarShape",
       "kind": "Enum",
       "category": "Components",
@@ -8415,6 +8425,20 @@
           "description": "When true, shows checkboxes and enables multi-select mode."
         },
         {
+          "name": "Appearance",
+          "type": "DataTableAppearance",
+          "isRequired": false,
+          "default": "DataTableAppearance.Card",
+          "description": "Card keeps today's frame. Plain adds tm-multi-view-list--plain and removes frame and padding."
+        },
+        {
+          "name": "AvatarFallback",
+          "type": "AvatarFallback",
+          "isRequired": false,
+          "default": "AvatarFallback.None",
+          "description": "Fallback for a missing avatar URL in the card view. None (default) renders no avatar; Initials derives initials from the item title."
+        },
+        {
           "name": "AvatarUrlField",
           "type": "Func<TItem, string?>?",
           "isRequired": false,
@@ -10416,6 +10440,13 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Fires when a dropdown item is selected (value = item key)."
+        },
+        {
+          "name": "OutlineTrigger",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, the trigger also gets tm-btn tm-btn-outline. Default false leaves other hosts unchanged.",
+          "default": "false"
         },
         {
           "name": "Placement",
@@ -27516,11 +27547,11 @@
     }
   ],
   "summary": {
-    "itemCount": 378,
-    "manualItemCount": 378,
-    "generatedItemCount": 370,
+    "itemCount": 379,
+    "manualItemCount": 379,
+    "generatedItemCount": 371,
     "generatedOnlyItemCount": 0,
     "componentCount": 203,
-    "publicApiTypeCount": 167
+    "publicApiTypeCount": 168
   }
 }

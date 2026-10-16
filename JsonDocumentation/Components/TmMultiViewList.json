@@ -232,11 +232,25 @@
       "description": "Additional CSS class for the root element."
     },
     {
+      "name": "Appearance",
+      "type": "DataTableAppearance",
+      "isRequired": false,
+      "default": "Card",
+      "description": "Card keeps today's frame. Plain adds tm-multi-view-list--plain and removes frame and padding."
+    },
+    {
       "name": "ViewSwitcherLabels",
       "type": "ViewSwitcherLabels",
       "isRequired": false,
       "default": "IconsOnly",
       "description": "IconsOnly (default) keeps today's icon buttons. IconsAndText adds the localized Table, Card and List names."
+    },
+    {
+      "name": "AvatarFallback",
+      "type": "AvatarFallback",
+      "isRequired": false,
+      "default": "None",
+      "description": "Fallback for a missing avatar URL in the card view. None (default) renders no avatar; Initials derives initials from the item title."
     },
     {
       "name": "AllowSelection",
