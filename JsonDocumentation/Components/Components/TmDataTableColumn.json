@@ -1,0 +1,10 @@
+{
+  "kind": "Component",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataTable",
+  "description": "Headless column descriptor for TmDataTable.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataTable/TmDataTableColumn.razor",
+  "documentationStatus": "generated",
+  "itemName": "TmDataTableColumn"
+}

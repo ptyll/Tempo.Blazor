@@ -109,6 +109,13 @@
       "description": "Default pin state (left/right/none). User pin changes override this at runtime. Default None."
     },
     {
+      "name": "CardRole",
+      "type": "DataTableCardRole",
+      "isRequired": false,
+      "default": "Field",
+      "description": "Semantic role of this column in mobile card layout. Defaults to Field."
+    },
+    {
       "name": "Align",
       "type": "ColumnAlign",
       "isRequired": false,

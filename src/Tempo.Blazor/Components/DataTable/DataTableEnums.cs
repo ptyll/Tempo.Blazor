@@ -132,6 +132,21 @@ public enum DataTableKeyboardNavigation
     Grid
 }
 
+/// <summary>Semantic role of a column when a data table is rendered as mobile cards.</summary>
+public enum DataTableCardRole
+{
+    /// <summary>Regular card field.</summary>
+    Field,
+    /// <summary>Primary title shown for the card.</summary>
+    Title,
+    /// <summary>Badge-style value.</summary>
+    Badge,
+    /// <summary>Media content.</summary>
+    Media,
+    /// <summary>Omit this column from cards.</summary>
+    Hidden
+}
+
 /// <summary>Responsive presentation of a data table on mobile viewports.</summary>
 public enum DataTableMobileLayout
 {

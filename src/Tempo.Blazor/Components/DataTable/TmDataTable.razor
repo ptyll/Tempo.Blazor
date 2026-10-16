@@ -16,7 +16,7 @@
     <span style="display:none" aria-hidden="true">@ChildContent</span>
 </CascadingValue>
 
-<div class="@WrapperCssClass @(Appearance == DataTableAppearance.Card ? "tm-data-table-wrapper--card-surface" : null) @(MobileLayout == DataTableMobileLayout.Scroll ? "tm-data-table-wrapper--responsive" : null) @Class" @attributes="AdditionalAttributes">
+<div class="@WrapperCssClass @(Appearance == DataTableAppearance.Card ? "tm-data-table-wrapper--card-surface" : null) @(MobileLayout == DataTableMobileLayout.Scroll ? "tm-data-table-wrapper--responsive" : null) @(MobileLayout == DataTableMobileLayout.Cards ? "tm-data-table-wrapper--cards" : null) @Class" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -424,9 +424,9 @@
                                            @onclick:stopPropagation="true" />
                                 </td>
                             }
-                            @foreach (var col in _visibleColumns)
+                            @foreach (var col in _visibleColumns.Where(c => MobileLayout != DataTableMobileLayout.Cards || c.CardRole != DataTableCardRole.Hidden))
                             {
-                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)">
+                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)" data-card-role="@(MobileLayout == DataTableMobileLayout.Cards ? col.CardRole.ToString() : null)">
                                     @if (col.CellTemplate is not null)
                                     {
                                         @col.CellTemplate(rowItem)
@@ -458,9 +458,9 @@
                                     {
                                         <td class="tm-col-check"></td>
                                     }
-                                    @foreach (var col in _visibleColumns)
+                                    @foreach (var col in _visibleColumns.Where(c => MobileLayout != DataTableMobileLayout.Cards || c.CardRole != DataTableCardRole.Hidden))
                                     {
-                                        <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)">
+                                        <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)" data-card-role="@(MobileLayout == DataTableMobileLayout.Cards ? col.CardRole.ToString() : null)">
                                             @if (!HasEditActions && ReferenceEquals(col, _visibleColumns[0]))
                                             {
                                                 @RowEditValidator
@@ -551,11 +551,11 @@
                                     </td>
                                 }
                                 @{ var colIndex = (HasDetail ? 1 : 0) + (Selectable ? 1 : 0); }
-                                @foreach (var col in _visibleColumns)
+                                @foreach (var col in _visibleColumns.Where(c => MobileLayout != DataTableMobileLayout.Cards || c.CardRole != DataTableCardRole.Hidden))
                                 {
                                     var cellCol = colIndex++;
                                     var cellRow = currentRowIndex;
-                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)"
+                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)" data-card-role="@(MobileLayout == DataTableMobileLayout.Cards ? col.CardRole.ToString() : null)"
                                         role="gridcell" aria-colindex="@(cellCol + 1)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
                                         @onkeydown="e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)">
                                         @if (col.CellTemplate is not null)

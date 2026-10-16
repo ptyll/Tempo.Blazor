@@ -2249,7 +2249,7 @@ public partial class TmDataTable<TItem> : IDisposable
                             builder.CloseElement(); // td
                         }
 
-                        foreach (var col in _visibleColumns)
+                        foreach (var col in _visibleColumns.Where(c => MobileLayout != DataTableMobileLayout.Cards || c.CardRole != DataTableCardRole.Hidden))
                         {
                             builder.OpenElement(seq++, "td");
                             builder.AddAttribute(seq++, "class", GetCellClass(col));
