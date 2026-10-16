@@ -5028,6 +5028,7 @@
   "TmViewManager_Save": "Uložiť zmeny",
   "TmViewManager_SaveCurrent": "Uložiť aktuálne ako nové",
   "TmViewManager_SaveCurrentTitle": "Uložiť aktuálny pohľad",
+  "TmViewManager_SaveCurrentHelper": "Zachová stĺpce, zoskupenie a filtre aktuálneho pohľadu.",
   "TmViewManager_SaveChanges": "Uložiť zmeny",
   "TmViewManager_SaveError": "Zobrazenie sa nepodarilo uložiť",
   "TmViewManager_ScopePersonal": "Osobné",

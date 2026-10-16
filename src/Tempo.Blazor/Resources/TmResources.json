@@ -5004,6 +5004,7 @@
   "TmViewManager_Save": "Save Changes",
   "TmViewManager_SaveCurrent": "Save Current as New",
   "TmViewManager_SaveCurrentTitle": "Save current view",
+  "TmViewManager_SaveCurrentHelper": "Keeps the columns, grouping and filters of the current view.",
   "TmViewManager_SaveChanges": "Save changes",
   "TmViewManager_SaveError": "Failed to save view",
   "TmViewManager_ScopePersonal": "Personal",

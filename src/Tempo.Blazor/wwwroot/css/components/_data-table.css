@@ -15,6 +15,11 @@
 .tm-data-table__export-label {
   font-weight: var(--tm-font-weight-semibold, 600);
 }
+.tm-view-modal-helper {
+  margin: 0 0 var(--tm-space-3);
+  color: var(--tm-text-muted);
+  font-size: var(--tm-font-size-sm);
+}
 .tm-data-table__export-description {
   flex-basis: 100%;
   color: var(--tm-text-muted);

@@ -5028,6 +5028,7 @@
   "TmViewManager_Save": "Uložit změny",
   "TmViewManager_SaveCurrent": "Uložit aktuální jako nový",
   "TmViewManager_SaveCurrentTitle": "Uložit aktuální pohled",
+  "TmViewManager_SaveCurrentHelper": "Zachová sloupce, seskupení a filtry aktuálního pohledu.",
   "TmViewManager_SaveChanges": "Uložit změny",
   "TmViewManager_ScopePersonal": "Osobní",
   "TmViewManager_ScopeTenant": "Tenant",

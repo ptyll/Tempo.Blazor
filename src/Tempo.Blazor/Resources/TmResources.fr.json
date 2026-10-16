@@ -5016,6 +5016,7 @@
   "TmViewManager_Save": "Enregistrer les modifications",
   "TmViewManager_SaveCurrent": "Enregistrer comme nouvelle vue",
   "TmViewManager_SaveCurrentTitle": "Enregistrer la vue actuelle",
+  "TmViewManager_SaveCurrentHelper": "Conserve les colonnes, le regroupement et les filtres de la vue actuelle.",
   "TmViewManager_SaveChanges": "Enregistrer les modifications",
   "TmViewManager_SaveError": "Impossible d'enregistrer la vue",
   "TmViewManager_ScopePersonal": "Personnelle",

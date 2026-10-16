@@ -139,6 +139,10 @@
          MobilePresentation="MobilePresentation.Auto">
     <ChildContent>
         <div class="tm-view-modal">
+                @if (_saveCurrent)
+                {
+                    <p class="tm-view-modal-helper">@Loc["TmViewManager_SaveCurrentHelper"]</p>
+                }
                 @* View Name *@
                 <div class="tm-form-group tm-mb-4">
                     <label for="@_nameId" class="tm-form-label">@(Loc["TmViewManager_ViewName"])</label>
