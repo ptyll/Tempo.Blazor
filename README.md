@@ -221,6 +221,8 @@ public sealed class MyStencilProvider : IDiagramStencilProvider
 </TmDataTable>
 ```
 
+For opt-in responsive layouts, card roles, keyboard navigation, and preserved defaults, see [the data-table redesign guide](docs/data-table-redesign.md).
+
 ## Embedding do vaší aplikace
 
 `TmReportViewer` lze vložit do běžné Blazor aplikace dvěma způsoby. Embedded režim spouští report engine v hostitelské aplikaci nad vlastním `IReportDataProvider`; Remote režim volá Tempo Report Server API přes `RemoteReportSource`.

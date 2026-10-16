@@ -3524,6 +3524,8 @@ Dynamický renderer formuláře z definic polí (metadata-driven).
 
 ## DataTable
 
+Nové opt-in režimy a výchozí hodnoty popisuje [průvodce redesignem datové tabulky](docs/data-table-redesign.md).
+
 ### TmDataTable\<TItem\>
 
 Kompletní datová tabulka s řazením, filtrováním, stránkováním, groupingem a virtualizací.
