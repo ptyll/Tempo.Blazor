@@ -737,6 +737,13 @@ public partial class TmDataTable<TItem> : IDisposable
 
     // ── Parameters: grouping ────────────────────────────────────────
 
+    /// <summary>
+    /// Keyboard model. <see cref="DataTableKeyboardNavigation.Rows"/> (default) keeps one Tab stop per row.
+    /// <see cref="DataTableKeyboardNavigation.Grid"/> uses roving tabindex on cells. Grid becomes the default in the next major;
+    /// set <c>KeyboardNavigation="DataTableKeyboardNavigation.Rows"</c> to keep today's behavior after that.
+    /// </summary>
+    [Parameter] public DataTableKeyboardNavigation KeyboardNavigation { get; set; } = DataTableKeyboardNavigation.Rows;
+
     /// <summary>Whether to show the grouping drop zone above the table.</summary>
     [Parameter] public bool ShowGrouping { get; set; }
 

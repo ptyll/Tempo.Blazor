@@ -356,6 +356,13 @@
       "description": "Fixed height for the virtualized scroll container (e.g. \"600px\", \"80vh\")."
     },
     {
+      "name": "KeyboardNavigation",
+      "type": "DataTableKeyboardNavigation",
+      "isRequired": false,
+      "default": "Rows",
+      "description": "Rows (default) keeps one Tab stop per row. Grid is opt-in roving tabindex: arrows, Home, End, PageUp and PageDown move the active cell. Grid becomes the default in the next major; set Rows to keep today's behavior."
+    },
+    {
       "name": "ShowGrouping",
       "type": "bool",
       "isRequired": false,

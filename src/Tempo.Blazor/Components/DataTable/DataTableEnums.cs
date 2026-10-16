@@ -103,3 +103,17 @@ public enum DataToolbarMode
     /// </summary>
     ContentOnly
 }
+
+/// <summary>
+/// How <see cref="TmDataTable{TItem}"/> moves keyboard focus.
+/// <see cref="Rows"/> is the default and keeps today's row Tab stops.
+/// <see cref="Grid"/> is opt-in ARIA grid roving tabindex. It becomes the default in the next major.
+/// </summary>
+public enum DataTableKeyboardNavigation
+{
+    /// <summary>Each data row is a Tab stop. Enter and Space activate the row. Arrow keys do not move cells.</summary>
+    Rows,
+
+    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell.</summary>
+    Grid
+}

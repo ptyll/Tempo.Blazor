@@ -4617,6 +4617,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "DataTableKeyboardNavigation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "How TmDataTable moves keyboard focus. Rows is the default and keeps today's row Tab stops. Grid is opt-in ARIA grid roving tabindex and becomes the default in the next major.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "DataTablePaginationInfo",
       "kind": "Record",
       "category": "Components",
@@ -9144,6 +9154,13 @@
           "type": "IEnumerable<TItem>?",
           "isRequired": false,
           "description": "In-memory items. When set without DataProvider, client-side sort/filter/pagination applies."
+        },
+        {
+          "name": "KeyboardNavigation",
+          "type": "DataTableKeyboardNavigation",
+          "isRequired": false,
+          "default": "DataTableKeyboardNavigation.Rows",
+          "description": "Rows (default) keeps one Tab stop per row. Grid is opt-in roving tabindex: arrows, Home, End, PageUp and PageDown move the active cell. Grid becomes the default in the next major; set Rows to keep today's behavior."
         },
         {
           "name": "LayoutChanged",
@@ -27448,11 +27465,11 @@
     }
   ],
   "summary": {
-    "itemCount": 374,
-    "manualItemCount": 374,
-    "generatedItemCount": 366,
+    "itemCount": 375,
+    "manualItemCount": 375,
+    "generatedItemCount": 367,
     "generatedOnlyItemCount": 0,
     "componentCount": 203,
-    "publicApiTypeCount": 163
+    "publicApiTypeCount": 164
   }
 }

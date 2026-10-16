@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataTable",
+  "description": "How TmDataTable moves keyboard focus. Rows is the default and keeps today's row Tab stops. Grid is opt-in ARIA grid roving tabindex and becomes the default in the next major.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "DataTableKeyboardNavigation"
+}

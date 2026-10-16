@@ -164,7 +164,7 @@
 
     @* ── Table ────────────────────────────────────────────────── *@
     <div class="@GetScrollContainerClass()" style="@GetScrollContainerStyle()">
-        <table class="tm-data-table" role="grid" @ref="_tableRef">
+        <table class="tm-data-table" role="grid" aria-rowcount="@_displayedItems.Count" aria-colcount="@GridColumnCount" @ref="_tableRef">
             @if (_visibleColumns.Count > 0 || Selectable)
             {
                 <thead>
@@ -509,7 +509,9 @@
                         else
                         {
                             <tr class="@GetRowClass(rowItem)"
-                                tabindex="0"
+                                tabindex="@RowTabIndex()"
+                                role="row"
+                                aria-rowindex="@(currentRowIndex + 1)"
                                 @ondblclick="() => StartEditAtAsync(currentRowIndex, rowItem)"
                                 @onclick="() => HandleRowClickAsync(rowItem)"
                                 @onkeydown="e => HandleRowKeyDownAsync(e, rowItem)"
@@ -542,9 +544,14 @@
                                                @onclick:stopPropagation="true" />
                                     </td>
                                 }
+                                @{ var colIndex = (HasDetail ? 1 : 0) + (Selectable ? 1 : 0); }
                                 @foreach (var col in _visibleColumns)
                                 {
-                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)">
+                                    var cellCol = colIndex++;
+                                    var cellRow = currentRowIndex;
+                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)"
+                                        role="gridcell" aria-colindex="@(cellCol + 1)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
+                                        @onkeydown="e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)">
                                         @if (col.CellTemplate is not null)
                                         {
                                             @col.CellTemplate(rowItem)
