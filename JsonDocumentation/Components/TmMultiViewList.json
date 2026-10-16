@@ -232,6 +232,13 @@
       "description": "Additional CSS class for the root element."
     },
     {
+      "name": "ViewSwitcherLabels",
+      "type": "ViewSwitcherLabels",
+      "isRequired": false,
+      "default": "IconsOnly",
+      "description": "IconsOnly (default) keeps today's icon buttons. IconsAndText adds the localized Table, Card and List names."
+    },
+    {
       "name": "AllowSelection",
       "type": "bool",
       "isRequired": false,

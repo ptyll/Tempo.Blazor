@@ -4,6 +4,9 @@
 
 ### Added
 
+- **`TmMultiViewList.ViewSwitcherLabels`.** Default `IconsOnly` keeps today's icon buttons.
+  `IconsAndText` adds the localized Table, Card and List names. The radiogroup contract is unchanged.
+
 - **`TmDataTable.Appearance` and `TmFilterBuilder.Presentation`.** Both default to today's
   look: `Plain` adds no card class, `Inline` keeps the filter editor in the flow (PickersPage
   included). Opt in with `Card` or `Popover`. Export items now show an icon and a format

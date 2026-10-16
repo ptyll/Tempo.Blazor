@@ -147,3 +147,16 @@ public enum FilterBuilderPresentation
     /// <summary>Same as <see cref="Inline"/> until a host opts into a breakpoint rule.</summary>
     Auto
 }
+
+/// <summary>
+/// Labels on the <c>TmMultiViewList</c> view switcher.
+/// <see cref="IconsOnly"/> is the default and keeps today's buttons.
+/// </summary>
+public enum ViewSwitcherLabels
+{
+    /// <summary>Icon only. The accessible name stays on <c>aria-label</c>.</summary>
+    IconsOnly,
+
+    /// <summary>Icon plus the localized view name.</summary>
+    IconsAndText
+}

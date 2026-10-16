@@ -7197,6 +7197,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "ViewSwitcherLabels",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataTable",
+          "description": "Labels on the TmMultiViewList view switcher. IconsOnly is the default. IconsAndText adds the localized view name.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "WorkflowCanvasDefinition",
           "kind": "Class",
           "category": "Components",
@@ -8683,6 +8693,13 @@
               "type": "IDataTableViewProvider?",
               "isRequired": false,
               "description": "Optional view persistence provider. When set, enables saved views and (by default) the external filter builder. Use ShowExternalFilterBuilder = false to keep saved views without rendering the inline filter builder, or ToolbarMode = ContentOnly when the page owns the filtering UI."
+            },
+            {
+              "name": "ViewSwitcherLabels",
+              "type": "ViewSwitcherLabels",
+              "isRequired": false,
+              "default": "ViewSwitcherLabels.IconsOnly",
+              "description": "IconsOnly (default) keeps today's icon buttons. IconsAndText adds the localized Table, Card and List names."
             },
             {
               "name": "VirtualCardHeight",
@@ -27501,12 +27518,12 @@
         }
       ],
       "summary": {
-        "itemCount": 377,
-        "manualItemCount": 377,
-        "generatedItemCount": 369,
+        "itemCount": 378,
+        "manualItemCount": 378,
+        "generatedItemCount": 370,
         "generatedOnlyItemCount": 0,
         "componentCount": 203,
-        "publicApiTypeCount": 166
+        "publicApiTypeCount": 167
       }
     },
     {
@@ -115313,10 +115330,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3213,
-    "manualItemCount": 3213,
+    "itemCount": 3214,
+    "manualItemCount": 3214,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2686
+    "publicApiTypeCount": 2687
   }
 }

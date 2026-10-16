@@ -67,6 +67,10 @@
                                 @onclick="() => SwitchView(ListViewMode.Table)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9783;</span>
+                            @if (ViewSwitcherLabels == ViewSwitcherLabels.IconsAndText)
+                            {
+                                <span>@Loc["TmMvl_TableView"]</span>
+                            }
                         </button>
                         <button type="button"
                                 class="tm-mvl-switch-card @(_viewMode == ListViewMode.Card ? "tm-mvl-switch--active" : "")"
@@ -76,6 +80,10 @@
                                 @onclick="() => SwitchView(ListViewMode.Card)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9645;</span>
+                            @if (ViewSwitcherLabels == ViewSwitcherLabels.IconsAndText)
+                            {
+                                <span>@Loc["TmMvl_CardView"]</span>
+                            }
                         </button>
                         <button type="button"
                                 class="tm-mvl-switch-list @(_viewMode == ListViewMode.List ? "tm-mvl-switch--active" : "")"
@@ -85,6 +93,10 @@
                                 @onclick="() => SwitchView(ListViewMode.List)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9776;</span>
+                            @if (ViewSwitcherLabels == ViewSwitcherLabels.IconsAndText)
+                            {
+                                <span>@Loc["TmMvl_ListView"]</span>
+                            }
                         </button>
                     </div>
                 }
@@ -395,6 +407,12 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     // ── Parameters: selection ────────────────────────────────────
+
+    /// <summary>
+    /// View switcher labels. <see cref="ViewSwitcherLabels.IconsOnly"/> (default) keeps today's buttons.
+    /// <see cref="ViewSwitcherLabels.IconsAndText"/> adds the localized names.
+    /// </summary>
+    [Parameter] public ViewSwitcherLabels ViewSwitcherLabels { get; set; } = ViewSwitcherLabels.IconsOnly;
 
     /// <summary>When true, shows checkboxes and enables multi-select mode.</summary>
     [Parameter] public bool AllowSelection { get; set; }
