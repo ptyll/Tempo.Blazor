@@ -1283,19 +1283,21 @@
         {
             var groupKey = GetGroupKey(group);
             var expanded = IsGroupExpanded(group);
+            var bodyId = $"tm-mvl-group-body-{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(groupKey)))[..12]}";
 
-            <div class="tm-mvl-group-section tm-mvl-group-level-@level">
+            <div class="tm-mvl-group-section tm-mvl-group-card tm-mvl-group-level-@level">
                 <div class="tm-mvl-group-header">
                     <button type="button" class="tm-mvl-group-toggle"
                             aria-expanded="@(expanded ? "true" : "false")"
+                            aria-controls="@bodyId"
                             aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc[expanded ? "TmDataTable_CollapseGroup" : "TmDataTable_ExpandGroup"], group.DisplayValue ?? group.Key)"
                             @onclick="() => ToggleGroupExpansion(groupKey)">
                         <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" Class="@(expanded ? "tm-data-table-group-chevron tm-data-table-group-chevron--open" : "tm-data-table-group-chevron")" />
+                        <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
+                        <span class="tm-mvl-group-count">(@group.Count)</span>
                     </button>
-                    <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
-                    <span class="tm-mvl-group-count">(@group.Count)</span>
                 </div>
-
+                <div id="@bodyId" class="tm-mvl-group-body">
                 @if (expanded)
                 {
                     if (group.SubGroups is { Count: > 0 })
@@ -1323,6 +1325,7 @@
                         @RenderGroupMiniPager(group, "div")
                     }
                 }
+                </div>
             </div>
         }
     };
