@@ -63,6 +63,9 @@
     /// <summary>Default pin state (left/right/none). User pin changes override this at runtime. Default None.</summary>
     [Parameter] public ColumnPin Pinned { get; set; } = ColumnPin.None;
 
+    /// <summary>Whether this column is pinned in responsive scroll layout. The first visible data column is pinned when none is explicitly marked.</summary>
+    [Parameter] public bool MobilePinned { get; set; }
+
     /// <summary>Semantic role of this column in mobile card layout. Defaults to Field.</summary>
     [Parameter] public DataTableCardRole CardRole { get; set; } = DataTableCardRole.Field;
 

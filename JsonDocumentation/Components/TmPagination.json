@@ -35,6 +35,12 @@
       "isRequired": false
     },
     {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether to render the compact page-count presentation."
+    },
+    {
       "name": "ShowInfo",
       "type": "bool",
       "isRequired": false,

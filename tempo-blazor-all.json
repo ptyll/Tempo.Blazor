@@ -9283,7 +9283,7 @@
               "type": "DataTableMobileLayout",
               "isRequired": false,
               "default": "DataTableMobileLayout.None",
-              "description": "Responsive mobile presentation. None (default) preserves today's table markup; Scroll adds tm-data-table-wrapper--responsive. Cards is reserved for a future implementation."
+              "description": "Responsive mobile presentation. None preserves today's table markup; Scroll enables horizontal scrolling and a pinned mobile column; Cards renders key-value cards. CardMode aliases Cards when MobileLayout is None."
             },
             {
               "name": "OnExportCompleted",
@@ -9792,6 +9792,12 @@
               "description": "Minimum column width CSS value."
             },
             {
+              "name": "MobilePinned",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether this column is pinned in responsive scroll layout. The first visible data column is pinned when none is explicitly marked."
+            },
+            {
               "name": "Order",
               "type": "int",
               "isRequired": false,
@@ -9861,6 +9867,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class."
+            },
+            {
+              "name": "Compact",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether to render the compact page-count presentation."
             },
             {
               "name": "CurrentPage",

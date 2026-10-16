@@ -29,6 +29,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
         cut.Find(".tm-data-table-wrapper--cards").Should().NotBeNull();
         cut.Find(".tm-data-table-wrapper--container").Should().NotBeNull();
         cut.Find("td[data-card-role=\"Field\"]").Should().NotBeNull();
+        cut.Find("td[data-label=\"Name\"]").Should().NotBeNull();
     }
 
     [Fact]
@@ -64,6 +65,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
         cut.Find(".tm-data-table-wrapper--card").Should().NotBeNull();
         cut.Markup.Should().NotContain("tm-data-table-wrapper--container");
         cut.Find("td[data-card-role=\"Field\"]").Should().NotBeNull();
+        cut.Find("td[data-label=\"Name\"]").Should().NotBeNull();
         cut.Markup.Should().NotContain("tm-data-table-wrapper--responsive");
     }
 
@@ -96,6 +98,33 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
         cut.Markup.Should().NotContain("tm-data-table-wrapper--cards");
         cut.Find(".tm-data-table-wrapper--responsive").Should().NotBeNull();
         cut.Find(".tm-data-table-wrapper--container").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Scroll_PinsFirstVisibleColumnOnlyInScrollMode()
+    {
+        var scroll = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, new List<BasicPerson> { new("Ada", 37, "Engineer") })
+            .Add(c => c.MobileLayout, DataTableMobileLayout.Scroll)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, x => x.Name))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Age").Add(x => x.Field, x => x.Age).Add(x => x.MobilePinned, true)));
+        scroll.FindAll("th.data-mobile-pinned").Should().HaveCount(1);
+        scroll.FindAll("td.data-mobile-pinned").Should().HaveCount(1);
+
+        var plain = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, new List<BasicPerson> { new("Ada", 37, "Engineer") })
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, x => x.Name)));
+        plain.Markup.Should().NotContain("data-mobile-pinned");
+    }
+
+    [Fact]
+    public void SourceCss_HasBalancedBraces()
+    {
+        var cssPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+            "../../../../../src/Tempo.Blazor/wwwroot/css/components/_data-table.css"));
+        var css = File.ReadAllText(cssPath);
+
+        css.Count(character => character == '{').Should().Be(css.Count(character => character == '}'));
     }
 
     [Fact]

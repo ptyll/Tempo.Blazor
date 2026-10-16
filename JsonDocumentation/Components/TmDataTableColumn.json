@@ -109,6 +109,12 @@
       "description": "Default pin state (left/right/none). User pin changes override this at runtime. Default None."
     },
     {
+      "name": "MobilePinned",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Pins this column in responsive scroll mode; otherwise the first visible data column is pinned."
+    },
+    {
       "name": "CardRole",
       "type": "DataTableCardRole",
       "isRequired": false,

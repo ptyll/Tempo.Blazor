@@ -23,5 +23,7 @@ public class TmMultiViewListResponsiveTests : LocalizationTestBase
             .Add(c => c.Responsive, true));
 
         cut.Find(".tm-mvl-table").ParentElement!.ClassList.Should().Contain("tm-mvl-table-scroll");
+        cut.Find(".tm-mvl-title-column").Should().NotBeNull();
+        cut.Find(".tm-mvl-switch--responsive").Should().NotBeNull();
     }
 }

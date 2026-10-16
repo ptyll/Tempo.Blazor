@@ -942,6 +942,7 @@
   "TmDataTable_NoResults": "Aucun résultat",
   "TmDataTable_PageSize": "Éléments par page",
   "TmDataTable_Pagination": "{0}–{1} sur {2}",
+  "TmDataTable_CompactPage": "Page {0} sur {1}",
   "TmDataTable_PinColumn": "Épingler la colonne",
   "TmDataTable_ResizeColumn": "Redimensionner la colonne {0}",
   "TmDataTable_RemoveGrouping": "Retirer le regroupement par {0}",

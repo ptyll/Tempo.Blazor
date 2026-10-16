@@ -945,6 +945,7 @@
   "TmDataTable_NoResults": "Žiadne výsledky",
   "TmDataTable_PageSize": "Položiek na stranu",
   "TmDataTable_Pagination": "{0}–{1} z {2}",
+  "TmDataTable_CompactPage": "Strana {0} z {1}",
   "TmDataTable_PinColumn": "Pripnúť stĺpec",
   "TmDataTable_ResizeColumn": "Zmeniť veľkosť stĺpca {0}",
   "TmDataTable_RemoveGrouping": "Odobrať zoskupenie podľa {0}",

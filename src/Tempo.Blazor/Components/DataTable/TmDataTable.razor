@@ -181,7 +181,7 @@
                         }
                         @if (Selectable)
                         {
-                            <th class="tm-col-check">
+                            <th class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)">
                                 <input type="checkbox"
                                        @ref="_selectAllRef"
                                        aria-label="@Loc["TmDataTable_SelectAll"]"
@@ -414,7 +414,7 @@
                             }
                             @if (Selectable)
                             {
-                                <td class="tm-col-check">
+                                <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)">
                                     <input type="checkbox"
                                            aria-label="@Loc["TmDataTable_SelectRow"]"
                                            checked="@IsSelected(rowItem)"
@@ -426,7 +426,7 @@
                             }
                             @foreach (var col in _visibleColumns.Where(c => !IsCardLayout || c.CardRole != DataTableCardRole.Hidden))
                             {
-                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)" data-card-role="@(IsCardLayout ? col.CardRole.ToString() : null)">
+                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsCardLayout ? col.CardRole.ToString() : null)">
                                     @if (col.CellTemplate is not null)
                                     {
                                         @col.CellTemplate(rowItem)
@@ -456,11 +456,11 @@
                                     }
                                     @if (Selectable)
                                     {
-                                        <td class="tm-col-check"></td>
+                                        <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)"></td>
                                     }
                                     @foreach (var col in _visibleColumns.Where(c => !IsCardLayout || c.CardRole != DataTableCardRole.Hidden))
                                     {
-                                        <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)" data-card-role="@(IsCardLayout ? col.CardRole.ToString() : null)">
+                                        <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsCardLayout ? col.CardRole.ToString() : null)">
                                             @if (!HasEditActions && ReferenceEquals(col, _visibleColumns[0]))
                                             {
                                                 @RowEditValidator
@@ -481,7 +481,7 @@
                                     }
                                     @if (HasEditActions)
                                     {
-                                        <td class="tm-data-table__edit-actions">
+                                        <td class="tm-data-table__edit-actions @(IsCardLayout ? "tm-data-table__edit-actions--card-footer" : null)">
                                             @RowEditValidator
                                             <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save"
                                                     aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]"
@@ -540,7 +540,7 @@
                                 }
                                 @if (Selectable)
                                 {
-                                    <td class="tm-col-check">
+                                    <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)">
                                         <input type="checkbox"
                                                aria-label="@Loc["TmDataTable_SelectRow"]"
                                                checked="@IsSelected(rowItem)"
@@ -555,7 +555,7 @@
                                 {
                                     var cellCol = colIndex++;
                                     var cellRow = currentRowIndex;
-                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)" data-card-role="@(IsCardLayout ? col.CardRole.ToString() : null)"
+                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsCardLayout ? col.CardRole.ToString() : null)"
                                         role="gridcell" aria-colindex="@(cellCol + 1)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
                                         @onkeydown="e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)">
                                         @if (col.CellTemplate is not null)
@@ -570,7 +570,7 @@
                                 }
                                 @if (HasEditActions)
                                 {
-                                    <td class="tm-data-table__edit-actions">
+                                    <td class="tm-data-table__edit-actions @(IsCardLayout ? "tm-data-table__edit-actions--card-footer" : null)">
                                         <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--start"
                                                 aria-label="@Loc["TmDataTable_EditRow"]" title="@Loc["TmDataTable_EditRow"]"
                                                 @onkeydown:stopPropagation="true"
@@ -597,7 +597,7 @@
     @* ── Pagination ───────────────────────────────────────────── *@
     @if (PagerRenders)
     {
-        <div class="tm-pagination-container" data-testid="@TestId("pagination-container")">
+        <div class="tm-pagination-container @(MobileLayout != DataTableMobileLayout.None ? "tm-pagination-compact" : null)" data-testid="@TestId("pagination-container")">
             @* Left: Info — rendered only when this is the chosen placement, so the range is not
                printed twice (the pagination bar below can state it instead). ShowResultSummary=false
                suppresses even this slot; with placement=Pagination the TmPagination below prints the
@@ -618,12 +618,12 @@
 
             @* Center: Page controls + Page size (vše v jednom) *@
             <div class="tm-pagination-center">
-                <TmPagination CurrentPage="@_currentPage"
+                <TmPagination Compact="@(MobileLayout != DataTableMobileLayout.None)" CurrentPage="@_currentPage"
                               TotalPages="@_totalPages"
                               TotalCount="@_totalCount"
                               PageSize="@_pageSize"
                               PageSizeOptions="PageSizeOptions"
-                              ShowInfo="@(PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
+                              ShowInfo="@(MobileLayout == DataTableMobileLayout.None && PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
                               TestIdPrefix="@TestIdPrefix"
                               AdditionalAttributes="PaginationAttributes"
                               OnPageChange="GoToPageAsync"

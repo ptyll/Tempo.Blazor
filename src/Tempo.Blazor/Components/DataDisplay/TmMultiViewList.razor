@@ -12,7 +12,7 @@
 @inject DragDropService DragDrop
 @inject IJSRuntime JS
 
-<div class="tm-multi-view-list @(Appearance == DataTableAppearance.Plain ? "tm-multi-view-list--plain" : null) @Class" @attributes="AdditionalAttributes">
+<div class="tm-multi-view-list @(Appearance == DataTableAppearance.Plain ? "tm-multi-view-list--plain" : null) @(Responsive ? "tm-multi-view-list--responsive" : null) @Class" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -21,7 +21,7 @@
             @* Left: Search *@
             @if (ShouldRenderSearch())
             {
-                <div class="tm-mvl-toolbar-left">
+                <div class="tm-mvl-toolbar-left @(Responsive ? "tm-mvl-toolbar-left--responsive" : null)">
                     <TmSearchInput Value="@_searchText"
                                    ValueChanged="OnSearchChangedAsync"
                                    Placeholder="@Loc["TmDataTable_SearchPlaceholder"]" />
@@ -61,7 +61,7 @@
                 {
                     <div class="tm-mvl-switcher" role="radiogroup" aria-label="@Loc["TmMvl_TableView"]">
                         <button type="button"
-                                class="tm-mvl-switch-table @(_viewMode == ListViewMode.Table ? "tm-mvl-switch--active" : "")"
+                                class="tm-mvl-switch-table @(Responsive ? "tm-mvl-switch--responsive" : null) @(_viewMode == ListViewMode.Table ? "tm-mvl-switch--active" : "")"
                                 role="radio"
                                 aria-checked="@(_viewMode == ListViewMode.Table ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_TableView"]"
@@ -74,7 +74,7 @@
                             }
                         </button>
                         <button type="button"
-                                class="tm-mvl-switch-card @(_viewMode == ListViewMode.Card ? "tm-mvl-switch--active" : "")"
+                                class="tm-mvl-switch-card @(Responsive ? "tm-mvl-switch--responsive" : null) @(_viewMode == ListViewMode.Card ? "tm-mvl-switch--active" : "")"
                                 role="radio"
                                 aria-checked="@(_viewMode == ListViewMode.Card ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_CardView"]"
@@ -87,7 +87,7 @@
                             }
                         </button>
                         <button type="button"
-                                class="tm-mvl-switch-list @(_viewMode == ListViewMode.List ? "tm-mvl-switch--active" : "")"
+                                class="tm-mvl-switch-list @(Responsive ? "tm-mvl-switch--responsive" : null) @(_viewMode == ListViewMode.List ? "tm-mvl-switch--active" : "")"
                                 role="radio"
                                 aria-checked="@(_viewMode == ListViewMode.List ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_ListView"]"
@@ -166,7 +166,7 @@
                                            @onchange="_ => ToggleSelectAllAsync()" />
                                 </th>
                             }
-                            @if (_visibleColumns.Contains(ColumnKeys.Title)) { <th>@Loc["TmMvl_ColTitle"]</th> }
+                            @if (_visibleColumns.Contains(ColumnKeys.Title)) { <th class="@(Responsive ? "tm-mvl-title-column" : null)">@Loc["TmMvl_ColTitle"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Status)) { <th>@Loc["TmMvl_ColStatus"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Date)) { <th>@Loc["TmMvl_ColDate"]</th> }
@@ -1253,7 +1253,7 @@
             }
             else
             {
-                if (_visibleColumns.Contains(ColumnKeys.Title)) { <td>@GetTitle(item)</td> }
+                if (_visibleColumns.Contains(ColumnKeys.Title)) { <td class="@(Responsive ? "tm-mvl-title-column" : null)">@GetTitle(item)</td> }
                 if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <td>@GetSubTitle(item)</td> }
                 if (_visibleColumns.Contains(ColumnKeys.Status))
                 {

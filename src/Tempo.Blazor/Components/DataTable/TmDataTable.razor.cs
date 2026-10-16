@@ -501,6 +501,7 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <c>tm-data-table-wrapper--card</c> class and every data cell carries a
     /// <c>data-label</c> attribute (the owning column's <see cref="TmDataTableColumn{TItem}.Title"/>),
     /// which the scoped CSS uses on narrow viewports to stack each row into a labeled card.
+    /// It aliases Cards only when MobileLayout is None; explicit Scroll wins.
     /// Default: false — the rendered markup is unchanged from a non-card table, so existing
     /// consumers are unaffected. Fully compatible with server-side data (<see cref="DataProvider"/>)
     /// and sorting.
@@ -512,7 +513,7 @@ public partial class TmDataTable<TItem> : IDisposable
     /// when <see cref="CardMode"/> is enabled, so non-card tables render an identical class list.
     /// </summary>
     private string WrapperCssClass =>
-        CardMode ? "tm-data-table-wrapper tm-data-table-wrapper--card" : "tm-data-table-wrapper";
+        IsCardLayout ? "tm-data-table-wrapper tm-data-table-wrapper--card" : "tm-data-table-wrapper";
 
     /// <summary>
     /// High-level preset that controls which toolbar chrome elements are rendered.
@@ -754,6 +755,9 @@ public partial class TmDataTable<TItem> : IDisposable
     [Parameter] public DataTableMobileLayout MobileLayout { get; set; } = DataTableMobileLayout.None;
 
     private bool IsCardLayout => MobileLayout == DataTableMobileLayout.None ? CardMode : MobileLayout == DataTableMobileLayout.Cards;
+    private bool IsResponsiveScroll => MobileLayout == DataTableMobileLayout.Scroll;
+    private bool IsMobilePinned(TmDataTableColumn<TItem> col) => IsResponsiveScroll &&
+        (col.MobilePinned || (!_visibleColumns.Any(c => c.MobilePinned) && ReferenceEquals(col, _visibleColumns.FirstOrDefault())));
 
     /// <summary>Whether to show the grouping drop zone above the table.</summary>
     [Parameter] public bool ShowGrouping { get; set; }
@@ -1053,7 +1057,7 @@ public partial class TmDataTable<TItem> : IDisposable
         // Left-pinned columns stack from the container edge. Leading utility columns (expander,
         // checkbox) are not sticky, so their width is not reserved — a pinned column simply sticks
         // over them once they scroll away.
-        var leftOffset = 0;
+        var leftOffset = IsResponsiveScroll && Selectable ? 44 : 0;
         foreach (var col in _visibleColumns.Where(c => GetPin(c) == ColumnPin.Left))
         {
             _stickyLeft[col.Key] = leftOffset;
@@ -2525,6 +2529,7 @@ public partial class TmDataTable<TItem> : IDisposable
     private string GetHeaderClass(TmDataTableColumn<TItem> col)
     {
         var parts = new List<string>();
+        if (IsMobilePinned(col)) parts.Add("data-mobile-pinned");
         if (col.Sortable) parts.Add("tm-col-sortable");
         if (col.Groupable) parts.Add("tm-col-groupable");
         var headerSort = GetColumnSort(col.Key);
@@ -2541,6 +2546,8 @@ public partial class TmDataTable<TItem> : IDisposable
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(col.CssClass)) parts.Add(col.CssClass);
+        if (IsMobilePinned(col)) parts.Add("data-mobile-pinned");
+        if (IsCardLayout) parts.Add("tm-data-table-cell--card");
         if (col.Align == ColumnAlign.Center) parts.Add("tm-text-center");
         if (col.Align == ColumnAlign.Right) parts.Add("tm-text-right");
         var cellPin = GetPinClass(col);

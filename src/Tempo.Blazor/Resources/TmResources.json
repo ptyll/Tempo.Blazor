@@ -939,6 +939,7 @@
   "TmDataTable_NoResults": "No results found",
   "TmDataTable_PageSize": "Items per page",
   "TmDataTable_Pagination": "{0}–{1} of {2}",
+  "TmDataTable_CompactPage": "Page {0} of {1}",
   "TmDataTable_PinColumn": "Pin column",
   "TmDataTable_ResizeColumn": "Resize column {0}",
   "TmDataTable_RemoveGrouping": "Remove grouping by {0}",

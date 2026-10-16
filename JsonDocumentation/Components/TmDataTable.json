@@ -374,7 +374,7 @@
       "type": "DataTableMobileLayout",
       "isRequired": false,
       "default": "None",
-      "description": "Responsive mobile presentation. None (default) preserves today's table markup; Scroll adds tm-data-table-wrapper--responsive. Cards is reserved for a future implementation."
+      "description": "Responsive mobile presentation. None preserves today's table markup; Scroll enables horizontal scrolling and a pinned mobile column; Cards renders key-value cards. CardMode aliases Cards when MobileLayout is None."
     },
     {
       "name": "ShowGrouping",
