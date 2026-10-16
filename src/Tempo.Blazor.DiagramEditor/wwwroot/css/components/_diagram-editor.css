@@ -596,12 +596,16 @@
     height: 100%;
     box-sizing: border-box;
     /* Node bodies paint on the DOCUMENT's data-driven fill (default #ffffff in both themes),
-       so the default ink must stay DARK in both themes. --tm-text-inverse is the dark-ink
-       token that keeps that value in dark mode too (tokens-dark re-declares it as the dark
-       page tone, not a light ink). The old code used an undefined --tm-diagram-node-text
-       whose hex fallback (#111827) produced exactly this; a theme-following --tm-color-text
-       would paint white-on-white in dark mode (found in the phase-3 screenshot review). */
-    color: var(--tm-text-inverse);
+       so the default ink must stay DARK in both themes. No text token qualifies as-is:
+       --tm-text-inverse is WHITE in light (the white-on-white defect found in the phase-3
+       screenshot review), --tm-text-primary flips to light #f1f5f9 in dark, and the gray
+       scale inverts under dark (gray-900 becomes white). --tm-color-secondary-hover is
+       NOT re-declared by tokens-dark.css, so it stays gray-600 (#4b5563, ~7.6:1 on the
+       white fill) in BOTH themes — a stable dark ink without a hex literal here. The old
+       code used an undefined --tm-diagram-node-text whose hex fallback (#111827) produced
+       exactly this ink; a theme-following --tm-color-text would paint white-on-white in
+       dark mode (found in the phase-3 screenshot review). */
+    color: var(--tm-color-secondary-hover);
     user-select: none;
     pointer-events: auto;
 }
