@@ -105,20 +105,6 @@ public enum DataToolbarMode
 }
 
 /// <summary>
-/// How <see cref="TmDataTable{TItem}"/> moves keyboard focus.
-/// <see cref="Rows"/> is the default and keeps today's row Tab stops.
-/// <see cref="Grid"/> is opt-in ARIA grid roving tabindex. It becomes the default in the next major.
-/// </summary>
-public enum DataTableKeyboardNavigation
-{
-    /// <summary>Each data row is a Tab stop. Enter and Space activate the row. Arrow keys do not move cells.</summary>
-    Rows,
-
-    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell.</summary>
-    Grid
-}
-
-/// <summary>
 /// Surface of a data table or multi-view list.
 /// <see cref="Plain"/> is the default and keeps today's markup.
 /// <see cref="Card"/> opts into the card radius, shadow and border.
@@ -130,6 +116,33 @@ public enum DataTableAppearance
 
     /// <summary>Card surface. Adds <c>tm-data-table-wrapper--card-surface</c>.</summary>
     Card
+}
+
+/// <summary>
+/// How <see cref="TmDataTable{TItem}"/> moves keyboard focus.
+/// <see cref="Rows"/> is the default and keeps today's row Tab stops.
+/// <see cref="Grid"/> is opt-in ARIA grid roving tabindex.
+/// </summary>
+public enum DataTableKeyboardNavigation
+{
+    /// <summary>Each data row is a Tab stop. Enter and Space activate the row. Arrow keys do not move cells.</summary>
+    Rows,
+
+    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell.</summary>
+    Grid
+}
+
+/// <summary>Responsive presentation of a data table on mobile viewports.</summary>
+public enum DataTableMobileLayout
+{
+    /// <summary>Keep today's table markup unchanged. This is the default.</summary>
+    None,
+
+    /// <summary>Allow horizontal scrolling for the table on mobile viewports.</summary>
+    Scroll,
+
+    /// <summary>Render table rows as cards on mobile viewports.</summary>
+    Cards
 }
 
 /// <summary>

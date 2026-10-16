@@ -4649,6 +4649,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "DataTableMobileLayout",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataTable",
+          "description": "Responsive mobile presentation of a data table. None preserves today's markup, Scroll adds tm-data-table-wrapper--responsive for horizontal scrolling, and Cards is reserved but not implemented.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "DataTablePaginationInfo",
           "kind": "Record",
           "category": "Components",
@@ -9250,6 +9260,13 @@
               "type": "IDataTableLayoutStore?",
               "isRequired": false,
               "description": "Persistence hook for per-user column layout (widths + pin state). Optional."
+            },
+            {
+              "name": "MobileLayout",
+              "type": "DataTableMobileLayout",
+              "isRequired": false,
+              "default": "DataTableMobileLayout.None",
+              "description": "Responsive mobile presentation. None (default) preserves today's table markup; Scroll adds tm-data-table-wrapper--responsive. Cards is reserved for a future implementation."
             },
             {
               "name": "OnExportCompleted",
@@ -27556,12 +27573,12 @@
         }
       ],
       "summary": {
-        "itemCount": 379,
-        "manualItemCount": 379,
-        "generatedItemCount": 371,
+        "itemCount": 380,
+        "manualItemCount": 380,
+        "generatedItemCount": 372,
         "generatedOnlyItemCount": 0,
         "componentCount": 203,
-        "publicApiTypeCount": 168
+        "publicApiTypeCount": 169
       }
     },
     {
@@ -115368,10 +115385,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3215,
-    "manualItemCount": 3215,
+    "itemCount": 3216,
+    "manualItemCount": 3216,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2688
+    "publicApiTypeCount": 2689
   }
 }

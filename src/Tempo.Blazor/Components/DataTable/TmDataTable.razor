@@ -16,7 +16,7 @@
     <span style="display:none" aria-hidden="true">@ChildContent</span>
 </CascadingValue>
 
-<div class="@WrapperCssClass @(Appearance == DataTableAppearance.Card ? "tm-data-table-wrapper--card-surface" : null) @Class" @attributes="AdditionalAttributes">
+<div class="@WrapperCssClass @(Appearance == DataTableAppearance.Card ? "tm-data-table-wrapper--card-surface" : null) @(MobileLayout == DataTableMobileLayout.Scroll ? "tm-data-table-wrapper--responsive" : null) @Class" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())

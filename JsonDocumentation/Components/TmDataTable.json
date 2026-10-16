@@ -370,6 +370,13 @@
       "description": "Plain (default) keeps today's markup. Card adds tm-data-table-wrapper--card-surface around the table, pager and group bar."
     },
     {
+      "name": "MobileLayout",
+      "type": "DataTableMobileLayout",
+      "isRequired": false,
+      "default": "None",
+      "description": "Responsive mobile presentation. None (default) preserves today's table markup; Scroll adds tm-data-table-wrapper--responsive. Cards is reserved for a future implementation."
+    },
+    {
       "name": "ShowGrouping",
       "type": "bool",
       "isRequired": false,

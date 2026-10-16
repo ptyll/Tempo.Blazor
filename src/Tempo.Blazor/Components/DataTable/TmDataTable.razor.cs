@@ -750,6 +750,9 @@ public partial class TmDataTable<TItem> : IDisposable
     /// </summary>
     [Parameter] public DataTableAppearance Appearance { get; set; } = DataTableAppearance.Plain;
 
+    /// <summary>Responsive mobile presentation. None (default) preserves today's table markup; Scroll enables horizontal scrolling.</summary>
+    [Parameter] public DataTableMobileLayout MobileLayout { get; set; } = DataTableMobileLayout.None;
+
     /// <summary>Whether to show the grouping drop zone above the table.</summary>
     [Parameter] public bool ShowGrouping { get; set; }
 

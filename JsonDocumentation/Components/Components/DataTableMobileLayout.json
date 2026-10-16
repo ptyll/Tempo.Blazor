@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataTable",
+  "description": "Responsive mobile presentation of a data table. None preserves today's markup, Scroll adds tm-data-table-wrapper--responsive for horizontal scrolling, and Cards is reserved but not implemented.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "DataTableMobileLayout"
+}
