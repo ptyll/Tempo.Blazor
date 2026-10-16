@@ -31,6 +31,10 @@
   border: 1px solid var(--tm-border-color);
   background: var(--tm-bg-surface);
 }
+.tm-data-table-wrapper--container {
+  container-type: inline-size;
+  container-name: tm-data-table;
+}
 .tm-data-table-wrapper {
   display: flex;
   flex-direction: column;

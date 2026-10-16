@@ -12,6 +12,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
         var cut = Render<TmDataTable<BasicPerson>>(p => p.Add(c => c.Items, new List<BasicPerson>()));
 
         cut.Markup.Should().NotContain("tm-data-table-wrapper--responsive");
+        cut.Markup.Should().NotContain("tm-data-table-wrapper--container");
     }
 
     [Fact]
@@ -26,6 +27,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
 
         cut.Markup.Should().NotContain("tm-data-table-wrapper--responsive");
         cut.Find(".tm-data-table-wrapper--cards").Should().NotBeNull();
+        cut.Find(".tm-data-table-wrapper--container").Should().NotBeNull();
         cut.Find("td[data-card-role=\"Field\"]").Should().NotBeNull();
     }
 
@@ -60,6 +62,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
 
         cut.Find(".tm-data-table-wrapper--cards").Should().NotBeNull();
         cut.Find(".tm-data-table-wrapper--card").Should().NotBeNull();
+        cut.Markup.Should().NotContain("tm-data-table-wrapper--container");
         cut.Find("td[data-card-role=\"Field\"]").Should().NotBeNull();
         cut.Markup.Should().NotContain("tm-data-table-wrapper--responsive");
     }
@@ -92,6 +95,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
 
         cut.Markup.Should().NotContain("tm-data-table-wrapper--cards");
         cut.Find(".tm-data-table-wrapper--responsive").Should().NotBeNull();
+        cut.Find(".tm-data-table-wrapper--container").Should().NotBeNull();
     }
 
     [Fact]
@@ -102,5 +106,6 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
             .Add(c => c.MobileLayout, DataTableMobileLayout.Scroll));
 
         cut.Find(".tm-data-table-wrapper--responsive").Should().NotBeNull();
+        cut.Find(".tm-data-table-wrapper--container").Should().NotBeNull();
     }
 }
