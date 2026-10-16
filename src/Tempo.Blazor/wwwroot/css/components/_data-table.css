@@ -135,7 +135,7 @@
 }
 .tm-data-table th,
 .tm-data-table td {
-  padding: var(--tm-space-3) var(--tm-space-4);
+  padding: var(--tm-data-table-cell-py, var(--tm-space-3)) var(--tm-data-table-cell-px, var(--tm-space-4));
   text-align: left;
   border-bottom: 1px solid var(--tm-border-color);
 }
