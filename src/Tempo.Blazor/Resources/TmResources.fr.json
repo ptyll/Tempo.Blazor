@@ -929,6 +929,7 @@
   "TmDataTable_FirstPage": "Première page",
   "TmDataTable_GroupAvg": "Moy.",
   "TmDataTable_GroupCount": "{0} éléments",
+  "TmDataTable_GroupBy": "Regrouper par",
   "TmDataTable_GroupDropPlaceholder": "Glissez les en-têtes de colonnes ici pour regrouper",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",

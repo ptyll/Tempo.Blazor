@@ -70,10 +70,12 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     // --- Drop Zone ---
 
     [Fact]
-    public void DataTable_ShowGrouping_RendersDropZone()
+    public void DataTable_ShowGrouping_RendersLocalizedLabel()
     {
         var cut = RenderGroupableTable(showGrouping: true);
-        cut.FindAll(".tm-data-table-group-zone").Should().HaveCount(1);
+
+        cut.Find(".tm-data-table-group-label-prefix").TextContent.Should().Be("Group by");
+        cut.FindAll(".tm-data-table-group-placeholder").Should().HaveCount(1);
     }
 
     [Fact]
@@ -284,7 +286,11 @@ public class TmDataTableGroupingTests : LocalizationTestBase
 
         await cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Department"));
 
+        var chip = cut.Find(".tm-data-table-group-chip");
+        chip.ClassList.Should().Contain("tm-data-table-group-chip");
         cut.FindAll(".tm-data-table-group-chip").Should().HaveCount(1);
+        cut.Find(".tm-data-table-group-expand-all").ClassList.Should().Contain("tm-link-button");
+        cut.Find(".tm-data-table-group-collapse-all").ClassList.Should().Contain("tm-link-button");
     }
 
     [Fact]

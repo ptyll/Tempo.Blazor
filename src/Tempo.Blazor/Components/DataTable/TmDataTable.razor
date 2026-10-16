@@ -60,6 +60,7 @@
                     <div class="tm-data-table__export">
                         <TmDropdown Text="@(_isExporting ? Loc["TmDataTable_Exporting"] : Loc["TmDataTable_Export"])"
                                     Icon="@IconNames.Download"
+                                    OutlineTrigger="true"
                                     Disabled="_isExporting"
                                     Class="tm-data-table__export-control"
                                     Align="OverlayAlign.End"
@@ -122,6 +123,7 @@
              @ondrop="HandleGroupZoneDrop"
              @ondragenter="() => _isDragOver = true"
              @ondragleave="() => _isDragOver = false">
+            <span class="tm-data-table-group-label-prefix">@Loc["TmDataTable_GroupBy"]</span>
             @if (ShouldRenderAddGrouping())
             {
                 <TmDropdown Text="@Loc["TmDataTable_AddGrouping"]" Class="tm-data-table-add-grouping" OnSelect="AddGroupColumn">
@@ -157,9 +159,9 @@
                     </div>
                 }
                 <div class="tm-data-table-group-actions">
-                    <button type="button" class="tm-data-table-group-expand-all"
+                    <button type="button" class="tm-link-button tm-data-table-group-expand-all"
                             @onclick="ExpandAllGroups">@Loc["TmDataTable_ExpandAll"]</button>
-                    <button type="button" class="tm-data-table-group-collapse-all"
+                    <button type="button" class="tm-link-button tm-data-table-group-collapse-all"
                             @onclick="CollapseAllGroups">@Loc["TmDataTable_CollapseAll"]</button>
                 </div>
             }

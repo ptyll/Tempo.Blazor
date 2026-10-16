@@ -926,6 +926,7 @@
   "TmDataTable_FirstPage": "First page",
   "TmDataTable_GroupAvg": "Avg",
   "TmDataTable_GroupCount": "{0} items",
+  "TmDataTable_GroupBy": "Group by",
   "TmDataTable_GroupDropPlaceholder": "Drag column headers here to group",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",

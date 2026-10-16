@@ -931,6 +931,7 @@
   "TmDataTable_FirstPage": "První stránka",
   "TmDataTable_GroupAvg": "Průměr",
   "TmDataTable_GroupCount": "Počet: {0}",
+  "TmDataTable_GroupBy": "Seskupit podle",
   "TmDataTable_GroupDropPlaceholder": "Přetáhněte záhlaví sloupce pro seskupení",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",

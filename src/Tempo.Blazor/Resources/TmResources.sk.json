@@ -932,6 +932,7 @@
   "TmDataTable_FirstPage": "Prvá strana",
   "TmDataTable_GroupAvg": "Priemer",
   "TmDataTable_GroupCount": "Počet: {0}",
+  "TmDataTable_GroupBy": "Zoskupiť podľa",
   "TmDataTable_GroupDropPlaceholder": "Presunutím hlavičky stĺpca sem zoskupíte údaje",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",

@@ -4,7 +4,7 @@
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-view-manager">
-    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-secondary tm-view-manager-toggle"
+    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline tm-view-manager-toggle"
             aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
         <span>@(Loc["TmViewManager_Views"])</span>

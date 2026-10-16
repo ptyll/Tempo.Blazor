@@ -11,7 +11,7 @@
 <div @ref="_wrapperRef" class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             @ref="_triggerRef"
-            class="tm-dropdown-trigger"
+            class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn-outline" : "")"
             aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
             aria-haspopup="true"
             data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
@@ -99,6 +99,9 @@
 
     /// <summary>Disables the dropdown.</summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Applies the outline button style to the trigger.</summary>
+    [Parameter] public bool OutlineTrigger { get; set; }
 
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]

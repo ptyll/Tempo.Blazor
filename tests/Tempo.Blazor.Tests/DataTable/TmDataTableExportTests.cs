@@ -273,6 +273,32 @@ public class TmDataTableExportTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ExportMenu_ShowsCsvAndXlsxLabelsAndDescriptions()
+    {
+        Services.AddTempoBlazorDataTableXlsx();
+        var cut = Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.ViewContext, "export-menu");
+            p.Add(c => c.Items, new List<Person> { new("Ann", 30) });
+            p.Add(c => c.ShowExport, true);
+            p.AddChildContent(b =>
+            {
+                var seq = 0;
+                AddCol(b, ref seq, "Name", x => x.Name);
+            });
+        });
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        var csv = cut.Find("[data-export-format='csv']");
+        csv.QuerySelector(".tm-data-table__export-label")!.TextContent.Should().Contain("CSV");
+        csv.QuerySelector(".tm-data-table__export-description")!.TextContent.Should().NotBeNullOrWhiteSpace();
+
+        var xlsx = cut.Find("[data-export-format='xlsx']");
+        xlsx.QuerySelector(".tm-data-table__export-label")!.TextContent.Should().Contain("Excel (XLSX)");
+        xlsx.QuerySelector(".tm-data-table__export-description")!.TextContent.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
     public async Task RegisteredXlsxExporter_AddsMenuItem_DownloadsAndReportsCompletion()
     {
         Services.AddTempoBlazorDataTableXlsx();
