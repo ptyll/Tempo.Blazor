@@ -4,6 +4,13 @@
 
 ### Added
 
+- **`TmDataTable.KeyboardNavigation`.** Opt-in `Grid` uses roving tabindex: one cell is
+  tabbable, arrows / Home / End / PageUp / PageDown move it, Enter activates the row once.
+  Default stays `Rows` (today's Tab-per-row). **Upcoming / Migration:** `Grid` becomes the
+  default in the next major. Keep today's behavior with
+  `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`. `TmMultiViewList` stays on row
+  navigation and has no grid parameter.
+
 - **`TmDashboard` documentation.** The redesigned dashboard (and widget selector) is now
   documented in [docs/dashboard.md](docs/dashboard.md): the chrome parameters
   (`Appearance`, `Title`/`Subtitle`/`HeaderStart`/`HeaderActions`/`ShowHeader`,
