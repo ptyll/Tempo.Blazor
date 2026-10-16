@@ -55,7 +55,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator("[data-tm-group='templates'] button").First.ClickAsync();
         await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotAsync(page, $"{prefix}--template-gallery");
+        await ShotSettledAsync(page, $"{prefix}--template-gallery");
         await page.Keyboard.PressAsync("Escape");
         await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
 
@@ -65,7 +65,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             .First.ClickAsync();
         await page.Locator(".tm-diagram-sql-import").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotAsync(page, $"{prefix}--sql-import-dialog");
+        await ShotSettledAsync(page, $"{prefix}--sql-import-dialog");
         await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
             .First.ClickAsync();
         await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
@@ -76,7 +76,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             .First.ClickAsync();
         await page.Locator(".tm-diagram-csv-import").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotAsync(page, $"{prefix}--csv-import-dialog");
+        await ShotSettledAsync(page, $"{prefix}--csv-import-dialog");
         await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
             .First.ClickAsync();
         await ExpectHiddenAsync(page, ".tm-diagram-csv-import");
@@ -109,7 +109,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
         await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotAsync(page, $"{prefix}--connect-modal");
+        await ShotSettledAsync(page, $"{prefix}--connect-modal");
     }
 
     private async Task<IPage> OpenDiagramEditorAsync(int width, int height, bool touch)
@@ -180,6 +180,26 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             Timeout = 60_000,
         });
         TestContext.AddResultFile(path);
+    }
+
+    /// <summary>
+    /// Screenshots a dialog after its open animations finished. The modal overlay fade and the
+    /// mobile sheet slide-up run ~300ms; a frame captured mid-animation shows the panel shifted
+    /// below the viewport with the footer buttons cut in half, which reads as an unreachable
+    /// footer (UX review phase 2 blocker) even though the settled sheet keeps Cancel/Import
+    /// inside the viewport. Waiting on the animation futures keeps the captures deterministic.
+    /// </summary>
+    private async Task ShotSettledAsync(IPage page, string name)
+    {
+        await page.EvaluateAsync(
+            """
+            async () => {
+                const animations = document.getAnimations();
+                await Promise.all(animations.map(a => a.finished.catch(() => { })));
+            }
+            """);
+        await page.WaitForTimeoutAsync(100);
+        await ShotAsync(page, name);
     }
 
     private static async Task ExpectHiddenAsync(IPage page, string selector)

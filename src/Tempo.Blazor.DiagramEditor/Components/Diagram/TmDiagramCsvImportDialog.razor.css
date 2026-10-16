@@ -111,3 +111,21 @@
 .tm-diagram-csv-import__error {
     margin-top: var(--tm-space-2);
 }
+
+/* Narrow-viewport sheet mitigation (UX review phase 2): on phones the TmModal renders this
+   dialog as a bottom sheet capped at 0.85 of the viewport, and the full sheet scroll contract
+   (min-height: 0 on the core .tm-modal-body) belongs to the foundational sheet plan — it is
+   intentionally NOT changed here. What this package can do on its own is keep its content
+   short: below the 640px breakpoint the paste area is capped at about four text rows
+   (token-based, no magic colors) so the header, the mapping selects and the modal footer with
+   Cancel/Import stay inside the sheet cap at 390×844 and 320×640. ::deep is required because
+   the textarea element is rendered by TmTextArea, outside this component's scope attribute. */
+@media (width < 640px) {
+    .tm-diagram-csv-import ::deep textarea {
+        max-height: calc(4 * var(--tm-font-size-sm) * var(--tm-line-height-normal) + 2 * var(--tm-space-2));
+    }
+
+    .tm-diagram-csv-import__preview-table-wrap {
+        max-height: 128px;
+    }
+}
