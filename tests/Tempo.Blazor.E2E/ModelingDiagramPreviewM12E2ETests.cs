@@ -25,6 +25,50 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("Viewer preview renders exactly the viewer toolbar groups and no unlock toggle")]
+    public async Task DiagramPreview_UsesViewerToolbarWithoutReadOnlyToggle()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        var preview = page.Locator("[data-testid='modeling-diagram-preview']");
+
+        var groups = await preview.Locator("[data-tm-group]")
+            .EvaluateAllAsync<string[]>(
+                """
+                els => els
+                    .map(el => el.getAttribute('data-tm-group'))
+                    .filter(name => !!name)
+                """);
+        CollectionAssert.AreEquivalent(new[] { "zoom", "view", "search", "export" }, groups,
+            "the preview must render exactly the viewer toolbar groups");
+
+        // A host-pinned read-only preview can no longer be unlocked from the UI (DI1).
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='readonly']").CountAsync(),
+            "the preview must not offer the read-only unlock toggle");
+        Assert.AreEqual(0, await preview.Locator("button[aria-label='Switch to edit mode']").CountAsync());
+        Assert.AreEqual(1, await preview.Locator(".tm-diagram-editor--readonly").CountAsync(),
+            "the preview editor root carries the read-only state class");
+    }
+
+    [TestMethod]
+    [Description("Viewer preview offers no import, template or other editing toolbar commands")]
+    public async Task DiagramPreview_HasNoImportOrTemplateCommands()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        var preview = page.Locator("[data-testid='modeling-diagram-preview']");
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='import']").CountAsync(),
+            "nothing may be imported into a read-only preview");
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='templates']").CountAsync());
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='clipboard']").CountAsync());
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='insert']").CountAsync());
+        Assert.AreEqual(0, await preview.GetByText("Import", new() { Exact = true }).CountAsync(),
+            "no Import command surface anywhere in the preview");
+    }
+
+    [TestMethod]
     [Description("Preview canvas supports zooming and panning interactions")]
     public async Task DiagramPreview_CanvasZoomsAndPans()
     {

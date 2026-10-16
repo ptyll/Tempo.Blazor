@@ -1,0 +1,28 @@
+{
+  "kind": "Enum",
+  "category": "Diagram",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "description": "Stable public API of the TmDiagramEditor toolbar contract (DiagramEditor redesign, phase 1). The group set, the data-tm-group attribute values and both enums must survive toolbar regrouping (phase 4) unchanged — hosts and the Modeling package key off them instead of positional CSS selectors.",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramToolbar.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiagramToolbarPreset",
+  "values": [
+    {
+      "name": "Full",
+      "value": "0",
+      "description": "Every toolbar group in the classic order (history, clipboard, tools, format, insert, arrange, search, panels, zoom, view, canvas-size, layout, export, templates, import, read-only). The default and the pre-split look."
+    },
+    {
+      "name": "Viewer",
+      "value": "1",
+      "description": "Preview-friendly subset for read-only viewer surfaces: the zoom, view, search and export groups. The read-only toggle never renders in this preset."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Viewer toolbar for a read-only preview surface",
+      "code": "<TmDiagramEditor Document=\"@document\" ReadOnly=\"true\" ToolbarPreset=\"DiagramToolbarPreset.Viewer\" />"
+    }
+  ]
+}

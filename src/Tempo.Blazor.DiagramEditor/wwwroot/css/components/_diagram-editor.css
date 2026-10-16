@@ -156,8 +156,17 @@
 .tm-diagram-editor__toolbar-row {
     display: flex;
     align-items: center;
+    /* Groups wrap instead of clipping on narrow hosts (the Modeling preview relied on this
+       before the toolbar API existed; overflow toolbar comes with the phase-4 redesign). */
+    flex-wrap: wrap;
     gap: var(--tm-space-2, 8px);
     min-height: 28px;
+}
+
+/* G9 host slots: the wrapper must not break the row's flex layout. */
+.tm-diagram-editor__header-start,
+.tm-diagram-editor__header-actions {
+    display: contents;
 }
 
 .tm-diagram-editor__title {

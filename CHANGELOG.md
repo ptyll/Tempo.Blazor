@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`TmDiagramEditor` explicit toolbar contract (DiagramEditor redesign phase 1).** Every toolbar
+  group now carries a stable `data-tm-group` attribute from the frozen set `history | clipboard |
+  tools | format | insert | arrange | search | panels | zoom | view | canvas-size | layout | export
+  | templates | import | readonly`, and visibility is decided in C# through the new `ToolbarPreset`
+  (`DiagramToolbarPreset.Full` default — today's look; `Viewer` renders only zoom, view, search and
+  export) and `ToolbarGroups` (flags, `null` = by preset) parameters. `HeaderStart`/`HeaderActions`
+  render slots open the first/last toolbar row to host actions. The contract is public API: hosts
+  (Modeling) key off `data-tm-group`/presets instead of positional CSS selectors on the toolbar's
+  internal DOM. `IsReadOnly` exposes the effective read-only state (see Breaking / Migration).
+
 - **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
 
 - **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
@@ -197,6 +207,38 @@
     `MockTmLocalizer`.
 
 ### Breaking / Migration
+
+- **`TmDiagramEditor`: the built-in Read-only/Edit toggle no longer overwrites the `[Parameter]
+  ReadOnly` and disappears while the host pins read-only (DI1).**
+  Previously clicking the toolbar's Read-only/Edit toggle assigned the `ReadOnly` parameter itself, so
+  a host that pinned `ReadOnly="true"` (for example a read-only preview surface) could be unlocked
+  from the UI — the parameter was silently rewritten to `false`. The toggle now flips an internal
+  user state instead, exposed by the new public `IsReadOnly` property (`ReadOnly || user-toggle`),
+  and every editing path (toolbar, keyboard shortcuts, context menu, import, templates, paste, canvas
+  interop) is gated on that effective state. The toggle is not rendered at all while the host sets
+  `ReadOnly="true"` or when the `readonly` toolbar group is disabled.
+
+  ```razor
+  @* before: the toggle overwrote the parameter — a pinned read-only viewer could unlock itself *@
+  <TmDiagramEditor Document="@document" ReadOnly="true" />
+  @* clicking the toolbar "Edit" button set ReadOnly=false on the component *@
+
+  @* after: the host's ReadOnly=true cannot be overridden — the toggle is not even rendered *@
+  <TmDiagramEditor Document="@document" ReadOnly="true" />
+
+  @* hosts that want a user-facing lock keep the default ReadOnly="false"; the toggle works as
+     before, never writes back to the parameter, and the effective state is readable: *@
+  <TmDiagramEditor @ref="editor" Document="@document" />
+  @code { var locked = editor.IsReadOnly; }
+  ```
+
+  The same release introduces the stable toolbar contract for nested hosts: `ToolbarPreset`
+  (`Full` is the default and keeps today's look; `Viewer` renders only zoom, view, search and
+  export), `ToolbarGroups` (flags that override the preset), the `HeaderStart`/`HeaderActions`
+  slots, and a `data-tm-group` attribute on every toolbar group. Model it into your CSS/anchors —
+  never against the toolbar's internal DOM. The Modeling diagram preview now uses
+  `ToolbarPreset="Viewer"` instead of hiding editor controls with positional `nth-of-type` CSS
+  selectors.
 
 - **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
   A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`
