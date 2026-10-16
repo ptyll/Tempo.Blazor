@@ -74,12 +74,15 @@
                     }
                 </div>
             }
-            <button class="tm-diagram-editor__page-tab-add"
-                    aria-label="@Loc["TmDiagramEditor_AddPage"]"
-                    title="@Loc["TmDiagramEditor_AddPage"]"
-                    @onclick="AddPage">
-                +
-            </button>
+            @if (!IsReadOnly)
+            {
+                <button class="tm-diagram-editor__page-tab-add"
+                        aria-label="@Loc["TmDiagramEditor_AddPage"]"
+                        title="@Loc["TmDiagramEditor_AddPage"]"
+                        @onclick="AddPage">
+                    +
+                </button>
+            }
         }
     </div>
 
@@ -595,8 +598,8 @@
                             <button class="tm-diagram-editor__context-item" role="menuitem" disabled="@(!DiagramClipboard.HasNodes)" @onclick="ContextMenuPasteHere">@Loc["TmDiagramEditor_PasteHere"]</button>
                             <button class="tm-diagram-editor__context-item" role="menuitem" @onclick="ContextMenuSelectAll">@Loc["TmDiagramEditor_SelectAll"]</button>
                             <div class="tm-diagram-editor__context-sep" role="separator"></div>
-                            <button class="tm-diagram-editor__context-item" role="menuitem" disabled="@(!ActiveCommandStack.CanUndo)" @onclick="ContextMenuUndo">@Loc["TmDiagramEditor_Undo"]</button>
-                            <button class="tm-diagram-editor__context-item" role="menuitem" disabled="@(!ActiveCommandStack.CanRedo)" @onclick="ContextMenuRedo">@Loc["TmDiagramEditor_Redo"]</button>
+                            <button class="tm-diagram-editor__context-item" role="menuitem" disabled="@(IsReadOnly || !ActiveCommandStack.CanUndo)" @onclick="ContextMenuUndo">@Loc["TmDiagramEditor_Undo"]</button>
+                            <button class="tm-diagram-editor__context-item" role="menuitem" disabled="@(IsReadOnly || !ActiveCommandStack.CanRedo)" @onclick="ContextMenuRedo">@Loc["TmDiagramEditor_Redo"]</button>
                             <div class="tm-diagram-editor__context-sep" role="separator"></div>
                             <span class="tm-diagram-editor__context-heading">@Loc["TmDiagramEditor_Insert"]</span>
                             <button class="tm-diagram-editor__context-item" role="menuitem" @onclick="ContextMenuInsertText">@Loc["TmDiagramEditor_Text"]</button>
@@ -761,6 +764,7 @@
                                                       SelectedIds="_selectedIds"
                                                       ActiveLayerId="_activeLayerId"
                                                       ActiveLayerIdChanged="id => _activeLayerId = id"
+                                                      ReadOnly="@IsReadOnly"
                                                       Class="tm-diagram-editor__layers" />
                             </div>
                         }

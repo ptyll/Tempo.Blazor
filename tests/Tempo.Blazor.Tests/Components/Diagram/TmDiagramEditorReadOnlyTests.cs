@@ -47,6 +47,23 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
     }
 
     [Fact]
+    public void HostReadOnly_True_HidesTheAddPageButton()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, true));
+
+        cut.FindAll(".tm-diagram-editor__page-tab-add").Should().BeEmpty(
+            "a read-only editor / Viewer preview must not show the add-page button");
+
+        cut.Render(p => p.Add(e => e.ReadOnly, false));
+
+        cut.FindAll(".tm-diagram-editor__page-tab-add").Should().ContainSingle(
+            "a writable editor keeps the add-page button");
+    }
+
+    [Fact]
     public void HostReadOnly_True_RootElementCarriesTheReadonlyClass()
     {
         using var cut = Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, true));
@@ -162,7 +179,7 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task EffectiveReadOnly_TemplateSelection_DoesNotReplaceTheDocument()
+    public void EffectiveReadOnly_TemplatesButton_DoesNotOpenTheGallery()
     {
         var doc = CreateDocument();
         doc.Title = "Original";
@@ -172,17 +189,159 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
 
         cut.Find("[data-tm-group='readonly'] button").Click();
 
-        // The gallery still opens (browsing is a read-only feature) but selecting must no-op.
         cut.FindAll("button").First(b => b.TextContent.Contains("Templates")).Click();
-        cut.Find(".tm-diagram-template-gallery").Should().NotBeNull();
-        cut.Find(".tm-diagram-template-card").Click();
 
-        var create = cut.FindAll("button").First(b => b.TextContent.Contains("Create"));
-        await cut.InvokeAsync(() => create.Click());
-
+        cut.FindAll(".tm-diagram-template-gallery").Should().BeEmpty(
+            "the template gallery must not open in the effective read-only state");
         cut.Instance.Document.Should().BeSameAs(doc,
             "a read-only editor must not swap to the template document");
         doc.Nodes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void HostReadOnly_TemplatesButton_DoesNotOpenTheGallery()
+    {
+        var doc = CreateDocument();
+        doc.Title = "Original";
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, true));
+
+        cut.FindAll("button").First(b => b.TextContent.Contains("Templates")).Click();
+
+        cut.FindAll(".tm-diagram-template-gallery").Should().BeEmpty(
+            "a host-pinned read-only editor must not open the template gallery");
+        cut.Instance.Document.Should().BeSameAs(doc);
+    }
+
+    [Fact]
+    public void ReadOnlyToggle_PushesReadOnlyToTheCanvasJs_TrueThenFalse()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var setReadOnly = JSInterop.SetupVoid("tmDiagramEditor.setReadOnly", _ => true).SetVoidResult();
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        setReadOnly.VerifyInvoke("tmDiagramEditor.setReadOnly", 1);
+        setReadOnly.Invocations["tmDiagramEditor.setReadOnly"].Single().Arguments[1].Should().Be(true);
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        setReadOnly.VerifyInvoke("tmDiagramEditor.setReadOnly", 2);
+        setReadOnly.Invocations["tmDiagramEditor.setReadOnly"].Last().Arguments[1].Should().Be(false);
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_LayerMutationsDoNotChangeTheDocument()
+    {
+        var doc = CreateDocument();
+        doc.Layers.Add(new DiagramLayer { Name = "Base", Order = 0 });
+        doc.Layers.Add(new DiagramLayer { Name = "Detail", Order = 1 });
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false)
+            .Add(e => e.ShowLayersPanel, true));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        var layersBefore = doc.Layers.Count;
+        cut.Find(".tm-diagram-layers__add-btn").Click();
+        doc.Layers.Should().HaveCount(layersBefore, "add-layer must no-op in the effective read-only state");
+
+        cut.FindAll(".tm-diagram-layers__delete").Should().NotBeEmpty();
+        cut.Find(".tm-diagram-layers__delete").Click();
+        doc.Layers.Should().HaveCount(layersBefore, "delete-layer must no-op in the effective read-only state");
+
+        cut.Find(".tm-diagram-layers__name").TriggerEvent("ondblclick", new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        cut.FindAll(".tm-diagram-layers__name-input").Should().BeEmpty(
+            "rename must not start in the effective read-only state");
+        doc.Layers.Single(l => l.Name == "Detail").Name.Should().Be("Detail");
+    }
+
+    [Fact]
+    public void HostReadOnly_LayerMutationsDoNotChangeTheDocument()
+    {
+        var doc = CreateDocument();
+        doc.Layers.Add(new DiagramLayer { Name = "Base", Order = 0 });
+        doc.Layers.Add(new DiagramLayer { Name = "Detail", Order = 1 });
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, true)
+            .Add(e => e.ShowLayersPanel, true));
+
+        var layersBefore = doc.Layers.Count;
+        cut.Find(".tm-diagram-layers__add-btn").Click();
+        doc.Layers.Should().HaveCount(layersBefore, "add-layer must no-op when the host pins read-only");
+
+        cut.Find(".tm-diagram-layers__delete").Click();
+        doc.Layers.Should().HaveCount(layersBefore, "delete-layer must no-op when the host pins read-only");
+
+        cut.Find(".tm-diagram-layers__name").TriggerEvent("ondblclick", new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        cut.FindAll(".tm-diagram-layers__name-input").Should().BeEmpty(
+            "rename must not start when the host pins read-only");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_ContextMenuUndo_DoesNotTouchTheCommandStack()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "HandleQuickInsert", "general.rectangle");
+        doc.Nodes.Should().HaveCount(1);
+        GetActiveCommandStack(cut.Instance).CanUndo.Should().BeTrue();
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        InvokePrivate(cut.Instance, "ContextMenuUndo");
+
+        doc.Nodes.Should().HaveCount(1, "context-menu undo must no-op in the effective read-only state");
+        GetActiveCommandStack(cut.Instance).CanUndo.Should().BeTrue(
+            "the undo entry must still be on the stack");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_ContextMenuRedo_DoesNotTouchTheCommandStack()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "HandleQuickInsert", "general.rectangle");
+        cut.InvokeAsync(() => InvokePrivate(cut.Instance, "OnUndoClicked")).GetAwaiter().GetResult();
+        doc.Nodes.Should().BeEmpty();
+        GetActiveCommandStack(cut.Instance).CanRedo.Should().BeTrue();
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        InvokePrivate(cut.Instance, "ContextMenuRedo");
+
+        doc.Nodes.Should().BeEmpty("context-menu redo must no-op in the effective read-only state");
+        GetActiveCommandStack(cut.Instance).CanRedo.Should().BeTrue(
+            "the redo entry must still be on the stack");
+    }
+
+    [Fact]
+    public void WritableEditor_ContextMenuUndo_RestoresTheQuickInsertedNode()
+    {
+        // Control test proving the ContextMenuUndo harness above actually undoes.
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "HandleQuickInsert", "general.rectangle");
+        InvokePrivate(cut.Instance, "ContextMenuUndo");
+
+        doc.Nodes.Should().BeEmpty();
+        GetActiveCommandStack(cut.Instance).CanRedo.Should().BeTrue();
     }
 
     [Fact]
@@ -222,6 +381,13 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
         });
         return doc;
     }
+
+    private static DiagramCommandStack GetActiveCommandStack(TmDiagramEditor editor)
+        => (typeof(TmDiagramEditor)
+            .GetProperty("ActiveCommandStack", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("ActiveCommandStack must exist"))
+            .GetValue(editor) as DiagramCommandStack
+            ?? throw new InvalidOperationException("ActiveCommandStack must return a DiagramCommandStack");
 
     private static void InvokePrivate(TmDiagramEditor editor, string methodName, params object?[] args)
     {

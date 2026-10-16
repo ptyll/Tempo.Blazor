@@ -13,6 +13,9 @@
   render slots open the first/last toolbar row to host actions. The contract is public API: hosts
   (Modeling) key off `data-tm-group`/presets instead of positional CSS selectors on the toolbar's
   internal DOM. `IsReadOnly` exposes the effective read-only state (see Breaking / Migration).
+  The `Viewer` preset still renders the document-title input (disabled while read-only — the
+  document name is a header element, not a toolbar group, so it intentionally stays outside the
+  group contract), while the search control received the standard toolbar-group chrome.
 
 - **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
 

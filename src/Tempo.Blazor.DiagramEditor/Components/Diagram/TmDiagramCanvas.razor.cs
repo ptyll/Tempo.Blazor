@@ -240,6 +240,12 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     // reseeded whenever OnParametersSet recomputes the initial viewBox.
     private double _lastAppliedPageScale = 1.0;
 
+    // Tracks the ReadOnly value last pushed into the JS instance (seeded by the
+    // init options). Read-only must be propagated to JS on EVERY change, not
+    // only at init — otherwise diagram-editor.js keeps mutating the document
+    // (Delete/arrows/undo/redo) after the host flips ReadOnly.
+    private bool _lastAppliedReadOnly;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_jsInitialized)
@@ -260,6 +266,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             };
 
             await JS.InvokeVoidAsync("tmDiagramEditor.init", _containerRef, _dotNetRef, options);
+            _lastAppliedReadOnly = ReadOnly;
         }
         else if (_jsInitialized)
         {
@@ -272,6 +279,16 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             {
                 _lastAppliedPageScale = pageScale;
                 try { await JS.InvokeVoidAsync("tmDiagramEditor.zoomTo", _containerRef, pageScale); }
+                catch { /* JS may be mid-teardown */ }
+            }
+
+            // Propagate read-only flips (user toggle or host parameter change)
+            // into the JS instance so keyboard and pointer interactions stop
+            // mutating the document.
+            if (ReadOnly != _lastAppliedReadOnly)
+            {
+                _lastAppliedReadOnly = ReadOnly;
+                try { await JS.InvokeVoidAsync("tmDiagramEditor.setReadOnly", _containerRef, ReadOnly); }
                 catch { /* JS may be mid-teardown */ }
             }
 
@@ -312,7 +329,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable]
     public void OnDragStarted(string[] ids)
     {
-        if (Document is null) return;
+        if (Document is null || ReadOnly) return;
         _isJsDragging = true;
         _dragStartPositions = [];
         foreach (var id in ids)
@@ -326,9 +343,20 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task OnElementMoved(string id, double x, double y)
     {
-        if (Document is null || ReadOnly) return;
+        if (Document is null || ReadOnly)
+        {
+            // Release the JS-drag latch even when the move is rejected, so a
+            // read-only flip mid-drag can't leave ShouldRender() disabled
+            // (ShouldRender() => !_isJsDragging) and freeze the canvas.
+            _isJsDragging = false;
+            return;
+        }
         var movedNode = Document.Nodes.FirstOrDefault(n => n.Id == id);
-        if (movedNode is not null && IsNodeLocked(movedNode)) return;
+        if (movedNode is not null && IsNodeLocked(movedNode))
+        {
+            _isJsDragging = false;
+            return;
+        }
 
         var before = _dragStartPositions is not null && _dragStartPositions.TryGetValue(id, out var bp)
             ? new Dictionary<string, NodeMoveState> { [id] = bp }
@@ -345,8 +373,17 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task OnElementsMoved(ElementMove[] moves)
     {
-        if (Document is null || ReadOnly) return;
-        if (moves.Any(m => Document.Nodes.FirstOrDefault(n => n.Id == m.Id) is { } node && IsNodeLocked(node))) return;
+        if (Document is null || ReadOnly)
+        {
+            // See OnElementMoved: release the JS-drag latch on rejection.
+            _isJsDragging = false;
+            return;
+        }
+        if (moves.Any(m => Document.Nodes.FirstOrDefault(n => n.Id == m.Id) is { } node && IsNodeLocked(node)))
+        {
+            _isJsDragging = false;
+            return;
+        }
 
         var before = _dragStartPositions;
         var after = moves.ToDictionary(
@@ -935,6 +972,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable("OnUndo")]
     public async Task JsOnUndo()
     {
+        if (ReadOnly) return;
         if (CommandStack is not null)
         {
             CommandStack.Undo();
@@ -949,6 +987,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable("OnRedo")]
     public async Task JsOnRedo()
     {
+        if (ReadOnly) return;
         if (CommandStack is not null)
         {
             CommandStack.Redo();

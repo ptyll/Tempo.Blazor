@@ -576,6 +576,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task ContextMenuUndo()
     {
+        if (IsReadOnly) return;
         await CloseContextMenu();
         if (ActiveCommandStack.CanUndo)
         {
@@ -586,6 +587,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task ContextMenuRedo()
     {
+        if (IsReadOnly) return;
         await CloseContextMenu();
         if (ActiveCommandStack.CanRedo)
         {
@@ -1270,6 +1272,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OpenCanvasSize()
     {
+        if (IsReadOnly) return;
         _canvasWInput = ((int)(_document?.Width ?? 3000)).ToString();
         _canvasHInput = ((int)(_document?.Height ?? 2000)).ToString();
         _canvasSizeEditing = true;
@@ -1718,6 +1721,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         _importError = null;
         var file = e.File;
         if (file is null) return;
+        if (IsReadOnly) return;
 
         try
         {
@@ -2179,6 +2183,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OpenTemplateGallery()
     {
+        if (IsReadOnly) return;
         _showTemplateGallery = true;
     }
 

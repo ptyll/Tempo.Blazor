@@ -2638,6 +2638,7 @@ window.tmDiagramEditor = {
         const ids = [...inst.selectedIds];
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (inst.readOnly) return;
             if (ids.length === 0) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             e.preventDefault();
@@ -2707,10 +2708,12 @@ window.tmDiagramEditor = {
         if (e.ctrlKey || e.metaKey) {
             switch (e.key.toLowerCase()) {
                 case 'z':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     inst.dotNetRef.invokeMethodAsync(e.shiftKey ? 'OnRedo' : 'OnUndo');
                     return;
                 case 'y':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     inst.dotNetRef.invokeMethodAsync('OnRedo');
                     return;
@@ -2719,6 +2722,7 @@ window.tmDiagramEditor = {
                     inst.dotNetRef.invokeMethodAsync('OnSelectAll');
                     return;
                 case 'd':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnDuplicate', ids);
                     return;
@@ -2731,6 +2735,7 @@ window.tmDiagramEditor = {
                     }
                     return;
                 case 'v':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (e.shiftKey) {
                         inst.dotNetRef.invokeMethodAsync('OnPasteStyle');
@@ -2747,14 +2752,17 @@ window.tmDiagramEditor = {
                     inst.dotNetRef.invokeMethodAsync('OnShowReplace');
                     return;
                 case 'b':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnToggleBold');
                     return;
                 case 'i':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnToggleItalic');
                     return;
                 case 'u':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnToggleUnderline');
                     return;
@@ -2776,6 +2784,7 @@ window.tmDiagramEditor = {
                     return;
                 case 'g':
                     if (e.shiftKey) {
+                        if (inst.readOnly) return;
                         e.preventDefault();
                         if (ids.length === 1) {
                             const selId = ids[0];
@@ -2796,6 +2805,7 @@ window.tmDiagramEditor = {
                     return;
                 case 'l':
                     if (e.shiftKey) {
+                        if (inst.readOnly) return;
                         e.preventDefault();
                         inst.dotNetRef.invokeMethodAsync('OnLockSelected');
                     }
@@ -2805,6 +2815,7 @@ window.tmDiagramEditor = {
 
         // Quick-insert stencils (A,S,D,F,R)
         if (!e.ctrlKey && !e.metaKey && !e.target.matches('input,textarea,select')) {
+            if (inst.readOnly) return;
             const stencilMap = {
                 'KeyA': 'general.text',
                 'KeyS': 'general.sticky-note',
@@ -2833,6 +2844,7 @@ window.tmDiagramEditor = {
         // `E` was added in Phase 3 to match draw.io's edge shortcut; `L`
         // and `C` are kept for backwards compatibility.
         if (!e.ctrlKey && !e.metaKey && !e.target.matches('input,textarea,select')) {
+            if (inst.readOnly) return;
             if (e.code === 'KeyH') {
                 e.preventDefault();
                 this._applyToolMode(inst, 'pan');
@@ -2857,6 +2869,7 @@ window.tmDiagramEditor = {
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             if (ids.length === 0) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (inst.readOnly) { e.preventDefault(); return; }
             e.preventDefault();
             const step = e.shiftKey ? 10 : 1;
             const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
@@ -3403,6 +3416,72 @@ window.tmDiagramEditor = {
         const inst = this.instances.get(container.id);
         if (!inst) return;
         inst.pageScale = scale || 1.0;
+    },
+
+    // Mirror a host-side read-only change into the instance. This must run on
+    // EVERY read-only flip (not only at init): otherwise `_onKeyDown` keeps
+    // mutating the document and drags keep moving DOM nodes after the host
+    // locked the editor. Any gesture caught mid-flight is released here so a
+    // read-only switch never leaves a half-finished drag or edge draw.
+    setReadOnly: function (container, readOnly) {
+        const inst = this.instances.get(container.id);
+        if (!inst) return;
+        inst.readOnly = !!readOnly;
+
+        if (inst.isPendingEdgeDraw) {
+            inst.isPendingEdgeDraw = false;
+            inst.pendingEdgeStart = null;
+        }
+        if (inst.isDrawingEdge) {
+            this._cancelEdgeDraw(inst);
+        }
+        if (inst.isDraggingWholeEdge) {
+            const group = inst.svg.querySelector('g.tm-diagram-edge-group[data-edge-id="' + inst.dragWholeEdgeId + '"]');
+            if (group) group.removeAttribute('transform');
+            inst.isDraggingWholeEdge = false;
+            inst.dragWholeEdgeId = null;
+            inst.dragWholeEdgeStartDoc = null;
+            inst.dragWholeEdgeDeltaDoc = { x: 0, y: 0 };
+            this._clearGuideLines(inst);
+        }
+        if (inst.isDraggingWaypoint || inst.isDraggingSegment || inst.isDraggingJetty ||
+            inst.isDraggingEdgeLabel || inst.isDraggingDangling) {
+            inst.isDraggingWaypoint = false;
+            inst.dragWaypointEdgeId = null;
+            inst.dragWaypointIndex = null;
+            inst.dragWaypointStartScreen = null;
+            inst.dragWaypointStartDoc = null;
+            inst.isDraggingSegment = false;
+            inst.isDraggingJetty = false;
+            inst.dragJettyEdgeId = null;
+            inst.isDraggingEdgeLabel = false;
+            inst.dragEdgeLabelId = null;
+            inst.isDraggingDangling = false;
+            // Same rollback path as Escape: rolls back the virtual-bend
+            // transaction when one is in flight, no-op otherwise.
+            if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('OnCancelEdgeEdit');
+        }
+        if (inst.isDragging) {
+            inst.isDragging = false;
+            inst.dragNodeIds = [];
+            inst.dragStartScreen = null;
+            inst.dragStartPositions = {};
+            this._clearGuideLines(inst);
+        }
+        if (inst.isRubberBand) {
+            inst.isRubberBand = false;
+            inst.rubberStartDoc = null;
+            if (inst.rubberEl) {
+                inst.rubberEl.remove();
+                inst.rubberEl = null;
+            }
+        }
+        if (inst.isPanning) {
+            inst.isPanning = false;
+            inst.panStartScreen = null;
+            inst.viewBoxStart = null;
+        }
+        inst.container.style.cursor = inst.toolMode === 'pan' ? 'grab' : '';
     },
 
     zoomTo: function (container, scale) {
