@@ -510,7 +510,7 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 | Component | Description |
 |-----------|-------------|
 | `TmChart` | SVG charts (Bar, Line, Pie, Donut, HorizontalBar) |
-| `TmDashboard` | Widget dashboard with drag/resize grid |
+| `TmDashboard` | Widget dashboard with drag/resize grid ([docs/dashboard.md](docs/dashboard.md)) |
 | `TmTreeView` | Hierarchical tree with lazy loading |
 | `TmStepper` | Step-by-step wizard/progress stepper |
 | `TmWorkflowDesignerCanvas` | Visual workflow editor (drag nodes, draw transitions, zoom/pan) |

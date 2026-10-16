@@ -815,10 +815,7 @@ public partial class TmDashboard : IAsyncDisposable
 
     private void DropGrabbed()
     {
-        if (_grabbedWidget is not { } widget)
-        {
-            return;
-        }
+        if (_grabbedWidget is not { } widget) return;
 
         PushAfterGrab(widget);
         ResetGrabState();
@@ -1158,11 +1155,11 @@ public partial class TmDashboard : IAsyncDisposable
             {
                 PushOverlappingWidgets(widget);
             }
-            
-            StateHasChanged();
+
+            _ = InvokeAsync(StateHasChanged);
         }
     }
-    
+
     [JSInvokable]
     public void OnWidgetResized(string instanceId, int width, int height)
     {
@@ -1171,14 +1168,14 @@ public partial class TmDashboard : IAsyncDisposable
         {
             widget.Width = width;
             widget.Height = height;
-            
+
             // Push overlapping widgets after resize
             if (_currentDashboard?.Grid.AllowOverlap == false)
             {
                 PushOverlappingWidgets(widget);
             }
-            
-            StateHasChanged();
+
+            _ = InvokeAsync(StateHasChanged);
         }
     }
     

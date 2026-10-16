@@ -4,6 +4,20 @@
 
 ### Added
 
+- **`TmDashboard` documentation.** The redesigned dashboard (and widget selector) is now
+  documented in [docs/dashboard.md](docs/dashboard.md): the chrome parameters
+  (`Appearance`, `Title`/`Subtitle`/`HeaderStart`/`HeaderActions`/`ShowHeader`,
+  `ShowWidgetIcons`, `ShowWidgetDescriptions`, `WidgetHeaderActions`), `CloseOnSelect`,
+  the keyboard alternative and non-drag reordering, and the `dashboard.js` /
+  `pointer-drag.js` script requirements.
+
+- **`TmDashboard` short labels on the mobile edit-mode action bar (Y11 pattern).** The bar
+  tiles carry `TmDashboard_AddWidgetShort` / `TmDashboard_RenameShort` ("Add" / "Rename",
+  "Přidat" / "Přejmenovat", "Pridať" / "Premenovať", "Ajouter" / "Renommer") — at 320 px the
+  full "Ajouter un widget" / "Renommer le tableau de bord" labels needed three lines and were
+  cut by the two-line clamp; the desktop toolbar keeps the full wording. New localization keys
+  in all four resource tables plus `MockTmLocalizer`.
+
 - **`TmDashboard` F7b — the redesign plan's remaining tasks resolved.**
 
   - Loading state (F2 UX §5.7): while the provider's first load is in flight the grid renders

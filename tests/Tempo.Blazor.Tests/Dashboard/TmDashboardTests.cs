@@ -222,8 +222,8 @@ public class TmDashboardTests : LocalizationTestBase
 
         var bar = cut.Find(".tm-mobile-action-bar__bar");
         bar.QuerySelectorAll(".tm-mobile-action-bar__action").Count.Should().Be(3);
-        bar.TextContent.Should().Contain("Rename dashboard",
-            "F7b: rename stays reachable on a mobile layout");
+        bar.TextContent.Should().Contain("Rename",
+            "F7b: rename stays reachable on a mobile layout (short Y11 bar label)");
         bar.GetAttribute("role").Should().Be("group");
     }
 

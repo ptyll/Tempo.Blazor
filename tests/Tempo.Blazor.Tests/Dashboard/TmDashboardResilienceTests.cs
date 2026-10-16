@@ -194,11 +194,11 @@ public class TmDashboardResilienceTests : LocalizationTestBase
         // MaxVisible=3: Add, Save and Rename stay on the bar; Cancel (lowest priority)
         // overflows into the "More" sheet.
         actions.Count.Should().Be(3);
-        bar.TextContent.Should().Contain("Rename dashboard",
+        bar.TextContent.Should().Contain("Rename",
             "F7b: rename is reachable on a mobile layout, where the desktop toolbar is hidden");
 
         bar.QuerySelectorAll(".tm-mobile-action-bar__action")
-           .Single(a => a.TextContent.Contains("Rename dashboard")).Click();
+           .Single(a => a.TextContent.Contains("Rename")).Click();
 
         var input = cut.Find(".tm-dashboard-rename-modal input");
         input.GetAttribute("autofocus").Should().NotBeNull("the dialog opens typing-ready");

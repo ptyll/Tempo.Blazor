@@ -40,7 +40,10 @@ public partial class TmDashboard
             new TmActionItem
             {
                 Id = "add-widget",
-                Label = Loc["TmDashboard_AddWidget"],
+                // Y11 pattern (fr-320 regression, F8): bar tiles carry the SHORT label — the
+                // two-line clamp must hold at 320 px, where "Ajouter un widget" needed three
+                // lines. The desktop toolbar keeps the full "Add Widget" wording.
+                Label = Loc["TmDashboard_AddWidgetShort"],
                 Icon = IconNames.Plus,
                 Priority = 100,
                 OnClick = EventCallback.Factory.Create(this, OpenWidgetSelector),
@@ -61,8 +64,9 @@ public partial class TmDashboard
                 Id = "rename-dashboard",
                 // F7b: rename must stay reachable on a mobile layout, where the desktop
                 // toolbar (the inline editor's host) is hidden — the action opens the
-                // rename dialog below.
-                Label = Loc["TmDashboard_Rename"],
+                // rename dialog below. Y11 pattern: SHORT bar label ("Renommer le tableau
+                // de bord" cannot fit the two-line clamp at 320 px).
+                Label = Loc["TmDashboard_RenameShort"],
                 Icon = IconNames.Edit,
                 Priority = 70,
                 OnClick = EventCallback.Factory.Create(this, OpenMobileRename),

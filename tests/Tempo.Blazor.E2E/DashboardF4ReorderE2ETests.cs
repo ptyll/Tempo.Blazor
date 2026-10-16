@@ -201,9 +201,10 @@ public sealed class DashboardF4ReorderE2ETests : ServerTestBase
         var page = await OpenDashboardAsync(390, 844);
         await EnterEditAsync(page);
 
-        // The mobile action bar owns the edit actions — open the widget selector from there.
+        // The mobile action bar owns the edit actions — open the widget selector from there
+        // (Y11 short bar label).
         var addTile = page.Locator("[data-testid='dashboard-action-bar'] button")
-            .Filter(new LocatorFilterOptions { HasText = "Add widget" });
+            .Filter(new LocatorFilterOptions { HasText = "Add" });
         await addTile.ClickAsync();
         await page.Locator(".tm-widget-card").First.ClickAsync(new LocatorClickOptions { Timeout = 15_000 });
 

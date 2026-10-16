@@ -5573,8 +5573,11 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 - **Mazání dashboardů** — Mazání s potvrzovacím dialogem (nelze smazat výchozí dashboard)
 - **Výchozí dashboard** — Nastavení výchozího dashboardu pro uživatele
 - **Editace názvu** — Přejmenování dashboardu v editačním režimu
-- **Drag & Drop** — Přesun widgetů myší
+- **Drag & Drop** — Přesun widgetů myší, dotykem i perem (sdílený helper `pointer-drag.js`, F5)
 - **Resize** — Změna velikosti widgetů
+- **Klávesnicové přesouvání** — Úchyt je tlačítko: Enter/Space zvedne a položí, šipky posunou o buňku, Shift+šipky změní velikost, Escape vrátí (F4)
+- **Přeuspořádání bez dragu** — Kompaktní editační režim na tabletu/mobilu: tlačítka Move up / Move down (F4)
+- **Redesign chrome (F2/F3/F7)** — Parametry `Appearance`, `Title`, `Subtitle`, `HeaderStart`, `HeaderActions`, `ShowHeader`, `ShowWidgetIcons`, `ShowWidgetDescriptions`, `WidgetHeaderActions`; responzivní hlavička, dotykové cíle ≥ 44 px, dialogy jako bottom sheet na mobilu. Detailní dokumentace: [docs/dashboard.md](dashboard.md).
 
 #### CSS třídy
 
@@ -5595,7 +5598,9 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `tm-dashboard-menu-header` | Hlavička menu |
 | `tm-dashboard-menu-item` | Položka menu |
 | `tm-dashboard-menu-item--active` | Aktivní položka |
-| `tm-dashboard-menu-badge` | Badge položky (★ výchozí) |
+| `tm-dashboard-menu-default` | Viditelný popis výchozího dashboardu (★ + text) |
+| `tm-dashboard-menu-default-hint` | Doplňující hint, proč výchozí nelze smazat |
+| `tm-dashboard-switcher` | Přepínač dashboardů (select-like tlačítko) |
 | `tm-dashboard-menu-action` | Akce položky (hvězdička, koš) |
 | `tm-dashboard-menu-divider` | Oddělovač v menu |
 | `tm-dashboard-grid-container` | Kontejner mřížky |
@@ -5605,7 +5610,10 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `tm-widget` | Widget |
 | `tm-widget--collapsed` | Sbalený widget |
 | `tm-widget--minimized` | Minimalizovaný widget |
-| `tm-widget--dragging` | Přetahovaný widget |
+| `tm-widget--dragging` | Přetahovaný widget (stav z dashboard.js) |
+| `tm-widget--grabbed` | Widget zvednutý klávesnicí |
+| `tm-widget--highlight` | Čerstvě přidaný widget (krátké zvýraznění) |
+| `tm-widget--wide` | Widget širší než polovina gridu |
 | `tm-widget-header` | Hlavička widgetu |
 | `tm-widget-header-left` | Levá strana hlavičky |
 | `tm-widget-drag-handle` | Úchyt pro přetahování |
@@ -5627,11 +5635,23 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `DashboardId` | `string?` | `null` | ID dashboardu |
 | `UserId` | `string?` | `null` | ID uživatele |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Appearance` | `DashboardAppearance` | `Plain` | `Plain` = plocha na pozadí workspace, `Card` = ohraničující karta (`.tm-dashboard--framed`) |
+| `Title` | `string?` | `null` | Text nadpisu (přepíše název dashboardu) |
+| `Subtitle` | `string?` | `null` | Druhý řádek pod nadpisem |
+| `HeaderStart` | `RenderFragment?` | `null` | Obsah hostitele na začátku hlavičky |
+| `HeaderActions` | `RenderFragment?` | `null` | Akce hostitele na konci hlavičky (před tlačítkem Edit, jen view režim) |
+| `ShowHeader` | `bool` | `true` | Zobrazit toolbar v view režimu (edit režim ho vždy zobrazí) |
 | `ShowTitle` | `bool` | `true` | Zobrazit název |
+| `ShowWidgetIcons` | `bool` | `true` | Ikona kategorie v hlavičce widgetu |
+| `ShowWidgetDescriptions` | `bool` | `false` | Popis widgetu pod titulkem |
+| `WidgetHeaderActions` | `RenderFragment<WidgetInstance>?` | `null` | Slot hostitele v hlavičce každého widgetu |
 | `AllowEdit` | `bool` | `true` | Povolit úpravy |
-| `OnDashboardChanged` | `EventCallback<DashboardLayout>` | — | Změna layoutu |
+| `CloseOnSelect` | `bool` | `true` | Zavřít selektor po výběru widgetu (`false` = přidávat více za sebou) |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Vynucený rozvržení režim (Auto měří šířku) |
+| `InitialMode` | `TmLayoutMode` | `Desktop` | Režim před prvním měřením |
+| `ResolvedLayoutChanged` | `EventCallback<TmLayoutMode>` | — | Změna vyřešeného rozvržení (nekombinovat s two-way `LayoutMode`) |
+| `OnDashboardChanged` | `EventCallback<DashboardConfig>` | — | Změna aktuálního dashboardu |
 | `WidgetTemplate` | `RenderFragment<WidgetInstance>?` | `null` | Šablona widgetu |
-| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Lokalizační klíče
 

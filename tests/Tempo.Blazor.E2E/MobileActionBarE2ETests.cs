@@ -733,7 +733,15 @@ public class MobileActionBarE2ETests : WasmTestBase
                     return el.scrollHeight - el.clientHeight <= 1;
                 }
                 """);
-            Assert.IsTrue(fits, $"label {i} must wrap its full text within the two-line clamp");
+            var diag = await label.EvaluateAsync<string>(
+                """
+                el => {
+                    const s = getComputedStyle(el);
+                    return JSON.stringify({ clamp: s.webkitLineClamp, display: s.display,
+                        sh: el.scrollHeight, ch: el.clientHeight, text: el.textContent });
+                }
+                """);
+            Assert.IsTrue(fits, $"label {i} must wrap its full text within the two-line clamp ({diag})");
             var text = (await label.TextContentAsync())?.Trim();
             Assert.IsFalse(string.IsNullOrEmpty(text), $"label {i} carries its full text");
         }
@@ -1101,19 +1109,21 @@ public class MobileActionBarE2ETests : WasmTestBase
         var bar = page.Locator(".tm-dashboard .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // The three edit actions live on the bar as tile buttons — the save action carries the
-        // SHORT mobile label (Y11), the desktop toolbar keeps the full wording. The wrapping
-        // toolbar actions are gone.
+        // The bar carries the first three edit actions as tile buttons — the save action carries
+        // the SHORT mobile label (Y11), the desktop toolbar keeps the full wording. F7b moved the
+        // Rename entry onto the bar (the desktop toolbar hosting the inline editor is hidden on a
+        // mobile layout) and pushed Cancel into the "More" sheet; the More trigger renders its
+        // own label tile. The wrapping toolbar actions are gone.
         var labels = await bar.Locator(".tm-mobile-action-bar__label-text").AllTextContentsAsync();
-        CollectionAssert.AreEqual(new List<string> { "Add Widget", "Save", "Cancel" }, labels.ToList(),
-            "dashboard edit actions render through the mobile action bar");
+        CollectionAssert.AreEqual(new List<string> { "Add", "Save", "Rename", "More" }, labels.ToList(),
+            "dashboard edit actions render through the mobile action bar (F7b: Rename on the bar, Cancel in More)");
         Assert.AreEqual(0, await page.Locator(".tm-dashboard-toolbar-right .tm-btn:visible").CountAsync(),
             "the desktop toolbar actions must not render twice on mobile");
 
         await CaptureStickyBarViewportAsync(page, bar, "390-dashboard-edit");
 
-        // The bar's actions are wired: Add Widget opens the widget selector.
-        await bar.Locator(".tm-mobile-action-bar__action", new() { HasText = "Add Widget" }).ClickAsync();
+        // The bar's actions are wired: Add opens the widget selector.
+        await bar.Locator(".tm-mobile-action-bar__action", new() { HasText = "Add" }).ClickAsync();
         await page.Locator(".tm-widget-selector-modal").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
     }
@@ -1139,10 +1149,15 @@ public class MobileActionBarE2ETests : WasmTestBase
         var bar = page.Locator(".tm-dashboard .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
+        // F7b: the bar carries Add / Save / Rename (Cancel overflows into the More sheet); the
+        // More trigger renders its own label tile. Y11: the bar tile gets the SHORT save label so
+        // the two-line floor and break-word hyphenation render every label whole — no clamp, no
+        // mid-word orphan line.
         var labels = bar.Locator(".tm-mobile-action-bar__label-text");
         var texts = (await labels.AllTextContentsAsync()).Select(t => t.Trim()).ToList();
-        CollectionAssert.AreEqual(new List<string> { "Ajouter un widget", "Enregistrer", "Annuler" }, texts,
-            "the fr edit actions render whole through the bar");
+        CollectionAssert.AreEqual(
+            new List<string> { "Ajouter", "Enregistrer", "Renommer", "Plus" }, texts,
+            "the fr edit actions render whole through the bar (F7b: Rename on the bar)");
 
         await AssertLabelsFitTwoLinesAsync(bar);
         await AssertNoOrphanLabelLinesAsync(bar);
