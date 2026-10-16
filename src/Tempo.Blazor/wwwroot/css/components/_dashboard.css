@@ -12,9 +12,9 @@
   gap: var(--tm-space-6);
   background: var(--tm-bg-workspace);
   padding: var(--tm-space-6);
-  /* G-6 (F2): the 600px floor is kept — it is the workspace's minimum, not a card style.
-     Backlog: replace with a spacing-derived value in a core follow-up. */
-  min-height: 600px;
+  /* G-6 (F7b): the workspace floor moved into the --tm-dashboard-min-height token (37.5rem,
+     the previous 600px literal) so hosts can override it without touching the component. */
+  min-height: var(--tm-dashboard-min-height, 37.5rem);
   /* Subtle category tint of the widget icon tiles: the global --tm-category-tint token,
      exposed under the component alias the tile rule consumes. The dark value lives in
      tokens-dark.css — component stylesheets carry no dark blocks (strict token audit). */
@@ -289,6 +289,28 @@
   min-height: 100%;
 }
 
+/* Loading skeletons (F7b, UX §5.7): while the provider's first load is in flight the grid
+   renders two card-shaped placeholders instead of the empty state (which would lie about
+   there being no widgets). The markup sets aria-busy on the grid container; the card height
+   mirrors a default 4-row widget. The desktop `span 6` assumes 12 tracks — compact layouts
+   below re-scope it so a single-column phone grid never gains five empty implicit tracks. */
+.tm-dashboard-skeleton-card {
+  grid-column: span 6;
+  grid-row: span 4;
+}
+
+/* Narrow tablet container (two columns) and the single-column mobile grid: a full-width
+   skeleton pair, so the placeholders align with the stacked widgets they stand in for. */
+@container tm-dashboard (width < 768px) {
+  .tm-dashboard[data-layout="tablet"] .tm-dashboard-skeleton-card {
+    grid-column: 1 / -1;
+  }
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-skeleton-card {
+  grid-column: 1 / -1;
+}
+
 .tm-dashboard-grid .tm-widget {
   grid-column: var(--tm-w-x, 1) / span var(--tm-w-span, 1);
   grid-row: var(--tm-w-y, auto) / span var(--tm-w-rows, 1);
@@ -406,7 +428,10 @@
   flex-shrink: 0;
   border-radius: var(--tm-radius-control);
   background: color-mix(in srgb, var(--category-color, var(--tm-category-fallback)) var(--tm-dashboard-category-tint, var(--tm-category-tint)), var(--tm-bg-surface));
-  color: var(--category-color, var(--tm-category-fallback));
+  /* UX §5.11 (F7b): the bare category colour on its own 12% tint can fall under 2:1 (amber);
+     the icon is decorative, but the ink is still mixed 75/25 towards the text colour so it
+     stays readable in both themes without changing the tile's hue. */
+  color: color-mix(in srgb, var(--category-color, var(--tm-category-fallback)) 75%, var(--tm-text-primary));
 }
 
 /* Title + optional description column. */
@@ -487,6 +512,25 @@
   align-items: center;
   gap: var(--tm-space-1);
   margin-inline-end: var(--tm-space-1);
+}
+
+/* F7b (backlog, 390px card header): in a narrow dashboard the two 44px move buttons plus the
+   remove button squeeze the title to an ellipsis — the move group drops onto its own header
+   row (inside .tm-widget-header-left, which wraps) so the title regains the full width.
+   Pure CSS over the EXISTING tm-dashboard container and the allowed 768 constant (the
+   responsive convention reserves the width literals to TmBreakpoints); the header markup is
+   unchanged. */
+@container tm-dashboard (width < 768px) {
+  .tm-dashboard--compact-edit .tm-widget-header-left {
+    flex-wrap: wrap;
+  }
+
+  .tm-dashboard--compact-edit .tm-widget-move-group {
+    flex-basis: 100%;
+    order: 10;
+    justify-content: flex-end;
+    margin-inline-end: 0;
+  }
 }
 
 .tm-dashboard--compact-edit .tm-widget-btn,
@@ -871,7 +915,9 @@
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--category-color, var(--tm-category-fallback)) var(--tm-dashboard-category-tint, var(--tm-category-tint)), var(--tm-bg-surface));
-  color: var(--category-color, var(--tm-category-fallback));
+  /* Same 75/25 ink mix as the dashboard's widget tile (UX §5.11): amber on its 12% tint
+     measured ≈ 2.1:1 — decorative, but readable in both themes after the mix. */
+  color: color-mix(in srgb, var(--category-color, var(--tm-category-fallback)) 75%, var(--tm-text-primary));
   border-radius: var(--tm-radius-control);
 }
 

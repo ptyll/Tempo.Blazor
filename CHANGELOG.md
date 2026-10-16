@@ -4,6 +4,36 @@
 
 ### Added
 
+- **`TmDashboard` F7b — the redesign plan's remaining tasks resolved.**
+
+  - Loading state (F2 UX §5.7): while the provider's first load is in flight the grid renders
+    two card-shaped `TmSkeleton` placeholders (`.tm-dashboard-skeleton-card`, 4 default rows
+    tall) with `aria-busy="true"` on the grid container and a localized sr-only "Loading"
+    status — the empty state (which would falsely claim there are no widgets) renders only
+    after the load answered.
+  - Error state (F2 UX §5.8): `IDashboardProvider` failures on the load path (dashboard list,
+    default dashboard, switcher selection) and the save path no longer crash the host. A soft
+    danger `TmAlert` renders above the grid (`tm-dashboard-error`) with a localized message and
+    a "Try again" action that re-runs the failed operation; a failed save keeps edit mode open.
+    New localization keys `TmDashboard_Loading`, `TmDashboard_LoadError`, `TmDashboard_SaveError`
+    and `TmDashboard_Retry` in all four resource tables plus `MockTmLocalizer`.
+  - Mobile rename: the compact edit mode's action bar gains a Rename entry (Add, Save, Rename
+    on the bar, Cancel overflows into the More sheet as before) that opens a rename dialog —
+    the desktop toolbar hosting the inline editor is hidden on a mobile layout, so rename was
+    unreachable there. The dialog's form is the Enter-to-apply contract, Escape/backdrop cancel.
+  - New token `--tm-dashboard-min-height: 37.5rem` (`tokens.css`): the G-6 follow-up — the
+    dashboard root's `min-height: 600px` literal is now `var(--tm-dashboard-min-height)` so
+    hosts can raise or drop the workspace floor.
+  - Category tile ink (F2 UX §5.11): the decorative widget icon tiles (dashboard and widget
+    selector) now paint their icon in
+    `color-mix(in srgb, var(--category-color) 75%, var(--tm-text-primary))`, so amber on its
+    12% tint stays readable in light mode (was ≈ 2.1:1) without changing the tile hue.
+  - Narrow-card widget header: an `@container tm-dashboard (width < 768px)` rule wraps
+    `.tm-widget-header-left` and drops `.tm-widget-move-group` onto its own row in compact edit
+    mode so the title regains the full width at 390px cards (markup unchanged).
+  - The CSS bundle was regenerated. DOM/tab order of the widgets already followed the visual
+    (Y, X) order since F3 (`WidgetLayout`), closing the last F2 coordination note.
+
 - **`TmDashboard` Fáze 7 — dialogs and the dashboard switcher on mobile (dashboard redesign
   plan, phase 7), riding the F2/F3 foundation primitives.**
 

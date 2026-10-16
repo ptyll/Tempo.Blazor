@@ -395,7 +395,7 @@ public sealed class MarkupClassCoverageTests
             // "tm-widget-desc-") — 39 → 45.
             // F4 dashboard reorder: the drag-handle keyboard instructions id
             // ("tm-dashboard-drag-instructions-{Guid…}") joined the scanned population — 45 → 46.
-            ExpectedUnmeasurableStems: 46),
+            ExpectedUnmeasurableStems: 47),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

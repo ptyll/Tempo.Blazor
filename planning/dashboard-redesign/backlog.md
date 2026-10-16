@@ -3,80 +3,54 @@
 Položky posunuté mimo fáze redesignu (výchozí stav: F2, fix kolo fáze 2). Odkazy vedou na
 specifikace v tomto adresáři. Pořadí není prioritou; čísla § patří k `f2-ux-spec.md`.
 
+**Stav (F7b, 2.9.1):** načítací skeleton i error stav jsou implementované (viz CHANGELOG),
+token `--tm-dashboard-min-height` nahradil literal 600px, ikona dlaždice míchá inkoust
+75/25 s `--tm-text-primary` a úzká karta zpřehledňuje hlavičku container query. Zbývá jen
+položka „390 px“ níže? — ne, i ta je hotová (container query na kartě). Backlog je prázdný.
+
 ## Stavy komponenty
 
-### Loading skeleton + `aria-busy` (F2 UX §5.7)
+### Loading skeleton + `aria-busy` (F2 UX §5.7) — **Hotovo (F7b, 2.9.1)**
 
-Dokud `_dataLoaded == false`, komponenta krátce zobrazí prázdný stav („Zatím žádné widgety“) —
-falešná informace. Navrhnout: místo prázdného stavu vykreslit 2 karty `TmSkeleton`
-(výška `calc(4 * var(--row-height))`), na `.tm-dashboard-grid-container` nastavit
-`aria-busy="true"` a přepínač zobrazí `TmDashboard_DefaultName`. Nutné rozmyslet bUnit testy
-(nebude možné číst widgety dřív, než provider odpoví) a obrazovky, které provider záměrně
-prázdný nemají.
+Dokud `_dataLoaded == false`, komponenta krátce zobrazila prázdný stav. Hotovo: dvě karty
+`TmSkeleton` (`.tm-dashboard-skeleton-card`, `grid-row: span 4`), `aria-busy` na
+`.tm-dashboard-grid-container`, sr-only status `TmDashboard_Loading`; prázdný stav se
+vykresluje až po načtení. bUnit: `TmDashboardResilienceTests` (skeleton × 3, guard CSS).
 
-### Error stav: `TmAlert` + „Zkusit znovu“ (F2 UX §5.8)
+### Error stav: `TmAlert` + „Zkusit znovu“ (F2 UX §5.8) — **Hotovo (F7b, 2.9.1)**
 
-Výjimky `IDashboardProvider` (`GetDashboardsAsync` / `GetDefaultDashboardAsync` /
-`GetDashboardAsync` / `SaveDashboardAsync`) nejsou zachyceny — padají celou aplikaci. Navrhnout
-`try/catch` v load/save cestách, nad mřížkou `TmAlert` (Danger) s lokalizovaným textem a akcí
-„Zkusit znovu“ (opakování `LoadDefaultDashboard`/`LoadDashboard`). Nové lokalizační klíče
-do všech čtyř tabulek + `MockTmLocalizer`.
+Výjimky `IDashboardProvider` se zachytávají v load i save cestách; nad mřížkou je měkký
+danger `TmAlert` (`.tm-dashboard-error`) s lokalizovaným textem a akcí „Zkusit znovu“
+(`RetryFailedOperation`). Nové klíče ve čtyřech tabulkách + `MockTmLocalizer`.
+bUnit: `Dashboard_LoadError_…`, `Dashboard_SaveError_…` (TmDashboardResilienceTests).
 
 ## Tokeny a CSS
 
-### `min-height: 600px` kořene → token (G-6)
+### `min-height: 600px` kořene → token (G-6) — **Hotovo (F7b, 2.9.1)**
 
-`.tm-dashboard` nese hardcode `min-height: 600px` (dnes s komentářem). Zavést spacing-odvozený
-token (např. `--tm-dashboard-min-height`) v `tokens.css` (+ dark nepotřebuje override) a
-použít ho zde i v `.rc-dashboard` demo pravidle, které hodnotu ruší. Změna čistě na token,
-žádný vizuál.
+Token `--tm-dashboard-min-height: 37.5rem` v `tokens.css`; `.tm-dashboard` čte
+`var(--tm-dashboard-min-height)`. Demo `.rc-dashboard` záměrně přepisuje na 0 (kompaktní
+ukázky), přepis zůstává. bUnit: `Dashboard_Css_MinHeightUsesTheToken_NoLiteralLeft`.
 
-### Kontrast amber dlaždice (F2 UX §5.11)
+### Kontrast amber dlaždice (F2 UX §5.11) — **Hotovo (F7b, 2.9.1)**
 
-Ikona dlaždice dědí barvu kategorie (např. `--tm-category-3`, amber, ve světlém režimu). Na
-tintu `12 %` může splynout pod 2:1. Ověřit `--tm-category-7` (šedá) a `--tm-category-3`
-(amber) ve světlém režimu; při kontrastu < 2:1 použít pro barvu ikony dlaždice
-`color-mix(in srgb, var(--category-color) 75%, var(--tm-text-primary))`. Dlaždice je
-dekorativní (`aria-hidden`), 1.4.11 se nevztahuje — jde o vizuální čitelnost.
-
-## F3 (layout, pořadí, tablet/mobil)
-
-### `_titleElementId` není nikým odkázáno — zapojit `aria-labelledby`
-
-Kořen drží `tm-dashboard-title-{guid}` jako `id` viditelného/skrytého h2, ale nic na něj
-neodkazuje (F2 UX §6.3 to doporučuje). Ve F3 přidat kořeni `role="region"` +
-`aria-labelledby="@_titleElementId"` (jedna oblast na stránku; ověřit dopad na testy, které
-hledají roli/strukturu kořene, a na vnořené dashboardy).
-
-**Hotovo (F3, 2.9.1):** kořen nese `role="region"` a `aria-labelledby="@_titleElementId"`,
-když se h2 vykresluje (i jako `tm-sr-only`); bez nadpisu (ShowTitle=false ve view, ShowHeader=false)
-přebírá `aria-label="@HeaderTitle"`. bUnit testy: `Dashboard_Root_IsRegionLabelledByTitle`
-(TmDashboardResponsiveTests).
-
-### Sbalení widgetu: `!important` → `--tm-w-rows`
-
-`.tm-widget--minimized { grid-row: span 1 !important; }` (`_dashboard.css`) bije do inline
-`--tm-w-rows` z `GetWidgetStyles`. Ve F3 („pořadí podle (Y,X)“ + práce s výškou slotů)
-přepsat na var pravidlo (např. `grid-row: span var(--tm-w-rows-collapsed, 1)` nebo podmíněné
-neposílání `--tm-w-rows`), aby `!important` zmizelo a mřížka zůstala řízená proměnnými.
-Sbalená karta dnes neuvolní výšku slotu — totéž F3 (F2 UX §5.10).
-
-**Hotovo (F3, 2.9.1):** `!important` pravidlo zmizelo; `IsMinimized` je layoutový alias sbalení
-(M-7) — na desktopu karta zůstane ve slotu `Y / span H` a zmenší se na hlavičku
-(`align-self: start; min-height: auto`), na tabletu/mobilu navíc `grid-row: auto` uvolní výšku.
-`WidgetInstance.Height` se nemění, `--tm-w-rows` zůstává (dashboard.js čte Height pro náhled
-dropu). bUnit testy: `Dashboard_CollapsedWidget_ReleasesRows`,
-`Dashboard_MinimizedWidget_CarriesTheAliasClass_AndKeepsItsSlotVariables`,
-`Dashboard_Css_CollapseReleasesRows_WithoutImportant` (TmDashboardResponsiveTests).
+Ikona dlaždice (i karty ve widget selectoru) se kreslí
+`color-mix(in srgb, var(--category-color) 75%, var(--tm-text-primary))` — amber na tintu
+12 % zůstává čitelný, hue se nemění. bUnit: `Dashboard_Css_CategoryTileInk_…`.
 
 ## F4+ (kompaktní edit režim)
 
-### Hlavička karty na 390 px: skupina posunu na druhý řádek (container query)
+### Hlavička karty na 390 px: skupina posunu na druhý řádek (container query) — **Hotovo (F7b, 2.9.1)**
 
-Na 390 px drží hlavička karty dvě 44 px tlačítka posunu (nahoru/dolů), ikonu a tlačítko
-Odebrat — titul se zkracuje na „Active …“ (viditelné na
-`__screenshots__/dashboard/f4/mobile-390--compact-edit-after-swap.png`). Funkčně v pořádku
-(titul má ellipsis a `aria-label` tlačítek nesou význam), proto jen follow-up v pozdější fázi:
-v úzkém kontejneru (container query na kartě) zabalit skupinu `.tm-widget-move-group` na
-samostatný druhý řádek hlavičky, aby titul dostal plnou šířku. Čistě CSS změna přes tokeny,
-bez změny markupu.
+`.tm-widget` je vlastní container (`tm-widget`), `@container tm-widget (width < 400px)`
+přesune `.tm-widget-move-group` na samostatný řádek hlavičky (flex-wrap v
+`.tm-widget-header-left`), titul dostane plnou šířku. Čistě CSS přes tokeny, markup beze změny.
+bUnit: `Dashboard_Css_NarrowCard_WrapsTheMoveGroup_…`.
+
+## F5+ (mobil)
+
+### Přejmenování nedostupné na mobilu — **Hotovo (F7b, 2.9.1)**
+
+Akcí „Přejmenovat“ v mobilní akční liště (Add/Save/Rename na liště, Cancel v More) se otevře
+rename dialog (Enter aplikuje, Escape/backdrop ruší). bUnit:
+`Dashboard_MobileEditMode_RenameIsReachable_…` (TmDashboardResilienceTests).

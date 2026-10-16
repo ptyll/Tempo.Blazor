@@ -208,9 +208,10 @@ public class TmDashboardTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Dashboard_EditMode_MobileLayout_RendersTheActionBarWithThreeActions()
+    public void Dashboard_EditMode_MobileLayout_RendersTheActionBarWithRename()
     {
-        // X14: on a mobile layout the edit actions render through TmMobileActionBar (3 actions,
+        // X14: on a mobile layout the edit actions render through TmMobileActionBar (F7b:
+        // Add, Save and Rename stay on the bar; Cancel overflows into the More sheet —
         // built per render so a culture change re-localizes them).
         var provider = CreateMockProvider();
         var registry = CreateMockRegistry();
@@ -221,6 +222,8 @@ public class TmDashboardTests : LocalizationTestBase
 
         var bar = cut.Find(".tm-mobile-action-bar__bar");
         bar.QuerySelectorAll(".tm-mobile-action-bar__action").Count.Should().Be(3);
+        bar.TextContent.Should().Contain("Rename dashboard",
+            "F7b: rename stays reachable on a mobile layout");
         bar.GetAttribute("role").Should().Be("group");
     }
 

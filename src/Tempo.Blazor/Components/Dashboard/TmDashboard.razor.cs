@@ -245,62 +245,41 @@ public partial class TmDashboard : IAsyncDisposable
     private string? _dashboardToDeleteName;
     
     private bool _dataLoaded;
-    private IReadOnlyList<TmActionItem> _editModeActions = [];
 
-    // X14: the edit actions are rebuilt per parameter set (not once in OnInitialized), so a
-    // culture change re-renders the labels in the new language.
-    protected override void OnParametersSet() => BuildEditModeActions();
-
-    private void BuildEditModeActions()
-    {
-        // The mobile edit-mode action bar (F5) renders the same three actions as the desktop
-        // toolbar. The EventCallback receiver is the dashboard, so its own markup re-renders on
-        // activation; Priority is only an overflow rank — the bar renders in Items order.
-        _editModeActions =
-        [
-            new TmActionItem
-            {
-                Id = "add-widget",
-                Label = Loc["TmDashboard_AddWidget"],
-                Icon = IconNames.Plus,
-                Priority = 100,
-                OnClick = EventCallback.Factory.Create(this, OpenWidgetSelector),
-            },
-            new TmActionItem
-            {
-                Id = "save-layout",
-                // Y11: the bar tile gets the SHORT mobile label — "Enregistrer les modifications"
-                // clamped illegibly at 320 fr (review round 2, m2). The desktop toolbar keeps the
-                // full wording.
-                Label = Loc["TmDashboard_SaveChangesShort"],
-                Icon = IconNames.Save,
-                Priority = 90,
-                OnClick = EventCallback.Factory.Create(this, SaveLayout),
-            },
-            new TmActionItem
-            {
-                Id = "cancel-edit",
-                Label = Loc["TmDashboard_CancelEdit"],
-                Icon = IconNames.X,
-                Priority = 80,
-                OnClick = EventCallback.Factory.Create(this, CancelEdit),
-            },
-        ];
-    }
+    // The edit-mode action items, the provider-error alert state and the mobile rename dialog
+    // live in the F7b partial (TmDashboard.Resilience.razor.cs).
 
     protected override async Task OnInitializedAsync()
     {
         if (_dataLoaded) return;
+        await LoadAllAsync();
+    }
 
-        await LoadDashboardsList();
-
-        if (!string.IsNullOrEmpty(DashboardId))
+    // F7b (UX §5.8): the whole first-load sequence lives in one guarded method so the initial
+    // load AND the error alert's "Try again" (which re-enters with _currentDashboard still null)
+    // share the same protection — a provider that fails twice must never leak the exception to
+    // the host. Both the switcher list and the dashboard load run inside the single catch: a
+    // retry that succeeds re-populates the list too, so the switcher is never left empty.
+    private async Task LoadAllAsync()
+    {
+        try
         {
-            await LoadDashboard(DashboardId);
+            await LoadDashboardsList();
+
+            if (!string.IsNullOrEmpty(DashboardId))
+            {
+                await LoadDashboard(DashboardId);
+            }
+            else
+            {
+                await LoadDefaultDashboard();
+            }
+
+            _loadError = false;
         }
-        else
+        catch (Exception)
         {
-            await LoadDefaultDashboard();
+            _loadError = true;
         }
 
         _dataLoaded = true;
@@ -439,7 +418,20 @@ public partial class TmDashboard : IAsyncDisposable
     {
         if (DashboardProvider is null) return;
 
-        _currentDashboard = await DashboardProvider.GetDashboardAsync(dashboardId);
+        // F7b: a switcher selection that fails keeps the current dashboard on screen and
+        // raises the load alert instead of crashing.
+        try
+        {
+            _currentDashboard = await DashboardProvider.GetDashboardAsync(dashboardId);
+        }
+        catch (Exception)
+        {
+            _loadError = true;
+            StateHasChanged();
+            return;
+        }
+
+        _loadError = false;
         if (_currentDashboard is not null)
         {
             _widgets = _currentDashboard.Widgets.ToList();
@@ -486,7 +478,20 @@ public partial class TmDashboard : IAsyncDisposable
         _currentDashboard.Widgets = _widgets.ToList();
         _currentDashboard.ModifiedAt = DateTime.UtcNow;
 
-        _currentDashboard = await DashboardProvider.SaveDashboardAsync(_currentDashboard);
+        // F7b (UX §5.8): a failed save keeps edit mode open (nothing is lost) and raises the
+        // save alert; "Try again" re-runs this method.
+        try
+        {
+            _currentDashboard = await DashboardProvider.SaveDashboardAsync(_currentDashboard);
+        }
+        catch (Exception)
+        {
+            _saveError = true;
+            StateHasChanged();
+            return;
+        }
+
+        _saveError = false;
         _isEditMode = false;
         _isEditingName = false;
         // The dashboard is persisted: a later "Cancel" keeps it (DA3 applies to unsaved creations only).
@@ -521,7 +526,7 @@ public partial class TmDashboard : IAsyncDisposable
         _focusViewEntryAfterEditModeExit = true;
         StateHasChanged();
     }
-    
+
     private void OpenWidgetSelector()
     {
         _showWidgetSelector = true;

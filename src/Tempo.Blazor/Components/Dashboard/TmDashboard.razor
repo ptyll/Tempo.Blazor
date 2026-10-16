@@ -265,18 +265,49 @@
     </div>
     }
 
+    @* ── Error alert (F7b, UX §5.8) ───────────────────────────── *@
+    @* Provider failures (load or save) surface above the grid with a localized "Try again"
+       that re-runs the failed operation; they never crash the host application. *@
+    @if (_loadError || _saveError)
+    {
+        <TmAlert Severity="AlertSeverity.Error"
+                 Variant="AlertVariant.Soft"
+                 Title="@(_saveError ? Loc["TmDashboard_SaveError"] : Loc["TmDashboard_LoadError"])"
+                 Class="tm-dashboard-error">
+            <Actions>
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" @onclick="RetryFailedOperation">
+                    @Loc["TmDashboard_Retry"]
+                </button>
+            </Actions>
+        </TmAlert>
+    }
+
     @* ── Grid Container ───────────────────────────────────────── *@
     @if (_isEditMode && mode.IsDesktop)
     {
         @* F4: shared keyboard contract of every drag handle, referenced through aria-describedby. *@
         <p class="tm-sr-only" id="@_dragInstructionsId">@Loc["TmDashboard_DragHandleInstructions"]</p>
     }
-    <div class="tm-dashboard-grid-container">
+    <div class="tm-dashboard-grid-container" aria-busy="@(!_dataLoaded ? "true" : null)">
         <div class="tm-dashboard-grid"
              style="--grid-columns: @(_currentDashboard?.Grid.Columns ?? 12);
                     --row-height: @(_currentDashboard?.Grid.RowHeight ?? 60)px;
                     --grid-gap: @(_currentDashboard?.Grid.Gap ?? 16)px;">
-            
+
+            @* Loading skeletons (F7b, UX §5.7): until the provider's first load answers, the
+               grid shows two card-shaped placeholders and aria-busy on the container — never
+               the empty state, which would falsely claim there are no widgets. *@
+            @if (!_dataLoaded)
+            {
+                <p class="tm-sr-only" role="status">@Loc["TmDashboard_Loading"]</p>
+                <div class="tm-dashboard-skeleton-card">
+                    <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="100%" />
+                </div>
+                <div class="tm-dashboard-skeleton-card">
+                    <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="100%" />
+                </div>
+            }
+
             @* Grid Background (visible in edit mode) *@
             @if (_isEditMode && mode.IsDesktop)
             {
@@ -459,7 +490,8 @@
     </div>
     
     @* ── Empty State ─────────────────────────────────────────── *@
-    @if (!_widgets.Any())
+    @* Only after the load answered (F7b, UX §5.7): while loading the skeletons speak instead. *@
+    @if (_dataLoaded && !_widgets.Any())
     {
         <div class="tm-dashboard-empty">
             <div class="tm-dashboard-empty-icon">
@@ -540,6 +572,36 @@
         <TmButton Variant="ButtonVariant.Primary"
                   OnClick="ConfirmCreateDashboard"
                   Disabled="string.IsNullOrWhiteSpace(_newDashboardName)">@Loc["Tm_Create"]</TmButton>
+    </Footer>
+</TmModal>
+
+@* ── Mobile Rename Dialog (F7b) ──────────────────────────────── *@
+@* On a mobile layout the desktop toolbar (the inline editor's host) is hidden, so rename
+   moves here through the action bar's Rename entry. The form is the Enter-to-apply contract
+   (docs/keyboard-activation-convention.md); Auto presents it as a sheet on a phone. *@
+<TmModal Show="_showMobileRenameDialog"
+         Title="@Loc["TmDashboard_Rename"]"
+         OnClose="CancelMobileRename"
+         InitialFocusTargetId="@_mobileRenameInputId"
+         ShowFooter="true"
+         ShowDefaultFooterButtons="false"
+         MobilePresentation="MobilePresentation.Auto"
+         Class="tm-dashboard-rename-modal">
+    <ChildContent>
+        <form @onsubmit="ConfirmMobileRename" @onsubmit:preventDefault>
+            <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
+                <TmTextInput Id="@_mobileRenameInputId"
+                             @bind-Value="_editingName"
+                             AutoFocus="true"
+                             Placeholder="@Loc["TmDashboard_NamePlaceholder"]" />
+            </TmFormField>
+        </form>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelMobileRename">@Loc["Tm_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  OnClick="ConfirmMobileRename"
+                  Disabled="string.IsNullOrWhiteSpace(_editingName)">@Loc["TmDashboard_ApplyName"]</TmButton>
     </Footer>
 </TmModal>
 

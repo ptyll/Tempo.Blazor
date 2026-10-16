@@ -1017,6 +1017,10 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDashboard_WidgetPlaceholder"]     = "Widget: {0}",
         ["TmDashboard_Expand"]                = "Expand",
         ["TmDashboard_Collapse"]              = "Collapse",
+        ["TmDashboard_Loading"]               = "Loading the dashboard…",
+        ["TmDashboard_LoadError"]             = "The dashboard could not be loaded.",
+        ["TmDashboard_SaveError"]             = "The changes could not be saved.",
+        ["TmDashboard_Retry"]                 = "Try again",
 
         // TmDiagramEditor
         ["TmDiagramEditor_ToolbarAriaLabel"] = "Diagram editor toolbar",
@@ -4600,6 +4604,10 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDashboard_WidgetPlaceholder"] = "Widget: {0}",
         ["TmDashboard_Expand"] = "Rozbalit",
         ["TmDashboard_Collapse"] = "Sbalit",
+        ["TmDashboard_Loading"] = "Nástěnka se načítá…",
+        ["TmDashboard_LoadError"] = "Nástěnku se nepodařilo načíst.",
+        ["TmDashboard_SaveError"] = "Změny se nepodařilo uložit.",
+        ["TmDashboard_Retry"] = "Zkusit znovu",
 
         // TmWireframe
         ["TmDiagramEditor_AddPage"] = "Přidat stránku",

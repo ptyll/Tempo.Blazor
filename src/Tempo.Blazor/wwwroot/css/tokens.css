@@ -381,6 +381,9 @@
   --tm-sidebar-width:    16rem;
   --tm-sidebar-collapsed: 3.5rem;
   --tm-topbar-height:    3.5rem;
+  /* Minimum height of the TmDashboard workspace (G-6, F7b): the old literal 600px floor,
+     expressed once here so hosts can raise or drop it. */
+  --tm-dashboard-min-height: 37.5rem;
 
   /* ── Charts ── */
   --tm-chart-area-fill-opacity: 0.25;
