@@ -171,6 +171,44 @@ public class TmDiagramEditorConnectTests : LocalizationTestBase
         DiagramStencilDisplayNames.GetStencilDisplayName(fallback, localizer).Should().Be("Fallback Name");
     }
 
+    /// <summary>
+    /// Mirrors the production <see cref="Tempo.Blazor.Localization.DefaultTmLocalizer"/>, which
+    /// echoes the raw key (no brackets) for missing translations — unlike the bracket-wrapping
+    /// <see cref="MockTmLocalizer"/>. The stencil display-name helper must treat that echo as
+    /// "missing" too and fall back to the stencil's raw name.
+    /// </summary>
+    private sealed class RawKeyEchoLocalizer(Dictionary<string, string> data) : Tempo.Blazor.Localization.ITmLocalizer
+    {
+        public System.Globalization.CultureInfo Culture => System.Globalization.CultureInfo.GetCultureInfo("en");
+
+        public string this[string key] => data.TryGetValue(key, out var v) ? v : key;
+
+        public string this[string key, params object[] arguments]
+        {
+            get
+            {
+                var template = data.TryGetValue(key, out var v) ? v : key;
+                return arguments.Length > 0 ? string.Format(Culture, template, arguments) : template;
+            }
+        }
+    }
+
+    [Fact]
+    public void StencilDisplayName_FallsBack_WhenLocalizerEchoesRawKey()
+    {
+        var localizer = new RawKeyEchoLocalizer(new Dictionary<string, string>
+        {
+            ["TestStencil_Localized"] = "Lokalizovaný tvar"
+        });
+        var missing = new DiagramStencil { Id = "test.raw", Name = "Fallback Name", NameResourceKey = "TestStencil_Missing" };
+
+        DiagramStencilDisplayNames.GetStencilDisplayName(missing, localizer).Should().Be("Fallback Name",
+            "a localizer echoing the raw key must be treated as untranslated");
+        DiagramStencilDisplayNames.GetLocalizedText(null, "Fallback Name", localizer).Should().Be("Fallback Name");
+        DiagramStencilDisplayNames.GetLocalizedText("TestStencil_Localized", "Fallback Name", localizer)
+            .Should().Be("Lokalizovaný tvar");
+    }
+
     [Fact]
     public async Task ConnectModal_UsesLocalizedStencilNames()
     {

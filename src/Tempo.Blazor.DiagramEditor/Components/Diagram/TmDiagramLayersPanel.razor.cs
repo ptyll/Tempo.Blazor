@@ -169,21 +169,37 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     }
 
     /// <summary>
-    /// Key handling on the focusable layer name (role=button is not natively activatable).
-    /// Per docs/keyboard-activation-convention.md: Enter fires on keydown (guarded against
-    /// auto-repeat), F2 is a plain keydown shortcut; Space is emulated on keyup to match the
-    /// native button split. Exactly one rename start per press.
+    /// Key handling on the layer name. One handler serves two contexts — the rename
+    /// <c>input</c> and the collapsed name <c>span</c> — distinguished by
+    /// <c>_editingLayerId == layer.Id</c>: inside the input, Enter commits the rename
+    /// and Escape cancels it (starting the edit again would leave the input open
+    /// forever); outside, Enter fires on keydown (guarded against auto-repeat) and F2
+    /// is a plain keydown shortcut per docs/keyboard-activation-convention.md, with
+    /// Space emulated on keyup by <see cref="OnNameKeyUp"/>. Exactly one action per press.
     /// </summary>
-    private void OnNameKeyDown(KeyboardEventArgs e, DiagramLayer layer)
+    private async Task OnNameKeyDown(KeyboardEventArgs e, DiagramLayer layer)
     {
         if (ReadOnly) return;
+
+        if (_editingLayerId == layer.Id)
+        {
+            if (e.Key == "Enter" && !e.Repeat)
+                await CommitRename(layer);
+            else if (e.Key == "Escape")
+            {
+                _editingLayerId = null;
+                StateHasChanged();
+            }
+            return;
+        }
+
         if (e.Key == "F2" || (e.Key == "Enter" && !e.Repeat))
             OnStartEdit(layer);
     }
 
     private void OnNameKeyUp(KeyboardEventArgs e, DiagramLayer layer)
     {
-        if (ReadOnly) return;
+        if (ReadOnly || _editingLayerId == layer.Id) return;
         if (e.Key == " ")
             OnStartEdit(layer);
     }

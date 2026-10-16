@@ -67,6 +67,25 @@ public class TmDiagramSqlImportDialogTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Import_Disabled_AfterParseError()
+    {
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+        cut.Find("textarea").Input(SingleTableSql);
+        cut.Render();
+
+        // Simulate the UpdatePreview catch branch (SqlParser.Parse threw): the
+        // sentinel state must disable Import, not leave it clickable.
+        typeof(TmDiagramSqlImportDialog)
+            .GetField("_previewTables", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(cut.Instance, -1);
+        cut.Render();
+
+        var importButton = cut.FindAll("button").First(b => b.TextContent.Contains("Import"));
+        importButton.HasAttribute("disabled").Should().BeTrue(
+            "a parse error (_previewTables == -1) must keep import disabled, like zero tables");
+    }
+
+    [Fact]
     public void LayoutOptions_AreLocalized_Cs()
     {
         UseCzechLocalization();

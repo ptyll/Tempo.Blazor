@@ -1193,6 +1193,7 @@
   "TmDiagramLayers_Rename": "Renommer le calque",
   "TmDiagramLayers_SelectLayer": "Sélectionner le calque",
   "TmDiagramLayers_SetActive": "Définir comme calque actif",
+  "TmDiagramLayers_SetActiveWithName": "Définir la couche {0} comme active",
   "TmDiagramLayers_Show": "Afficher",
   "TmDiagramLayers_Title": "Calques",
   "TmDiagramLayers_Toggle": "Afficher/masquer le panneau des calques",

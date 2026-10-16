@@ -55,7 +55,7 @@
         </TmButton>
         <TmButton Variant="ButtonVariant.Primary"
                   OnClick="OnImportClick"
-                  Disabled="string.IsNullOrWhiteSpace(_sql) || _previewTables == 0">
+                  Disabled="string.IsNullOrWhiteSpace(_sql) || _previewTables <= 0">
             @Loc["TmDiagramSqlImportDialog_ImportButton"]
         </TmButton>
     </Footer>

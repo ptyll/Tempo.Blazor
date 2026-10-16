@@ -27,8 +27,10 @@ public static class DiagramStencilDisplayNames
 
     /// <summary>
     /// Resolves a localized text for <paramref name="resourceKey"/>, falling back
-    /// to <paramref name="fallback"/> when the key is empty or untranslated
-    /// (localizers that echo <c>[key]</c> for unknown keys are treated as missing).
+    /// to <paramref name="fallback"/> when the key is empty or untranslated.
+    /// Untranslated is decided by <see cref="ITmLocalizer.TryGetString"/>: localizers
+    /// may echo the missing key either bare (production default) or bracketed as
+    /// <c>[key]</c> (test doubles) — both count as missing.
     /// </summary>
     public static string GetLocalizedText(string? resourceKey, string fallback, ITmLocalizer localizer)
     {
@@ -38,10 +40,9 @@ public static class DiagramStencilDisplayNames
             return fallback;
         }
 
-        var localized = localizer[resourceKey];
-        return string.Equals(localized, $"[{resourceKey}]", StringComparison.Ordinal)
-            ? fallback
-            : localized;
+        return localizer.TryGetString(resourceKey, out var localized)
+            ? localized
+            : fallback;
     }
 
     /// <summary>

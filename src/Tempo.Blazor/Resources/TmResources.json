@@ -1190,6 +1190,7 @@
   "TmDiagramLayers_Rename": "Rename layer",
   "TmDiagramLayers_SelectLayer": "Select layer",
   "TmDiagramLayers_SetActive": "Set as active layer",
+  "TmDiagramLayers_SetActiveWithName": "Set layer {0} as active",
   "TmDiagramLayers_Show": "Show",
   "TmDiagramLayers_Title": "Layers",
   "TmDiagramLayers_Toggle": "Toggle layers panel",

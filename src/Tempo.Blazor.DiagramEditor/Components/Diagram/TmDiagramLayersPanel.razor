@@ -44,8 +44,8 @@
                             class="tm-diagram-layers__active @(_defaultLayerId == layer.Id ? "tm-diagram-layers__active--default" : "")"
                             role="radio"
                             aria-checked="@(isActive ? "true" : "false")"
-                            aria-label="@Loc["TmDiagramLayers_SetActive"]"
-                            title="@Loc["TmDiagramLayers_SetActive"]"
+                            aria-label="@Loc["TmDiagramLayers_SetActiveWithName", layer.Name]"
+                            title="@Loc["TmDiagramLayers_SetActiveWithName", layer.Name]"
                             @onclick="() => OnSetActive(layer.Id)"
                             disabled="@ReadOnly">
                         <span class="tm-diagram-layers__radio @(isActive ? "tm-diagram-layers__radio--checked" : "")"></span>

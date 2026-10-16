@@ -1196,6 +1196,7 @@
   "TmDiagramLayers_Rename": "Přejmenovat vrstvu",
   "TmDiagramLayers_SelectLayer": "Vyberte vrstvu",
   "TmDiagramLayers_SetActive": "Nastavit jako aktivní",
+  "TmDiagramLayers_SetActiveWithName": "Nastavit vrstvu {0} jako aktivní",
   "TmDiagramLayers_Show": "Zobrazit",
   "TmDiagramLayers_Title": "Vrstvy",
   "TmDiagramLayers_Toggle": "Přepnout panel vrstev",

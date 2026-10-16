@@ -122,6 +122,96 @@ public class TmDiagramLayersPanelTests : DiagramTestBase
     }
 
     [Fact]
+    public async Task EnterKey_InInput_CommitsRename()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var nameSpan = cut.FindAll(".tm-diagram-layers__name")
+            .First(n => n.TextContent.Contains("Annotations"));
+        await cut.InvokeAsync(() => nameSpan.KeyDown("Enter"));
+        cut.Render();
+
+        var input = cut.Find(".tm-diagram-layers__name-input");
+        input.Input("Nový název");
+        await cut.InvokeAsync(() => input.KeyDown("Enter"));
+        cut.Render();
+
+        doc.Layers.First(l => l.Name == "Nový název").Should().NotBeNull(
+            "Enter in the rename input must commit the new name");
+        cut.FindAll(".tm-diagram-layers__name-input").Should().BeEmpty(
+            "Enter in the rename input must end the edit");
+        cut.FindAll(".tm-diagram-layers__name")
+            .Should().Contain(n => n.TextContent == "Nový název");
+    }
+
+    [Fact]
+    public async Task EscapeKey_InInput_CancelsRename()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var nameSpan = cut.FindAll(".tm-diagram-layers__name")
+            .First(n => n.TextContent.Contains("Annotations"));
+        await cut.InvokeAsync(() => nameSpan.KeyDown("Enter"));
+        cut.Render();
+
+        var input = cut.Find(".tm-diagram-layers__name-input");
+        input.Input("Jiný název");
+        await cut.InvokeAsync(() => input.KeyDown("Escape"));
+        cut.Render();
+
+        doc.Layers[1].Name.Should().Be("Annotations",
+            "Escape in the rename input must discard the edit");
+        cut.FindAll(".tm-diagram-layers__name-input").Should().BeEmpty(
+            "Escape in the rename input must end the edit");
+    }
+
+    [Fact]
+    public async Task SpaceKeyUp_InInput_DoesNotStealSpace()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var nameSpan = cut.FindAll(".tm-diagram-layers__name")
+            .First(n => n.TextContent.Contains("Annotations"));
+        await cut.InvokeAsync(() => nameSpan.KeyDown("Enter"));
+        cut.Render();
+
+        var input = cut.Find(".tm-diagram-layers__name-input");
+        input.Input("My Layer");
+
+        input.Invoking(i => i.KeyUp(" "))
+            .Should().Throw<Bunit.MissingEventHandlerException>(
+                "the rename input must not have a Space keyup handler — spaces in the name belong to the user");
+        cut.FindAll(".tm-diagram-layers__name-input").Should().HaveCount(1,
+            "Space inside the input must neither end nor restart the edit");
+        doc.Layers[1].Name.Should().Be("Annotations");
+    }
+
+    [Fact]
+    public void ActiveRadio_AriaLabel_ContainsLayerName()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var radios = cut.FindAll("[role='radio']").ToList();
+        radios.Should().HaveCount(2);
+        radios[0].GetAttribute("aria-label").Should().Contain("Base",
+            "each radio's aria-label must identify its layer");
+        radios[1].GetAttribute("aria-label").Should().Contain("Annotations");
+        radios[0].GetAttribute("aria-label").Should().NotBe(radios[1].GetAttribute("aria-label"));
+    }
+
+    [Fact]
     public void DataTestId_RendersOnRoot()
     {
         var doc = CreateDocument();
