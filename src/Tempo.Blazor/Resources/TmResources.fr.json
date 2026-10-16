@@ -4999,6 +4999,8 @@
   "TmViewManager_CreateNew": "Créer une nouvelle vue",
   "TmViewManager_CreateTitle": "Créer une nouvelle vue",
   "TmViewManager_DeleteError": "Impossible de supprimer la vue",
+  "TmViewManager_DeleteNamed": "Supprimer la vue {0}",
+  "TmViewManager_EditNamed": "Modifier la vue {0}",
   "TmViewManager_EditTitle": "Modifier la vue",
   "TmViewManager_Filters": "Filtres",
   "TmViewManager_GroupByColumns": "Regrouper par colonnes",

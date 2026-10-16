@@ -34,26 +34,28 @@
                 <div class="tm-view-list">
                     @foreach (var view in _views.Where(v => v.Scope == ViewScope.Personal))
                     {
-                        <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
-                             @onclick="() => ApplyViewAsync(view)">
-                            <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
-                            @if (view.IsDefault)
-                            {
-                                <span class="tm-view-item-badge">★</span>
-                            }
+                        <div class="tm-view-item-row">
+                            <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                 @onclick="() => ApplyViewAsync(view)">
+                                <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+                                @if (view.IsDefault)
+                                {
+                                    <span class="tm-view-item-badge">★</span>
+                                }
+                            </button>
                             @if (CanEditView(view))
                             {
-                                <button type="button" class="tm-view-edit-btn" aria-label="@Loc["TmViewManager_EditTitle"]" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
+                                <button type="button" class="tm-view-edit-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_EditNamed"], view.Name)" @onclick="() => OpenEditModal(view)">
                                     <TmIcon Name="edit" Size="IconSize.Sm" />
                                 </button>
                             }
                             @if (CanDeleteView(view))
                             {
-                                <button type="button" class="tm-view-delete-btn" aria-label="@($"{Loc["TmViewManager_DeleteError"]} {view.Name}")" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
+                                <button type="button" class="tm-view-delete-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_DeleteNamed"], view.Name)" @onclick="() => DeleteViewAsync(view)">
                                     <TmIcon Name="trash" Size="IconSize.Sm" />
                                 </button>
                             }
-                        </button>
+                        </div>
                     }
                     @if (!_views.Any(v => v.Scope == ViewScope.Personal))
                     {
@@ -75,26 +77,28 @@
                     <div class="tm-view-list">
                         @foreach (var view in _views.Where(v => v.Scope == ViewScope.Tenant))
                         {
-                            <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
-                                 @onclick="() => ApplyViewAsync(view)">
-                                <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
-                                @if (view.IsDefault)
-                                {
-                                    <span class="tm-view-item-badge">★</span>
-                                }
+                            <div class="tm-view-item-row">
+                                <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                     @onclick="() => ApplyViewAsync(view)">
+                                    <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+                                    @if (view.IsDefault)
+                                    {
+                                        <span class="tm-view-item-badge">★</span>
+                                    }
+                                </button>
                                 @if (CanEditView(view))
                                 {
-                                    <button type="button" class="tm-view-edit-btn" aria-label="@Loc["TmViewManager_EditTitle"]" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
+                                    <button type="button" class="tm-view-edit-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_EditNamed"], view.Name)" @onclick="() => OpenEditModal(view)">
                                         <TmIcon Name="edit" Size="IconSize.Sm" />
                                     </button>
                                 }
                                 @if (CanDeleteView(view))
                                 {
-                                    <button type="button" class="tm-view-delete-btn" aria-label="@($"{Loc["TmViewManager_DeleteError"]} {view.Name}")" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
+                                    <button type="button" class="tm-view-delete-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_DeleteNamed"], view.Name)" @onclick="() => DeleteViewAsync(view)">
                                         <TmIcon Name="trash" Size="IconSize.Sm" />
                                     </button>
                                 }
-                            </button>
+                            </div>
                         }
                         @if (!_views.Any(v => v.Scope == ViewScope.Tenant))
                         {
@@ -134,6 +138,7 @@
          RestoreFocusTargetId="@_toggleId"
          MobilePresentation="MobilePresentation.Auto">
     <ChildContent>
+        <div class="tm-view-modal">
                 @* View Name *@
                 <div class="tm-form-group tm-mb-4">
                     <label for="@_nameId" class="tm-form-label">@(Loc["TmViewManager_ViewName"])</label>
@@ -213,8 +218,10 @@
                                          ShowClearAll="true" />
                     </div>
                 }
+        </div>
     </ChildContent>
     <Footer>
+        <div class="tm-view-modal-footer">
         <button type="button" class="tm-btn tm-btn-ghost" @onclick="CloseModal">
             @(Loc["TmViewManager_Cancel"])
         </button>
@@ -224,5 +231,6 @@
                 ? (Loc["TmViewManager_Create"])
                 : (Loc["TmViewManager_Save"]))
         </button>
+        </div>
     </Footer>
 </TmModal>

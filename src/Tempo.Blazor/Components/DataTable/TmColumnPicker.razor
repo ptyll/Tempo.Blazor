@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-column-picker @Class @(Disabled ? "tm-column-picker-disabled" : "")" @attributes="AdditionalAttributes">
-    <button class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
+    <button id="@_toggleId" class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
             type="button"
             @ref="_toggleRef"
             aria-haspopup="true"
@@ -25,6 +25,7 @@
                     Title="@Loc["TmDataTable_ColumnPicker"]"
                     AriaLabel="@Loc["TmDataTable_ColumnPicker"]"
                     MobilePresentation="PanelPresentation.Auto"
+                    RestoreFocusTargetId="@_toggleId"
                     Class="tm-column-picker-panel">
         <div class="tm-column-picker-items">
             @foreach (var col in Columns.Where(c => c.IsHideable))
@@ -56,6 +57,7 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    private readonly string _toggleId = $"tm-column-picker-{Guid.NewGuid():N}";
     private bool _open;
     private ElementReference _toggleRef;
 

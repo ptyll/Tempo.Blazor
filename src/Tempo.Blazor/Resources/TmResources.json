@@ -4987,6 +4987,8 @@
   "TmViewManager_CreateNew": "Create New View",
   "TmViewManager_CreateTitle": "Create New View",
   "TmViewManager_DeleteError": "Failed to delete view",
+  "TmViewManager_DeleteNamed": "Delete view {0}",
+  "TmViewManager_EditNamed": "Edit view {0}",
   "TmViewManager_EditTitle": "Edit View",
   "TmViewManager_Filters": "Filters",
   "TmViewManager_GroupByColumns": "Group by columns",

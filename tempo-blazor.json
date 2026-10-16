@@ -20973,6 +20973,12 @@
           "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
         },
         {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Element id that receives focus when the panel closes by Escape or an outside pointer."
+        },
+        {
           "name": "Role",
           "type": "string?",
           "isRequired": false,

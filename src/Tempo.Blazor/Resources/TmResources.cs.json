@@ -5005,6 +5005,8 @@
   "TmValidation_Invalid": "Toto pole obsahuje neplatnou hodnotu",
   "TmValidation_Required": "Toto pole je povinné",
   "TmViewManager_DeleteError": "Nepodařilo se smazat pohled",
+  "TmViewManager_DeleteNamed": "Smazat pohled {0}",
+  "TmViewManager_EditNamed": "Upravit pohled {0}",
   "TmViewManager_GroupByColumns": "Seskupit podle sloupců",
   "TmViewManager_Grouping": "Seskupování",
   "TmViewManager_Cancel": "Zrušit",

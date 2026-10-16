@@ -764,8 +764,15 @@
   max-height: 12rem; 
   overflow-y: auto; 
 }
+.tm-view-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+}
 .tm-view-item {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  width: auto;
   text-align: start;
   background: transparent;
   border: none;

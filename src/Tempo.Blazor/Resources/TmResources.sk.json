@@ -5011,6 +5011,8 @@
   "TmViewManager_CreateNew": "Vytvoriť nové zobrazenie",
   "TmViewManager_CreateTitle": "Vytvoriť nové zobrazenie",
   "TmViewManager_DeleteError": "Zobrazenie sa nepodarilo odstrániť",
+  "TmViewManager_DeleteNamed": "Odstrániť zobrazenie {0}",
+  "TmViewManager_EditNamed": "Upraviť zobrazenie {0}",
   "TmViewManager_EditTitle": "Upraviť zobrazenie",
   "TmViewManager_Filters": "Filtre",
   "TmViewManager_GroupByColumns": "Zoskupiť podľa stĺpcov",

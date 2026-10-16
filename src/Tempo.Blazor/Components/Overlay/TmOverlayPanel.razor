@@ -266,6 +266,9 @@
     /// </summary>
     [Parameter] public string? Title { get; set; }
 
+    /// <summary>Element id that receives focus when the panel closes by Escape or an outside pointer.</summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     /// <summary>
     /// How the panel presents on a narrow viewport. Default <see cref="PanelPresentation.Popover"/>:
     /// the anchored popover at every width. A surface whose anchor keeps focus (a typeahead, a
@@ -472,6 +475,15 @@
         if (dismissed && OnDismissed.HasDelegate)
         {
             await OnDismissed.InvokeAsync(reason);
+        }
+
+        if (!open && dismissed && !string.IsNullOrEmpty(RestoreFocusTargetId))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("eval", $"document.getElementById({System.Text.Json.JsonSerializer.Serialize(RestoreFocusTargetId)})?.focus()");
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
         }
 
         // Uncontrolled mode mutates _internalOpen without a parent re-render, and the

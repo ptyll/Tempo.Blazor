@@ -32,7 +32,7 @@
                 @if (ShouldRenderGroupPicker())
                 {
                     <div class="tm-mvl-group-picker">
-                        <button type="button" class="tm-mvl-group-btn" @ref="_groupPickerRef"
+                        <button type="button" id="@_groupPickerId" class="tm-mvl-group-btn" @ref="_groupPickerRef"
                                 aria-expanded="@(_groupPickerOpen ? "true" : "false")" aria-haspopup="dialog"
                                 @onclick="ToggleGroupPicker">
                             @Loc["TmMvl_GroupBy"]
@@ -42,6 +42,7 @@
                                         IsOpenChanged="v => _groupPickerOpen = v"
                                         Role="dialog"
                                         Title="@Loc["TmMvl_GroupBy"]"
+                                        RestoreFocusTargetId="@_groupPickerId"
                                         Class="tm-mvl-group-dropdown">
                             @foreach (var field in GroupableFields)
                             {
@@ -505,6 +506,7 @@
     private readonly HashSet<string> _expandedGroups = new();
     private IReadOnlyList<DataGroup<TItem>>? _groupedData;
     private bool _groupPickerOpen;
+    private readonly string _groupPickerId = $"tm-mvl-group-{Guid.NewGuid():N}";
     private ElementReference _groupPickerRef;
     private ElementReference _selectAllRef;
 

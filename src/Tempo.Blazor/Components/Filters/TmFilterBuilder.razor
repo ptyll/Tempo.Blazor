@@ -23,17 +23,14 @@
     </div>
 
     @* Add filter button *@
-    @if (!_showFieldPicker)
-    {
-        <button type="button" @ref="_addButton" class="tm-filter-builder-add" aria-expanded="@(_showFieldPicker ? "true" : "false")" @onclick="OpenFieldPicker">
-            @Loc["TmFilterBuilder_AddFilter"]
-        </button>
-    }
+    <button type="button" @ref="_addButton" class="tm-filter-builder-add" aria-expanded="@(_showFieldPicker || _selectedDefinition is not null ? "true" : "false")" @onclick="OpenFieldPicker">
+        @Loc["TmFilterBuilder_AddFilter"]
+    </button>
 
     @* Field picker *@
     @if (_showFieldPicker && _editingFilter is null)
     {
-        <div class="tm-filter-field-picker" @onkeydown="OnPickerKey">
+        <div class="tm-filter-field-picker" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
             @foreach (var def in FilterDefinitions)
             {
                 var d = def;
@@ -50,7 +47,7 @@
     @* Filter editor *@
     @if (_selectedDefinition is not null)
     {
-        <div class="tm-filter-editor" @onkeydown="OnPickerKey">
+        <div class="tm-filter-editor" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
             <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition)</span>
 
             <select class="tm-filter-operator-select" aria-label="@Loc["TmFilterBuilder_Operator"]"
@@ -66,7 +63,8 @@
             {
                 @if (_selectedDefinition.FieldType == FilterFieldType.Date)
                 {
-                    <TmDatePicker Value="_dateValue"
+                    <TmDatePicker Label="@Loc["TmFilterBuilder_Value"]"
+                                  Value="_dateValue"
                                   ValueChanged="d => _dateValue = d"
                                   Class="tm-filter-value-input" />
                 }
