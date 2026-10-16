@@ -239,6 +239,13 @@
       "description": "Additional CSS class for the root element."
     },
     {
+      "name": "Responsive",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, allows horizontal scrolling for the table view. Defaults to false."
+    },
+    {
       "name": "Appearance",
       "type": "DataTableAppearance",
       "isRequired": false,

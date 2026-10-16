@@ -67,6 +67,11 @@
   border-color: var(--tm-color-primary); 
 }
 
+/* Responsive table scrolling */
+.tm-mvl-table-scroll {
+  overflow-x: auto;
+}
+
 /* Table View */
 .tm-mvl-table { 
   width: 100%; 

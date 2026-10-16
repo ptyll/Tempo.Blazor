@@ -149,7 +149,7 @@
     }
     else
     {
-        <div class="@GetMvlScrollContainerClass()" style="@GetMvlScrollContainerStyle()">
+        <div class="@GetMvlScrollContainerClass() @(Responsive && _viewMode == ListViewMode.Table ? "tm-mvl-table-scroll" : null)" style="@GetMvlScrollContainerStyle()">
             @if (_viewMode == ListViewMode.Table)
             {
                 <table class="tm-mvl-table">
@@ -355,6 +355,9 @@
     [Parameter] public float VirtualListItemHeight { get; set; } = 56f;
 
     // ── Parameters: display ──────────────────────────────────────
+
+    /// <summary>When true, allows horizontal scrolling for the table view. Defaults to false.</summary>
+    [Parameter] public bool Responsive { get; set; }
 
     /// <summary>Surface appearance. Defaults to Card to preserve the current framed look.</summary>
     [Parameter] public DataTableAppearance Appearance { get; set; } = DataTableAppearance.Card;
