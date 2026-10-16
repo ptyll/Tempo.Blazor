@@ -1,0 +1,10 @@
+{
+  "itemName": "CardActivation",
+  "kind": "Enum",
+  "category": "Data Table",
+  "description": "Activation semantics for multi-view list cards.",
+  "values": [
+    {"name":"Button","description":"Cards retain button semantics."},
+    {"name":"StretchedLink","description":"Cards use an inner stretched link."}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "itemName": "TableCellLayout",
+  "kind": "Enum",
+  "category": "Data Table",
+  "description": "Cell content layout for multi-view lists.",
+  "values": [
+    {"name":"Inline","description":"Inline layout."},
+    {"name":"Stacked","description":"Stack cell content."}
+  ]
+}

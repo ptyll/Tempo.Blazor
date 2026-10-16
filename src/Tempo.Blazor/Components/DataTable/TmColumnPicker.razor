@@ -62,6 +62,8 @@
     private bool _open;
     private ElementReference _toggleRef;
 
+    public void Open() => _open = true;
+
     private void ToggleOpen() => _open = !_open;
 
     private Task Toggle(string key) => OnToggleColumn.InvokeAsync(key);

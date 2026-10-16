@@ -19,6 +19,17 @@ public partial class TmDataTable<TItem> : IDisposable
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
 
+    private TmColumnPicker? _columnPicker;
+
+    private async Task OpenColumnMenuAsync()
+    {
+        if (_columnPicker is not null)
+        {
+            _columnPicker.Open();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     // ── Column layout state (pin + width; runtime overrides of column defaults) ──
     private readonly Dictionary<string, int> _columnWidths = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ColumnPin> _columnPins = new(StringComparer.Ordinal);
@@ -37,6 +48,27 @@ public partial class TmDataTable<TItem> : IDisposable
 
     /// <summary>Whether column header controls (pin toggle, resize handle) are shown. Default true.</summary>
     [Parameter] public bool ShowColumnMenu { get; set; } = true;
+
+    /// <summary>Optional column menu button mode. Defaults to None; this does not create an app-shell menu.</summary>
+    [Parameter] public ColumnMenuMode ColumnMenuMode { get; set; } = ColumnMenuMode.None;
+
+    /// <summary>Optional group header content; null preserves the current group label.</summary>
+    [Parameter] public RenderFragment<DataGroup<TItem>>? GroupHeaderTemplate { get; set; }
+
+    /// <summary>Edit action presentation. Defaults to Icons.</summary>
+    [Parameter] public EditActionsMode EditActionsMode { get; set; } = EditActionsMode.Icons;
+
+    /// <summary>When true, requests selected-only export when supported; currently marks scope in markup because the exporter has no safe item-filter hook.</summary>
+    [Parameter] public bool ExportSelectedOnly { get; set; }
+
+    /// <summary>Include active view name in view toggle. Defaults false.</summary>
+    [Parameter] public bool ShowActiveViewName { get; set; }
+
+    /// <summary>Show per-view Set as default actions. Defaults false.</summary>
+    [Parameter] public bool AllowSetDefault { get; set; }
+
+    /// <summary>Raised when a view is requested as default.</summary>
+    [Parameter] public EventCallback<DataTableView> OnSetDefault { get; set; }
 
     // ── Inline edit state ─────────────────────────────────────────
     private TItem? _editingItem;
@@ -758,6 +790,7 @@ public partial class TmDataTable<TItem> : IDisposable
     [Parameter] public DataTableMobileLayout MobileLayout { get; set; } = DataTableMobileLayout.None;
 
     private bool IsCardLayout => MobileLayout == DataTableMobileLayout.None ? CardMode : MobileLayout == DataTableMobileLayout.Cards;
+    private EditActionsMode EffectiveEditActionsMode => IsCardLayout ? EditActionsMode.Text : EditActionsMode;
     private bool IsResponsiveScroll => MobileLayout == DataTableMobileLayout.Scroll;
     private bool IsMobilePinned(TmDataTableColumn<TItem> col) => IsResponsiveScroll &&
         (col.MobilePinned || (!_visibleColumns.Any(c => c.MobilePinned) && ReferenceEquals(col, _visibleColumns.FirstOrDefault())));
@@ -2192,17 +2225,21 @@ public partial class TmDataTable<TItem> : IDisposable
             builder.CloseComponent();
             builder.CloseElement(); // button
 
-            // Group label
-            builder.OpenElement(seq++, "span");
-            builder.AddAttribute(seq++, "class", "tm-data-table-group-label");
-            builder.AddContent(seq++, g.DisplayValue);
-            builder.CloseElement(); // span
-
-            // Count
-            builder.OpenElement(seq++, "span");
-            builder.AddAttribute(seq++, "class", "tm-data-table-group-count");
-            builder.AddContent(seq++, $"({g.Count})");
-            builder.CloseElement(); // span
+            if (GroupHeaderTemplate is not null)
+            {
+                builder.AddContent(seq++, GroupHeaderTemplate(g));
+            }
+            else
+            {
+                builder.OpenElement(seq++, "span");
+                builder.AddAttribute(seq++, "class", "tm-data-table-group-label");
+                builder.AddContent(seq++, g.DisplayValue);
+                builder.CloseElement();
+                builder.OpenElement(seq++, "span");
+                builder.AddAttribute(seq++, "class", "tm-data-table-group-count");
+                builder.AddContent(seq++, $"({g.Count})");
+                builder.CloseElement();
+            }
 
             builder.CloseElement(); // td
             builder.CloseElement(); // tr

@@ -51,6 +51,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "ShowResultPreview",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Show a localized placeholder result preview; does not compute matching records."
     }
   ],
   "cssClasses": [

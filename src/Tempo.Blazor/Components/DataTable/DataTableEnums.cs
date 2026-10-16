@@ -104,11 +104,45 @@ public enum DataToolbarMode
     ContentOnly
 }
 
-/// <summary>
-/// Surface of a data table or multi-view list.
-/// <see cref="Plain"/> is the default and keeps today's markup.
-/// <see cref="Card"/> opts into the card radius, shadow and border.
-/// </summary>
+/// <summary>Column-menu affordance mode for a data table.</summary>
+/// <summary>Column-menu affordance mode for a data table.</summary>
+public enum ColumnMenuMode
+{
+    /// <summary>Render no extra column menu button.</summary>
+    None,
+    /// <summary>Render an accessible column menu button.</summary>
+    Menu
+}
+
+/// <summary>Presentation of inline row edit actions.</summary>
+public enum EditActionsMode
+{
+    /// <summary>Icon actions, preserving current markup.</summary>
+    Icons,
+    /// <summary>Localized text buttons.</summary>
+    Text,
+    /// <summary>Actions in a separate footer row.</summary>
+    Footer
+}
+
+/// <summary>Activation semantics for multi-view list cards.</summary>
+public enum CardActivation
+{
+    /// <summary>Cards retain button semantics.</summary>
+    Button,
+    /// <summary>Cards use an inner stretched link.</summary>
+    StretchedLink
+}
+
+/// <summary>Cell content layout for multi-view lists.</summary>
+public enum TableCellLayout
+{
+    /// <summary>Inline layout.</summary>
+    Inline,
+    /// <summary>Stack cell content.</summary>
+    Stacked
+}
+
 public enum DataTableAppearance
 {
     /// <summary>Today's flat surface. No card class.</summary>

@@ -358,6 +358,32 @@
       "isRequired": true,
       "editorRequired": true,
       "description": "Unique identifier for this list instance. Used to scope saved views to specific lists (e.g. \"projects\", \"team-members\")."
+    },
+    {
+      "name": "CardActivation",
+      "type": "CardActivation",
+      "isRequired": false,
+      "default": "Button",
+      "description": "Opt-in CardActivation behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "GroupHeaderTemplate",
+      "type": "RenderFragment<DataGroup<TItem>>?",
+      "isRequired": false,
+      "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "StatusVariantField",
+      "type": "Func<TItem, BadgeVariant>?",
+      "isRequired": false,
+      "description": "Opt-in StatusVariantField behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "TableCellLayout",
+      "type": "TableCellLayout",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "Opt-in TableCellLayout behavior; defaults preserve the existing presentation."
     }
   ],
   "cssClasses": [

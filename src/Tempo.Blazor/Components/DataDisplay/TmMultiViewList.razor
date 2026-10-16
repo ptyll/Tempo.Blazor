@@ -310,6 +310,18 @@
     /// <summary>Maps an item to its status badge CSS color.</summary>
     [Parameter] public Func<TItem, string?>? StatusColorField { get; set; }
 
+    /// <summary>Maps an item to a badge variant when no explicit status color is supplied.</summary>
+    [Parameter] public Func<TItem, Tempo.Blazor.Components.DataDisplay.BadgeVariant>? StatusVariantField { get; set; }
+
+    /// <summary>Cell layout in table mode. Inline preserves current markup.</summary>
+    [Parameter] public TableCellLayout TableCellLayout { get; set; } = TableCellLayout.Inline;
+
+    /// <summary>Group header content; null preserves the existing group label.</summary>
+    [Parameter] public RenderFragment<DataGroup<TItem>>? GroupHeaderTemplate { get; set; }
+
+    /// <summary>Card activation semantics. Defaults to Button.</summary>
+    [Parameter] public CardActivation CardActivation { get; set; } = CardActivation.Button;
+
     /// <summary>Maps an item to its date value.</summary>
     [Parameter] public Func<TItem, DateTimeOffset?>? DateField { get; set; }
 
@@ -640,6 +652,8 @@
     // ink; any other color syntax falls back to inverse ink. Mid-luminance
     // backgrounds (where neither ink reaches 4.5:1) remain the caller's
     // responsibility.
+    private BadgeVariant GetStatusVariant(TItem item) => StatusVariantField?.Invoke(item) ?? BadgeVariant.Default;
+
     private string? GetStatusStyle(TItem item)
     {
         if (GetStatusColor(item) is not { } c) return null;
@@ -1175,14 +1189,18 @@
 
             <tr class="tm-mvl-group-row tm-mvl-group-level-@level">
                 <td colspan="@MvlColSpan">
-                    <button type="button" class="tm-mvl-group-toggle"
-                            aria-expanded="@(expanded ? "true" : "false")"
-                            aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc[expanded ? "TmDataTable_CollapseGroup" : "TmDataTable_ExpandGroup"], group.DisplayValue ?? group.Key)"
-                            @onclick="() => ToggleGroupExpansion(groupKey)">
+                    <button type="button" class="tm-mvl-group-toggle" aria-expanded="@(expanded ? "true" : "false")" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc[expanded ? "TmDataTable_CollapseGroup" : "TmDataTable_ExpandGroup"], group.DisplayValue ?? group.Key)" @onclick="() => ToggleGroupExpansion(groupKey)">
                         <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" Class="@(expanded ? "tm-data-table-group-chevron tm-data-table-group-chevron--open" : "tm-data-table-group-chevron")" />
                     </button>
-                    <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
-                    <span class="tm-mvl-group-count">(@group.Count)</span>
+                    @if (GroupHeaderTemplate is null)
+                    {
+                        <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
+                        <span class="tm-mvl-group-count">(@group.Count)</span>
+                    }
+                    else
+                    {
+                        @GroupHeaderTemplate(group)
+                    }
                 </td>
             </tr>
 
@@ -1230,7 +1248,7 @@
     {
         var selected = AllowSelection && IsSelected(item);
         var dragging = IsDragging(item);
-        <tr class="tm-mvl-row @(selected ? "tm-mvl-row--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
+        <tr class="tm-mvl-row @(TableCellLayout == TableCellLayout.Stacked ? "tm-mvl-cell--stacked" : null) @(selected ? "tm-mvl-row--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
             aria-selected="@(AllowSelection ? selected.ToString().ToLowerInvariant() : null)"
             tabindex="0"
             draggable="@(AllowDrag ? "true" : "false")"
@@ -1261,9 +1279,9 @@
                     <td>
                         @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
                         {
-                            <span class="tm-mvl-status" style="@GetStatusStyle(item)">
+                            <TmBadge Variant="@(GetStatusColor(item) is null ? GetStatusVariant(item) : BadgeVariant.Default)" Class="tm-mvl-status" AdditionalAttributes="@(GetStatusStyle(item) is string css ? new Dictionary<string, object> { ["style"] = css } : null)">
                                 @GetStatusLabel(item)
-                            </span>
+                            </TmBadge>
                         }
                     </td>
                 }
@@ -1376,13 +1394,17 @@
         var selected = AllowSelection && IsSelected(item);
         var dragging = IsDragging(item);
         <div class="tm-mvl-card @(selected ? "tm-mvl-card--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
-             role="button" tabindex="0"
+             role="@(CardActivation == CardActivation.Button ? "button" : null)" tabindex="0"
              draggable="@(AllowDrag ? "true" : "false")"
              @onclick="() => OnItemClick.InvokeAsync(item)"
              @onkeydown="e => HandleItemKeyDownAsync(e, item)"
              @onkeyup="e => HandleItemKeyUpAsync(e, item)"
              @ondragstart="() => HandleDragStartAsync(item)"
              @ondragend="HandleDragEnd">
+            @if (CardActivation == CardActivation.StretchedLink)
+            {
+                <a class="tm-stretched-link" href="#" aria-label="@GetTitle(item)" @onclick:preventDefault @onclick:stopPropagation @onclick="() => OnItemClick.InvokeAsync(item)"></a>
+            }
             @if (CardTemplate is not null)
             {
                 @if (AllowSelection)
@@ -1430,9 +1452,7 @@
                     }
                     @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
                     {
-                        <span class="tm-mvl-status" style="@GetStatusStyle(item)">
-                            @GetStatusLabel(item)
-                        </span>
+                        <TmBadge Variant="@(GetStatusColor(item) is null ? GetStatusVariant(item) : BadgeVariant.Default)" Class="tm-mvl-status" AdditionalAttributes="@(GetStatusStyle(item) is string css ? new Dictionary<string, object> { ["style"] = css } : null)">@GetStatusLabel(item)</TmBadge>
                     }
                 </div>
             }
@@ -1481,9 +1501,7 @@
                 </div>
                 @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
                 {
-                    <span class="tm-mvl-status" style="@GetStatusStyle(item)">
-                        @GetStatusLabel(item)
-                    </span>
+                    <TmBadge Variant="@(GetStatusColor(item) is null ? GetStatusVariant(item) : BadgeVariant.Default)" Class="tm-mvl-status" AdditionalAttributes="@(GetStatusStyle(item) is string css ? new Dictionary<string, object> { ["style"] = css } : null)">@GetStatusLabel(item)</TmBadge>
                 }
             }
         </li>

@@ -34,9 +34,13 @@
 
             @* Right: Actions (column picker, view manager) *@
             <div class="tm-data-table-toolbar-right">
+                @if (ColumnMenuMode == ColumnMenuMode.Menu)
+                {
+                    <button type="button" aria-label="@Loc["TmDataTable_ColumnMenu"]" aria-haspopup="dialog" @onclick="OpenColumnMenuAsync"></button>
+                }
                 @if (ShouldRenderColumnPicker())
                 {
-                    <TmColumnPicker Columns="@GetColumnVisibilityItems()"
+                    <TmColumnPicker @ref="_columnPicker" Columns="@GetColumnVisibilityItems()"
                                     OnToggleColumn="OnToggleColumnAsync"
                                     OnReset="OnResetColumnsAsync" />
                 }
@@ -44,6 +48,9 @@
                 {
                     <TmViewManager Provider="ViewProvider"
                                    ViewContext="@ViewContext"
+                                   ShowActiveViewName="@ShowActiveViewName"
+                                   AllowSetDefault="@AllowSetDefault"
+                                   OnSetDefault="@OnSetDefault"
                                    OnViewApplied="ApplyViewAsync"
                                    GetCurrentView="GetCurrentView"
                                    GetCurrentFilters="() => _externalFilters"
@@ -57,7 +64,7 @@
                 }
                 @if (ShouldRenderExport())
                 {
-                    <div class="tm-data-table__export">
+                    <div class="tm-data-table__export" data-export-scope="@(ExportSelectedOnly ? "selected" : "all")">
                         <TmDropdown Text="@(_isExporting ? Loc["TmDataTable_Exporting"] : Loc["TmDataTable_Export"])"
                                     Icon="@IconNames.Download"
                                     OutlineTrigger="true"
@@ -490,27 +497,36 @@
                                     }
                                     @if (HasEditActions)
                                     {
-                                        <td class="tm-data-table__edit-actions @(IsCardLayout ? "tm-data-table__edit-actions--card-footer" : null)">
-                                            @RowEditValidator
-                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save"
-                                                    aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]"
-                                                    data-testid="@TestId("edit-commit")"
-                                                    @onkeydown:stopPropagation="true"
-                                                    @onclick:stopPropagation="true"
-                                                    @onclick="CommitEditAsync">
-                                                <TmIcon Name="save" />
-                                            </button>
-                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel"
-                                                    aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]"
-                                                    data-testid="@TestId("edit-cancel")"
-                                                    @onkeydown:stopPropagation="true"
-                                                    @onclick:stopPropagation="true"
-                                                    @onclick="CancelEditAsync">
-                                                <TmIcon Name="x" />
-                                            </button>
-                                        </td>
+                                        @if (EffectiveEditActionsMode != EditActionsMode.Footer)
+                                        {
+                                            <td class="tm-data-table__edit-actions @(IsCardLayout ? "tm-data-table__edit-actions--card-footer" : null)">
+                                                @RowEditValidator
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save"
+                                                        aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]"
+                                                        data-testid="@TestId("edit-commit")"
+                                                        @onkeydown:stopPropagation="true" @onclick:stopPropagation="true" @onclick="CommitEditAsync">
+                                                    @if (EffectiveEditActionsMode == EditActionsMode.Text) { @Loc["TmDataTable_SaveRow"] } else { <TmIcon Name="save" /> }
+                                                </button>
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel"
+                                                        aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]"
+                                                        data-testid="@TestId("edit-cancel")"
+                                                        @onkeydown:stopPropagation="true" @onclick:stopPropagation="true" @onclick="CancelEditAsync">
+                                                    @if (EffectiveEditActionsMode == EditActionsMode.Text) { @Loc["TmDataTable_CancelEdit"] } else { <TmIcon Name="x" /> }
+                                                </button>
+                                            </td>
+                                        }
                                     }
                                 </tr>
+                                @if (HasEditActions && EffectiveEditActionsMode == EditActionsMode.Footer)
+                                {
+                                    <tr class="tm-data-table-row--edit-footer">
+                                        <td colspan="@ColSpan">
+                                            @RowEditValidator
+                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save" aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]" data-testid="@TestId("edit-commit")" @onclick="CommitEditAsync"><TmIcon Name="save" /> @Loc["TmDataTable_SaveRow"]</button>
+                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel" aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]" data-testid="@TestId("edit-cancel")" @onclick="CancelEditAsync"><TmIcon Name="x" /> @Loc["TmDataTable_CancelEdit"]</button>
+                                        </td>
+                                    </tr>
+                                }
                                 @if (_editHasErrors)
                                 {
                                     <tr class="tm-data-table-row--validation">

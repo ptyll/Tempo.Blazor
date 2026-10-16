@@ -12,6 +12,15 @@ namespace Tempo.Blazor.Components.DataTable;
 /// </summary>
 public partial class TmViewManager : ComponentBase
 {
+    /// <summary>When true, show the active view name beside the view toggle icon.</summary>
+    [Parameter] public bool ShowActiveViewName { get; set; }
+
+    /// <summary>When true, show Set as default actions. Changes persist only when OnSetDefault has a consumer.</summary>
+    [Parameter] public bool AllowSetDefault { get; set; }
+
+    /// <summary>Raised when the user requests that a view become the default.</summary>
+    [Parameter] public EventCallback<DataTableView> OnSetDefault { get; set; }
+
     /// <summary>Data provider for views.</summary>
     [Parameter, EditorRequired] public IDataTableViewProvider Provider { get; set; } = default!;
 
@@ -119,6 +128,8 @@ public partial class TmViewManager : ComponentBase
     {
         _isOpen = false;
     }
+
+    private Task RequestSetDefaultAsync(DataTableView view) => OnSetDefault.HasDelegate ? OnSetDefault.InvokeAsync(view) : Task.CompletedTask;
 
     private async Task ApplyViewAsync(DataTableView view)
     {

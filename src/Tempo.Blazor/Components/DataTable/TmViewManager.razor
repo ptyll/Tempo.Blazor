@@ -7,7 +7,7 @@
     <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline tm-view-manager-toggle"
             aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
-        <span>@(Loc["TmViewManager_Views"])</span>
+        <span>@(ShowActiveViewName && _activeView is not null ? _activeView.Name : Loc["TmViewManager_Views"])</span>
         <TmIcon Name="chevron-down" />
     </button>
 
@@ -43,6 +43,10 @@
                                     <span class="tm-view-item-badge">★</span>
                                 }
                             </button>
+                            @if (AllowSetDefault && !view.IsDefault)
+                            {
+                                <button type="button" aria-label="@Loc["TmViewManager_SetDefault"]" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                            }
                             @if (CanEditView(view))
                             {
                                 <button type="button" class="tm-view-edit-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_EditNamed"], view.Name)" @onclick="() => OpenEditModal(view)">
@@ -86,7 +90,11 @@
                                         <span class="tm-view-item-badge">★</span>
                                     }
                                 </button>
-                                @if (CanEditView(view))
+                                @if (AllowSetDefault && !view.IsDefault)
+                            {
+                                <button type="button" aria-label="@Loc["TmViewManager_SetDefault"]" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                            }
+                            @if (CanEditView(view))
                                 {
                                     <button type="button" class="tm-view-edit-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_EditNamed"], view.Name)" @onclick="() => OpenEditModal(view)">
                                         <TmIcon Name="edit" Size="IconSize.Sm" />

@@ -431,6 +431,53 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the wrapper div."
+    },
+    {
+      "name": "AllowSetDefault",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "ColumnMenuMode",
+      "type": "ColumnMenuMode",
+      "isRequired": false,
+      "default": "None",
+      "description": "Opt-in ColumnMenuMode behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "EditActionsMode",
+      "type": "EditActionsMode",
+      "isRequired": false,
+      "default": "Icons",
+      "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "ExportSelectedOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in ExportSelectedOnly behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "GroupHeaderTemplate",
+      "type": "RenderFragment<DataGroup<TItem>>?",
+      "isRequired": false,
+      "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "OnSetDefault",
+      "type": "EventCallback<DataTableView>",
+      "isRequired": false,
+      "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "ShowActiveViewName",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation."
     }
   ],
   "cssClasses": [

@@ -89,6 +89,26 @@
       "type": "string?",
       "isRequired": false,
       "description": "Current tenant identifier."
+    },
+    {
+      "name": "AllowSetDefault",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "OnSetDefault",
+      "type": "EventCallback<DataTableView>",
+      "isRequired": false,
+      "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+    },
+    {
+      "name": "ShowActiveViewName",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation."
     }
   ],
   "cssClasses": [

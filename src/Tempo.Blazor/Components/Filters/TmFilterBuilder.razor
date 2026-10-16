@@ -27,6 +27,11 @@
         @Loc["TmFilterBuilder_AddFilter"]
     </button>
 
+    @if (ShowResultPreview)
+    {
+        <div class="tm-filter-result-preview">@Loc["TmFilterBuilder_ResultPreview"]</div>
+    }
+
     @* Field picker *@
     @if (_showFieldPicker && _editingFilter is null)
     {
@@ -122,6 +127,9 @@
 
     /// <summary>Fires whenever the filter list changes.</summary>
     [Parameter] public EventCallback<IReadOnlyList<ActiveFilter>> OnFiltersChanged { get; set; }
+
+    /// <summary>Show a localized placeholder result preview; does not compute matching records.</summary>
+    [Parameter] public bool ShowResultPreview { get; set; }
 
     /// <summary>Show the "Clear all" button when filters are active.</summary>
     [Parameter] public bool ShowClearAll { get; set; } = true;

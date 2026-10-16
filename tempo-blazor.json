@@ -4310,6 +4310,26 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "CardActivation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Activation semantics for multi-view list cards.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Button",
+          "description": "Cards retain button semantics."
+        },
+        {
+          "name": "StretchedLink",
+          "description": "Cards use an inner stretched link."
+        }
+      ]
+    },
+    {
       "itemName": "CardVariant",
       "kind": "Enum",
       "category": "Components",
@@ -4494,6 +4514,26 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ColumnMenuMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Column-menu affordance mode for a data table.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "None",
+          "description": "Render no extra column menu button."
+        },
+        {
+          "name": "Menu",
+          "description": "Render an accessible column menu button."
+        }
+      ]
     },
     {
       "itemName": "ColumnVisibilityItem",
@@ -4829,6 +4869,30 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Layout/DrawerPosition.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "EditActionsMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Presentation of inline row edit actions.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Icons",
+          "description": "Icon actions, preserving current markup."
+        },
+        {
+          "name": "Text",
+          "description": "Localized text buttons."
+        },
+        {
+          "name": "Footer",
+          "description": "Actions in a separate footer row."
+        }
+      ]
     },
     {
       "itemName": "EditorCommands",
@@ -6505,6 +6569,26 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Workflow/StepperEnums.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TableCellLayout",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Cell content layout for multi-view lists.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Inline",
+          "description": "Inline layout."
+        },
+        {
+          "name": "Stacked",
+          "description": "Stack cell content."
+        }
+      ]
     },
     {
       "itemName": "TabVariant",
@@ -8465,6 +8549,13 @@
           "description": "Maps an item to its avatar/thumbnail URL."
         },
         {
+          "name": "CardActivation",
+          "type": "CardActivation",
+          "isRequired": false,
+          "default": "CardActivation.Button",
+          "description": "Opt-in CardActivation behavior; defaults preserve the existing presentation."
+        },
+        {
           "name": "CardTemplate",
           "type": "RenderFragment<TItem>?",
           "isRequired": false,
@@ -8531,6 +8622,12 @@
           "type": "IReadOnlyList<GroupFieldDefinition<TItem>>?",
           "isRequired": false,
           "description": "Fields available for grouping in the dropdown picker."
+        },
+        {
+          "name": "GroupHeaderTemplate",
+          "type": "RenderFragment<DataGroup<TItem>>?",
+          "isRequired": false,
+          "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
         },
         {
           "name": "GroupsCollapsedByDefault",
@@ -8687,10 +8784,23 @@
           "description": "Maps an item to its status label text."
         },
         {
+          "name": "StatusVariantField",
+          "type": "Func<TItem, Tempo.Blazor.Components.DataDisplay.BadgeVariant>?",
+          "isRequired": false,
+          "description": "Opt-in StatusVariantField behavior; defaults preserve the existing presentation."
+        },
+        {
           "name": "SubTitleField",
           "type": "Func<TItem, string?>?",
           "isRequired": false,
           "description": "Maps an item to its secondary text."
+        },
+        {
+          "name": "TableCellLayout",
+          "type": "TableCellLayout",
+          "isRequired": false,
+          "default": "TableCellLayout.Inline",
+          "description": "Opt-in TableCellLayout behavior; defaults preserve the existing presentation."
         },
         {
           "name": "TableRowTemplate",
@@ -9138,6 +9248,13 @@
       ],
       "parameters": [
         {
+          "name": "AllowSetDefault",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation.",
+          "default": "false"
+        },
+        {
           "name": "Appearance",
           "type": "DataTableAppearance",
           "isRequired": false,
@@ -9161,6 +9278,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class applied to the wrapper div."
+        },
+        {
+          "name": "ColumnMenuMode",
+          "type": "ColumnMenuMode",
+          "isRequired": false,
+          "default": "ColumnMenuMode.None",
+          "description": "Opt-in ColumnMenuMode behavior; defaults preserve the existing presentation."
         },
         {
           "name": "CsvDelimiter",
@@ -9226,10 +9350,24 @@
           "description": "Enables inline row editing (double-click a row). Requires editable columns with EditTemplate."
         },
         {
+          "name": "EditActionsMode",
+          "type": "EditActionsMode",
+          "isRequired": false,
+          "default": "EditActionsMode.Icons",
+          "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
+        },
+        {
           "name": "EmptyTitle",
           "type": "string?",
           "isRequired": false,
           "description": "Heading shown in the empty state when no items are available."
+        },
+        {
+          "name": "ExportSelectedOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in ExportSelectedOnly behavior; defaults preserve the existing presentation.",
+          "default": "false"
         },
         {
           "name": "ExternalFilterDefinitions",
@@ -9237,6 +9375,12 @@
           "isRequired": false,
           "default": "[]",
           "description": "Filter definitions for the inline external filter builder (shown above the table when ViewProvider is set). When the page owns filtering, leave this empty and set ShowExternalFilterBuilder to false or use ToolbarMode = ContentOnly."
+        },
+        {
+          "name": "GroupHeaderTemplate",
+          "type": "RenderFragment<DataGroup<TItem>>?",
+          "isRequired": false,
+          "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
         },
         {
           "name": "GroupsCollapsedByDefault",
@@ -9344,6 +9488,12 @@
           "description": "Fires when the selection changes."
         },
         {
+          "name": "OnSetDefault",
+          "type": "EventCallback<DataTableView>",
+          "isRequired": false,
+          "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+        },
+        {
           "name": "PageSize",
           "type": "int?",
           "isRequired": false,
@@ -9428,6 +9578,13 @@
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Render fragment shown in the selection action bar (bulk actions)."
+        },
+        {
+          "name": "ShowActiveViewName",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation.",
+          "default": "false"
         },
         {
           "name": "ShowColumnMenu",
@@ -10221,6 +10378,13 @@
       ],
       "parameters": [
         {
+          "name": "AllowSetDefault",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation.",
+          "default": "false"
+        },
+        {
           "name": "AvailableColumns",
           "type": "List<ViewColumnInfo>",
           "isRequired": false,
@@ -10285,6 +10449,12 @@
           "description": "Callback when creating a new view."
         },
         {
+          "name": "OnSetDefault",
+          "type": "EventCallback<DataTableView>",
+          "isRequired": false,
+          "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+        },
+        {
           "name": "OnViewApplied",
           "type": "EventCallback<DataTableView>",
           "isRequired": false,
@@ -10296,6 +10466,13 @@
           "isRequired": true,
           "description": "Data provider for views.",
           "editorRequired": true
+        },
+        {
+          "name": "ShowActiveViewName",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation.",
+          "default": "false"
         },
         {
           "name": "ViewContext",
@@ -12883,6 +13060,13 @@
           "isRequired": false,
           "default": "true",
           "description": "Show the \"Clear all\" button when filters are active."
+        },
+        {
+          "name": "ShowResultPreview",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Show a localized placeholder result preview; does not compute matching records.",
+          "default": "false"
         }
       ],
       "cssClasses": [
@@ -27602,11 +27786,11 @@
     }
   ],
   "summary": {
-    "itemCount": 381,
-    "manualItemCount": 381,
-    "generatedItemCount": 373,
+    "itemCount": 385,
+    "manualItemCount": 385,
+    "generatedItemCount": 377,
     "generatedOnlyItemCount": 0,
     "componentCount": 203,
-    "publicApiTypeCount": 170
+    "publicApiTypeCount": 174
   }
 }
