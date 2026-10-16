@@ -1,5 +1,5 @@
 {
-  "count": 5354,
+  "count": 5352,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -3277,8 +3277,6 @@
     "undefined-token|src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css|--tm-surface-2": 1,
     "undefined-token|src/Tempo.Blazor/Components/Toolbar/TmFormActionBar.razor.css|--tm-form-action-bar-inset-inline-end": 2,
     "undefined-token|src/Tempo.Blazor/Components/Toolbar/TmFormActionBar.razor.css|--tm-form-action-bar-z-index": 3,
-    "undefined-token|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|--tm-data-table-cell-px": 1,
-    "undefined-token|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|--tm-data-table-cell-py": 1,
     "white-on-primary|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|.tm-wysiwyg--show-blocks .tm-wysiwyg-block::before": 1,
     "white-on-primary|src/Tempo.Blazor.DocumentEditor/wwwroot/css/components/_document-editor.css|.tm-wysiwyg-remote-cursor__label": 1,
     "white-on-primary|src/Tempo.Blazor.Maps/wwwroot/css/components/_map.css|.tm-map__cluster": 1,
