@@ -68,8 +68,8 @@ public class TmDiagramEditorPageTabsTests : DiagramTestBase
 
         // Close the middle tab (Page 2)
         var closeButtons = tabs[1].QuerySelectorAll(".tm-diagram-editor__page-tab-close");
-        // The last button in the tab is the close (×) button
-        var closeBtn = closeButtons.LastOrDefault(b => b.TextContent.Trim() == "✕");
+        // The close action is the last button in the tab (the duplicate button comes first)
+        var closeBtn = closeButtons.LastOrDefault();
         closeBtn.Should().NotBeNull();
         closeBtn!.Click();
 

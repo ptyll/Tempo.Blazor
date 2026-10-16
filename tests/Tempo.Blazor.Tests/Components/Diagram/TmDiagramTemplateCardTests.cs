@@ -87,4 +87,53 @@ public class TmDiagramTemplateCardTests : DiagramTestBase
 
         clicked.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task EnterKey_And_Space_SelectCard()
+    {
+        var clicks = 0;
+        var template = new DiagramTemplate { Id = "t1", Name = "Blank", Category = "General" };
+
+        var cut = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, false)
+            .Add(p => p.OnClick, () => clicks++));
+
+        var card = cut.Find(".tm-diagram-template-card");
+
+        // Enter activates on keydown (guarded against auto-repeat)
+        await cut.InvokeAsync(() => card.KeyDown("Enter"));
+        clicks.Should().Be(1, "Enter must select the card exactly once");
+
+        // A held Enter key auto-repeats and must not re-select
+        await cut.InvokeAsync(() => card.KeyDown("Enter", true));
+        clicks.Should().Be(1, "auto-repeat Enter must not re-select the card");
+
+        // Space emulates the native button split: activation on keyup
+        await cut.InvokeAsync(() =>
+        {
+            card.KeyDown(" ");
+            card.KeyUp(" ");
+        });
+        clicks.Should().Be(2, "Space must select the card exactly once per press");
+
+        // The div role=button is not native: there must be no separate click invocation
+        // stacked behind the emulated key activation (exactly-one-activation rule).
+    }
+
+    [Fact]
+    public void AriaPressed_RendersTrueFalseLowercase()
+    {
+        var template = new DiagramTemplate { Id = "t1", Name = "Blank", Category = "General" };
+
+        var unselected = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, false));
+        var selected = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, true));
+
+        unselected.Find(".tm-diagram-template-card").GetAttribute("aria-pressed").Should().Be("false");
+        selected.Find(".tm-diagram-template-card").GetAttribute("aria-pressed").Should().Be("true");
+    }
 }

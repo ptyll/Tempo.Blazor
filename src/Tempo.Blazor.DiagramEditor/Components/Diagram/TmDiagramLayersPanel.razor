@@ -1,8 +1,9 @@
 @namespace Tempo.Blazor.Components.Diagram
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.Diagram.Commands
 @using Tempo.Blazor.Components.Diagram.Models
 
-<div class="tm-diagram-layers @Class" data-collapsed="@_collapsed">
+<div class="tm-diagram-layers @Class" data-collapsed="@_collapsed" data-testid="@RootTestId("diagram-layers")">
     <button type="button" class="tm-diagram-layers__toggle" @onclick="ToggleCollapse"
             aria-label="@Loc["TmDiagramLayers_Toggle"]" title="@Loc["TmDiagramLayers_Toggle"]">
         <TmIcon Name="@(_collapsed ? IconNames.ChevronLeft : IconNames.ChevronRight)" />
@@ -20,13 +21,12 @@
             </button>
         </div>
 
-        <div class="tm-diagram-layers__list" role="list" aria-label="@Loc["TmDiagramLayers_Title"]">
+        <div class="tm-diagram-layers__list" role="radiogroup" aria-label="@Loc["TmDiagramLayers_Title"]">
             @foreach (var layer in SortedLayers)
             {
                 var isActive = ActiveLayerId == layer.Id;
                 var isEditing = _editingLayerId == layer.Id;
-                <div class="tm-diagram-layers__item"
-                     role="listitem"
+                <div class="tm-diagram-layers__item @(isActive ? "tm-diagram-layers__item--active" : "") @(_dragOverLayerId == layer.Id ? "tm-diagram-layers__item--drag-over" : "")"
                      data-layer-id="@layer.Id"
                      draggable="true"
                      @ondragstart="e => OnDragStart(e, layer.Id)"
@@ -42,18 +42,13 @@
 
                     <button type="button"
                             class="tm-diagram-layers__active @(_defaultLayerId == layer.Id ? "tm-diagram-layers__active--default" : "")"
+                            role="radio"
+                            aria-checked="@(isActive ? "true" : "false")"
                             aria-label="@Loc["TmDiagramLayers_SetActive"]"
                             title="@Loc["TmDiagramLayers_SetActive"]"
                             @onclick="() => OnSetActive(layer.Id)"
                             disabled="@ReadOnly">
-                        @if (isActive)
-                        {
-                            <span class="tm-diagram-layers__radio tm-diagram-layers__radio--checked"></span>
-                        }
-                        else
-                        {
-                            <span class="tm-diagram-layers__radio"></span>
-                        }
+                        <span class="tm-diagram-layers__radio @(isActive ? "tm-diagram-layers__radio--checked" : "")"></span>
                     </button>
 
                     <button type="button"
@@ -79,6 +74,7 @@
                         <input class="tm-diagram-layers__name-input"
                                type="text"
                                value="@_editName"
+                               aria-label="@Loc["TmDiagramLayers_Rename"]"
                                @oninput="e => _editName = e.Value?.ToString() ?? _editName"
                                @onkeydown="e => OnNameKeyDown(e, layer)"
                                @onblur="() => OnNameBlur(layer)"
@@ -87,7 +83,11 @@
                     else
                     {
                         <span class="tm-diagram-layers__name"
+                              tabindex="0"
+                              role="button"
                               @ondblclick="() => OnStartEdit(layer)"
+                              @onkeydown="e => OnNameKeyDown(e, layer)"
+                              @onkeyup="e => OnNameKeyUp(e, layer)"
                               title="@Loc["TmDiagramLayers_DoubleClickToEdit"]">
                             @layer.Name
                         </span>
@@ -111,8 +111,9 @@
         @if (SelectedNodes.Count > 0 && !ReadOnly)
         {
             <div class="tm-diagram-layers__move-section">
-                <label class="tm-diagram-layers__move-label">@Loc["TmDiagramLayers_MoveToLayer"]</label>
+                <label class="tm-diagram-layers__move-label" for="@_moveSelectId">@Loc["TmDiagramLayers_MoveToLayer"]</label>
                 <TmSelect TValue="string"
+                          Id="@_moveSelectId"
                           Value="_moveTargetLayerId"
                           ValueChanged="OnMoveNodesToLayer"
                           Options="MoveLayerOptions"

@@ -53,12 +53,12 @@
                         }
                         @if (!IsReadOnly)
                         {
-                            <button class="tm-diagram-editor__page-tab-close"
+                            <button class="tm-diagram-editor__page-tab-duplicate"
                                     aria-label="@Loc["TmDiagramEditor_DuplicatePage"]"
                                     title="@Loc["TmDiagramEditor_DuplicatePage"]"
                                     @onclick:stopPropagation
                                     @onclick="() => DuplicatePage(pg.Id)">
-                                ⧉
+                                <TmIcon Name="@DiagramEditorIconNames.Duplicate" Size="IconSize.Xs" />
                             </button>
                             @if (_document.Pages.Count > 1)
                             {
@@ -67,7 +67,7 @@
                                         title="@Loc["TmDiagramEditor_ClosePage", pg.Name]"
                                         @onclick:stopPropagation
                                         @onclick="() => RemovePage(pg.Id)">
-                                    ✕
+                                    <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
                                 </button>
                             }
                         }
@@ -80,7 +80,7 @@
                         aria-label="@Loc["TmDiagramEditor_AddPage"]"
                         title="@Loc["TmDiagramEditor_AddPage"]"
                         @onclick="AddPage">
-                    +
+                    <TmIcon Name="@IconNames.Plus" Size="IconSize.Xs" />
                 </button>
             }
         }
@@ -146,7 +146,7 @@
                                          Tooltip="@Loc["TmDiagramEditor_Paste"]"
                                          Disabled="@IsReadOnly"
                                          OnClick="OnPasteClicked" />
-                        <TmToolbarButton Icon="@IconNames.Copy"
+                        <TmToolbarButton Icon="@DiagramEditorIconNames.Duplicate"
                                          Tooltip="@Loc["TmDiagramEditor_Duplicate"]"
                                          Disabled="@(_selectedIds.Length == 0 || IsReadOnly)"
                                          OnClick="OnDuplicateClicked" />
@@ -186,7 +186,7 @@
                                          Tooltip="@Loc["TmDiagramEditor_CopyStyle"]"
                                          Disabled="@IsReadOnly"
                                          OnClick="OnCopyStyle" />
-                        <TmToolbarButton Icon="@IconNames.Brush"
+                        <TmToolbarButton Icon="@IconNames.Paintbrush"
                                          Tooltip="@Loc["TmDiagramEditor_PasteStyle"]"
                                          Disabled="@IsReadOnly"
                                          OnClick="OnPasteStyle" />
@@ -226,9 +226,9 @@
                             <TmDropdownItem Value="align-center" Icon="@IconNames.AlignCenter">@Loc["TmDiagramProperties_AlignCenter"]</TmDropdownItem>
                             <TmDropdownItem Value="align-right" Icon="@IconNames.AlignRight">@Loc["TmDiagramProperties_AlignRight"]</TmDropdownItem>
                             <div class="tm-dropdown-sep" role="separator"></div>
-                            <TmDropdownItem Value="align-top" Icon="@IconNames.AlignLeft">@Loc["TmDiagramProperties_AlignTop"]</TmDropdownItem>
-                            <TmDropdownItem Value="align-middle" Icon="@IconNames.AlignCenter">@Loc["TmDiagramProperties_AlignMiddle"]</TmDropdownItem>
-                            <TmDropdownItem Value="align-bottom" Icon="@IconNames.AlignRight">@Loc["TmDiagramProperties_AlignBottom"]</TmDropdownItem>
+                            <TmDropdownItem Value="align-top" Icon="@IconNames.ArrowUp">@Loc["TmDiagramProperties_AlignTop"]</TmDropdownItem>
+                            <TmDropdownItem Value="align-middle" Icon="@IconNames.AlignVerticalJustifyCenter">@Loc["TmDiagramProperties_AlignMiddle"]</TmDropdownItem>
+                            <TmDropdownItem Value="align-bottom" Icon="@IconNames.ArrowDown">@Loc["TmDiagramProperties_AlignBottom"]</TmDropdownItem>
                             <div class="tm-dropdown-sep" role="separator"></div>
                             <TmDropdownItem Value="distribute-horizontal">@Loc["TmDiagramProperties_DistributeHorizontal"]</TmDropdownItem>
                             <TmDropdownItem Value="distribute-vertical">@Loc["TmDiagramProperties_DistributeVertical"]</TmDropdownItem>
@@ -320,7 +320,7 @@
                                          Tooltip="@Loc[ShowPageView ? "TmDiagramEditor_HidePageView" : "TmDiagramEditor_ShowPageView"]"
                                          Class="@(ShowPageView ? "tm-toolbar-btn--active" : "")"
                                          OnClick="OnTogglePageView" />
-                        <TmToolbarButton Icon="@IconNames.Sliders"
+                        <TmToolbarButton Icon="@IconNames.Ruler"
                                          Tooltip="@Loc["TmDiagramEditor_ToggleRulers"]"
                                          Class="@(_showRulers ? "tm-toolbar-btn--active" : "")"
                                          OnClick="ToggleRulers" />
@@ -484,23 +484,23 @@
     @* ── Import error banner ─────────────────────────────────────────────── *@
     @if (_importError is not null)
     {
-        <div class="tm-alert tm-alert--danger" role="alert" aria-live="assertive" style="margin:0;border-radius:0;">
-            <div class="tm-alert__content" style="display:flex;align-items:center;gap:8px;">
-                <span>@_importError</span>
-                <button class="tm-pivot-btn tm-pivot-btn--ghost tm-pivot-btn--sm" aria-label="@Loc["TmDiagramEditor_DismissError"]" @onclick="() => _importError = null">✕</button>
-            </div>
-        </div>
+        <TmAlert Severity="AlertSeverity.Error"
+                 Dismissable="true"
+                 OnDismiss="() => _importError = null"
+                 Class="tm-diagram-editor__banner">
+            @_importError
+        </TmAlert>
     }
 
     @* ── Export error banner ──────────────────────────────────────────────── *@
     @if (_exportError is not null)
     {
-        <div class="tm-alert tm-alert--danger" role="alert" aria-live="assertive" style="margin:0;border-radius:0;">
-            <div class="tm-alert__content" style="display:flex;align-items:center;gap:8px;">
-                <span>@_exportError</span>
-                <button class="tm-pivot-btn tm-pivot-btn--ghost tm-pivot-btn--sm" aria-label="@Loc["TmDiagramEditor_DismissError"]" @onclick="() => _exportError = null">✕</button>
-            </div>
-        </div>
+        <TmAlert Severity="AlertSeverity.Error"
+                 Dismissable="true"
+                 OnDismiss="() => _exportError = null"
+                 Class="tm-diagram-editor__banner">
+            @_exportError
+        </TmAlert>
     }
 
     @* ── Body (toolbox + canvas + props) ─────────────────────────────────── *@
@@ -797,11 +797,11 @@
          CloseOnEscape="true">
     <ChildContent>
         <div class="tm-diagram-connect-modal__grid">
-            @foreach (var stencil in StencilRegistry.GetAll())
+            @foreach (var stencil in ConnectableStencils)
             {
                 <button type="button"
                         class="tm-diagram-connect-modal__item"
-                        title="@stencil.Name"
+                        title="@GetStencilDisplayName(stencil)"
                         @onclick="() => OnStencilSelectedForConnect(stencil.Id)">
                     <div class="tm-diagram-connect-modal__icon">
                         @if (!string.IsNullOrEmpty(stencil.IconSvg))
@@ -819,7 +819,7 @@
                             </svg>
                         }
                     </div>
-                    <span class="tm-diagram-connect-modal__label">@stencil.Name</span>
+                    <span class="tm-diagram-connect-modal__label">@GetStencilDisplayName(stencil)</span>
                 </button>
             }
         </div>

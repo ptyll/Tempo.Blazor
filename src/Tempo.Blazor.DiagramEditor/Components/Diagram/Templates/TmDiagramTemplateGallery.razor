@@ -20,14 +20,16 @@
                              Class="tm-diagram-template-gallery__search" />
                 @if (_categories.Length > 0)
                 {
-                    <div class="tm-diagram-template-gallery__filters">
-                        <button class="tm-diagram-template-gallery__filter @(_selectedCategory == null ? "tm-diagram-template-gallery__filter--active" : "")"
+                    <div class="tm-diagram-template-gallery__filters" role="group" aria-label="@Loc["TmDiagramTemplateGallery_FiltersAriaLabel"]">
+                        <button type="button" class="tm-diagram-template-gallery__filter @(_selectedCategory == null ? "tm-diagram-template-gallery__filter--active" : "")"
+                                aria-pressed="@(_selectedCategory == null ? "true" : "false")"
                                 @onclick="() => _selectedCategory = null">
                             @Loc["TmDiagramTemplateGallery_All"]
                         </button>
                         @foreach (var cat in _categories)
                         {
-                            <button class="tm-diagram-template-gallery__filter @(_selectedCategory == cat ? "tm-diagram-template-gallery__filter--active" : "")"
+                            <button type="button" class="tm-diagram-template-gallery__filter @(_selectedCategory == cat ? "tm-diagram-template-gallery__filter--active" : "")"
+                                    aria-pressed="@(_selectedCategory == cat ? "true" : "false")"
                                     @onclick="() => _selectedCategory = cat">
                                 @cat
                             </button>

@@ -41,13 +41,15 @@ public class TmDiagramEditorLayoutTests : LocalizationTestBase
         var menuItems = cut.FindAll(".tm-dropdown-item");
         var texts = menuItems.Select(m => m.TextContent).ToList();
 
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutHierarchicalTopDown]");
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutHierarchicalLeftRight]");
+        // Localized through MockTmLocalizer — a raw resource key must never reach the UI
+        texts.Should().ContainEquivalentOf("Hierarchical Top-Down");
+        texts.Should().ContainEquivalentOf("Hierarchical Left-Right");
         texts.Should().ContainEquivalentOf("[TmDiagram_LayoutTree]");
         texts.Should().ContainEquivalentOf("[TmDiagram_LayoutTreeLR]");
         texts.Should().ContainEquivalentOf("[TmDiagram_LayoutForce]");
         texts.Should().ContainEquivalentOf("[TmDiagram_LayoutCircle]");
         texts.Should().ContainEquivalentOf("[TmDiagram_LayoutGrid]");
+        texts.Should().NotContain(t => t.StartsWith('[') && t.Contains("Hierarchical"));
     }
 
     [Fact]

@@ -517,6 +517,52 @@
 
 ### Fixed
 
+- **DiagramEditor wave 0 fixes: SQL/CSV import dialogs, layers panel, template gallery,
+  minimap tokens, editor icons (DiagramEditor redesign phase 2).**
+  The SQL import dialog now shows a live preview ("Tables: N / Relations: N") while typing
+  (`@bind-Value:after` on an `Immediate` textarea) and disables **Importovat** while the parsed
+  DDL has zero tables. Layout direction choices are localized (reusing
+  `TmDiagram_LayoutHierarchicalTopDown` / `…LeftRight`). The CSV import dialog localizes the
+  diagram-type options (`TmDiagramCsvImportDialog_Type_*`) and the semantic mapping fields
+  (`TmDiagramCsvImportDialog_Field_*`), and parses the preview on every keystroke. Both dialogs
+  give their fields per-instance ids (`sql-ddl-{id}`, `csv-data-{id}`, `diagram-type-{id}`,
+  `csv-map-{field}-{id}`) with matching `label for` — two dialogs on one page no longer share
+  ids. A new layer is named through `TmDiagramLayers_NewLayerName` ("New layer {0}") instead of a
+  hardcoded "Layer {n}".
+
+  `TmDiagramLayersPanel` derives from `TmComponentBase`, so it now accepts `DataTestId` /
+  `TestIdPrefix` and renders `data-testid="diagram-layers"` by default; every parameter has an
+  XML doc. The active row carries `tm-diagram-layers__item--active`, the drop target
+  `--drag-over`; the layer selector is a `role="radiogroup"` with `role="radio"` +
+  `aria-checked` buttons; the layer name is focusable (`tabindex="0"`, `role="button"`) and
+  rename starts from the keyboard (Enter / F2 / Space, one activation per press per
+  docs/keyboard-activation-convention.md). Template gallery filter chips are `type="button"`
+  with `aria-pressed`, and `TmDiagramTemplateCard` renders lowercase `aria-pressed` values
+  (`"true"`/`"false"`, previously invalid `"True"`/`"False"`).
+
+  The page-tab buttons replaced the raw `⧉` / `✕` / `+` glyphs with `TmIcon`, and the duplicate
+  action uses its own `tm-diagram-editor__page-tab-duplicate` class (the shared
+  `__page-tab-close` class no longer matches the duplicate button — see migration below).
+  Duplicate toolbar icons were disambiguated: Duplicate uses the two-pages glyph, Paste style
+  uses `IconNames.Paintbrush`, Rulers use `IconNames.Ruler`, and vertical align items no longer
+  reuse the horizontal align icons. Import/export error banners render as a real `TmAlert`
+  (`tm-diagram-editor__banner`) instead of a hand-rolled `tm-pivot-btn` + inline-style banner.
+  The minimap viewport rectangle uses `--tm-color-primary` / `--tm-color-primary-subtle`
+  instead of hardcoded `#3b82f6` / `rgba(59,130,246,0.08)`. Missing keys
+  `TmDiagramEditor_PasteHere` and `TmDiagramCanvas_AriaLabel` were added to all four resource
+  tables (they rendered as raw keys in the UI), and the Czech toolbox placeholder is now
+  "Hledat tvary…".
+
+  ```razor
+  @* before: duplicate page button carried the close-button class *@
+  <button class="tm-diagram-editor__page-tab-close" ...>⧉</button>
+  @* CSS targeting .tm-diagram-editor__page-tab-close also styled duplicate *@
+
+  @* after: the duplicate action has its own class (close keeps the danger-red hover) *@
+  <button class="tm-diagram-editor__page-tab-duplicate" ...><TmIcon Name="files" /></button>
+  <button class="tm-diagram-editor__page-tab-close" ...><TmIcon Name="x" /></button>
+  ```
+
 - **`TmDataTable` / `TmViewManager` / `TmMultiViewList` / `TmFilterBuilder` wave 0 accessibility.**
   Group toggles announce expand/collapse (`TmDataTable_ExpandGroup` / `TmDataTable_CollapseGroup`)
   and use a chevron icon instead of a glyph. Group chips remove with a labeled icon button.

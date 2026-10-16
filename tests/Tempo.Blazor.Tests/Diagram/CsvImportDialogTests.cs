@@ -29,7 +29,7 @@ public class CsvImportDialogTests : DiagramTestBase
             .Add(p => p.OnImport, (CsvImportResult r) => { }));
 
         var textarea = cut.Find("textarea");
-        textarea.Change("Name,Manager\nAlice,Bob\nCharlie,Bob");
+        textarea.Input("Name,Manager\nAlice,Bob\nCharlie,Bob");
 
         cut.WaitForAssertion(() =>
         {
@@ -49,10 +49,7 @@ public class CsvImportDialogTests : DiagramTestBase
             .Add(p => p.OnImport, (CsvImportResult r) => { }));
 
         var textarea = cut.Find("textarea");
-        textarea.Change("Name\nAlice");
-
-        var importBtn = cut.FindAll("button").First(b => b.TextContent == "Import");
-        cut.InvokeAsync(() => importBtn.Click());
+        textarea.Input("Name\nAlice");
 
         cut.WaitForAssertion(() =>
         {
@@ -91,7 +88,7 @@ public class CsvImportDialogTests : DiagramTestBase
             .Add(p => p.OnImport, (CsvImportResult r) => captured = r));
 
         var textarea = cut.Find("textarea");
-        textarea.Change("Name,Manager\nAlice,Bob");
+        textarea.Input("Name,Manager\nAlice,Bob");
 
         // Wait for selects to appear (type + 2 mappings)
         cut.WaitForAssertion(() => cut.FindAll("select").Count.Should().BeGreaterThanOrEqualTo(3));

@@ -167,6 +167,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private string? _connectSourceNodeId;
     private string? _connectDirection;
 
+    /// <summary>Connect modal palette: node stencils only (edge stencils style relationships, not shapes).</summary>
+    private IEnumerable<DiagramStencil> ConnectableStencils => DiagramStencilDisplayNames.GetConnectableStencils(StencilRegistry);
+
+    /// <summary>Localized stencil display name via the shared helper (resource key with raw-name fallback).</summary>
+    private string GetStencilDisplayName(DiagramStencil stencil) => DiagramStencilDisplayNames.GetStencilDisplayName(stencil, Loc);
+
     // SQL import dialog state
     private bool _sqlImportDialogOpen;
     private bool _csvImportDialogOpen;

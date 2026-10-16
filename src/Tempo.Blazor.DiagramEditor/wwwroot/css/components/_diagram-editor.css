@@ -97,6 +97,43 @@
     transition: opacity 120ms, background 120ms;
 }
 
+/* Duplicate-page action — same footprint as the close button, neutral hover (no danger red) */
+.tm-diagram-editor__page-tab-duplicate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    line-height: 1;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 120ms, background 120ms;
+}
+
+.tm-diagram-editor__page-tab:hover .tm-diagram-editor__page-tab-duplicate,
+.tm-diagram-editor__page-tab--active .tm-diagram-editor__page-tab-duplicate {
+    opacity: 1;
+}
+
+.tm-diagram-editor__page-tab-duplicate:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+/* Full-width error banner (import/export) rendered through TmAlert */
+.tm-diagram-editor__banner {
+    margin: 0;
+    border-radius: 0;
+    border-inline: none;
+    border-top: none;
+}
+
 .tm-diagram-editor__page-tab:hover .tm-diagram-editor__page-tab-close,
 .tm-diagram-editor__page-tab--active .tm-diagram-editor__page-tab-close {
     opacity: 1;

@@ -8,25 +8,42 @@ using Tempo.Blazor.Models;
 namespace Tempo.Blazor.Components.Diagram;
 
 /// <summary>Right-side layers panel for managing diagram layers.</summary>
-public partial class TmDiagramLayersPanel : ComponentBase
+public partial class TmDiagramLayersPanel : TmComponentBase
 {
+    /// <summary>Document whose layers are managed; a missing default layer is created on first render.</summary>
     [Parameter, EditorRequired] public DiagramDocument? Document { get; set; }
+
+    /// <summary>Ids of the currently selected nodes — enables the "move nodes to layer" section.</summary>
     [Parameter] public string[] SelectedIds { get; set; } = [];
+
+    /// <summary>Command stack used for undoable layer operations; when absent, commands execute directly.</summary>
     [CascadingParameter] public DiagramCommandStack? CommandStack { get; set; }
+
+    /// <summary>When true, all editing paths (add, delete, rename, reorder, toggles) are blocked.</summary>
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Id of the active (radio-selected) layer; two-way bound.</summary>
     [Parameter] public string? ActiveLayerId { get; set; }
+
+    /// <summary>Raises when the user activates another layer radio.</summary>
     [Parameter] public EventCallback<string?> ActiveLayerIdChanged { get; set; }
+
+    /// <summary>Raises after a command mutated the document so hosts can persist it.</summary>
     [Parameter] public EventCallback<DiagramDocument> DocumentChanged { get; set; }
 
     private bool _collapsed;
     private string? _editingLayerId;
     private string _editName = "";
     private ElementReference _nameInputRef;
+    private bool _pendingNameFocus;
     private string? _draggedLayerId;
     private string? _dragOverLayerId;
     private string? _defaultLayerId;
     private string? _moveTargetLayerId;
+    private readonly string _moveSelectId = $"layers-move-{Guid.NewGuid().ToString("n")[..8]}";
 
     private List<DiagramNode> SelectedNodes => SelectedIds
         .Select(id => Document?.Nodes.FirstOrDefault(n => n.Id == id))
@@ -47,6 +64,15 @@ public partial class TmDiagramLayersPanel : ComponentBase
         {
             ActiveLayerId = _defaultLayerId;
             ActiveLayerIdChanged.InvokeAsync(_defaultLayerId);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingNameFocus)
+        {
+            _pendingNameFocus = false;
+            await _nameInputRef.FocusAsync();
         }
     }
 
@@ -76,7 +102,7 @@ public partial class TmDiagramLayersPanel : ComponentBase
     private async Task OnAddLayer()
     {
         if (Document is null || ReadOnly) return;
-        var name = $"Layer {Document.Layers.Count + 1}";
+        var name = Loc["TmDiagramLayers_NewLayerName", Document.Layers.Count + 1];
         var cmd = new AddLayerCommand(Document, name);
         if (CommandStack is not null)
             CommandStack.Push(cmd);
@@ -134,6 +160,7 @@ public partial class TmDiagramLayersPanel : ComponentBase
         if (ReadOnly) return;
         _editingLayerId = layer.Id;
         _editName = layer.Name;
+        _pendingNameFocus = true;
     }
 
     private async Task OnNameBlur(DiagramLayer layer)
@@ -141,12 +168,24 @@ public partial class TmDiagramLayersPanel : ComponentBase
         await CommitRename(layer);
     }
 
-    private async Task OnNameKeyDown(KeyboardEventArgs e, DiagramLayer layer)
+    /// <summary>
+    /// Key handling on the focusable layer name (role=button is not natively activatable).
+    /// Per docs/keyboard-activation-convention.md: Enter fires on keydown (guarded against
+    /// auto-repeat), F2 is a plain keydown shortcut; Space is emulated on keyup to match the
+    /// native button split. Exactly one rename start per press.
+    /// </summary>
+    private void OnNameKeyDown(KeyboardEventArgs e, DiagramLayer layer)
     {
-        if (e.Key == "Enter")
-            await CommitRename(layer);
-        else if (e.Key == "Escape")
-            _editingLayerId = null;
+        if (ReadOnly) return;
+        if (e.Key == "F2" || (e.Key == "Enter" && !e.Repeat))
+            OnStartEdit(layer);
+    }
+
+    private void OnNameKeyUp(KeyboardEventArgs e, DiagramLayer layer)
+    {
+        if (ReadOnly) return;
+        if (e.Key == " ")
+            OnStartEdit(layer);
     }
 
     private async Task CommitRename(DiagramLayer layer)

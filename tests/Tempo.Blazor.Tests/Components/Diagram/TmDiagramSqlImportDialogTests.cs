@@ -1,0 +1,98 @@
+using FluentAssertions;
+using Tempo.Blazor.Components.Diagram;
+using Tempo.Blazor.Tests.Localization;
+
+namespace Tempo.Blazor.Tests.Components.Diagram;
+
+/// <summary>
+/// bUnit tests for the SQL import dialog: live preview, guarded import button,
+/// localized layout options and per-instance label ids.
+/// </summary>
+public class TmDiagramSqlImportDialogTests : LocalizationTestBase
+{
+    private const string SingleTableSql =
+        """
+        CREATE TABLE Customer (
+            Id INT PRIMARY KEY,
+            Name NVARCHAR(100) NOT NULL
+        );
+        """;
+
+    private const string NoTableSql = "SELECT 1;";
+
+    [Fact]
+    public void Preview_ShowsTablesAndRelations_WhenSqlTyped()
+    {
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.Find("textarea").Input(SingleTableSql);
+        cut.Render();
+
+        var preview = cut.Find(".tm-diagram-sql-import__preview");
+        preview.TextContent.Should().Contain("Tables: 1");
+        preview.TextContent.Should().Contain("Relations: 0");
+    }
+
+    [Fact]
+    public void Preview_Hides_WhenSqlEmpty()
+    {
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.FindAll(".tm-diagram-sql-import__preview").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Import_Disabled_WhenPreviewHasZeroTables()
+    {
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.Find("textarea").Input(NoTableSql);
+        cut.Render();
+
+        var importButton = cut.FindAll("button").First(b => b.TextContent.Contains("Import"));
+        importButton.HasAttribute("disabled").Should().BeTrue(
+            "importing must stay disabled while the parsed SQL has zero tables");
+    }
+
+    [Fact]
+    public void Import_Enabled_WhenPreviewHasTables()
+    {
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.Find("textarea").Input(SingleTableSql);
+        cut.Render();
+
+        var importButton = cut.FindAll("button").First(b => b.TextContent.Contains("Import"));
+        importButton.HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
+    public void LayoutOptions_AreLocalized_Cs()
+    {
+        UseCzechLocalization();
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        var options = cut.FindAll("select option").Select(o => o.TextContent.Trim()).ToList();
+        options.Should().Contain("Hierarchicky shora dolů");
+        options.Should().Contain("Hierarchicky zleva doprava");
+        options.Should().NotContain("Top-Bottom");
+        options.Should().NotContain("Left-Right");
+    }
+
+    [Fact]
+    public void Labels_HaveUniqueId_PerInstance()
+    {
+        var first = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+        var second = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        var firstTextarea = first.Find("textarea");
+        var secondTextarea = second.Find("textarea");
+
+        firstTextarea.Id.Should().NotBeNullOrWhiteSpace();
+        secondTextarea.Id.Should().NotBeNullOrWhiteSpace();
+        firstTextarea.Id.Should().NotBe(secondTextarea.Id, "two dialogs rendered at once must not share field ids");
+
+        first.Find($"label[for='{firstTextarea.Id}']").Should().NotBeNull();
+        second.Find($"label[for='{secondTextarea.Id}']").Should().NotBeNull();
+    }
+}

@@ -102,6 +102,30 @@ public class TmDiagramTemplateGalleryTests : DiagramTestBase
         selected!.Id.Should().Be("t1");
     }
 
+    [Fact]
+    public void FilterChips_HaveTypeButtonAndAriaPressed()
+    {
+        var registry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t1", Name = "Blank", Category = "General" });
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t2", Name = "Flowchart", Category = "Flowchart" });
+
+        var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        var chips = cut.FindAll(".tm-diagram-template-gallery__filter").ToList();
+        chips.Should().HaveCountGreaterThan(1);
+
+        foreach (var chip in chips)
+        {
+            chip.GetAttribute("type").Should().Be("button", "filter chips must be type=button");
+            chip.GetAttribute("aria-pressed").Should().BeOneOf("true", "false",
+                "filter chips are toggle buttons and must expose aria-pressed");
+        }
+
+        chips.Count(c => c.GetAttribute("aria-pressed") == "true").Should().Be(1,
+            "exactly the active category chip is pressed");
+    }
+
     private sealed class BunitNavigationManager : NavigationManager
     {
         public BunitNavigationManager()

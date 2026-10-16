@@ -111,6 +111,23 @@
     border-color: var(--tm-color-border);
 }
 
+/* Active (radio-selected) layer row */
+.tm-diagram-layers__item--active {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+/* Drop target while dragging a layer over it */
+.tm-diagram-layers__item--drag-over {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+/* Keyboard parity with hover: row controls stay discoverable while focus is inside the row */
+.tm-diagram-layers__item:focus-within .tm-diagram-layers__delete {
+    opacity: 1;
+}
+
 .tm-diagram-layers__drag-handle {
     display: inline-flex;
     color: var(--tm-color-text-muted);
@@ -190,6 +207,13 @@
 }
 
 .tm-diagram-layers__name:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* The name is a keyboard-focusable role=button — a visible focus ring is required */
+.tm-diagram-layers__name:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
     background: var(--tm-color-surface-hover);
 }
 

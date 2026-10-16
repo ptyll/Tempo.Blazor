@@ -1,12 +1,18 @@
 @namespace Tempo.Blazor.Components.Diagram
 @using Tempo.Blazor.Components.Diagram.Templates
+@using Microsoft.AspNetCore.Components.Web
 
+@* role=button on a div is NOT natively activatable — Enter (keydown, repeat-guarded) and
+   Space (keyup) are emulated here per docs/keyboard-activation-convention.md, exactly one
+   activation per press. *@
 <div class="tm-diagram-template-card @(_selected ? "tm-diagram-template-card--selected" : "")"
      @onclick="OnClick"
+     @onkeydown="OnCardKeyDown"
+     @onkeyup="OnCardKeyUp"
      role="button"
      tabindex="0"
      aria-label="@Template.Name"
-     aria-pressed="@_selected">
+     aria-pressed="@(_selected ? "true" : "false")">
     <div class="tm-diagram-template-card__thumb">
         @if (!string.IsNullOrEmpty(Template.ThumbnailUrl))
         {
@@ -34,9 +40,16 @@
 </div>
 
 @code {
+    /// <summary>Template previewed and activated by this card.</summary>
     [Parameter] public DiagramTemplate Template { get; set; } = default!;
+
+    /// <summary>Whether the card is the currently selected template (mirrored to aria-pressed).</summary>
     [Parameter] public bool Selected { get; set; }
+
+    /// <summary>Raised once per activation: mouse click, Enter or Space.</summary>
     [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>Base URI used to resolve relative thumbnail URLs.</summary>
     [Parameter] public string BaseUri { get; set; } = "";
 
     private bool _selected => Selected;
@@ -48,4 +61,10 @@
             : string.IsNullOrWhiteSpace(BaseUri)
                 ? Template.ThumbnailUrl
                 : $"{BaseUri.TrimEnd('/')}/{Template.ThumbnailUrl.TrimStart('/')}";
+
+    private Task OnCardKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" && !e.Repeat ? OnClick.InvokeAsync() : Task.CompletedTask;
+
+    private Task OnCardKeyUp(KeyboardEventArgs e) =>
+        e.Key == " " ? OnClick.InvokeAsync() : Task.CompletedTask;
 }

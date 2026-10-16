@@ -30655,6 +30655,66 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "DiagramStencilDisplayNames",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Diagram",
+          "description": "Shared display-name helpers for diagram stencils: resolves a stencil's localized display name (resource key with a fallback to the raw name) and lists the stencils that are connectable shapes (nodes only — edge stencils style relationships and must not appear in shape-picking surfaces such as the connect modal).",
+          "packageId": "Tempo.Blazor.DiagramEditor",
+          "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramStencilDisplayNames.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "GetConnectableStencils",
+              "kind": "Method",
+              "type": "IEnumerable<DiagramStencil>",
+              "description": "Returns the connectable stencils from the registry — node stencils only, in the registry's display order.",
+              "parameters": [
+                {
+                  "name": "registry",
+                  "type": "DiagramStencilRegistry"
+                }
+              ]
+            },
+            {
+              "name": "GetLocalizedText",
+              "kind": "Method",
+              "type": "string",
+              "description": "Resolves a localized text for a resource key, falling back to the provided value when the key is empty or untranslated (localizers echoing [key] are treated as missing).",
+              "parameters": [
+                {
+                  "name": "resourceKey",
+                  "type": "string?"
+                },
+                {
+                  "name": "fallback",
+                  "type": "string"
+                },
+                {
+                  "name": "localizer",
+                  "type": "ITmLocalizer"
+                }
+              ]
+            },
+            {
+              "name": "GetStencilDisplayName",
+              "kind": "Method",
+              "type": "string",
+              "description": "Returns the localized display name for a stencil: the translation of its NameResourceKey when the key resolves, otherwise the stencil's raw name.",
+              "parameters": [
+                {
+                  "name": "stencil",
+                  "type": "DiagramStencil"
+                },
+                {
+                  "name": "localizer",
+                  "type": "ITmLocalizer"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "itemName": "DiagramStencilLibraryValidationException",
           "kind": "Class",
           "category": "Components",
@@ -33689,17 +33749,20 @@
             {
               "name": "OnClose",
               "type": "EventCallback",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised when the user cancels or closes the dialog."
             },
             {
               "name": "OnImport",
               "type": "EventCallback<CsvImportResult>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised on import with the generated document and the layout id for the chosen type."
             },
             {
               "name": "Show",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Whether the dialog is visible; hidden resets the entered CSV, mappings and preview."
             }
           ]
         },
@@ -33871,39 +33934,46 @@
             {
               "name": "ActiveLayerId",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Id of the active (radio-selected) layer; two-way bound."
             },
             {
               "name": "ActiveLayerIdChanged",
               "type": "EventCallback<string?>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raises when the user activates another layer radio."
             },
             {
               "name": "Class",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Additional CSS class applied to the panel root."
             },
             {
               "name": "Document",
               "type": "DiagramDocument?",
               "isRequired": true,
+              "description": "Document whose layers are managed; a missing default layer is created on first render.",
               "editorRequired": true
             },
             {
               "name": "DocumentChanged",
               "type": "EventCallback<DiagramDocument>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raises after a command mutated the document so hosts can persist it."
             },
             {
               "name": "ReadOnly",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "When true, all editing paths (add, delete, rename, reorder, toggles) are blocked."
             },
             {
               "name": "SelectedIds",
               "type": "string[]",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "Ids of the currently selected nodes — enables the \"move nodes to layer\" section."
             }
           ]
         },
@@ -34267,17 +34337,20 @@
             {
               "name": "OnClose",
               "type": "EventCallback",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised when the user cancels or closes the dialog."
             },
             {
               "name": "OnImport",
               "type": "EventCallback<SqlImportResult>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised on import with the generated ER document and chosen layout direction."
             },
             {
               "name": "Show",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Whether the dialog is visible; hidden resets the entered SQL and preview."
             }
           ]
         },
@@ -34376,22 +34449,26 @@
               "name": "BaseUri",
               "type": "string",
               "isRequired": false,
-              "default": "\"\""
+              "default": "\"\"",
+              "description": "Base URI used to resolve relative thumbnail URLs."
             },
             {
               "name": "OnClick",
               "type": "EventCallback",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised once per activation: mouse click, Enter or Space."
             },
             {
               "name": "Selected",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Whether the card is the currently selected template (mirrored to aria-pressed)."
             },
             {
               "name": "Template",
               "type": "DiagramTemplate",
-              "isRequired": true
+              "isRequired": true,
+              "description": "Template previewed and activated by this card."
             }
           ]
         },
@@ -34532,12 +34609,12 @@
         }
       ],
       "summary": {
-        "itemCount": 136,
-        "manualItemCount": 136,
-        "generatedItemCount": 127,
+        "itemCount": 137,
+        "manualItemCount": 137,
+        "generatedItemCount": 128,
         "generatedOnlyItemCount": 0,
         "componentCount": 16,
-        "publicApiTypeCount": 111
+        "publicApiTypeCount": 112
       }
     },
     {
@@ -115780,10 +115857,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3223,
-    "manualItemCount": 3223,
+    "itemCount": 3224,
+    "manualItemCount": 3224,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2696
+    "publicApiTypeCount": 2697
   }
 }
