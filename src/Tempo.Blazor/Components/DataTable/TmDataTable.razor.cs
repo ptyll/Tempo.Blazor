@@ -753,6 +753,8 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <summary>Responsive mobile presentation. None (default) preserves today's table markup; Scroll enables horizontal scrolling.</summary>
     [Parameter] public DataTableMobileLayout MobileLayout { get; set; } = DataTableMobileLayout.None;
 
+    private bool IsCardLayout => MobileLayout == DataTableMobileLayout.None ? CardMode : MobileLayout == DataTableMobileLayout.Cards;
+
     /// <summary>Whether to show the grouping drop zone above the table.</summary>
     [Parameter] public bool ShowGrouping { get; set; }
 
@@ -2249,7 +2251,7 @@ public partial class TmDataTable<TItem> : IDisposable
                             builder.CloseElement(); // td
                         }
 
-                        foreach (var col in _visibleColumns.Where(c => MobileLayout != DataTableMobileLayout.Cards || c.CardRole != DataTableCardRole.Hidden))
+                        foreach (var col in _visibleColumns.Where(c => !IsCardLayout || c.CardRole != DataTableCardRole.Hidden))
                         {
                             builder.OpenElement(seq++, "td");
                             builder.AddAttribute(seq++, "class", GetCellClass(col));
