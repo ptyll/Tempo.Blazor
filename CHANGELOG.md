@@ -813,6 +813,27 @@
 
 ### Fixed
 
+- **`TmDiagramEditor` context menu stays inside the editor box (DiagramEditor redesign phase 8).**
+  The editor is an inline-size container, so the fixed-position context menu resolves against the
+  EDITOR box while `openContextMenu` clamped it to the VIEWPORT: a menu clamped to the viewport
+  top translated to a negative editor-box top and painted above the editor's clip — on a hosted
+  editor shorter than the window (the Modeling preview, any split layout) the edge context menu's
+  upper half, including the routing previews, was unreachable. `diagram-editor.js` now detects the
+  effective containing block at runtime (a zero-size fixed probe), caps the menu's height to the
+  editor box and clamps the positioned box into it; under plain viewport semantics it clamps to
+  the viewport. Not breaking; no markup or class changes.
+
+- **`TmDiagramEditor`: pressing a port that carries an attached edge starts edge drawing again
+  (DiagramEditor redesign phase 8).** Edges paint over nodes, so the fat invisible
+  `.tm-diagram-edge-hit-path` is the TOP element at a port's position; the whole-edge drag branch
+  (added after the port branch in the phase-5/6 edge work) consumed the press whenever the
+  pointer rested on an edge corridor — drawing a new edge FROM a port of an already-connected
+  node was impossible (the Workflow-phase "drop a dependency stencil, drag port to port" flow
+  hung). `_onMouseDown` now yields the whole-edge drag to a port or connection point found under
+  the pointer (x-ray via `document.elementsFromPoint`), and the port branch resolves the port
+  through the same stack when the hit path owns the event. Whole-edge dragging still works from
+  anywhere on the corridor away from the ports.
+
 - **DiagramEditor wave 0 fixes: SQL/CSV import dialogs, layers panel, template gallery,
   minimap tokens, editor icons (DiagramEditor redesign phase 2).**
   The SQL import dialog now shows a live preview ("Tables: N / Relations: N") while typing

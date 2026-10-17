@@ -28,21 +28,27 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("1024×768 touch: editor, template gallery, SQL/CSV import dialogs, search panel, connect modal")]
-    public async Task Tablet_1024Touch_CapturesEditorDialogsAndConnectModal() =>
-        await CaptureAllStatesAsync(1024, 768, touch: true, "tablet-1024-touch", scrollEditorIntoView: true);
+    [Description("Tablet landscape: editor, template gallery, SQL/CSV import dialogs, search panel, connect modal")]
+    public async Task Tablet_1024Touch_CapturesEditorDialogsAndConnectModal()
+    {
+        // The demo sidebar takes ~290px: at a 1024 viewport a tablet-band editor (≥768) would
+        // push the toolbar's right end past the viewport edge (overflow-x is hidden in the
+        // demo shell, so the "More" button is unreachable). Widen the window so the pinned
+        // tablet band fits with room for the whole toolbar row.
+        await CaptureAllStatesAsync(1366, 900, touch: true, "tablet-1024-touch", scrollEditorIntoView: true, pinLayout: "tablet");
+    }
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("390×844: editor, template gallery, SQL/CSV import dialogs, search panel, connect modal")]
+    [Description("390×844: editor, search panel, connect modal (G2: gallery/imports stay tablet+)")]
     public async Task Mobile_390_CapturesEditorDialogsAndConnectModal() =>
-        await CaptureAllStatesAsync(390, 844, touch: false, "mobile-390");
+        await CaptureAllStatesAsync(390, 844, touch: false, "mobile-390", pinLayout: "mobile");
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("320×640: editor, template gallery, SQL/CSV import dialogs, search panel, connect modal")]
+    [Description("320×640: editor, search panel, connect modal (G2: gallery/imports stay tablet+)")]
     public async Task Mobile_320_CapturesEditorDialogsAndConnectModal() =>
-        await CaptureAllStatesAsync(320, 640, touch: false, "mobile-320");
+        await CaptureAllStatesAsync(320, 640, touch: false, "mobile-320", pinLayout: "mobile");
 
     /// <summary>
     /// Phase-3 (visual layer) theme matrix: the editor, the layers panel and the four dialogs
@@ -162,9 +168,24 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         }
     }
 
-    private async Task CaptureAllStatesAsync(int width, int height, bool touch, string prefix, bool scrollEditorIntoView = false)
+    private async Task CaptureAllStatesAsync(int width, int height, bool touch, string prefix, bool scrollEditorIntoView = false, string? pinLayout = null)
     {
         var page = await OpenDiagramEditorAsync(width, height, touch);
+
+        // Band pin: the editor resolves its presentation from its own container, and the demo
+        // column keeps a 1024 viewport BELOW the 768px mobile threshold (phase 7 band). A test
+        // that captures a specific presentation pins the container, exactly like a full-bleed
+        // host would. Mobile additionally scopes the set: per G2 the template gallery and the
+        // SQL/CSV imports stay tablet+ — the mobile sheet offers Shapes/Properties, the search
+        // panel and the connect picker only.
+        var isMobile = pinLayout == "mobile";
+        if (pinLayout is not null)
+        {
+            // Tablet pin: a 1200px container resolves as the DESKTOP band (the band edge is
+            // exclusive) — pin 1100 so the editor lands at 940 (tablet), which also fits the
+            // 1366px window next to the demo sidebar with the whole toolbar row on screen.
+            await DiagramEditorE2E.ForceEditorWidthAsync(page, isMobile ? width : 1100, pinLayout);
+        }
 
         // 1. Full editor. On the tablet viewport the demo column is taller than the window: the
         //    shell title and the status bar (zoom − % +) land below the fold, so the capture
@@ -190,37 +211,55 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             await ShotAsync(page, $"{prefix}--editor");
         }
 
-        // 2. Template gallery
-        await OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
-        await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
-            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotSettledAsync(page, $"{prefix}--template-gallery");
-        await AssertDialogFitsViewportAsync(page, ".tm-diagram-template-gallery", expectFooter: true);
-        await page.Keyboard.PressAsync("Escape");
-        await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
+        // 2. Template gallery (desktop/tablet only — G2 keeps templates tablet+)
+        if (!isMobile)
+        {
+            await OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
+            await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
+                new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            await ShotSettledAsync(page, $"{prefix}--template-gallery");
+            await AssertDialogFitsViewportAsync(page, ".tm-diagram-template-gallery", expectFooter: true);
+            await page.Keyboard.PressAsync("Escape");
+            await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
 
-        // 3. SQL import dialog
-        await OpenImportMenuItemAsync(page, "Import SQL");
-        await page.Locator(".tm-diagram-sql-import").WaitForAsync(
-            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotSettledAsync(page, $"{prefix}--sql-import-dialog");
-        await AssertDialogFitsViewportAsync(page, ".tm-diagram-sql-import", expectFooter: true);
-        await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
-            .First.ClickAsync();
-        await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
+            // 3. SQL import dialog (tablet+ per G2)
+            await OpenImportMenuItemAsync(page, "Import SQL");
+            await page.Locator(".tm-diagram-sql-import").WaitForAsync(
+                new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            await ShotSettledAsync(page, $"{prefix}--sql-import-dialog");
+            await AssertDialogFitsViewportAsync(page, ".tm-diagram-sql-import", expectFooter: true);
+            await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
+                .First.ClickAsync();
+            await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
 
-        // 4. CSV import dialog
-        await OpenImportMenuItemAsync(page, "Import CSV");
-        await page.Locator(".tm-diagram-csv-import").WaitForAsync(
-            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ShotSettledAsync(page, $"{prefix}--csv-import-dialog");
-        await AssertDialogFitsViewportAsync(page, ".tm-diagram-csv-import", expectFooter: true);
-        await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
-            .First.ClickAsync();
-        await ExpectHiddenAsync(page, ".tm-diagram-csv-import");
+            // 4. CSV import dialog (tablet+ per G2)
+            await OpenImportMenuItemAsync(page, "Import CSV");
+            await page.Locator(".tm-diagram-csv-import").WaitForAsync(
+                new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            await ShotSettledAsync(page, $"{prefix}--csv-import-dialog");
+            await AssertDialogFitsViewportAsync(page, ".tm-diagram-csv-import", expectFooter: true);
+            await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
+                .First.ClickAsync();
+            await ExpectHiddenAsync(page, ".tm-diagram-csv-import");
+        }
 
-        // 5. Search panel (the search toggle lives in the header since phase 4 — never overflows)
+        // 5. Search panel (desktop/tablet: the header toggle; mobile: the "⋯" view menu
+        //    carries the search group — there is no command row on the phone). The menu
+        //    trigger is addressed by its stable testid: the first .more-btn on mobile is
+        //    the (disabled) Undo button, not the menu.
+        if (isMobile)
+        {
+            await page.Locator("[data-testid='diagram-editor-more']").First.ClickAsync();
+        }
         await page.Locator("[data-tm-group='search'] button").First.ClickAsync();
+        if (isMobile)
+        {
+            // The toggle menu stays open after invoking an entry and its backdrop covers the
+            // trigger; close it through the DOM (same Blazor handler) so it does not overlay
+            // the search panel in the capture.
+            await page.EvaluateAsync(
+                "() => document.querySelector(\"[data-testid='diagram-editor-more']\")?.click()");
+        }
         await page.Locator(".tm-diagram-search-panel").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotAsync(page, $"{prefix}--search-panel");
@@ -228,30 +267,36 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await ExpectHiddenAsync(page, ".tm-diagram-search-panel");
 
         // 6. Connect modal (selecting a node renders the connect arrows in the decorator pane;
-        //    the JS selection path is the stable entry point DiagramBaselineScreenshots uses)
-        await page.EvaluateAsync(
-            """
-            () => {
-                const canvas = document.querySelector('.tm-diagram-canvas');
-                if (!canvas) return 'no-canvas';
-                const inst = window.tmDiagramEditor.instances.get(canvas.id);
-                if (!inst || !inst.dotNetRef) return 'no-instance';
-                const id = document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id');
-                if (!id) return 'no-node';
-                inst.selectedIds = new Set([id]);
-                window.tmDiagramEditor._updateSelection(inst);
-                inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
-                return 'ok';
-            }
-            """);
-        await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
-        await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
-            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        // The connect picker's primary action is a palette tile; on the mobile sheet the
-        // sticky footer with the Close button appears as well. Settle first — a frame taken
-        // mid slide-up would read the footer below the fold.
-        await ShotSettledAsync(page, $"{prefix}--connect-modal");
-        await AssertDialogFitsViewportAsync(page, ".tm-diagram-connect-modal", expectFooter: width < 640);
+        //    the JS selection path is the stable entry point DiagramBaselineScreenshots uses).
+        //    Mobile skips it: G2 keeps edge work (the connect arrows) tablet+, so the arrows —
+        //    and with them the modal entry — do not render on a phone. The mobile sheet
+        //    PRESENTATION of the dialog is exercised by the phase-5 dialog tests.
+        if (!isMobile)
+        {
+            await page.EvaluateAsync(
+                """
+                () => {
+                    const canvas = document.querySelector('.tm-diagram-canvas');
+                    if (!canvas) return 'no-canvas';
+                    const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                    if (!inst || !inst.dotNetRef) return 'no-instance';
+                    const id = document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id');
+                    if (!id) return 'no-node';
+                    inst.selectedIds = new Set([id]);
+                    window.tmDiagramEditor._updateSelection(inst);
+                    inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+                    return 'ok';
+                }
+                """);
+            await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
+            await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
+                new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            // The connect picker's primary action is a palette tile; on the mobile sheet the
+            // sticky footer with the Close button appears as well. Settle first — a frame taken
+            // mid slide-up would read the footer below the fold.
+            await ShotSettledAsync(page, $"{prefix}--connect-modal");
+            await AssertDialogFitsViewportAsync(page, ".tm-diagram-connect-modal", expectFooter: width < 640);
+        }
     }
 
     /// <summary>

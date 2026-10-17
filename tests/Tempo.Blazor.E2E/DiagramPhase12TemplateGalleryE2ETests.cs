@@ -19,7 +19,9 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
     {
         var page = await CreateDiagramPageAsync();
 
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Templates" }).ClickAsync();
+        // Since phase 4 the Templates command lives on the core TmToolbar and collapses into
+        // the "More" menu when the row runs out of room — click it wherever it currently is.
+        await DiagramEditorE2E.OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
         await page.Locator(".tm-diagram-template-gallery").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         await ExpectTemplateAsync(page, "UML 2.5 Class Baseline");
@@ -28,13 +30,14 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
         await AssertNoTextOverflowAsync(page);
         await SaveStableScreenshotAsync(page, "diagram_phase12_template_gallery");
 
-        // Keyboard activation (phase 2): the card is a div[role=button] — Enter and Space must
-        // select it exactly once, without any mouse interaction.
+        // Keyboard activation (phase 2): the card is a div[role=button] — Space selects it
+        // exactly once, without any mouse interaction. (Since phase 5 Enter/double-click
+        // CREATE — the selection tap kept for the keyboard is Space.)
         var bpmnCard = page.Locator(".tm-diagram-template-card").Filter(new LocatorFilterOptions { HasText = "BPMN 2 Process Baseline" });
         await bpmnCard.FocusAsync();
-        await page.Keyboard.PressAsync("Enter");
+        await page.Keyboard.PressAsync(" ");
         await ExpectCardPressedAsync(page, bpmnCard);
-        Assert.IsTrue(await IsCreateEnabledAsync(page), "Create must enable after keyboard (Enter) selection");
+        Assert.IsTrue(await IsCreateEnabledAsync(page), "Create must enable after keyboard (Space) selection");
 
         var umlCard = page.Locator(".tm-diagram-template-card").Filter(new LocatorFilterOptions { HasText = "UML 2.5 Class Baseline" });
         await umlCard.FocusAsync();

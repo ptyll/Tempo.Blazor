@@ -2130,6 +2130,25 @@ circle.tm-diagram-rotate-handle-hit {
 
 .tm-diagram-properties__field .tm-text-input {
     width: 100%;
+    /* The class has no core or demo styling, so without these declarations the browser's
+       UA default (white box) leaks through and reads as broken in dark theme — the page
+       W/H/Scale and node X/Y/W/H fields sat white on the dark panel (UX review, phase 8).
+       Tokenized control look, same contract as the core .tm-input. */
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-2);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+    background-color: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-diagram-properties__field textarea.tm-text-input {
+    height: auto;
+    min-height: 5rem;
+    padding: var(--tm-space-2);
+    line-height: var(--tm-line-height-normal);
 }
 
 .tm-diagram-properties__row {

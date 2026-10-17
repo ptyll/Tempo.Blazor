@@ -758,10 +758,26 @@ window.tmDiagramEditor = {
             return;
         }
 
-        // Left-click on edge hit-path? -> start whole-edge drag
+        // Left-click on edge hit-path? -> start whole-edge drag. A port sitting under the
+        // pointer wins over the edge corridor, though: edges paint over nodes, so the fat
+        // invisible hit path is the top element at a port's position and the raw target is
+        // the hit path, not the port (phase 8 regression — pressing a port that carries an
+        // attached edge started a whole-edge drag and edge drawing became impossible).
         if (!isRightClick && !inst.readOnly) {
             const edgeHitEl = this._findHitPath(e);
-            if (edgeHitEl) {
+            var portUnderPointer = false;
+            if (edgeHitEl && typeof document.elementsFromPoint === 'function') {
+                var stackAtPointer = document.elementsFromPoint(e.clientX, e.clientY);
+                for (var stackIndex = 0; stackIndex < stackAtPointer.length; stackIndex++) {
+                    var stackEl = stackAtPointer[stackIndex];
+                    if (stackEl.classList && (stackEl.classList.contains('tm-diagram-port')
+                        || stackEl.classList.contains('tm-diagram-connection-point'))) {
+                        portUnderPointer = true;
+                        break;
+                    }
+                }
+            }
+            if (edgeHitEl && !portUnderPointer) {
                 const edgeId = edgeHitEl.getAttribute('data-edge-id');
                 if (edgeId) {
                     if (!inst.selectedIds.has(edgeId)) {
@@ -792,8 +808,21 @@ window.tmDiagramEditor = {
             }
         }
 
-        // Port clicked? -> start edge drawing (skip if node is locked)
-        const portEl = e.target.closest('.tm-diagram-port');
+        // Port clicked? -> start edge drawing (skip if node is locked). The port may sit
+        // UNDER an edge hit path (edges paint over nodes and the hit path becomes the event
+        // target), so when the raw target is not a port, resolve the element stack under
+        // the pointer (phase 8).
+        var portEl = e.target.closest('.tm-diagram-port');
+        if (!portEl && typeof document.elementsFromPoint === 'function') {
+            var stackUnderPointer = document.elementsFromPoint(e.clientX, e.clientY);
+            for (var portIndex = 0; portIndex < stackUnderPointer.length; portIndex++) {
+                var portCandidate = stackUnderPointer[portIndex];
+                if (portCandidate.classList && portCandidate.classList.contains('tm-diagram-port')) {
+                    portEl = portCandidate;
+                    break;
+                }
+            }
+        }
         if (portEl && !inst.readOnly) {
             const nodeEl = portEl.closest('[data-node-id]');
             if (nodeEl && nodeEl.getAttribute('data-locked') === 'true') return;
@@ -3690,26 +3719,75 @@ window.tmDiagramEditor = {
         }
         setTimeout(function () {
             if (!menuEl) return;
-            const rect = menuEl.getBoundingClientRect();
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
+            let rect = menuEl.getBoundingClientRect();
             const margin = 8;
             let left = parseFloat(menuEl.style.left) || 0;
             let top = parseFloat(menuEl.style.top) || 0;
-            if (left + rect.width + margin > vw) {
-                left = Math.max(margin, vw - rect.width - margin);
-            }
-            if (top + rect.height + margin > vh) {
-                top = Math.max(margin, vh - rect.height - margin);
-            }
-            // Phase 6: the editor root is an inline-size container (layout containment), so the
-            // fixed-position menu resolves against the EDITOR box, not the viewport — the stored
-            // viewport coordinates are translated into that box here.
+
+            // Phase 8: detect what position:fixed ACTUALLY resolves against for this editor.
+            // The editor root carries container-type: inline-size; engines differ on whether
+            // that makes it the containing block for fixed descendants (layout containment
+            // does, Chromium's inline-size does not). Phase 6 assumed the editor box and
+            // translated the stored viewport coordinates into it — under viewport semantics
+            // that translation displaces the menu by the editor offset and can park it partly
+            // off-screen. Measure a probe instead of assuming; translate and clamp into the
+            // editor box only when the editor really is the containing block, else clamp
+            // against the viewport.
             const editor = container.closest('.tm-diagram-editor');
+            let editorBox = null;
             if (editor) {
-                const er = editor.getBoundingClientRect();
+                const probe = document.createElement('div');
+                probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;';
+                editor.appendChild(probe);
+                const probeRect = probe.getBoundingClientRect();
+                const editorRect = editor.getBoundingClientRect();
+                probe.remove();
+                if (Math.abs(probeRect.left - editorRect.left) <= 1
+                    && Math.abs(probeRect.top - editorRect.top) <= 1) {
+                    editorBox = editorRect;
+                }
+            }
+
+            if (editorBox) {
+                // Containing block = editor box: the editor box is the menu's effective
+                // viewport. Translate, cap the menu's height to the box, and clamp the
+                // positioned box inside it (a viewport clamp translated to a negative
+                // editor-box top once painted the menu above the editor's clip).
+                const er = editorBox;
                 left -= er.left;
                 top -= er.top;
+                const availHeight = Math.max(160, er.height - 2 * margin);
+                if (rect.height > availHeight) {
+                    menuEl.style.maxHeight = availHeight + 'px';
+                    rect = menuEl.getBoundingClientRect();
+                }
+                if (left + rect.width + margin > er.width) {
+                    left = Math.max(margin, er.width - rect.width - margin);
+                }
+                if (top + rect.height + margin > er.height) {
+                    top = Math.max(margin, er.height - rect.height - margin);
+                }
+                if (top < margin) {
+                    top = margin;
+                }
+                if (left < margin) {
+                    left = margin;
+                }
+            } else {
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+                if (left + rect.width + margin > vw) {
+                    left = Math.max(margin, vw - rect.width - margin);
+                }
+                if (top + rect.height + margin > vh) {
+                    top = Math.max(margin, vh - rect.height - margin);
+                }
+                if (top < margin) {
+                    top = margin;
+                }
+                if (left < margin) {
+                    left = margin;
+                }
             }
             menuEl.style.left = left + 'px';
             menuEl.style.top = top + 'px';

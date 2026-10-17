@@ -31,6 +31,27 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         var page = await OpenLoadedModelingPageAsync();
         await WaitForPreviewNodeCountAtLeastAsync(page, 1);
 
+        // The toolbar contract lives on the TmToolbar, which the editor renders from the
+        // desktop band up. At the default demo viewport the preview column sits in the mobile
+        // band (phase 7: no command row, the viewer chrome is the zoom pill + the "⋯" menu),
+        // so pin the preview editor to the desktop band like a full-bleed host. The editor
+        // root IS the inline-size container, so the width goes on it directly.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const editor = document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor");
+                if (!editor) throw new Error('preview editor not found');
+                editor.style.width = '1280px';
+                editor.style.maxWidth = '1280px';
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            """
+            () => document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor")
+                ?.getAttribute('data-editor-layout') === 'desktop'
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 15_000 });
+
         var preview = page.Locator("[data-testid='modeling-diagram-preview']");
 
         var groups = await preview.Locator("[data-tm-group]")
