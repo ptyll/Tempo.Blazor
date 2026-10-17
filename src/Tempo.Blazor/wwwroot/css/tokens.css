@@ -385,6 +385,13 @@
      expressed once here so hosts can raise or drop it. */
   --tm-dashboard-min-height: 37.5rem;
 
+  /* ── TmDataTable ────────────────────────────────────────────── */
+  /* Cell padding of the table: aliases of the spacing steps the component stylesheet
+     falls back to, so a host can tune the density without touching the rule. The
+     values match those fallbacks exactly, so declaring them changes no visual. */
+  --tm-data-table-cell-py:     var(--tm-space-3);
+  --tm-data-table-cell-px:     var(--tm-space-4);
+
   /* ── Charts ── */
   --tm-chart-area-fill-opacity: 0.25;
 

@@ -3912,6 +3912,33 @@ window.tmDiagramEditor = {
         return this._screenToDoc(inst, clientX, clientY);
     },
 
+    // ── Mobile sheet-visible band centre (tap-insert above the peek sheet) ────
+    // The mobile panels sheet is a non-modal bottom drawer whose PANEL covers the lower
+    // band of the canvas, so a tap-insert at the viewport centre can land under it.
+    // Returns the doc point of the centre of the canvas band that stays visible above
+    // the sheet panel, or null when nothing covers the canvas (desktop, closed sheet,
+    // no JS geometry) — the caller keeps its viewport-centre fallback. The sheet ROOT
+    // spans the whole stage (it is click-through), so only the .tm-drawer__panel marks
+    // the covered band.
+    visibleBandCentre: function (root) {
+        if (!root) return null;
+        const canvasEl = root.querySelector('.tm-diagram-canvas');
+        const inst = canvasEl ? this.instances.get(canvasEl.id) : null;
+        if (!inst || !inst.svg) return null;
+        const rect = inst.svg.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return null;
+        let visibleBottom = rect.bottom;
+        const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
+        if (panel) {
+            const panelRect = panel.getBoundingClientRect();
+            if (panelRect.height > 0 && panelRect.top < visibleBottom && panelRect.top > rect.top) {
+                visibleBottom = panelRect.top;
+            }
+        }
+        if (visibleBottom <= rect.top) return null;
+        return this._screenToDoc(inst, rect.left + rect.width / 2, (rect.top + visibleBottom) / 2);
+    },
+
     // ── Table inserter anchor (UX review phase 4) ─────────────────────────────
     // The picker renders at the editor root as a FIXED popover (never inside a toolbar item,
     // which collapses inert into "More"), so Blazor needs the viewport point to pin it to: the

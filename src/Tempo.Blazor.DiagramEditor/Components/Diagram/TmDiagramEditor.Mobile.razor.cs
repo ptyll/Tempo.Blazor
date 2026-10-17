@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.Icons;
@@ -34,6 +35,41 @@ public partial class TmDiagramEditor
 
     /// <summary>Whether the editor resolves the shell's mobile presentation.</summary>
     private bool IsMobileLayout => _resolvedLayout == TmLayoutMode.Mobile;
+
+    /// <summary>
+    /// Whether the mobile panels sheet currently covers part of the canvas: the mobile
+    /// presentation's non-modal bottom drawer is open while either dock exists. Tap-insert
+    /// targets the canvas band above the sheet panel in that state (see
+    /// <c>HandleQuickInsert</c>); desktop and tablet keep the plain viewport centre.
+    /// </summary>
+    private bool IsMobileSheetOpen => IsMobileLayout && MobilePanelsAllowed
+        && (LeftDockOpen || RightDockOpen);
+
+    /// <summary>
+    /// The centre of the canvas band that stays visible above the open mobile sheet panel,
+    /// in document coordinates, or null when JS cannot measure it (tests, disposed host, no
+    /// overlap). Pairs with the <c>tmDiagramEditor.visibleBandCentre</c> helper: the sheet
+    /// ROOT spans the whole stage (it is click-through), so the measurement must use its
+    /// <c>.tm-drawer__panel</c>, not the sheet root.
+    /// </summary>
+    private async Task<(double X, double Y)?> TryGetVisibleBandCentreAsync()
+    {
+        try
+        {
+            var anchor = await JS.InvokeAsync<double[]?>("tmDiagramEditor.visibleBandCentre", _editorRoot);
+            return anchor is { Length: 2 } ? (anchor[0], anchor[1]) : null;
+        }
+        catch (JSException)
+        {
+            // Keep the viewport-centre fallback; the insert still happens.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Host is going away — nothing to measure.
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Whether the mobile editing surfaces (panels sheet, action bar) render at all: a Viewer

@@ -2561,8 +2561,12 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             DefaultWidth = 520, DefaultHeight = 340,
             Props =
             [
-                P("title",     "Title",      PropType.String, "Diagram",   cat: "Content"),
-                P("nodeCount", "Node Count", PropType.Int,    4,           cat: "Appearance"),
+                P("title",      "Title",      PropType.String, "Diagram",   cat: "Content"),
+                P("nodeCount",  "Node Count", PropType.Int,    4,           cat: "Appearance"),
+                // The editor's responsive band is a stated wireframe decision (tablet sheet,
+                // mobile sheet presentation) — mirrors TmDashboard.LayoutMode.
+                P("layoutMode", "Layout Mode", PropType.Enum,  "auto",      cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 

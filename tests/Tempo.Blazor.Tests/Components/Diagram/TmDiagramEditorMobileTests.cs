@@ -123,6 +123,39 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         (centreY - page.Height / 2.0).Should().BeLessThanOrEqualTo(21.0);
     }
 
+    [Fact]
+    public async Task TapStencil_WithSheetOpen_InsertsIntoTheBandAboveTheSheet()
+    {
+        var doc = CreateDocument();
+        // A fresh mobile editor opens the panels sheet (peek), whose panel covers the
+        // canvas' lower band: JS measures the band that stays visible ABOVE the sheet
+        // panel and reports its centre in doc coordinates — pushed ABOVE the viewport
+        // centre, which the overlap would hide.
+        var page = doc.Pages[doc.ActivePageIndex];
+        var bandCentre = (X: page.Width / 2.0, Y: page.Height / 2.0 - 150.0);
+        JSInterop.Setup<double[]?>("tmDiagramEditor.visibleBandCentre", _ => true)
+            .SetResult([bandCentre.X, bandCentre.Y]);
+
+        var cut = RenderMobileEditor(doc);
+
+        var tile = cut.Find(".tm-diagram-toolbox__item[data-stencil-id='general.rectangle']");
+        tile.Click();
+
+        // The insert went through the visible-band interop, not the plain viewport centre.
+        JSInterop.VerifyInvoke("tmDiagramEditor.visibleBandCentre");
+
+        doc.Nodes.Should().HaveCount(2, "the tap inserts a shape");
+        var inserted = doc.Nodes.Last();
+        var centreX = inserted.X + inserted.W / 2.0;
+        var centreY = inserted.Y + inserted.H / 2.0;
+
+        (page.Height / 2.0 - centreY).Should().BeGreaterThan(100.0,
+            "the sheet overlap pushes the insert centre ABOVE the viewport centre");
+        centreY.Should().BeApproximately(bandCentre.Y, 4.0,
+            "the node lands on the reported band centre (grid-snapped to the default step of 8)");
+        centreX.Should().BeApproximately(bandCentre.X, 4.0);
+    }
+
     // ── The action bar: Select | Pan | Properties | More ────────────────────
 
     [Fact]

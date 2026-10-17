@@ -2612,6 +2612,21 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
                 cy = vp.Y + vp.H / 2;
             }
         }
+        // Mobile tap-insert with the panels sheet open (UX cleanup): the sheet's panel
+        // covers the canvas' lower band, so a viewport-centre insert can land partly
+        // under it. Target the centre of the band that stays VISIBLE above the sheet
+        // panel instead — JS measures it and converts it to doc coordinates. Desktop
+        // and tablet keep the plain viewport centre; the fallback below also covers
+        // a JS that cannot measure (tests, no overlap).
+        if (IsMobileSheetOpen)
+        {
+            var visibleCentre = await TryGetVisibleBandCentreAsync();
+            if (visibleCentre is { } band)
+            {
+                cx = band.X;
+                cy = band.Y;
+            }
+        }
         var x = Math.Round((cx - w / 2) / GridSize) * GridSize;
         var y = Math.Round((cy - h / 2) / GridSize) * GridSize;
         await OnToolboxDrop((stencilId, x, y));

@@ -3187,10 +3187,40 @@ line.tm-diagram-rotate-handle-stem {
     padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
 }
 
+/* The document title must survive 320 whole ("UML Class Diagram"): it keeps the free
+   width (flex 1, min-width 0), and the bar drops the desktop spacer — its min-width
+   steals exactly the pixels the full title needs — while the input tightens to the xs
+   step. The Undo/Redo/⋯ buttons KEEP the 44px touch target (WCAG 2.5.5): the text
+   yields first, never the targets. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__header-spacer {
+    display: none;
+}
+
 .tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__title {
     flex: 1 1 auto;
     min-width: 0;
     max-width: none;
+    padding: 4px 6px;
+    font-size: var(--tm-font-size-xs, 12px);
+}
+
+/* ── Action bar (F5): whole words at 320. The core bar hands every tile an equal width
+   (flex-basis 0), so a ten-letter label like "Properties" loses the coin flip at 320
+   and hyphenates mid-word ("Propertie|s"). The editor's bar labels are known short
+   words: they never wrap, each tile sizes from its label first (grow still splits the
+   free space, so tiles stay even whenever room allows), and the bar's inter-tile gap
+   tightens a step so the four tiles clear a 320 viewport even with a scrollbar. ── */
+.tm-diagram-editor .tm-mobile-action-bar__bar {
+    gap: var(--tm-space-1);
+}
+
+.tm-diagram-editor .tm-mobile-action-bar__bar .tm-mobile-action-bar__action,
+.tm-diagram-editor .tm-mobile-action-bar__bar .tm-mobile-action-bar__more {
+    flex-basis: auto;
+}
+
+.tm-diagram-editor .tm-mobile-action-bar__label-text {
+    white-space: nowrap;
 }
 
 .tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__more-btn {
