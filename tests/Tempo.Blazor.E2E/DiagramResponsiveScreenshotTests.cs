@@ -72,8 +72,22 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                     """);
                 await page.WaitForTimeoutAsync(150);
 
-                // 1. Full editor
+                // 1. Full editor. At the 900px viewport height the shell's status bar (zoom
+                //    controls) sits at the page bottom — below the fold — so the capture scrolls
+                //    the editor fully into the frame first (the status bar is phase-4 review
+                //    evidence) and restores the scroll afterwards, keeping the overlay captures
+                //    below framed exactly as before.
+                await page.EvaluateAsync(
+                    """
+                    () => {
+                        const status = document.querySelector('.tm-editor-shell__status');
+                        if (status) status.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+                    }
+                    """);
+                await page.WaitForTimeoutAsync(100);
                 await ShotAsync(page, $"desktop-1440-{theme}--editor");
+                await page.EvaluateAsync("() => window.scrollTo({ top: 0, behavior: 'instant' })");
+                await page.WaitForTimeoutAsync(100);
 
                 // 2. Layers panel: since phase 4 the panels share the inspector tabs — collapsing
                 //    the properties panel auto-selects the Layers tab. The minimap card below the
