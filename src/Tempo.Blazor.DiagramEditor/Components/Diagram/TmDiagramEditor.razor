@@ -11,6 +11,7 @@
 <CascadingValue Value="ActiveCommandStack" IsFixed="false">
 
 <div class="tm-diagram-editor @Class @(IsReadOnly ? "tm-diagram-editor--readonly" : "")"
+     @ref="_editorRoot"
      data-testid="@TestId("diagram-editor")">
 
     @* Phase 4 (desktop restructure): the shell owns the editor chrome — a header (page tabs,
@@ -561,6 +562,18 @@
         </Canvas>
     </TmEditorShell>
 
+    @* UX review phase 4 (high): the table picker must never be a descendant of a toolbar item —
+       a group that collapses into "More" turns its bar copy inert and hidden and would take the
+       picker with it. It renders at the editor root as a fixed popover anchored where the user
+       invoked it (the Insert trigger on the bar, the "More" trigger once collapsed); both entry
+       points — the bar dropdown and the More "Table" entry — open this same surface. *@
+    @if (_showTableInserter)
+    {
+        <div class="tm-diagram-table-inserter-popover" style="@TableInserterStyle">
+            <TmDiagramTableInserter OnInsert="HandleTableInsert" />
+        </div>
+    }
+
 </div>
 
 @* Connect stencil selection modal *@
@@ -840,31 +853,23 @@
                         </TmToolbarGroup>
                     }
 
-                    @* Insert: Table / Text — the popover wrapper moves with the group and keeps the
-                       table inserter OUTSIDE the data-tm-group=insert element. *@
+                    @* Insert: Table / Text — the picker itself renders at the editor root (never
+                       inside this group: a collapsed bar copy is inert and hidden), see the
+                       popover below the shell. *@
                     @if (Shows(DiagramToolbarGroups.Insert))
                     {
-                        <div class="tm-diagram-insert-dropdown-wrapper">
-                            <TmToolbarGroup Label="@Loc["TmDiagramEditor_Insert"]"
-                                            Class="tm-diagram-editor__toolbar-group tm-diagram-insert-dropdown"
-                                            data-tm-group="insert">
-                                <TmToolbarItem MenuLabel="@Loc["TmDiagramEditor_Insert"]"
-                                               Priority="ToolbarButtonPriority.Primary"
-                                               MenuItems="@BuildInsertMenuItems()">
-                                    <TmDropdown Text="@Loc["TmDiagramEditor_Insert"]" Icon="@IconNames.Plus" Disabled="@IsReadOnly" OnSelect="HandleInsertSelect">
-                                        <TmDropdownItem Value="table" Icon="@IconNames.Grid">@Loc["TmDiagramEditor_InsertTable"]</TmDropdownItem>
-                                        <TmDropdownItem Value="text" Icon="@IconNames.Type">@Loc["TmDiagramEditor_InsertText"]</TmDropdownItem>
-                                    </TmDropdown>
-                                </TmToolbarItem>
-                            </TmToolbarGroup>
-
-                            @if (_showTableInserter)
-                            {
-                                <div class="tm-diagram-table-inserter-popover">
-                                    <TmDiagramTableInserter OnInsert="HandleTableInsert" />
-                                </div>
-                            }
-                        </div>
+                        <TmToolbarGroup Label="@Loc["TmDiagramEditor_Insert"]"
+                                        Class="tm-diagram-editor__toolbar-group tm-diagram-insert-dropdown"
+                                        data-tm-group="insert">
+                            <TmToolbarItem MenuLabel="@Loc["TmDiagramEditor_Insert"]"
+                                           Priority="ToolbarButtonPriority.Primary"
+                                           MenuItems="@BuildInsertMenuItems()">
+                                <TmDropdown Text="@Loc["TmDiagramEditor_Insert"]" Icon="@IconNames.Plus" Disabled="@IsReadOnly" OnSelect="HandleInsertSelect">
+                                    <TmDropdownItem Value="table" Icon="@IconNames.Grid">@Loc["TmDiagramEditor_InsertTable"]</TmDropdownItem>
+                                    <TmDropdownItem Value="text" Icon="@IconNames.Type">@Loc["TmDiagramEditor_InsertText"]</TmDropdownItem>
+                                </TmDropdown>
+                            </TmToolbarItem>
+                        </TmToolbarGroup>
                     }
 
                     @* Arrange: Align / Distribute *@

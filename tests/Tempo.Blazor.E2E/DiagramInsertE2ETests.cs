@@ -35,10 +35,28 @@ public class DiagramInsertE2ETests : WasmTestBase
         return page;
     }
 
-    private async Task OpenInsertDropdownAsync(IPage page)
+    /// <summary>
+    /// Phase 4 (UX/code review): the command row is a core TmToolbar — a collapsed group's
+    /// trigger is inert and its commands live in the "More" menu as plain entries (Table/Text).
+    /// Open whichever surface is currently on screen and run the insert command; from "More",
+    /// Table must surface the same <c>.tm-diagram-table-inserter</c> picker.
+    /// </summary>
+    private async Task RunInsertCommandAsync(IPage page, string optionName)
     {
+        var pattern = new Regex($"^{Regex.Escape(optionName)}$");
+
         var trigger = page.Locator(".tm-diagram-insert-dropdown .tm-dropdown-trigger");
-        await trigger.ClickAsync();
+        if (await trigger.CountAsync() > 0 && await trigger.IsVisibleAsync() && await trigger.IsEnabledAsync())
+        {
+            await trigger.ClickAsync();
+            await page.WaitForTimeoutAsync(200);
+            await ClickInsertOptionAsync(page, optionName);
+            return;
+        }
+
+        await page.Locator(".tm-toolbar-more").First.ClickAsync();
+        await page.WaitForTimeoutAsync(200);
+        await page.Locator(".tm-toolbar-more__item").Filter(new() { HasTextRegex = pattern }).First.ClickAsync();
         await page.WaitForTimeoutAsync(200);
     }
 
@@ -55,9 +73,9 @@ public class DiagramInsertE2ETests : WasmTestBase
     {
         var page = await PrepareDiagramPageAsync();
 
-        // Open Insert dropdown and click Table
-        await OpenInsertDropdownAsync(page);
-        await ClickInsertOptionAsync(page, "Table");
+        // Open the insert surface (bar dropdown, or the "More" entry once the group collapsed)
+        // and pick Table.
+        await RunInsertCommandAsync(page, "Table");
 
         // Wait for table inserter to appear
         await page.WaitForSelectorAsync(".tm-diagram-table-inserter", new PageWaitForSelectorOptions
@@ -102,9 +120,8 @@ public class DiagramInsertE2ETests : WasmTestBase
     {
         var page = await PrepareDiagramPageAsync();
 
-        // Open Insert dropdown and click Text
-        await OpenInsertDropdownAsync(page);
-        await ClickInsertOptionAsync(page, "Text");
+        // Open the insert surface and pick Text
+        await RunInsertCommandAsync(page, "Text");
         await page.WaitForTimeoutAsync(800);
 
         // After F3.A `.tm-diagram-node` is an SVG <g> group; Playwright's

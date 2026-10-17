@@ -113,6 +113,53 @@ public class TmDiagramEditorInsertTableTests : LocalizationTestBase
         node.H.Should().Be(110);
     }
 
+    [Fact]
+    public async Task TableInserter_RendersAtEditorRoot_OutsideCollapsedToolbarItem()
+    {
+        // UX review phase 4 (high): the picker opened from the Insert dropdown (the same handler
+        // the "More" entry runs) must never be a descendant of a toolbar item — a collapsed group's
+        // bar copy turns inert and hidden and would take the picker with it.
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        await cut.InvokeAsync(() =>
+            cut.Find("[data-tm-group='insert'] .tm-dropdown-trigger").Click());
+        await cut.InvokeAsync(() =>
+            cut.FindAll(".tm-dropdown-item")
+                .First(item => item.TextContent.Contains("Table"))
+                .Click());
+
+        // The selection closes the menu, yields and only then runs the insert handler.
+        AngleSharp.Dom.IElement? popover = null;
+        cut.WaitForAssertion(
+            () => popover = cut.Find(".tm-diagram-table-inserter-popover"));
+        popover.Should().NotBeNull("the picker opens from the bar dropdown");
+
+        var ancestors = Ancestors(popover!).ToList();
+        ancestors.Should().NotContain(
+            a => a.HasAttribute("inert") || a.ClassList.Contains("tm-toolbar-item--collapsed"),
+            "an inert or collapsed toolbar item must never contain the picker");
+        ancestors.Should().NotContain(
+            a => a.ClassList.Contains("tm-diagram-editor__toolbar"),
+            "the picker renders at the editor root, outside the collapsible command row");
+        popover.GetAttribute("style").Should().Contain("left:")
+            .And.Contain("top:", "the popover is pinned at the measured viewport point");
+    }
+
+    private static IEnumerable<AngleSharp.Dom.IElement> Ancestors(AngleSharp.Dom.IElement element)
+    {
+        var current = element.ParentElement;
+        while (current is not null)
+        {
+            yield return current;
+            current = current.ParentElement;
+        }
+    }
+
     private static async Task InvokeInsertTable(IRenderedComponent<TmDiagramEditor> cut, int rows, int columns)
     {
         var method = typeof(TmDiagramEditor).GetMethod("InsertTable", BindingFlags.NonPublic | BindingFlags.Instance);

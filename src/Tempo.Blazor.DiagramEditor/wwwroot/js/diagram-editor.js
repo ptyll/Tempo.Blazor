@@ -3776,6 +3776,28 @@ window.tmDiagramEditor = {
         return this._screenToDoc(inst, clientX, clientY);
     },
 
+    // ── Table inserter anchor (UX review phase 4) ─────────────────────────────
+    // The picker renders at the editor root as a FIXED popover (never inside a toolbar item,
+    // which collapses inert into "More"), so Blazor needs the viewport point to pin it to: the
+    // Insert trigger while the group sits on the bar, otherwise the toolbar's "More" trigger
+    // that now owns the group's commands. Returns null when nothing is measurable (the caller
+    // keeps its previous position).
+    tableInserterAnchor: function (root) {
+        if (!root) return null;
+        const insertTrigger = root.querySelector("[data-tm-group='insert'] .tm-dropdown-trigger");
+        const onBar = insertTrigger !== null
+            && insertTrigger.closest('.tm-toolbar-item--collapsed') === null;
+        const anchorEl = onBar ? insertTrigger : root.querySelector('.tm-toolbar-more');
+        if (!anchorEl) return null;
+        const rect = anchorEl.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return null;
+        // The grid popover is ~200×230; keep it inside the viewport.
+        const width = 208, height = 240, margin = 8, gap = 6;
+        const x = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+        const y = Math.max(margin, Math.min(rect.bottom + gap, window.innerHeight - height - margin));
+        return [x, y];
+    },
+
     // ── Magnetic guidelines ────────────────────────────────────────────────
 
     _computeSnapGuides: function (inst, dragNodeIds, dragStartPositions, dxDoc, dyDoc) {

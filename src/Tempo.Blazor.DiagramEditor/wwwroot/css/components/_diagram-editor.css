@@ -182,9 +182,25 @@
 
 /* ── Editor shell integration (phase 4) ──────────────────────────────────── */
 /* The core shell paints generic chrome (padded surface bands); the diagram editor owns the
-   workspace tone and its own header/toolbar/status paint, so the shell regions go flat. */
+   workspace tone and its own header/toolbar/status paint, so the shell regions go flat.
+
+   UX review phase 4 (blocker): the editor root is a bounded box (demo height 600px,
+   overflow hidden), so the whole chain down to the status bar must be an explicit flex
+   column — the shell fills the root, __main takes the leftover and clips its own overflow
+   (the inspector dock scrolls INSIDE), and the status bar keeps its intrinsic height so the
+   zoom controls stay visible instead of being pushed out of the box. */
 .tm-diagram-editor .tm-editor-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     height: 100%;
+    min-height: 0;
+}
+
+.tm-diagram-editor .tm-editor-shell__main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .tm-diagram-editor .tm-editor-shell__header,
@@ -201,7 +217,10 @@
     overflow: hidden;
 }
 
+/* The status bar is the shell's LAST row (sibling of __main): flex-shrink 0 keeps it inside
+   the editor box — the zoom controls (− % +) must survive a short host container. */
 .tm-diagram-editor .tm-editor-shell__status {
+    flex-shrink: 0;
     padding: 0;
     background: transparent;
     border-block-start: none;
@@ -369,11 +388,6 @@
     min-height: 0;
 }
 
-.tm-diagram-insert-dropdown-wrapper {
-    position: relative;
-    display: inline-flex;
-}
-
 /* ── Toolbar Button Groups ───────────────────────────────────────────────── */
 /* Flat groups (mockup): no group box, no per-button inner separators. Each button is
    its own rounded control; the `--active` tool gets the subtle primary fill + primary
@@ -428,15 +442,25 @@
     border-right: none;
 }
 
-/* Pressed toggles inside the editor groups (mockup: subtle primary fill + primary ink). */
-.tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"] {
+/* Pressed toggles inside the editor groups (mockup: subtle primary fill + primary ink, no ring).
+   UX review phase 4 (major): the core paints pressed with an inset ring at a specificity that
+   beats the former group-scoped rule, so the active tool lost its fill — the editor-scoped
+   selector out-ranks it (and its own hover rule below), clears the ring, and keeps the label
+   ink primary with the icon. */
+.tm-diagram-editor .tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"] {
     background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    box-shadow: none;
+}
+
+.tm-diagram-editor .tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"] .tm-toolbar-btn-text {
     color: var(--tm-color-primary);
 }
 
-.tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
+.tm-diagram-editor .tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
     background: var(--tm-color-primary-subtle);
     color: var(--tm-color-primary);
+    box-shadow: none;
 }
 
 .tm-diagram-editor__toolbar-group .tm-dropdown-trigger {
@@ -1629,6 +1653,13 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     overflow: hidden;
 }
 
+/* UX review phase 4 (minor): the card header already reads "Minimap" — the standalone
+   TmDiagramMinimap title would label the card twice. The markup keeps the title (the
+   minimap is also used on its own, where it needs it), the embedded card just hides it. */
+.tm-diagram-editor__minimap-card .tm-diagram-minimap__title {
+    display: none;
+}
+
 /* ── Properties panel ────────────────────────────────────────────────────── */
 .tm-diagram-editor__props-wrap {
     background: var(--tm-color-surface-elevated);
@@ -2745,11 +2776,11 @@ line.tm-diagram-rotate-handle-stem {
    block re-declared exactly those tokens with stale hex fallbacks). */
 
 /* ── Table Inserter ─────────────────────────────────────────────────────── */
-
+/* UX review phase 4: the popover renders at the editor root (never inside a toolbar item that
+   may collapse into "More") as a fixed surface; its viewport point is measured in JS when it
+   opens and pinned through the inline left/top — the class only paints it. */
 .tm-diagram-table-inserter-popover {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
+    position: fixed;
     z-index: 1000;
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);

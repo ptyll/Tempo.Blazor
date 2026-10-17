@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
@@ -129,6 +130,18 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private bool _propsCollapsed;
     private bool _layersCollapsed;
     private bool _showTableInserter;
+
+    // UX review phase 4: the picker renders at the editor root as a fixed popover anchored to
+    // the Insert trigger (or the More trigger once the group collapsed), measured in JS at the
+    // moment it opens — never a child of a toolbar item that may collapse into "More".
+    private double _tableInserterX;
+    private double _tableInserterY;
+    private ElementReference _editorRoot;
+
+    /// <summary>Inline style pinning the fixed popover at the measured viewport point (invariant format — a CSS value must not follow the UI culture).</summary>
+    private string TableInserterStyle =>
+        string.Create(CultureInfo.InvariantCulture, $"left:{_tableInserterX:0.#}px;top:{_tableInserterY:0.#}px");
+
     private bool _minimapCollapsed;
     private bool _exportMenuOpen;
     private bool _exporting;
@@ -1514,13 +1527,43 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleInsertSelect(string value)
     {
-        Console.WriteLine($"[HandleInsertSelect] value={value}, _showTableInserter before={_showTableInserter}");
         switch (value)
         {
-            case "table": _showTableInserter = true; await InvokeAsync(StateHasChanged); break;
-            case "text": await InsertText(); break;            
+            case "table":
+                _showTableInserter = true;
+                await PositionTableInserterAsync();
+                break;
+            case "text": await InsertText(); break;
         }
-        Console.WriteLine($"[HandleInsertSelect] _showTableInserter after={_showTableInserter}");
+    }
+
+    /// <summary>
+    /// UX review phase 4: the picker is anchored where the user invoked it — the Insert trigger
+    /// while the group sits on the bar, the "More" trigger once the group collapsed there. The
+    /// measurement happens before the popover renders; without JS (tests, disposed host) the
+    /// popover keeps its last/fallback position.
+    /// </summary>
+    private async Task PositionTableInserterAsync()
+    {
+        try
+        {
+            var anchor = await JS.InvokeAsync<double[]?>("tmDiagramEditor.tableInserterAnchor", _editorRoot);
+            if (anchor is { Length: 2 })
+            {
+                _tableInserterX = anchor[0];
+                _tableInserterY = anchor[1];
+            }
+        }
+        catch (JSException)
+        {
+            // Keep the previous position; the popover still opens.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Host is going away — nothing to anchor.
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleTableInsert((int Rows, int Columns) args)
