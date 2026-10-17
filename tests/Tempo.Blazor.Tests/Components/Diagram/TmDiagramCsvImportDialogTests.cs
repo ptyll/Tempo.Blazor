@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Tests.Localization;
+using Xunit;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
@@ -86,5 +87,60 @@ public class TmDiagramCsvImportDialogTests : LocalizationTestBase
         cut.Render();
 
         cut.Find(".tm-diagram-csv-import__preview").TextContent.Should().Contain("Nodes: 2");
+    }
+
+    [Fact]
+    public void Mapping_IsTwoColumnForm()
+    {
+        var cut = Render<TmDiagramCsvImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.Find("textarea").Input(OrgChartCsv);
+        cut.Render();
+
+        // Mockup: every mapping renders as a two-column form row — a label on the left
+        // and its column select on the right, never stacked controls.
+        var rows = cut.FindAll(".tm-diagram-csv-import__mapping-row").ToList();
+        rows.Should().HaveCount(2);
+
+        foreach (var row in rows)
+        {
+            row.QuerySelectorAll("label").Should().ContainSingle(
+                "a two-column mapping row carries exactly one label");
+            row.QuerySelectorAll("select").Should().ContainSingle(
+                "a two-column mapping row carries exactly one select");
+        }
+    }
+
+    [Fact]
+    public void Summary_RendersNodeAndEdgeStatChips()
+    {
+        var cut = Render<TmDiagramCsvImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.Find("textarea").Input(OrgChartCsv);
+        cut.Render();
+
+        var mappingSelects = cut.FindAll(".tm-diagram-csv-import__mapping-row select").ToList();
+        mappingSelects[0].Change("name");
+        mappingSelects[1].Change("manager");
+        cut.Render();
+
+        // Mockup: the live summary is a box of icon stat chips — one per count.
+        var stats = cut.FindAll(".tm-diagram-csv-import__stat").ToList();
+        stats.Should().HaveCount(2, "one chip per node and edge count");
+        stats[0].TextContent.Should().Contain("Nodes: 2");
+        stats[1].TextContent.Should().Contain("Edges: 1");
+        stats.Should().OnlyContain(s => s.QuerySelector("svg") != null,
+            "every stat chip paints its icon");
+    }
+
+    [Fact]
+    public void Subtitle_IsLocalized()
+    {
+        UseCzechLocalization();
+        var cut = Render<TmDiagramCsvImportDialog>(p => p.Add(x => x.Show, true));
+
+        var subtitle = cut.Find(".tm-modal-subtitle");
+        subtitle.TextContent.Should().Contain("Mapujte sloupce CSV",
+            "the dialog explains its purpose through the TmModal subtitle");
     }
 }

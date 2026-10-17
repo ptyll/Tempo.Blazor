@@ -21,8 +21,9 @@
     font-size: var(--tm-text-sm);
 }
 
+/* Mockup: the diagram-type select spans the dialog width. */
 .tm-diagram-csv-import__select {
-    max-width: 220px;
+    width: 100%;
 }
 
 .tm-diagram-csv-import__mappings {
@@ -37,16 +38,19 @@
     color: var(--tm-color-text);
 }
 
+/* Mockup: the mapping form is TWO-COLUMN — the semantic-field label sits on the left
+   and its column select fills the right column of the same row. */
 .tm-diagram-csv-import__mappings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: var(--tm-space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
 }
 
 .tm-diagram-csv-import__mapping-row {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-1);
+    display: grid;
+    grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--tm-space-3);
 }
 
 .tm-diagram-csv-import__mapping-label {
@@ -102,7 +106,22 @@
     /* Mockup: the header row stays visible while the preview body scrolls. */
     position: sticky;
     top: 0;
+    z-index: 2;
+}
+
+/* Mockup: the first column pins horizontally, so the row identity stays visible while
+   a wide CSV scrolls inside the preview (the table scrolls, never the page). */
+.tm-diagram-csv-import__preview-table th:first-child,
+.tm-diagram-csv-import__preview-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--tm-color-surface);
     z-index: 1;
+}
+
+.tm-diagram-csv-import__preview-table th:first-child {
+    z-index: 3;
+    background: var(--tm-color-surface-elevated);
 }
 
 /* Mockup: the live parse result paints as one summary box holding icon stats. */

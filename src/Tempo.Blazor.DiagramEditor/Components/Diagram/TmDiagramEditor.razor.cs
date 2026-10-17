@@ -180,11 +180,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private string? _connectSourceNodeId;
     private string? _connectDirection;
 
-    /// <summary>Connect modal palette: node stencils only (edge stencils style relationships, not shapes).</summary>
-    private IEnumerable<DiagramStencil> ConnectableStencils => DiagramStencilDisplayNames.GetConnectableStencils(StencilRegistry);
-
-    /// <summary>Localized stencil display name via the shared helper (resource key with raw-name fallback).</summary>
-    private string GetStencilDisplayName(DiagramStencil stencil) => DiagramStencilDisplayNames.GetStencilDisplayName(stencil, Loc);
+    /// <summary>Stencil of the node the connect arrow was dragged from — it scopes the connect dialog's default palette (DI4).</summary>
+    private string? ConnectSourceStencilId =>
+        _connectSourceNodeId is null
+            ? null
+            : _document?.Nodes.FirstOrDefault(n => n.Id == _connectSourceNodeId)?.StencilId;
 
     // SQL import dialog state
     private bool _sqlImportDialogOpen;

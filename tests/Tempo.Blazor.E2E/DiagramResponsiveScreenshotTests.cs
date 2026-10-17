@@ -174,6 +174,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--template-gallery");
+        await AssertDialogFitsViewportAsync(page, ".tm-diagram-template-gallery", expectFooter: true);
         await page.Keyboard.PressAsync("Escape");
         await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
 
@@ -182,6 +183,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator(".tm-diagram-sql-import").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--sql-import-dialog");
+        await AssertDialogFitsViewportAsync(page, ".tm-diagram-sql-import", expectFooter: true);
         await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
             .First.ClickAsync();
         await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
@@ -191,6 +193,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator(".tm-diagram-csv-import").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--csv-import-dialog");
+        await AssertDialogFitsViewportAsync(page, ".tm-diagram-csv-import", expectFooter: true);
         await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
             .First.ClickAsync();
         await ExpectHiddenAsync(page, ".tm-diagram-csv-import");
@@ -223,7 +226,81 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
         await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        // The connect picker's primary action is a palette tile; on the mobile sheet the
+        // sticky footer with the Close button appears as well. Settle first — a frame taken
+        // mid slide-up would read the footer below the fold.
         await ShotSettledAsync(page, $"{prefix}--connect-modal");
+        await AssertDialogFitsViewportAsync(page, ".tm-diagram-connect-modal", expectFooter: width < 640);
+    }
+
+    /// <summary>
+    /// Phase-5 DoD assertions, run against a settled dialog: the page has no horizontal scroll
+    /// (a wide preview table must scroll INSIDE its wrapper), and the dialog's footer — when the
+    /// dialog has one — sits fully inside the viewport with a clickable primary button, so a
+    /// phone user confirms without scrolling the page. The page itself never scrolls.
+    /// </summary>
+    private static async Task AssertDialogFitsViewportAsync(IPage page, string contentSelector, bool expectFooter)
+    {
+        var metrics = await page.EvaluateAsync<DialogMetrics>(
+            """
+            (sel) => {
+                const content = document.querySelector(sel);
+                const root = content?.closest('.tm-modal-container');
+                const rect = root?.getBoundingClientRect();
+                const footer = document.querySelector('.tm-modal-footer');
+                const footerRect = footer?.getBoundingClientRect();
+                const primary = footer
+                    ? Array.from(footer.querySelectorAll('button')).find(b =>
+                        b.classList.contains('tm-btn-primary') || b.classList.contains('tm-btn-ok'))
+                        ?? footer.querySelector('button')
+                    : null;
+                const primaryRect = primary?.getBoundingClientRect();
+                return {
+                    hasRoot: !!rect,
+                    rootTop: rect?.top ?? -1,
+                    rootBottom: rect?.bottom ?? -1,
+                    viewportH: window.innerHeight,
+                    viewportW: window.innerWidth,
+                    pageScrollX: document.documentElement.scrollWidth - window.innerWidth,
+                    hasFooter: !!footerRect && footerRect.height > 0,
+                    footerBottom: footerRect?.bottom ?? -1,
+                    primaryBottom: primaryRect?.bottom ?? -1,
+                    primaryH: primaryRect?.height ?? 0,
+                };
+            }
+            """, contentSelector);
+
+        Assert.IsNotNull(metrics, $"viewport metrics for {contentSelector}");
+        Assert.IsTrue(metrics.HasRoot, $"dialog root for {contentSelector} not found");
+        Assert.IsTrue(metrics.PageScrollX <= 0,
+            $"page must not scroll horizontally for {contentSelector}");
+        Assert.AreEqual(expectFooter, metrics.HasFooter,
+            $"unexpected footer visibility for {contentSelector}");
+
+        if (expectFooter)
+        {
+            Assert.IsTrue(metrics.FooterBottom <= metrics.ViewportH + 0.5,
+                $"footer bottom ({metrics.FooterBottom}) must stay inside the viewport ({metrics.ViewportH}) for {contentSelector}");
+            Assert.IsTrue(metrics.PrimaryBottom <= metrics.ViewportH + 0.5,
+                $"primary button must be clickable without page scroll for {contentSelector}");
+            Assert.IsTrue(metrics.PrimaryH >= 32,
+                $"primary button collapsed to {metrics.PrimaryH}px in {contentSelector}");
+        }
+    }
+
+    /// <summary>Viewport-fit metrics for one open dialog (a plain mutable class — Playwright's JSON deserializer needs a parameterless constructor).</summary>
+    private sealed class DialogMetrics
+    {
+        public bool HasRoot { get; set; }
+        public double RootTop { get; set; }
+        public double RootBottom { get; set; }
+        public double ViewportH { get; set; }
+        public double ViewportW { get; set; }
+        public double PageScrollX { get; set; }
+        public bool HasFooter { get; set; }
+        public double FooterBottom { get; set; }
+        public double PrimaryBottom { get; set; }
+        public double PrimaryH { get; set; }
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Tests.Localization;
+using Xunit;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
@@ -15,6 +16,20 @@ public class TmDiagramSqlImportDialogTests : LocalizationTestBase
         CREATE TABLE Customer (
             Id INT PRIMARY KEY,
             Name NVARCHAR(100) NOT NULL
+        );
+        """;
+
+    private const string TwoTableSql =
+        """
+        CREATE TABLE Customer (
+            Id INT PRIMARY KEY,
+            Name NVARCHAR(100) NOT NULL
+        );
+
+        CREATE TABLE Order (
+            Id INT PRIMARY KEY,
+            CustomerId INT,
+            FOREIGN KEY (CustomerId) REFERENCES Customer(Id)
         );
         """;
 
@@ -113,5 +128,22 @@ public class TmDiagramSqlImportDialogTests : LocalizationTestBase
 
         first.Find($"label[for='{firstTextarea.Id}']").Should().NotBeNull();
         second.Find($"label[for='{secondTextarea.Id}']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Summary_RendersIconsAndCounts()
+    {
+        var cut = Render<TmDiagramSqlImportDialog>(p => p.Add(x => x.Show, true));
+
+        cut.Find("textarea").Input(TwoTableSql);
+        cut.Render();
+
+        // Mockup: the parse summary is a box of icon stat chips — one per count.
+        var stats = cut.FindAll(".tm-diagram-sql-import__stat").ToList();
+        stats.Should().HaveCount(2, "one chip per table and relation count");
+        stats[0].TextContent.Should().Contain("Tables: 2");
+        stats[1].TextContent.Should().Contain("Relations: 1");
+        stats.Should().OnlyContain(s => s.QuerySelector("svg") != null,
+            "every stat chip paints its icon");
     }
 }

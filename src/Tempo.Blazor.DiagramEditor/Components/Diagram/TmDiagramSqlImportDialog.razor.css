@@ -21,8 +21,9 @@
     font-size: var(--tm-text-sm);
 }
 
+/* Mockup: the layout select spans the dialog width (mono stays in the textarea only). */
 .tm-diagram-sql-import__select {
-    max-width: 200px;
+    width: 100%;
 }
 
 /* Mockup: the live parse result paints as one summary box holding icon stats. */

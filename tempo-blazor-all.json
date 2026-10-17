@@ -30914,6 +30914,94 @@
           ]
         },
         {
+          "itemName": "DiagramTemplateDisplayNames",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Diagram.Templates",
+          "description": "Display-name helpers for diagram templates and their categories: resolves the localized text through resource keys derived from the template Id (TmDiagramTemplate_<id>) and the category name (TmDiagramTemplateCategory_<category>), falling back to the raw authored values, so the DiagramTemplate model itself stays unchanged.",
+          "packageId": "Tempo.Blazor.DiagramEditor",
+          "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/DiagramTemplateDisplayNames.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CategoryKeyPrefix",
+              "kind": "Field",
+              "type": "string",
+              "description": "Prefix of the category keys, followed by the sanitized category name."
+            },
+            {
+              "name": "NameKeyPrefix",
+              "kind": "Field",
+              "type": "string",
+              "description": "Prefix of the per-template name keys, followed by the sanitized template id."
+            },
+            {
+              "name": "GetCategoryName",
+              "kind": "Method",
+              "type": "string",
+              "description": "Returns the localized category label: the translation of the key derived from the category when the key resolves, otherwise the raw category name.",
+              "parameters": [
+                {
+                  "name": "category",
+                  "type": "string"
+                },
+                {
+                  "name": "localizer",
+                  "type": "ITmLocalizer"
+                }
+              ]
+            },
+            {
+              "name": "GetLocalizedText",
+              "kind": "Method",
+              "type": "string",
+              "description": "Resolves a localized text for a resource key, falling back to the provided value when the key is empty or untranslated (localizers echoing [key] are treated as missing).",
+              "parameters": [
+                {
+                  "name": "resourceKey",
+                  "type": "string?"
+                },
+                {
+                  "name": "fallback",
+                  "type": "string"
+                },
+                {
+                  "name": "localizer",
+                  "type": "ITmLocalizer"
+                }
+              ]
+            },
+            {
+              "name": "GetTemplateName",
+              "kind": "Method",
+              "type": "string",
+              "description": "Returns the localized display name for a template: the translation of the key derived from its Id when the key resolves, otherwise the template's raw name.",
+              "parameters": [
+                {
+                  "name": "template",
+                  "type": "DiagramTemplate"
+                },
+                {
+                  "name": "localizer",
+                  "type": "ITmLocalizer"
+                }
+              ]
+            },
+            {
+              "name": "Sanitize",
+              "kind": "Method",
+              "type": "string",
+              "description": "Maps a template id or category to its resource-key fragment: letters and digits stay, every other character becomes an underscore (\"uml-class\" → \"uml_class\").",
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": "string"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "itemName": "DiagramTemplateRegistry",
           "kind": "Class",
           "category": "Components",
@@ -33762,11 +33850,108 @@
           ]
         },
         {
+          "itemName": "TmDiagramConnectDialog",
+          "kind": "Component",
+          "category": "Diagram",
+          "namespace": "Tempo.Blazor.Components.Diagram",
+          "description": "Modal picker for the shape to connect when the user drags a connect arrow off a node. By default it offers only the node stencils of the source node's own set (declared SetId, else the id family prefix), narrowed by a search box; the 'Show all' toggle opts into the whole node library. Renders a roving arrow-key tile grid on desktop and plain rows with a Close footer button on the mobile bottom sheet. Edge stencils are never offered.",
+          "packageId": "Tempo.Blazor.DiagramEditor",
+          "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramConnectDialog.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Diagram"
+          ],
+          "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto follows the viewport (bottom sheet under 640px); a forced value never measures, so tests can render the sheet without a DOM."
+            },
+            {
+              "name": "OnClose",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the user cancels or closes the dialog."
+            },
+            {
+              "name": "OnStencilSelected",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the picked stencil id; the host creates the node and the edge."
+            },
+            {
+              "name": "RestoreFocusTarget",
+              "type": "ElementReference?",
+              "isRequired": false,
+              "description": "Element focus returns to when the dialog closes — typically the diagram canvas."
+            },
+            {
+              "name": "Show",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the dialog is visible."
+            },
+            {
+              "name": "SourceStencilId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Stencil id of the source node. Its set scopes the default palette; unknown or empty ids fall back to every node stencil."
+            }
+          ],
+          "examples": [
+            "<TmDiagramConnectDialog Show=\"_connectOpen\"\n                         SourceStencilId=\"_sourceStencilId\"\n                         OnClose=\"() => _connectOpen = false\"\n                         OnStencilSelected=\"ConnectAs\"\n                         RestoreFocusTarget=\"@_canvasRef\" />"
+          ],
+          "cssClasses": [
+            {
+              "name": "tm-diagram-connect-modal",
+              "description": "Dialog body column: toolbar, tile grid and the empty-state note."
+            },
+            {
+              "name": "tm-diagram-connect-modal__toolbar",
+              "description": "One row holding the search field and the Show-all toggle."
+            },
+            {
+              "name": "tm-diagram-connect-modal__search",
+              "description": "Class of the search TmTextInput (lands on the input element)."
+            },
+            {
+              "name": "tm-diagram-connect-modal__show-all",
+              "description": "Show-all toggle button; aria-pressed mirrors the state."
+            },
+            {
+              "name": "tm-diagram-connect-modal__grid",
+              "description": "Tile container; a 3-column grid on desktop, single-column rows below 640px."
+            },
+            {
+              "name": "tm-diagram-connect-modal__item",
+              "description": "One stencil tile; roving tabindex carries the arrow-key tab stop."
+            },
+            {
+              "name": "tm-diagram-connect-modal__icon",
+              "description": "40px stencil preview box."
+            },
+            {
+              "name": "tm-diagram-connect-modal__label",
+              "description": "Localized stencil name under (desktop) or beside (mobile) the icon."
+            },
+            {
+              "name": "tm-diagram-connect-modal__close",
+              "description": "Sheet footer Close button; the whole footer hides at 640px and up."
+            },
+            {
+              "name": "tm-diagram-connect-modal__empty",
+              "description": "Localized empty-state note when the search matches nothing."
+            }
+          ]
+        },
+        {
           "itemName": "TmDiagramCsvImportDialog",
           "kind": "Component",
           "category": "Diagram",
           "namespace": "Tempo.Blazor.Components.Diagram",
-          "description": "Modal dialog that builds a diagram from pasted CSV data. The user selects a target diagram type, maps CSV columns onto the required semantic fields, and sees a live table preview plus the resulting node/edge counts before importing.",
+          "description": "Modal dialog that builds a diagram from pasted CSV data. The user selects a target diagram type, maps CSV columns onto the required semantic fields through two-column label/select rows, and sees a sticky-header preview (first column pinned) plus the resulting node/edge stat chips before importing. Presents as a bottom sheet on narrow viewports.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramCsvImportDialog.razor",
           "documentationStatus": "merged",
@@ -33774,6 +33959,13 @@
             "@using Tempo.Blazor.Components.Diagram"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto follows the viewport (bottom sheet under 640px); a forced value never measures, so tests can render the sheet without a DOM."
+            },
             {
               "name": "OnClose",
               "type": "EventCallback",
@@ -33785,6 +33977,12 @@
               "type": "EventCallback<CsvImportResult>",
               "isRequired": false,
               "description": "Raised on import with the generated document and the layout id for the chosen type."
+            },
+            {
+              "name": "RestoreFocusTarget",
+              "type": "ElementReference?",
+              "isRequired": false,
+              "description": "Element focus returns to when the dialog closes — typically the diagram canvas."
             },
             {
               "name": "Show",
@@ -34395,7 +34593,7 @@
           "kind": "Component",
           "category": "Diagram",
           "namespace": "Tempo.Blazor.Components.Diagram",
-          "description": "Modal dialog that generates an entity-relationship diagram from pasted SQL DDL. The user picks a layout for the parsed tables and sees a preview of how many tables and relations were detected before importing.",
+          "description": "Modal dialog that generates an entity-relationship diagram from pasted SQL DDL. The user picks a full-width layout direction for the parsed tables and sees a summary box of icon stat chips (tables and relations detected) before importing. Presents as a bottom sheet on narrow viewports.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramSqlImportDialog.razor",
           "documentationStatus": "merged",
@@ -34403,6 +34601,13 @@
             "@using Tempo.Blazor.Components.Diagram"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto follows the viewport (bottom sheet under 640px); a forced value never measures, so tests can render the sheet without a DOM."
+            },
             {
               "name": "OnClose",
               "type": "EventCallback",
@@ -34414,6 +34619,12 @@
               "type": "EventCallback<SqlImportResult>",
               "isRequired": false,
               "description": "Raised on import with the generated ER document and chosen layout direction."
+            },
+            {
+              "name": "RestoreFocusTarget",
+              "type": "ElementReference?",
+              "isRequired": false,
+              "description": "Element focus returns to when the dialog closes — typically the diagram canvas."
             },
             {
               "name": "Show",
@@ -34506,7 +34717,7 @@
           "category": "Diagram",
           "subcategory": "Templates",
           "namespace": "Tempo.Blazor.Components.Diagram",
-          "description": "Selectable card that previews a single diagram template, showing its thumbnail (or an initial-letter placeholder), name, and up to three tags. Raises OnClick when chosen; used to populate the template gallery grid.",
+          "description": "Selectable card that previews a single diagram template, showing its thumbnail (or an initial-letter placeholder), localized name, localized category chip and up to three tags clamped to two lines. Click or Space raises OnClick (select); double-click or Enter raises OnActivateRequest (create immediately — the gallery wires it to create without the footer detour); used to populate the template gallery grid.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/TmDiagramTemplateCard.razor",
           "documentationStatus": "merged",
@@ -34522,10 +34733,16 @@
               "description": "Base URI used to resolve relative thumbnail URLs."
             },
             {
+              "name": "OnActivateRequest",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised once per creation activation: double-click or Enter (repeat-guarded)."
+            },
+            {
               "name": "OnClick",
               "type": "EventCallback",
               "isRequired": false,
-              "description": "Raised once per activation: mouse click, Enter or Space."
+              "description": "Raised once per selection activation: mouse click or Space."
             },
             {
               "name": "Selected",
@@ -34547,7 +34764,7 @@
           "category": "Diagram",
           "subcategory": "Templates",
           "namespace": "Tempo.Blazor.Components.Diagram",
-          "description": "Modal gallery for browsing and picking a starter diagram template from the DiagramTemplateRegistry. Supports free-text search and category filters, groups matching templates into sections of TmDiagramTemplateCard tiles, and raises OnSelect with the chosen template.",
+          "description": "Modal gallery (extra-large dialog, bottom sheet on phones) for browsing and picking a starter diagram template from the DiagramTemplateRegistry. The search field and the localized category chips share one toolbar row; matching templates group into sections of vertical TmDiagramTemplateCard tiles. Double-click/Enter on a card or the Create footer button raises OnSelect with the chosen template; template and category names resolve through TmDiagramTemplate_*/TmDiagramTemplateCategory_* resource keys with the raw values as fallback.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/TmDiagramTemplateGallery.razor",
           "documentationStatus": "merged",
@@ -34555,6 +34772,13 @@
             "@using Tempo.Blazor.Components.Diagram"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto follows the viewport (bottom sheet under 640px); a forced value never measures, so tests can render the sheet without a DOM."
+            },
             {
               "name": "OnClose",
               "type": "EventCallback",
@@ -34564,6 +34788,12 @@
               "name": "OnSelect",
               "type": "EventCallback<DiagramTemplate>",
               "isRequired": false
+            },
+            {
+              "name": "RestoreFocusTarget",
+              "type": "ElementReference?",
+              "isRequired": false,
+              "description": "Element focus returns to when the gallery closes — typically the diagram canvas."
             },
             {
               "name": "Show",
@@ -34678,12 +34908,12 @@
         }
       ],
       "summary": {
-        "itemCount": 138,
-        "manualItemCount": 138,
-        "generatedItemCount": 129,
+        "itemCount": 140,
+        "manualItemCount": 140,
+        "generatedItemCount": 131,
         "generatedOnlyItemCount": 0,
-        "componentCount": 16,
-        "publicApiTypeCount": 113
+        "componentCount": 17,
+        "publicApiTypeCount": 114
       }
     },
     {
@@ -115926,10 +116156,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3225,
-    "manualItemCount": 3225,
+    "itemCount": 3227,
+    "manualItemCount": 3227,
     "generatedOnlyItemCount": 0,
-    "componentCount": 474,
-    "publicApiTypeCount": 2698
+    "componentCount": 475,
+    "publicApiTypeCount": 2699
   }
 }

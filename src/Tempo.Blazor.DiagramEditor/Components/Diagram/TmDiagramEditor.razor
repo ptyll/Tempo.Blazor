@@ -576,59 +576,32 @@
 
 </div>
 
-@* Connect stencil selection modal *@
-<TmModal Show="@_connectModalOpen"
-         OnClose="CloseConnectModal"
-         Title="@Loc["TmDiagramEditor_SelectStencilTitle"]"
-         ShowDefaultFooterButtons="false"
-         Size="ModalSize.Medium"
-         CloseOnOverlayClick="true"
-         CloseOnEscape="true">
-    <ChildContent>
-        <div class="tm-diagram-connect-modal__grid">
-            @foreach (var stencil in ConnectableStencils)
-            {
-                <button type="button"
-                        class="tm-diagram-connect-modal__item"
-                        title="@GetStencilDisplayName(stencil)"
-                        @onclick="() => OnStencilSelectedForConnect(stencil.Id)">
-                    <div class="tm-diagram-connect-modal__icon">
-                        @if (!string.IsNullOrEmpty(stencil.IconSvg))
-                        {
-                            <svg viewBox="0 0 32 32" aria-hidden="true">
-                                @((MarkupString)stencil.IconSvg)
-                            </svg>
-                        }
-                        else
-                        {
-                            <svg viewBox="0 0 32 32" aria-hidden="true">
-                                <rect x="2" y="8" width="28" height="16" rx="2"
-                                      fill="var(--tm-color-surface-elevated)"
-                                      stroke="var(--tm-color-text)" stroke-width="2" />
-                            </svg>
-                        }
-                    </div>
-                    <span class="tm-diagram-connect-modal__label">@GetStencilDisplayName(stencil)</span>
-                </button>
-            }
-        </div>
-    </ChildContent>
-</TmModal>
+@* Connect stencil picker (DI4): its own component — the default palette is the source
+   node's stencil set, "Show all" opts into the whole node library, focus returns to the
+   canvas through the modal's public focus scope. *@
+<TmDiagramConnectDialog Show="@_connectModalOpen"
+                        SourceStencilId="@ConnectSourceStencilId"
+                        OnClose="CloseConnectModal"
+                        OnStencilSelected="OnStencilSelectedForConnect"
+                        RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
 
 @* SQL Import dialog *@
 <TmDiagramSqlImportDialog Show="@_sqlImportDialogOpen"
                           OnClose="CloseSqlImportDialog"
-                          OnImport="OnSqlImport" />
+                          OnImport="OnSqlImport"
+                          RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
 
 @* CSV Import dialog *@
 <TmDiagramCsvImportDialog Show="@_csvImportDialogOpen"
                           OnClose="CloseCsvImportDialog"
-                          OnImport="OnCsvImport" />
+                          OnImport="OnCsvImport"
+                          RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
 
 @* Template gallery *@
 <TmDiagramTemplateGallery Show="@_showTemplateGallery"
                             OnClose="CloseTemplateGallery"
-                            OnSelect="OnTemplateSelected" />
+                            OnSelect="OnTemplateSelected"
+                            RestoreFocusTarget="@(_canvas?.GetContainerRef())" />
 
 </CascadingValue>
 

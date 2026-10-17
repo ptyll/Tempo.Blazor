@@ -4,7 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Diagram.Stencils;
+using Tempo.Blazor.Components.Feedback;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Tests.Localization;
+using Xunit;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
@@ -79,7 +82,8 @@ public class TmDiagramEditorConnectTests : LocalizationTestBase
         cut.Find(".tm-diagram-connect-arrow--e").Click();
         cut.Render();
 
-        // Click first stencil in the modal grid (general.rectangle)
+        // Pick a stencil from the source node's palette (DI4: the default offer is the
+        // source stencil's own set, so pick from the dialog's palette directly).
         var firstStencil = cut.Find(".tm-diagram-connect-modal__item");
         firstStencil.Click();
         cut.Render();
@@ -122,7 +126,86 @@ public class TmDiagramEditorConnectTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task ConnectModal_ExcludesEdgeStencils()
+    public async Task ConnectModal_DefaultsToSourceNodePalette()
+    {
+        EnsureBuiltInStencils();
+        var registry = Services.GetRequiredService<DiagramStencilRegistry>();
+        var doc = new DiagramDocument();
+        doc.Nodes.Add(new DiagramNode { StencilId = "general.rectangle", X = 100, Y = 100, W = 120, H = 60 });
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        await canvas.Instance.SetSelection(doc.Nodes[0].Id);
+        cut.Render();
+        cut.Find(".tm-diagram-connect-arrow--e").Click();
+        cut.Render();
+
+        // DI4: the default offer is the source node's own set/palette — node stencils sharing
+        // the source's set (declared SetId, else the id's family prefix) — never the whole
+        // ~158-stencil library and never edge stencils.
+        static string Scope(DiagramStencil s) =>
+            !string.IsNullOrEmpty(s.SetId)
+                ? s.SetId
+                : s.Id.IndexOf('.') is > 0 and var dot ? s.Id[..dot] : s.Id;
+
+        var sourceStencil = registry.GetStencil("general.rectangle")!;
+        var paletteIds = registry.GetAll()
+            .Where(s => s.Kind == DiagramStencilKind.Node && Scope(s) == Scope(sourceStencil))
+            .Select(s => s.Id)
+            .ToList();
+        var allNodeCount = registry.GetAll().Count(s => s.Kind == DiagramStencilKind.Node);
+        paletteIds.Count.Should().BeLessThan(allNodeCount,
+            "the default palette must be narrower than the whole node library");
+
+        var items = cut.FindAll(".tm-diagram-connect-modal__item").ToList();
+        items.Count.Should().Be(paletteIds.Count,
+            "by default the modal offers exactly the node stencils of the source stencil's set");
+    }
+
+    [Fact]
+    public async Task ConnectModal_ShowAll_ListsAllNodeStencils()
+    {
+        EnsureBuiltInStencils();
+        var registry = Services.GetRequiredService<DiagramStencilRegistry>();
+        var doc = new DiagramDocument();
+        doc.Nodes.Add(new DiagramNode { StencilId = "general.rectangle", X = 100, Y = 100, W = 120, H = 60 });
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        await canvas.Instance.SetSelection(doc.Nodes[0].Id);
+        cut.Render();
+        cut.Find(".tm-diagram-connect-arrow--e").Click();
+        cut.Render();
+
+        var showAll = cut.Find(".tm-diagram-connect-modal__show-all");
+        showAll.Click();
+        cut.Render();
+
+        var allNodeCount = registry.GetAll().Count(s => s.Kind == DiagramStencilKind.Node);
+        var items = cut.FindAll(".tm-diagram-connect-modal__item").ToList();
+        items.Count.Should().Be(allNodeCount,
+            "'Show all' is the explicit opt-in to the whole node library");
+
+        // Edge stencils stay out even in the full list.
+        var edgeNames = registry.GetAll()
+            .Where(s => s.Kind == DiagramStencilKind.Edge)
+            .Select(s => s.Name)
+            .ToList();
+        foreach (var edgeName in edgeNames)
+        {
+            items.Should().NotContain(i => i.TextContent.Contains(edgeName),
+                $"edge stencil '{edgeName}' must not appear even after 'Show all'");
+        }
+    }
+
+    [Fact]
+    public async Task ConnectModal_SearchFilters()
     {
         EnsureBuiltInStencils();
         var doc = new DiagramDocument();
@@ -138,7 +221,91 @@ public class TmDiagramEditorConnectTests : LocalizationTestBase
         cut.Find(".tm-diagram-connect-arrow--e").Click();
         cut.Render();
 
+        cut.Find(".tm-diagram-connect-modal__search").Input("cylinder");
+        cut.Render();
+
+        var labels = cut.FindAll(".tm-diagram-connect-modal__label")
+            .Select(l => l.TextContent.Trim()).ToList();
+        labels.Should().NotBeEmpty("the palette search must find the queried stencil");
+        labels.Should().OnlyContain(l => l.Contains("Cylinder", StringComparison.OrdinalIgnoreCase),
+            "searching narrows the offer to the matching stencils");
+    }
+
+    [Fact]
+    public async Task ConnectModal_ArrowKeysMoveFocus()
+    {
+        EnsureBuiltInStencils();
+        var doc = new DiagramDocument();
+        doc.Nodes.Add(new DiagramNode { StencilId = "general.rectangle", X = 100, Y = 100, W = 120, H = 60 });
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        await canvas.Instance.SetSelection(doc.Nodes[0].Id);
+        cut.Render();
+        cut.Find(".tm-diagram-connect-arrow--e").Click();
+        cut.Render();
+
+        var tiles = cut.FindAll(".tm-diagram-connect-modal__item").ToList();
+        tiles.Count.Should().BeGreaterThan(1);
+
+        // Roving tabindex: exactly one tile is tabbable and the arrows move the tab stop.
+        tiles[0].GetAttribute("tabindex").Should().Be("0", "the first tile starts as the tab stop");
+        tiles.Skip(1).Should().OnlyContain(t => t.GetAttribute("tabindex") == "-1");
+
+        tiles[0].KeyDown("ArrowRight");
+        cut.Render();
+
+        cut.FindAll(".tm-diagram-connect-modal__item").ToList()[1]
+            .GetAttribute("tabindex").Should().Be("0",
+                "ArrowRight moves the roving tab stop to the next tile");
+        cut.FindAll(".tm-diagram-connect-modal__item").ToList()[0]
+            .GetAttribute("tabindex").Should().Be("-1");
+    }
+
+    [Fact]
+    public void ConnectModal_MobilePresentationSheet()
+    {
+        EnsureBuiltInStencils();
+
+        var cut = Render<TmDiagramConnectDialog>(p => p
+            .Add(x => x.Show, true)
+            .Add(x => x.SourceStencilId, "general.rectangle")
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile));
+
+        // Forced mobile layout presents the modal as a bottom sheet (foundation F2).
+        cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--sheet");
+
+        // The mobile presentation offers list rows and an explicit Close action.
+        cut.FindAll(".tm-diagram-connect-modal__item").Should().NotBeEmpty();
+        var close = cut.Find(".tm-diagram-connect-modal__close");
+        close.TextContent.Should().Contain("Close");
+    }
+
+    [Fact]
+    public async Task ConnectModal_ExcludesEdgeStencils()
+    {
+        EnsureBuiltInStencils();
         var registry = Services.GetRequiredService<DiagramStencilRegistry>();
+        var doc = new DiagramDocument();
+        doc.Nodes.Add(new DiagramNode { StencilId = "general.rectangle", X = 100, Y = 100, W = 120, H = 60 });
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        await canvas.Instance.SetSelection(doc.Nodes[0].Id);
+        cut.Render();
+        cut.Find(".tm-diagram-connect-arrow--e").Click();
+        cut.Render();
+
+        // Opt in to the whole library, then verify no edge stencil ever appears.
+        cut.Find(".tm-diagram-connect-modal__show-all").Click();
+        cut.Render();
+
         var nodeStencilCount = registry.GetAll().Count(s => s.Kind == DiagramStencilKind.Node);
         nodeStencilCount.Should().BeGreaterThan(0);
 
@@ -239,6 +406,10 @@ public class TmDiagramEditorConnectTests : LocalizationTestBase
         await canvas.Instance.SetSelection(doc.Nodes[0].Id);
         cut.Render();
         cut.Find(".tm-diagram-connect-arrow--e").Click();
+        cut.Render();
+
+        // The custom stencil lives in a different set, so opt into the full list to see it.
+        cut.Find(".tm-diagram-connect-modal__show-all").Click();
         cut.Render();
 
         var labels = cut.FindAll(".tm-diagram-connect-modal__label").Select(l => l.TextContent.Trim()).ToList();

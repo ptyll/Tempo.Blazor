@@ -4,6 +4,18 @@
 
 ### Added
 
+- **`TmDiagramConnectDialog` (DiagramEditor redesign phase 5, DI4).** The connect picker is its
+  own component: the source node's stencil set as the default palette, search over the registry,
+  "Show all" opt-in, recently-used-first ordering, roving arrow-key tile grid (no preselection),
+  localized stencil names, a mobile bottom sheet with plain rows and a Close footer button, and
+  focus return to the canvas. `TmDiagramEditor` hosts it and passes the source stencil plus the
+  canvas restore target. Dialogs of the editor now carry the foundation presentation contract:
+  `FooterLayout=Inline`, `TmModal.Subtitle` (CSV/SQL), `XLarge` template gallery with search and
+  category chips in one row, double-click/Enter create on template cards, two-column CSV mapping
+  rows with a sticky-header pinned-first-column preview, the SQL summary box with icon stat chips
+  and localized built-in template/category names via `TmDiagramTemplate_*` /
+  `TmDiagramTemplateCategory_*` keys (en/cs/sk/fr).
+
 - **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4, DI2/DI3).** The editor
   renders through the core `TmEditorShell`: a header (page tabs on top per DI3, document title,
   named panel toggles with visible labels, "⋯" view-settings menu), a single command row built on
@@ -303,6 +315,55 @@
   never against the toolbar's internal DOM. The Modeling diagram preview now uses
   `ToolbarPreset="Viewer"` instead of hiding editor controls with positional `nth-of-type` CSS
   selectors.
+
+- **`TmDiagramEditor` connect modal became the `TmDiagramConnectDialog` component and defaults to
+  the source node's stencil set (DI4).** Previously the "choose a shape to connect" modal listed
+  every node stencil in the library (~150 tiles at once) with no search. The new dialog offers by
+  default only the node stencils of the source node's own set (declared `SetId`, else the id's
+  family prefix — a UML node offers UML shapes, a `general.rectangle` offers the 12 "general"
+  shapes), with a search field (reusing `DiagramStencilRegistry.Search`), a "Show all" toggle as
+  the explicit opt-in to the whole node library, recently-used tiles floated first, a roving
+  arrow-key grid (no tile preselected) and a mobile bottom-sheet presentation with a Close footer
+  button; edge stencils stay excluded everywhere. On a phone the tiles present as plain rows
+  (no chevrons). Focus returns to the canvas through the modal's public focus scope
+  (`RestoreFocusTarget`).
+
+  ```html
+  <!-- before: .tm-diagram-connect-modal__grid held EVERY node stencil, desktop tiles only -->
+  <div class="tm-diagram-connect-modal__grid"> … ~150 tiles … </div>
+
+  <!-- after: toolbar (search + "Show all") and the scoped palette; list rows below 640px,
+       a .tm-diagram-connect-modal__close footer button on the mobile sheet -->
+  <div class="tm-diagram-connect-modal__toolbar">…search…show-all…</div>
+  <div class="tm-diagram-connect-modal__grid">…palette tiles…</div>
+  ```
+
+  Host CSS keyed on the bare `__grid` showing the whole library, or asserting
+  `items.Count == all node stencils`, must opt into the full list first (click
+  `.tm-diagram-connect-modal__show-all`) or scope to the palette. The old
+  `TmDiagramEditor_SelectStencilTitle` resource key is reused unchanged.
+
+- **`TmDiagramTemplateCard` keyboard contract: Enter (and double-click) now CREATE, Space keeps
+  the selection tap.** The gallery mockup's shortcut is create-without-detour: `TmDiagramTemplateCard`
+  gained an `OnActivateRequest` callback raised by double-click and by the Enter keydown
+  (repeat-guarded); single click and Space still raise `OnClick` (select). Host code that relied
+  on Enter only selecting must handle `OnActivateRequest` (or ignore it) — `TmDiagramTemplateGallery`
+  wires it to create immediately. Cards also render the localized category chip
+  (`.tm-diagram-template-card__category`) next to the tags and the whole meta row is clamped to
+  two lines.
+
+- **`TmDiagramTemplateGallery` and the import dialogs are localized through Id-derived keys and
+  present through the foundation `TmModal` contract.** Template names resolve via
+  `TmDiagramTemplate_<id with - → _>` and categories via
+  `TmDiagramTemplateCategory_<name>` (fallback: the raw values — the `DiagramTemplate` model is
+  unchanged), so a Czech gallery shows "Prázdný diagram" / "Obecné" instead of "Blank Diagram" /
+  "General". The gallery dialog is `Size=XLarge` with the search field and the category chips in
+  one toolbar row (`.tm-diagram-template-gallery__toolbar` replaces `__header`), the CSV mapping
+  form is a two-column label|select row list (the type and layout selects span the full dialog
+  width), the CSV preview pins its header row and first column, and all four dialogs pass
+  `FooterLayout=Inline` plus the viewport-driven mobile presentation (bottom sheet under 640px).
+  Host CSS on `.tm-diagram-template-gallery__header` or the stacked CSV mapping rows must move to
+  the new structure.
 
 - **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
   A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`

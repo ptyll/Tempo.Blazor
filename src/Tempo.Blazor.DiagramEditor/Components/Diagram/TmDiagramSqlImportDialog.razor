@@ -4,14 +4,20 @@
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Diagram.Services
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Abstractions.Layout
 
 <TmModal Show="@Show"
          OnClose="OnClose"
          Title="@Loc["TmDiagramSqlImportDialog_Title"]"
+         Subtitle="@Loc["TmDiagramSqlImportDialog_Subtitle"]"
          ShowDefaultFooterButtons="false"
          Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         LayoutMode="@LayoutMode"
          CloseOnOverlayClick="true"
-         CloseOnEscape="true">
+         CloseOnEscape="true"
+         RestoreFocusTarget="@RestoreFocusTarget">
     <ChildContent>
         <div class="tm-diagram-sql-import">
             <div class="tm-diagram-sql-import__field">
@@ -77,6 +83,15 @@
 
     /// <summary>Raised on import with the generated ER document and chosen layout direction.</summary>
     [Parameter] public EventCallback<SqlImportResult> OnImport { get; set; }
+
+    /// <summary>
+    /// The layout the modal renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value never measures, so a test can render the mobile sheet without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The element (typically the canvas) focus returns to when the dialog closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
     private string _sql = string.Empty;
     private string _layout = "TB";

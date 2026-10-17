@@ -2,16 +2,19 @@
 @using Tempo.Blazor.Components.Diagram.Templates
 @using Microsoft.AspNetCore.Components.Web
 
-@* role=button on a div is NOT natively activatable — Enter (keydown, repeat-guarded) and
-   Space (keyup) are emulated here per docs/keyboard-activation-convention.md, exactly one
-   activation per press. *@
+@* Mockup: vertical cards — preview on top, then name, category and tags (category + tags clamped
+   to two lines). role=button on a div is NOT natively activatable — Enter (keydown,
+   repeat-guarded) and Space (keyup) are emulated here per docs/keyboard-activation-convention.md,
+   exactly one activation per press. Enter is the keyboard twin of the mockup's double-click and
+   creates the template right away; Space taps the card into the selected state. *@
 <div class="tm-diagram-template-card @(_selected ? "tm-diagram-template-card--selected" : "")"
-     @onclick="OnClick"
+     @onclick="() => OnClick.InvokeAsync()"
+     @ondblclick="OnCardActivate"
      @onkeydown="OnCardKeyDown"
      @onkeyup="OnCardKeyUp"
      role="button"
      tabindex="0"
-     aria-label="@Template.Name"
+     aria-label="@DisplayName"
      aria-pressed="@(_selected ? "true" : "false")">
     <div class="tm-diagram-template-card__thumb">
         @if (!string.IsNullOrEmpty(Template.ThumbnailUrl))
@@ -21,21 +24,19 @@
         else
         {
             <div class="tm-diagram-template-card__placeholder">
-                <span>@Template.Name[0]</span>
+                <span>@DisplayName[0]</span>
             </div>
         }
     </div>
     <div class="tm-diagram-template-card__info">
-        <span class="tm-diagram-template-card__name">@Template.Name</span>
-        @if (Template.Tags.Length > 0)
-        {
-            <div class="tm-diagram-template-card__tags">
-                @foreach (var tag in Template.Tags.Take(3))
-                {
-                    <span class="tm-diagram-template-card__tag">@tag</span>
-                }
-            </div>
-        }
+        <span class="tm-diagram-template-card__name">@DisplayName</span>
+        <div class="tm-diagram-template-card__meta">
+            <span class="tm-diagram-template-card__category">@CategoryName</span>
+            @foreach (var tag in Template.Tags.Take(3))
+            {
+                <span class="tm-diagram-template-card__tag">@tag</span>
+            }
+        </div>
     </div>
 </div>
 
@@ -46,13 +47,26 @@
     /// <summary>Whether the card is the currently selected template (mirrored to aria-pressed).</summary>
     [Parameter] public bool Selected { get; set; }
 
-    /// <summary>Raised once per activation: mouse click, Enter or Space.</summary>
+    /// <summary>Raised once per selection activation: mouse click or Space.</summary>
     [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>
+    /// Raised once per creation activation: double-click or Enter — the mockup's shortcut that
+    /// creates the template without the detour through the footer button.
+    /// </summary>
+    [Parameter] public EventCallback OnActivateRequest { get; set; }
 
     /// <summary>Base URI used to resolve relative thumbnail URLs.</summary>
     [Parameter] public string BaseUri { get; set; } = "";
 
     private bool _selected => Selected;
+
+    /// <summary>Localized display name (resource key derived from the template Id, raw-name fallback).</summary>
+    private string DisplayName => DiagramTemplateDisplayNames.GetTemplateName(Template, Loc);
+
+    /// <summary>Localized category label (resource key derived from the category, raw-name fallback).</summary>
+    private string CategoryName => DiagramTemplateDisplayNames.GetCategoryName(Template.Category, Loc);
+
     private string _thumbUrl => string.IsNullOrWhiteSpace(Template.ThumbnailUrl)
         ? ""
         : Template.ThumbnailUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
@@ -62,8 +76,10 @@
                 ? Template.ThumbnailUrl
                 : $"{BaseUri.TrimEnd('/')}/{Template.ThumbnailUrl.TrimStart('/')}";
 
+    private Task OnCardActivate() => OnActivateRequest.InvokeAsync();
+
     private Task OnCardKeyDown(KeyboardEventArgs e) =>
-        e.Key == "Enter" && !e.Repeat ? OnClick.InvokeAsync() : Task.CompletedTask;
+        e.Key == "Enter" && !e.Repeat ? OnActivateRequest.InvokeAsync() : Task.CompletedTask;
 
     private Task OnCardKeyUp(KeyboardEventArgs e) =>
         e.Key == " " ? OnClick.InvokeAsync() : Task.CompletedTask;

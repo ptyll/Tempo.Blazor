@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Diagram.Templates
+@using Tempo.Blazor.Abstractions.Layout
 @inject DiagramTemplateRegistry TemplateRegistry
 @inject NavigationManager Navigation
 
@@ -9,12 +10,18 @@
          OnClose="OnClose"
          Title="@Loc["TmDiagramTemplateGallery_Title"]"
          ShowDefaultFooterButtons="false"
-         Size="ModalSize.Large"
+         Size="ModalSize.XLarge"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         LayoutMode="@LayoutMode"
          CloseOnOverlayClick="true"
-         CloseOnEscape="true">
+         CloseOnEscape="true"
+         RestoreFocusTarget="@RestoreFocusTarget">
     <ChildContent>
         <div class="tm-diagram-template-gallery">
-            <div class="tm-diagram-template-gallery__header">
+            @* Mockup: the search field and the category chips share ONE toolbar row; narrow
+               viewports wrap the chips under the field without leaving the row container. *@
+            <div class="tm-diagram-template-gallery__toolbar">
                 <TmTextInput @bind-Value="_searchQuery"
                              Placeholder="@Loc["TmDiagramTemplateGallery_SearchPlaceholder"]"
                              Class="tm-diagram-template-gallery__search" />
@@ -31,7 +38,7 @@
                             <button type="button" class="tm-diagram-template-gallery__filter @(_selectedCategory == cat ? "tm-diagram-template-gallery__filter--active" : "")"
                                     aria-pressed="@(_selectedCategory == cat ? "true" : "false")"
                                     @onclick="() => _selectedCategory = cat">
-                                @cat
+                                @DiagramTemplateDisplayNames.GetCategoryName(cat, Loc)
                             </button>
                         }
                     </div>
@@ -42,13 +49,14 @@
                 @foreach (var category in GetVisibleCategories())
                 {
                     <div class="tm-diagram-template-gallery__section">
-                        <h4 class="tm-diagram-template-gallery__section-title">@category.Name</h4>
+                        <h4 class="tm-diagram-template-gallery__section-title">@DiagramTemplateDisplayNames.GetCategoryName(category.Name, Loc)</h4>
                         <div class="tm-diagram-template-gallery__grid">
                             @foreach (var template in category.Templates)
                             {
                                 <TmDiagramTemplateCard Template="template"
                                                        Selected="_selectedTemplate?.Id == template.Id"
                                                        OnClick="() => SelectTemplate(template)"
+                                                       OnActivateRequest="() => ActivateTemplate(template)"
                                                        BaseUri="@Navigation.BaseUri" />
                             }
                         </div>
@@ -80,6 +88,15 @@
     [Parameter] public bool Show { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<DiagramTemplate> OnSelect { get; set; }
+
+    /// <summary>
+    /// The layout the modal renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value never measures, so a test can render the mobile sheet without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The element (typically the canvas) focus returns to when the gallery closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
     private string _searchQuery = "";
     private string? _selectedCategory;
@@ -122,6 +139,13 @@
     private void SelectTemplate(DiagramTemplate template)
     {
         _selectedTemplate = template;
+    }
+
+    /// <summary>Double-click / Enter: select the card and create immediately.</summary>
+    private async Task ActivateTemplate(DiagramTemplate template)
+    {
+        _selectedTemplate = template;
+        await OnSelect.InvokeAsync(template);
     }
 
     private async Task OnApplyClick()

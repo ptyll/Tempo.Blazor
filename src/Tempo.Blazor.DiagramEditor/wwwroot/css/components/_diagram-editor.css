@@ -2409,13 +2409,57 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-connect-arrow--w .tm-diagram-connect-arrow__icon { transform: rotate(180deg); }
 
 /* ── Connect modal stencil grid ────────────────────────────────────────── */
+.tm-diagram-connect-modal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+}
+
+/* Mockup (DI4): the search field and the "Show all" toggle share one toolbar row. */
+.tm-diagram-connect-modal__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-diagram-connect-modal__search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-diagram-connect-modal__show-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+}
+
+.tm-diagram-connect-modal__show-all:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-connect-modal__show-all[aria-pressed="true"] {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
 .tm-diagram-connect-modal__grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: var(--tm-space-2);
     max-height: 320px;
     overflow-y: auto;
-    padding: 4px;
+    padding: var(--tm-space-1);
 }
 @media (max-width: 480px) {
     .tm-diagram-connect-modal__grid {
@@ -2428,8 +2472,8 @@ line.tm-diagram-rotate-handle-stem {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 10px 8px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-2);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
@@ -2441,9 +2485,15 @@ line.tm-diagram-rotate-handle-stem {
     background: var(--tm-color-surface-hover);
 }
 
+/* Roving focus (DI4): the tab stop carries the visible focus ring, arrows move it. */
+.tm-diagram-connect-modal__item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
 .tm-diagram-connect-modal__icon {
-    width: 32px;
-    height: 32px;
+    width: var(--tm-space-10);
+    height: var(--tm-space-10);
     color: var(--tm-color-text-muted);
 }
 
@@ -2465,6 +2515,51 @@ line.tm-diagram-rotate-handle-stem {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+}
+
+/* Mobile sheet (DI4): the palette presents as plain rows — icon and label on one
+   line, no tiles, no chevrons. */
+@media (width < 640px) {
+    .tm-diagram-connect-modal__grid {
+        grid-template-columns: 1fr;
+        max-height: none;
+    }
+
+    .tm-diagram-connect-modal__item {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: var(--tm-space-3);
+        padding: var(--tm-space-3);
+    }
+
+    .tm-diagram-connect-modal__icon {
+        flex: 0 0 auto;
+    }
+
+    .tm-diagram-connect-modal__label {
+        text-align: start;
+        white-space: normal;
+    }
+}
+
+/* Desktop dialog: the header close ✕ is the close affordance, so the sheet's sticky
+   footer collapses. The bar owns no class of its own, so the rule keys on the button
+   this dialog renders inside it. */
+@media (width >= 640px) {
+    .tm-modal-footer:has(.tm-diagram-connect-modal__close) {
+        display: none;
+    }
+}
+
+.tm-diagram-connect-modal__close {
+    flex: 1 1 auto;
+}
+
+.tm-diagram-connect-modal__empty {
+    margin: 0;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
 }
 
 /* ── Property Panel collapsible sections ───────────────────────────────── */
@@ -2626,20 +2721,24 @@ line.tm-diagram-rotate-handle-stem {
     max-height: 70vh;
 }
 
-.tm-diagram-template-gallery__header {
+/* Mockup: the search field and the category chips share ONE toolbar row; on narrow
+   viewports the chips wrap under the field inside the same row container. */
+.tm-diagram-template-gallery__toolbar {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-3);
 }
 
 .tm-diagram-template-gallery__search {
-    width: 100%;
+    flex: 1 1 16rem;
+    min-width: 0;
 }
 
 .tm-diagram-template-gallery__filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--tm-space-2);
 }
 
 .tm-diagram-template-gallery__filter {
@@ -2681,6 +2780,14 @@ line.tm-diagram-rotate-handle-stem {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 12px;
+}
+
+/* Mobile sheet: the grid becomes a single-column card list (the mobile mockup lists
+   the templates one per row). */
+@media (width < 640px) {
+    .tm-diagram-template-gallery__grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .tm-diagram-template-gallery__empty {
@@ -2766,6 +2873,25 @@ line.tm-diagram-rotate-handle-stem {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+}
+
+/* Mockup: the card paints its category and tags on AT MOST two lines — the meta row
+   clamps, so a tag-heavy template never stretches the card. */
+.tm-diagram-template-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    overflow: hidden;
+    max-height: calc(2 * (var(--tm-font-size-xs, 12px) * 1.4 + 2 * var(--tm-space-1)));
+}
+
+.tm-diagram-template-card__category {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    padding: 2px 6px;
+    border-radius: var(--tm-radius-sm, 4px);
 }
 
 .tm-diagram-template-card__tag {
