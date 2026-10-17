@@ -30,7 +30,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
     [TestCategory("WASM")]
     [Description("1024×768 touch: editor, template gallery, SQL/CSV import dialogs, search panel, connect modal")]
     public async Task Tablet_1024Touch_CapturesEditorDialogsAndConnectModal() =>
-        await CaptureAllStatesAsync(1024, 768, touch: true, "tablet-1024-touch");
+        await CaptureAllStatesAsync(1024, 768, touch: true, "tablet-1024-touch", scrollEditorIntoView: true);
 
     [TestMethod]
     [TestCategory("WASM")]
@@ -162,12 +162,33 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         }
     }
 
-    private async Task CaptureAllStatesAsync(int width, int height, bool touch, string prefix)
+    private async Task CaptureAllStatesAsync(int width, int height, bool touch, string prefix, bool scrollEditorIntoView = false)
     {
         var page = await OpenDiagramEditorAsync(width, height, touch);
 
-        // 1. Full editor
-        await ShotAsync(page, $"{prefix}--editor");
+        // 1. Full editor. On the tablet viewport the demo column is taller than the window: the
+        //    shell title and the status bar (zoom − % +) land below the fold, so the capture
+        //    scrolls the status bar into the frame first and the shot shows the whole editor —
+        //    the same framing fix the phase-4 theme-matrix captures use. The scroll is restored
+        //    afterwards, keeping the overlay captures below framed exactly as before.
+        if (scrollEditorIntoView)
+        {
+            await page.EvaluateAsync(
+                """
+                () => {
+                    const status = document.querySelector('.tm-editor-shell__status');
+                    if (status) status.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+                }
+                """);
+            await page.WaitForTimeoutAsync(100);
+            await ShotAsync(page, $"{prefix}--editor");
+            await page.EvaluateAsync("() => window.scrollTo({ top: 0, behavior: 'instant' })");
+            await page.WaitForTimeoutAsync(100);
+        }
+        else
+        {
+            await ShotAsync(page, $"{prefix}--editor");
+        }
 
         // 2. Template gallery
         await OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");

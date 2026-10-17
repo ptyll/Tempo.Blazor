@@ -3024,6 +3024,10 @@ line.tm-diagram-rotate-handle-stem {
 
 /* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */
 
+/* UX review phase 6: the floating overlay tucks into the canvas bottom-right
+   corner with a token inset on both axes, so by default it never rides the
+   canvas centre over nodes. The shell status bar (zoom controls) renders below
+   the canvas region, so the corner inset keeps the map clear of it too. */
 .tm-diagram-editor__minimap-overlay {
     position: absolute;
     inset-inline-end: var(--tm-space-3);
@@ -3043,9 +3047,12 @@ line.tm-diagram-rotate-handle-stem {
     width: auto;
 }
 
+/* UX review phase 6 (minor): the standalone title reads as a big caption floating
+   over the canvas and pushes the preview over the nodes. The phase-4 card rule
+   already hides it inside the docked card, and the overlay hides it too (the
+   markup keeps the title for the standalone minimap, which still needs it). */
 .tm-diagram-editor__minimap-overlay .tm-diagram-minimap__title {
-    font-size: var(--tm-font-size-xs);
-    color: var(--tm-color-text-muted);
+    display: none;
 }
 
 /* The minimap is navigated with a finger or a mouse drag: the surface belongs
@@ -3076,8 +3083,8 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 /* ── Tablet layout (the resolved shell mode): the palette renders as a grid
-   of tiles, the overlay minimap keeps clear of the status bar. Desktop chrome
-   is untouched. ───────────────────────────────────────────────────────────── */
+   of tiles; the minimap overlay keeps the shared corner inset, which already
+   sits above the status bar. Desktop chrome is untouched. ─────────────────── */
 
 .tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-toolbox__category-body {
     display: grid;
@@ -3091,10 +3098,6 @@ line.tm-diagram-rotate-handle-stem {
     gap: var(--tm-space-1);
     padding: var(--tm-space-2);
     text-align: center;
-}
-
-.tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-editor__minimap-overlay {
-    inset-block-end: calc(var(--tm-space-2) + var(--tm-space-6));
 }
 
 /* ── Coarse pointer (finger / pen): every small chrome target grows to the

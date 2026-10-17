@@ -43,12 +43,14 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         var overlay = page.Locator(".tm-diagram-editor__minimap-overlay");
         await overlay.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
 
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotSettledAsync(page, "tablet-1024-touch--editor");
 
         // ── Tap-to-insert: the palette rail expands into the tile grid ──────
         await page.Locator(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle").First.ClickAsync();
         var paletteTile = page.Locator("[data-stencil-id='general.rectangle']").First;
         await paletteTile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotAsync(page, "tablet-1024-touch--palette-grid");
 
         var before = await NodeCountAsync(page);
@@ -84,6 +86,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         var sizeAfter = await GetNodeSizeAsync(page, nodeId);
         Assert.IsTrue(sizeAfter.w > sizeBefore.w + 40 && sizeAfter.h > sizeBefore.h + 40,
             $"a finger drag on the SE handle must resize the node (before {sizeBefore.w}×{sizeBefore.h}, after {sizeAfter.w}×{sizeAfter.h})");
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotAsync(page, "tablet-1024-touch--finger-resize");
 
         // ── Finger rotation on the rotate handle ────────────────────────────
@@ -111,6 +114,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         Assert.AreNotEqual(zoomBefore, zoomAfter,
             "a two-finger pinch must change the zoom (pinch/pan over pointer-gesture.js)");
 
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotSettledAsync(page, "tablet-1024-touch--after-gestures");
 
         // The mouse path still owns the desktop-style resize on the same session-enabled handles.
@@ -183,6 +187,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             .Locator(".tm-diagram-layers__row-menu-trigger"));
         var moveUp = page.Locator(".tm-diagram-layers__row-menu-item--up").Last;
         await moveUp.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotAsync(page, "tablet-1180-touch--layers-row-menu");
         await ClickFirstAsync(page, moveUp);
 
@@ -195,6 +200,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             """,
             firstName, new PageWaitForFunctionOptions { Timeout = 10_000 });
         await page.WaitForTimeoutAsync(250);
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotAsync(page, "tablet-1180-touch--layers-panel");
 
         // ── Pages: add a page and switch between the tabs ───────────────────
@@ -248,6 +254,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         Assert.IsTrue(ok,
             $"the command row must keep every group represented (bar copy or More entry) in the tablet band: {reachability}");
 
+        await ScrollEditorStatusIntoViewAsync(page);
         await ShotSettledAsync(page, "tablet-1180-touch--editor");
     }
 
@@ -601,6 +608,23 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
 
     private static async Task<string> ZoomLabelAsync(IPage page) =>
         (await page.Locator(".tm-diagram-editor__zoom-label").First.TextContentAsync())?.Trim() ?? string.Empty;
+
+    /// <summary>
+    /// Scrolls the shell status bar (zoom − % +) into the viewport before a tablet editor
+    /// capture: the demo column is taller than the tablet window, which leaves the shell title
+    /// and the zoom controls below the fold. Instant behavior keeps the frame deterministic.
+    /// </summary>
+    private static async Task ScrollEditorStatusIntoViewAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const status = document.querySelector('.tm-editor-shell__status');
+                if (status) status.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+            }
+            """);
+        await page.WaitForTimeoutAsync(100);
+    }
 
     private async Task ShotAsync(IPage page, string name)
     {
