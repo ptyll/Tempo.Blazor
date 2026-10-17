@@ -44,6 +44,20 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// <summary>Prevent all editing interactions.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Whether the selected nodes render the transform handles (resize + rotate). Default true;
+    /// a host drops them where the form factor forbids reshaping — the editor hides them on a
+    /// mobile layout (G2: resize/rotate stay tablet+).
+    /// </summary>
+    [Parameter] public bool ShowTransformHandles { get; set; } = true;
+
+    /// <summary>
+    /// Whether the selected nodes render the quick-connect arrows (N/E/S/W). Default true; a
+    /// host drops them where edge drawing is out of scope — the editor hides them on a mobile
+    /// layout (G2: edge drawing stays tablet+).
+    /// </summary>
+    [Parameter] public bool ShowConnectArrows { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the canvas wrapper.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -322,7 +336,90 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    protected override bool ShouldRender() => !_isJsDragging;
+    protected override bool ShouldRender()
+    {
+        if (_isJsDragging) return false;
+        if (_chromeOnlyLatch)
+        {
+            // A chrome-only editor pass (the mobile panels sheet moving above the canvas) may
+            // be skipped — but a REAL parameter change breaks the latch and repaints.
+            if (ChromeSnapshotChanged())
+            {
+                _chromeOnlyLatch = false;
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    // ── Chrome-only render skip (phase 7) ────────────────────────────────────
+    // A same-reference parameter pass MUST repaint (in-place document edits arrive exactly
+    // that way), so a skipped render can only ever come from an explicit chrome-only pass:
+    // the editor arms <see cref="BeginChromeOnlyPass"/> before the sheet interactions that
+    // move chrome ABOVE the canvas (open, tab, snap). The latch holds until (a) the editor's
+    // content funnel flags a document mutation (<see cref="NotifyContentMutated"/>), (b) this
+    // component's own state changes (selection, tool state, search match, viewport), or (c)
+    // a render-relevant parameter actually changes — each of those clears the latch and the
+    // next render repaints. Everything else renders as before.
+    private bool _chromeOnlyLatch;
+
+    /// <summary>Parameters at arm time; a change against this snapshot breaks the latch.</summary>
+    private (object? Doc, int Page, bool Grid, int GridSize, bool ReadOnly, double Zoom, bool PageView, bool Transform, bool Connect, string? Group, string? Class, string Cells) _chromeSnapshot;
+
+    private void MarkContentDirty() => _chromeOnlyLatch = false;
+
+    /// <summary>
+    /// Flags an in-place document mutation (the <see cref="Document"/> reference did not
+    /// change) so the next render repaints. The editor calls this from its central mutation
+    /// funnel and this component calls it from its own state changes; the snapshot cannot
+    /// see same-reference edits.
+    /// </summary>
+    public void NotifyContentMutated() => MarkContentDirty();
+
+    /// <summary>
+    /// Arms the chrome-only render skip for the mobile sheet interactions. Every following
+    /// render with unchanged parameters is skipped until a content mutation, an internal
+    /// state change or a real parameter change clears the latch.
+    /// </summary>
+    public void BeginChromeOnlyPass()
+    {
+        _chromeSnapshot = ChromeSnapshot();
+        _chromeOnlyLatch = true;
+    }
+
+    private (object? Doc, int Page, bool Grid, int GridSize, bool ReadOnly, double Zoom, bool PageView, bool Transform, bool Connect, string? Group, string? Class, string Cells) ChromeSnapshot()
+        => (Document,
+            Document?.ActivePageIndex ?? -1,
+            ShowGrid,
+            GridSize,
+            ReadOnly,
+            Zoom,
+            ShowPageView,
+            ShowTransformHandles,
+            ShowConnectArrows,
+            ActiveGroupId,
+            Class,
+            string.Join(";", SelectedTableCells.Select(c => $"{c.Row}:{c.Column}")));
+
+    private bool ChromeSnapshotChanged()
+    {
+        var current = ChromeSnapshot();
+        var before = _chromeSnapshot;
+        _chromeSnapshot = current;
+        return before.Doc != current.Doc
+            || before.Page != current.Page
+            || before.Grid != current.Grid
+            || before.GridSize != current.GridSize
+            || before.ReadOnly != current.ReadOnly
+            || Math.Abs(before.Zoom - current.Zoom) > 1e-9
+            || before.PageView != current.PageView
+            || before.Transform != current.Transform
+            || before.Connect != current.Connect
+            || before.Group != current.Group
+            || before.Class != current.Class
+            || before.Cells != current.Cells;
+    }
 
     // ── JS → C# callbacks ───────────────────────────────────────────────────
 
@@ -592,6 +689,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             }
         }
         ResetResizeState();
+        MarkContentDirty();
         StateHasChanged();
         if (_jsInitialized)
         {
@@ -683,6 +781,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             }
         }
 
+        MarkContentDirty();
         StateHasChanged();
 
         // Re-sync JS selection outline to follow the new bounds
@@ -940,6 +1039,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task JsOnSelectionChanged(string[] ids)
     {
         _currentSelectionIds = ids;
+        MarkContentDirty();
         await OnSelectionChanged.InvokeAsync(ids);
     }
 
@@ -947,6 +1047,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task OnMultiSelect(string[] ids)
     {
         _currentSelectionIds = ids;
+        MarkContentDirty();
         await OnSelectionChanged.InvokeAsync(ids);
     }
 
@@ -1200,6 +1301,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         _viewportH = h;
         _viewportInitialized = true;
         await ViewportChanged.InvokeAsync(new DiagramMinimapViewport(x, y, w, h));
+        MarkContentDirty();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1561,6 +1663,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             await JS.InvokeVoidAsync("tmDiagramEditor.setSelection", _containerRef, Array.Empty<string>());
         }
         await OnSelectionChanged.InvokeAsync(_currentSelectionIds);
+        MarkContentDirty();
         await InvokeAsync(StateHasChanged);
         await OnSelectionChanged.InvokeAsync(_currentSelectionIds);
     }
@@ -2099,6 +2202,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         if (edge is null) return;
         _editingEdgeLabelId = edgeId;
         _editingLabelValue = edge.Label ?? "";
+        MarkContentDirty();
         StateHasChanged();
     }
 
@@ -2265,6 +2369,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task SetSelection(params string[] ids)
     {
         _currentSelectionIds = ids;
+        MarkContentDirty();
         if (_jsInitialized)
         {
             var nodeIds = Document is null
@@ -2348,6 +2453,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public Task SetActiveSearchResult(string? id)
     {
         _activeSearchResultId = id;
+        MarkContentDirty();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -2359,6 +2465,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     {
         if (Document is not null)
             await DocumentChanged.InvokeAsync(Document);
+        MarkContentDirty();
         await InvokeAsync(StateHasChanged);
     }
 

@@ -315,6 +315,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnDocumentChanged(DiagramDocument doc)
     {
         _document = doc;
+        // The chrome-only canvas latch must not swallow a content edit (phase 7 gate).
+        _canvas?.NotifyContentMutated();
         await DocumentChanged.InvokeAsync(doc);
         await InvokeAsync(StateHasChanged);
     }
@@ -327,6 +329,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         // Phase 6 (tablet): a selection is an editing intent — surface the inspector even
         // when the palette took the single expanded dock slot (DI3).
         ExpandInspectorForSelectionOnTablet();
+        // Phase 7 (mobile): the same intent opens the panels sheet PEEKED on the properties.
+        ExpandPropertiesForSelectionOnMobile();
         await OnSelectedIdsChanged.InvokeAsync(ids);
         await InvokeAsync(StateHasChanged);
     }
@@ -365,7 +369,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await _canvas.SetSelection(args.NodeId);
         }
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
@@ -384,7 +388,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         _selectedIds = [args.EdgeId];
         if (_canvas is not null) await _canvas.SetSelection([]);
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
@@ -411,7 +415,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         }
 
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
@@ -432,7 +436,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         _selectedIds = [];
         if (_canvas is not null) await _canvas.SetSelection([]);
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
@@ -2577,6 +2581,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task RerenderCanvas()
     {
+        _canvas?.NotifyContentMutated();
         StateHasChanged();
         if (_document is not null)
             await DocumentChanged.InvokeAsync(_document);

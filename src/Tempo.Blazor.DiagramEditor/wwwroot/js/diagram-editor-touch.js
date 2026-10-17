@@ -122,7 +122,9 @@ export async function attachTouch(engine, inst) {
     sessions.push(nodeMenu);
 
     // (3) Pan: a drag from the empty surface pans the canvas (navigation works read-only too);
-    // a tap on an edge hit path selects the edge so a tablet can edit it.
+    // a tap on an edge hit path selects the edge so a tablet can edit it. A press on the empty
+    // surface clears the selection — the touch parity of the mouse rubber-band start (which
+    // clears at mousedown), so a phone can deselect without a keyboard (G2 mobile light edits).
     const panDrag = drag.attach(inst.container, {
         pointerTypes: TOUCH_POINTERS,
         threshold: 6,
@@ -132,6 +134,11 @@ export async function attachTouch(engine, inst) {
             if (target?.closest?.(PAN_VETO_SELECTOR)) return false;
             if (target?.closest?.('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')) {
                 return engine.touchPressEdge(inst, target.closest('.tm-diagram-edge-hit-path') ?? target);
+            }
+            if (inst.selectedIds.size > 0) {
+                inst.selectedIds.clear();
+                engine._updateSelection(inst);
+                inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', []);
             }
             return true;
         },

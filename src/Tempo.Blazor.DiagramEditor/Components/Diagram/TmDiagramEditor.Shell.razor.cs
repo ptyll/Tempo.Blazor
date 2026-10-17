@@ -111,16 +111,34 @@ public partial class TmDiagramEditor
 
     // ── Editor-shell dock state ──────────────────────────────────────────────
 
-    /// <summary>The left dock holds the toolbox: open while the host shows it and the user did not collapse it.</summary>
-    private bool LeftDockOpen => ShowToolbox && !_toolboxCollapsed;
+    /// <summary>
+    /// The left dock holds the toolbox: open while the host shows it and the user did not
+    /// collapse it. On a mobile layout the dock exists only when the mobile editing surfaces
+    /// are allowed (a viewer gets no panels sheet).
+    /// </summary>
+    private bool LeftDockOpen => ShowToolbox
+        && !(IsMobileLayout && !MobilePanelsAllowed)
+        && !_toolboxCollapsed;
 
-    /// <summary>The right dock holds the inspector (and the minimap card): open while the column has content.</summary>
-    private bool RightDockOpen => InspectorVisible || ShowMinimap;
+    /// <summary>
+    /// The right dock holds the inspector (and, from tablet up, the collapsible minimap card).
+    /// On a mobile layout the minimap floats as an overlay, so the dock exists for the inspector
+    /// alone and only when the mobile editing surfaces are allowed.
+    /// </summary>
+    private bool RightDockOpen
+    {
+        get
+        {
+            if (IsMobileLayout) return InspectorVisible && MobilePanelsAllowed;
+            return InspectorVisible || ShowMinimap;
+        }
+    }
 
     private Task OnShellLeftDockOpenChanged(bool open)
     {
         // The shell's slim reopen toggle is the only writer when our header toggle is not used.
         if (ShowToolbox) _toolboxCollapsed = !open;
+        if (IsMobileLayout) _canvas?.BeginChromeOnlyPass();
         return ScheduleCanvasRelayoutAsync();
     }
 
@@ -148,6 +166,7 @@ public partial class TmDiagramEditor
             _layersCollapsed = true;
         }
 
+        if (IsMobileLayout) _canvas?.BeginChromeOnlyPass();
         return ScheduleCanvasRelayoutAsync();
     }
 

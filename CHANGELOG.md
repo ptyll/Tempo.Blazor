@@ -4,6 +4,21 @@
 
 ### Added
 
+- **`TmDiagramEditor` mobile viewing and light edits (DiagramEditor redesign phase 7, G2).** Below
+  the 768px container band the editor renders the shell's mobile presentation: a non-modal bottom
+  sheet (peek/half/full snap points) holding the Shapes palette and the Properties | Layers
+  inspector, the core F5 action bar (Select | Pan | Properties tiles with an export-only "More"
+  overflow), a floating zoom pill over the canvas corner, the floating minimap, and the long-press
+  context menu as a shared F3 bottom sheet. Light edits on mobile: selection, text and style in
+  the properties, layer visibility/lock/active layer and "move to layer", delete, undo/redo and
+  tap-insert from the palette; resize/rotate, edge drawing, align/distribute, layout and import
+  stay tablet+. New `TmDiagramCanvas` parameters `ShowTransformHandles` and `ShowConnectArrows`
+  (both default `true`) let any host drop the reshaping or edge-drawing affordances where the form
+  factor forbids them. A selection opens the sheet peeked on the properties panel; a `Viewer`
+  preset or pinned read-only host renders no edit action bar (the Modeling preview contract).
+  Localization: `TmDiagramEditor_ShapesTab`, `TmDiagramEditor_ActionsSheetTitle` and
+  `TmDiagramEditor_ZoomControls` (en/cs/sk/fr).
+
 - **`TmDiagramConnectDialog` (DiagramEditor redesign phase 5, DI4).** The connect picker is its
   own component: the source node's stencil set as the default palette, search over the registry,
   "Show all" opt-in, recently-used-first ordering, roving arrow-key tile grid (no preselection),
@@ -232,6 +247,51 @@
     `MockTmLocalizer`.
 
 ### Breaking / Migration
+
+- **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below
+  768px now renders the dedicated mobile layout, replacing the old `max-width: 640px` viewport
+  stack (toolbox fixed to 280px above the canvas, the inspector hidden).** The mobile layout is
+  container-driven (`data-editor-layout="mobile"` mirrors the resolved shell layout) and renders
+  through the core shell: a compact header (document title, icon-only Undo/Redo, the "⋯"
+  view-settings menu — search and the Read-only toggle moved into that menu, the docked-panel
+  toggles are gone because the panels live in the sheet), horizontally scrollable page tabs, the
+  full-area canvas with a floating zoom pill (`+ / % / − / fit`,
+  `.tm-diagram-editor__zoom-overlay`) and the floating minimap, a **non-modal bottom sheet**
+  (peek/half/full snaps) presenting Shapes | Inspector (the inspector keeps its Properties |
+  Layers tabs), and the core F5 action bar **Select | Pan | Properties | More**. The "More" menu
+  carries the export commands only — layout and import stay tablet+; the long-press context menu
+  presents as the shared F3 bottom sheet (`.tm-diagram-editor__context-sheet`) instead of the
+  `position:fixed` menu, without the align/distribute (node menu) and auto-layout (canvas menu)
+  entries; resize/rotate handles and quick-connect arrows are not rendered
+  (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` new, default `true`). A `Viewer`
+  preset or a host-pinned read-only editor renders no edit action bar and no panels sheet on
+  mobile — only the floating zoom and minimap (the Modeling preview contract).
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before (<640px viewport): viewport media query; toolbox 280px, inspector display:none -->
+  <div class="tm-diagram-editor__toolbox-wrap">…</div>
+  <!-- .tm-diagram-editor__right-stack hidden by @media (max-width: 640px) -->
+
+  <!-- after (<768px container): the shell's mobile presentation -->
+  <div class="tm-diagram-editor" data-editor-layout="mobile">
+    <div class="tm-diagram-editor__zoom-overlay">…</div>
+    <div class="tm-diagram-editor__minimap-overlay">…</div>
+    <div class="tm-editor-shell__stage tm-editor-shell__stage--sheet-open">
+      <div class="tm-editor-shell__sheet tm-drawer--inline tm-drawer--bottom">…</div>
+    </div>
+    <div class="tm-mobile-action-bar" data-layout="mobile">…</div>
+  </div>
+  ```
+
+  Host CSS keyed on `@media (max-width: 640px)` around the editor must branch on
+  `data-editor-layout='mobile'` instead (a narrow editor inside a wide window keeps the desktop
+  presentation). The old viewport media block in the package CSS was replaced by
+  `[data-editor-layout='mobile']` rules with the same toolbox tightening. Performance note: the
+  sheet interactions (open, tab switch, snap) do not re-render `TmDiagramCanvas` — the editor
+  marks those passes chrome-only and the canvas skips them (its render gate never skips a
+  content-affecting pass).
 
 - **`TmDiagramEditor` tablet and touch layout (DiagramEditor redesign phase 6, DI3): the editor
   now resolves its layout from its own container width, and a tablet container changes the panel

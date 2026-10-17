@@ -1935,51 +1935,51 @@ circle.tm-diagram-rotate-handle-hit {
     color: var(--tm-color-text);
 }
 
-@media (max-width: 640px) {
-    /* Phase 4: the editor shell owns the mobile presentation (docked panels become the mobile
-       sheet / tabs), so only the panel CONTENT tightens up here — no more hidden right column. */
-    .tm-diagram-editor__toolbox-wrap {
-        max-height: 280px;
-        overflow-y: auto;
-    }
+/* Phase 7 (G2): the old viewport @media (max-width: 640px) block is gone — the editor's
+   presentation travels on the data-editor-layout attribute the shell resolution mirrors
+   (the phase-6 container convention), so a narrow editor inside a wide window keeps the
+   desktop presentation and the mode branch never duplicates a breakpoint literal. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__toolbox-wrap {
+    max-height: 280px;
+    overflow-y: auto;
+}
 
-    .tm-diagram-toolbox__inner {
-        padding: var(--tm-space-2, 8px);
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__inner {
+    padding: var(--tm-space-2, 8px);
+}
 
-    .tm-diagram-toolbox__title {
-        margin-bottom: var(--tm-space-2, 8px);
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__title {
+    margin-bottom: var(--tm-space-2, 8px);
+}
 
-    .tm-diagram-toolbox__search {
-        margin-bottom: var(--tm-space-2, 8px);
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__search {
+    margin-bottom: var(--tm-space-2, 8px);
+}
 
-    .tm-diagram-toolbox__library {
-        margin-bottom: var(--tm-space-2, 8px);
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__library {
+    margin-bottom: var(--tm-space-2, 8px);
+}
 
-    .tm-diagram-toolbox__library-header {
-        padding: 0;
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__library-header {
+    padding: 0;
+}
 
-    .tm-diagram-toolbox__category-body {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
-        gap: var(--tm-space-1, 4px);
-        padding-left: 0;
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__category-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+    gap: var(--tm-space-1, 4px);
+    padding-left: 0;
+}
 
-    .tm-diagram-toolbox__item {
-        min-width: 0;
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__item {
+    min-width: 0;
+}
 
-    .tm-diagram-toolbox__label {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* TmDiagramLayersPanel styles live ONLY in the component's scoped stylesheet
@@ -3144,5 +3144,121 @@ line.tm-diagram-rotate-handle-stem {
     .tm-diagram-toolbox__item {
         min-height: var(--tm-touch-target);
     }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phase 7 — mobile (G2): compact header, floating zoom, panels sheet content.
+   The mode branch travels on the data-editor-layout attribute (the phase-6
+   convention): no new viewport/container width literals, and the sheet reserve
+   above the canvas is the core shell's (--tm-editor-shell-sheet-reserve).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Compact header: title takes the free width (ellipsis), the icon-only
+   Undo/Redo/⋯ buttons keep the touch target. The panel toggles never render
+   in the markup on this layout — nothing to hide here. ───────────────────── */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__header-bar {
+    min-height: var(--tm-touch-target);
+    gap: var(--tm-space-1, 4px);
+    padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__more-btn {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+}
+
+/* ── Page tabs: the strip scrolls horizontally; the tabs keep their footprint
+   so the active page stays comfortably tappable. ──────────────────────────── */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__page-tab {
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 50vw;
+}
+
+/* ── Floating zoom overlay (phase 7): the vertical + / % / − / fit pill at the
+   canvas corner, mirroring the minimap overlay's elevation. Anchored to the
+   canvas region; while the panels sheet is open the pill rides up by the same
+   reserve formula the core shell pads the canvas with, so it never hides
+   under the peeked sheet. ── */
+.tm-diagram-editor__zoom-overlay {
+    position: absolute;
+    inset-inline-start: var(--tm-space-3);
+    inset-block-end: var(--tm-space-3);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md, 8px);
+    box-shadow: var(--tm-shadow-lg);
+    overflow: hidden;
+}
+
+/* While the panels sheet is open, ride above the peeked sheet: the same reserve
+   formula the core shell pads the canvas region with (stage is a size container,
+   so 100cqh resolves against it). */
+.tm-editor-shell__stage--sheet-open .tm-diagram-editor__zoom-overlay {
+    inset-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-3));
+}
+
+/* The minimap overlay rides above the peeked sheet with the zoom pill. */
+.tm-editor-shell__stage--sheet-open .tm-diagram-editor__minimap-overlay {
+    inset-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-3));
+}
+
+.tm-diagram-editor__zoom-overlay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    border: none;
+    background: transparent;
+    color: var(--tm-color-text);
+    cursor: pointer;
+    transition: background 120ms;
+}
+
+.tm-diagram-editor__zoom-overlay-btn:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-editor__zoom-overlay .tm-diagram-editor__zoom-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--tm-space-1, 4px);
+    min-height: 24px;
+    font-size: var(--tm-font-size-xs, 12px);
+    color: var(--tm-color-text-secondary);
+    border-block: 1px solid var(--tm-color-border);
+    white-space: nowrap;
+}
+
+/* ── Panels sheet: the palette presents the phase-6 tile grid inside the sheet
+   body (4 tiles per row on a phone), so a tap inserts without the desktop list. ── */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__sheet .tm-diagram-toolbox__category-body {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__sheet .tm-diagram-toolbox__item {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--tm-space-1, 4px);
+    padding: var(--tm-space-2);
+    text-align: center;
+}
+
+/* ── Context menu sheet: the desktop menu items become full-height rows so the
+   long-press menu is finger-sized. ─────────────────────────────────────────── */
+.tm-overlay-panel-sheet .tm-diagram-editor__context-item {
+    min-height: var(--tm-touch-target);
 }
 
