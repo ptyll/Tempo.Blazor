@@ -492,15 +492,41 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     private List<DiagramNode> GetGroupMembers(string groupId) =>
         Document?.Nodes.Where(n => n.ParentGroupId == groupId).ToList() ?? [];
 
-    private void OnResizeStart(MouseEventArgs e, string nodeId, string handle)
+    // Phase 6 (tablet and touch): the handles start from Pointer Events. A MOUSE press keeps the
+    // C# resize state machine completed by the container's mousemove/mouseup; a TOUCH/PEN press
+    // is owned by the pointer-drag session in diagram-editor-touch.js, which reports the gesture
+    // back through the OnResize* JSInvokable methods below.
+
+    /// <summary>Pointer-down on a resize handle. Only the mouse drives the C# drag: the touch and
+    /// pen gestures arrive again through the JS pointer-drag session (OnResizeStarted).</summary>
+    private void OnResizeStart(PointerEventArgs e, string nodeId, string handle)
     {
+        if (e.PointerType != "mouse") return;
+        if (!TryBeginResize(nodeId, handle, e.ClientX, e.ClientY)) return;
+    }
+
+    /// <summary>Pointer-down on the rotate handle. Mouse keeps the direct JS rotation; touch and
+    /// pen are driven by the pointer-drag session (touchBeginRotate).</summary>
+    private void OnRotateStartPointer(PointerEventArgs e, string nodeId)
+    {
+        if (e.PointerType != "mouse") return;
         if (ReadOnly || Document is null) return;
         var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
-        if (node is null || IsNodeLocked(node)) return;
+        if (node is null || IsNodeLocked(node) || !_jsInitialized) return;
+        _ = JS.InvokeVoidAsync("tmDiagramEditor.startRotate", _containerRef, nodeId, e.ClientX, e.ClientY, node.Rotation, RotateSnap);
+    }
+
+    /// <summary>Begins a resize gesture from any pointer path. Returns false when the gesture is
+    /// vetoed (read-only, missing or locked node).</summary>
+    private bool TryBeginResize(string nodeId, string handle, double screenX, double screenY)
+    {
+        if (ReadOnly || Document is null) return false;
+        var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
+        if (node is null || IsNodeLocked(node)) return false;
 
         _resizeNodeId = nodeId;
         _resizeHandle = handle;
-        _resizeStartScreen = (e.ClientX, e.ClientY);
+        _resizeStartScreen = (screenX, screenY);
         _resizeStartRect = (node.X, node.Y, node.W, node.H);
         _resizeGroupMemberStartRects = null;
 
@@ -512,14 +538,66 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
                 _resizeGroupMemberStartRects[member.Id] = (member.X, member.Y, member.W, member.H);
             }
         }
+        return true;
     }
 
-    private void OnRotateStartJs(MouseEventArgs e, string nodeId)
+    /// <summary>The touch/pen resize session (pointer-drag.js) reports its first drag position.</summary>
+    [JSInvokable]
+    public Task OnResizeStarted(string nodeId, string handle, double screenX, double screenY)
     {
-        if (ReadOnly || Document is null) return;
-        var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
-        if (node is null || IsNodeLocked(node) || !_jsInitialized) return;
-        _ = JS.InvokeVoidAsync("tmDiagramEditor.startRotate", _containerRef, nodeId, e.ClientX, e.ClientY, node.Rotation, RotateSnap);
+        if (ReadOnly) return Task.CompletedTask;
+        TryBeginResize(nodeId, handle, screenX, screenY);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The touch/pen resize session reports each live pointer position.</summary>
+    [JSInvokable]
+    public Task OnResizeMoved(double screenX, double screenY)
+    {
+        ApplyResizeMove(screenX, screenY);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The touch/pen resize session finished: commit exactly like the mouse-up does.</summary>
+    [JSInvokable]
+    public Task OnResizeEnded()
+    {
+        CommitResize();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The touch/pen resize session was cancelled: roll the geometry back.</summary>
+    [JSInvokable]
+    public Task OnResizeCancelled()
+    {
+        if (_resizeNodeId is null || Document is null) return Task.CompletedTask;
+        var node = Document.Nodes.FirstOrDefault(n => n.Id == _resizeNodeId);
+        if (node is not null)
+        {
+            node.X = _resizeStartRect.X;
+            node.Y = _resizeStartRect.Y;
+            node.W = _resizeStartRect.W;
+            node.H = _resizeStartRect.H;
+            if (IsGroupContainer(node) && _resizeGroupMemberStartRects is not null)
+            {
+                foreach (var (memberId, rect) in _resizeGroupMemberStartRects)
+                {
+                    var member = Document.Nodes.FirstOrDefault(n => n.Id == memberId);
+                    if (member is null) continue;
+                    member.X = rect.X;
+                    member.Y = rect.Y;
+                    member.W = rect.W;
+                    member.H = rect.H;
+                }
+            }
+        }
+        ResetResizeState();
+        StateHasChanged();
+        if (_jsInitialized)
+        {
+            _ = JS.InvokeVoidAsync("tmDiagramEditor.updateSelectionOutlines", _containerRef);
+        }
+        return Task.CompletedTask;
     }
 
     [JSInvokable]
@@ -567,12 +645,16 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         return Math.Round(angle / snap) * snap;
     }
 
-    private void OnCanvasMouseMove(MouseEventArgs e)
+    private void OnCanvasMouseMove(MouseEventArgs e) => ApplyResizeMove(e.ClientX, e.ClientY);
+
+    /// <summary>Shared live-resize body: the mouse path (container mousemove) and the touch/pen
+    /// session (OnResizeMoved) both land here, so the maths exist exactly once.</summary>
+    private void ApplyResizeMove(double screenX, double screenY)
     {
         if (_resizeNodeId is null || Document is null || string.IsNullOrEmpty(_resizeHandle) || Zoom <= 0) return;
 
-        var dx = (e.ClientX - _resizeStartScreen.X) / Zoom;
-        var dy = (e.ClientY - _resizeStartScreen.Y) / Zoom;
+        var dx = (screenX - _resizeStartScreen.X) / Zoom;
+        var dy = (screenY - _resizeStartScreen.Y) / Zoom;
 
         var (x, y, w, h) = ComputeResize(_resizeStartRect, _resizeHandle, dx, dy);
         var resizeNode = Document.Nodes.FirstOrDefault(n => n.Id == _resizeNodeId);
@@ -610,7 +692,11 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         }
     }
 
-    private void OnCanvasMouseUp(MouseEventArgs e)
+    private void OnCanvasMouseUp(MouseEventArgs e) => CommitResize();
+
+    /// <summary>Shared commit: pushes the undoable resize command and resets the gesture state
+    /// (the mouse path and the touch/pen session both land here).</summary>
+    private void CommitResize()
     {
         if (_resizeNodeId is null || Document is null) return;
 
@@ -652,6 +738,13 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             }
         }
 
+        _resizeNodeId = null;
+        _resizeHandle = null;
+        _resizeGroupMemberStartRects = null;
+    }
+
+    private void ResetResizeState()
+    {
         _resizeNodeId = null;
         _resizeHandle = null;
         _resizeGroupMemberStartRects = null;
@@ -1116,6 +1209,17 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         => _viewportInitialized
             ? (_viewportX, _viewportY, _viewportW, _viewportH)
             : (0, 0, 0, 0);
+
+    /// <summary>
+    /// Phase 6: recomputes the canvas geometry after the editor chrome changed around the canvas
+    /// (a docked panel expanded, collapsed or was resized). Asks the JS engine to re-measure and
+    /// report the viewport and zoom — <c>OnViewportChanged</c> / <c>OnZoomChanged</c> — without a
+    /// Blazor re-render of the canvas.
+    /// </summary>
+    public Task NotifyViewportChangedAsync()
+        => _jsInitialized
+            ? JS.InvokeVoidAsync("tmDiagramEditor.relayout", _containerRef).AsTask()
+            : Task.CompletedTask;
 
     private bool IsNodeVisible(DiagramNode node)
     {

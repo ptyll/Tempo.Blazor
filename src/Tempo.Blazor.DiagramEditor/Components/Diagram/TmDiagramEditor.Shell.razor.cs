@@ -96,6 +96,7 @@ public partial class TmDiagramEditor
     {
         _propsCollapsed = !_propsCollapsed;
         if (!_propsCollapsed) _inspectorTab = "properties";
+        _ = ScheduleCanvasRelayoutAsync();
     }
 
     /// <summary>Header "Layers" toggle: expands/collapses the layers panel and selects its tab.</summary>
@@ -103,6 +104,7 @@ public partial class TmDiagramEditor
     {
         _layersCollapsed = !_layersCollapsed;
         if (!_layersCollapsed) _inspectorTab = "layers";
+        _ = ScheduleCanvasRelayoutAsync();
     }
 
     private void SelectInspectorTab(string tabId) => _inspectorTab = tabId;
@@ -119,7 +121,7 @@ public partial class TmDiagramEditor
     {
         // The shell's slim reopen toggle is the only writer when our header toggle is not used.
         if (ShowToolbox) _toolboxCollapsed = !open;
-        return Task.CompletedTask;
+        return ScheduleCanvasRelayoutAsync();
     }
 
     private Task OnShellRightDockOpenChanged(bool open)
@@ -146,7 +148,7 @@ public partial class TmDiagramEditor
             _layersCollapsed = true;
         }
 
-        return Task.CompletedTask;
+        return ScheduleCanvasRelayoutAsync();
     }
 
     /// <summary>Accessible name of the right dock: the inspector tab title, or the minimap when it is the only content.</summary>

@@ -42,8 +42,35 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     private string? _draggedLayerId;
     private string? _dragOverLayerId;
     private string? _defaultLayerId;
+    private string? _rowMenuLayerId;
     private string? _moveTargetLayerId;
     private readonly string _moveSelectId = $"layers-move-{Guid.NewGuid().ToString("n")[..8]}";
+
+    /// <summary>Zero-based position of the row whose "⋯" menu is open (-1 when none).</summary>
+    private int _rowMenuLayerIndex
+    {
+        get
+        {
+            if (_rowMenuLayerId is null) return -1;
+            var ordered = SortedLayers.ToList();
+            return ordered.FindIndex(l => l.Id == _rowMenuLayerId);
+        }
+    }
+
+    /// <summary>Whether the open row menu's layer is the first in the z-order (Move up is then disabled).</summary>
+    private bool RowMenuIsFirst => _rowMenuLayerIndex <= 0;
+
+    /// <summary>Whether the open row menu's layer is the last in the z-order (Move down is then disabled).</summary>
+    private bool RowMenuIsLast
+    {
+        get
+        {
+            var count = Document?.Layers.Count ?? 0;
+            return _rowMenuLayerIndex < 0 || _rowMenuLayerIndex >= count - 1;
+        }
+    }
+
+    private void ToggleRowMenu(string layerId) => _rowMenuLayerId = _rowMenuLayerId == layerId ? null : layerId;
 
     private List<DiagramNode> SelectedNodes => SelectedIds
         .Select(id => Document?.Nodes.FirstOrDefault(n => n.Id == id))
@@ -124,6 +151,44 @@ public partial class TmDiagramLayersPanel : TmComponentBase
 
         if (ActiveLayerId == layer.Id)
             await ActiveLayerIdChanged.InvokeAsync(_defaultLayerId);
+        _rowMenuLayerId = null;
+        await DocumentChanged.InvokeAsync(Document);
+    }
+
+    /// <summary>The row menu's rename entry: closes the menu and starts the inline edit.</summary>
+    private void OnRowMenuRename(DiagramLayer layer)
+    {
+        _rowMenuLayerId = null;
+        OnStartEdit(layer);
+    }
+
+    /// <summary>The row menu's delete entry: the same undoable removal as the row's trash.</summary>
+    private Task OnRowMenuDelete(DiagramLayer layer) => OnRemoveLayer(layer);
+
+    /// <summary>
+    /// Phase 6 (tablet and touch): moves a layer one position with the SAME undoable
+    /// <see cref="ReorderLayersCommand"/> the drag-and-drop drop pushes — the non-drag
+    /// alternative (WCAG 2.5.7). <paramref name="direction"/> is -1 for "up", +1 for "down".
+    /// </summary>
+    private async Task OnMoveLayer(DiagramLayer layer, int direction)
+    {
+        if (Document is null || ReadOnly) return;
+        var ordered = SortedLayers.ToList();
+        var index = ordered.FindIndex(l => l.Id == layer.Id);
+        var target = index + direction;
+        if (index < 0 || target < 0 || target >= ordered.Count) return;
+
+        var reordered = ordered.ToList();
+        (reordered[index], reordered[target]) = (reordered[target], reordered[index]);
+
+        var newOrders = reordered.Select((l, i) => (l.Id, Order: i)).ToDictionary(x => x.Id, x => x.Order);
+        var cmd = new ReorderLayersCommand(Document, newOrders);
+        if (CommandStack is not null)
+            CommandStack.Push(cmd);
+        else
+            cmd.Execute();
+
+        _rowMenuLayerId = null;
         await DocumentChanged.InvokeAsync(Document);
     }
 

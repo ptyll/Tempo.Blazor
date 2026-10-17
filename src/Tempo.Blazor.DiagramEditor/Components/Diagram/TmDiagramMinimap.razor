@@ -18,10 +18,11 @@
              height="@mapH"
              viewBox="0 0 @F(Document.Width) @F(Document.Height)"
              xmlns="http://www.w3.org/2000/svg"
-             @onmousedown="OnSvgMouseDown"
-             @onmousemove="OnSvgMouseMove"
-             @onmouseup="OnSvgMouseUp"
-             @onmouseleave="OnSvgMouseLeave">
+             @onpointerdown="OnSvgPointerDown"
+             @onpointermove="OnSvgPointerMove"
+             @onpointerup="OnSvgPointerUp"
+             @onpointercancel="OnSvgPointerUp"
+             @onpointerleave="OnSvgPointerLeave">
 
             @* Canvas background *@
             <rect x="0" y="0"

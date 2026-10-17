@@ -52,7 +52,7 @@ public partial class TmDiagramMinimap : ComponentBase
             ? 1.0
             : Width / Document.Width;
 
-    private async Task OnSvgMouseDown(MouseEventArgs e)
+    private async Task OnSvgPointerDown(PointerEventArgs e)
     {
         if (Document is null) return;
 
@@ -72,7 +72,7 @@ public partial class TmDiagramMinimap : ComponentBase
         }
     }
 
-    private async Task OnSvgMouseMove(MouseEventArgs e)
+    private async Task OnSvgPointerMove(PointerEventArgs e)
     {
         if (!_dragging || Document is null) return;
 
@@ -94,8 +94,8 @@ public partial class TmDiagramMinimap : ComponentBase
         await NavigateRequested.InvokeAsync(new DiagramMinimapNavigateArgs(newX + vpW / 2, newY + vpH / 2));
     }
 
-    private void OnSvgMouseUp(MouseEventArgs _) => _dragging = false;
-    private void OnSvgMouseLeave(MouseEventArgs _) => _dragging = false;
+    private void OnSvgPointerUp(PointerEventArgs _) => _dragging = false;
+    private void OnSvgPointerLeave(PointerEventArgs _) => _dragging = false;
 
     private (double X, double Y) ClientToSvg(double offsetX, double offsetY)
     {

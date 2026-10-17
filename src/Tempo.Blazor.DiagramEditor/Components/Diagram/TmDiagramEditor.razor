@@ -12,6 +12,7 @@
 
 <div class="tm-diagram-editor @Class @(IsReadOnly ? "tm-diagram-editor--readonly" : "")"
      @ref="_editorRoot"
+     data-editor-layout="@(_resolvedLayout.ToString().ToLowerInvariant())"
      data-testid="@TestId("diagram-editor")">
 
     @* Phase 4 (desktop restructure): the shell owns the editor chrome — a header (page tabs,
@@ -23,6 +24,14 @@
                    Right="@RightSlot"
                    StatusBar="@StatusBarSlot"
                    Toolbar="@ToolbarSlot"
+                   LeftRail="@ToolboxRail"
+                   LayoutMode="LayoutMode"
+                   Breakpoints="@(LayoutBreakpoints ?? EditorBreakpoints)"
+                   ResolvedLayoutChanged="OnShellResolvedLayoutChanged"
+                   CollapsedPanels="_shellCollapsed"
+                   CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
+                   LeftWidthChanged="OnShellLeftWidthChanged"
+                   RightWidthChanged="OnShellRightWidthChanged"
                    LeftOpen="LeftDockOpen"
                    LeftOpenChanged="OnShellLeftDockOpenChanged"
                    RightOpen="RightDockOpen"
@@ -412,6 +421,19 @@
                                  OnTableCellSelect="HandleTableCellSelect"
                                  OnClearTableCellSelection="HandleClearTableCellSelection"
                                  Class="tm-diagram-editor__canvas" />
+                @* ── Minimap overlay (DI3, phase 6): from tablet down the minimap floats over
+                   the canvas corner instead of taking a column of its own; a tap or drag on it
+                   navigates the canvas. *@
+                @if (ShowMinimap && MinimapAsOverlay)
+                {
+                    <div class="tm-diagram-editor__minimap-overlay" data-testid="@TestId("diagram-editor-minimap-overlay")">
+                        <TmDiagramMinimap Document="_document"
+                                          SelectedIds="_selectedIds"
+                                          Viewport="_minimapViewport"
+                                          NavigateRequested="OnMinimapNavigate"
+                                          Class="tm-diagram-editor__minimap" />
+                    </div>
+                }
                 @* Context menu (long-press / right-click) *@
                 @if (_contextMenuOpen)
                 {
@@ -609,10 +631,21 @@
 <a @ref="_downloadAnchor" style="display:none"></a>
 
 @code {
+    /// <summary>The palette rail content (phase 6): a labelled expand affordance beside the
+    /// shell's chevron, so the 44px rail names what it opens.</summary>
+    private RenderFragment? ToolboxRail => ShowToolbox
+        ? @<button type="button"
+                   class="tm-diagram-editor__rail-btn"
+                   aria-label="@Loc["TmDiagramEditor_PanelToolbox"]"
+                   title="@Loc["TmDiagramEditor_PanelToolbox"]"
+                   @onclick="() => _toolboxCollapsed = false">
+            <TmIcon Name="@IconNames.Grid" Size="IconSize.Sm" />
+        </button>
+        : null;
+
     /// <summary>The left dock: the stencil toolbox (null when the host hides it).</summary>
     private RenderFragment? LeftSlot
-    {
-        get
+    {        get
         {
             if (!ShowToolbox) return null;
             return @<div class="tm-diagram-editor__toolbox-wrap">
@@ -706,7 +739,7 @@
                         }
                     </div>
                 }
-                @if (ShowMinimap)
+                @if (ShowMinimap && !MinimapAsOverlay)
                 {
                     <div class="tm-diagram-editor__minimap-card" data-testid="@TestId("diagram-editor-minimap-card")">
                         <button type="button"

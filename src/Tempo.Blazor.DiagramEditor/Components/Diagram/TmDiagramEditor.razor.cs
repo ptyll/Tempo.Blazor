@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Components.Diagram.Commands;
 using Tempo.Blazor.Components.Diagram.Models;
@@ -257,6 +258,15 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _selectedIds = [];
             EnsureCommandStackForActivePage();
         }
+
+        // A FORCED layout is the resolution: the shell reports changes only, and the initial
+        // resolution is not a change — so a host (or test) that pins Tablet/Desktop/Mobile must
+        // see the tablet presentation from the first frame. Under Auto the shell's callback owns
+        // this state (it fires on the first container measurement).
+        if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
+        {
+            ApplyResolvedLayout(LayoutMode);
+        }
     }
 
     private void EnsureDocumentLayers(DiagramDocument doc)
@@ -314,6 +324,9 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnSelectionChanged(string[] ids)
     {
         _selectedIds = ids;
+        // Phase 6 (tablet): a selection is an editing intent — surface the inspector even
+        // when the palette took the single expanded dock slot (DI3).
+        ExpandInspectorForSelectionOnTablet();
         await OnSelectedIdsChanged.InvokeAsync(ids);
         await InvokeAsync(StateHasChanged);
     }

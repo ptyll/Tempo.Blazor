@@ -1,0 +1,33 @@
+{
+  "kind": "Enum",
+  "category": "Diagram",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "description": "Where the minimap of TmDiagramEditor renders (DI3, tablet redesign phase 6).",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramMinimapPlacement.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiagramMinimapPlacement",
+  "values": [
+    {
+      "name": "Auto",
+      "value": "0",
+      "description": "The minimap card renders in the right column on a desktop layout and floats over the canvas corner from tablet down (a floating, tappable navigation card). The default."
+    },
+    {
+      "name": "Panel",
+      "value": "1",
+      "description": "Always the collapsible card in the right column, on every layout (the pre-phase-6 desktop presentation)."
+    },
+    {
+      "name": "Overlay",
+      "value": "2",
+      "description": "Always the floating overlay over the canvas corner, on every layout."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Force the floating minimap on a desktop-embedded editor",
+      "code": "<TmDiagramEditor Document=\"@document\" MinimapPlacement=\"DiagramMinimapPlacement.Overlay\" />"
+    }
+  ]
+}

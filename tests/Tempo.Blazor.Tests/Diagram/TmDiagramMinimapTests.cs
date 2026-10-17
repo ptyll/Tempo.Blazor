@@ -89,8 +89,10 @@ public class TmDiagramMinimapTests : DiagramTestBase
                 parameters.Add(p => p.NavigateRequested, new Microsoft.AspNetCore.Components.EventCallback<DiagramMinimapNavigateArgs>(null, (System.Action<DiagramMinimapNavigateArgs>)(args => navigated = args)));
             });
 
+        // Phase 6: the minimap is driven by Pointer Events (a finger drags the viewport rect),
+        // so the navigation press is a pointerdown.
         var svg = cut.Find("svg");
-        svg.MouseDown(new MouseEventArgs { OffsetX = 10, OffsetY = 10 });
+        svg.PointerDown(new PointerEventArgs { PointerType = "touch", OffsetX = 10, OffsetY = 10 });
 
         navigated.Should().NotBeNull();
         navigated!.CentreX.Should().BeApproximately(50, 0.1);

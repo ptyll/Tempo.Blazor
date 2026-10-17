@@ -76,6 +76,26 @@
       "description": "How the inspector column presents the properties and layers panels. Tabs (the default) renders \"Properties | Layers\" tabs; Stacked is the opt-in legacy column with both panels stacked above each other."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "How the editor resolves its layout. Auto (the default) measures the editor's own container width against LayoutBreakpoints — tablet 768-1199, desktop from 1200; a forced Tablet/Desktop/Mobile pins the presentation (tablet: docked panels with at most one expanded, the palette as a 44px rail, the minimap as a canvas overlay, full touch editing)."
+    },
+    {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Per-instance layout thresholds for the editor container. Null uses the editor default (tablet from 768px, desktop from 1200px). Pass new TmLayoutBreakpoints(640, 1024) to follow the shared TmBreakpoints instead."
+    },
+    {
+      "name": "MinimapPlacement",
+      "type": "DiagramMinimapPlacement",
+      "isRequired": false,
+      "default": "DiagramMinimapPlacement.Auto",
+      "description": "Where the minimap renders. Auto shows the right-column card on a desktop layout and floats the minimap over the canvas corner from tablet down (DI3); Panel and Overlay force the choice for every layout."
+    },
+    {
       "name": "ShowStatusBar",
       "type": "bool",
       "isRequired": false,
@@ -120,7 +140,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Show the minimap at the bottom of the right sidebar."
+      "description": "Show the minimap (a card in the right column on desktop, an overlay over the canvas corner from tablet down — see MinimapPlacement)."
     },
     {
       "name": "ShowPageView",
@@ -162,6 +182,8 @@
     "tm-diagram-editor__statusbar",
     "tm-diagram-editor__inspector",
     "tm-diagram-editor__minimap-card",
+    "tm-diagram-editor__minimap-overlay",
+    "tm-diagram-editor__rail-btn",
     "tm-diagram-editor__header-start",
     "tm-diagram-editor__header-actions",
     "tm-diagram-editor__zoom-label",
@@ -182,6 +204,10 @@
     {
       "title": "Legacy stacked inspector (opt-in)",
       "code": "<TmDiagramEditor Document=\"@document\" InspectorLayout=\"DiagramInspectorLayout.Stacked\" />"
+    },
+    {
+      "title": "Tablet layout in a fixed-width host pane",
+      "code": "<div style=\"width: 1100px\"><TmDiagramEditor Document=\"@document\" /></div>"
     }
   ]
 }

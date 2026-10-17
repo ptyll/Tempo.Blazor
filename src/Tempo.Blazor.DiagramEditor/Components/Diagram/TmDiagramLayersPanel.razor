@@ -104,6 +104,54 @@
                             <TmIcon Name="@IconNames.Trash" />
                         </button>
                     }
+
+                    @* Phase 6 (tablet and touch): the row's non-drag alternative to the layer
+                       DnD — a "⋯" menu with Rename, Move up, Move down and Delete. *@
+                    <button type="button"
+                            class="tm-diagram-layers__row-menu-trigger"
+                            aria-label="@Loc["TmDiagramLayers_RowActions"]"
+                            title="@Loc["TmDiagramLayers_RowActions"]"
+                            aria-haspopup="true"
+                            aria-expanded="@(_rowMenuLayerId == layer.Id ? "true" : "false")"
+                            @onclick="() => ToggleRowMenu(layer.Id)"
+                            disabled="@ReadOnly">
+                        <TmIcon Name="@IconNames.MoreHorizontal" />
+                    </button>
+                    @if (_rowMenuLayerId == layer.Id)
+                    {
+                        <div class="tm-diagram-layers__row-menu-backdrop" @onclick="() => ToggleRowMenu(layer.Id)"></div>
+                        <div class="tm-diagram-layers__row-menu" role="menu" aria-label="@Loc["TmDiagramLayers_RowActions"]">
+                            <button type="button"
+                                    class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--rename"
+                                    role="menuitem"
+                                    @onclick="() => OnRowMenuRename(layer)">
+                                @Loc["TmDiagramLayers_Rename"]
+                            </button>
+                            <button type="button"
+                                    class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--up"
+                                    role="menuitem"
+                                    disabled="@RowMenuIsFirst"
+                                    @onclick="() => OnMoveLayer(layer, -1)">
+                                @Loc["TmDiagramLayers_MoveUp"]
+                            </button>
+                            <button type="button"
+                                    class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--down"
+                                    role="menuitem"
+                                    disabled="@RowMenuIsLast"
+                                    @onclick="() => OnMoveLayer(layer, +1)">
+                                @Loc["TmDiagramLayers_MoveDown"]
+                            </button>
+                            @if (Document?.Layers.Count > 1 && layer.Id != _defaultLayerId)
+                            {
+                                <button type="button"
+                                        class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--delete"
+                                        role="menuitem"
+                                        @onclick="() => OnRowMenuDelete(layer)">
+                                    @Loc["TmDiagramLayers_Delete"]
+                                </button>
+                            }
+                        </div>
+                    }
                 </div>
             }
         </div>

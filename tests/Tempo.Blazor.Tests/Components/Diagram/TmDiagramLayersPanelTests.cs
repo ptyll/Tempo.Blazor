@@ -197,6 +197,113 @@ public class TmDiagramLayersPanelTests : DiagramTestBase
     }
 
     [Fact]
+    public void MoveUpDownMenu_PushesReorderCommand()
+    {
+        // Non-drag alternative to the layer DnD (WCAG 2.5.7 / touch): every row's "⋯"
+        // menu offers Rename, Move up, Move down and Delete — moving pushes the same
+        // undoable ReorderLayersCommand the drop does.
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[1].Id));
+
+        var row = cut.Find($"[data-layer-id='{doc.Layers[1].Id}']");
+        row.QuerySelector(".tm-diagram-layers__row-menu-trigger")!.Click();
+        cut.Render();
+
+        cut.Find(".tm-diagram-layers__row-menu").Should().NotBeNull("the row menu opens");
+        cut.Find(".tm-diagram-layers__row-menu-item--up").Click();
+
+        doc.Layers.First(l => l.Name == "Annotations").Order.Should().Be(0,
+            "Move up pushes the same ReorderLayersCommand as the DnD drop");
+        doc.Layers.First(l => l.Name == "Base").Order.Should().Be(1);
+    }
+
+    [Fact]
+    public void MoveDownMenu_PushesReorderCommand()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var row = cut.Find($"[data-layer-id='{doc.Layers[0].Id}']");
+        row.QuerySelector(".tm-diagram-layers__row-menu-trigger")!.Click();
+        cut.Render();
+        cut.Find(".tm-diagram-layers__row-menu-item--down").Click();
+
+        doc.Layers.First(l => l.Name == "Base").Order.Should().Be(1);
+        doc.Layers.First(l => l.Name == "Annotations").Order.Should().Be(0);
+    }
+
+    [Fact]
+    public void RowMenu_OffersRenameAndDelete()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var row = cut.Find($"[data-layer-id='{doc.Layers[1].Id}']");
+        row.QuerySelector(".tm-diagram-layers__row-menu-trigger")!.Click();
+        cut.Render();
+
+        var items = cut.FindAll(".tm-diagram-layers__row-menu-item").ToList();
+        items.Should().Contain(i => i.ClassList.Contains("tm-diagram-layers__row-menu-item--rename"));
+        items.Should().Contain(i => i.ClassList.Contains("tm-diagram-layers__row-menu-item--up"));
+        items.Should().Contain(i => i.ClassList.Contains("tm-diagram-layers__row-menu-item--down"));
+        items.Should().Contain(i => i.ClassList.Contains("tm-diagram-layers__row-menu-item--delete"));
+    }
+
+    [Fact]
+    public void RowMenu_RenameEntry_StartsInlineEdit()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var row = cut.Find($"[data-layer-id='{doc.Layers[0].Id}']");
+        row.QuerySelector(".tm-diagram-layers__row-menu-trigger")!.Click();
+        cut.Render();
+        cut.Find(".tm-diagram-layers__row-menu-item--rename").Click();
+        cut.Render();
+
+        cut.Find(".tm-diagram-layers__name-input").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RowMenu_DeleteEntry_RemovesLayer()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[1].Id));
+
+        var row = cut.Find($"[data-layer-id='{doc.Layers[1].Id}']");
+        row.QuerySelector(".tm-diagram-layers__row-menu-trigger")!.Click();
+        cut.Render();
+        cut.Find(".tm-diagram-layers__row-menu-item--delete").Click();
+
+        doc.Layers.Should().ContainSingle().Which.Name.Should().Be("Base");
+    }
+
+    [Fact]
+    public void RowMenu_Trigger_HasAccessibleName()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        var trigger = cut.Find(".tm-diagram-layers__row-menu-trigger");
+        trigger.GetAttribute("aria-label").Should().NotBeNullOrEmpty()
+            .And.NotStartWith("[", "layer row actions must be localized");
+        trigger.GetAttribute("aria-expanded").Should().BeOneOf("true", "false",
+            "the menu trigger reports its open state (a raw bool attribute renders empty)");
+    }
+
+    [Fact]
     public void ActiveRadio_AriaLabel_ContainsLayerName()
     {
         var doc = CreateDocument();

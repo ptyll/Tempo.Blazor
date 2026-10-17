@@ -150,23 +150,17 @@ window.tmDiagramEditor = {
             dragWholeEdgeStartDoc: null,
             dragWholeEdgeDeltaDoc: { x: 0, y: 0 },
 
-            // pinch zoom
-            pinchStartDist: 0,
-            pinchStartScale: 1,
-            pinchMidDoc: null,
-            pinchViewBoxStart: null,
-
-            // long press
-            longPressTimer: null,
-            longPressStart: null,
-            longPressNodeId: null,
-
             // magnetic guidelines
             guideLines: [],
         };
 
         this.instances.set(id, inst);
         this._attachEvents(inst);
+        // Phase 6: the touch/pen gesture stack (node drag, pan, long-press menu, pinch/pan,
+        // resize/rotate sessions) lives in diagram-editor-touch.js over the shared core helpers
+        // pointer-drag.js / pointer-gesture.js — a second pinch or long-press here is forbidden
+        // (decision F7-POINTER-DRAG-PLURALS-RELATIVE-TIME).
+        this._loadTouchModule(inst);
 
         // Auto-fit the content into the visible canvas on first initialization.
         // Without this, the default viewBox (e.g. 0 0 3000 2000) is much larger
@@ -195,6 +189,10 @@ window.tmDiagramEditor = {
         const inst = this.instances.get(id);
         if (!inst) return;
 
+        if (inst.__touchDetach) {
+            try { inst.__touchDetach(); } catch (_e) { /* the sessions are already gone */ }
+            inst.__touchDetach = null;
+        }
         this._detachEvents(inst);
         if (inst.rubberEl) inst.rubberEl.remove();
         this._clearSelectionOutlines(inst);
@@ -243,6 +241,30 @@ window.tmDiagramEditor = {
     },
 
     // ── Event attachment ──────────────────────────────────────────────────────
+    // The mouse path stays here (characterization parity, phase 6); every touch/pen gesture is
+    // the shared-helper session stack in diagram-editor-touch.js — no touchstart handlers.
+
+    // Resolved NOW: document.currentScript is only set while this classic script runs.
+    _touchModuleUrl: (function () {
+        try {
+            const script = document.currentScript;
+            if (script && script.src) return new URL('diagram-editor-touch.js', script.src).href;
+        } catch (_e) { /* fall through to the deployed default */ }
+        return '_content/Tempo.Blazor.DiagramEditor/js/diagram-editor-touch.js';
+    })(),
+
+    _loadTouchModule: function (inst) {
+        if (inst.__touchDetach) return;
+        import(this._touchModuleUrl).then(function (module) {
+            if (!inst.container || inst.__touchDetach) return;
+            module.attachTouch(window.tmDiagramEditor, inst).then(function (detach) {
+                if (inst.__touchDetach) { detach(); return; }
+                inst.__touchDetach = detach;
+            });
+        }).catch(function (err) {
+            console.warn('tmDiagramEditor: the touch module could not be loaded; touch gestures are unavailable', err);
+        });
+    },
 
     _attachEvents: function (inst) {
         inst._onMouseDown = (e) => this._onMouseDown(e, inst);
@@ -251,9 +273,6 @@ window.tmDiagramEditor = {
         inst._onWheel = (e) => this._onWheel(e, inst);
         inst._onKeyDown = (e) => this._onKeyDown(e, inst);
         inst._onKeyUp = (e) => this._onKeyUp(e, inst);
-        inst._onTouchStart = (e) => this._onTouchStart(e, inst);
-        inst._onTouchMove = (e) => this._onTouchMove(e, inst);
-        inst._onTouchEnd = (e) => this._onTouchEnd(e, inst);
         inst._onDrop = (e) => this._onDrop(e, inst);
         inst._onDragOver = (e) => { e.preventDefault(); };
         inst._onContextMenu = (e) => this._onContextMenu(e, inst);
@@ -261,10 +280,6 @@ window.tmDiagramEditor = {
 
         inst.container.addEventListener('mousedown', inst._onMouseDown);
         inst.container.addEventListener('wheel', inst._onWheel, { passive: false });
-        inst.container.addEventListener('touchstart', inst._onTouchStart, { passive: false });
-        inst.container.addEventListener('touchmove', inst._onTouchMove, { passive: false });
-        inst.container.addEventListener('touchend', inst._onTouchEnd);
-        inst.container.addEventListener('touchcancel', inst._onTouchEnd);
         inst.container.addEventListener('drop', inst._onDrop);
         inst.container.addEventListener('dragover', inst._onDragOver);
         inst.container.addEventListener('contextmenu', inst._onContextMenu);
@@ -278,10 +293,6 @@ window.tmDiagramEditor = {
     _detachEvents: function (inst) {
         inst.container.removeEventListener('mousedown', inst._onMouseDown);
         inst.container.removeEventListener('wheel', inst._onWheel);
-        inst.container.removeEventListener('touchstart', inst._onTouchStart);
-        inst.container.removeEventListener('touchmove', inst._onTouchMove);
-        inst.container.removeEventListener('touchend', inst._onTouchEnd);
-        inst.container.removeEventListener('touchcancel', inst._onTouchEnd);
         inst.container.removeEventListener('drop', inst._onDrop);
         inst.container.removeEventListener('dragover', inst._onDragOver);
         inst.container.removeEventListener('contextmenu', inst._onContextMenu);
@@ -811,8 +822,9 @@ window.tmDiagramEditor = {
         }
 
         // Resize / rotate / connect clicked? -> let Blazor handle it (do NOT stopPropagation,
-        // otherwise Blazor's document-level event delegation never receives the event)
-        if (e.target.closest('.tm-diagram-resize-handle, .tm-diagram-rotate-handle, .tm-diagram-connect-arrow')) {
+        // otherwise Blazor's document-level event delegation never receives the event). The -hit
+        // rects (phase 6) carry the gesture for every pointer type.
+        if (e.target.closest('.tm-diagram-resize-handle, .tm-diagram-rotate-handle, .tm-diagram-resize-handle-hit, .tm-diagram-rotate-handle-hit, .tm-diagram-connect-arrow')) {
             return;
         }
 
@@ -1827,225 +1839,340 @@ window.tmDiagramEditor = {
         inst.dotNetRef.invokeMethodAsync('OnViewportChanged', newX, newY, newW, newH);
     },
 
-    // ── Touch events ─────────────────────────────────────────────────────────
+    // ── Touch/pen gesture hooks (diagram-editor-touch.js) ────────────────────
+    // The sessions (core pointer-drag.js / pointer-gesture.js) drive the SAME inst state as the
+    // mouse path — selection, node drag, pan, rotation — so each gesture keeps one implementation.
+    // There is deliberately no second pinch and no second long-press here (decision
+    // F7-POINTER-DRAG-PLURALS-RELATIVE-TIME).
 
-    _onTouchStart: function (e, inst) {
-        if (inst.readOnly) return;
-
-        // Pinch zoom start
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            this._cancelLongPress(inst);
-            const t1 = e.touches[0];
-            const t2 = e.touches[1];
-            const dx = t2.clientX - t1.clientX;
-            const dy = t2.clientY - t1.clientY;
-            inst.pinchStartDist = Math.sqrt(dx * dx + dy * dy);
-            inst.pinchStartScale = inst.scale;
-            inst.pinchMidDoc = this._screenToDoc(inst, (t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2);
-            inst.pinchViewBoxStart = this._getViewBox(inst);
-            return;
+    touchPressNode: function (inst, nodeEl, clientX, clientY) {
+        if (inst.readOnly) return false;
+        const id = nodeEl.getAttribute('data-node-id');
+        if (!id) return false;
+        if (!inst.selectedIds.has(id)) {
+            inst.selectedIds = new Set([id]);
+            this._updateSelection(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
         }
+        inst.container.focus({ preventScroll: true });
+        return nodeEl.getAttribute('data-locked') !== 'true';
+    },
 
-        if (e.touches.length !== 1) return;
-
-        const t = e.touches[0];
-        const nodeEl = document.elementFromPoint(t.clientX, t.clientY)?.closest('[data-node-id]');
-
-        if (nodeEl) {
-            e.preventDefault();
-            const id = nodeEl.getAttribute('data-node-id');
-            const isLocked = nodeEl.getAttribute('data-locked') === 'true';
-            if (!inst.selectedIds.has(id)) {
-                inst.selectedIds = new Set([id]);
-                this._updateSelection(inst);
-                inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
-            }
-
-            if (isLocked || inst.readOnly) {
-                // Cancel long press for locked nodes
-                this._cancelLongPress(inst);
-                return;
-            }
-
-            inst.isDragging = true;
-            inst.dragNodeIds = [...inst.selectedIds];
-
-            // Include children of selected nodes
-            const allIds = new Set(inst.dragNodeIds);
-            inst.dragNodeIds.forEach(nid => {
-                if (inst.scenePane) {
-                    inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
-                        const cid = childEl.getAttribute('data-node-id');
-                        if (cid) allIds.add(cid);
-                    });
-                }
-            });
-            inst.dragNodeIds = [...allIds];
-
-            // Include group nodes
-            inst.dragNodeIds = this._includeGroupNodes(inst, inst.dragNodeIds);
-
-            inst.dragStartScreen = { x: t.clientX, y: t.clientY };
-            inst.dragStartPositions = {};
-            inst.dragNodeIds.forEach(nid => {
-                const r = this._nodeRect(inst, nid);
-                if (r) inst.dragStartPositions[nid] = { x: r.x, y: r.y };
-            });
-            inst.dotNetRef.invokeMethodAsync('OnDragStarted', inst.dragNodeIds);
-
-            // Long press for context menu
-            inst.longPressNodeId = id;
-            inst.longPressStart = { x: t.clientX, y: t.clientY };
-            inst.longPressTimer = setTimeout(() => {
-                if (inst.longPressNodeId && inst.dotNetRef) {
-                    inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', inst.longPressNodeId, inst.longPressStart.x, inst.longPressStart.y);
-                }
-                inst.longPressTimer = null;
-                inst.longPressNodeId = null;
-            }, 600);
-            return;
+    touchPressEdge: function (inst, edgeEl) {
+        if (inst.readOnly) return false;
+        const edgeId = edgeEl.getAttribute('data-edge-id');
+        if (!edgeId) return false;
+        if (!inst.selectedIds.has(edgeId)) {
+            inst.selectedIds = new Set([edgeId]);
+            this._updateSelection(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [edgeId]);
         }
+        return true;
+    },
 
-        // Pan on empty canvas
-        e.preventDefault();
+    touchBeginNodeDrag: function (inst, nodeEl, clientX, clientY) {
+        if (inst.readOnly || inst.isDragging) return;
+        const id = nodeEl ? nodeEl.getAttribute('data-node-id') : null;
+        if (!id || nodeEl.getAttribute('data-locked') === 'true') return;
+        if (!inst.selectedIds.has(id)) return;   // the press must have selected it first
+
+        inst.isDragging = true;
+        inst.dragNodeIds = [...inst.selectedIds];
+
+        // Include children of selected nodes
+        const allIds = new Set(inst.dragNodeIds);
+        inst.dragNodeIds.forEach(nid => {
+            if (inst.scenePane) {
+                inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
+                    const cid = childEl.getAttribute('data-node-id');
+                    if (cid && this._isNodeInActiveGroup(inst, childEl)) allIds.add(cid);
+                });
+            }
+        });
+        inst.dragNodeIds = [...allIds];
+
+        // Include group nodes
+        inst.dragNodeIds = this._includeGroupNodes(inst, inst.dragNodeIds);
+
+        inst.dragStartScreen = { x: clientX, y: clientY };
+        inst.dragStartPositions = {};
+        inst.dragNodeIds.forEach(nid => {
+            const r = this._nodeRect(inst, nid);
+            if (r) inst.dragStartPositions[nid] = { x: r.x, y: r.y };
+        });
+        inst.dotNetRef.invokeMethodAsync('OnDragStarted', inst.dragNodeIds);
+    },
+
+    touchMoveNodeDrag: function (inst, clientX, clientY) {
+        if (!inst.isDragging || inst.dragNodeIds.length === 0 || !inst.dragStartScreen) return;
+        const dxScreen = clientX - inst.dragStartScreen.x;
+        const dyScreen = clientY - inst.dragStartScreen.y;
+        let dxDoc = dxScreen / inst.scale;
+        let dyDoc = dyScreen / inst.scale;
+
+        const guides = this._computeSnapGuides(inst, inst.dragNodeIds, inst.dragStartPositions, dxDoc, dyDoc);
+        if (guides.x !== null) dxDoc += guides.x.delta;
+        if (guides.y !== null) dyDoc += guides.y.delta;
+        this._drawGuideLines(inst, guides);
+
+        inst.dragNodeIds.forEach(id => {
+            const start = inst.dragStartPositions[id];
+            if (!start) return;
+            const nx = start.x + dxDoc;
+            const ny = start.y + dyDoc;
+            const clamped = this._clampChildPosition(inst, id, nx, ny);
+            this._setNodeTranslate(inst, id, clamped.x, clamped.y);
+        });
+        this._updateSelectionTransforms(inst);
+    },
+
+    touchEndNodeDrag: function (inst, clientX, clientY) {
+        if (!inst.isDragging) return;
+        const moves = inst.dragNodeIds.map(id => {
+            const r = this._nodeRect(inst, id);
+            if (!r) return null;
+            const sx = this._snap(inst, r.x);
+            const sy = this._snap(inst, r.y);
+            this._setNodeTranslate(inst, id, sx, sy);
+            return { id, x: sx, y: sy };
+        }).filter(Boolean);
+
+        inst.isDragging = false;
+        inst.dragNodeIds = [];
+        inst.dragStartScreen = null;
+        inst.dragStartPositions = {};
+        this._clearGuideLines(inst);
+
+        if (moves.length === 1) {
+            inst.dotNetRef.invokeMethodAsync('OnElementMoved', moves[0].id, moves[0].x, moves[0].y);
+        } else if (moves.length > 1) {
+            inst.dotNetRef.invokeMethodAsync('OnElementsMoved', moves);
+        }
+    },
+
+    touchCancelNodeDrag: function (inst) {
+        if (!inst.isDragging) return;
+        // Roll the gesture back: every dragged node returns to its start position.
+        inst.dragNodeIds.forEach(id => {
+            const start = inst.dragStartPositions[id];
+            if (!start) return;
+            this._setNodeTranslate(inst, id, start.x, start.y);
+        });
+        inst.isDragging = false;
+        inst.dragNodeIds = [];
+        inst.dragStartScreen = null;
+        inst.dragStartPositions = {};
+        this._clearGuideLines(inst);
+        this._updateSelectionTransforms(inst);
+    },
+
+    touchBeginPan: function (inst, clientX, clientY) {
+        if (inst.isPanning) return;
         inst.isPanning = true;
-        inst.panStartScreen = { x: t.clientX, y: t.clientY };
+        inst.panStartScreen = { x: clientX, y: clientY };
         inst.viewBoxStart = this._getViewBox(inst);
     },
 
-    _onTouchMove: function (e, inst) {
-        // Pinch zoom
-        if (e.touches.length === 2 && inst.pinchStartDist > 0) {
-            e.preventDefault();
-            const t1 = e.touches[0];
-            const t2 = e.touches[1];
-            const dx = t2.clientX - t1.clientX;
-            const dy = t2.clientY - t1.clientY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const factor = inst.pinchStartDist / dist;
+    touchMovePan: function (inst, clientX, clientY) {
+        if (!inst.isPanning || !inst.panStartScreen || !inst.viewBoxStart) return;
+        const vb = inst.viewBoxStart;
+        const dxDoc = (clientX - inst.panStartScreen.x) / inst.scale;
+        const dyDoc = (clientY - inst.panStartScreen.y) / inst.scale;
+        this._setViewBox(inst, vb.x - dxDoc, vb.y - dyDoc, vb.w, vb.h);
+    },
 
-            const vb = inst.pinchViewBoxStart;
-            const mid = inst.pinchMidDoc;
-            if (!vb || !mid) return;
+    touchEndPan: function (inst) {
+        if (!inst.isPanning) return;
+        inst.isPanning = false;
+        inst.panStartScreen = null;
+        inst.viewBoxStart = null;
+        const vb = this._getViewBox(inst);
+        inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
+        inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+    },
 
-            const newW = vb.w * factor;
-            const newH = vb.h * factor;
-            const svgRect = inst.svg.getBoundingClientRect();
-            const newScale = svgRect.width / newW;
-            if (newScale < 0.15 || newScale > 5.0) return;
-
-            const newX = mid.x - (mid.x - vb.x) * factor;
-            const newY = mid.y - (mid.y - vb.y) * factor;
-
-            this._setViewBox(inst, newX, newY, newW, newH);
-            if (inst.dotNetRef)
-                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', newX, newY, newW, newH);
-            return;
-        }
-
-        if (e.touches.length !== 1) return;
-        const t = e.touches[0];
-
-        // Cancel long press if finger moved significantly
-        if (inst.longPressTimer && inst.longPressStart) {
-            const moveDist = Math.sqrt(Math.pow(t.clientX - inst.longPressStart.x, 2) + Math.pow(t.clientY - inst.longPressStart.y, 2));
-            if (moveDist > 10) {
-                this._cancelLongPress(inst);
-            }
-        }
-
-        if (inst.isDragging && inst.dragNodeIds.length > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            const dxScreen = t.clientX - inst.dragStartScreen.x;
-            const dyScreen = t.clientY - inst.dragStartScreen.y;
-            let dxDoc = dxScreen / inst.scale;
-            let dyDoc = dyScreen / inst.scale;
-
-            const guides = this._computeSnapGuides(inst, inst.dragNodeIds, inst.dragStartPositions, dxDoc, dyDoc);
-            if (guides.x !== null) dxDoc += guides.x.delta;
-            if (guides.y !== null) dyDoc += guides.y.delta;
-            this._drawGuideLines(inst, guides);
-
-            inst.dragNodeIds.forEach(id => {
-                const start = inst.dragStartPositions[id];
-                if (!start) return;
-                let nx = start.x + dxDoc;
-                let ny = start.y + dyDoc;
-                const clamped = this._clampChildPosition(inst, id, nx, ny);
-                this._setNodeTranslate(inst, id, clamped.x, clamped.y);
-            });
-            this._updateSelectionTransforms(inst);
-            return;
-        }
-
-        if (inst.isPanning && inst.panStartScreen) {
-            e.preventDefault();
+    touchCancelPan: function (inst) {
+        if (!inst.isPanning) return;
+        if (inst.viewBoxStart) {
             const vb = inst.viewBoxStart;
-            const dxScreen = t.clientX - inst.panStartScreen.x;
-            const dyScreen = t.clientY - inst.panStartScreen.y;
-            const dxDoc = dxScreen / inst.scale;
-            const dyDoc = dyScreen / inst.scale;
-            this._setViewBox(inst, vb.x - dxDoc, vb.y - dyDoc, vb.w, vb.h);
+            this._setViewBox(inst, vb.x, vb.y, vb.w, vb.h);
+        }
+        inst.isPanning = false;
+        inst.panStartScreen = null;
+        inst.viewBoxStart = null;
+    },
+
+    // ── Two-finger pinch/pan (pointer-gesture.js reports the geometry) ───────
+
+    touchPinchBegin: function (inst) {
+        return this._getViewBox(inst);
+    },
+
+    touchPinchChange: function (inst, startVb, scale, centerX, centerY, dx, dy) {
+        if (!startVb || !isFinite(scale) || scale <= 0) return;
+        const rect = inst.svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const newW = startVb.w / scale;
+        const newH = startVb.h / scale;
+        const newScale = rect.width / newW;
+        if (newScale < 0.15 || newScale > 5.0) return;
+
+        // The viewport point under the gesture's START centre stays under the centre, plus the
+        // two-finger pan in new-scale document units.
+        const px = (centerX - dx) - rect.left;
+        const py = (centerY - dy) - rect.top;
+        const docX = startVb.x + px * (startVb.w / rect.width);
+        const docY = startVb.y + py * (startVb.h / rect.height);
+        const panX = dx * (newW / rect.width);
+        const panY = dy * (newH / rect.height);
+        this._setViewBox(inst, docX - px * (newW / rect.width) - panX, docY - py * (newH / rect.height) - panY, newW, newH);
+    },
+
+    touchPinchEnd: function (inst, startVb, scale, dx, dy) {
+        const vb = this._getViewBox(inst);
+        inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
+        inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+        inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
+    },
+
+    touchPinchCancel: function (inst, startVb) {
+        if (!startVb) return;
+        this._setViewBox(inst, startVb.x, startVb.y, startVb.w, startVb.h);
+    },
+
+    // ── Rotation session (shared by the mouse path and the touch session) ────
+
+    _beginRotateSession: function (inst, nodeId, clientX, clientY, initialRotation, snap) {
+        if (inst.isRotating) return;
+        const r = this._nodeRect(inst, nodeId);
+        if (!r) return;
+
+        inst.isRotating = true;
+        inst.rotateNodeId = nodeId;
+        inst.rotateCenterDoc = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+        inst.rotateStartNodeRotation = initialRotation;
+        inst.rotateSnap = snap || 0;
+        inst.rotateGroupMembers = null;
+
+        const startPt = this._screenToDoc(inst, clientX, clientY);
+        inst.rotateStartAngle = Math.atan2(startPt.y - inst.rotateCenterDoc.y, startPt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
+
+        // If rotating a group, cache member start rotations for real-time updates
+        const nodeEl = this._nodeEl(inst, nodeId);
+        if (nodeEl && nodeEl.getAttribute('data-stencil-id') === 'general.group' && inst.scenePane) {
+            inst.rotateGroupMembers = [];
+            inst.scenePane.querySelectorAll('g.tm-diagram-node[data-node-id]').forEach(el => {
+                if (el.getAttribute('data-parent-group-id') === nodeId) {
+                    const memberId = el.getAttribute('data-node-id');
+                    const memberRot = this._getNodeRotation(el);
+                    inst.rotateGroupMembers.push({ id: memberId, startRotation: memberRot });
+                }
+            });
         }
     },
 
-    _onTouchEnd: function (e, inst) {
-        this._cancelLongPress(inst);
-
-        // End pinch zoom
-        if (inst.pinchStartDist > 0 && e.touches.length < 2) {
-            inst.pinchStartDist = 0;
-            inst.pinchStartScale = 1;
-            inst.pinchMidDoc = null;
-            inst.pinchViewBoxStart = null;
-            const vb = this._getViewBox(inst);
-            if (inst.dotNetRef)
-                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+    _moveRotateSession: function (inst, clientX, clientY) {
+        if (!inst.isRotating) return;
+        const pt = this._screenToDoc(inst, clientX, clientY);
+        const angle = Math.atan2(pt.y - inst.rotateCenterDoc.y, pt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
+        let delta = angle - inst.rotateStartAngle;
+        let rot = inst.rotateStartNodeRotation + delta;
+        if (inst.rotateSnap > 0) {
+            rot = Math.round(rot / inst.rotateSnap) * inst.rotateSnap;
         }
+        this._applyNodeRotation(inst, inst.rotateNodeId, rot);
+        if (inst.rotateGroupMembers) {
+            const groupDelta = rot - inst.rotateStartNodeRotation;
+            inst.rotateGroupMembers.forEach(m => {
+                this._applyNodeRotation(inst, m.id, m.startRotation + groupDelta);
+            });
+        }
+    },
 
-        if (inst.isDragging) {
-            const moves = inst.dragNodeIds.map(id => {
-                const r = this._nodeRect(inst, id);
-                if (!r) return null;
-                const sx = this._snap(inst, r.x);
-                const sy = this._snap(inst, r.y);
-                this._setNodeTranslate(inst, id, sx, sy);
-                return { id, x: sx, y: sy };
-            }).filter(Boolean);
+    _endRotateSession: function (inst) {
+        if (!inst.isRotating) return;
+        inst.isRotating = false;
+        const nodeId = inst.rotateNodeId;
+        const nodeEl = this._nodeEl(inst, nodeId);
+        const rot = nodeEl ? this._getNodeRotation(nodeEl) : inst.rotateStartNodeRotation;
+        if (inst.dotNetRef) {
+            inst.dotNetRef.invokeMethodAsync('OnRotateEnded', nodeId, rot);
+        }
+        inst.rotateNodeId = null;
+        inst.rotateGroupMembers = null;
+    },
 
-            inst.isDragging = false;
-            inst.dragNodeIds = [];
-            inst.dragStartScreen = null;
-            inst.dragStartPositions = {};
-            this._clearGuideLines(inst);
-
-            if (moves.length === 1) {
-                inst.dotNetRef.invokeMethodAsync('OnElementMoved', moves[0].id, moves[0].x, moves[0].y);
-            } else if (moves.length > 1) {
-                inst.dotNetRef.invokeMethodAsync('OnElementsMoved', moves);
+    _cancelRotateSession: function (inst) {
+        if (!inst.isRotating) return;
+        inst.isRotating = false;
+        if (inst.rotateNodeId) {
+            this._applyNodeRotation(inst, inst.rotateNodeId, inst.rotateStartNodeRotation);
+            if (inst.rotateGroupMembers) {
+                inst.rotateGroupMembers.forEach(m => {
+                    this._applyNodeRotation(inst, m.id, m.startRotation);
+                });
             }
-            return;
         }
-
-        if (inst.isPanning) {
-            inst.isPanning = false;
-            inst.panStartScreen = null;
-            inst.viewBoxStart = null;
-            const vb = this._getViewBox(inst);
-            inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
-            inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
-        }
+        inst.rotateNodeId = null;
+        inst.rotateGroupMembers = null;
     },
 
-    _cancelLongPress: function (inst) {
-        if (inst.longPressTimer) {
-            clearTimeout(inst.longPressTimer);
-            inst.longPressTimer = null;
+    startRotate: function (container, nodeId, clientX, clientY, initialRotation, snap) {
+        const inst = this.instances.get(container ? container.id : null);
+        if (!inst) return;
+        this._beginRotateSession(inst, nodeId, clientX, clientY, initialRotation, snap);
+        if (!inst.isRotating) return;
+
+        const self = this;
+        const move = function (e) {
+            if (!inst.isRotating) return;
+            e.preventDefault();
+            self._moveRotateSession(inst, e.clientX, e.clientY);
+        };
+        const up = function () {
+            if (!inst.isRotating) return;
+            self._endRotateSession(inst);
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+        };
+
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+    },
+
+    touchBeginRotate: function (inst, nodeId, clientX, clientY) {
+        const nodeEl = this._nodeEl(inst, nodeId);
+        if (!nodeEl) return;
+        this._beginRotateSession(inst, nodeId, clientX, clientY, this._getNodeRotation(nodeEl), 0);
+    },
+
+    touchMoveRotate: function (inst, clientX, clientY) {
+        this._moveRotateSession(inst, clientX, clientY);
+    },
+
+    touchEndRotate: function (inst) {
+        this._endRotateSession(inst);
+    },
+
+    touchCancelRotate: function (inst) {
+        this._cancelRotateSession(inst);
+    },
+
+    // ── Viewport re-measure (phase 6) ────────────────────────────────────────
+    // After the editor chrome changed around the canvas (a docked panel expanded, collapsed or
+    // was resized), the SVG box changed size without any view change: re-derive the scale and
+    // report the viewport and zoom — no Blazor re-render of the canvas.
+
+    relayout: function (container) {
+        const inst = this.instances.get(container ? container.id : null);
+        if (!inst || !inst.svg) return;
+        const vb = this._getViewBox(inst);
+        const rect = inst.svg.getBoundingClientRect();
+        if (rect.width > 0 && vb.w > 0) inst.scale = rect.width / vb.w;
+        if (inst.dotNetRef) {
+            inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
         }
-        inst.longPressStart = null;
-        inst.longPressNodeId = null;
     },
 
     // ── Edge drawing helpers ─────────────────────────────────────────────────
@@ -3575,6 +3702,15 @@ window.tmDiagramEditor = {
             if (top + rect.height + margin > vh) {
                 top = Math.max(margin, vh - rect.height - margin);
             }
+            // Phase 6: the editor root is an inline-size container (layout containment), so the
+            // fixed-position menu resolves against the EDITOR box, not the viewport — the stored
+            // viewport coordinates are translated into that box here.
+            const editor = container.closest('.tm-diagram-editor');
+            if (editor) {
+                const er = editor.getBoundingClientRect();
+                left -= er.left;
+                top -= er.top;
+            }
             menuEl.style.left = left + 'px';
             menuEl.style.top = top + 'px';
 
@@ -3793,8 +3929,13 @@ window.tmDiagramEditor = {
         if (rect.width === 0 && rect.height === 0) return null;
         // The grid popover is ~200×230; keep it inside the viewport.
         const width = 208, height = 240, margin = 8, gap = 6;
-        const x = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
-        const y = Math.max(margin, Math.min(rect.bottom + gap, window.innerHeight - height - margin));
+        let x = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+        let y = Math.max(margin, Math.min(rect.bottom + gap, window.innerHeight - height - margin));
+        // Phase 6: layout containment (the editor root is an inline-size container) resolves the
+        // fixed popover against the editor box — translate the viewport anchor into it.
+        const er = root.getBoundingClientRect();
+        x -= er.left;
+        y -= er.top;
         return [x, y];
     },
 

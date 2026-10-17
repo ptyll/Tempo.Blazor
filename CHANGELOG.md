@@ -233,6 +233,87 @@
 
 ### Breaking / Migration
 
+- **`TmDiagramEditor` tablet and touch layout (DiagramEditor redesign phase 6, DI3): the editor
+  now resolves its layout from its own container width, and a tablet container changes the panel
+  chrome.** New parameters: `LayoutMode` (`Auto` default — the editor measures itself; forced
+  `Tablet`/`Desktop`/`Mobile` pins the presentation, e.g. for tests), `LayoutBreakpoints` (null =
+  the editor's own band — tablet from 768px, desktop from 1200px; pass
+  `new TmLayoutBreakpoints(640, 1024)` to follow the shared `TmBreakpoints` instead) and
+  `MinimapPlacement` (`Auto` default — the right-column minimap card on desktop, a floating
+  overlay over the canvas corner from tablet down; `Panel`/`Overlay` force the choice).
+
+  From tablet down (container 768–1199 with the defaults) the shell keeps **at most one docked
+  panel expanded** — expanding the palette rails the inspector and vice versa — and the palette
+  renders as a 44px rail by default (a labelled grid button beside the shell's chevron expands
+  it; expanded, it renders as a grid of tiles). Selecting a node raises the inspector back up.
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before: both panels docked at every width; minimap always a right-column card -->
+  <div class="tm-diagram-editor__minimap-card">…</div>
+
+  <!-- after, from tablet down: the palette is a rail, the minimap floats over the canvas -->
+  <div class="tm-editor-shell__rail tm-editor-shell__rail--left" data-region="rail-left">…</div>
+  <div class="tm-diagram-editor__minimap-overlay">…</div>
+  ```
+
+  Host CSS keyed on `.tm-diagram-editor__minimap-card` must also cover
+  `.tm-diagram-editor__minimap-overlay` (or pin `MinimapPlacement="DiagramMinimapPlacement.Panel"`).
+  The editor root now carries `data-editor-layout="desktop|tablet|mobile"` (mirrors the resolved
+  shell layout) — branch host CSS on that attribute; the editor root is a named inline-size
+  container (`tm-diagram-editor`), so `@container tm-diagram-editor (…)` with the shared
+  TmBreakpoints literals works too. Because layout containment makes the editor root the
+  containing block for fixed descendants, the context menu and the table-inserter popover are
+  positioned relative to the editor box (translated by the engine) — hosts that repositioned them
+  against the viewport must do the same.
+
+- **`TmDiagramCanvas` resize/rotate handles start from Pointer Events with enlarged invisible hit
+  areas (phase 6).** Each visible 8×8 handle square is now decorative (`pointer-events: none`) and
+  is covered by an invisible hit rect/circle (`.tm-diagram-resize-handle-hit` /
+  `.tm-diagram-rotate-handle-hit`) that carries `@onpointerdown`. The hit size is the CSS variable
+  `--tm-diagram-handle-hit` on `.tm-diagram-node-handles` — `24px` by default, `44px` on a coarse
+  pointer — in SVG user units, so it scales with canvas zoom. Mouse behaviour is unchanged (the C#
+  resize machine and `startRotate` keep running for the mouse); touch/pen resize and rotation are
+  driven by the new `diagram-editor-touch.js` over the core `pointer-drag.js` and report through
+  the new `OnResizeStarted`/`OnResizeMoved`/`OnResizeEnded`/`OnResizeCancelled` interop points.
+  Host CSS that attached its own handlers to `rect.tm-diagram-resize-handle` must move to the
+  hit rects (or the handles group).
+
+  ```css
+  /* before: the visible square carried the gesture */
+  .tm-diagram-resize-handle { pointer-events: auto; }
+  /* after: the invisible hit area carries it, sized by the variable */
+  .tm-diagram-node-handles { --tm-diagram-handle-hit: 24px; }
+  @media (pointer: coarse) { .tm-diagram-node-handles { --tm-diagram-handle-hit: 44px; } }
+  ```
+
+- **`TmDiagramCanvas` touch stack rewritten on the shared pointer helpers (phase 6).** The
+  hand-rolled `touchstart/touchmove/touchend` handlers, the custom pinch and the custom 600ms
+  long-press are gone; every touch gesture is a session of the core `pointer-drag.js` /
+  `pointer-gesture.js` in the new `diagram-editor-touch.js` module. Behaviour notes for hosts:
+  two-finger pinch now also **pans** (previously it only zoomed) and both gestures work while
+  read-only; the long-press context menu opens when the 600ms hold completes (moving the finger
+  first drags the node and never opens the menu — before, moving cancelled the menu but the drag
+  state had already been armed at `touchstart`); a tap on an edge hit path now selects the edge so
+  tablets can edit it. Plain-wheel zoom is unchanged (`attachPinch`'s ctrl+wheel stays off). The
+  engine gained `tmDiagramEditor.relayout(container)` — after host chrome around the canvas
+  changes, it re-measures and reports `OnViewportChanged`/`OnZoomChanged` without a canvas
+  re-render (the editor calls it when a docked panel expands, collapses or resizes).
+
+- **`TmDiagramToolbox` stencil tiles insert on tap/click (phase 6).** A tap (or a desktop click —
+  a drag is never the only way to insert, WCAG 2.5.7) on a stencil tile inserts it at the visible
+  viewport centre through the same path the keyboard uses; tapping an edge stencil arms the edge
+  tool instead of inserting. Drag-and-drop keeps working unchanged. `TmDiagramMinimap` is driven
+  by Pointer Events (`onpointerdown/move/up`) instead of mouse events and its SVG carries
+  `touch-action: none`, so the viewport rect can be dragged with a finger.
+
+- **`TmDiagramLayersPanel` row "⋯" menu (phase 6).** Every layer row gained a "⋯" trigger
+  (`.tm-diagram-layers__row-menu-trigger`) with Rename / Move up / Move down / Delete — the
+  non-drag alternative to the layer drag-and-drop; Move pushes the same undoable
+  `ReorderLayersCommand` the drop does. On `(hover: none)` pointers the delete affordance is
+  always visible and on `(pointer: coarse)` the row controls grow to the 44px touch target.
+
 - **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4): the two toolbar rows
   became header + single command row + status bar, and the inspector grew "Properties | Layers"
   tabs.** The editor now renders through the core `TmEditorShell` (header / toolbar / left /

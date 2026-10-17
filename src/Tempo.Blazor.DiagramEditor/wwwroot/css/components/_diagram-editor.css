@@ -1727,7 +1727,37 @@ rect.tm-diagram-resize-handle {
     stroke-width: 1.5;
     rx: 2;
     ry: 2;
-    pointer-events: auto;
+    pointer-events: none;
+}
+
+/* Phase 6 (tablet and touch): each visible handle square is covered by a larger INVISIBLE
+ * hit rect centred on the same point, and the whole gesture (pointer/pen/mouse) starts on
+ * that hit rect. The size is a variable in SVG user units: 24 by default, 44 on a coarse
+ * pointer (WCAG 2.5.8 target size). It scales with canvas zoom by nature of the user units —
+ * at zoom 1 it is the on-screen pixel size. */
+.tm-diagram-node-handles {
+    --tm-diagram-handle-hit: 24px;
+}
+
+rect.tm-diagram-resize-handle-hit,
+circle.tm-diagram-rotate-handle-hit {
+    /* SVG2 geometry properties: the rect/circle is positioned by its centre (the x/y / cx/cy
+     * attributes carry the handle point) and grows symmetrically around it. transform-box is
+     * required so the percentage translate resolves against the element, not the view-box. */
+    width: var(--tm-diagram-handle-hit);
+    height: var(--tm-diagram-handle-hit);
+    r: calc(var(--tm-diagram-handle-hit) / 2);
+    transform-box: fill-box;
+    transform: translate(-50%, -50%);
+    fill: none;
+    stroke: none;
+    pointer-events: all;
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-node-handles {
+        --tm-diagram-handle-hit: 44px;
+    }
 }
 
 /* ── Read-only mode ──────────────────────────────────────────────────────── */
@@ -2969,4 +2999,147 @@ line.tm-diagram-rotate-handle-stem {
    tokens only (surface / border / primary / text-muted), which tokens-dark.css
    re-points. In dark the primary step already resolves to the lighter tone the
    removed override used to hard-code. */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phase 6 — tablet and touch (DI3): the container convention, coarse-pointer
+   targets, the minimap overlay and the palette rail. The editor root is a
+   NAMED inline-size container (tm-diagram-editor) so hosts and future rules can
+   branch on the editor's own width; the stylesheet literals stay the shared
+   TmBreakpoints set, so the mode branch itself travels on the data-editor-layout
+   attribute the editor mirrors from the resolved shell layout (the F1
+   convention: a per-instance pair moves the markup branch, never a literal).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.tm-diagram-editor {
+    container-type: inline-size;
+    container-name: tm-diagram-editor;
+}
+
+/* The canvas owns its surface for the pointer-drag/pointer-gesture sessions: a
+   finger drag or pinch must never scroll or zoom the page (the canvas itself
+   never natively scrolls). */
+.tm-diagram-canvas {
+    touch-action: none;
+}
+
+/* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */
+
+.tm-diagram-editor__minimap-overlay {
+    position: absolute;
+    inset-inline-end: var(--tm-space-3);
+    inset-block-end: var(--tm-space-3);
+    z-index: 5;
+    max-width: calc(100% - var(--tm-space-6));
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md, 8px);
+    box-shadow: var(--tm-shadow-lg);
+    padding: var(--tm-space-2);
+}
+
+.tm-diagram-editor__minimap-overlay .tm-diagram-minimap {
+    background: transparent;
+    border: none;
+    width: auto;
+}
+
+.tm-diagram-editor__minimap-overlay .tm-diagram-minimap__title {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-muted);
+}
+
+/* The minimap is navigated with a finger or a mouse drag: the surface belongs
+   to the gesture, never to page scrolling. */
+.tm-diagram-minimap__svg {
+    touch-action: none;
+}
+
+/* ── Palette rail button (the labelled affordance beside the shell chevron) ── */
+
+.tm-diagram-editor__rail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+}
+
+.tm-diagram-editor__rail-btn:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+/* ── Tablet layout (the resolved shell mode): the palette renders as a grid
+   of tiles, the overlay minimap keeps clear of the status bar. Desktop chrome
+   is untouched. ───────────────────────────────────────────────────────────── */
+
+.tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-toolbox__category-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-toolbox__item {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    text-align: center;
+}
+
+.tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-editor__minimap-overlay {
+    inset-block-end: calc(var(--tm-space-2) + var(--tm-space-6));
+}
+
+/* ── Coarse pointer (finger / pen): every small chrome target grows to the
+   44px touch target. The canvas handles use --tm-diagram-handle-hit above. ── */
+
+@media (pointer: coarse) {
+    /* Page tabs: the tab row grows, and the 16px duplicate/close buttons keep
+       their footprint while their hit area expands through the pseudo-element
+       (a 44px button would blow up the tab strip). */
+    .tm-diagram-editor__page-tab {
+        min-height: var(--tm-touch-target);
+        padding-block: var(--tm-space-2);
+    }
+
+    .tm-diagram-editor__page-tab-close,
+    .tm-diagram-editor__page-tab-duplicate {
+        position: relative;
+    }
+
+    .tm-diagram-editor__page-tab-close::before,
+    .tm-diagram-editor__page-tab-duplicate::before {
+        content: '';
+        position: absolute;
+        inset: calc((var(--tm-touch-target) - 100%) / -2);
+    }
+
+    .tm-diagram-editor__panel-toggle,
+    .tm-diagram-editor__more-btn,
+    .tm-diagram-editor__page-tab-add {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group .tm-toolbar-btn,
+    .tm-diagram-editor__toolbar-group .tm-dropdown-trigger {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-editor__rail-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-toolbox__item {
+        min-height: var(--tm-touch-target);
+    }
+}
 

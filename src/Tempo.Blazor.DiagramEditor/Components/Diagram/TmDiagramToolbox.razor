@@ -65,6 +65,7 @@
                                              aria-label="@stencilAriaLabel"
                                              @ondragstart="e => OnDragStart(e, stencil.Id)"
                                              @onkeydown="e => OnStencilKeyDown(e, stencil.Id)"
+                                             @onclick="() => OnStencilActivated(stencil.Id)"
                                              title="@stencilTooltip">
                                             <div class="tm-diagram-toolbox__preview @(stencil.Kind == DiagramStencilKind.Edge ? "tm-diagram-toolbox__edge-preview" : "")">
                                                 @if (!string.IsNullOrEmpty(stencil.IconSvg))

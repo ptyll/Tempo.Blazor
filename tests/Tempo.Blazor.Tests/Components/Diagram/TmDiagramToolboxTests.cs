@@ -1,4 +1,5 @@
 using Tempo.Blazor.Components.Diagram;
+using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Tests.Diagram;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
@@ -12,6 +13,49 @@ public class TmDiagramToolboxTests : DiagramTestBase
 
         var categories = cut.FindAll(".tm-diagram-toolbox__category-header");
         categories.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void TapStencil_InsertsAtViewportCenter()
+    {
+        // Touch has no HTML5 drag: tapping a stencil tile inserts it at the visible
+        // viewport centre — the same HandleQuickInsert path the keyboard uses (WCAG
+        // 2.5.7: a drag is never the only way to insert).
+        DiagramDocument? changed = null;
+        var doc = new DiagramDocument();
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.DocumentChanged, d => changed = d));
+
+        var tile = cut.Find("[data-stencil-id='general.rectangle']");
+        tile.Click();
+
+        changed.Should().NotBeNull("tapping a stencil tile must insert a node");
+        var inserted = changed!.Nodes.Last(n => n.StencilId == "general.rectangle");
+
+        // Without a JS measure the viewport falls back to the whole page, so the
+        // node centre must land on the page centre (within one 8px grid cell).
+        const double grid = 8;
+        (inserted.X + inserted.W / 2d).Should().BeApproximately(doc.Width / 2d, grid, "tap inserts at the viewport centre");
+        (inserted.Y + inserted.H / 2d).Should().BeApproximately(doc.Height / 2d, grid, "tap inserts at the viewport centre");
+    }
+
+    [Fact]
+    public void TapEdgeStencil_SwitchesToEdgeTool()
+    {
+        DiagramDocument? changed = null;
+        var doc = new DiagramDocument();
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.DocumentChanged, d => changed = d));
+
+        var edgeTile = cut.Find("[data-stencil-kind='edge']");
+        edgeTile.Click();
+
+        changed.Should().BeNull("an edge stencil tap arms the edge tool instead of mutating the document");
+        doc.Nodes.Should().BeEmpty();
     }
 
     [Fact]

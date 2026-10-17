@@ -1215,6 +1215,39 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "DiagramMinimapPlacement",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Diagram",
+      "description": "Where the minimap of TmDiagramEditor renders (DI3, tablet redesign phase 6).",
+      "packageId": "Tempo.Blazor.DiagramEditor",
+      "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramMinimapPlacement.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Auto",
+          "value": "0",
+          "description": "The minimap card renders in the right column on a desktop layout and floats over the canvas corner from tablet down (a floating, tappable navigation card). The default."
+        },
+        {
+          "name": "Panel",
+          "value": "1",
+          "description": "Always the collapsible card in the right column, on every layout (the pre-phase-6 desktop presentation)."
+        },
+        {
+          "name": "Overlay",
+          "value": "2",
+          "description": "Always the floating overlay over the canvas corner, on every layout."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Force the floating minimap on a desktop-embedded editor",
+          "code": "<TmDiagramEditor Document=\"@document\" MinimapPlacement=\"DiagramMinimapPlacement.Overlay\" />"
+        }
+      ]
+    },
+    {
       "itemName": "DiagramMinimapViewport",
       "kind": "Class",
       "category": "Components",
@@ -4619,6 +4652,26 @@
           "description": "How the inspector column presents the properties and layers panels. Tabs (the default) renders \"Properties | Layers\" tabs; Stacked is the opt-in legacy column with both panels stacked above each other."
         },
         {
+          "name": "LayoutBreakpoints",
+          "type": "TmLayoutBreakpoints?",
+          "isRequired": false,
+          "description": "Per-instance layout thresholds for the editor container. Null uses the editor default (tablet from 768px, desktop from 1200px). Pass new TmLayoutBreakpoints(640, 1024) to follow the shared TmBreakpoints instead."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "How the editor resolves its layout. Auto (the default) measures the editor's own container width against LayoutBreakpoints — tablet 768-1199, desktop from 1200; a forced Tablet/Desktop/Mobile pins the presentation (tablet: docked panels with at most one expanded, the palette as a 44px rail, the minimap as a canvas overlay, full touch editing)."
+        },
+        {
+          "name": "MinimapPlacement",
+          "type": "DiagramMinimapPlacement",
+          "isRequired": false,
+          "default": "DiagramMinimapPlacement.Auto",
+          "description": "Where the minimap renders. Auto shows the right-column card on a desktop layout and floats the minimap over the canvas corner from tablet down (DI3); Panel and Overlay force the choice for every layout."
+        },
+        {
           "name": "OnSelectedIdsChanged",
           "type": "EventCallback<string[]>",
           "isRequired": false,
@@ -4649,7 +4702,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Show the minimap at the bottom of the right sidebar."
+          "description": "Show the minimap (a card in the right column on desktop, an overlay over the canvas corner from tablet down — see MinimapPlacement)."
         },
         {
           "name": "ShowPageView",
@@ -4718,6 +4771,8 @@
         "tm-diagram-editor__statusbar",
         "tm-diagram-editor__inspector",
         "tm-diagram-editor__minimap-card",
+        "tm-diagram-editor__minimap-overlay",
+        "tm-diagram-editor__rail-btn",
         "tm-diagram-editor__header-start",
         "tm-diagram-editor__header-actions",
         "tm-diagram-editor__zoom-label",
@@ -4738,6 +4793,10 @@
         {
           "title": "Legacy stacked inspector (opt-in)",
           "code": "<TmDiagramEditor Document=\"@document\" InspectorLayout=\"DiagramInspectorLayout.Stacked\" />"
+        },
+        {
+          "title": "Tablet layout in a fixed-width host pane",
+          "code": "<div style=\"width: 1100px\"><TmDiagramEditor Document=\"@document\" /></div>"
         }
       ]
     },
@@ -5461,7 +5520,15 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/diagram-editor-touch.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/diagram-editor.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/__tests__/diagram-editor-touch.test.mjs",
       "kind": "JavaScript"
     },
     {
@@ -5470,11 +5537,11 @@
     }
   ],
   "summary": {
-    "itemCount": 140,
-    "manualItemCount": 140,
-    "generatedItemCount": 131,
+    "itemCount": 141,
+    "manualItemCount": 141,
+    "generatedItemCount": 132,
     "generatedOnlyItemCount": 0,
     "componentCount": 17,
-    "publicApiTypeCount": 114
+    "publicApiTypeCount": 115
   }
 }
