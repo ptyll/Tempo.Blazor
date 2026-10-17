@@ -9,9 +9,10 @@ namespace Tempo.Blazor.Components.Diagram;
 public enum DiagramToolbarPreset
 {
     /// <summary>
-    /// Every toolbar group in the classic order (history, clipboard, tools, format, insert,
-    /// arrange, search, panels, zoom, view, canvas-size, layout, export, templates, import,
-    /// read-only). This is the default and preserves the pre-split look.
+    /// Every toolbar group — the set of groups, not a historical order. Since the phase-4
+    /// desktop restructure the command groups share one TmToolbar row, the search and panel
+    /// toggles live in the header, the view/canvas-size groups in the header "⋯" menu and the
+    /// zoom/read-only groups in the status bar. This is the default and keeps every command.
     /// </summary>
     Full = 0,
 

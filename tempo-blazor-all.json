@@ -30615,6 +30615,34 @@
           ]
         },
         {
+          "itemName": "DiagramInspectorLayout",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Diagram",
+          "description": "How the inspector column of TmDiagramEditor presents the properties and layers panels (DI2, desktop redesign phase 4).",
+          "packageId": "Tempo.Blazor.DiagramEditor",
+          "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramInspectorLayout.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Tabs",
+              "value": "0",
+              "description": "The properties and layers panels share one column behind \"Properties | Layers\" tabs. The default."
+            },
+            {
+              "name": "Stacked",
+              "value": "1",
+              "description": "Both panels render stacked in one scrollable column (the pre-redesign look), opt-in."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Legacy stacked inspector (opt-in)",
+              "code": "<TmDiagramEditor Document=\"@document\" InspectorLayout=\"DiagramInspectorLayout.Stacked\" />"
+            }
+          ]
+        },
+        {
           "itemName": "DiagramMinimapNavigateArgs",
           "kind": "Class",
           "category": "Components",
@@ -31147,7 +31175,7 @@
             {
               "name": "Full",
               "value": "0",
-              "description": "Every toolbar group in the classic order (history, clipboard, tools, format, insert, arrange, search, panels, zoom, view, canvas-size, layout, export, templates, import, read-only). The default and the pre-split look."
+              "description": "Every toolbar group — the set of groups, not a historical order (since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar). The default."
             },
             {
               "name": "Viewer",
@@ -33771,7 +33799,7 @@
           "kind": "Component",
           "category": "Diagram",
           "namespace": "Tempo.Blazor.Components.Diagram",
-          "description": "Top-level diagram editor component. Composes the canvas, toolbox, properties panel, and toolbar into a fully working editor. The toolbar is a stable public contract: every toolbar group carries a data-tm-group attribute (history|clipboard|tools|format|insert|arrange|search|panels|zoom|view|canvas-size|layout|export|templates|import|readonly) and visibility is decided by ToolbarPreset/ToolbarGroups in C# — never target the toolbar's internal DOM with positional CSS.",
+          "description": "Top-level diagram editor component. Renders through the core editor shell: a header (document title, named panel toggles, view-settings menu), a single command toolbar built on TmToolbar with Priority overflow, a status bar with the zoom controls, and an inspector with Properties | Layers tabs. The toolbar is a stable public contract: every toolbar group carries a data-tm-group attribute (history|clipboard|tools|format|insert|arrange|search|panels|zoom|view|canvas-size|layout|export|templates|import|readonly) and visibility is decided by ToolbarPreset/ToolbarGroups in C# — never target the toolbar's internal DOM with positional CSS.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramEditor.razor",
           "documentationStatus": "merged",
@@ -33815,13 +33843,20 @@
               "name": "HeaderActions",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "Host content rendered at the very end of the last toolbar row, after the built-in groups (G9 host slot)."
+              "description": "Host content rendered at the very end of the header bar, after the built-in controls (G9 host slot)."
             },
             {
               "name": "HeaderStart",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "Host content rendered at the very start of the first toolbar row, before the document title (G9 host slot)."
+              "description": "Host content rendered at the very start of the header bar, before the document title (G9 host slot)."
+            },
+            {
+              "name": "InspectorLayout",
+              "type": "DiagramInspectorLayout",
+              "isRequired": false,
+              "default": "DiagramInspectorLayout.Tabs",
+              "description": "How the inspector column presents the properties and layers panels. Tabs (the default) renders \"Properties | Layers\" tabs; Stacked is the opt-in legacy column with both panels stacked above each other."
             },
             {
               "name": "OnSelectedIdsChanged",
@@ -33871,6 +33906,20 @@
               "description": "Show the properties panel on the right."
             },
             {
+              "name": "ShowStatusBar",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Show the status bar below the canvas (zoom controls, read-only toggle)."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Show the editable document title in the header. Hosts hide it through this parameter — never through CSS selectors (the title is deliberately outside the toolbar group contract)."
+            },
+            {
               "name": "ShowToolbar",
               "type": "bool",
               "isRequired": false,
@@ -33895,14 +33944,20 @@
               "type": "DiagramToolbarPreset",
               "isRequired": false,
               "default": "DiagramToolbarPreset.Full",
-              "description": "Toolbar layout preset. Full (the default) renders every toolbar group in the classic order; Viewer renders only the zoom, view, search and export groups for read-only preview surfaces. Stable public API: the group set and the data-tm-group attribute values must survive toolbar regrouping unchanged."
+              "description": "Toolbar layout preset. Full renders every toolbar group (the set of groups, not a historical order — since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar); Viewer renders only the zoom, view, search and export groups for read-only preview surfaces. Stable public API: the group set and the data-tm-group attribute values must survive toolbar regrouping unchanged."
             }
           ],
           "cssClasses": [
             "tm-diagram-editor",
             "tm-diagram-editor--readonly",
+            "tm-diagram-editor__header-bar",
+            "tm-diagram-editor__panel-toggle",
+            "tm-diagram-editor__view-menu",
             "tm-diagram-editor__toolbar",
             "tm-diagram-editor__toolbar-group[data-tm-group]",
+            "tm-diagram-editor__statusbar",
+            "tm-diagram-editor__inspector",
+            "tm-diagram-editor__minimap-card",
             "tm-diagram-editor__header-start",
             "tm-diagram-editor__header-actions",
             "tm-diagram-editor__zoom-label",
@@ -33919,6 +33974,10 @@
             {
               "title": "Custom group selection with host header slots",
               "code": "<TmDiagramEditor Document=\"@document\" ToolbarGroups=\"DiagramToolbarGroups.Zoom | DiagramToolbarGroups.Export\" HeaderStart=\"<span>My app</span>\"><HeaderActions><TmButton OnClick=\"Save\">Save</TmButton></HeaderActions></TmDiagramEditor>"
+            },
+            {
+              "title": "Legacy stacked inspector (opt-in)",
+              "code": "<TmDiagramEditor Document=\"@document\" InspectorLayout=\"DiagramInspectorLayout.Stacked\" />"
             }
           ]
         },
@@ -34067,6 +34126,12 @@
               "name": "OnApplyLayout",
               "type": "EventCallback<(string Algorithm, string Direction)>",
               "isRequired": false
+            },
+            {
+              "name": "OnDeleteRequested",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the Actions section's Delete button. The editor wires it to the same delete path as the toolbar command, so the selection delete stays undoable."
             },
             {
               "name": "OnEdgeManualRoutingChanged",
@@ -34613,12 +34678,12 @@
         }
       ],
       "summary": {
-        "itemCount": 137,
-        "manualItemCount": 137,
-        "generatedItemCount": 128,
+        "itemCount": 138,
+        "manualItemCount": 138,
+        "generatedItemCount": 129,
         "generatedOnlyItemCount": 0,
         "componentCount": 16,
-        "publicApiTypeCount": 112
+        "publicApiTypeCount": 113
       }
     },
     {
@@ -115861,10 +115926,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3224,
-    "manualItemCount": 3224,
+    "itemCount": 3225,
+    "manualItemCount": 3225,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2697
+    "publicApiTypeCount": 2698
   }
 }

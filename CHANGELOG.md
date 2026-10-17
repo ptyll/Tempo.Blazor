@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4, DI2/DI3).** The editor
+  renders through the core `TmEditorShell`: a header (page tabs on top per DI3, document title,
+  named panel toggles with visible labels, "⋯" view-settings menu), a single command row built on
+  the core `TmToolbar` (`Overflow=Menu`, `Priority`-driven overflow, visible labels below icons,
+  labelled `TmToolbarGroup`s carrying the frozen `data-tm-group` contract), a status bar with the
+  zoom controls and the Read-only toggle, a collapsible minimap card, and an inspector presenting
+  "Properties | Layers" tabs (new `InspectorLayout` parameter, `Stacked` opt-in) with a dedicated
+  Actions section. Docked panels resize/collapse through the shell. New parameters:
+  `InspectorLayout`, `ShowStatusBar`, `ShowTitle`.
+
 - **`TmDiagramEditor` explicit toolbar contract (DiagramEditor redesign phase 1).** Every toolbar
   group now carries a stable `data-tm-group` attribute from the frozen set `history | clipboard |
   tools | format | insert | arrange | search | panels | zoom | view | canvas-size | layout | export
@@ -210,6 +220,57 @@
     `MockTmLocalizer`.
 
 ### Breaking / Migration
+
+- **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4): the two toolbar rows
+  became header + single command row + status bar, and the inspector grew "Properties | Layers"
+  tabs.** The editor now renders through the core `TmEditorShell` (header / toolbar / left /
+  canvas / right / status-bar regions). What moved:
+
+  | Group (`data-tm-group`) | Before (2.9.1 phase 1) | After (phase 4) |
+  |---|---|---|
+  | `history` `clipboard` `tools` `format` `insert` `arrange` `layout` `export` `import` `templates` | toolbar row 1 / row 2 | one command row (core `TmToolbar`, Priority overflow into its "More" menu, labels below icons) |
+  | `search` | toolbar row 1 | header, named "Search" toggle |
+  | `panels` | toolbar row 1 | header, named toggles (Tools / Properties / Layers / Minimap) |
+  | `view` `canvas-size` | toolbar row 2 | header "⋯" menu (`.tm-diagram-editor__view-menu-panel`, rendered hidden in the DOM when closed) |
+  | `zoom` | toolbar row 2 | status bar (`.tm-diagram-editor__statusbar`), `.tm-diagram-editor__zoom-label` preserved |
+  | `readonly` | toolbar row 2 | status bar |
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before: groups lived inside the toolbar rows -->
+  <div class="tm-diagram-editor__toolbar">
+    <div class="tm-diagram-editor__toolbar-row">…[data-tm-group=search]…</div>
+    <div class="tm-diagram-editor__toolbar-row">…[data-tm-group=zoom]…</div>
+  </div>
+
+  <!-- after: header bar + command toolbar + status bar -->
+  <div class="tm-diagram-editor__header-bar">…[data-tm-group=search][data-tm-group=panels]…⋯</div>
+  <div class="tm-diagram-editor__toolbar">…command groups only…</div>
+  <div class="tm-diagram-editor__statusbar">…[data-tm-group=zoom][data-tm-group=readonly]…</div>
+  ```
+
+  Host CSS keyed on `.tm-diagram-editor__toolbar-row`, on the position of a group inside the
+  toolbar, or on `.tm-diagram-editor__toolbar [data-tm-group='zoom']` must move to the new
+  regions — query `[data-tm-group]` from the editor root (`[data-testid='diagram-editor']
+  [data-tm-group]`), never positionally. `flex-wrap: wrap` on the old toolbar rows is gone:
+  overflow is the core `TmToolbar` "More" menu (`data-tm-toolbar-item`), so a command that
+  collapsed can be `inert` until it is opened from the menu. `__toolbar-row` no longer exists;
+  `__props-wrap`, `__layers-wrap`, `__right-stack` and `__right-wrap` remain as aliases inside
+  the inspector, and `__toolbox-wrap`/`__minimap-card` wrap the docked panels. The toolbar
+  toggle buttons keep their tooltips ("Toggle toolbox", "Toggle properties panel",
+  "Toggle layers", "Toggle minimap"), so attribute selectors keep working; the new visible
+  labels are `TmDiagramEditor_Panel*` keys. The Properties/Layers panels now render behind
+  inspector tabs (`TmTabs`) — an inactive tab's panel is not in the DOM; opt out with the new
+  `InspectorLayout="DiagramInspectorLayout.Stacked"`.
+
+  The Properties panel's order/grouping/collapse/lock actions moved into a dedicated
+  **Actions** section (with a Delete button raised through `OnDeleteRequested`). The collapsed
+  Import group offers SQL/CSV entries in "More"; the JSON file picker stays on the bar item
+  (a browser file dialog cannot be opened from a menu entry), and at desktop widths the Import
+  group stays on the bar. New parameters: `InspectorLayout` (`Tabs` default / `Stacked` opt-in),
+  `ShowStatusBar` (default `true`), `ShowTitle` (default `true` — hide the document title
+  through the API, never through CSS).
 
 - **`TmDiagramEditor`: the built-in Read-only/Edit toggle no longer overwrites the `[Parameter]
   ReadOnly` and disappears while the host pins read-only (DI1).**

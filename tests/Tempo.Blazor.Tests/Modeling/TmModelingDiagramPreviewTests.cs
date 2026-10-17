@@ -164,7 +164,9 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
             .Add(p => p.Document, CreateDocument(nodeCount: 2)));
 
-        var groupNames = cut.FindAll("[data-testid='diagram-editor'] .tm-diagram-editor__toolbar [data-tm-group]")
+        // Phase 4 scattered the groups across the editor regions (search/view in the header,
+        // zoom in the status bar), so the check is editor-scoped, not toolbar-scoped.
+        var groupNames = cut.FindAll("[data-testid='diagram-editor'] [data-tm-group]")
             .Select(g => g.GetAttribute("data-tm-group")!)
             .ToList();
 
@@ -173,6 +175,9 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         groupNames.Should().NotContain("import", "the preview must not offer imports");
         groupNames.Should().NotContain("templates", "the preview must not offer templates");
         groupNames.Should().NotContain("readonly", "a host-pinned read-only preview cannot be unlocked");
+
+        // The viewer zoom readout stays reachable by the Modeling E2E selector.
+        cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull();
     }
 
     [Fact]

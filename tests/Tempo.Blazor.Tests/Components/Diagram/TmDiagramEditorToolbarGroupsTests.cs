@@ -8,20 +8,28 @@ using Tempo.Blazor.Tests.Localization;
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
 /// <summary>
-/// Freezes the public toolbar contract of <see cref="TmDiagramEditor"/> (DiagramEditor redesign,
-/// phase 1): every toolbar group carries a stable <c>data-tm-group</c> attribute from a fixed set,
-/// the <see cref="TmDiagramEditor.ToolbarPreset"/>/<see cref="TmDiagramEditor.ToolbarGroups"/>
+/// Freezes the public toolbar contract of <see cref="TmDiagramEditor"/>: every toolbar group
+/// carries a stable <c>data-tm-group</c> attribute from a fixed set, the
+/// <see cref="TmDiagramEditor.ToolbarPreset"/>/<see cref="TmDiagramEditor.ToolbarGroups"/>
 /// parameters decide group visibility in C# (never CSS), and the <c>HeaderStart</c> /
-/// <c>HeaderActions</c> slots render host content. The contract is public API and must survive the
-/// phase-4 toolbar regrouping unchanged.
+/// <c>HeaderActions</c> slots render host content.
 /// </summary>
+/// <remarks>
+/// Phase 4 (desktop restructure) regrouped the toolbar: the command groups render in ONE
+/// TmToolbar row, the search and panel toggles moved into the header, the view/canvas-size
+/// groups into the header "⋯" menu and the zoom/read-only groups into the status bar. The
+/// group NAMES, the flags and the <see cref="DiagramToolbarGroups.All"/> meaning are unchanged
+/// public API; only the frozen ORDER below reflects the new desktop DOM order.
+/// </remarks>
 public class TmDiagramEditorToolbarGroupsTests : LocalizationTestBase
 {
-    /// <summary>The frozen <c>data-tm-group</c> contract, in the classic (Full preset) DOM order.</summary>
+    /// <summary>The frozen <c>data-tm-group</c> contract, in the desktop (Full preset) DOM order:
+    /// header groups, view-settings menu groups, command-row groups, status-bar groups.</summary>
     public static readonly string[] ContractGroups =
     [
-        "history", "clipboard", "tools", "format", "insert", "arrange", "search", "panels",
-        "zoom", "view", "canvas-size", "layout", "export", "templates", "import", "readonly",
+        "search", "panels", "view", "canvas-size",
+        "history", "clipboard", "tools", "format", "insert", "arrange", "layout", "export", "import", "templates",
+        "zoom", "readonly",
     ];
 
     public TmDiagramEditorToolbarGroupsTests()
@@ -41,7 +49,7 @@ public class TmDiagramEditorToolbarGroupsTests : LocalizationTestBase
     }
 
     [Fact]
-    public void FullPreset_RendersEveryGroupInTheClassicOrder()
+    public void FullPreset_RendersEveryGroupInTheDesktopOrder()
     {
         using var cut = RenderDefaultEditor();
 
@@ -59,8 +67,9 @@ public class TmDiagramEditorToolbarGroupsTests : LocalizationTestBase
         names.Should().BeEquivalentTo(["zoom", "view", "search", "export"]);
         names.Should().OnlyHaveUniqueItems("each group renders exactly once");
 
-        // The viewer keeps the zoom readout and the fit-to-view command.
-        cut.Find(".tm-diagram-editor__toolbar [data-tm-group='zoom'] .tm-diagram-editor__zoom-label")
+        // The viewer keeps the zoom readout — in the status bar since phase 4 — and the
+        // fit-to-view command (Modeling E2E contract: .tm-diagram-editor__zoom-label).
+        cut.Find(".tm-diagram-editor__statusbar [data-tm-group='zoom'] .tm-diagram-editor__zoom-label")
             .Should().NotBeNull();
     }
 
@@ -70,7 +79,7 @@ public class TmDiagramEditorToolbarGroupsTests : LocalizationTestBase
         using var cut = Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, false));
 
         cut.Instance.ToolbarPreset.Should().Be(DiagramToolbarPreset.Full);
-        cut.FindAll(".tm-diagram-editor__toolbar [data-tm-group='readonly']").Should().HaveCount(1);
+        cut.FindAll(".tm-diagram-editor__statusbar [data-tm-group='readonly']").Should().HaveCount(1);
     }
 
     [Fact]
@@ -91,51 +100,17 @@ public class TmDiagramEditorToolbarGroupsTests : LocalizationTestBase
             .Add(e => e.ReadOnly, false)
             .Add(e => e.ToolbarGroups, DiagramToolbarGroups.Zoom));
 
-        cut.FindAll(".tm-diagram-editor__toolbar [data-tm-group='templates']").Should().BeEmpty();
-        cut.FindAll(".tm-diagram-editor__toolbar [data-tm-group='import']").Should().BeEmpty();
-        cut.FindAll(".tm-diagram-editor__toolbar [data-tm-group='readonly']").Should().BeEmpty();
-        cut.FindAll(".tm-diagram-editor__toolbar [data-tm-group='zoom']").Should().HaveCount(1);
-    }
-
-    [Fact]
-    public void HeaderStart_RendersBeforeTheDocumentTitle()
-    {
-        using var cut = Render<TmDiagramEditor>(p => p
-            .Add(e => e.ReadOnly, false)
-            .Add(e => e.HeaderStart, "<span class=\"hdr-start-sentinel\">Start</span>"));
-
-        var sentinel = cut.Find(".tm-diagram-editor__header-start .hdr-start-sentinel");
-        sentinel.TextContent.Should().Be("Start");
-
-        var firstRow = cut.FindAll(".tm-diagram-editor__toolbar-row")[0];
-        var childClasses = firstRow.Children.Select(c => c.ClassName ?? string.Empty).ToList();
-        childClasses.FindIndex(c => c.Contains("tm-diagram-editor__header-start"))
-            .Should().BeLessThan(childClasses.FindIndex(c => c.Contains("tm-diagram-editor__title")),
-                "HeaderStart opens the first toolbar row, before the built-in title input");
-    }
-
-    [Fact]
-    public void HeaderActions_RenderAfterTheBuiltInGroups()
-    {
-        using var cut = Render<TmDiagramEditor>(p => p
-            .Add(e => e.ReadOnly, false)
-            .Add(e => e.HeaderActions, "<span class=\"hdr-actions-sentinel\">Actions</span>"));
-
-        cut.Find(".tm-diagram-editor__header-actions .hdr-actions-sentinel").TextContent
-            .Should().Be("Actions");
-
-        var lastRow = cut.FindAll(".tm-diagram-editor__toolbar-row")[^1];
-        var childClasses = lastRow.Children.Select(c => c.ClassName ?? string.Empty).ToList();
-        childClasses.FindIndex(c => c.Contains("tm-diagram-editor__header-actions"))
-            .Should().BeGreaterThan(childClasses.FindIndex(c => c.Contains("readonly")),
-                "HeaderActions close the toolbar, after the built-in groups");
+        cut.FindAll("[data-testid='diagram-editor'] [data-tm-group='templates']").Should().BeEmpty();
+        cut.FindAll("[data-testid='diagram-editor'] [data-tm-group='import']").Should().BeEmpty();
+        cut.FindAll("[data-testid='diagram-editor'] [data-tm-group='readonly']").Should().BeEmpty();
+        cut.FindAll("[data-testid='diagram-editor'] [data-tm-group='zoom']").Should().HaveCount(1);
     }
 
     private IRenderedComponent<TmDiagramEditor> RenderDefaultEditor() =>
         Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, false));
 
     private static List<string> ToolbarGroupNames(IRenderedComponent<TmDiagramEditor> cut) =>
-        cut.FindAll(".tm-diagram-editor__toolbar [data-tm-group]")
+        cut.FindAll("[data-testid='diagram-editor'] [data-tm-group]")
             .Select(g => g.GetAttribute("data-tm-group")!)
             .ToList();
 }

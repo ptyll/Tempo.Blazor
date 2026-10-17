@@ -241,6 +241,50 @@
                     </select>
                 </div>
 
+                @if (CanAlign)
+                {
+                    <div class="tm-diagram-properties__field">
+                        <label>@Loc["TmDiagramProperties_TextAlign"]</label>
+                        <div class="tm-diagram-properties__action-grid">
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.AlignLeft" OnClick='() => OnAlign("left")'>@Loc["TmDiagramProperties_AlignLeft"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.AlignCenter" OnClick='() => OnAlign("center")'>@Loc["TmDiagramProperties_AlignCenter"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.AlignRight" OnClick='() => OnAlign("right")'>@Loc["TmDiagramProperties_AlignRight"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.ArrowUp" OnClick='() => OnAlign("top")'>@Loc["TmDiagramProperties_AlignTop"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.Minimize2" OnClick='() => OnAlign("middle")'>@Loc["TmDiagramProperties_AlignMiddle"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.ArrowDown" OnClick='() => OnAlign("bottom")'>@Loc["TmDiagramProperties_AlignBottom"]</TmButton>
+                        </div>
+                    </div>
+                }
+
+                @if (CanDistribute)
+                {
+                    <div class="tm-diagram-properties__field">
+                        <label>@Loc["TmDiagramProperties_Distribute"]</label>
+                        <div class="tm-diagram-properties__action-grid-2">
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnDistribute("horizontal")'>@Loc["TmDiagramProperties_DistributeHorizontal"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnDistribute("vertical")'>@Loc["TmDiagramProperties_DistributeVertical"]</TmButton>
+                        </div>
+                    </div>
+                }
+
+                @if (CanLayout)
+                {
+                    <div class="tm-diagram-properties__field">
+                        <label>@Loc["TmDiagram_Layout"]</label>
+                        <div class="tm-diagram-properties__action-grid">
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("dagre", "TB"))' title="@Loc["TmDiagram_LayoutHierarchicalTopDown_Tooltip"]">@Loc["TmDiagram_LayoutHierarchicalTopDown"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("dagre", "LR"))' title="@Loc["TmDiagram_LayoutHierarchicalLeftRight_Tooltip"]">@Loc["TmDiagram_LayoutHierarchicalLeftRight"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("tree", "TB"))' title="@Loc["TmDiagram_LayoutTree_Tooltip"]">@Loc["TmDiagram_LayoutTree"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("force", ""))' title="@Loc["TmDiagram_LayoutForce_Tooltip"]">@Loc["TmDiagram_LayoutForce"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("circle", ""))' title="@Loc["TmDiagram_LayoutCircle_Tooltip"]">@Loc["TmDiagram_LayoutCircle"]</TmButton>
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("grid", ""))' title="@Loc["TmDiagram_LayoutGrid_Tooltip"]">@Loc["TmDiagram_LayoutGrid"]</TmButton>
+                        </div>
+                    </div>
+                }
+            </TmSection>
+
+            @* ── Actions Section (mockup: Akce) ────────────────────────────── *@
+            <TmSection Title="@Loc["TmDiagramProperties_Actions"]" Icon="@IconNames.Zap" Collapsible="true" Collapsed="@(!IsSectionExpanded("actions"))" CollapsedChanged="OnActionsCollapsedChanged">
                 <div class="tm-diagram-properties__field">
                     <label>@Loc["TmDiagramProperties_Order"]</label>
                     <div class="tm-diagram-properties__action-grid-2">
@@ -286,44 +330,11 @@
                     </div>
                 }
 
-                @if (CanAlign)
+                @if (!ReadOnly)
                 {
                     <div class="tm-diagram-properties__field">
-                        <label>@Loc["TmDiagramProperties_TextAlign"]</label>
-                        <div class="tm-diagram-properties__action-grid">
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.AlignLeft" OnClick='() => OnAlign("left")'>@Loc["TmDiagramProperties_AlignLeft"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.AlignCenter" OnClick='() => OnAlign("center")'>@Loc["TmDiagramProperties_AlignCenter"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.AlignRight" OnClick='() => OnAlign("right")'>@Loc["TmDiagramProperties_AlignRight"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.ArrowUp" OnClick='() => OnAlign("top")'>@Loc["TmDiagramProperties_AlignTop"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.Minimize2" OnClick='() => OnAlign("middle")'>@Loc["TmDiagramProperties_AlignMiddle"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.ArrowDown" OnClick='() => OnAlign("bottom")'>@Loc["TmDiagramProperties_AlignBottom"]</TmButton>
-                        </div>
-                    </div>
-                }
-
-                @if (CanDistribute)
-                {
-                    <div class="tm-diagram-properties__field">
-                        <label>@Loc["TmDiagramProperties_Distribute"]</label>
-                        <div class="tm-diagram-properties__action-grid-2">
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnDistribute("horizontal")'>@Loc["TmDiagramProperties_DistributeHorizontal"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnDistribute("vertical")'>@Loc["TmDiagramProperties_DistributeVertical"]</TmButton>
-                        </div>
-                    </div>
-                }
-
-                @if (CanLayout)
-                {
-                    <div class="tm-diagram-properties__field">
-                        <label>@Loc["TmDiagram_Layout"]</label>
-                        <div class="tm-diagram-properties__action-grid">
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("dagre", "TB"))' title="@Loc["TmDiagram_LayoutHierarchicalTopDown_Tooltip"]">@Loc["TmDiagram_LayoutHierarchicalTopDown"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("dagre", "LR"))' title="@Loc["TmDiagram_LayoutHierarchicalLeftRight_Tooltip"]">@Loc["TmDiagram_LayoutHierarchicalLeftRight"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("tree", "TB"))' title="@Loc["TmDiagram_LayoutTree_Tooltip"]">@Loc["TmDiagram_LayoutTree"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("force", ""))' title="@Loc["TmDiagram_LayoutForce_Tooltip"]">@Loc["TmDiagram_LayoutForce"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("circle", ""))' title="@Loc["TmDiagram_LayoutCircle_Tooltip"]">@Loc["TmDiagram_LayoutCircle"]</TmButton>
-                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick='() => OnApplyLayout.InvokeAsync(("grid", ""))' title="@Loc["TmDiagram_LayoutGrid_Tooltip"]">@Loc["TmDiagram_LayoutGrid"]</TmButton>
-                        </div>
+                        <label>@Loc["TmDiagramEditor_Delete"]</label>
+                        <TmButton Variant="ButtonVariant.Danger" Size="ButtonSize.Sm" Icon="@IconNames.Trash" OnClick="OnDeleteRequested">@Loc["TmDiagramEditor_Delete"]</TmButton>
                     </div>
                 }
             </TmSection>
@@ -662,7 +673,7 @@
                 </div>
 
                 <div class="tm-diagram-properties__field">
-                    <label>Actions</label>
+                    <label>@Loc["TmDiagramProperties_Actions"]</label>
                     <div class="tm-diagram-properties__action-grid-2">
                         <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.ArrowUp" OnClick="OnBringEdgeToFront">@Loc["TmDiagramProperties_BringToFront"]</TmButton>
                         <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="@IconNames.ArrowDown" OnClick="OnSendEdgeToBack">@Loc["TmDiagramProperties_SendToBack"]</TmButton>

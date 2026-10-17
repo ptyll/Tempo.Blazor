@@ -85,8 +85,8 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
         cut.Instance.ReadOnly.Should().BeFalse(
             "the [Parameter] ReadOnly is never assigned inside the component");
         cut.Instance.IsReadOnly.Should().BeTrue("the toggle flips the internal user state");
-        cut.Find("[data-tm-group='readonly'] button").ClassList
-            .Should().Contain("tm-toolbar-btn--active", "the toggle reflects the effective state");
+        cut.Find("[data-tm-group='readonly'] button").GetAttribute("aria-pressed")
+            .Should().Be("true", "the toggle reflects the effective state");
         cut.Find("[data-testid='diagram-editor']").ClassList
             .Should().Contain("tm-diagram-editor--readonly");
     }
@@ -108,15 +108,15 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
         cut.Instance.IsReadOnly.Should().BeTrue();
         cut.Instance.ReadOnly.Should().BeFalse();
         cut.FindAll("[data-tm-group='readonly']").Should().HaveCount(1);
-        cut.Find("[data-tm-group='readonly'] button").ClassList
-            .Should().Contain("tm-toolbar-btn--active");
+        cut.Find("[data-tm-group='readonly'] button").GetAttribute("aria-pressed")
+            .Should().Be("true");
 
         // And the user can still unlock via the same toggle.
         cut.Find("[data-tm-group='readonly'] button").Click();
         cut.Instance.IsReadOnly.Should().BeFalse();
         cut.Instance.ReadOnly.Should().BeFalse();
-        cut.Find("[data-tm-group='readonly'] button").ClassList
-            .Should().NotContain("tm-toolbar-btn--active");
+        cut.Find("[data-tm-group='readonly'] button").GetAttribute("aria-pressed")
+            .Should().Be("false");
     }
 
     [Fact]
@@ -248,6 +248,9 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
 
         cut.Find("[data-tm-group='readonly'] button").Click();
 
+        // DI2: the layers panel lives behind the inspector's Layers tab.
+        OpenLayersTab(cut);
+
         var layersBefore = doc.Layers.Count;
         cut.Find(".tm-diagram-layers__add-btn").Click();
         doc.Layers.Should().HaveCount(layersBefore, "add-layer must no-op in the effective read-only state");
@@ -272,6 +275,9 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
             .Add(e => e.Document, doc)
             .Add(e => e.ReadOnly, true)
             .Add(e => e.ShowLayersPanel, true));
+
+        // DI2: the layers panel lives behind the inspector's Layers tab.
+        OpenLayersTab(cut);
 
         var layersBefore = doc.Layers.Count;
         cut.Find(".tm-diagram-layers__add-btn").Click();
@@ -388,6 +394,15 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
             ?? throw new InvalidOperationException("ActiveCommandStack must exist"))
             .GetValue(editor) as DiagramCommandStack
             ?? throw new InvalidOperationException("ActiveCommandStack must return a DiagramCommandStack");
+
+    /// <summary>DI2: the layers panel renders behind the inspector's Layers tab — select it first.</summary>
+    private static void OpenLayersTab(IRenderedComponent<TmDiagramEditor> cut)
+    {
+        var layersTab = cut.FindAll(".tm-diagram-editor__inspector [role='tab']")
+            .FirstOrDefault(t => t.TextContent.Contains("Layers"));
+        layersTab.Should().NotBeNull("the inspector must offer the Layers tab");
+        layersTab!.Click();
+    }
 
     private static void InvokePrivate(TmDiagramEditor editor, string methodName, params object?[] args)
     {

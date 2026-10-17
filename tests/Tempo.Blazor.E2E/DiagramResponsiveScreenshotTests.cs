@@ -75,10 +75,11 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 // 1. Full editor
                 await ShotAsync(page, $"desktop-1440-{theme}--editor");
 
-                // 2. Layers panel: the properties panel is flex-shrink:0 above it, so the layers
-                //    wrap only gets the LEFTOVER height (a 2px strip at 1440×900 — the demo's
-                //    default state, unchanged by phase 3). Collapse the properties panel first
-                //    (its own panels-group toggle) so the capture shows the real panel.
+                // 2. Layers panel: since phase 4 the panels share the inspector tabs — collapsing
+                //    the properties panel auto-selects the Layers tab. The minimap card below the
+                //    tabs gets the column's leftover height, so collapse it too (its own panels
+                //    toggle) and the capture shows the full layers panel.
+                await page.Locator("[data-tm-group='panels'] button[title='Toggle minimap']").First.ClickAsync();
                 await page.Locator("[data-tm-group='panels'] button[title='Toggle properties panel']")
                     .First.ClickAsync();
                 var layers = page.Locator(".tm-diagram-editor__layers-wrap");
@@ -92,10 +93,11 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 });
                 await page.Locator("[data-tm-group='panels'] button[title='Toggle properties panel']")
                     .First.ClickAsync();
+                await page.Locator("[data-tm-group='panels'] button[title='Toggle minimap']").First.ClickAsync();
                 await page.WaitForTimeoutAsync(150);
 
                 // 3. Template gallery
-                await page.Locator("[data-tm-group='templates'] button").First.ClickAsync();
+                await OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
                 await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--template-gallery");
@@ -103,9 +105,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
 
                 // 4. SQL import dialog
-                await page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First.ClickAsync();
-                await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = "Import SQL" })
-                    .First.ClickAsync();
+                await OpenImportMenuItemAsync(page, "Import SQL");
                 await page.Locator(".tm-diagram-sql-import").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--sql-import-dialog");
@@ -114,9 +114,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
 
                 // 5. CSV import dialog
-                await page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First.ClickAsync();
-                await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = "Import CSV" })
-                    .First.ClickAsync();
+                await OpenImportMenuItemAsync(page, "Import CSV");
                 await page.Locator(".tm-diagram-csv-import").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--csv-import-dialog");
@@ -158,7 +156,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await ShotAsync(page, $"{prefix}--editor");
 
         // 2. Template gallery
-        await page.Locator("[data-tm-group='templates'] button").First.ClickAsync();
+        await OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
         await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--template-gallery");
@@ -166,9 +164,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
 
         // 3. SQL import dialog
-        await page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First.ClickAsync();
-        await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = "Import SQL" })
-            .First.ClickAsync();
+        await OpenImportMenuItemAsync(page, "Import SQL");
         await page.Locator(".tm-diagram-sql-import").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--sql-import-dialog");
@@ -177,9 +173,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await ExpectHiddenAsync(page, ".tm-diagram-sql-import");
 
         // 4. CSV import dialog
-        await page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First.ClickAsync();
-        await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = "Import CSV" })
-            .First.ClickAsync();
+        await OpenImportMenuItemAsync(page, "Import CSV");
         await page.Locator(".tm-diagram-csv-import").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--csv-import-dialog");
@@ -187,7 +181,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             .First.ClickAsync();
         await ExpectHiddenAsync(page, ".tm-diagram-csv-import");
 
-        // 5. Search panel
+        // 5. Search panel (the search toggle lives in the header since phase 4 — never overflows)
         await page.Locator("[data-tm-group='search'] button").First.ClickAsync();
         await page.Locator(".tm-diagram-search-panel").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
@@ -216,6 +210,49 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotSettledAsync(page, $"{prefix}--connect-modal");
+    }
+
+    /// <summary>
+    /// Phase 4: the command row is a core TmToolbar — a command without room collapses into the
+    /// "More" menu (its bar button is inert). Click it wherever it currently is.
+    /// </summary>
+    private static async Task OpenToolbarCommandAsync(IPage page, string barSelector, string moreEntryText)
+    {
+        var barButton = page.Locator(barSelector).First;
+        if (await barButton.CountAsync() > 0 && await barButton.IsVisibleAsync() && await barButton.IsEnabledAsync())
+        {
+            await barButton.ClickAsync();
+            return;
+        }
+
+        await page.Locator(".tm-toolbar-more").First.ClickAsync();
+        var entry = page.Locator(".tm-toolbar-more__item")
+            .Filter(new() { HasText = moreEntryText }).First;
+        await entry.ScrollIntoViewIfNeededAsync();
+        await entry.ClickAsync();
+    }
+
+    /// <summary>
+    /// Opens an Import dropdown item. On the bar the Import dropdown opens as before; when the
+    /// Import group collapsed into "More", the group's MenuItems offer the same commands as menu
+    /// entries (the SQL/CSV handlers run from there directly).
+    /// </summary>
+    private static async Task OpenImportMenuItemAsync(IPage page, string itemText)
+    {
+        var trigger = page.Locator("[data-tm-group='import'] .tm-dropdown-trigger").First;
+        if (await trigger.CountAsync() > 0 && await trigger.IsVisibleAsync() && await trigger.IsEnabledAsync())
+        {
+            await trigger.ClickAsync();
+            await page.Locator(".tm-dropdown-item[role='menuitem']", new PageLocatorOptions { HasText = itemText })
+                .First.ClickAsync();
+            return;
+        }
+
+        await page.Locator(".tm-toolbar-more").First.ClickAsync();
+        var entry = page.Locator(".tm-toolbar-more__item")
+            .Filter(new() { HasText = itemText }).First;
+        await entry.ScrollIntoViewIfNeededAsync();
+        await entry.ClickAsync();
     }
 
     private async Task<IPage> OpenDiagramEditorAsync(int width, int height, bool touch)

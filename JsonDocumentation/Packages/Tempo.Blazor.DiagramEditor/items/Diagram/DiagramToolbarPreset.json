@@ -11,7 +11,7 @@
     {
       "name": "Full",
       "value": "0",
-      "description": "Every toolbar group in the classic order (history, clipboard, tools, format, insert, arrange, search, panels, zoom, view, canvas-size, layout, export, templates, import, read-only). The default and the pre-split look."
+      "description": "Every toolbar group — the set of groups, not a historical order (since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar). The default."
     },
     {
       "name": "Viewer",

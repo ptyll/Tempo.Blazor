@@ -180,35 +180,80 @@
     color: var(--tm-color-text);
 }
 
-/* ── Toolbar ──────────────────────────────────────────────────────────────── */
-/* Mockup: the toolbar is a flat strip on the workspace chrome; groups are NOT boxed
-   button containers — the `__toolbar-sep` rules between groups (and the group gaps)
-   carry the structure. Re-grouping itself is the phase-4 redesign; only the paint
-   changed here. The data-tm-group contract is untouched. */
-.tm-diagram-editor__toolbar {
+/* ── Editor shell integration (phase 4) ──────────────────────────────────── */
+/* The core shell paints generic chrome (padded surface bands); the diagram editor owns the
+   workspace tone and its own header/toolbar/status paint, so the shell regions go flat. */
+.tm-diagram-editor .tm-editor-shell {
+    height: 100%;
+}
+
+.tm-diagram-editor .tm-editor-shell__header,
+.tm-diagram-editor .tm-editor-shell__toolbar {
+    padding: 0;
+    background: transparent;
+    border-block-end: none;
+}
+
+.tm-diagram-editor .tm-editor-shell__canvas {
     display: flex;
     flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.tm-diagram-editor .tm-editor-shell__status {
+    padding: 0;
+    background: transparent;
+    border-block-start: none;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+/* Phase 4: the command row is ONE core TmToolbar (no flex-wrap fallback). The editor only
+   paints the flat strip; overflow/collapse (Priority + "More") comes from tm-toolbar.js. */
+.tm-diagram-editor__toolbar {
+    background: var(--tm-bg-workspace);
+    border-bottom: 1px solid var(--tm-color-border);
+    flex-shrink: 0;
+    padding: 0 var(--tm-space-2, 8px);
+}
+
+.tm-diagram-editor__toolbar .tm-toolbar {
     gap: var(--tm-space-1, 4px);
+    min-height: 44px;
+    background: transparent;
+}
+
+/* The editor command row collapses ~19 commands into the toolbar's "More" menu; without a cap
+   the panel grows past short viewports and its last entries (e.g. Templates) become unclickable.
+   Package-level mitigation — the panel keeps the core paint, it just scrolls. */
+.tm-diagram-editor .tm-toolbar-more__panel {
+    max-height: min(60vh, 26rem);
+    overflow-y: auto;
+}
+
+/* G9 host slots: the wrappers must not break the flex layout of their region. */
+.tm-diagram-editor__header-start,
+.tm-diagram-editor__header-actions {
+    display: contents;
+}
+
+/* ── Header bar (phase 4): title + named panel toggles + "⋯" view settings ── */
+.tm-diagram-editor__header-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 8px);
+    min-height: 48px;
     padding: var(--tm-space-1, 4px) var(--tm-space-3, 12px);
     background: var(--tm-bg-workspace);
     border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
 }
 
-.tm-diagram-editor__toolbar-row {
-    display: flex;
-    align-items: center;
-    /* Groups wrap instead of clipping on narrow hosts (the Modeling preview relied on this
-       before the toolbar API existed; overflow toolbar comes with the phase-4 redesign). */
-    flex-wrap: wrap;
-    gap: var(--tm-space-1, 4px);
-    min-height: 40px;
-}
-
-/* G9 host slots: the wrapper must not break the row's flex layout. */
-.tm-diagram-editor__header-start,
-.tm-diagram-editor__header-actions {
-    display: contents;
+.tm-diagram-editor__header-spacer {
+    flex: 1;
+    min-width: var(--tm-space-2, 8px);
 }
 
 .tm-diagram-editor__title {
@@ -229,6 +274,99 @@
     border-color: var(--tm-color-primary);
     outline: none;
     box-shadow: 0 0 0 3px var(--tm-color-primary-subtle);
+}
+
+/* Named panel toggles (mockup): icon + visible label, active panel highlighted. */
+.tm-diagram-editor__panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1, 4px);
+    height: 36px;
+    padding: 0 var(--tm-space-2, 8px);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm, 13px);
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms, color 120ms;
+}
+
+.tm-diagram-editor__panel-toggle:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-editor__panel-toggle--active,
+.tm-diagram-editor__panel-toggle[aria-pressed="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+/* "⋯" view settings menu */
+.tm-diagram-editor__view-menu {
+    position: relative;
+    display: inline-flex;
+}
+
+.tm-diagram-editor__more-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 36px;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+
+.tm-diagram-editor__more-btn:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-editor__more-btn[aria-expanded="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-diagram-editor__view-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: transparent;
+    border: none;
+}
+
+.tm-diagram-editor__view-menu-panel {
+    position: absolute;
+    top: calc(100% + var(--tm-space-1, 4px));
+    inset-inline-end: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2, 8px);
+    min-width: 260px;
+    padding: var(--tm-space-2, 8px);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg, 8px);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-diagram-editor__view-menu-panel[hidden] {
+    display: none;
+}
+
+.tm-diagram-editor__view-menu-panel .tm-diagram-editor__toolbar-group {
+    flex-wrap: wrap;
+    gap: var(--tm-space-1, 4px);
+    min-height: 0;
 }
 
 .tm-diagram-insert-dropdown-wrapper {
@@ -290,6 +428,17 @@
     border-right: none;
 }
 
+/* Pressed toggles inside the editor groups (mockup: subtle primary fill + primary ink). */
+.tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
 .tm-diagram-editor__toolbar-group .tm-dropdown-trigger {
     display: inline-flex;
     align-items: center;
@@ -312,16 +461,48 @@
     color: var(--tm-color-text);
 }
 
-.tm-diagram-editor__toolbar-sep {
-    width: 1px;
-    height: 24px;
-    background: var(--tm-color-border);
-    margin: 0 var(--tm-space-1, 4px);
+/* ── Status bar (phase 4): zoom controls + read-only toggle ─────────────── */
+.tm-diagram-editor__statusbar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 8px);
+    min-height: 36px;
+    padding: 0 var(--tm-space-3, 12px);
+    background: var(--tm-bg-workspace);
+    border-top: 1px solid var(--tm-color-border);
     flex-shrink: 0;
 }
 
-.tm-diagram-editor__toolbar-spacer {
+.tm-diagram-editor__statusbar-spacer {
     flex: 1;
+}
+
+.tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group {
+    min-height: 36px;
+}
+
+.tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group .tm-toolbar-btn {
+    height: 30px;
+    min-width: 30px;
+}
+
+/* ── Body (toolbox + canvas + props) ─────────────────────────────────────── */
+.tm-diagram-editor__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ── Toolbox ──────────────────────────────────────────────────────────────── */
+/* Inside the editor shell the dock owns the width; the wrap fills it. */
+.tm-diagram-editor__toolbox-wrap {
+    width: 100%;
+    flex-shrink: 0;
+    border-right: none;
+    background: var(--tm-color-surface-elevated);
+    overflow-y: auto;
+    height: 100%;
 }
 
 .tm-diagram-editor__zoom-label {
@@ -368,23 +549,6 @@
 .tm-diagram-editor__import-file-label {
     cursor: pointer;
     margin: 0;
-}
-
-/* ── Body (toolbox + canvas + props) ─────────────────────────────────────── */
-.tm-diagram-editor__body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-}
-
-/* ── Toolbox ──────────────────────────────────────────────────────────────── */
-.tm-diagram-editor__toolbox-wrap {
-    width: 220px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface-elevated);
-    overflow-y: auto;
 }
 
 .tm-diagram-editor__toolbox {
@@ -1369,14 +1533,46 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     text-align: center;
 }
 
-/* ── Right column (properties + layers + minimap) ───────────────────────── */
+/* ── Right column (inspector + minimap, phase 4) ────────────────────────── */
+/* Inside the editor shell the dock owns the width; the stack fills it. */
 .tm-diagram-editor__right-stack {
     display: flex;
     flex-direction: column;
-    width: 280px;
+    width: 100%;
     flex-shrink: 0;
-    border-left: 1px solid var(--tm-color-border);
+    border-left: none;
     background: var(--tm-color-surface-elevated);
+    height: 100%;
+}
+
+.tm-diagram-editor__inspector {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.tm-diagram-editor__inspector .tm-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tm-diagram-editor__inspector .tm-tabs__header {
+    flex-shrink: 0;
+    padding: 0 var(--tm-space-2, 8px);
+    border-bottom: 1px solid var(--tm-color-border);
+}
+
+.tm-diagram-editor__inspector .tm-tabs__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    overflow-y: auto;
 }
 
 .tm-diagram-editor__right-wrap {
@@ -1397,11 +1593,40 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     border-top: 1px solid var(--tm-color-border);
 }
 
-.tm-diagram-editor__minimap-wrap {
+/* Collapsible minimap card (mockup): a header with a chevron above the preview. */
+.tm-diagram-editor__minimap-card {
     flex-shrink: 0;
     border-top: 1px solid var(--tm-color-border);
-    max-height: 200px;
     background: var(--tm-color-surface-elevated);
+}
+
+.tm-diagram-editor__minimap-card-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 8px);
+    width: 100%;
+    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
+    border: none;
+    background: transparent;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm, 14px);
+    font-weight: 500;
+    cursor: pointer;
+    text-align: start;
+}
+
+.tm-diagram-editor__minimap-card-toggle:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-editor__minimap-card-toggle > :last-child {
+    margin-inline-start: auto;
+}
+
+.tm-diagram-editor__minimap-body {
+    padding: 0 var(--tm-space-3, 12px) var(--tm-space-3, 12px);
+    max-height: 200px;
+    overflow: hidden;
 }
 
 /* ── Properties panel ────────────────────────────────────────────────────── */
@@ -1645,26 +1870,11 @@ rect.tm-diagram-resize-handle {
 }
 
 @media (max-width: 640px) {
-    .tm-diagram-editor__body {
-        flex-direction: column;
-        overflow: hidden;
-    }
-
+    /* Phase 4: the editor shell owns the mobile presentation (docked panels become the mobile
+       sheet / tabs), so only the panel CONTENT tightens up here — no more hidden right column. */
     .tm-diagram-editor__toolbox-wrap {
-        width: 100%;
         max-height: 280px;
-        border-right: none;
-        border-bottom: 1px solid var(--tm-color-border);
         overflow-y: auto;
-    }
-
-    .tm-diagram-editor__right-stack {
-        display: none;
-    }
-
-    .tm-diagram-editor__canvas-wrap {
-        flex: 1 1 auto;
-        min-height: 320px;
     }
 
     .tm-diagram-toolbox__inner {

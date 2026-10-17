@@ -339,14 +339,9 @@ public class DiagramLayoutE2ETests : WasmTestBase
         var page = await PrepareDiagramPageAsync();
         await SelectAllNodesAsync(page);
 
-        // Open Arrange dropdown and click Align Left
-        var trigger = page.Locator(".tm-diagram-arrange-dropdown .tm-dropdown-trigger");
-        await trigger.ClickAsync();
-        await page.WaitForTimeoutAsync(200);
-
-        var option = page.Locator(".tm-dropdown-item")
-            .Filter(new() { HasTextRegex = new Regex($"{Regex.Escape("Align Left")}|{Regex.Escape("Zarovnat vlevo")}") });
-        await option.ClickAsync();
+        // Open Arrange (on the bar, or from the toolbar "More" menu once the group collapsed)
+        // and click Align Left.
+        await RunArrangeCommandAsync(page, "Align Left", "Zarovnat vlevo");
         await page.WaitForTimeoutAsync(1000);
 
         var positions = await GetNodeLayoutPositionsAsync(page);
@@ -363,14 +358,9 @@ public class DiagramLayoutE2ETests : WasmTestBase
         var page = await PrepareDiagramPageAsync();
         await SelectAllNodesAsync(page);
 
-        // Open Arrange dropdown and click Distribute Horizontally
-        var trigger = page.Locator(".tm-diagram-arrange-dropdown .tm-dropdown-trigger");
-        await trigger.ClickAsync();
-        await page.WaitForTimeoutAsync(200);
-
-        var option = page.Locator(".tm-dropdown-item")
-            .Filter(new() { HasTextRegex = new Regex($"{Regex.Escape("Horizontally")}|{Regex.Escape("Vodorovně")}") });
-        await option.ClickAsync();
+        // Open Arrange (on the bar, or from the toolbar "More" menu once the group collapsed)
+        // and click Distribute Horizontally.
+        await RunArrangeCommandAsync(page, "Horizontally", "Vodorovně");
         await page.WaitForTimeoutAsync(1000);
 
         var positions = await GetNodeLayoutPositionsAsync(page);
@@ -380,6 +370,29 @@ public class DiagramLayoutE2ETests : WasmTestBase
         // With 2 nodes they should end up at different X values
         var xs = positions.Select(p => p.X).Distinct().OrderBy(x => x).ToList();
         Assert.IsTrue(xs.Count > 1, "Distribute Horizontal should spread nodes across different X coordinates");
+    }
+
+    /// <summary>
+    /// Phase 4: the command row is a core TmToolbar — a collapsed group's trigger is inert and
+    /// the commands live in the "More" menu (the arrange group offers the same commands as a
+    /// labelled menu section). Open whichever surface is currently on screen and run the command.
+    /// </summary>
+    private static async Task RunArrangeCommandAsync(IPage page, string optionEn, string optionCs)
+    {
+        var pattern = new Regex($"{Regex.Escape(optionEn)}|{Regex.Escape(optionCs)}");
+
+        var trigger = page.Locator(".tm-diagram-arrange-dropdown .tm-dropdown-trigger");
+        if (await trigger.CountAsync() > 0 && await trigger.IsVisibleAsync() && await trigger.IsEnabledAsync())
+        {
+            await trigger.ClickAsync();
+            await page.WaitForTimeoutAsync(200);
+            await page.Locator(".tm-dropdown-item").Filter(new() { HasTextRegex = pattern }).First.ClickAsync();
+            return;
+        }
+
+        await page.Locator(".tm-toolbar-more").First.ClickAsync();
+        await page.WaitForTimeoutAsync(200);
+        await page.Locator(".tm-toolbar-more__item").Filter(new() { HasTextRegex = pattern }).First.ClickAsync();
     }
 }
 
