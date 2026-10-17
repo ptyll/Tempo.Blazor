@@ -785,12 +785,15 @@
     box-sizing: border-box;
     /* Node bodies paint on the DOCUMENT's data-driven fill (default white in both themes),
        so the default ink must stay dark in both themes. No text token is theme-invariant:
-       every --tm-text-*/gray token flips between light and dark, so none of them can serve
-       as the node ink directly. --tm-diagram-node-ink is the named override point — a host
-       theme can redefine it for its brand without touching this rule. The value is
-       temporarily --tm-color-secondary-hover because a hex literal here would be flagged as
+       every --tm-text-* token (and every gray token) flips between light and dark, so none of
+       them can serve as the node ink directly. --tm-diagram-node-ink is the named override
+       point — a host theme can redefine it for its brand without touching this rule. The value
+       is temporarily --tm-color-secondary-hover because a hex literal here would be flagged as
        color-literal drift by scripts/audit-css-strict.mjs (the baseline may only shrink) and
-       the token core must not change in this phase. */
+       the token core must not change in this phase. NOTE: never write the comment-end delimiter
+       sequence inside this comment (e.g. between token names) — an early close silently drops
+       the ink declarations below, the labels inherit the shell's theme-flipping text color and
+       turn unreadable in dark. */
     --tm-diagram-node-ink: var(--tm-color-secondary-hover);
     color: var(--tm-diagram-node-ink);
     user-select: none;
@@ -1110,7 +1113,9 @@ rect.tm-diagram-selection-outline {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12px;
-    color: var(--tm-color-text);
+    /* Table cells are labels painted on the node's data-driven (white) fill, so they use the
+       node ink — --tm-color-text flips light in dark and would vanish on the white fill. */
+    color: var(--tm-diagram-node-ink);
     box-sizing: border-box;
 }
 
