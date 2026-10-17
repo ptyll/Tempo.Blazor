@@ -45,7 +45,12 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await page.Locator(".tm-diagram-editor__minimap-overlay").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await ScrollEditorActionBarIntoViewAsync(page);
+        // The capture must read like the mockup: the diagram visible ABOVE the sheet, the sheet
+        // only at the bottom. The sheet opens on the lowest (peek) snap and the editor fills the
+        // viewport (below the demo's fixed header), so the canvas keeps its full strip.
+        await SetMobileSheetPeekAsync(page);
+        await FrameEditorInViewportAsync(page);
+        await FrameDiagramAboveSheetAsync(page);
         await ShotSettledAsync(page, "mobile-390-touch--editor");
 
         // ── Action bar: Select | Pan | Properties tiles + More ──────────────
@@ -223,7 +228,12 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         await page.Locator(".tm-editor-shell__sheet").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
 
+        // Same capture contract as 390: the sheet backs down to the peek snap so the diagram
+        // stays visible above it, and the canvas is framed clear of the floating overlays.
+        await SetMobileSheetPeekAsync(page);
+        await FrameEditorInViewportAsync(page);
         await ScrollEditorActionBarIntoViewAsync(page);
+        await FrameDiagramAboveSheetAsync(page);
         await ShotSettledAsync(page, "mobile-320-touch--editor");
     }
 
@@ -526,6 +536,113 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
             }
             """);
         await page.WaitForTimeoutAsync(100);
+    }
+
+    /// <summary>
+    /// Drives the mobile panels sheet to the PEEK snap (the lowest one) through the sheet
+    /// handle's keyboard contract (Home = the lowest snap, and Home never dismisses), so an
+    /// editor capture keeps the diagram visible above the sheet — the mockup's bottom-only
+    /// sheet, not a half-open one covering the canvas.
+    /// </summary>
+    private static async Task SetMobileSheetPeekAsync(IPage page)
+    {
+        var sheet = page.Locator(".tm-editor-shell__sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await sheet.Locator(".tm-sheet__handle[role='slider']").FocusAsync();
+        await page.Keyboard.PressAsync("Home");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('.tm-editor-shell__sheet')?.getAttribute('data-snap-index') === '0'",
+            null, new PageWaitForFunctionOptions { Timeout = 10_000 });
+    }
+
+    /// <summary>
+    /// Parks the editor right under the demo's fixed 4rem mobile header for the capture: hides
+    /// the demo top bar, the page intro above the editor section and the section's own
+    /// heading/buttons row (capture framing only — the DOM change lives and dies with the test
+    /// context) and scrolls so the whole editor fills the viewport — bottom-aligned when the
+    /// phone is too short for it, which keeps the action bar inside the frame.
+    /// </summary>
+    private static async Task FrameEditorInViewportAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const editor = document.querySelector('.tm-diagram-editor');
+                if (!editor) return;
+                const topbar = document.querySelector('main > div.sticky');
+                if (topbar) topbar.style.display = 'none';
+                const host = editor.parentElement;
+                const section = host ? host.parentElement : null;
+                let intro = host ? host.previousElementSibling : null;
+                while (intro) {
+                    intro.style.display = 'none';
+                    intro = intro.previousElementSibling;
+                }
+                let outer = section ? section.previousElementSibling : null;
+                while (outer) {
+                    outer.style.display = 'none';
+                    outer = outer.previousElementSibling;
+                }
+                window.scrollTo({ top: 0, behavior: 'instant' });
+                const box = editor.getBoundingClientRect();
+                const overflow = box.top + editor.offsetHeight - window.innerHeight;
+                if (overflow > 0) {
+                    window.scrollTo({ top: overflow, behavior: 'instant' });
+                }
+            }
+            """);
+        await page.WaitForTimeoutAsync(150);
+    }
+
+    /// <summary>
+    /// Reframes the canvas for the mobile editor capture: zooms the loaded content out and
+    /// parks it in the free band between the floating chrome and the sheet — below the
+    /// top-right minimap, right of the zoom pill, above the peeked sheet — the mockup's
+    /// readable-diagram framing. The band is bounded by the live SHEET PANEL edge (the sheet
+    /// root spans the whole stage) and clamped to the width left of the pill. The zoom label
+    /// and the minimap viewport are synced the same way the editor's own fit command syncs them.
+    /// </summary>
+    private static async Task FrameDiagramAboveSheetAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const canvas = document.querySelector('.tm-diagram-canvas');
+                const ed = window.tmDiagramEditor;
+                const inst = ed.instances.get(canvas.id);
+                const box = inst.svg.getBoundingClientRect();
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                inst.scenePane.querySelectorAll('g.tm-diagram-node[data-node-id]').forEach(el => {
+                    const r = ed._nodeRect(inst, el.getAttribute('data-node-id'));
+                    if (!r) return;
+                    minX = Math.min(minX, r.x); minY = Math.min(minY, r.y);
+                    maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h);
+                });
+                if (!isFinite(minX)) return;
+                const card = document.querySelector('.tm-diagram-editor__minimap-overlay');
+                const cardBottom = card ? card.getBoundingClientRect().bottom - box.top + 8 : box.height * 0.4;
+                const pill = document.querySelector('.tm-diagram-editor__zoom-overlay');
+                const pillRight = pill ? pill.getBoundingClientRect().right - box.left + 8 : 0;
+                const sheet = document.querySelector('.tm-editor-shell__sheet .tm-drawer__panel')
+                    ?? document.querySelector('.tm-editor-shell__sheet');
+                const sheetTop = sheet ? sheet.getBoundingClientRect().top - box.top : box.height;
+                // Zoom out until the fitted band fits the strip between the minimap, the pill
+                // and the sheet (at most 50%, so the pair stays readable).
+                const bandW = maxX - minX, bandH = maxY - minY;
+                const availH = Math.max(40, sheetTop - cardBottom - 12);
+                const availW = Math.max(40, box.width - pillRight - 8);
+                const scale = Math.min(0.5, (availH * 0.9) / bandH, availW / bandW);
+                const left = Math.max((box.width - bandW * scale) / 2, pillRight);
+                const top = Math.min(Math.max(cardBottom, sheetTop * 0.4), sheetTop - bandH * scale - 8);
+                const w = box.width / scale, h = box.height / scale;
+                const x = minX - left / scale;
+                const y = minY - top / scale;
+                ed._setViewBox(inst, x, y, w, h);
+                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', x, y, w, h);
+                inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
+            }
+            """);
+        await page.WaitForTimeoutAsync(250);
     }
 
     private async Task ShotAsync(IPage page, string name)

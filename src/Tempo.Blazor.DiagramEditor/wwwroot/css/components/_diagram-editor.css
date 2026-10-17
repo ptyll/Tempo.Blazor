@@ -3027,7 +3027,8 @@ line.tm-diagram-rotate-handle-stem {
 /* UX review phase 6: the floating overlay tucks into the canvas bottom-right
    corner with a token inset on both axes, so by default it never rides the
    canvas centre over nodes. The shell status bar (zoom controls) renders below
-   the canvas region, so the corner inset keeps the map clear of it too. */
+   the canvas region, so the corner inset keeps the map clear of it too. The
+   mobile layout overrides this to the top-right corner (phase 7, below). */
 .tm-diagram-editor__minimap-overlay {
     position: absolute;
     inset-inline-end: var(--tm-space-3);
@@ -3047,7 +3048,31 @@ line.tm-diagram-rotate-handle-stem {
     width: auto;
 }
 
-/* UX review phase 6 (minor): the standalone title reads as a big caption floating
+/* UX review phase 7 (mobile): the phone layout moves the floating minimap to the
+   canvas TOP-right corner with the same token inset on both axes, mirroring the
+   mockup. With the panels sheet open the bottom corner would put the map over the
+   fitted diagram once only a strip of canvas stays visible above the sheet. The
+   sheet-open lift below is superseded on this layout, because a top-anchored map
+   needs no lift; tablet keeps the phase-6 bottom-right corner inset. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__minimap-overlay {
+    inset-block-start: var(--tm-space-3);
+    inset-block-end: auto;
+}
+
+/* UX review phase 7 (mobile): the phone canvas gives the overlays a narrow strip,
+   so the map preview shrinks to a compact corner card — three touch targets wide,
+   the SVG keeps its document aspect through its viewBox and the important width
+   beats the component's inline pin. Tablet and desktop keep the full preview. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__minimap-overlay .tm-diagram-minimap {
+    width: auto !important;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__minimap-overlay .tm-diagram-minimap__svg {
+    width: calc(var(--tm-touch-target) * 3);
+    height: auto;
+}
+
+/* UX review phase 7 (minor): the standalone title reads as a big caption floating
    over the canvas and pushes the preview over the nodes. The phase-4 card rule
    already hides it inside the docked card, and the overlay hides it too (the
    markup keeps the title for the standalone minimap, which still needs it). */
@@ -3181,11 +3206,11 @@ line.tm-diagram-rotate-handle-stem {
     max-width: 50vw;
 }
 
-/* ── Floating zoom overlay (phase 7): the vertical + / % / − / fit pill at the
-   canvas corner, mirroring the minimap overlay's elevation. Anchored to the
-   canvas region; while the panels sheet is open the pill rides up by the same
-   reserve formula the core shell pads the canvas with, so it never hides
-   under the peeked sheet. ── */
+/* ── Floating zoom overlay (phase 7): the vertical + / % / − / fit pill pinned to
+   the canvas LEFT edge with a token inset on both axes (the mockup's left-side
+   pill, clear of the node area). While the panels sheet is open the pill rides up
+   by the same reserve formula the core shell pads the canvas with, so it never
+   hides under the peeked sheet. ── */
 .tm-diagram-editor__zoom-overlay {
     position: absolute;
     inset-inline-start: var(--tm-space-3);
@@ -3202,13 +3227,9 @@ line.tm-diagram-rotate-handle-stem {
 
 /* While the panels sheet is open, ride above the peeked sheet: the same reserve
    formula the core shell pads the canvas region with (stage is a size container,
-   so 100cqh resolves against it). */
+   so 100cqh resolves against it). The minimap needs no ride anymore — the mobile
+   layout anchors it to the top-right corner above. */
 .tm-editor-shell__stage--sheet-open .tm-diagram-editor__zoom-overlay {
-    inset-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-3));
-}
-
-/* The minimap overlay rides above the peeked sheet with the zoom pill. */
-.tm-editor-shell__stage--sheet-open .tm-diagram-editor__minimap-overlay {
     inset-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-3));
 }
 
