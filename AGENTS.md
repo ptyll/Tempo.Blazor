@@ -471,6 +471,38 @@ The `TmPdfViewer` component is a standalone PDF viewer powered by **PDF.js v5** 
 
 The diagram editor (`TmDiagramEditor`, `TmDiagramCanvas`) supports several advanced productivity features beyond basic drawing:
 
+### Editor Chrome (redesign plan 94d441f2)
+
+Since the DiagramEditor redesign the editor renders through the core `TmEditorShell` and resolves
+its presentation from its own container (`data-editor-layout` on the root, default breakpoints
+768/1200): desktop (≥1200) shows the full chrome — header (page tabs, document title, named panel
+toggles, "⋯" view-settings menu), one `TmToolbar` command row (`Overflow=Menu` with a "More"
+overflow), docked toolbox / inspector, status bar (zoom + Read-only toggle) and a minimap card;
+tablet (768–1199) keeps the docked panels (at most one expanded, the other rails), touch gestures
+and the **floating minimap overlay**; mobile (<768) is **viewing + light edits** (G2): a non-modal
+bottom sheet (peek/half/full) holds the Shapes palette and the Properties | Layers inspector, an
+F5 action bar drives Select/Pan/Properties, and resize/rotate, edge drawing, layout and import
+stay tablet+ (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` drop the affordances).
+
+**Stable toolbar contract (frozen since phase 1):** groups carry `data-tm-group` from the frozen
+set `history | clipboard | tools | format | insert | arrange | search | panels | zoom | view |
+canvas-size | layout | export | templates | import | readonly`; `ToolbarPreset` (`Full`/`Viewer`)
+and `ToolbarGroups` (flags, `null` = by preset) decide the group set; `HeaderStart`/`HeaderActions`
+are host-action slots. Where a group renders (header / toolbar row / status bar / More menu) is a
+layout detail that may change — hosts (Modeling) key off `data-tm-group`/presets, never positional
+CSS selectors on the toolbar's internal DOM. `ReadOnly` is never assigned inside the component;
+the built-in toggle drives only the internal user state surfaced as `IsReadOnly`, and a host-pinned
+`ReadOnly="true"` hides the toggle and blocks every editing path. The inspector presents
+"Properties | Layers" tabs (`InspectorLayout`, `Stacked` opt-in); the minimap chooses card vs
+overlay through `MinimapPlacement`; pages stay as top tabs in every layout. Full contract:
+[docs/diagram-editor.md](docs/diagram-editor.md).
+
+**Touch:** all pointer work runs on the shared `pointer-drag.js` / `pointer-gesture.js` helpers
+(imported by the package's `diagram-editor-touch.js`) — resize/rotate handles carry an invisible
+hit area sized by `--tm-diagram-handle-hit` (24px, 44px on coarse pointers), two fingers pinch/pan
+the `viewBox`, long-press opens the context menu (a bottom sheet on tablet/mobile), and toolbox
+tiles insert on tap while drag-and-drop keeps working.
+
 ### Unified SVG Canvas Architecture (4-pane model)
 
 Inspired by **draw.io / mxGraph**, the canvas uses a single SVG scene with four dedicated `<g>` panes instead of the legacy dual-layer SVG+HTML overlay. This eliminates the CTM/CSS-transform drift bug, enables true global Z-order interleaving between nodes and edges, and allows simple stencils to render as native SVG primitives.
@@ -554,7 +586,7 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 
 Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.PdfViewer`: `_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js`
-- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/dagre.min.js` and `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js`
+- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (imports `diagram-editor-touch.js`, `dagre.min.js` and the d3 bundles), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
 - `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js`
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`

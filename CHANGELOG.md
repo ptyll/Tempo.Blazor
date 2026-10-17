@@ -4,6 +4,21 @@
 
 ### Added
 
+- **DiagramEditor redesign — plan summary (phases 1–7).** `TmDiagramEditor` was rebuilt on the
+  core responsive primitives (`TmEditorShell`, `TmToolbar Overflow=Menu`, `TmOverlayPanel`,
+  `TmModal.MobilePresentation`, `TmMobileActionBar`, `pointer-drag.js`/`pointer-gesture.js`)
+  following the reference mockups: an explicit toolbar contract (`ToolbarPreset` /
+  `ToolbarGroups` / frozen `data-tm-group` values, phase 1), wave-0 bug/localization/a11y fixes
+  (phase 2), a tokenized visual layer aligned with the mockups (phase 3), the desktop restructure
+  onto header + one command row + status bar + tabbed inspector (phase 4, DI2/DI3), dialogs on
+  `TmModal` with the narrowed `TmDiagramConnectDialog` connect picker (phase 5, DI4), tablet with
+  touch gestures and the floating minimap (phase 6) and mobile viewing + light edits below 768px
+  (phase 7, G2 — resize/rotate, edges, layout and import stay tablet+). Host actions render
+  through the `HeaderStart` / `HeaderActions` slots (G9). The toolbar contract, `InspectorLayout`,
+  `MinimapPlacement` and the responsive scope are documented in
+  [docs/diagram-editor.md](docs/diagram-editor.md); every breaking DOM/CSS change is listed under
+  Breaking / Migration below.
+
 - **`TmDiagramEditor` mobile viewing and light edits (DiagramEditor redesign phase 7, G2).** Below
   the 768px container band the editor renders the shell's mobile presentation: a non-modal bottom
   sheet (peek/half/full snap points) holding the Shapes palette and the Properties | Layers
@@ -505,6 +520,24 @@
   `FooterLayout=Inline` plus the viewport-driven mobile presentation (bottom sheet under 640px).
   Host CSS on `.tm-diagram-template-gallery__header` or the stacked CSV mapping rows must move to
   the new structure.
+
+- **The duplicate page-tab button has its own `tm-diagram-editor__page-tab-duplicate` class
+  (DiagramEditor redesign phase 2).** The duplicate action previously reused the close button's
+  class, so CSS targeting `.tm-diagram-editor__page-tab-close` silently styled both buttons; the
+  icons also moved from raw glyphs to `TmIcon`.
+
+  ```razor
+  @* before: duplicate carried the close-button class *@
+  <button class="tm-diagram-editor__page-tab-close">⧉</button>
+
+  @* after: each action has its own class (close keeps the danger-red hover) *@
+  <button class="tm-diagram-editor__page-tab-duplicate"><TmIcon Name="files" /></button>
+  <button class="tm-diagram-editor__page-tab-close"><TmIcon Name="x" /></button>
+  ```
+
+  **Migration:** host CSS that wanted to catch both buttons keeps working unchanged; CSS that
+  meant to style only the close button must not rely on `__page-tab-close` matching duplicate
+  anymore — target both classes explicitly.
 
 - **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
   A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`

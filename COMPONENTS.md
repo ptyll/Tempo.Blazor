@@ -7601,25 +7601,72 @@ Dark mode tokeny jsou definovány v `tokens-dark.css` a automaticky se aplikují
 
 Hlavní editor pro tvorbu diagramů. Podporuje více stránek, vrstvy, undo/redo, auto-layout a import/export.
 
+Editor je postaven na jádru `TmEditorShell` (redesign DiagramEditoru, plán 94d441f2): hlavička
+(záložky stránek, název dokumentu, pojmenované přepínače panelů, menu „⋯“ s mřížkou/přichytáváním),
+jedna příkazová řada na `TmToolbar` (`Overflow=Menu`, přetečení „More“), ukotvený toolbox vlevo,
+inspektor vpravo a stavová lišta (zoom + přepínač Read-only). Detaily kontraktů viz
+[docs/diagram-editor.md](docs/diagram-editor.md).
+
 Nástroj **Edge/Spojnice** umí kreslit i volné čáry kdekoli na plátně:
 
 - **Tažením** na prázdném plátně vznikne jednoduchá jednosegmentová hrana s plovoucími konci.
 - **Klikem** (bez tažení) na prázdné plátno se zahájí kreslení *polyčáry* — další kliky přidávají body polyline, dvojklik / Enter čáru ukončí v aktuální pozici kurzoru (jako plovoucí konec), klik na port / uzel / hranu čáru ukončí s navázáním. **Escape** nebo pravé tlačítko rozpracovanou polyčáru zahodí.
+
+#### Toolbar kontrakt (stabilní veřejné API)
+
+Vnoření hostitelé (např. Modeling preview) se opírají o kontrakt, nikdy o poziční CSS selektory
+interního DOM toolbaru:
+
+- `ToolbarPreset` — `Full` (výchozí, všechny skupiny) nebo `Viewer` (jen `zoom`, `view`, `search`,
+  `export`; bez přepínače read-only).
+- `ToolbarGroups` — volitelné flagy (`DiagramToolbarGroups`), `null` = podle presetu.
+- `data-tm-group` — každá skupina nese stabilní atribut z frozen sady `history | clipboard | tools
+  | format | insert | arrange | search | panels | zoom | view | canvas-size | layout | export |
+  templates | import | readonly`. Kde přesně skupina renderuje (hlavička / řada toolbaru / stavová
+  lišta / menu More) je layout detail — hodnoty atributů a sada skupin jsou kontrakt.
+- `HeaderStart` / `HeaderActions` — sloty pro akce hostitele v první (hlavičkové) řadě.
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Document` | `DiagramDocument?` | `null` | Aktivní dokument |
-| `ReadOnly` | `bool` | `false` | Pouze pro čtení |
+| `DocumentChanged` | `EventCallback<DiagramDocument>` | — | Vyvoláno po každé mutaci |
+| `ReadOnly` | `bool` | `false` | Pouze pro čtení (nikdy se nepřiřazuje uvnitř komponenty) |
+| `IsReadOnly` | `bool` (get) | — | Efektivní stav `ReadOnly \|\| _userReadOnly`; vnitřní přepínač Read-only mění jen uživatelskou část |
+| `ToolbarPreset` | `DiagramToolbarPreset` | `Full` | Sada skupin toolbaru (`Full` / `Viewer`) |
+| `ToolbarGroups` | `DiagramToolbarGroups?` | `null` | Explicitní flagy skupin (přepíše preset) |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Sloty pro akce hostitele v hlavičce |
+| `InspectorLayout` | `DiagramInspectorLayout` | `Tabs` | Inspektor: `Tabs` (Vlastnosti \| Vrstvy) nebo `Stacked` (opt-in sloupcové posloupnost) |
+| `MinimapPlacement` | `DiagramMinimapPlacement` | `Auto` | Minimapa: `Auto` (karta na desktopu, overlay od tabletu), `Panel`, `Overlay` |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Režim rozvržení (auto / desktop / tablet / mobile) |
+| `LayoutBreakpoints` | `TmLayoutBreakpoints?` | `null` | Vlastní prahy kontejneru (default 768/1200) |
+| `ShowStatusBar` | `bool` | `true` | Stavová lišta pod plátnem (zoom, read-only) |
+| `ShowTitle` | `bool` | `true` | Editovatelný název dokumentu v hlavičce |
 | `ShowToolbox` | `bool` | `true` | Zobrazit panel nástrojů |
 | `ShowPropertiesPanel` | `bool` | `true` | Zobrazit panel vlastností |
 | `ShowLayersPanel` | `bool` | `true` | Zobrazit panel vrstev |
 | `ShowMinimap` | `bool` | `true` | Zobrazit minimapu |
-| `ShowToolbar` | `bool` | `true` | Zobrazit toolbar |
+| `ShowToolbar` | `bool` | `true` | Zobrazit toolbar / akční lištu |
 | `ShowGrid` | `bool` | `true` | Zobrazit mřížku |
 | `GridSize` | `int` | `8` | Velikost buňky mřížky |
 | `ShowPageView` | `bool` | `true` | Zobrazit okraje stránky |
+| `OnSelectedIdsChanged` | `EventCallback<string[]>` | — | Změna výběru |
+| `ExportHttpClientName` | `string` | `""` | Pojmenovaný HttpClient pro export SVG/PNG/PDF |
+| `Class` | `string?` | `null` | Volitelná CSS třída |
+
+#### Responzivní rozsah (G2)
+
+- **Desktop (≥ 1200):** plná editace i kompletní chrome (hlavička, příkazová řada, ukotvené panely,
+  stavová lišta, karta minimapy).
+- **Tablet (768–1199):** stejné ukotvené panely přes `TmEditorShell`, dotykové gesta, 44px úchyty
+  pro prst, plovoucí minimapa, dlouhé podržení = kontextové menu. Plná editace zůstává.
+- **Mobil (< 768):** prohlížení + lehké úpravy — canvas a nemodální spodní sheet (peek/half/full)
+  s paletou *Shapes* a inspektorem *Vlastnosti \| Vrstvy*, akční lišta (Select/Pan/Vlastnosti,
+  export v „More“), plovoucí zoom pilulka a minimapa, tap-insert z palety, undo/redo, mazání,
+  viditelnost/zámek/aktivní vrstva. **Resize/rotate, kreslení hran, zarovnání/rozdělení, layout a
+  import jsou až od tabletu.** Přepínače úchytů: `TmDiagramCanvas.ShowTransformHandles` /
+  `ShowConnectArrows`.
 
 ### TmDiagramCanvas
 
@@ -7641,6 +7688,9 @@ Zoom a pan jsou řízeny výhradně přes SVG `viewBox` — žádný duplicitní
 | `ShowGrid` | `bool` | `true` | Zobrazit mřížku |
 | `GridSize` | `int` | `8` | Velikost buňky mřížky |
 | `ShowPageView` | `bool` | `true` | Zobrazit okraje stránky |
+| `Zoom` | `double` | `1.0` | Aktuální přiblížení (dvousměrně přes `ZoomChanged`) |
+| `ShowTransformHandles` | `bool` | `true` | Resize/rotate úchyty výběru (mobil je skrývá — G2) |
+| `ShowConnectArrows` | `bool` | `true` | Šipky pro kreslení hran na portech (mobil je skrývá — G2) |
 | `Class` | `string?` | `null` | Volitelná CSS třída |
 
 ### TmDiagramSqlImportDialog
