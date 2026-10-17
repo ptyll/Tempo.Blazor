@@ -2453,12 +2453,13 @@ line.tm-diagram-rotate-handle-stem {
     color: var(--tm-color-primary);
 }
 
+/* No fixed pixel cap here: the palette keeps whole tile rows visible on desktop
+   and a tall offer (Show all) scrolls the modal body instead of slicing the
+   last row in half. */
 .tm-diagram-connect-modal__grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--tm-space-2);
-    max-height: 320px;
-    overflow-y: auto;
     padding: var(--tm-space-1);
 }
 @media (max-width: 480px) {
