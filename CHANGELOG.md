@@ -198,6 +198,10 @@
 
 ### Breaking / Migration
 
+- **Data-table defaults did not change.** `TmDataTable.Appearance` remains `Plain`, `TmFilterBuilder.Presentation` remains `Inline`, `MobileLayout` remains `None`, `KeyboardNavigation` remains `Rows`, and `ShowFilterSummary` remains `false`. The multi-view list defaults also remain unchanged.
+- A table without a pager now displays `Total {0} records` rather than the previous page-range summary; provide `PaginationInfoTemplate` to retain custom wording.
+- `CardMode` also emits the cards class when `MobileLayout` is unset (`None`); an explicit `Scroll` or `Cards` layout takes precedence.
+- Export dropdown items now wrap their icon and format description together.
 - **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
   A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`
   announces `Filter: {column}` (`TmDataTable_FilterColumn`) instead of the generic `Filter`.
@@ -469,6 +473,10 @@
   Standalone editors that already expose their text through `Value`/`ValueChanged` binding —
   `TmRichEditorFull`, `TmRichEditorSimple` and the Signing `TmCommentComposer` — deliberately stay
   unchanged: a host that binds them already sees every character.
+
+### Upcoming
+
+- **`TmDataTable.KeyboardNavigation` becomes `Grid` by default in the next major release.** Keep today's behavior by explicitly setting `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`.
 
 ### Fixed
 
