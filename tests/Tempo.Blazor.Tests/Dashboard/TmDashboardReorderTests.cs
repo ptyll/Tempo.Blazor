@@ -361,6 +361,76 @@ public class TmDashboardReorderTests : LocalizationTestBase
         handle.GetAttribute("aria-pressed").Should().Be("false");
     }
 
+    // ── Grab state dies with edit mode (hardening A3) ──
+
+    [Fact]
+    public async Task Widget_Keyboard_GrabState_IsClearedWhenLayoutIsSaved()
+    {
+        var cut = await RenderEditMode(TmLayoutMode.Desktop, Dashboard("d1", "Pilot", isDefault: true,
+            Widget("a", 0, 0, width: 4, height: 2)));
+
+        var handle = cut.Find("[data-instance-id='a'] .tm-widget-drag-handle");
+        handle.Click();
+        cut.Find(".tm-widget--grabbed").Should().NotBeNull("precondition: the keyboard grab is active");
+
+        // SaveLayout keeps the SAME widget instances (the list is copied by reference into the
+        // config), so a grab state that survives the exit would paint --grabbed (and its
+        // z-index/opacity) on the card in VIEW mode.
+        cut.Find(".tm-dashboard-toolbar-right .tm-btn-primary").Click();
+
+        cut.FindAll(".tm-widget--grabbed").Should().BeEmpty(
+            "leaving edit mode via Save drops any in-progress keyboard grab");
+        cut.FindAll(".tm-widget-drag-handle[aria-pressed='true']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Widget_Keyboard_GrabState_IsClearedWhenEditIsCancelled()
+    {
+        var cut = await RenderEditMode(TmLayoutMode.Desktop, Dashboard("d1", "Pilot", isDefault: true,
+            Widget("a", 0, 0, width: 4, height: 2)));
+
+        var handle = cut.Find("[data-instance-id='a'] .tm-widget-drag-handle");
+        handle.Click();
+        handle.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        cut.Find(".tm-widget--grabbed").Should().NotBeNull("precondition: the keyboard grab is active");
+
+        // Cancel restores the widget list from the config; the grab state must be dropped with
+        // the mode, never carried into a later edit session.
+        cut.Find(".tm-dashboard-toolbar-right .tm-btn-ghost").Click();
+
+        cut.FindAll(".tm-widget--grabbed").Should().BeEmpty(
+            "leaving edit mode via Cancel drops any in-progress keyboard grab");
+
+        // Re-entering edit mode starts from a clean slate: no handle is stuck pressed.
+        await cut.InvokeAsync(() => cut.Instance.EnterEditModeForTests());
+        cut.FindAll(".tm-widget-drag-handle[aria-pressed='true']").Should().BeEmpty();
+    }
+
+    // ── Placement clamp (hardening A5) ──
+
+    [Fact]
+    public async Task Widget_AddedFromSelector_ClampsDefinitionsWiderThanTheGrid()
+    {
+        // A host typo (DefaultWidth 16 on the 12-column grid) must not place a card wider than
+        // the grid: the placement clamps the width in, the same way the resize clamp and the
+        // drop commit already do.
+        var definition = new WidgetDefinition { Id = "wide", Name = "Wide", DefaultWidth = 16, DefaultHeight = 3 };
+        var cut = await RenderEditMode(TmLayoutMode.Desktop, Dashboard("d1", "Pilot", isDefault: true,
+            Widget("a", 0, 0, width: 4, height: 2)), definition);
+        _registry.GetAllWidgets().Returns(new[] { definition });
+
+        cut.Find("[data-testid='dashboard-add-widget']").Click();
+        cut.Find(".tm-widget-card").Click();
+
+        var newInstance = cut.FindAll(".tm-widget").Last().GetAttribute("data-instance-id")!;
+        var style = cut.Find($"[data-instance-id='{newInstance}']").GetAttribute("style")!;
+        Extract(style, "--tm-w-span").Should().Be("12",
+            "a definition wider than the grid is clamped to the grid's column count");
+        Extract(style, "--tm-w-x").Should().Be("1", "the clamped card starts inside the grid");
+        Extract(style, "--tm-w-y").Should().Be("3",
+            "the clamped card is placed below the existing widgets, not on top of them");
+    }
+
     // ── Live region announcements ──
 
     [Fact]

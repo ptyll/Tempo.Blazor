@@ -134,6 +134,53 @@ test('window.tempoDashboard keeps init, destroy and scrollWidgetIntoView', async
     }
 });
 
+// ── scroll-into-view (hardening: the instance id joins an attribute selector) ────────────────
+
+test('scrollWidgetIntoView escapes the instance id into the attribute selector', async () => {
+    const b = board();
+    b.widget.scrollIntoView = () => { b.widget.scrolled = true; };
+    const selectors = [];
+    b.root.querySelector = (selector) => {
+        if (selector.startsWith('[data-instance-id')) { selectors.push(selector); return b.widget; }
+        return selector === '.tm-dashboard-grid' ? b.grid : null;
+    };
+
+    dashboard.scrollWidgetIntoView(b.root, 'a"b\\c');
+
+    assert.equal(
+        selectors[0],
+        '[data-instance-id="a\\"b\\\\c"]',
+        'quotes and backslashes are escaped before they join the selector');
+    assert.equal(b.widget.scrolled, true, 'the escaped selector still finds the widget');
+});
+
+test('scrollWidgetIntoView passes a plain id through unchanged', async () => {
+    const b = board();
+    b.widget.scrollIntoView = () => { b.widget.scrolled = true; };
+    const selectors = [];
+    b.root.querySelector = (selector) => {
+        if (selector.startsWith('[data-instance-id')) { selectors.push(selector); return b.widget; }
+        return selector === '.tm-dashboard-grid' ? b.grid : null;
+    };
+
+    dashboard.scrollWidgetIntoView(b.root, 'a2f0c9d1e4b34f5a');
+
+    assert.equal(selectors[0], '[data-instance-id="a2f0c9d1e4b34f5a"]', 'a Guid-shaped id is untouched');
+    assert.equal(b.widget.scrolled, true);
+});
+
+test('scrollWidgetIntoView does nothing for an unknown widget', async () => {
+    const b = board();
+    const selectors = [];
+    b.root.querySelector = (selector) => {
+        if (selector.startsWith('[data-instance-id')) { selectors.push(selector); return null; }
+        return selector === '.tm-dashboard-grid' ? b.grid : null;
+    };
+
+    assert.doesNotThrow(() => dashboard.scrollWidgetIntoView(b.root, 'missing'));
+    assert.equal(selectors.length, 1, 'the selector is still built safely');
+});
+
 test('no HTML5 drag-and-drop or mouse listener is registered any more - the gestures are Pointer Events on the grid', async () => {
     const b = board();
     const id = dashboard.init(b.root, dotnet());

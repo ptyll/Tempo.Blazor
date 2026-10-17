@@ -295,25 +295,28 @@ public class TmWidgetSelectorTests : LocalizationTestBase
     // ── Fáze 6: mobile presentation ────────────────────────────────────────────────────
 
     [Fact]
-    public void WidgetSelector_Mobile_RendersCategoryChips_AsRadioGroup()
+    public void WidgetSelector_Mobile_RendersCategoryChips_AsPressedToggles()
     {
         var cut = RenderSelector(layoutMode: TmLayoutMode.Mobile);
 
-        // The sidebar is gone; categories render as a horizontal radio group of chips.
+        // The sidebar is gone; categories render as a horizontal group of chips with the SAME
+        // aria-pressed contract as the desktop sidebar (a radio role would demand arrow-key
+        // roving tabindex on the scrollable row, which the native button group does not need).
         cut.FindAll(".tm-widget-selector-sidebar").Should().BeEmpty();
         var group = cut.Find(".tm-widget-selector-chips");
-        group.GetAttribute("role").Should().Be("radiogroup");
+        group.GetAttribute("role").Should().Be("group");
         group.GetAttribute("aria-label").Should().Be("Categories");
 
         var chips = group.QuerySelectorAll(".tm-widget-selector-chip");
         chips.Should().HaveCountGreaterThan(1);
-        chips[0].GetAttribute("role").Should().Be("radio");
-        chips[0].GetAttribute("aria-checked").Should().Be("true", "'All widgets' is the default chip");
-        chips[1].GetAttribute("aria-checked").Should().Be("false");
+        chips[0].GetAttribute("role").Should().BeNull("the chips are native toggle buttons");
+        chips[0].GetAttribute("aria-pressed").Should().Be("true", "'All widgets' is the default chip");
+        chips[0].GetAttribute("aria-checked").Should().BeNull("aria-checked belongs to a radio, not a toggle");
+        chips[1].GetAttribute("aria-pressed").Should().Be("false");
 
         // Activating a chip filters the grid to that category.
         chips[1].Click();
-        cut.FindAll(".tm-widget-selector-chip")[1].GetAttribute("aria-checked").Should().Be("true");
+        cut.FindAll(".tm-widget-selector-chip")[1].GetAttribute("aria-pressed").Should().Be("true");
         cut.FindAll(".tm-widget-card").Should().OnlyContain(c => c.TextContent.Contains("KPI"),
             "the Analytics category holds only the KPI widget");
     }
@@ -326,6 +329,17 @@ public class TmWidgetSelectorTests : LocalizationTestBase
         // The F2 foundation: a forced-mobile selector presents as a bottom sheet — the modal
         // panel carries the sheet class (tm-sheet__panel) instead of the desktop dialog chrome.
         cut.Find(".tm-modal").ClassList.Should().Contain("tm-sheet__panel");
+    }
+
+    [Fact]
+    public void WidgetSelector_Mobile_FooterCarriesItsOwnDataLayout()
+    {
+        var cut = RenderSelector(layoutMode: TmLayoutMode.Mobile);
+
+        // The footer renders inside TmModal's .tm-modal-footer — outside .tm-widget-selector-modal —
+        // so the mobile stacking rule (.tm-widget-selector-footer[data-layout="mobile"]) can only
+        // key off the footer's OWN data-layout attribute, never the modal content root's.
+        cut.Find(".tm-widget-selector-footer").GetAttribute("data-layout").Should().Be("mobile");
     }
 
     [Fact]

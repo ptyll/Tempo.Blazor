@@ -11,7 +11,7 @@
 @* The selector is a TmModal surface (B12): dialog role, aria-modal, focus trap, Escape and the
    scroll lock come from the modal, which also presents as a bottom sheet on a mobile layout
    (F2 foundation). Fáze 6: the resolved layout — never a viewport media query — decides between
-   the desktop/tablet category sidebar and the mobile chip radio group; the cards show a pastel
+   the desktop/tablet category sidebar and the mobile chip toggle group; the cards show a pastel
    category tile, a spaced size label and a persistent plus, and CloseOnSelect=false keeps the
    selector open while the added card flips to a green "Added" badge with a live announcement.
    The E2E/test contract class .tm-widget-selector-modal stays on the content root. *@
@@ -74,14 +74,17 @@
                 }
                 else
                 {
-                    @* Category chips (mobile): a horizontal radio group with counts — filtering
-                       stays reachable where the sidebar is hidden. Native buttons carry role=radio
-                       + aria-checked; activation is the browser's own Enter/Space handling. *@
-                    <div class="tm-widget-selector-chips" role="radiogroup"
+                    @* Category chips (mobile): a horizontal group of pressed-toggle buttons with
+                       counts — filtering stays reachable where the sidebar is hidden. Native buttons
+                       carry aria-pressed, the same contract as the desktop category sidebar above
+                       (role=radio would also demand arrow-key roving tabindex on a horizontally
+                       scrollable row, which a native button group gets for free). Activation is the
+                       browser's own Enter/Space handling. *@
+                    <div class="tm-widget-selector-chips" role="group"
                          aria-label="@Loc["TmWidgetSelector_Categories"]">
-                        <button type="button" role="radio"
+                        <button type="button"
                                 class="tm-widget-selector-chip"
-                                aria-checked="@(_selectedCategory == null ? "true" : "false")"
+                                aria-pressed="@(_selectedCategory == null ? "true" : "false")"
                                 @onclick="() => SelectCategory(null)">
                             <span>@Loc["TmWidgetSelector_AllWidgets"]</span>
                             <span class="tm-widget-selector-chip-count">@GetTotalWidgetCount()</span>
@@ -92,9 +95,9 @@
                             var count = GetWidgetCountByCategory(category.Id);
                             if (count > 0)
                             {
-                                <button type="button" role="radio"
+                                <button type="button"
                                         class="tm-widget-selector-chip @GetCategoryColorClass(category.Id)"
-                                        aria-checked="@(_selectedCategory == category.Id ? "true" : "false")"
+                                        aria-pressed="@(_selectedCategory == category.Id ? "true" : "false")"
                                         @onclick="() => SelectCategory(category.Id)"
                                         style="@GetCategoryColorStyle(category.Id)">
                                     <TmIcon Name="@category.Icon" Size="IconSize.Sm" />
@@ -177,7 +180,9 @@
         </div>
     </ChildContent>
     <Footer>
-        <div class="tm-widget-selector-footer">
+        @* The footer renders inside TmModal's .tm-modal-footer — outside .tm-widget-selector-modal —
+           so it carries its own data-layout for the mobile stacking rule (_dashboard.css). *@
+        <div class="tm-widget-selector-footer" data-layout="@Context.CssModifier">
             <span class="tm-widget-selector-hint">
                 <TmIcon Name="info" Size="IconSize.Sm" />
                 @Loc["TmWidgetSelector_Hint"]

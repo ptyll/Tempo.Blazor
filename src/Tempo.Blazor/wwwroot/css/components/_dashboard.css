@@ -442,15 +442,23 @@
   min-width: 0;
 }
 
+/* UX polish (1440px review): the single ellipsised line over-truncated — a 3-column KPI card
+   squeezed "Revenue KPI" to "Revenue …" while the auto-height header had room for a second
+   line. The title now wraps and clamps at TWO lines before the ellipsis, so narrow cards show
+   the full short name and only genuinely long names are cut. */
 .tm-widget-title {
   margin: 0;
   font-size: var(--tm-font-size-lg);
   font-weight: var(--tm-font-weight-semibold);
   line-height: var(--tm-line-height-tight);
   color: var(--tm-text-primary);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  /* A long unbroken token (URL, id) would overflow the clamped box before the ellipsis
+     kicks in — let it wrap at any character inside the two-line budget. */
+  overflow-wrap: anywhere;
 }
 
 .tm-widget-description {
@@ -610,6 +618,21 @@
 
 .tm-widget--collapsed .tm-widget-content {
   display: none;
+}
+
+/* UX polish: TmChart draws its SVG in a fixed 600×400 viewBox, so a widget's wide-short card
+   scales the whole drawing down (a 6×4 card measures ≈ 0.5) and the 11-unit axis/value text
+   landed at ≈ 6px on screen — illegible. This dashboard-scoped override (specificity (0,3,0)
+   beats both the SVG presentation attribute and the _chart.css class rules) repaints the
+   tick/value/label text at --tm-widget-chart-font-size (20 units default), which renders ≈ 10px
+   inside typical widget slots while everything stays proportional in larger ones. The fix is
+   deliberately scoped to `.tm-widget` — charts used standalone keep their tuned 11/12-unit
+   text. (Written as three explicit selectors, NOT `:is(...)`: the BundleCss minifier drops the
+   descendant combinator before `:is(`, which would silently retarget the rule.) */
+.tm-widget .tm-chart .tm-chart__axis-label,
+.tm-widget .tm-chart .tm-chart__value,
+.tm-widget .tm-chart .tm-chart__label {
+  font-size: var(--tm-widget-chart-font-size, 20px);
 }
 
 /* Resize Handles. Fáze 5: touch-action: none lives ONLY on the handles (drag + resize) —
@@ -809,8 +832,9 @@
   /* Plain text, not a pill: the count is metadata, not a badge (Fáze 6). */
 }
 
-/* Mobile category chips — a horizontal radio group rendered by the markup only on the mobile
-   layout; the styles ride along so the modal never flashes an unstyled row. */
+/* Mobile category chips — a horizontal row of pressed-toggle buttons rendered by the markup only
+   on the mobile layout; the styles ride along so the modal never flashes an unstyled row. The
+   aria-pressed contract matches the desktop category sidebar (A1 hardening). */
 .tm-widget-selector-chips {
   display: flex;
   gap: var(--tm-space-2);
@@ -840,7 +864,7 @@
   color: var(--category-color, var(--tm-text-secondary));
 }
 
-.tm-widget-selector-chip[aria-checked="true"] {
+.tm-widget-selector-chip[aria-pressed="true"] {
   background: var(--tm-color-primary-subtle);
   border-color: var(--tm-color-primary);
   color: var(--tm-color-primary-text);
@@ -851,7 +875,7 @@
   color: var(--tm-text-secondary);
 }
 
-.tm-widget-selector-chip[aria-checked="true"] .tm-widget-selector-chip-count {
+.tm-widget-selector-chip[aria-pressed="true"] .tm-widget-selector-chip-count {
   color: var(--tm-color-primary-text);
 }
 
@@ -1037,6 +1061,21 @@
   flex: 1;
 }
 
+/* UX polish: on the mobile sheet the inline hint squeezed the Done button into a sliver of the
+   row. The sheet stacks them instead — hint above, full-width Done below (the sheet footer's
+   coarse-pointer rule keeps the 48px touch target). The footer lives inside TmModal's
+   .tm-modal-footer — OUTSIDE .tm-widget-selector-modal — so the modal's data-layout never
+   reaches it; the footer therefore carries its own data-layout attribute. */
+.tm-widget-selector-footer[data-layout="mobile"] {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--tm-space-2);
+}
+
+.tm-widget-selector-footer[data-layout="mobile"] .tm-btn {
+  inline-size: 100%;
+}
+
 /* Polite live region for the CloseOnSelect=false additions — visually hidden, announced only. */
 .tm-widget-selector-live {
   position: absolute;
@@ -1217,6 +1256,17 @@
   .tm-dashboard-create-modal .tm-modal-footer .tm-btn {
     min-height: var(--tm-space-12);
   }
+}
+
+/* UX polish: the global 0.5 disabled veil left the white label on the translucent primary fill
+   at ≈ 1.4:1 — illegible, not just subdued. Inside the dashboard dialogs the disabled primary
+   (Create / Apply) swaps the veil for a legible muted state: the soft primary fill with the
+   primary-text ink (≥ 4.5:1 in both themes), which keeps the action visibly non-committing. */
+.tm-dashboard-create-modal .tm-modal-footer .tm-btn-primary:disabled,
+.tm-dashboard-rename-modal .tm-modal-footer .tm-btn-primary:disabled {
+  opacity: 1;
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary-text);
 }
 
 /* Fáze 7: the default row explains WHY there is no delete control — a muted full-width line

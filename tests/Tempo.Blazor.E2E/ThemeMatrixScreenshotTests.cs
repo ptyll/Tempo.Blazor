@@ -80,6 +80,16 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
                         await AssertWorkspaceAsync(page, dark, indigo);
                     }
 
+                    // UX-polish review: "dark-indigo looks near-identical to dark-default" — pin
+                    // the themed primary ON a dashboard accent so a token that stops reaching the
+                    // dashboard fails here instead of hiding in the screenshots. (The remaining
+                    // sameness is by design: dark paints the pale -400 step in both themes, and
+                    // the categorical tile/chart colours are theme-independent on purpose.)
+                    if (name == "dashboard")
+                    {
+                        await AssertDashboardAccentAsync(page, dark, indigo);
+                    }
+
                     var theme = (dark ? "dark" : "light") + "-" + (indigo ? "indigo" : "default");
                     await SaveAsync(page, $"{name}--{theme}", fullPage: name != "modal");
                 }
@@ -195,6 +205,25 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
             expected, new PageWaitForFunctionOptions { Timeout = 5000 });
 
         await AssertWorkspaceAsync(page, dark, indigo);
+    }
+
+    /// <summary>
+    /// The dashboard's own accent — the view-mode Edit button, the only <c>.tm-btn-primary</c>
+    /// the component renders — must take the active theme's primary step. This is the verification
+    /// the UX review asked for when dark-indigo looked near-identical to dark-default: the indigo
+    /// token does reach the dashboard accents (Edit button, toggle, edit-mode tint), it is just a
+    /// subtle -400-step hue shift in dark by design.
+    /// </summary>
+    private static async Task AssertDashboardAccentAsync(IPage page, bool dark, bool indigo)
+    {
+        await page.Locator("[data-testid='dashboard-edit']").First.WaitForAsync(
+            new LocatorWaitForOptions { Timeout = 15000 });
+        var expected = indigo
+            ? (dark ? "rgb(129, 140, 248)" : "rgb(79, 70, 229)")
+            : (dark ? "rgb(96, 165, 250)" : "rgb(37, 99, 235)");
+        await page.WaitForFunctionAsync(
+            "expected => getComputedStyle(document.querySelector(\"[data-testid='dashboard-edit']\")).backgroundColor === expected",
+            expected, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
     private static async Task AssertWorkspaceAsync(IPage page, bool dark, bool indigo)

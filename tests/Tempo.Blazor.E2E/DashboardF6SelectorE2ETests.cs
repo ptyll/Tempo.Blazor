@@ -6,11 +6,15 @@ namespace Tempo.Blazor.E2E;
 
 /// <summary>
 /// Fáze 6 of the dashboard redesign — the redesigned TmWidgetSelector on the three reference
-/// widths: desktop 1440 (sidebar), tablet 1024 touch (sidebar + two columns) and mobile 390/320
-/// (bottom sheet with the category chip radio group). Covers the DA1 CloseOnSelect=false flow
+/// widths: desktop 1440 (sidebar), tablet 900 touch (sidebar + two columns — 1024 itself sits on
+/// desktop per <c>TmBreakpoints.Lg</c>, so the capture names its real viewport) and mobile 390/320
+/// (bottom sheet with the category chip toggle group). Covers the DA1 CloseOnSelect=false flow
 /// (the selector stays open, the added card flips to the "Přidáno" state) and keyboard-only
 /// operation. Screenshots land in <c>__screenshots__/dashboard/f6/</c> for the UX review against
 /// output/imagegen/tempo-reimagined/TmDashboard/widget-selector--{desktop,tablet,mobile}.png.
+/// Every open-selector capture waits out the overlay's 0.3 s fade first: a shot taken mid-fade
+/// reads as "the desktop dialog lacks the tablet/mobile scrim" when the scrim is identical at
+/// every width (UX-polish review finding, resolved on the capture, not in the CSS).
 /// </summary>
 [TestClass]
 public sealed class DashboardF6SelectorE2ETests : WasmTestBase
@@ -24,8 +28,17 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
     {
         var page = await OpenDashboardAsync(1440, 900);
 
-        // Open the selector and capture the redesigned desktop surface.
+        // Open the selector and capture the redesigned desktop surface. The scrim/backdrop-blur
+        // of the desktop dialog is asserted to be the SAME presentation the sheet uses on
+        // tablet/mobile — the modal overlay paints both at every width (see _modal.css).
         await OpenSelectorAsync(page);
+        await WaitForOverlayFadeAsync(page);
+        var overlay = page.Locator(".tm-modal-overlay").First;
+        StringAssert.Contains(await overlay.GetAttributeAsync("class"), "tm-modal--visible");
+        var scrim = await overlay.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        var blur = await overlay.EvaluateAsync<string>("el => getComputedStyle(el).backdropFilter");
+        Assert.AreEqual("rgba(0, 0, 0, 0.5)", scrim, "the desktop dialog carries the shared scrim");
+        StringAssert.Contains(blur, "blur", "the desktop dialog carries the shared backdrop blur");
         await ShotAsync(page, "desktop-1440-selector-open");
 
         // Sidebar category filter: activating a category narrows the grid.
@@ -71,7 +84,9 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
     /// <remarks>
     /// The reference tablet width is 1024, but the library's tablet band is 768–1023
     /// (<c>TmBreakpoints.Lg = 1024</c> puts 1024 itself on desktop), so the tablet run uses 900 —
-    /// the same width the earlier dashboard phases captured.
+    /// the same width the earlier dashboard phases captured. The captures are named
+    /// <c>tablet-900-*</c> so the file name states the viewport the pixels actually show (the
+    /// old <c>tablet-1024-*</c> names described a 900×768 capture — UX-polish review).
     /// </remarks>
     [TestMethod]
     [TestCategory("WASM")]
@@ -80,6 +95,7 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
         var page = await OpenDashboardAsync(900, 768, touch: true);
 
         await OpenSelectorAsync(page);
+        await WaitForOverlayFadeAsync(page);
 
         // The sidebar survives on tablet; the card grid sits in exactly two columns.
         // The layout probe measures asynchronously — wait for the resolved data-layout.
@@ -91,9 +107,9 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
             "() => getComputedStyle(document.querySelector('.tm-widget-selector-grid')).gridTemplateColumns.split(' ').filter(Boolean).length");
         Assert.AreEqual(2, columns, "the tablet selector shows two card columns");
 
-        await ShotAsync(page, "tablet-1024-selector-open");
+        await ShotAsync(page, "tablet-900-selector-open");
         await FilterBySidebarAsync(page);
-        await ShotAsync(page, "tablet-1024-category-filter");
+        await ShotAsync(page, "tablet-900-category-filter");
         await page.CloseAsync();
     }
 
@@ -105,32 +121,47 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
 
         await OpenSelectorAsync(page);
 
-        // The F2 sheet presentation with the chip radio group replacing the sidebar.
+        // The F2 sheet presentation with the chip toggle group replacing the sidebar.
         // The layout probe measures asynchronously — wait for the resolved data-layout first.
         var modalRoot = page.Locator(".tm-widget-selector-modal[data-layout='mobile']");
         await modalRoot.First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await WaitForOverlayFadeAsync(page);
         var panel = page.Locator(".tm-modal");
         StringAssert.Contains(await panel.GetAttributeAsync("class"), "tm-sheet__panel",
             "the mobile selector presents as a bottom sheet");
         Assert.AreEqual(0, await page.Locator(".tm-widget-selector-sidebar").CountAsync());
 
         var group = page.Locator(".tm-widget-selector-chips");
-        Assert.AreEqual("radiogroup", await group.GetAttributeAsync("role"));
+        Assert.AreEqual("group", await group.GetAttributeAsync("role"),
+            "the chips are a pressed-toggle group, the mobile twin of the desktop category sidebar");
         Assert.IsTrue((await group.Locator(".tm-widget-selector-chip").CountAsync()) > 1,
             "the chips carry every category plus 'All widgets'");
 
         await ShotAsync(page, "mobile-390-selector-sheet");
 
-        // Filter by a chip: the radio flips and the grid narrows to that category.
+        // Filter by a chip: the toggle flips and the grid narrows to that category.
         await group.Locator(".tm-widget-selector-chip").Nth(1).ClickAsync();
         await Assertions.Expect(group.Locator(".tm-widget-selector-chip").Nth(1))
-            .ToHaveAttributeAsync("aria-checked", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
+            .ToHaveAttributeAsync("aria-pressed", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 10000 });
         await ShotAsync(page, "mobile-390-chip-filter");
 
         // One column, plus on the right, and Done closes the sheet.
         var columns = await page.EvaluateAsync<int>(
             "() => getComputedStyle(document.querySelector('.tm-widget-selector-grid')).gridTemplateColumns.split(' ').filter(Boolean).length");
         Assert.AreEqual(1, columns, "the mobile selector stacks the cards in one column");
+
+        // The footer (rendered in TmModal's .tm-modal-footer, outside .tm-widget-selector-modal)
+        // carries its own data-layout, and the mobile rule stacks it — hint above, full-width
+        // Done below: the Done button spans the footer's content width.
+        Assert.AreEqual("mobile", await page.Locator(".tm-widget-selector-footer")
+            .GetAttributeAsync("data-layout"), "the sheet footer keys its stacking off its own data-layout");
+        var widths = await page.EvaluateAsync<double[]>(
+            @"() => { const f = document.querySelector('.tm-widget-selector-footer').getBoundingClientRect();
+                      const b = document.querySelector('.tm-widget-selector-footer .tm-btn').getBoundingClientRect();
+                      return [f.width, b.width]; }");
+        Assert.IsTrue(Math.Abs(widths[1] - widths[0]) <= 2,
+            $"the mobile Done button spans the footer width (footer {widths[0]:F1}px, button {widths[1]:F1}px)");
+
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Hotovo" }).ClickAsync();
         await Assertions.Expect(page.Locator(".tm-widget-selector-modal"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
@@ -145,6 +176,7 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
 
         await OpenSelectorAsync(page);
 
+        await WaitForOverlayFadeAsync(page);
         await ShotAsync(page, "mobile-320-selector-sheet");
 
         // The chips row is horizontally scrollable at 320 — the last chip is reachable.
@@ -215,6 +247,18 @@ public sealed class DashboardF6SelectorE2ETests : WasmTestBase
         await page.Locator(".tm-modal-close").ClickAsync();
         await Assertions.Expect(page.Locator(".tm-widget-selector-modal"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+    }
+
+    /// <summary>
+    /// Waits out the overlay's 0.3 s fade (tm-modal--animated plays modalFadeIn on insertion), so
+    /// a screenshot never catches the scrim at partial opacity — the artifact that read as
+    /// "the desktop dialog lacks the tablet/mobile scrim" in the UX review.
+    /// </summary>
+    private static async Task WaitForOverlayFadeAsync(IPage page)
+    {
+        await page.WaitForFunctionAsync(
+            "() => { const o = document.querySelector('.tm-modal-overlay'); return !!o && getComputedStyle(o).opacity === '1' && getComputedStyle(o).visibility === 'visible'; }",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
     private async Task ShotAsync(IPage page, string name)

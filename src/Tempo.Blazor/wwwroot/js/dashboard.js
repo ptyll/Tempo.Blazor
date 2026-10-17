@@ -68,6 +68,13 @@
         return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
     }
 
+    // CSS.escape is missing in the stub DOM the node tests run against. Attribute values only need
+    // the quote and the backslash escaped to stay inside the selector (the tm-focus-trap pattern).
+    function escapeAttr(value) {
+        if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(value);
+        return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+
     /** The metrics object the pure maths helpers expect (columns/rowHeight/gap). */
     function metricsOf(dashboard) {
         return { columns: dashboard.gridColumns, rowHeight: dashboard.rowHeight, gap: dashboard.gap };
@@ -331,6 +338,15 @@
         },
 
         updateDropPreview: function (dashboard, col, row) {
+            // Why the preview is a JS-appended node and NOT a Blazor-rendered element (hardening
+            // review, decided): the preview follows every pointermove (~60 Hz), so a Blazor-owned
+            // node would need a JS→.NET call and a component re-render per move — a round-trip
+            // lag the gesture would feel, and a re-render under an active pointer, which the
+            // component's render contract explicitly avoids ("no DOM node ever moves under an
+            // active pointer", see WidgetLayout in TmDashboard.razor.cs). The preview is also a
+            // pure transient affordance: Blazor never reads it back, and this file removes it on
+            // every exit path (release, Escape/pointercancel via the helper's cancel, destroy).
+            // The C# side mirrors the same clamp on the committed drop (OnGridPositionChanged).
             var grid = dashboard._grid;
             if (!grid) return;
             var preview = grid.querySelector(PREVIEW_SELECTOR);
@@ -363,8 +379,10 @@
 
         // F4: a freshly added widget may land below the fold (mobile 390 px) — bring it into view
         // so the brief highlight is actually seen. Respects prefers-reduced-motion.
+        // The instance id is host/shaped data (a Guid today), so it is escaped before it joins
+        // the attribute selector — an id carrying a quote would otherwise break the query.
         scrollWidgetIntoView: function (element, instanceId) {
-            var widget = element.querySelector('[data-instance-id="' + instanceId + '"]');
+            var widget = element.querySelector('[data-instance-id="' + escapeAttr(instanceId) + '"]');
             if (!widget) {
                 return;
             }

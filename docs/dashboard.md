@@ -62,13 +62,25 @@ for `dashboard.js`.
 - A freshly added widget is highlighted briefly (`tm-widget--highlight`, quiet under
   `prefers-reduced-motion`) and scrolled into view (`tempoDashboard.scrollWidgetIntoView`).
 
+## Charts inside widgets
+
+A `TmChart` scales with its widget card (the SVG viewBox is fixed at 600×400), so the tuned
+11–12-unit tick/value text can shrink below legibility in wide-short slots. The dashboard CSS
+repaints the axis/value/label text inside `.tm-widget` at `--tm-widget-chart-font-size`
+(default `20px` — ≈ 10 px in a typical 6×4 slot); override the custom property to tune every
+dashboard-embedded chart at once. Standalone charts are untouched — the override never leaves
+`.tm-widget`.
+
 ## Touch drag and resize (F5)
 
 Widget move/resize uses the shared `pointer-drag.js` helper (Pointer Events: mouse, touch, pen)
 — not HTML5 drag-and-drop. Escape/pointercancel roll the gesture back, the drop preview follows
 the pointer, and `touch-action: none` lives on the handles only so the page keeps scrolling
 everywhere else. See [touch-interaction.md](touch-interaction.md); never write a second drag
-implementation.
+implementation. The drop preview is deliberately a `dashboard.js`-appended node, not a
+Blazor-rendered element: it must follow every pointermove (~60 Hz) without a JS→.NET round-trip
+per move, and the component's render contract never moves DOM under an active pointer — the C#
+side applies the same clamp to the committed drop (`OnGridPositionChanged`).
 
 ## Responsive layout (F1/F3)
 
@@ -89,8 +101,9 @@ bind. See [responsive-conventions.md](responsive-conventions.md).
 | `LayoutMode` | `TmLayoutMode` | `Auto` | Pins the presentation (including the mobile chip row and the bottom sheet) for tests and embedded hosts. |
 
 The selector presents as an anchored modal on desktop, keeps the category sidebar at two card
-columns on tablet, and becomes a bottom sheet with a horizontal chip radio group on mobile —
-keyed off `data-layout`, never a viewport media query.
+columns on tablet, and becomes a bottom sheet with a horizontal chip toggle group on mobile —
+the chips are native buttons carrying `aria-pressed`, the same contract as the desktop sidebar
+(never a viewport media query).
 
 ## Dialogs on mobile (F7)
 

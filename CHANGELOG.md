@@ -34,6 +34,44 @@
   the keyboard alternative and non-drag reordering, and the `dashboard.js` /
   `pointer-drag.js` script requirements.
 
+- **`TmDashboard` post-review hardening and UX polish (the redesign plan's last two remaining
+  tasks).**
+
+  - Widget selector chips (mobile) are native `aria-pressed` toggle buttons — the same contract
+    as the desktop category sidebar — instead of `role=radio` buttons without the arrow-key
+    roving tabindex a radiogroup demands (hardening).
+  - `dashboard.js` `scrollWidgetIntoView` escapes the instance id through `CSS.escape` before it
+    joins the attribute selector (with the `tm-focus-trap.js` stub-DOM fallback), and documents
+    why the drop preview stays a JS-appended node: a Blazor-owned preview would need a JS→.NET
+    round-trip per pointermove and would re-render under an active pointer (hardening).
+  - Leaving edit mode via "Save changes" or "Cancel" now resets the keyboard grab state, so a
+    grab held during the exit can no longer paint the grabbed style in view mode (hardening).
+  - Adding a widget whose definition is wider than the grid (host typo, wider saved
+    `GridConfig`) clamps the instance to the grid's column count in
+    `FindNonOverlappingPosition` — the same clamp the resize and the drop commit already apply;
+    the clamp also covers the empty-dashboard early return (hardening).
+  - Widget titles clamp at TWO lines before the ellipsis: a 3-column KPI card at 1440 px
+    squeezed "Revenue KPI" to "Revenue …" although the header had room for a second line (UX).
+  - Chart axis/value/label text inside widget cards repaints at 20 viewBox units (≈ 10 px in
+    typical slots) — the fixed 600×400 chart viewBox scaled the 11-unit ticks to ≈ 6 px, which
+    was illegible. The override is scoped to `.tm-widget` and tunable through
+    `--tm-widget-chart-font-size`; standalone charts keep their tuned size (UX).
+  - The dashboard create/rename dialogs' disabled primary button (Create/Apply) swaps the global
+    0.5 opacity veil (white label at ≈ 1.4:1) for a legible muted state: soft primary fill with
+    the `--tm-color-primary-text` ink (UX).
+  - The widget selector's mobile sheet stacks its footer — hint above, full-width Done below —
+    so the hint no longer crowds the button (UX).
+  - Verified the indigo variant reaches the dashboard accents: the theme-matrix E2E now pins the
+    themed primary on the dashboard's Edit button in all four light/dark × default/indigo
+    combinations. (The residual dark-indigo ≈ dark-default impression is by design: dark paints
+    the pale `-400` primary step in both themes, and the categorical tile/chart colours are
+    theme-independent on purpose.)
+  - The f6 tablet captures are named for their real 900×768 viewport (`tablet-900-*.png`, was
+    `tablet-1024-*.png` — 1024 itself sits on desktop), and the selector E2E waits out the
+    overlay's 0.3 s fade before shooting: a mid-fade screenshot read as "the desktop dialog
+    lacks the tablet/mobile scrim", while the scrim and blur are identical at every width (now
+    asserted in the desktop test).
+
 - **`TmDashboard` short labels on the mobile edit-mode action bar (Y11 pattern).** The bar
   tiles carry `TmDashboard_AddWidgetShort` / `TmDashboard_RenameShort` ("Add" / "Rename",
   "Přidat" / "Přejmenovat", "Pridať" / "Premenovať", "Ajouter" / "Renommer") — at 320 px the
@@ -202,6 +240,7 @@
 - A table without a pager now displays `Total {0} records` rather than the previous page-range summary; provide `PaginationInfoTemplate` to retain custom wording.
 - `CardMode` also emits the cards class when `MobileLayout` is unset (`None`); an explicit `Scroll` or `Cards` layout takes precedence.
 - Export dropdown items now wrap their icon and format description together.
+
 - **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
   A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`
   announces `Filter: {column}` (`TmDataTable_FilterColumn`) instead of the generic `Filter`.
