@@ -131,6 +131,42 @@ public class TmDropdownTests : LocalizationTestBase
         cut.FindAll(".tm-dropdown-menu").Should().BeEmpty();
     }
 
+    [Fact]
+    public void TmDropdown_DisabledWhileOpen_ClosesTheMenu()
+    {
+        // A host that disables the dropdown while its menu is open (e.g. the diagram editor's
+        // IsReadOnly flipping) must not leave an open menu behind: the disabled trigger can
+        // never close it again.
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .AddChildContent("<div class='item'>Item 1</div>"));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        cut.FindAll(".tm-dropdown-menu").Should().NotBeEmpty("precondition: the menu is open");
+
+        cut.Render(p => p.Add(c => c.Disabled, true));
+
+        cut.FindAll(".tm-dropdown-menu").Should().BeEmpty("becoming disabled closes the open menu");
+        cut.Find("button.tm-dropdown-trigger").HasAttribute("aria-expanded").Should().BeFalse(
+            "an expanded state is meaningless on a disabled trigger");
+    }
+
+    [Fact]
+    public void TmDropdown_Disabled_StaysClosedOnReRender()
+    {
+        // The close must fire on the transition into disabled, not on every render of an
+        // already-disabled dropdown (the flag would otherwise re-open nothing but the state
+        // writes must be idempotent).
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .Add(c => c.Disabled, true)
+            .AddChildContent("<div class='item'>Item 1</div>"));
+
+        cut.Render(p => p.Add(c => c.Text, "Options changed"));
+
+        cut.FindAll(".tm-dropdown-menu").Should().BeEmpty();
+    }
+
     /// <summary>
     /// N319: the menu must close BEFORE <c>OnSelect</c> runs — a handler that opens a dialog
     /// would otherwise render it under the still-open top-layer popover.

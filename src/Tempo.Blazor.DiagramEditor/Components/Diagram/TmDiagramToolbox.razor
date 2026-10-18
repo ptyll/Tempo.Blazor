@@ -18,7 +18,7 @@
            readers why — per-tile text would repeat it once per stencil. *@
         @if (ReadOnly)
         {
-            <span id="tm-diagram-toolbox-readonly-hint" class="tm-diagram-toolbox__sr-hint">@Loc["TmDiagramToolbox_ReadOnlyHint"]</span>
+            <span id="@ReadOnlyHintId" class="tm-diagram-toolbox__sr-hint">@Loc["TmDiagramToolbox_ReadOnlyHint"]</span>
         }
 
         <div class="tm-diagram-toolbox__search">
@@ -76,7 +76,7 @@
                                              @onkeyup="e => OnStencilKeyUp(e, stencil.Id)"
                                              @onclick="() => OnStencilActivated(stencil.Id)"
                                              title="@(ReadOnly ? GetReadOnlyHint() : stencilTooltip)"
-                                             aria-describedby="@(ReadOnly ? "tm-diagram-toolbox-readonly-hint" : null)">
+                                             aria-describedby="@(ReadOnly ? ReadOnlyHintId : null)">
                                             <div class="tm-diagram-toolbox__preview @(stencil.Kind == DiagramStencilKind.Edge ? "tm-diagram-toolbox__edge-preview" : "")">
                                                 @if (!string.IsNullOrEmpty(stencil.IconSvg))
                                                 {

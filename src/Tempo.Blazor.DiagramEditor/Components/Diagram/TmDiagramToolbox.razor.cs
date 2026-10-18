@@ -29,6 +29,10 @@ public partial class TmDiagramToolbox : TmComponentBase
     private ElementReference _containerRef;
     private bool _initialized;
 
+    /// <summary>Per-instance id of the visually-hidden read-only hint: two toolboxes on one page
+    /// must never share an id (a duplicate id breaks every aria-describedby reference).</summary>
+    private string ReadOnlyHintId { get; } = $"tm-diagram-toolbox-readonly-hint-{Guid.NewGuid():N}";
+
     private string _searchQuery = string.Empty;
     private List<ToolboxLibraryGroup> _filteredLibraries = [];
 

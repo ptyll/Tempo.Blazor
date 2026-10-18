@@ -119,6 +119,21 @@
     private MenuNavInterop? _menuNav;
     private bool _disposed;
 
+    /// <summary>The Disabled value seen by the previous parameter pass: the menu closes only on a
+    /// transition into disabled, not on every re-render of an already disabled dropdown.</summary>
+    private bool _lastDisabled;
+
+    protected override void OnParametersSet()
+    {
+        // A dropdown that became disabled while its menu was open must not keep the open menu
+        // around: the trigger is dead (native disabled), so nothing could ever close it again.
+        if (Disabled && !_lastDisabled)
+        {
+            _isOpen = false;
+        }
+        _lastDisabled = Disabled;
+    }
+
     private void Toggle()
     {
         if (Disabled) return;

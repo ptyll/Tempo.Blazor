@@ -90,12 +90,50 @@ public class TmDiagramSearchPanelTests : LocalizationTestBase
         var error = cut.Find(".tm-diagram-search-panel__error");
         error.GetAttribute("role").Should().Be("alert",
             "the pattern error must be announced as soon as it appears");
-        error.Id.Should().Be("tm-diagram-search-error");
+        error.Id.Should().StartWith("tm-diagram-search-error-",
+            "the id is namespaced per component kind");
 
         var query = cut.Find("input[type='search']");
         query.GetAttribute("aria-invalid").Should().Be("true");
-        query.GetAttribute("aria-describedby").Should().Be("tm-diagram-search-error",
+        query.GetAttribute("aria-describedby").Should().Be(error.Id,
             "the input points at the error message that describes it");
+    }
+
+    [Fact]
+    public void RegexError_IdIsPerInstance_AndReferencedByEveryOwnInput()
+    {
+        // Two panels on one page must not share the error id — a duplicate id breaks the
+        // aria-describedby reference for every instance after the first.
+        var first = Render<TmDiagramSearchPanel>(p => p
+            .Add(c => c.Query, "(")
+            .Add(c => c.RegexError, "bad pattern one"));
+        var second = Render<TmDiagramSearchPanel>(p => p
+            .Add(c => c.Query, "[")
+            .Add(c => c.RegexError, "bad pattern two"));
+
+        var firstError = first.Find(".tm-diagram-search-panel__error");
+        var secondError = second.Find(".tm-diagram-search-panel__error");
+        firstError.Id.Should().NotBe(secondError.Id, "instance ids never collide");
+        firstError.Id.Should().StartWith("tm-diagram-search-error-");
+        secondError.Id.Should().StartWith("tm-diagram-search-error-");
+
+        first.Find("input[type='search']").GetAttribute("aria-describedby").Should().Be(firstError.Id);
+        second.Find("input[type='search']").GetAttribute("aria-describedby").Should().Be(secondError.Id);
+    }
+
+    /// <summary>
+    /// TmSearchInput has no Clearable parameter — a Clearable="true" attribute is splatted onto
+    /// the native input as an invalid DOM attribute. No usage may carry it.
+    /// </summary>
+    [Fact]
+    public void SearchInput_HasNoInvalidClearableAttribute()
+    {
+        var cut = Render<TmDiagramSearchPanel>(p => p
+            .Add(c => c.Query, "foo")
+            .Add(c => c.RegexError, "bad pattern"));
+
+        cut.FindAll("input[clearable]").Should().BeEmpty(
+            "TmSearchInput clears itself — Clearable is not a parameter and must not leak to the DOM");
     }
 
     [Fact]

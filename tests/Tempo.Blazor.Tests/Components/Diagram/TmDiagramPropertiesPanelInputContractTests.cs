@@ -51,6 +51,8 @@ public class TmDiagramPropertiesPanelInputContractTests : LocalizationTestBase
         var input = cut.Find(".tm-diagram-properties input[type='search']");
         input.GetAttribute("value").Should().BeEmpty(
             "the F3 literal binding used to pre-fill the field with '_replaceShapeSearch'");
+        input.HasAttribute("clearable").Should().BeFalse(
+            "TmSearchInput has no Clearable parameter — the attribute must not splat onto the input");
     }
 
     [Fact]

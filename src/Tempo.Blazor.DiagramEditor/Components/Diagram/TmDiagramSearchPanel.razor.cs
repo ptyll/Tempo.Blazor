@@ -57,6 +57,10 @@ public partial class TmDiagramSearchPanel : ComponentBase
     private bool CanReplace => !ReadOnly && ResultsCount > 0 && !string.IsNullOrEmpty(Query) && string.IsNullOrEmpty(RegexError);
     private bool CanReplaceAll => CanReplace;
 
+    /// <summary>Per-instance id of the error span: two panels on one page must never share an
+    /// id (a duplicate id breaks the aria-describedby reference for every instance after the first).</summary>
+    private string ErrorId { get; } = $"tm-diagram-search-error-{Guid.NewGuid():N}";
+
     /// <summary>The pattern error state: marks the query input aria-invalid and ties the
     /// role="alert" error span to it through aria-describedby.</summary>
     private bool HasError => !string.IsNullOrEmpty(RegexError);
