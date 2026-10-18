@@ -4,38 +4,53 @@
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Diagram.Services
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Abstractions.Layout
 
 <TmModal Show="@Show"
          OnClose="OnClose"
          Title="@Loc["TmDiagramSqlImportDialog_Title"]"
+         Subtitle="@Loc["TmDiagramSqlImportDialog_Subtitle"]"
          ShowDefaultFooterButtons="false"
          Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         LayoutMode="@LayoutMode"
          CloseOnOverlayClick="true"
-         CloseOnEscape="true">
+         CloseOnEscape="true"
+         RestoreFocusTarget="@RestoreFocusTarget">
     <ChildContent>
         <div class="tm-diagram-sql-import">
             <div class="tm-diagram-sql-import__field">
-                <label class="tm-diagram-sql-import__label" for="sql-ddl">@Loc["TmDiagramSqlImportDialog_SqlLabel"]</label>
-                <TmTextArea Id="sql-ddl"
+                <label class="tm-diagram-sql-import__label" for="@_sqlFieldId">@Loc["TmDiagramSqlImportDialog_SqlLabel"]</label>
+                <TmTextArea Id="@_sqlFieldId"
                             @bind-Value="_sql"
+                            @bind-Value:after="OnSqlChanged"
+                            Immediate="true"
                             Rows="10"
                             Placeholder="@Loc["TmDiagramSqlImportDialog_SqlPlaceholder"]"
                             Class="tm-diagram-sql-import__textarea" />
             </div>
 
             <div class="tm-diagram-sql-import__field">
-                <label class="tm-diagram-sql-import__label" for="layout-select">@Loc["TmDiagramSqlImportDialog_LayoutLabel"]</label>
-                <TmSelect Id="layout-select"
+                <label class="tm-diagram-sql-import__label" for="@_layoutFieldId">@Loc["TmDiagramSqlImportDialog_LayoutLabel"]</label>
+                <TmSelect Id="@_layoutFieldId"
                           @bind-Value="_layout"
-                          Options="_layoutOptions"
+                          Options="LayoutOptions"
                           Class="tm-diagram-sql-import__select" />
             </div>
 
             @if (_previewTables >= 0)
             {
-                <div class="tm-diagram-sql-import__preview">
-                    <span>@Loc["TmDiagramSqlImportDialog_PreviewTables", _previewTables]</span>
-                    <span>@Loc["TmDiagramSqlImportDialog_PreviewRelations", _previewRelations]</span>
+                @* Mockup: the live parse result is a summary box with one icon stat per count. *@
+                <div class="tm-diagram-sql-import__preview" role="status" aria-live="polite">
+                    <span class="tm-diagram-sql-import__stat">
+                        <TmIcon Name="@IconNames.Table" Size="IconSize.Sm" />
+                        @Loc["TmDiagramSqlImportDialog_PreviewTables", _previewTables]
+                    </span>
+                    <span class="tm-diagram-sql-import__stat">
+                        <TmIcon Name="@IconNames.Link" Size="IconSize.Sm" />
+                        @Loc["TmDiagramSqlImportDialog_PreviewRelations", _previewRelations]
+                    </span>
                 </div>
             }
 
@@ -53,16 +68,30 @@
         </TmButton>
         <TmButton Variant="ButtonVariant.Primary"
                   OnClick="OnImportClick"
-                  Disabled="string.IsNullOrWhiteSpace(_sql)">
+                  Disabled="string.IsNullOrWhiteSpace(_sql) || _previewTables <= 0">
             @Loc["TmDiagramSqlImportDialog_ImportButton"]
         </TmButton>
     </Footer>
 </TmModal>
 
 @code {
+    /// <summary>Whether the dialog is visible; hidden resets the entered SQL and preview.</summary>
     [Parameter] public bool Show { get; set; }
+
+    /// <summary>Raised when the user cancels or closes the dialog.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised on import with the generated ER document and chosen layout direction.</summary>
     [Parameter] public EventCallback<SqlImportResult> OnImport { get; set; }
+
+    /// <summary>
+    /// The layout the modal renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value never measures, so a test can render the mobile sheet without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The element (typically the canvas) focus returns to when the dialog closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
     private string _sql = string.Empty;
     private string _layout = "TB";
@@ -70,10 +99,17 @@
     private int _previewRelations = -1;
     private string? _errorMessage;
 
-    private readonly List<SelectOption<string>> _layoutOptions = new()
+    // Per-instance field ids: two dialogs can be rendered at once (bUnit tests,
+    // split views) and the fixed "sql-ddl"/"layout-select" ids collided.
+    private readonly string _uid = Guid.NewGuid().ToString("n")[..8];
+    private string _sqlFieldId => $"sql-ddl-{_uid}";
+    private string _layoutFieldId => $"layout-select-{_uid}";
+
+    /// <summary>Layout direction choices, localized at render time (reuses the diagram layout keys).</summary>
+    private List<SelectOption<string>> LayoutOptions => new()
     {
-        new() { Value = "TB", Label = "Top-Bottom" },
-        new() { Value = "LR", Label = "Left-Right" }
+        new() { Value = "TB", Label = Loc["TmDiagram_LayoutHierarchicalTopDown"] },
+        new() { Value = "LR", Label = Loc["TmDiagram_LayoutHierarchicalLeftRight"] }
     };
 
     protected override void OnParametersSet()
@@ -87,6 +123,9 @@
             _errorMessage = null;
         }
     }
+
+    /// <summary>Live preview: re-parses the typed DDL on every input (@bind-Value:after + Immediate).</summary>
+    private void OnSqlChanged() => UpdatePreview();
 
     private void UpdatePreview()
     {

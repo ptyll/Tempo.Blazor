@@ -101,34 +101,9 @@
     min-height: calc(var(--tm-space-7) + var(--tm-space-1));
 }
 
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row {
-    flex-wrap: wrap;
-}
-
-.tm-modeling-diagram-preview ::deep .tm-btn-primary,
-.tm-modeling-diagram-preview ::deep .tm-toolbar-btn--active {
-    border-color: var(--tm-color-primary-700, var(--tm-color-primary));
-    background-color: var(--tm-color-primary-700, var(--tm-color-primary));
-    color: var(--tm-color-white);
-}
-
-.tm-modeling-diagram-preview ::deep .tm-btn-primary:hover:not(:disabled),
-.tm-modeling-diagram-preview ::deep .tm-toolbar-btn--active:hover:not(:disabled) {
-    border-color: var(--tm-color-primary-800, var(--tm-color-primary-hover));
-    background-color: var(--tm-color-primary-800, var(--tm-color-primary-hover));
-    color: var(--tm-color-white);
-}
-
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__title,
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-toolbar-divider,
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-diagram-editor__toolbar-group:nth-of-type(1),
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-diagram-editor__toolbar-group:nth-of-type(2),
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-diagram-editor__toolbar-group:nth-of-type(4),
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-diagram-editor__toolbar-group:nth-of-type(6),
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-diagram-insert-dropdown-wrapper,
-::deep .tm-modeling-diagram-preview__editor .tm-diagram-editor__toolbar-row:first-child > .tm-diagram-editor__toolbar-spacer {
-    display: none;
-}
+/* Toolbar visibility is decided by TmDiagramEditor's ToolbarPreset/ToolbarGroups API
+   (the preview uses ToolbarPreset.Viewer) — never by hiding internal editor DOM here.
+   The header buttons use the core .tm-btn-primary styling (--tm-color-on-primary token). */
 
 .tm-modeling-diagram-preview__empty-diagram-hint {
     position: absolute;

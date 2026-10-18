@@ -21,8 +21,9 @@
     font-size: var(--tm-text-sm);
 }
 
+/* Mockup: the diagram-type select spans the dialog width. */
 .tm-diagram-csv-import__select {
-    max-width: 220px;
+    width: 100%;
 }
 
 .tm-diagram-csv-import__mappings {
@@ -37,16 +38,19 @@
     color: var(--tm-color-text);
 }
 
+/* Mockup: the mapping form is TWO-COLUMN — the semantic-field label sits on the left
+   and its column select fills the right column of the same row. */
 .tm-diagram-csv-import__mappings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: var(--tm-space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
 }
 
 .tm-diagram-csv-import__mapping-row {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-1);
+    display: grid;
+    grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--tm-space-3);
 }
 
 .tm-diagram-csv-import__mapping-label {
@@ -74,11 +78,11 @@
     padding: var(--tm-space-2);
 }
 
+/* Mockup: preview title is a sentence-case label above the table. */
 .tm-diagram-csv-import__preview-title {
     font-weight: 600;
-    font-size: var(--tm-text-xs);
-    color: var(--tm-color-text-muted);
-    text-transform: uppercase;
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-csv-import__preview-table {
@@ -99,15 +103,69 @@
 .tm-diagram-csv-import__preview-table th {
     background: var(--tm-color-surface-elevated);
     font-weight: 600;
+    /* Mockup: the header row stays visible while the preview body scrolls. */
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
+/* Mockup: the first column pins horizontally, so the row identity stays visible while
+   a wide CSV scrolls inside the preview (the table scrolls, never the page). */
+.tm-diagram-csv-import__preview-table th:first-child,
+.tm-diagram-csv-import__preview-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--tm-color-surface);
+    z-index: 1;
+}
+
+.tm-diagram-csv-import__preview-table th:first-child {
+    z-index: 3;
+    background: var(--tm-color-surface-elevated);
+}
+
+/* Mockup: the live parse result paints as one summary box holding icon stats. */
 .tm-diagram-csv-import__preview {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--tm-space-4);
+    padding: var(--tm-space-3);
+    background: var(--tm-color-primary-subtle);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-diagram-csv-import__stat {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
     font-size: var(--tm-text-sm);
-    color: var(--tm-color-text-muted);
+    font-weight: 600;
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-csv-import__stat svg {
+    color: var(--tm-color-primary);
 }
 
 .tm-diagram-csv-import__error {
     margin-top: var(--tm-space-2);
+}
+
+/* Narrow-viewport sheet mitigation (UX review phase 2): on phones the TmModal renders this
+   dialog as a bottom sheet capped at 0.85 of the viewport, and the full sheet scroll contract
+   (min-height: 0 on the core .tm-modal-body) belongs to the foundational sheet plan — it is
+   intentionally NOT changed here. What this package can do on its own is keep its content
+   short: below the 640px breakpoint the paste area is capped at about four text rows
+   (token-based, no magic colors) so the header, the mapping selects and the modal footer with
+   Cancel/Import stay inside the sheet cap at 390×844 and 320×640. ::deep is required because
+   the textarea element is rendered by TmTextArea, outside this component's scope attribute. */
+@media (width < 640px) {
+    .tm-diagram-csv-import ::deep textarea {
+        max-height: calc(4 * var(--tm-font-size-sm) * var(--tm-line-height-normal) + 2 * var(--tm-space-2));
+    }
+
+    .tm-diagram-csv-import__preview-table-wrap {
+        max-height: 128px;
+    }
 }

@@ -44,6 +44,20 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// <summary>Prevent all editing interactions.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Whether the selected nodes render the transform handles (resize + rotate). Default true;
+    /// a host drops them where the form factor forbids reshaping — the editor hides them on a
+    /// mobile layout (G2: resize/rotate stay tablet+).
+    /// </summary>
+    [Parameter] public bool ShowTransformHandles { get; set; } = true;
+
+    /// <summary>
+    /// Whether the selected nodes render the quick-connect arrows (N/E/S/W). Default true; a
+    /// host drops them where edge drawing is out of scope — the editor hides them on a mobile
+    /// layout (G2: edge drawing stays tablet+).
+    /// </summary>
+    [Parameter] public bool ShowConnectArrows { get; set; } = true;
+
     /// <summary>Additional CSS class applied to the canvas wrapper.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -240,6 +254,12 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     // reseeded whenever OnParametersSet recomputes the initial viewBox.
     private double _lastAppliedPageScale = 1.0;
 
+    // Tracks the ReadOnly value last pushed into the JS instance (seeded by the
+    // init options). Read-only must be propagated to JS on EVERY change, not
+    // only at init — otherwise diagram-editor.js keeps mutating the document
+    // (Delete/arrows/undo/redo) after the host flips ReadOnly.
+    private bool _lastAppliedReadOnly;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_jsInitialized)
@@ -260,6 +280,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             };
 
             await JS.InvokeVoidAsync("tmDiagramEditor.init", _containerRef, _dotNetRef, options);
+            _lastAppliedReadOnly = ReadOnly;
         }
         else if (_jsInitialized)
         {
@@ -272,6 +293,16 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             {
                 _lastAppliedPageScale = pageScale;
                 try { await JS.InvokeVoidAsync("tmDiagramEditor.zoomTo", _containerRef, pageScale); }
+                catch { /* JS may be mid-teardown */ }
+            }
+
+            // Propagate read-only flips (user toggle or host parameter change)
+            // into the JS instance so keyboard and pointer interactions stop
+            // mutating the document.
+            if (ReadOnly != _lastAppliedReadOnly)
+            {
+                _lastAppliedReadOnly = ReadOnly;
+                try { await JS.InvokeVoidAsync("tmDiagramEditor.setReadOnly", _containerRef, ReadOnly); }
                 catch { /* JS may be mid-teardown */ }
             }
 
@@ -305,14 +336,97 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    protected override bool ShouldRender() => !_isJsDragging;
+    protected override bool ShouldRender()
+    {
+        if (_isJsDragging) return false;
+        if (_chromeOnlyLatch)
+        {
+            // A chrome-only editor pass (the mobile panels sheet moving above the canvas) may
+            // be skipped — but a REAL parameter change breaks the latch and repaints.
+            if (ChromeSnapshotChanged())
+            {
+                _chromeOnlyLatch = false;
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    // ── Chrome-only render skip (phase 7) ────────────────────────────────────
+    // A same-reference parameter pass MUST repaint (in-place document edits arrive exactly
+    // that way), so a skipped render can only ever come from an explicit chrome-only pass:
+    // the editor arms <see cref="BeginChromeOnlyPass"/> before the sheet interactions that
+    // move chrome ABOVE the canvas (open, tab, snap). The latch holds until (a) the editor's
+    // content funnel flags a document mutation (<see cref="NotifyContentMutated"/>), (b) this
+    // component's own state changes (selection, tool state, search match, viewport), or (c)
+    // a render-relevant parameter actually changes — each of those clears the latch and the
+    // next render repaints. Everything else renders as before.
+    private bool _chromeOnlyLatch;
+
+    /// <summary>Parameters at arm time; a change against this snapshot breaks the latch.</summary>
+    private (object? Doc, int Page, bool Grid, int GridSize, bool ReadOnly, double Zoom, bool PageView, bool Transform, bool Connect, string? Group, string? Class, string Cells) _chromeSnapshot;
+
+    private void MarkContentDirty() => _chromeOnlyLatch = false;
+
+    /// <summary>
+    /// Flags an in-place document mutation (the <see cref="Document"/> reference did not
+    /// change) so the next render repaints. The editor calls this from its central mutation
+    /// funnel and this component calls it from its own state changes; the snapshot cannot
+    /// see same-reference edits.
+    /// </summary>
+    public void NotifyContentMutated() => MarkContentDirty();
+
+    /// <summary>
+    /// Arms the chrome-only render skip for the mobile sheet interactions. Every following
+    /// render with unchanged parameters is skipped until a content mutation, an internal
+    /// state change or a real parameter change clears the latch.
+    /// </summary>
+    public void BeginChromeOnlyPass()
+    {
+        _chromeSnapshot = ChromeSnapshot();
+        _chromeOnlyLatch = true;
+    }
+
+    private (object? Doc, int Page, bool Grid, int GridSize, bool ReadOnly, double Zoom, bool PageView, bool Transform, bool Connect, string? Group, string? Class, string Cells) ChromeSnapshot()
+        => (Document,
+            Document?.ActivePageIndex ?? -1,
+            ShowGrid,
+            GridSize,
+            ReadOnly,
+            Zoom,
+            ShowPageView,
+            ShowTransformHandles,
+            ShowConnectArrows,
+            ActiveGroupId,
+            Class,
+            string.Join(";", SelectedTableCells.Select(c => $"{c.Row}:{c.Column}")));
+
+    private bool ChromeSnapshotChanged()
+    {
+        var current = ChromeSnapshot();
+        var before = _chromeSnapshot;
+        _chromeSnapshot = current;
+        return before.Doc != current.Doc
+            || before.Page != current.Page
+            || before.Grid != current.Grid
+            || before.GridSize != current.GridSize
+            || before.ReadOnly != current.ReadOnly
+            || Math.Abs(before.Zoom - current.Zoom) > 1e-9
+            || before.PageView != current.PageView
+            || before.Transform != current.Transform
+            || before.Connect != current.Connect
+            || before.Group != current.Group
+            || before.Class != current.Class
+            || before.Cells != current.Cells;
+    }
 
     // ── JS → C# callbacks ───────────────────────────────────────────────────
 
     [JSInvokable]
     public void OnDragStarted(string[] ids)
     {
-        if (Document is null) return;
+        if (Document is null || ReadOnly) return;
         _isJsDragging = true;
         _dragStartPositions = [];
         foreach (var id in ids)
@@ -326,9 +440,20 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task OnElementMoved(string id, double x, double y)
     {
-        if (Document is null || ReadOnly) return;
+        if (Document is null || ReadOnly)
+        {
+            // Release the JS-drag latch even when the move is rejected, so a
+            // read-only flip mid-drag can't leave ShouldRender() disabled
+            // (ShouldRender() => !_isJsDragging) and freeze the canvas.
+            _isJsDragging = false;
+            return;
+        }
         var movedNode = Document.Nodes.FirstOrDefault(n => n.Id == id);
-        if (movedNode is not null && IsNodeLocked(movedNode)) return;
+        if (movedNode is not null && IsNodeLocked(movedNode))
+        {
+            _isJsDragging = false;
+            return;
+        }
 
         var before = _dragStartPositions is not null && _dragStartPositions.TryGetValue(id, out var bp)
             ? new Dictionary<string, NodeMoveState> { [id] = bp }
@@ -345,8 +470,17 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task OnElementsMoved(ElementMove[] moves)
     {
-        if (Document is null || ReadOnly) return;
-        if (moves.Any(m => Document.Nodes.FirstOrDefault(n => n.Id == m.Id) is { } node && IsNodeLocked(node))) return;
+        if (Document is null || ReadOnly)
+        {
+            // See OnElementMoved: release the JS-drag latch on rejection.
+            _isJsDragging = false;
+            return;
+        }
+        if (moves.Any(m => Document.Nodes.FirstOrDefault(n => n.Id == m.Id) is { } node && IsNodeLocked(node)))
+        {
+            _isJsDragging = false;
+            return;
+        }
 
         var before = _dragStartPositions;
         var after = moves.ToDictionary(
@@ -455,15 +589,41 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     private List<DiagramNode> GetGroupMembers(string groupId) =>
         Document?.Nodes.Where(n => n.ParentGroupId == groupId).ToList() ?? [];
 
-    private void OnResizeStart(MouseEventArgs e, string nodeId, string handle)
+    // Phase 6 (tablet and touch): the handles start from Pointer Events. A MOUSE press keeps the
+    // C# resize state machine completed by the container's mousemove/mouseup; a TOUCH/PEN press
+    // is owned by the pointer-drag session in diagram-editor-touch.js, which reports the gesture
+    // back through the OnResize* JSInvokable methods below.
+
+    /// <summary>Pointer-down on a resize handle. Only the mouse drives the C# drag: the touch and
+    /// pen gestures arrive again through the JS pointer-drag session (OnResizeStarted).</summary>
+    private void OnResizeStart(PointerEventArgs e, string nodeId, string handle)
     {
+        if (e.PointerType != "mouse") return;
+        if (!TryBeginResize(nodeId, handle, e.ClientX, e.ClientY)) return;
+    }
+
+    /// <summary>Pointer-down on the rotate handle. Mouse keeps the direct JS rotation; touch and
+    /// pen are driven by the pointer-drag session (touchBeginRotate).</summary>
+    private void OnRotateStartPointer(PointerEventArgs e, string nodeId)
+    {
+        if (e.PointerType != "mouse") return;
         if (ReadOnly || Document is null) return;
         var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
-        if (node is null || IsNodeLocked(node)) return;
+        if (node is null || IsNodeLocked(node) || !_jsInitialized) return;
+        _ = JS.InvokeVoidAsync("tmDiagramEditor.startRotate", _containerRef, nodeId, e.ClientX, e.ClientY, node.Rotation, RotateSnap);
+    }
+
+    /// <summary>Begins a resize gesture from any pointer path. Returns false when the gesture is
+    /// vetoed (read-only, missing or locked node).</summary>
+    private bool TryBeginResize(string nodeId, string handle, double screenX, double screenY)
+    {
+        if (ReadOnly || Document is null) return false;
+        var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
+        if (node is null || IsNodeLocked(node)) return false;
 
         _resizeNodeId = nodeId;
         _resizeHandle = handle;
-        _resizeStartScreen = (e.ClientX, e.ClientY);
+        _resizeStartScreen = (screenX, screenY);
         _resizeStartRect = (node.X, node.Y, node.W, node.H);
         _resizeGroupMemberStartRects = null;
 
@@ -475,14 +635,67 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
                 _resizeGroupMemberStartRects[member.Id] = (member.X, member.Y, member.W, member.H);
             }
         }
+        return true;
     }
 
-    private void OnRotateStartJs(MouseEventArgs e, string nodeId)
+    /// <summary>The touch/pen resize session (pointer-drag.js) reports its first drag position.</summary>
+    [JSInvokable]
+    public Task OnResizeStarted(string nodeId, string handle, double screenX, double screenY)
     {
-        if (ReadOnly || Document is null) return;
-        var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
-        if (node is null || IsNodeLocked(node) || !_jsInitialized) return;
-        _ = JS.InvokeVoidAsync("tmDiagramEditor.startRotate", _containerRef, nodeId, e.ClientX, e.ClientY, node.Rotation, RotateSnap);
+        if (ReadOnly) return Task.CompletedTask;
+        TryBeginResize(nodeId, handle, screenX, screenY);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The touch/pen resize session reports each live pointer position.</summary>
+    [JSInvokable]
+    public Task OnResizeMoved(double screenX, double screenY)
+    {
+        ApplyResizeMove(screenX, screenY);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The touch/pen resize session finished: commit exactly like the mouse-up does.</summary>
+    [JSInvokable]
+    public Task OnResizeEnded()
+    {
+        CommitResize();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The touch/pen resize session was cancelled: roll the geometry back.</summary>
+    [JSInvokable]
+    public Task OnResizeCancelled()
+    {
+        if (_resizeNodeId is null || Document is null) return Task.CompletedTask;
+        var node = Document.Nodes.FirstOrDefault(n => n.Id == _resizeNodeId);
+        if (node is not null)
+        {
+            node.X = _resizeStartRect.X;
+            node.Y = _resizeStartRect.Y;
+            node.W = _resizeStartRect.W;
+            node.H = _resizeStartRect.H;
+            if (IsGroupContainer(node) && _resizeGroupMemberStartRects is not null)
+            {
+                foreach (var (memberId, rect) in _resizeGroupMemberStartRects)
+                {
+                    var member = Document.Nodes.FirstOrDefault(n => n.Id == memberId);
+                    if (member is null) continue;
+                    member.X = rect.X;
+                    member.Y = rect.Y;
+                    member.W = rect.W;
+                    member.H = rect.H;
+                }
+            }
+        }
+        ResetResizeState();
+        MarkContentDirty();
+        StateHasChanged();
+        if (_jsInitialized)
+        {
+            _ = JS.InvokeVoidAsync("tmDiagramEditor.updateSelectionOutlines", _containerRef);
+        }
+        return Task.CompletedTask;
     }
 
     [JSInvokable]
@@ -530,12 +743,16 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         return Math.Round(angle / snap) * snap;
     }
 
-    private void OnCanvasMouseMove(MouseEventArgs e)
+    private void OnCanvasMouseMove(MouseEventArgs e) => ApplyResizeMove(e.ClientX, e.ClientY);
+
+    /// <summary>Shared live-resize body: the mouse path (container mousemove) and the touch/pen
+    /// session (OnResizeMoved) both land here, so the maths exist exactly once.</summary>
+    private void ApplyResizeMove(double screenX, double screenY)
     {
         if (_resizeNodeId is null || Document is null || string.IsNullOrEmpty(_resizeHandle) || Zoom <= 0) return;
 
-        var dx = (e.ClientX - _resizeStartScreen.X) / Zoom;
-        var dy = (e.ClientY - _resizeStartScreen.Y) / Zoom;
+        var dx = (screenX - _resizeStartScreen.X) / Zoom;
+        var dy = (screenY - _resizeStartScreen.Y) / Zoom;
 
         var (x, y, w, h) = ComputeResize(_resizeStartRect, _resizeHandle, dx, dy);
         var resizeNode = Document.Nodes.FirstOrDefault(n => n.Id == _resizeNodeId);
@@ -564,6 +781,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             }
         }
 
+        MarkContentDirty();
         StateHasChanged();
 
         // Re-sync JS selection outline to follow the new bounds
@@ -573,7 +791,11 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         }
     }
 
-    private void OnCanvasMouseUp(MouseEventArgs e)
+    private void OnCanvasMouseUp(MouseEventArgs e) => CommitResize();
+
+    /// <summary>Shared commit: pushes the undoable resize command and resets the gesture state
+    /// (the mouse path and the touch/pen session both land here).</summary>
+    private void CommitResize()
     {
         if (_resizeNodeId is null || Document is null) return;
 
@@ -615,6 +837,13 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             }
         }
 
+        _resizeNodeId = null;
+        _resizeHandle = null;
+        _resizeGroupMemberStartRects = null;
+    }
+
+    private void ResetResizeState()
+    {
         _resizeNodeId = null;
         _resizeHandle = null;
         _resizeGroupMemberStartRects = null;
@@ -810,6 +1039,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task JsOnSelectionChanged(string[] ids)
     {
         _currentSelectionIds = ids;
+        MarkContentDirty();
         await OnSelectionChanged.InvokeAsync(ids);
     }
 
@@ -817,6 +1047,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task OnMultiSelect(string[] ids)
     {
         _currentSelectionIds = ids;
+        MarkContentDirty();
         await OnSelectionChanged.InvokeAsync(ids);
     }
 
@@ -935,6 +1166,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable("OnUndo")]
     public async Task JsOnUndo()
     {
+        if (ReadOnly) return;
         if (CommandStack is not null)
         {
             CommandStack.Undo();
@@ -949,6 +1181,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     [JSInvokable("OnRedo")]
     public async Task JsOnRedo()
     {
+        if (ReadOnly) return;
         if (CommandStack is not null)
         {
             CommandStack.Redo();
@@ -1068,6 +1301,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         _viewportH = h;
         _viewportInitialized = true;
         await ViewportChanged.InvokeAsync(new DiagramMinimapViewport(x, y, w, h));
+        MarkContentDirty();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1077,6 +1311,17 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         => _viewportInitialized
             ? (_viewportX, _viewportY, _viewportW, _viewportH)
             : (0, 0, 0, 0);
+
+    /// <summary>
+    /// Phase 6: recomputes the canvas geometry after the editor chrome changed around the canvas
+    /// (a docked panel expanded, collapsed or was resized). Asks the JS engine to re-measure and
+    /// report the viewport and zoom — <c>OnViewportChanged</c> / <c>OnZoomChanged</c> — without a
+    /// Blazor re-render of the canvas.
+    /// </summary>
+    public Task NotifyViewportChangedAsync()
+        => _jsInitialized
+            ? JS.InvokeVoidAsync("tmDiagramEditor.relayout", _containerRef).AsTask()
+            : Task.CompletedTask;
 
     private bool IsNodeVisible(DiagramNode node)
     {
@@ -1418,6 +1663,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             await JS.InvokeVoidAsync("tmDiagramEditor.setSelection", _containerRef, Array.Empty<string>());
         }
         await OnSelectionChanged.InvokeAsync(_currentSelectionIds);
+        MarkContentDirty();
         await InvokeAsync(StateHasChanged);
         await OnSelectionChanged.InvokeAsync(_currentSelectionIds);
     }
@@ -1956,6 +2202,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         if (edge is null) return;
         _editingEdgeLabelId = edgeId;
         _editingLabelValue = edge.Label ?? "";
+        MarkContentDirty();
         StateHasChanged();
     }
 
@@ -2122,6 +2369,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task SetSelection(params string[] ids)
     {
         _currentSelectionIds = ids;
+        MarkContentDirty();
         if (_jsInitialized)
         {
             var nodeIds = Document is null
@@ -2205,6 +2453,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public Task SetActiveSearchResult(string? id)
     {
         _activeSearchResultId = id;
+        MarkContentDirty();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -2216,6 +2465,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     {
         if (Document is not null)
             await DocumentChanged.InvokeAsync(Document);
+        MarkContentDirty();
         await InvokeAsync(StateHasChanged);
     }
 

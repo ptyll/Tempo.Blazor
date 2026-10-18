@@ -1857,11 +1857,49 @@ public class DiagramEdgeE2ETests : WasmTestBase
         var page = await CreatePageAsync();
         await OpenDiagramEditorAsync(page);
 
+        // The viewport context menu is the DESKTOP presentation; in the tablet band the
+        // context menu renders as a bottom sheet (phase 6). Pin the desktop band.
+        await DiagramEditorE2E.PinDesktopAsync(page);
+
         await SelectEdgeAsync(page);
         await OpenEdgeContextMenuAsync(page);
 
         var picker = page.Locator(".tm-diagram-edge-routing-picker");
         await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Phase 8 regression pin: the menu paints inside the editor box, so its HORIZONTAL
+        // extent must stay within it (a viewport-clamped menu used to stick out past a hosted
+        // narrow editor and clip the routing previews). Vertically the menu may exceed the
+        // editor box: it is taller than most editors and scrolls internally.
+        var menuBox = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const menu = document.querySelector('.tm-diagram-editor__context-menu');
+                if (!menu) return JSON.stringify({ found: false });
+                const m = menu.getBoundingClientRect();
+                return JSON.stringify({
+                    menuLeft: Math.round(m.left), menuRight: Math.round(m.right),
+                    menuTop: Math.round(m.top), menuBottom: Math.round(m.bottom),
+                    viewportW: window.innerWidth, viewportH: window.innerHeight,
+                });
+            }
+            """);
+        Console.WriteLine($"PROBE[context-menu box]: {menuBox}");
+        // Phase 8 regression pin: the context menu must end up FULLY ON SCREEN wherever the
+        // editor is hosted (the fixed menu used to be clamped against the viewport while its
+        // containing block semantics differed, leaving a tall menu parked off-screen and the
+        // edge routing previews unreachable).
+        var menuOnScreen = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const menu = document.querySelector('.tm-diagram-editor__context-menu');
+                if (!menu) return false;
+                const m = menu.getBoundingClientRect();
+                return m.left >= 0 && m.top >= 0
+                    && m.right <= window.innerWidth + 1 && m.bottom <= window.innerHeight + 1;
+            }
+            """);
+        Assert.IsTrue(menuOnScreen, $"the context menu must be fully on screen: {menuBox}");
 
         var previews = picker.Locator(".tm-diagram-routing-preview");
         var count = await previews.CountAsync();
@@ -1893,6 +1931,10 @@ public class DiagramEdgeE2ETests : WasmTestBase
         var page = await CreatePageAsync();
         await OpenDiagramEditorAsync(page);
 
+        // The viewport context menu is the DESKTOP presentation; in the tablet band the
+        // context menu renders as a bottom sheet (phase 6). Pin the desktop band.
+        await DiagramEditorE2E.PinDesktopAsync(page);
+
         await SelectEdgeAsync(page);
         await SetEdgeRoutingAsync(page, "elbow");
         await page.WaitForTimeoutAsync(300);
@@ -1920,6 +1962,10 @@ public class DiagramEdgeE2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await OpenDiagramEditorAsync(page);
+
+        // The viewport context menu is the DESKTOP presentation; in the tablet band the
+        // context menu renders as a bottom sheet (phase 6). Pin the desktop band.
+        await DiagramEditorE2E.PinDesktopAsync(page);
 
         await SelectEdgeAsync(page);
         await SetEdgeRoutingAsync(page, "orthogonal");

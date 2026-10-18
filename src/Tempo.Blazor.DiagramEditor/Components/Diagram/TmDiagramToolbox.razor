@@ -43,8 +43,9 @@
                             <button type="button" class="tm-diagram-toolbox__category-header"
                                     @onclick="() => TogglePalette(palette.Id)"
                                     aria-expanded="@((!_collapsedPalettes.Contains(palette.Id)).ToString().ToLowerInvariant())">
-                                <TmIcon Name="@(_collapsedPalettes.Contains(palette.Id) ? IconNames.ChevronRight : IconNames.ChevronDown)" />
+                                @* Mockup: label first, chevron on the far right (margin-left: auto). *@
                                 <span>@GetLocalizedText(palette.NameResourceKey, palette.FallbackName)</span>
+                                <TmIcon Name="@(_collapsedPalettes.Contains(palette.Id) ? IconNames.ChevronRight : IconNames.ChevronDown)" />
                             </button>
 
                             @if (!_collapsedPalettes.Contains(palette.Id))
@@ -64,6 +65,7 @@
                                              aria-label="@stencilAriaLabel"
                                              @ondragstart="e => OnDragStart(e, stencil.Id)"
                                              @onkeydown="e => OnStencilKeyDown(e, stencil.Id)"
+                                             @onclick="() => OnStencilActivated(stencil.Id)"
                                              title="@stencilTooltip">
                                             <div class="tm-diagram-toolbox__preview @(stencil.Kind == DiagramStencilKind.Edge ? "tm-diagram-toolbox__edge-preview" : "")">
                                                 @if (!string.IsNullOrEmpty(stencil.IconSvg))

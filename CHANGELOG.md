@@ -4,6 +4,71 @@
 
 ### Added
 
+- **DiagramEditor redesign — plan summary (phases 1–7).** `TmDiagramEditor` was rebuilt on the
+  core responsive primitives (`TmEditorShell`, `TmToolbar Overflow=Menu`, `TmOverlayPanel`,
+  `TmModal.MobilePresentation`, `TmMobileActionBar`, `pointer-drag.js`/`pointer-gesture.js`)
+  following the reference mockups: an explicit toolbar contract (`ToolbarPreset` /
+  `ToolbarGroups` / frozen `data-tm-group` values, phase 1), wave-0 bug/localization/a11y fixes
+  (phase 2), a tokenized visual layer aligned with the mockups (phase 3), the desktop restructure
+  onto header + one command row + status bar + tabbed inspector (phase 4, DI2/DI3), dialogs on
+  `TmModal` with the narrowed `TmDiagramConnectDialog` connect picker (phase 5, DI4), tablet with
+  touch gestures and the floating minimap (phase 6) and mobile viewing + light edits below 768px
+  (phase 7, G2 — resize/rotate, edges, layout and import stay tablet+). Host actions render
+  through the `HeaderStart` / `HeaderActions` slots (G9). The toolbar contract, `InspectorLayout`,
+  `MinimapPlacement` and the responsive scope are documented in
+  [docs/diagram-editor.md](docs/diagram-editor.md); every breaking DOM/CSS change is listed under
+  Breaking / Migration below.
+
+- **`TmDiagramEditor` mobile viewing and light edits (DiagramEditor redesign phase 7, G2).** Below
+  the 768px container band the editor renders the shell's mobile presentation: a non-modal bottom
+  sheet (peek/half/full snap points) holding the Shapes palette and the Properties | Layers
+  inspector, the core F5 action bar (Select | Pan | Properties tiles with an export-only "More"
+  overflow), a floating zoom pill over the canvas corner, the floating minimap, and the long-press
+  context menu as a shared F3 bottom sheet. Light edits on mobile: selection, text and style in
+  the properties, layer visibility/lock/active layer and "move to layer", delete, undo/redo and
+  tap-insert from the palette; resize/rotate, edge drawing, align/distribute, layout and import
+  stay tablet+. New `TmDiagramCanvas` parameters `ShowTransformHandles` and `ShowConnectArrows`
+  (both default `true`) let any host drop the reshaping or edge-drawing affordances where the form
+  factor forbids them. A selection opens the sheet peeked on the properties panel; a `Viewer`
+  preset or pinned read-only host renders no edit action bar (the Modeling preview contract).
+  Localization: `TmDiagramEditor_ShapesTab`, `TmDiagramEditor_ActionsSheetTitle` and
+  `TmDiagramEditor_ZoomControls` (en/cs/sk/fr).
+
+- **`TmDiagramConnectDialog` (DiagramEditor redesign phase 5, DI4).** The connect picker is its
+  own component: the source node's stencil set as the default palette, search over the registry,
+  "Show all" opt-in, recently-used-first ordering, roving arrow-key tile grid (no preselection),
+  localized stencil names, a mobile bottom sheet with plain rows and a Close footer button, and
+  focus return to the canvas. `TmDiagramEditor` hosts it and passes the source stencil plus the
+  canvas restore target. Dialogs of the editor now carry the foundation presentation contract:
+  `FooterLayout=Inline`, `TmModal.Subtitle` (CSV/SQL), `XLarge` template gallery with search and
+  category chips in one row, double-click/Enter create on template cards, two-column CSV mapping
+  rows with a sticky-header pinned-first-column preview, the SQL summary box with icon stat chips
+  and localized built-in template/category names via `TmDiagramTemplate_*` /
+  `TmDiagramTemplateCategory_*` keys (en/cs/sk/fr).
+
+- **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4, DI2/DI3).** The editor
+  renders through the core `TmEditorShell`: a header (page tabs on top per DI3, document title,
+  named panel toggles with visible labels, "⋯" view-settings menu), a single command row built on
+  the core `TmToolbar` (`Overflow=Menu`, `Priority`-driven overflow, visible labels below icons,
+  labelled `TmToolbarGroup`s carrying the frozen `data-tm-group` contract), a status bar with the
+  zoom controls and the Read-only toggle, a collapsible minimap card, and an inspector presenting
+  "Properties | Layers" tabs (new `InspectorLayout` parameter, `Stacked` opt-in) with a dedicated
+  Actions section. Docked panels resize/collapse through the shell. New parameters:
+  `InspectorLayout`, `ShowStatusBar`, `ShowTitle`.
+
+- **`TmDiagramEditor` explicit toolbar contract (DiagramEditor redesign phase 1).** Every toolbar
+  group now carries a stable `data-tm-group` attribute from the frozen set `history | clipboard |
+  tools | format | insert | arrange | search | panels | zoom | view | canvas-size | layout | export
+  | templates | import | readonly`, and visibility is decided in C# through the new `ToolbarPreset`
+  (`DiagramToolbarPreset.Full` default — today's look; `Viewer` renders only zoom, view, search and
+  export) and `ToolbarGroups` (flags, `null` = by preset) parameters. `HeaderStart`/`HeaderActions`
+  render slots open the first/last toolbar row to host actions. The contract is public API: hosts
+  (Modeling) key off `data-tm-group`/presets instead of positional CSS selectors on the toolbar's
+  internal DOM. `IsReadOnly` exposes the effective read-only state (see Breaking / Migration).
+  The `Viewer` preset still renders the document-title input (disabled while read-only — the
+  document name is a header element, not a toolbar group, so it intentionally stays outside the
+  group contract), while the search control received the standard toolbar-group chrome.
+
 - **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
 
 - **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
@@ -240,6 +305,282 @@
 - A table without a pager now displays `Total {0} records` rather than the previous page-range summary; provide `PaginationInfoTemplate` to retain custom wording.
 - `CardMode` also emits the cards class when `MobileLayout` is unset (`None`); an explicit `Scroll` or `Cards` layout takes precedence.
 - Export dropdown items now wrap their icon and format description together.
+
+- **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below
+  768px now renders the dedicated mobile layout, replacing the old `max-width: 640px` viewport
+  stack (toolbox fixed to 280px above the canvas, the inspector hidden).** The mobile layout is
+  container-driven (`data-editor-layout="mobile"` mirrors the resolved shell layout) and renders
+  through the core shell: a compact header (document title, icon-only Undo/Redo, the "⋯"
+  view-settings menu — search and the Read-only toggle moved into that menu, the docked-panel
+  toggles are gone because the panels live in the sheet), horizontally scrollable page tabs, the
+  full-area canvas with a floating zoom pill (`+ / % / − / fit`,
+  `.tm-diagram-editor__zoom-overlay`) and the floating minimap, a **non-modal bottom sheet**
+  (peek/half/full snaps) presenting Shapes | Inspector (the inspector keeps its Properties |
+  Layers tabs), and the core F5 action bar **Select | Pan | Properties | More**. The "More" menu
+  carries the export commands only — layout and import stay tablet+; the long-press context menu
+  presents as the shared F3 bottom sheet (`.tm-diagram-editor__context-sheet`) instead of the
+  `position:fixed` menu, without the align/distribute (node menu) and auto-layout (canvas menu)
+  entries; resize/rotate handles and quick-connect arrows are not rendered
+  (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` new, default `true`). A `Viewer`
+  preset or a host-pinned read-only editor renders no edit action bar and no panels sheet on
+  mobile — only the floating zoom and minimap (the Modeling preview contract).
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before (<640px viewport): viewport media query; toolbox 280px, inspector display:none -->
+  <div class="tm-diagram-editor__toolbox-wrap">…</div>
+  <!-- .tm-diagram-editor__right-stack hidden by @media (max-width: 640px) -->
+
+  <!-- after (<768px container): the shell's mobile presentation -->
+  <div class="tm-diagram-editor" data-editor-layout="mobile">
+    <div class="tm-diagram-editor__zoom-overlay">…</div>
+    <div class="tm-diagram-editor__minimap-overlay">…</div>
+    <div class="tm-editor-shell__stage tm-editor-shell__stage--sheet-open">
+      <div class="tm-editor-shell__sheet tm-drawer--inline tm-drawer--bottom">…</div>
+    </div>
+    <div class="tm-mobile-action-bar" data-layout="mobile">…</div>
+  </div>
+  ```
+
+  Host CSS keyed on `@media (max-width: 640px)` around the editor must branch on
+  `data-editor-layout='mobile'` instead (a narrow editor inside a wide window keeps the desktop
+  presentation). The old viewport media block in the package CSS was replaced by
+  `[data-editor-layout='mobile']` rules with the same toolbox tightening. Performance note: the
+  sheet interactions (open, tab switch, snap) do not re-render `TmDiagramCanvas` — the editor
+  marks those passes chrome-only and the canvas skips them (its render gate never skips a
+  content-affecting pass).
+
+- **`TmDiagramEditor` tablet and touch layout (DiagramEditor redesign phase 6, DI3): the editor
+  now resolves its layout from its own container width, and a tablet container changes the panel
+  chrome.** New parameters: `LayoutMode` (`Auto` default — the editor measures itself; forced
+  `Tablet`/`Desktop`/`Mobile` pins the presentation, e.g. for tests), `LayoutBreakpoints` (null =
+  the editor's own band — tablet from 768px, desktop from 1200px; pass
+  `new TmLayoutBreakpoints(640, 1024)` to follow the shared `TmBreakpoints` instead) and
+  `MinimapPlacement` (`Auto` default — the right-column minimap card on desktop, a floating
+  overlay over the canvas corner from tablet down; `Panel`/`Overlay` force the choice).
+
+  From tablet down (container 768–1199 with the defaults) the shell keeps **at most one docked
+  panel expanded** — expanding the palette rails the inspector and vice versa — and the palette
+  renders as a 44px rail by default (a labelled grid button beside the shell's chevron expands
+  it; expanded, it renders as a grid of tiles). Selecting a node raises the inspector back up.
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before: both panels docked at every width; minimap always a right-column card -->
+  <div class="tm-diagram-editor__minimap-card">…</div>
+
+  <!-- after, from tablet down: the palette is a rail, the minimap floats over the canvas -->
+  <div class="tm-editor-shell__rail tm-editor-shell__rail--left" data-region="rail-left">…</div>
+  <div class="tm-diagram-editor__minimap-overlay">…</div>
+  ```
+
+  Host CSS keyed on `.tm-diagram-editor__minimap-card` must also cover
+  `.tm-diagram-editor__minimap-overlay` (or pin `MinimapPlacement="DiagramMinimapPlacement.Panel"`).
+  The editor root now carries `data-editor-layout="desktop|tablet|mobile"` (mirrors the resolved
+  shell layout) — branch host CSS on that attribute; the editor root is a named inline-size
+  container (`tm-diagram-editor`), so `@container tm-diagram-editor (…)` with the shared
+  TmBreakpoints literals works too. Because layout containment makes the editor root the
+  containing block for fixed descendants, the context menu and the table-inserter popover are
+  positioned relative to the editor box (translated by the engine) — hosts that repositioned them
+  against the viewport must do the same.
+
+- **`TmDiagramCanvas` resize/rotate handles start from Pointer Events with enlarged invisible hit
+  areas (phase 6).** Each visible 8×8 handle square is now decorative (`pointer-events: none`) and
+  is covered by an invisible hit rect/circle (`.tm-diagram-resize-handle-hit` /
+  `.tm-diagram-rotate-handle-hit`) that carries `@onpointerdown`. The hit size is the CSS variable
+  `--tm-diagram-handle-hit` on `.tm-diagram-node-handles` — `24px` by default, `44px` on a coarse
+  pointer — in SVG user units, so it scales with canvas zoom. Mouse behaviour is unchanged (the C#
+  resize machine and `startRotate` keep running for the mouse); touch/pen resize and rotation are
+  driven by the new `diagram-editor-touch.js` over the core `pointer-drag.js` and report through
+  the new `OnResizeStarted`/`OnResizeMoved`/`OnResizeEnded`/`OnResizeCancelled` interop points.
+  Host CSS that attached its own handlers to `rect.tm-diagram-resize-handle` must move to the
+  hit rects (or the handles group).
+
+  ```css
+  /* before: the visible square carried the gesture */
+  .tm-diagram-resize-handle { pointer-events: auto; }
+  /* after: the invisible hit area carries it, sized by the variable */
+  .tm-diagram-node-handles { --tm-diagram-handle-hit: 24px; }
+  @media (pointer: coarse) { .tm-diagram-node-handles { --tm-diagram-handle-hit: 44px; } }
+  ```
+
+- **`TmDiagramCanvas` touch stack rewritten on the shared pointer helpers (phase 6).** The
+  hand-rolled `touchstart/touchmove/touchend` handlers, the custom pinch and the custom 600ms
+  long-press are gone; every touch gesture is a session of the core `pointer-drag.js` /
+  `pointer-gesture.js` in the new `diagram-editor-touch.js` module. Behaviour notes for hosts:
+  two-finger pinch now also **pans** (previously it only zoomed) and both gestures work while
+  read-only; the long-press context menu opens when the 600ms hold completes (moving the finger
+  first drags the node and never opens the menu — before, moving cancelled the menu but the drag
+  state had already been armed at `touchstart`); a tap on an edge hit path now selects the edge so
+  tablets can edit it. Plain-wheel zoom is unchanged (`attachPinch`'s ctrl+wheel stays off). The
+  engine gained `tmDiagramEditor.relayout(container)` — after host chrome around the canvas
+  changes, it re-measures and reports `OnViewportChanged`/`OnZoomChanged` without a canvas
+  re-render (the editor calls it when a docked panel expands, collapses or resizes).
+
+- **`TmDiagramToolbox` stencil tiles insert on tap/click (phase 6).** A tap (or a desktop click —
+  a drag is never the only way to insert, WCAG 2.5.7) on a stencil tile inserts it at the visible
+  viewport centre through the same path the keyboard uses; tapping an edge stencil arms the edge
+  tool instead of inserting. Drag-and-drop keeps working unchanged. `TmDiagramMinimap` is driven
+  by Pointer Events (`onpointerdown/move/up`) instead of mouse events and its SVG carries
+  `touch-action: none`, so the viewport rect can be dragged with a finger.
+
+- **`TmDiagramLayersPanel` row "⋯" menu (phase 6).** Every layer row gained a "⋯" trigger
+  (`.tm-diagram-layers__row-menu-trigger`) with Rename / Move up / Move down / Delete — the
+  non-drag alternative to the layer drag-and-drop; Move pushes the same undoable
+  `ReorderLayersCommand` the drop does. On `(hover: none)` pointers the delete affordance is
+  always visible and on `(pointer: coarse)` the row controls grow to the 44px touch target.
+
+- **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4): the two toolbar rows
+  became header + single command row + status bar, and the inspector grew "Properties | Layers"
+  tabs.** The editor now renders through the core `TmEditorShell` (header / toolbar / left /
+  canvas / right / status-bar regions). What moved:
+
+  | Group (`data-tm-group`) | Before (2.9.1 phase 1) | After (phase 4) |
+  |---|---|---|
+  | `history` `clipboard` `tools` `format` `insert` `arrange` `layout` `export` `import` `templates` | toolbar row 1 / row 2 | one command row (core `TmToolbar`, Priority overflow into its "More" menu, labels below icons) |
+  | `search` | toolbar row 1 | header, named "Search" toggle |
+  | `panels` | toolbar row 1 | header, named toggles (Tools / Properties / Layers / Minimap) |
+  | `view` `canvas-size` | toolbar row 2 | header "⋯" menu (`.tm-diagram-editor__view-menu-panel`, rendered hidden in the DOM when closed) |
+  | `zoom` | toolbar row 2 | status bar (`.tm-diagram-editor__statusbar`), `.tm-diagram-editor__zoom-label` preserved |
+  | `readonly` | toolbar row 2 | status bar |
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before: groups lived inside the toolbar rows -->
+  <div class="tm-diagram-editor__toolbar">
+    <div class="tm-diagram-editor__toolbar-row">…[data-tm-group=search]…</div>
+    <div class="tm-diagram-editor__toolbar-row">…[data-tm-group=zoom]…</div>
+  </div>
+
+  <!-- after: header bar + command toolbar + status bar -->
+  <div class="tm-diagram-editor__header-bar">…[data-tm-group=search][data-tm-group=panels]…⋯</div>
+  <div class="tm-diagram-editor__toolbar">…command groups only…</div>
+  <div class="tm-diagram-editor__statusbar">…[data-tm-group=zoom][data-tm-group=readonly]…</div>
+  ```
+
+  Host CSS keyed on `.tm-diagram-editor__toolbar-row`, on the position of a group inside the
+  toolbar, or on `.tm-diagram-editor__toolbar [data-tm-group='zoom']` must move to the new
+  regions — query `[data-tm-group]` from the editor root (`[data-testid='diagram-editor']
+  [data-tm-group]`), never positionally. `flex-wrap: wrap` on the old toolbar rows is gone:
+  overflow is the core `TmToolbar` "More" menu (`data-tm-toolbar-item`), so a command that
+  collapsed can be `inert` until it is opened from the menu. `__toolbar-row` no longer exists;
+  `__props-wrap`, `__layers-wrap`, `__right-stack` and `__right-wrap` remain as aliases inside
+  the inspector, and `__toolbox-wrap`/`__minimap-card` wrap the docked panels. The toolbar
+  toggle buttons keep their tooltips ("Toggle toolbox", "Toggle properties panel",
+  "Toggle layers", "Toggle minimap"), so attribute selectors keep working; the new visible
+  labels are `TmDiagramEditor_Panel*` keys. The Properties/Layers panels now render behind
+  inspector tabs (`TmTabs`) — an inactive tab's panel is not in the DOM; opt out with the new
+  `InspectorLayout="DiagramInspectorLayout.Stacked"`.
+
+  The Properties panel's order/grouping/collapse/lock actions moved into a dedicated
+  **Actions** section (with a Delete button raised through `OnDeleteRequested`). The collapsed
+  Import group offers SQL/CSV entries in "More"; the JSON file picker stays on the bar item
+  (a browser file dialog cannot be opened from a menu entry), and at desktop widths the Import
+  group stays on the bar. New parameters: `InspectorLayout` (`Tabs` default / `Stacked` opt-in),
+  `ShowStatusBar` (default `true`), `ShowTitle` (default `true` — hide the document title
+  through the API, never through CSS).
+
+- **`TmDiagramEditor`: the built-in Read-only/Edit toggle no longer overwrites the `[Parameter]
+  ReadOnly` and disappears while the host pins read-only (DI1).**
+  Previously clicking the toolbar's Read-only/Edit toggle assigned the `ReadOnly` parameter itself, so
+  a host that pinned `ReadOnly="true"` (for example a read-only preview surface) could be unlocked
+  from the UI — the parameter was silently rewritten to `false`. The toggle now flips an internal
+  user state instead, exposed by the new public `IsReadOnly` property (`ReadOnly || user-toggle`),
+  and every editing path (toolbar, keyboard shortcuts, context menu, import, templates, paste, canvas
+  interop) is gated on that effective state. The toggle is not rendered at all while the host sets
+  `ReadOnly="true"` or when the `readonly` toolbar group is disabled.
+
+  ```razor
+  @* before: the toggle overwrote the parameter — a pinned read-only viewer could unlock itself *@
+  <TmDiagramEditor Document="@document" ReadOnly="true" />
+  @* clicking the toolbar "Edit" button set ReadOnly=false on the component *@
+
+  @* after: the host's ReadOnly=true cannot be overridden — the toggle is not even rendered *@
+  <TmDiagramEditor Document="@document" ReadOnly="true" />
+
+  @* hosts that want a user-facing lock keep the default ReadOnly="false"; the toggle works as
+     before, never writes back to the parameter, and the effective state is readable: *@
+  <TmDiagramEditor @ref="editor" Document="@document" />
+  @code { var locked = editor.IsReadOnly; }
+  ```
+
+  The same release introduces the stable toolbar contract for nested hosts: `ToolbarPreset`
+  (`Full` is the default and keeps today's look; `Viewer` renders only zoom, view, search and
+  export), `ToolbarGroups` (flags that override the preset), the `HeaderStart`/`HeaderActions`
+  slots, and a `data-tm-group` attribute on every toolbar group. Model it into your CSS/anchors —
+  never against the toolbar's internal DOM. The Modeling diagram preview now uses
+  `ToolbarPreset="Viewer"` instead of hiding editor controls with positional `nth-of-type` CSS
+  selectors.
+
+- **`TmDiagramEditor` connect modal became the `TmDiagramConnectDialog` component and defaults to
+  the source node's stencil set (DI4).** Previously the "choose a shape to connect" modal listed
+  every node stencil in the library (~150 tiles at once) with no search. The new dialog offers by
+  default only the node stencils of the source node's own set (declared `SetId`, else the id's
+  family prefix — a UML node offers UML shapes, a `general.rectangle` offers the 12 "general"
+  shapes), with a search field (reusing `DiagramStencilRegistry.Search`), a "Show all" toggle as
+  the explicit opt-in to the whole node library, recently-used tiles floated first, a roving
+  arrow-key grid (no tile preselected) and a mobile bottom-sheet presentation with a Close footer
+  button; edge stencils stay excluded everywhere. On a phone the tiles present as plain rows
+  (no chevrons). Focus returns to the canvas through the modal's public focus scope
+  (`RestoreFocusTarget`).
+
+  ```html
+  <!-- before: .tm-diagram-connect-modal__grid held EVERY node stencil, desktop tiles only -->
+  <div class="tm-diagram-connect-modal__grid"> … ~150 tiles … </div>
+
+  <!-- after: toolbar (search + "Show all") and the scoped palette; list rows below 640px,
+       a .tm-diagram-connect-modal__close footer button on the mobile sheet -->
+  <div class="tm-diagram-connect-modal__toolbar">…search…show-all…</div>
+  <div class="tm-diagram-connect-modal__grid">…palette tiles…</div>
+  ```
+
+  Host CSS keyed on the bare `__grid` showing the whole library, or asserting
+  `items.Count == all node stencils`, must opt into the full list first (click
+  `.tm-diagram-connect-modal__show-all`) or scope to the palette. The old
+  `TmDiagramEditor_SelectStencilTitle` resource key is reused unchanged.
+
+- **`TmDiagramTemplateCard` keyboard contract: Enter (and double-click) now CREATE, Space keeps
+  the selection tap.** The gallery mockup's shortcut is create-without-detour: `TmDiagramTemplateCard`
+  gained an `OnActivateRequest` callback raised by double-click and by the Enter keydown
+  (repeat-guarded); single click and Space still raise `OnClick` (select). Host code that relied
+  on Enter only selecting must handle `OnActivateRequest` (or ignore it) — `TmDiagramTemplateGallery`
+  wires it to create immediately. Cards also render the localized category chip
+  (`.tm-diagram-template-card__category`) next to the tags and the whole meta row is clamped to
+  two lines.
+
+- **`TmDiagramTemplateGallery` and the import dialogs are localized through Id-derived keys and
+  present through the foundation `TmModal` contract.** Template names resolve via
+  `TmDiagramTemplate_<id with - → _>` and categories via
+  `TmDiagramTemplateCategory_<name>` (fallback: the raw values — the `DiagramTemplate` model is
+  unchanged), so a Czech gallery shows "Prázdný diagram" / "Obecné" instead of "Blank Diagram" /
+  "General". The gallery dialog is `Size=XLarge` with the search field and the category chips in
+  one toolbar row (`.tm-diagram-template-gallery__toolbar` replaces `__header`), the CSV mapping
+  form is a two-column label|select row list (the type and layout selects span the full dialog
+  width), the CSV preview pins its header row and first column, and all four dialogs pass
+  `FooterLayout=Inline` plus the viewport-driven mobile presentation (bottom sheet under 640px).
+  Host CSS on `.tm-diagram-template-gallery__header` or the stacked CSV mapping rows must move to
+  the new structure.
+
+- **The duplicate page-tab button has its own `tm-diagram-editor__page-tab-duplicate` class
+  (DiagramEditor redesign phase 2).** The duplicate action previously reused the close button's
+  class, so CSS targeting `.tm-diagram-editor__page-tab-close` silently styled both buttons; the
+  icons also moved from raw glyphs to `TmIcon`.
+
+  ```razor
+  @* before: duplicate carried the close-button class *@
+  <button class="tm-diagram-editor__page-tab-close">⧉</button>
+
+  @* after: each action has its own class (close keeps the danger-red hover) *@
+  <button class="tm-diagram-editor__page-tab-duplicate"><TmIcon Name="files" /></button>
+  <button class="tm-diagram-editor__page-tab-close"><TmIcon Name="x" /></button>
+  ```
+
+  **Migration:** host CSS that wanted to catch both buttons keeps working unchanged; CSS that
+  meant to style only the close button must not rely on `__page-tab-close` matching duplicate
+  anymore — target both classes explicitly.
 
 - **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
   A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`
@@ -518,6 +859,73 @@
 - **`TmDataTable.KeyboardNavigation` becomes `Grid` by default in the next major release.** Keep today's behavior by explicitly setting `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`.
 
 ### Fixed
+
+- **`TmDiagramEditor` context menu stays inside the editor box (DiagramEditor redesign phase 8).**
+  The editor is an inline-size container, so the fixed-position context menu resolves against the
+  EDITOR box while `openContextMenu` clamped it to the VIEWPORT: a menu clamped to the viewport
+  top translated to a negative editor-box top and painted above the editor's clip — on a hosted
+  editor shorter than the window (the Modeling preview, any split layout) the edge context menu's
+  upper half, including the routing previews, was unreachable. `diagram-editor.js` now detects the
+  effective containing block at runtime (a zero-size fixed probe), caps the menu's height to the
+  editor box and clamps the positioned box into it; under plain viewport semantics it clamps to
+  the viewport. Not breaking; no markup or class changes.
+
+- **`TmDiagramEditor`: pressing a port that carries an attached edge starts edge drawing again
+  (DiagramEditor redesign phase 8).** Edges paint over nodes, so the fat invisible
+  `.tm-diagram-edge-hit-path` is the TOP element at a port's position; the whole-edge drag branch
+  (added after the port branch in the phase-5/6 edge work) consumed the press whenever the
+  pointer rested on an edge corridor — drawing a new edge FROM a port of an already-connected
+  node was impossible (the Workflow-phase "drop a dependency stencil, drag port to port" flow
+  hung). `_onMouseDown` now yields the whole-edge drag to a port or connection point found under
+  the pointer (x-ray via `document.elementsFromPoint`), and the port branch resolves the port
+  through the same stack when the hit path owns the event. Whole-edge dragging still works from
+  anywhere on the corridor away from the ports.
+
+- **DiagramEditor wave 0 fixes: SQL/CSV import dialogs, layers panel, template gallery,
+  minimap tokens, editor icons (DiagramEditor redesign phase 2).**
+  The SQL import dialog now shows a live preview ("Tables: N / Relations: N") while typing
+  (`@bind-Value:after` on an `Immediate` textarea) and disables **Importovat** while the parsed
+  DDL has zero tables. Layout direction choices are localized (reusing
+  `TmDiagram_LayoutHierarchicalTopDown` / `…LeftRight`). The CSV import dialog localizes the
+  diagram-type options (`TmDiagramCsvImportDialog_Type_*`) and the semantic mapping fields
+  (`TmDiagramCsvImportDialog_Field_*`), and parses the preview on every keystroke. Both dialogs
+  give their fields per-instance ids (`sql-ddl-{id}`, `csv-data-{id}`, `diagram-type-{id}`,
+  `csv-map-{field}-{id}`) with matching `label for` — two dialogs on one page no longer share
+  ids. A new layer is named through `TmDiagramLayers_NewLayerName` ("New layer {0}") instead of a
+  hardcoded "Layer {n}".
+
+  `TmDiagramLayersPanel` derives from `TmComponentBase`, so it now accepts `DataTestId` /
+  `TestIdPrefix` and renders `data-testid="diagram-layers"` by default; every parameter has an
+  XML doc. The active row carries `tm-diagram-layers__item--active`, the drop target
+  `--drag-over`; the layer selector is a `role="radiogroup"` with `role="radio"` +
+  `aria-checked` buttons; the layer name is focusable (`tabindex="0"`, `role="button"`) and
+  rename starts from the keyboard (Enter / F2 / Space, one activation per press per
+  docs/keyboard-activation-convention.md). Template gallery filter chips are `type="button"`
+  with `aria-pressed`, and `TmDiagramTemplateCard` renders lowercase `aria-pressed` values
+  (`"true"`/`"false"`, previously invalid `"True"`/`"False"`).
+
+  The page-tab buttons replaced the raw `⧉` / `✕` / `+` glyphs with `TmIcon`, and the duplicate
+  action uses its own `tm-diagram-editor__page-tab-duplicate` class (the shared
+  `__page-tab-close` class no longer matches the duplicate button — see migration below).
+  Duplicate toolbar icons were disambiguated: Duplicate uses the two-pages glyph, Paste style
+  uses `IconNames.Paintbrush`, Rulers use `IconNames.Ruler`, and vertical align items no longer
+  reuse the horizontal align icons. Import/export error banners render as a real `TmAlert`
+  (`tm-diagram-editor__banner`) instead of a hand-rolled `tm-pivot-btn` + inline-style banner.
+  The minimap viewport rectangle uses `--tm-color-primary` / `--tm-color-primary-subtle`
+  instead of hardcoded `#3b82f6` / `rgba(59,130,246,0.08)`. Missing keys
+  `TmDiagramEditor_PasteHere` and `TmDiagramCanvas_AriaLabel` were added to all four resource
+  tables (they rendered as raw keys in the UI), and the Czech toolbox placeholder is now
+  "Hledat tvary…".
+
+  ```razor
+  @* before: duplicate page button carried the close-button class *@
+  <button class="tm-diagram-editor__page-tab-close" ...>⧉</button>
+  @* CSS targeting .tm-diagram-editor__page-tab-close also styled duplicate *@
+
+  @* after: the duplicate action has its own class (close keeps the danger-red hover) *@
+  <button class="tm-diagram-editor__page-tab-duplicate" ...><TmIcon Name="files" /></button>
+  <button class="tm-diagram-editor__page-tab-close" ...><TmIcon Name="x" /></button>
+  ```
 
 - **`TmDataTable` / `TmViewManager` / `TmMultiViewList` / `TmFilterBuilder` wave 0 accessibility.**
   Group toggles announce expand/collapse (`TmDataTable_ExpandGroup` / `TmDataTable_CollapseGroup`)
@@ -1508,6 +1916,48 @@
 
 ### Breaking / Migration
 
+- **`TmDiagramLayersPanel` styles live in exactly one stylesheet now (DiagramEditor redesign
+  phase 3).** The panel's rules were duplicated: a scoped `TmDiagramLayersPanel.razor.css` AND a
+  legacy global copy inside `Tempo.Blazor.DiagramEditor`'s `_diagram-editor.css`. The global copy
+  is deleted (together with its dead rules for markup that no longer exists:
+  `.tm-diagram-layers__selected-section`, `__select`, `__actions`, `__action-btn`, `__icon-btn`,
+  `__label`); the scoped component stylesheet is the single source
+  (`TmDiagramLayersPanelTests.SingleStyleSource` pins it). No class that any markup, test or
+  consumer still uses was removed — the live class names are unchanged, so most hosts need no
+  action. Two consequences to migrate for:
+
+  ```css
+  /* before — two sources; the global copy could be "edited" with no effect
+     (the scoped copy won on specificity) */
+  wwwroot/css/components/_diagram-editor.css   .tm-diagram-layers__item { ... }   /* deleted */
+  Components/Diagram/TmDiagramLayersPanel.razor.css .tm-diagram-layers__item { ... }  /* the source */
+
+  /* after — override the scoped source (or ::deep from a parent's razor.css);
+     a host that linked ONLY the package's global stylesheet and styled
+     .tm-diagram-layers* must load the RCL scoped bundle ({App}.styles.css),
+     which the demos already do */
+  ```
+
+  ```text
+  # dead class names, removed without alias (no markup/test/consumer referenced them):
+  #   .tm-diagram-layers__selected-section / __select / __actions / __action-btn
+  #   .tm-diagram-layers__icon-btn / __label
+  ```
+
+- **`TmDiagramTemplateCard` is a vertical card (DiagramEditor redesign phase 3, mockup).** The
+  card now stacks the 16:10 preview ABOVE the name/tags (`flex-direction: column` with
+  `aspect-ratio: 16 / 10` on `.tm-diagram-template-card__thumb`); the DOM order
+  (thumb → info) is unchanged, so selectors keep matching. A host that laid the card out as a
+  horizontal row from CSS must set `flex-direction: row` on `.tm-diagram-template-card` again
+  and give `.tm-diagram-template-card__thumb` an explicit width.
+
+- **`TmDiagramEditor`/dialogs: component-level dark overrides removed (DiagramEditor redesign
+  phase 3).** Every `[data-theme="dark"]` / `.tm-dark` block and every hex/rgba literal in the
+  DiagramEditor package's CSS was replaced by semantic `--tm-*` tokens (the strict token audit
+  of the package went from 168 baseline entries to 0). Dark mode now follows `tokens-dark.css`
+  exclusively; a host that RE-Pointed one of the removed component dark values must override the
+  semantic token instead (e.g. `--tm-color-surface-elevated`), not the component class.
+
 - **`TmWidgetSelector` renders on `TmModal` — its private overlay markup is gone.** The selector
   no longer renders `.tm-widget-selector-overlay` (its own `position: fixed` root) or a private
   header/close button; the modal owns the overlay, the panel chrome, the title and the close
@@ -1850,6 +2300,33 @@
   ```
 
 ### Changed
+
+- **`TmDiagramEditor` visual layer aligned with the redesign mockups — tokenized, no structure
+  change (DiagramEditor redesign phase 3).** Paint-only pass over the package's CSS plus small
+  markup touches; the toolbar keeps its `data-tm-group` contract, no group is re-ordered (that is
+  phase 4) and no toolbar function changed:
+
+  - The editor chrome (root, page-tabs strip, toolbar) paints the themed workspace tone
+    (`--tm-bg-workspace`, F0) instead of a hardcoded surface, so the indigo theme and dark mode
+    recolor it without component overrides.
+  - Toolbar groups are FLAT (no boxed button groups); the cluster separators and the 40px row
+    height carry the structure, buttons/controls use `--tm-radius-control` and the active tool
+    paints `--tm-color-primary-subtle` + primary ink (same convention as the core
+    `aria-pressed` toolbar button).
+  - Page tabs mark the ACTIVE page with a primary underline instead of a raised boxed tab.
+  - The stencil palette reads like the mockup: sentence-case category headers with the chevron
+    on the RIGHT (markup order swapped inside the button; `aria-expanded` unchanged) and
+    card-like rows for the stencils.
+  - Inspector property sections use `--tm-radius-card`; the Fill/Stroke fields show the current
+    hex value as text next to the swatch (`.tm-diagram-properties__color-value`, mockup
+    "Vzhled" section).
+  - The SQL/CSV import dialogs paint the live parse result as a summary box with icon stats
+    (`.tm-diagram-{sql,csv}-import__stat`), the CSV preview table has a sticky `thead`, and the
+    template gallery cards are vertical (see Breaking / Migration).
+  - Everything paints through semantic tokens; translucent washes derive from tokens via
+    `color-mix()`. The package's strict token-audit baseline dropped from 168 entries to 0 and
+    `DiagramResponsiveScreenshotTests` gained a 1440×900 light/dark × default/indigo matrix
+    (editor, layers panel and the four dialogs) that fails on a dark-mode regression.
 
 - **The demo-only localization keys moved out of the `Tempo.Blazor` package into the demo
   applications.** All 267 keys that only demo pages use — `TmDemo_*` and the `TmToolbarDemo_*`,

@@ -228,6 +228,20 @@
       "description": "Prevent all editing interactions."
     },
     {
+      "name": "ShowTransformHandles",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the selected nodes render the transform handles (resize + rotate). Default true; a host drops them where the form factor forbids reshaping — the editor hides them on a mobile layout (G2: resize/rotate stay tablet+)."
+    },
+    {
+      "name": "ShowConnectArrows",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the selected nodes render the quick-connect arrows (N/E/S/W). Default true; a host drops them where edge drawing is out of scope — the editor hides them on a mobile layout (G2: edge drawing stays tablet+)."
+    },
+    {
       "name": "SelectedTableCells",
       "type": "List<(int Row, int Column)>",
       "isRequired": false,

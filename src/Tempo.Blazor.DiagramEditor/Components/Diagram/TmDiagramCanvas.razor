@@ -593,8 +593,12 @@
                translate()+rotate() SVG transform. Handles themselves are laid out
                in node-local coordinates (0..W, 0..H) so rotation follows the node.
                JS `_updateSelection{,Transforms}` keeps this <g>'s transform in
-               sync during drags (see diagram-editor.js _updateNodeHandles). *@
-            @if (Document is not null && !ReadOnly)
+               sync during drags (see diagram-editor.js _updateNodeHandles).
+               Phase 7 (mobile, G2): the group splits — resize/rotate follow
+               ShowTransformHandles and the quick-connect arrows follow
+               ShowConnectArrows, so a mobile host keeps selection outlines
+               without reshaping or edge-drawing affordances. *@
+            @if (Document is not null && !ReadOnly && (ShowTransformHandles || ShowConnectArrows))
             {
                 @foreach (var _sid in _currentSelectionIds)
                 {
@@ -607,44 +611,61 @@
                     var _hTx = $"translate({F(_hNode.X)},{F(_hNode.Y)}) rotate({F(_hNode.Rotation)} {_hCx} {_hCy})";
 
                     <g class="tm-diagram-node-handles" data-node-id="@_hNode.Id" transform="@_hTx">
-                        @* 8 resize squares at corners + edge mid-points, 8x8,
-                           centered on the node's bbox corners. Cursor hint per
-                           handle so the user sees the correct arrow before
-                           pressing. *@
-                        @foreach (var _h in _resizeHandles)
+                        @* Phase 6 (tablet and touch): each direction renders the visible 8x8
+                           square PLUS an enlarged invisible hit rect centred on the same point.
+                           The hit rect carries the gesture — Pointer Events, so a finger drives
+                           it — and its size comes from --tm-diagram-handle-hit (44 on a coarse
+                           pointer). Cursor hint per handle so the user sees the correct arrow
+                           before pressing. *@
+                        @if (ShowTransformHandles)
                         {
-                            var (_hx, _hy, _cur) = _h switch
+                            @foreach (var _h in _resizeHandles)
                             {
-                                "nw" => (-4.0, -4.0, "nw-resize"),
-                                "n"  => (_hNode.W / 2.0 - 4.0, -4.0, "n-resize"),
-                                "ne" => (_hNode.W - 4.0, -4.0, "ne-resize"),
-                                "e"  => (_hNode.W - 4.0, _hNode.H / 2.0 - 4.0, "e-resize"),
-                                "se" => (_hNode.W - 4.0, _hNode.H - 4.0, "se-resize"),
-                                "s"  => (_hNode.W / 2.0 - 4.0, _hNode.H - 4.0, "s-resize"),
-                                "sw" => (-4.0, _hNode.H - 4.0, "sw-resize"),
-                                "w"  => (-4.0, _hNode.H / 2.0 - 4.0, "w-resize"),
-                                _    => (0.0, 0.0, "default"),
-                            };
-                            <rect class="tm-diagram-resize-handle tm-diagram-resize-handle--@_h"
-                                  x="@F(_hx)" y="@F(_hy)" width="8" height="8"
-                                  style="cursor: @_cur;"
-                                  @onmousedown:stopPropagation="true"
-                                  @onmousedown="e => OnResizeStart(e, _hNode.Id, _h)" />
+                                var (_cx, _cy, _cur) = _h switch
+                                {
+                                    "nw" => (0.0, 0.0, "nw-resize"),
+                                    "n"  => (_hNode.W / 2.0, 0.0, "n-resize"),
+                                    "ne" => (_hNode.W, 0.0, "ne-resize"),
+                                    "e"  => (_hNode.W, _hNode.H / 2.0, "e-resize"),
+                                    "se" => (_hNode.W, _hNode.H, "se-resize"),
+                                    "s"  => (_hNode.W / 2.0, _hNode.H, "s-resize"),
+                                    "sw" => (0.0, _hNode.H, "sw-resize"),
+                                    "w"  => (0.0, _hNode.H / 2.0, "w-resize"),
+                                    _    => (0.0, 0.0, "default"),
+                                };
+                                <rect class="tm-diagram-resize-handle tm-diagram-resize-handle--@_h"
+                                      x="@F(_cx - 4.0)" y="@F(_cy - 4.0)" width="8" height="8"
+                                      style="cursor: @_cur; pointer-events: none;" />
+                                <rect class="tm-diagram-resize-handle-hit"
+                                      data-resize-handle="@_h"
+                                      x="@F(_cx)" y="@F(_cy)"
+                                      style="cursor: @_cur;"
+                                      @onpointerdown:stopPropagation="true"
+                                      @onpointerdown="e => OnResizeStart(e, _hNode.Id, _h)" />
+                            }
+
+                            @* Rotate handle — stem line + grab circle centered above top edge,
+                               with the same enlarged invisible hit circle (phase 6). *@
+                            <line class="tm-diagram-rotate-handle-stem"
+                                  x1="@_hCx" y1="-30" x2="@_hCx" y2="0" />
+                            <circle class="tm-diagram-rotate-handle"
+                                    cx="@_hCx" cy="-38" r="7"
+                                    style="pointer-events: none;">
+                                <title>@Loc["TmDiagramEditor_RotateHandleLabel"]</title>
+                            </circle>
+                            <circle class="tm-diagram-rotate-handle-hit"
+                                    cx="@_hCx" cy="-38"
+                                    style="cursor: grab;"
+                                    @onpointerdown:stopPropagation="true"
+                                    @onpointerdown="e => OnRotateStartPointer(e, _hNode.Id)">
+                                <title>@Loc["TmDiagramEditor_RotateHandleLabel"]</title>
+                            </circle>
                         }
 
-                        @* Rotate handle — stem line + grab circle centered above top edge.
-                           Position chosen to match the pre-F5 HTML handle (top: -38px, 14px circle). *@
-                        <line class="tm-diagram-rotate-handle-stem"
-                              x1="@_hCx" y1="-30" x2="@_hCx" y2="0" />
-                        <circle class="tm-diagram-rotate-handle"
-                                cx="@_hCx" cy="-38" r="7"
-                                @onmousedown:stopPropagation="true"
-                                @onmousedown="e => OnRotateStartJs(e, _hNode.Id)">
-                            <title>@Loc["TmDiagramEditor_RotateHandleLabel"]</title>
-                        </circle>
-
                         @* Quick-connect arrows N/E/S/W (<foreignObject><button> for a11y). *@
-                        @foreach (var _dir in _connectDirections)
+                        @if (ShowConnectArrows)
+                        {
+                            @foreach (var _dir in _connectDirections)
                         {
                             var (_ax, _ay) = _dir.Css switch
                             {
@@ -667,6 +688,7 @@
                                     <span class="tm-diagram-connect-arrow__icon">+</span>
                                 </button>
                             </foreignObject>
+                            }
                         }
                     </g>
                 }

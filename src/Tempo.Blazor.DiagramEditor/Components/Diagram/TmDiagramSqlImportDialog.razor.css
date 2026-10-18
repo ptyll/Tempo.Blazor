@@ -21,17 +21,49 @@
     font-size: var(--tm-text-sm);
 }
 
+/* Mockup: the layout select spans the dialog width (mono stays in the textarea only). */
 .tm-diagram-sql-import__select {
-    max-width: 200px;
+    width: 100%;
 }
 
+/* Mockup: the live parse result paints as one summary box holding icon stats. */
 .tm-diagram-sql-import__preview {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--tm-space-4);
+    padding: var(--tm-space-3);
+    background: var(--tm-color-primary-subtle);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-diagram-sql-import__stat {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
     font-size: var(--tm-text-sm);
-    color: var(--tm-color-text-muted);
+    font-weight: 600;
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-sql-import__stat svg {
+    color: var(--tm-color-primary);
 }
 
 .tm-diagram-sql-import__error {
     margin-top: var(--tm-space-2);
+}
+
+/* Narrow-viewport sheet mitigation (UX review phase 2): on phones the TmModal renders this
+   dialog as a bottom sheet capped at 0.85 of the viewport, and the full sheet scroll contract
+   (min-height: 0 on the core .tm-modal-body) belongs to the foundational sheet plan — it is
+   intentionally NOT changed here. What this package can do on its own is keep its content
+   short: below the 640px breakpoint the DDL paste area is capped at about four text rows
+   (token-based, no magic colors) so the layout-direction select and the modal footer with
+   Cancel/Import stay inside the sheet cap at 390×844 and 320×640. ::deep is required because
+   the textarea element is rendered by TmTextArea, outside this component's scope attribute. */
+@media (width < 640px) {
+    .tm-diagram-sql-import ::deep textarea {
+        max-height: calc(4 * var(--tm-font-size-sm) * var(--tm-line-height-normal) + 2 * var(--tm-space-2));
+    }
 }

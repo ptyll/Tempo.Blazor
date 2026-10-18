@@ -30,12 +30,15 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
     [Parameter] public EventCallback<(string EdgeId, bool Value)> OnEdgeManualRoutingChanged { get; set; }
     [Parameter] public EventCallback<(string Algorithm, string Direction)> OnApplyLayout { get; set; }
     [Parameter] public EventCallback OnPageSizeChanged { get; set; }
+    /// <summary>Raised by the Actions section's Delete button. The editor wires it to the same
+    /// delete path as the toolbar command, so the selection delete stays undoable.</summary>
+    [Parameter] public EventCallback OnDeleteRequested { get; set; }
     [Parameter] public List<(int Row, int Column)> SelectedTableCells { get; set; } = [];
     [Parameter] public EventCallback<List<(int Row, int Column)>> SelectedTableCellsChanged { get; set; }
     [Inject] private DiagramStencilRegistry StencilRegistry { get; set; } = default!;
 
     private bool _collapsed;
-    private readonly HashSet<string> _expandedSections = new() { "style", "text", "arrange", "page", "edgeStyle" };
+    private readonly HashSet<string> _expandedSections = new() { "style", "text", "arrange", "page", "edgeStyle", "actions" };
 
     private bool IsSingleNode => SelectedNodes.Count == 1 && SelectedEdges.Count == 0;
     private bool IsSingleEdge => SelectedNodes.Count == 0 && SelectedEdges.Count == 1;
@@ -96,6 +99,8 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
     private void OnReplaceShapeCollapsedChanged(bool collapsed) => SetSectionExpanded("replaceShape", !collapsed);
     private void OnTextCollapsedChanged(bool collapsed) => SetSectionExpanded("text", !collapsed);
     private void OnArrangeCollapsedChanged(bool collapsed) => SetSectionExpanded("arrange", !collapsed);
+
+    private void OnActionsCollapsedChanged(bool collapsed) => SetSectionExpanded("actions", !collapsed);
     private void OnSwimlaneCollapsedChanged(bool collapsed) => SetSectionExpanded("swimlane", !collapsed);
     private void OnTableCollapsedChanged(bool collapsed) => SetSectionExpanded("table", !collapsed);
     private void OnEdgeStyleCollapsedChanged(bool collapsed) => SetSectionExpanded("edgeStyle", !collapsed);
@@ -211,6 +216,12 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
 
     private string GetNodeFill() => GetCommonString(SelectedNodes.Select(n => n.Style.Fill)) ?? "#ffffff";
     private string GetNodeStroke() => GetCommonString(SelectedNodes.Select(n => n.Style.Stroke)) ?? "#111827";
+
+    /// <summary>Uppercase form of a hex colour for the read-only value next to a swatch
+    /// (mockup shows "#DBEAFE", not "#dbeafe"). Non-hex values pass through unchanged.</summary>
+    private static string FormatHex(string value) =>
+        value.StartsWith('#') ? value.ToUpperInvariant() : value;
+
     private double GetNodeStrokeWidth() => GetCommonDouble(SelectedNodes.Select(n => n.Style.StrokeWidth)) ?? 1.5;
     private double GetNodeOpacity() => (GetCommonDouble(SelectedNodes.Select(n => n.Style.Opacity)) ?? 1.0) * 100;
     private double GetNodeRadius() => GetCommonDouble(SelectedNodes.Select(n => n.Style.Radius)) ?? 0;

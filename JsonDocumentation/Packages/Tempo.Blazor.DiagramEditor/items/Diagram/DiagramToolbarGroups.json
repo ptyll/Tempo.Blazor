@@ -1,0 +1,108 @@
+{
+  "kind": "Enum",
+  "category": "Diagram",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "description": "Frozen set of TmDiagramEditor toolbar groups. Each flag maps to exactly one data-tm-group attribute value on the toolbar DOM (see ToolbarGroups): history, clipboard, tools, format, insert, arrange, search, panels, zoom, view, canvas-size, layout, export, templates, import, readonly.",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramToolbar.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiagramToolbarGroups",
+  "values": [
+    {
+      "name": "None",
+      "value": "0",
+      "description": "No toolbar group."
+    },
+    {
+      "name": "History",
+      "value": "1",
+      "description": "Undo / Redo group (data-tm-group=\"history\")."
+    },
+    {
+      "name": "Clipboard",
+      "value": "2",
+      "description": "Cut / Copy / Paste / Duplicate / Delete group (data-tm-group=\"clipboard\")."
+    },
+    {
+      "name": "Tools",
+      "value": "4",
+      "description": "Select / Pan / Edge tool modes (data-tm-group=\"tools\")."
+    },
+    {
+      "name": "Format",
+      "value": "8",
+      "description": "Format painter group (data-tm-group=\"format\")."
+    },
+    {
+      "name": "Insert",
+      "value": "16",
+      "description": "Insert table / text dropdown (data-tm-group=\"insert\")."
+    },
+    {
+      "name": "Arrange",
+      "value": "32",
+      "description": "Align / distribute dropdown (data-tm-group=\"arrange\")."
+    },
+    {
+      "name": "Search",
+      "value": "64",
+      "description": "Search toggle (data-tm-group=\"search\")."
+    },
+    {
+      "name": "Panels",
+      "value": "128",
+      "description": "Toolbox / properties / layers / minimap panel toggles (data-tm-group=\"panels\")."
+    },
+    {
+      "name": "Zoom",
+      "value": "256",
+      "description": "Zoom out / level / in / fit-to-view group (data-tm-group=\"zoom\")."
+    },
+    {
+      "name": "View",
+      "value": "512",
+      "description": "Grid / snap / page view / ruler toggles (data-tm-group=\"view\")."
+    },
+    {
+      "name": "CanvasSize",
+      "value": "1024",
+      "description": "Ruler unit and canvas size group (data-tm-group=\"canvas-size\")."
+    },
+    {
+      "name": "Layout",
+      "value": "2048",
+      "description": "Auto layout dropdown (data-tm-group=\"layout\")."
+    },
+    {
+      "name": "Export",
+      "value": "4096",
+      "description": "Export dropdown (data-tm-group=\"export\")."
+    },
+    {
+      "name": "Templates",
+      "value": "8192",
+      "description": "Template gallery button (data-tm-group=\"templates\")."
+    },
+    {
+      "name": "Import",
+      "value": "16384",
+      "description": "Import dropdown (data-tm-group=\"import\")."
+    },
+    {
+      "name": "ReadOnly",
+      "value": "32768",
+      "description": "Read-only / Edit toggle (data-tm-group=\"readonly\")."
+    },
+    {
+      "name": "All",
+      "value": "65535",
+      "description": "Every group — the DiagramToolbarPreset.Full layout."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Custom group selection that overrides the preset",
+      "code": "<TmDiagramEditor Document=\"@document\"\n                 ToolbarGroups=\"DiagramToolbarGroups.Zoom | DiagramToolbarGroups.Export\" />"
+    }
+  ]
+}

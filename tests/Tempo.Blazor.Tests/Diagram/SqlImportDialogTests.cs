@@ -9,7 +9,7 @@ namespace Tempo.Blazor.Tests.Diagram;
 public class SqlImportDialogTests : DiagramTestBase
 {
     [Fact]
-    public async Task SqlImportDialog_RendersErrorForInvalidSql()
+    public void SqlImportDialog_DisablesImportForSqlWithoutTables()
     {
         var cut = Render<TmDiagramSqlImportDialog>(parameters => parameters
             .Add(p => p.Show, true)
@@ -17,16 +17,15 @@ public class SqlImportDialogTests : DiagramTestBase
             .Add(p => p.OnImport, (SqlImportResult r) => { }));
 
         var textarea = cut.Find("textarea");
-        textarea.Change("NOT A VALID SQL");
-
-        var importBtn = cut.FindAll("button").First(b => b.TextContent == "Import");
-        await cut.InvokeAsync(() => importBtn.Click());
+        textarea.Input("NOT A VALID SQL");
 
         cut.WaitForAssertion(() =>
         {
-            var alerts = cut.FindAll(".tm-alert");
-            alerts.Should().ContainSingle();
-            alerts[0].TextContent.Should().Contain("No tables found");
+            // Live preview reports zero tables and the import stays disabled
+            cut.Find(".tm-diagram-sql-import__preview").TextContent.Should().Contain("Tables: 0");
+            var importBtn = cut.FindAll("button").First(b => b.TextContent == "Import");
+            importBtn.HasAttribute("disabled").Should().BeTrue(
+                "importing must be impossible while the parsed SQL has zero tables");
         });
     }
 

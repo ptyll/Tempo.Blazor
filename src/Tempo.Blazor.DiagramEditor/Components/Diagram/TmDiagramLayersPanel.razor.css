@@ -3,6 +3,10 @@
     display: flex;
     flex-direction: column;
     width: 220px;
+    /* Fill the host slot (the editor's __layers-wrap flexes); ported from the legacy
+       global copy so the panel does not collapse inside TmDiagramEditor. */
+    height: 100%;
+    min-height: 0;
     background: var(--tm-color-surface-elevated);
     border-left: 1px solid var(--tm-color-border);
     transition: width 0.2s ease;
@@ -97,6 +101,7 @@
 }
 
 .tm-diagram-layers__item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--tm-space-1);
@@ -109,6 +114,23 @@
 
 .tm-diagram-layers__item:hover {
     border-color: var(--tm-color-border);
+}
+
+/* Active (radio-selected) layer row */
+.tm-diagram-layers__item--active {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+/* Drop target while dragging a layer over it */
+.tm-diagram-layers__item--drag-over {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+/* Keyboard parity with hover: row controls stay discoverable while focus is inside the row */
+.tm-diagram-layers__item:focus-within .tm-diagram-layers__delete {
+    opacity: 1;
 }
 
 .tm-diagram-layers__drag-handle {
@@ -193,6 +215,13 @@
     background: var(--tm-color-surface-hover);
 }
 
+/* The name is a keyboard-focusable role=button — a visible focus ring is required */
+.tm-diagram-layers__name:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+    background: var(--tm-color-surface-hover);
+}
+
 .tm-diagram-layers__name-input {
     flex: 1;
     font-size: var(--tm-font-size-sm);
@@ -217,4 +246,106 @@
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-medium);
     color: var(--tm-color-text-muted);
+}
+
+/* ── Phase 6 (tablet and touch): the row "⋯" menu — the non-drag alternative
+   to the layer drag-and-drop (Rename / Move up / Move down / Delete). ─────── */
+
+.tm-diagram-layers__row-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+}
+
+.tm-diagram-layers__row-menu-trigger:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-layers__row-menu-trigger[aria-expanded="true"] {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-layers__row-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+}
+
+.tm-diagram-layers__row-menu {
+    position: absolute;
+    top: calc(100% + var(--tm-space-1));
+    inset-inline-end: 0;
+    z-index: 6;
+    min-width: 10rem;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+    padding: var(--tm-space-1);
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-diagram-layers__row-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    width: 100%;
+    min-height: 32px;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-diagram-layers__row-menu-item:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-layers__row-menu-item--delete {
+    color: var(--tm-color-danger);
+}
+
+/* ── Phase 6: coarse-pointer targets and hover-free visibility ────────────── */
+
+/* A finger has no hover: the destructive affordance stays discoverable, and the
+   row controls grow to the shared touch target. */
+@media (hover: none) {
+    .tm-diagram-layers__delete {
+        opacity: 1;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-layers__item {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-layers__active,
+    .tm-diagram-layers__visibility,
+    .tm-diagram-layers__lock,
+    .tm-diagram-layers__delete,
+    .tm-diagram-layers__row-menu-trigger,
+    .tm-diagram-layers__add-btn {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-layers__row-menu-item {
+        min-height: var(--tm-touch-target);
+    }
 }

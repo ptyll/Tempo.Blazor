@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Components.Diagram.Commands;
 using Tempo.Blazor.Components.Diagram.Models;
@@ -34,8 +36,23 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>Raised after every mutation.</summary>
     [Parameter] public EventCallback<DiagramDocument> DocumentChanged { get; set; }
 
-    /// <summary>Prevent all editing interactions.</summary>
+    /// <summary>
+    /// Host-pinned read-only mode: prevents all editing interactions and hides the built-in
+    /// Read-only/Edit toggle. The component NEVER assigns this parameter — the user-facing
+    /// toggle flips <see cref="IsReadOnly"/>'s internal <c>_userReadOnly</c> component instead
+    /// (DI1), so a hosted read-only preview can no longer be unlocked from the UI.
+    /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Effective read-only state: the host-pinned <see cref="ReadOnly"/> parameter OR the user's
+    /// local Read-only toggle. Every editing path (toolbar, keyboard shortcuts, context menu,
+    /// import, templates, paste, canvas interop) is gated on this state.
+    /// </summary>
+    public bool IsReadOnly => ReadOnly || _userReadOnly;
+
+    /// <summary>User-toggled read-only state; deliberately separate from <see cref="ReadOnly"/>.</summary>
+    private bool _userReadOnly;
 
     /// <summary>Show the component toolbox panel on the left.</summary>
     [Parameter] public bool ShowToolbox { get; set; } = true;
@@ -114,6 +131,18 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private bool _propsCollapsed;
     private bool _layersCollapsed;
     private bool _showTableInserter;
+
+    // UX review phase 4: the picker renders at the editor root as a fixed popover anchored to
+    // the Insert trigger (or the More trigger once the group collapsed), measured in JS at the
+    // moment it opens — never a child of a toolbar item that may collapse into "More".
+    private double _tableInserterX;
+    private double _tableInserterY;
+    private ElementReference _editorRoot;
+
+    /// <summary>Inline style pinning the fixed popover at the measured viewport point (invariant format — a CSS value must not follow the UI culture).</summary>
+    private string TableInserterStyle =>
+        string.Create(CultureInfo.InvariantCulture, $"left:{_tableInserterX:0.#}px;top:{_tableInserterY:0.#}px");
+
     private bool _minimapCollapsed;
     private bool _exportMenuOpen;
     private bool _exporting;
@@ -151,6 +180,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private bool _connectModalOpen;
     private string? _connectSourceNodeId;
     private string? _connectDirection;
+
+    /// <summary>Stencil of the node the connect arrow was dragged from — it scopes the connect dialog's default palette (DI4).</summary>
+    private string? ConnectSourceStencilId =>
+        _connectSourceNodeId is null
+            ? null
+            : _document?.Nodes.FirstOrDefault(n => n.Id == _connectSourceNodeId)?.StencilId;
 
     // SQL import dialog state
     private bool _sqlImportDialogOpen;
@@ -223,6 +258,15 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _selectedIds = [];
             EnsureCommandStackForActivePage();
         }
+
+        // A FORCED layout is the resolution: the shell reports changes only, and the initial
+        // resolution is not a change — so a host (or test) that pins Tablet/Desktop/Mobile must
+        // see the tablet presentation from the first frame. Under Auto the shell's callback owns
+        // this state (it fires on the first container measurement).
+        if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
+        {
+            ApplyResolvedLayout(LayoutMode);
+        }
     }
 
     private void EnsureDocumentLayers(DiagramDocument doc)
@@ -271,6 +315,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnDocumentChanged(DiagramDocument doc)
     {
         _document = doc;
+        // The chrome-only canvas latch must not swallow a content edit (phase 7 gate).
+        _canvas?.NotifyContentMutated();
         await DocumentChanged.InvokeAsync(doc);
         await InvokeAsync(StateHasChanged);
     }
@@ -280,6 +326,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnSelectionChanged(string[] ids)
     {
         _selectedIds = ids;
+        // Phase 6 (tablet): a selection is an editing intent — surface the inspector even
+        // when the palette took the single expanded dock slot (DI3).
+        ExpandInspectorForSelectionOnTablet();
+        // Phase 7 (mobile): the same intent opens the panels sheet PEEKED on the properties.
+        ExpandPropertiesForSelectionOnMobile();
         await OnSelectedIdsChanged.InvokeAsync(ids);
         await InvokeAsync(StateHasChanged);
     }
@@ -302,7 +353,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnNodeContextMenu((string NodeId, double ScreenX, double ScreenY) args)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.Node;
         _contextMenuOpen = true;
         _contextMenuNodeId = args.NodeId;
@@ -318,13 +369,13 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await _canvas.SetSelection(args.NodeId);
         }
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
     private async Task OnEdgeContextMenu((string EdgeId, double ScreenX, double ScreenY) args)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.Edge;
         _contextMenuOpen = true;
         _contextMenuEdgeId = args.EdgeId;
@@ -337,13 +388,13 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         _selectedIds = [args.EdgeId];
         if (_canvas is not null) await _canvas.SetSelection([]);
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
     private async Task OnTableCellContextMenu((string NodeId, int Row, int Column, double ScreenX, double ScreenY) args)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.TableCell;
         _contextMenuOpen = true;
         _contextMenuNodeId = args.NodeId;
@@ -364,13 +415,13 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         }
 
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
     private async Task OnCanvasContextMenu((double CanvasX, double CanvasY, double ScreenX, double ScreenY) args)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.Canvas;
         _contextMenuOpen = true;
         _contextMenuNodeId = null;
@@ -385,7 +436,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         _selectedIds = [];
         if (_canvas is not null) await _canvas.SetSelection([]);
         await InvokeAsync(StateHasChanged);
-        if (_canvas is not null)
+        if (_canvas is not null && !IsMobileLayout)
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
@@ -414,7 +465,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleTableCellSelect((string NodeId, int Row, int Column, bool IsCtrlHeld) args)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         if (!args.IsCtrlHeld)
         {
             _selectedTableCells.Clear();
@@ -501,7 +552,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuCut()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         ActiveCommandStack.Push(new CutNodesCommand(_document, ids));
         _selectedIds = [];
@@ -520,7 +571,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuDuplicate()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         ActiveCommandStack.Push(new DuplicateNodesCommand(_document, ids));
         await OnDocumentChanged(_document);
@@ -529,7 +580,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuPaste()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var cmd = new PasteNodesCommand(_document, 16, 16, useInternalClipboard: true, parentGroupId: ActiveGroupId);
         if (cmd.PastedNodes.Count == 0) return;
         ActiveCommandStack.Push(cmd);
@@ -541,7 +592,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuPasteHere()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var cmd = new PasteNodesCommand(_document, _contextMenuCanvasX, _contextMenuCanvasY, useInternalClipboard: true, pasteHere: true, parentGroupId: ActiveGroupId);
         if (cmd.PastedNodes.Count == 0) return;
         ActiveCommandStack.Push(cmd);
@@ -561,6 +612,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task ContextMenuUndo()
     {
+        if (IsReadOnly) return;
         await CloseContextMenu();
         if (ActiveCommandStack.CanUndo)
         {
@@ -571,6 +623,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task ContextMenuRedo()
     {
+        if (IsReadOnly) return;
         await CloseContextMenu();
         if (ActiveCommandStack.CanRedo)
         {
@@ -582,7 +635,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuDelete()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         var nodeIds = ids.Where(id => _document.Nodes.Any(n => n.Id == id)).ToArray();
         var edgeIds = ids.Where(id => _document.Edges.Any(e => e.Id == id)).ToArray();
@@ -610,7 +663,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuBringToFront()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         var before = ids.ToDictionary(id => id, id => _document.Nodes.FirstOrDefault(n => n.Id == id)?.ZIndex ?? 0);
         var maxZ = _document.Nodes.Count > 0 ? _document.Nodes.Max(n => n.ZIndex) : 0;
@@ -622,7 +675,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuSendToBack()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         var before = ids.ToDictionary(id => id, id => _document.Nodes.FirstOrDefault(n => n.Id == id)?.ZIndex ?? 0);
         var minZ = _document.Nodes.Count > 0 ? _document.Nodes.Min(n => n.ZIndex) : 0;
@@ -634,7 +687,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuLock()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         ActiveCommandStack.Push(new LockNodesCommand(_document, ids));
         await OnDocumentChanged(_document);
@@ -643,7 +696,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuUnlock()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         ActiveCommandStack.Push(new UnlockNodesCommand(_document, ids));
         await OnDocumentChanged(_document);
@@ -652,7 +705,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuGroup()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         if (!CanContextMenuGroup()) return;
         var ids = _selectedIds.Where(id => _document.Nodes.FirstOrDefault(n => n.Id == id)?.IsLocked != true).ToArray();
         if (ids.Length < 2) return;
@@ -665,7 +718,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuUngroup()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         if (!CanContextMenuUngroup()) return;
         var node = _document.Nodes.FirstOrDefault(n => n.Id == _selectedIds[0]);
         var groupId = node?.StencilId == "general.group" ? node.Id : node?.GroupId;
@@ -679,7 +732,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuPasteStyle()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         if (DiagramClipboard.Style is null) return;
         ActiveCommandStack.Push(new PasteStyleCommand(_document, ids));
@@ -689,7 +742,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuPasteSize()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var ids = _selectedIds.Contains(_contextMenuNodeId) ? _selectedIds : [_contextMenuNodeId];
         if (DiagramClipboard.Width is null || DiagramClipboard.Height is null) return;
         ActiveCommandStack.Push(new PasteSizeCommand(_document, ids));
@@ -699,7 +752,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuReplaceShape(string stencilId)
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null) return;
         var stencil = StencilRegistry.GetStencil(stencilId);
         if (stencil is null) return;
         var node = _document.Nodes.FirstOrDefault(n => n.Id == _contextMenuNodeId);
@@ -722,7 +775,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuDeleteEdge()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         ActiveCommandStack.Push(new RemoveEdgesCommand(_document, [_contextMenuEdgeId]));
         await OnDocumentChanged(_document);
     }
@@ -733,7 +786,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuDetachEdgeEndpoints()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == _contextMenuEdgeId);
         if (edge is null) return;
         ActiveCommandStack.Push(new DetachEdgeEndpointsCommand(_document, edge.Id, detachSource: true, detachTarget: true));
@@ -742,7 +795,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private bool ContextMenuCanDetachEdgeEndpoints()
     {
-        if (ReadOnly || _document is null || _contextMenuEdgeId is null) return false;
+        if (IsReadOnly || _document is null || _contextMenuEdgeId is null) return false;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == _contextMenuEdgeId);
         if (edge is null) return false;
         // At least one endpoint must be attached for detach to make sense.
@@ -762,7 +815,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuChangeEdgeConnector(string routing)
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == _contextMenuEdgeId);
         if (edge is null || edge.Routing == routing) return;
         ActiveCommandStack.Push(new UpdateEdgeRoutingCommand(_document, _contextMenuEdgeId, edge.Routing, routing, edge.Waypoints.ToList(), []));
@@ -772,7 +825,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuFlipEdge()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == _contextMenuEdgeId);
         if (edge is null) return;
         await _canvas?.OnEdgeToolbarAction(_contextMenuEdgeId, "flip")!;
@@ -781,7 +834,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuClearWaypoints()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == _contextMenuEdgeId);
         if (edge is null) return;
         await _canvas?.OnEdgeToolbarAction(_contextMenuEdgeId, "clearWaypoints")!;
@@ -790,7 +843,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuChangeEdgeArrowheadStart(string arrowhead)
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         ActiveCommandStack.Push(new UpdateEdgeArrowheadsCommand(_document, [_contextMenuEdgeId], newStartArrow: arrowhead));
         await OnDocumentChanged(_document);
     }
@@ -798,7 +851,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuChangeEdgeArrowheadEnd(string arrowhead)
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         ActiveCommandStack.Push(new UpdateEdgeArrowheadsCommand(_document, [_contextMenuEdgeId], newEndArrow: arrowhead));
         await OnDocumentChanged(_document);
     }
@@ -806,7 +859,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuChangeEdgeLineStyle(string? dasharray)
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuEdgeId is null) return;
+        if (_document is null || IsReadOnly || _contextMenuEdgeId is null) return;
         ActiveCommandStack.Push(new UpdateEdgeLineStyleCommand(_document, [_contextMenuEdgeId], dasharray));
         await OnDocumentChanged(_document);
     }
@@ -816,7 +869,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertRowAbove()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
         var row = _contextMenuTableCell?.Row ?? 0;
         using (ActiveCommandStack.TransactionScope(Loc["TmDiagramEditor_InsertRowAbove"]))
         {
@@ -828,7 +881,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertRowBelow()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
         var row = (_contextMenuTableCell?.Row ?? 0) + 1;
         var rowCount = Services.TableLayoutService.GetRowCount(_document.Nodes.First(n => n.Id == _contextMenuNodeId));
         if (row > rowCount) row = rowCount;
@@ -842,7 +895,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertColumnLeft()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
         var col = _contextMenuTableCell?.Column ?? 0;
         using (ActiveCommandStack.TransactionScope(Loc["TmDiagramEditor_InsertColumnLeft"]))
         {
@@ -854,7 +907,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertColumnRight()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
         var col = (_contextMenuTableCell?.Column ?? 0) + 1;
         var colCount = Services.TableLayoutService.GetColumnCount(_document.Nodes.First(n => n.Id == _contextMenuNodeId));
         if (col > colCount) col = colCount;
@@ -868,7 +921,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuMergeCells()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
         if (!CanContextMenuMergeCells()) return;
         ActiveCommandStack.Push(new MergeTableCellsCommand(_document, _contextMenuNodeId, _selectedTableCells));
         _selectedTableCells.Clear();
@@ -878,7 +931,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuSplitCell()
     {
         await CloseContextMenu();
-        if (_contextMenuTableCell is null || _document is null || ReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
+        if (_contextMenuTableCell is null || _document is null || IsReadOnly || _contextMenuNodeId is null || IsContextMenuNodeLocked()) return;
         var (row, col) = _contextMenuTableCell.Value;
         ActiveCommandStack.Push(new SplitTableCellCommand(_document, _contextMenuNodeId, row, col));
         await OnDocumentChanged(_document);
@@ -895,7 +948,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuFormatTableCell(string backgroundColor, string borderColor)
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly || _contextMenuNodeId is null || _contextMenuTableCell is null || IsContextMenuNodeLocked()) return;
+        if (_document is null || IsReadOnly || _contextMenuNodeId is null || _contextMenuTableCell is null || IsContextMenuNodeLocked()) return;
         var (row, col) = _contextMenuTableCell.Value;
         var cell = Services.TableLayoutService.GetCells(_document.Nodes.First(n => n.Id == _contextMenuNodeId))
             .FirstOrDefault(c => c.Row == row && c.Column == col);
@@ -915,7 +968,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertText()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var node = new DiagramNode { StencilId = "general.text", X = _contextMenuCanvasX, Y = _contextMenuCanvasY, W = 80, H = 30 };
         node.Data["text"] = "Text";
         ActiveCommandStack.Push(new AddNodeCommand(_document, node));
@@ -925,7 +978,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertRectangle()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var node = new DiagramNode { StencilId = "general.rectangle", X = _contextMenuCanvasX, Y = _contextMenuCanvasY };
         ActiveCommandStack.Push(new AddNodeCommand(_document, node));
         await OnDocumentChanged(_document);
@@ -934,7 +987,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ContextMenuInsertEllipse()
     {
         await CloseContextMenu();
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var node = new DiagramNode { StencilId = "general.ellipse", X = _contextMenuCanvasX, Y = _contextMenuCanvasY };
         ActiveCommandStack.Push(new AddNodeCommand(_document, node));
         await OnDocumentChanged(_document);
@@ -1255,6 +1308,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OpenCanvasSize()
     {
+        if (IsReadOnly) return;
         _canvasWInput = ((int)(_document?.Width ?? 3000)).ToString();
         _canvasHInput = ((int)(_document?.Height ?? 2000)).ToString();
         _canvasSizeEditing = true;
@@ -1263,7 +1317,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task ApplyCanvasSize()
     {
         _canvasSizeEditing = false;
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         if (!double.TryParse(_canvasWInput, out var w) || w < 100) return;
         if (!double.TryParse(_canvasHInput, out var h) || h < 100) return;
         if (Math.Abs(w - _document.Width) < 0.5 && Math.Abs(h - _document.Height) < 0.5) return;
@@ -1279,7 +1333,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnTitleChanged(ChangeEventArgs e)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         _document.Title = e.Value?.ToString() ?? "";
         await OnDocumentChanged(_document);
     }
@@ -1296,14 +1350,14 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnUndoClicked()
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         ActiveCommandStack.Undo();
         await RerenderCanvas();
     }
 
     private async Task OnRedoClicked()
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         ActiveCommandStack.Redo();
         await RerenderCanvas();
     }
@@ -1312,32 +1366,32 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnCutClicked()
     {
-        if (_canvas is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_canvas is null || IsReadOnly || _selectedIds.Length == 0) return;
         await _canvas.OnCopy(_selectedIds);
         await _canvas.OnDeleteSelected(_selectedIds);
     }
 
     private async Task OnCopyClicked()
     {
-        if (_canvas is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_canvas is null || IsReadOnly || _selectedIds.Length == 0) return;
         await _canvas.OnCopy(_selectedIds);
     }
 
     private async Task OnPasteClicked()
     {
-        if (_canvas is null || ReadOnly) return;
+        if (_canvas is null || IsReadOnly) return;
         await _canvas.OnPaste();
     }
 
     private async Task OnDuplicateClicked()
     {
-        if (_canvas is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_canvas is null || IsReadOnly || _selectedIds.Length == 0) return;
         await _canvas.OnDuplicate(_selectedIds);
     }
 
     private async Task OnDeleteClicked()
     {
-        if (_canvas is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_canvas is null || IsReadOnly || _selectedIds.Length == 0) return;
         await _canvas.OnDeleteSelected(_selectedIds);
     }
 
@@ -1346,7 +1400,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnAlign(string alignment)
     {
-        if (_document is null || ReadOnly || !CanAlign) return;
+        if (_document is null || IsReadOnly || !CanAlign) return;
         var ids = _document.Nodes.Where(n => _selectedIds.Contains(n.Id)).Select(n => n.Id).ToList();
         if (ids.Count <= 1) return;
         var cmd = new AlignNodesCommand(_document, ids, alignment);
@@ -1356,7 +1410,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnDistribute(string axis)
     {
-        if (_document is null || ReadOnly || !CanDistribute) return;
+        if (_document is null || IsReadOnly || !CanDistribute) return;
         var ids = _document.Nodes.Where(n => _selectedIds.Contains(n.Id)).Select(n => n.Id).ToList();
         if (ids.Count <= 2) return;
         var cmd = new DistributeNodesCommand(_document, ids, axis);
@@ -1394,7 +1448,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OnCopyStyle()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         var node = _document.Nodes.FirstOrDefault(n => n.Id == _selectedIds[0]);
         if (node is null) return;
         new CopyStyleCommand(node, includeSize: false).Execute();
@@ -1402,14 +1456,14 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnPasteStyle()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         ActiveCommandStack.Push(new PasteStyleCommand(_document, _selectedIds));
         await OnDocumentChanged(_document);
     }
 
     private async Task OnPasteSize()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         ActiveCommandStack.Push(new PasteSizeCommand(_document, _selectedIds));
         await OnDocumentChanged(_document);
     }
@@ -1490,13 +1544,43 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleInsertSelect(string value)
     {
-        Console.WriteLine($"[HandleInsertSelect] value={value}, _showTableInserter before={_showTableInserter}");
         switch (value)
         {
-            case "table": _showTableInserter = true; await InvokeAsync(StateHasChanged); break;
-            case "text": await InsertText(); break;            
+            case "table":
+                _showTableInserter = true;
+                await PositionTableInserterAsync();
+                break;
+            case "text": await InsertText(); break;
         }
-        Console.WriteLine($"[HandleInsertSelect] _showTableInserter after={_showTableInserter}");
+    }
+
+    /// <summary>
+    /// UX review phase 4: the picker is anchored where the user invoked it — the Insert trigger
+    /// while the group sits on the bar, the "More" trigger once the group collapsed there. The
+    /// measurement happens before the popover renders; without JS (tests, disposed host) the
+    /// popover keeps its last/fallback position.
+    /// </summary>
+    private async Task PositionTableInserterAsync()
+    {
+        try
+        {
+            var anchor = await JS.InvokeAsync<double[]?>("tmDiagramEditor.tableInserterAnchor", _editorRoot);
+            if (anchor is { Length: 2 })
+            {
+                _tableInserterX = anchor[0];
+                _tableInserterY = anchor[1];
+            }
+        }
+        catch (JSException)
+        {
+            // Keep the previous position; the popover still opens.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Host is going away — nothing to anchor.
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleTableInsert((int Rows, int Columns) args)
@@ -1507,7 +1591,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task InsertTable(int rows, int columns)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var stencil = StencilRegistry.GetStencil("table.basic");
         if (stencil is null) return;
 
@@ -1570,7 +1654,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task InsertText()
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         await HandleQuickInsert("general.text");
     }    
 
@@ -1703,6 +1787,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         _importError = null;
         var file = e.File;
         if (file is null) return;
+        if (IsReadOnly) return;
 
         try
         {
@@ -1731,7 +1816,9 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     // ── Toolbar: Read-only toggle ────────────────────────────────────────────
 
-    private void ToggleReadOnly() => ReadOnly = !ReadOnly;
+    // DI1: the toggle flips the internal user state only. Assigning the [Parameter] ReadOnly
+    // from inside the component let a hosted read-only preview unlock itself — that is gone.
+    private void ToggleReadOnly() => _userReadOnly = !_userReadOnly;
 
     // ── Toolbox drag activation ──────────────────────────────────────────────
 
@@ -1747,7 +1834,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnToolboxDrop((string StencilId, double X, double Y) drop)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
 
         var stencil = StencilRegistry.GetStencil(drop.StencilId);
         if (stencil?.Kind == DiagramStencilKind.Edge)
@@ -1844,7 +1931,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnEdgeCreated((string? SourceNodeId, string? SourcePortId, string? TargetNodeId, string? TargetPortId, string? SourceSide, double SourceOffset, string? TargetSide, double TargetOffset, string? TargetEdgeId, double TargetEdgeT, double? SourceConstraintRx, double? SourceConstraintRy, bool? SourceConstraintPerimeter, double? TargetConstraintRx, double? TargetConstraintRy, bool? TargetConstraintPerimeter, double? TargetPointX, double? TargetPointY, double? SourcePointX, double? SourcePointY, double[]? WaypointsXY) args)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
 
         if (GridSize > 0)
         {
@@ -2024,7 +2111,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleEdgeRoutingChanged((string EdgeId, string OldRouting, string NewRouting) args)
     {
-        if (_document is null || _canvas is null || ReadOnly) return;
+        if (_document is null || _canvas is null || IsReadOnly) return;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == args.EdgeId);
         if (edge is null) return;
 
@@ -2053,7 +2140,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     // moment the user intends to preserve its shape for manual tweaking.
     private async Task HandleEdgeManualRoutingChanged((string EdgeId, bool Value) args)
     {
-        if (_document is null || _canvas is null || ReadOnly) return;
+        if (_document is null || _canvas is null || IsReadOnly) return;
         if (!args.Value) return;
         var edge = _document.Edges.FirstOrDefault(e => e.Id == args.EdgeId);
         if (edge is null) return;
@@ -2076,7 +2163,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OnConnectArrowClicked((string NodeId, string Direction) args)
     {
-        if (ReadOnly || _document is null) return;
+        if (IsReadOnly || _document is null) return;
         _connectSourceNodeId = args.NodeId;
         _connectDirection = args.Direction;
         _connectModalOpen = true;
@@ -2092,7 +2179,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OpenSqlImportDialog()
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _sqlImportDialogOpen = true;
     }
 
@@ -2104,7 +2191,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnSqlImport(SqlImportResult result)
     {
         _sqlImportDialogOpen = false;
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
 
         Document = result.Document;
         _document = result.Document;
@@ -2127,7 +2214,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OpenCsvImportDialog()
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _csvImportDialogOpen = true;
     }
 
@@ -2139,7 +2226,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnCsvImport(CsvImportResult result)
     {
         _csvImportDialogOpen = false;
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
 
         Document = result.Document;
         _document = result.Document;
@@ -2162,6 +2249,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OpenTemplateGallery()
     {
+        if (IsReadOnly) return;
         _showTemplateGallery = true;
     }
 
@@ -2173,7 +2261,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnTemplateSelected(Tempo.Blazor.Components.Diagram.Templates.DiagramTemplate template)
     {
         _showTemplateGallery = false;
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
 
         DiagramDocument? doc = null;
         if (!string.IsNullOrWhiteSpace(template.DocumentJson))
@@ -2211,7 +2299,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnStencilSelectedForConnect(string stencilId)
     {
-        if (_document is null || ReadOnly || _connectSourceNodeId is null || _connectDirection is null) return;
+        if (_document is null || IsReadOnly || _connectSourceNodeId is null || _connectDirection is null) return;
 
         var sourceNode = _document.Nodes.FirstOrDefault(n => n.Id == _connectSourceNodeId);
         var stencil = StencilRegistry.GetStencil(stencilId);
@@ -2325,7 +2413,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void AddPage()
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
 
         var newPage = new DiagramPage
         {
@@ -2342,7 +2430,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void RemovePage(string pageId)
     {
-        if (_document is null || ReadOnly || _document.Pages.Count <= 1) return;
+        if (_document is null || IsReadOnly || _document.Pages.Count <= 1) return;
 
         var index = _document.Pages.FindIndex(p => p.Id == pageId);
         if (index < 0) return;
@@ -2366,7 +2454,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void DuplicatePage(string pageId)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
 
         var source = _document.Pages.FirstOrDefault(p => p.Id == pageId);
         if (source is null) return;
@@ -2401,7 +2489,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void StartRenamePage(string pageId)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         var page = _document?.Pages.FirstOrDefault(p => p.Id == pageId);
         if (page is null) return;
 
@@ -2425,7 +2513,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void CommitRenamePage(string pageId)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var page = _document.Pages.FirstOrDefault(p => p.Id == pageId);
         if (page is not null && !string.IsNullOrWhiteSpace(_pageRenameInput))
         {
@@ -2452,13 +2540,13 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OnPageTabDragStart(string pageId)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _pageDragId = pageId;
     }
 
     private void OnPageTabDragEnter(string pageId)
     {
-        if (ReadOnly || _pageDragId is null || _pageDragId == pageId) return;
+        if (IsReadOnly || _pageDragId is null || _pageDragId == pageId) return;
         _pageDragOverId = pageId;
         StateHasChanged();
     }
@@ -2471,7 +2559,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private void OnPageTabDrop(string targetPageId)
     {
-        if (ReadOnly || _pageDragId is null || _pageDragId == targetPageId) return;
+        if (IsReadOnly || _pageDragId is null || _pageDragId == targetPageId) return;
 
         var sourceIndex = _document?.Pages.FindIndex(p => p.Id == _pageDragId) ?? -1;
         var targetIndex = _document?.Pages.FindIndex(p => p.Id == targetPageId) ?? -1;
@@ -2493,6 +2581,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task RerenderCanvas()
     {
+        _canvas?.NotifyContentMutated();
         StateHasChanged();
         if (_document is not null)
             await DocumentChanged.InvokeAsync(_document);
@@ -2502,7 +2591,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleQuickInsert(string stencilId)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var stencil = StencilRegistry.GetStencil(stencilId);
         var w = stencil?.DefaultWidth ?? 120;
         var h = stencil?.DefaultHeight ?? 60;
@@ -2521,6 +2610,21 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             {
                 cx = vp.X + vp.W / 2;
                 cy = vp.Y + vp.H / 2;
+            }
+        }
+        // Mobile tap-insert with the panels sheet open (UX cleanup): the sheet's panel
+        // covers the canvas' lower band, so a viewport-centre insert can land partly
+        // under it. Target the centre of the band that stays VISIBLE above the sheet
+        // panel instead — JS measures it and converts it to doc coordinates. Desktop
+        // and tablet keep the plain viewport centre; the fallback below also covers
+        // a JS that cannot measure (tests, no overlap).
+        if (IsMobileSheetOpen)
+        {
+            var visibleCentre = await TryGetVisibleBandCentreAsync();
+            if (visibleCentre is { } band)
+            {
+                cx = band.X;
+                cy = band.Y;
             }
         }
         var x = Math.Round((cx - w / 2) / GridSize) * GridSize;
@@ -2552,7 +2656,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleGroupSelected()
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         if (!CanContextMenuGroup()) return;
         var ids = _selectedIds.Where(id => _document.Nodes.FirstOrDefault(n => n.Id == id)?.IsLocked != true).ToArray();
         if (ids.Length < 2) return;
@@ -2564,7 +2668,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleLockSelected()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         var anyLocked = _selectedIds.Any(id => _document.Nodes.FirstOrDefault(n => n.Id == id)?.IsLocked == true);
         if (anyLocked)
         {
@@ -2579,19 +2683,19 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleToggleBold()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         await ToggleStyleFlag(s => s.IsBold == true, s => s.IsBold = true, s => s.IsBold = false);
     }
 
     private async Task HandleToggleItalic()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         await ToggleStyleFlag(s => s.IsItalic == true, s => s.IsItalic = true, s => s.IsItalic = false);
     }
 
     private async Task HandleToggleUnderline()
     {
-        if (_document is null || ReadOnly || _selectedIds.Length == 0) return;
+        if (_document is null || IsReadOnly || _selectedIds.Length == 0) return;
         await ToggleStyleFlag(s => s.IsUnderline == true, s => s.IsUnderline = true, s => s.IsUnderline = false);
     }
 

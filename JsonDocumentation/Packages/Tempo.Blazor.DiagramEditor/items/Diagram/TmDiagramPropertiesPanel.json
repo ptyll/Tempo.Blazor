@@ -60,6 +60,12 @@
       "isRequired": false
     },
     {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Actions section's Delete button. The editor wires it to the same delete path as the toolbar command, so the selection delete stays undoable."
+    },
+    {
       "name": "SelectedTableCells",
       "type": "List<(int Row, int Column)>",
       "isRequired": false,

@@ -5,32 +5,39 @@
 @using Tempo.Blazor.Components.Diagram.Services
 @using Tempo.Blazor.Components.Diagram.Models
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Abstractions.Layout
 
 <TmModal Show="@Show"
          OnClose="OnClose"
          Title="@Loc["TmDiagramCsvImportDialog_Title"]"
+         Subtitle="@Loc["TmDiagramCsvImportDialog_Subtitle"]"
          ShowDefaultFooterButtons="false"
          Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         LayoutMode="@LayoutMode"
          CloseOnOverlayClick="true"
-         CloseOnEscape="true">
+         CloseOnEscape="true"
+         RestoreFocusTarget="@RestoreFocusTarget">
     <ChildContent>
         <div class="tm-diagram-csv-import">
             <div class="tm-diagram-csv-import__field">
-                <label class="tm-diagram-csv-import__label" for="csv-data">@Loc["TmDiagramCsvImportDialog_CsvLabel"]</label>
-                <TmTextArea Id="csv-data"
+                <label class="tm-diagram-csv-import__label" for="@_csvFieldId">@Loc["TmDiagramCsvImportDialog_CsvLabel"]</label>
+                <TmTextArea Id="@_csvFieldId"
                             @bind-Value="_csvText"
                             @bind-Value:after="OnCsvChanged"
+                            Immediate="true"
                             Rows="8"
                             Placeholder="@Loc["TmDiagramCsvImportDialog_CsvPlaceholder"]"
                             Class="tm-diagram-csv-import__textarea" />
             </div>
 
             <div class="tm-diagram-csv-import__field">
-                <label class="tm-diagram-csv-import__label" for="diagram-type">@Loc["TmDiagramCsvImportDialog_TypeLabel"]</label>
-                <TmSelect Id="diagram-type"
+                <label class="tm-diagram-csv-import__label" for="@_typeFieldId">@Loc["TmDiagramCsvImportDialog_TypeLabel"]</label>
+                <TmSelect Id="@_typeFieldId"
                           @bind-Value="_diagramType"
                           @bind-Value:after="OnDiagramTypeChanged"
-                          Options="_typeOptions"
+                          Options="TypeOptions"
                           Class="tm-diagram-csv-import__select" />
             </div>
 
@@ -41,15 +48,17 @@
                     <div class="tm-diagram-csv-import__mappings-grid">
                         @foreach (var mapping in _mappings)
                         {
+                            var mappingFieldId = $"csv-map-{mapping.SemanticField.ToLowerInvariant()}-{_uid}";
                             <div class="tm-diagram-csv-import__mapping-row">
-                                <label class="tm-diagram-csv-import__mapping-label">
-                                    @mapping.SemanticField
+                                <label class="tm-diagram-csv-import__mapping-label" for="@mappingFieldId">
+                                    @GetSemanticFieldLabel(mapping.SemanticField)
                                     @if (mapping.IsRequired)
                                     {
-                                        <span class="tm-diagram-csv-import__required">*</span>
+                                        <span class="tm-diagram-csv-import__required" aria-hidden="true">*</span>
                                     }
                                 </label>
-                                <TmSelect Value="mapping.SelectedColumn"
+                                <TmSelect Id="@mappingFieldId"
+                                          Value="mapping.SelectedColumn"
                                           ValueChanged="(string? v) => OnMappingChanged(mapping, v)"
                                           Options="_headerOptions"
                                           Placeholder="@Loc["TmDiagramCsvImportDialog_SelectColumn"]"
@@ -92,9 +101,16 @@
 
             @if (_previewNodes >= 0)
             {
-                <div class="tm-diagram-csv-import__preview">
-                    <span>@Loc["TmDiagramCsvImportDialog_PreviewNodes", _previewNodes]</span>
-                    <span>@Loc["TmDiagramCsvImportDialog_PreviewEdges", _previewEdges]</span>
+                @* Mockup: the live parse result paints as one summary box holding icon stats. *@
+                <div class="tm-diagram-csv-import__preview" role="status" aria-live="polite">
+                    <span class="tm-diagram-csv-import__stat">
+                        <TmIcon Name="@IconNames.Square" Size="IconSize.Sm" />
+                        @Loc["TmDiagramCsvImportDialog_PreviewNodes", _previewNodes]
+                    </span>
+                    <span class="tm-diagram-csv-import__stat">
+                        <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Sm" />
+                        @Loc["TmDiagramCsvImportDialog_PreviewEdges", _previewEdges]
+                    </span>
                 </div>
             }
 
@@ -119,9 +135,23 @@
 </TmModal>
 
 @code {
+    /// <summary>Whether the dialog is visible; hidden resets the entered CSV, mappings and preview.</summary>
     [Parameter] public bool Show { get; set; }
+
+    /// <summary>Raised when the user cancels or closes the dialog.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised on import with the generated document and the layout id for the chosen type.</summary>
     [Parameter] public EventCallback<CsvImportResult> OnImport { get; set; }
+
+    /// <summary>
+    /// The layout the modal renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value never measures, so a test can render the mobile sheet without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The element (typically the canvas) focus returns to when the dialog closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
     private string _csvText = string.Empty;
     private CsvDiagramType _diagramType = CsvDiagramType.OrgChart;
@@ -134,11 +164,32 @@
     private int _previewNodes = -1;
     private int _previewEdges = -1;
 
-    private readonly List<SelectOption<CsvDiagramType>> _typeOptions = new()
+    // Per-instance field ids: the fixed "csv-data"/"diagram-type" ids collided
+    // when two dialogs were rendered at once and the diagram-type label pointed
+    // at a non-existent id (TmSelect generated its own random id).
+    private readonly string _uid = Guid.NewGuid().ToString("n")[..8];
+    private string _csvFieldId => $"csv-data-{_uid}";
+    private string _typeFieldId => $"diagram-type-{_uid}";
+
+    /// <summary>Diagram type choices, localized at render time.</summary>
+    private List<SelectOption<CsvDiagramType>> TypeOptions => new()
     {
-        new() { Value = CsvDiagramType.OrgChart, Label = "Org Chart" },
-        new() { Value = CsvDiagramType.Flowchart, Label = "Flowchart" },
-        new() { Value = CsvDiagramType.Timeline, Label = "Timeline" }
+        new() { Value = CsvDiagramType.OrgChart, Label = Loc["TmDiagramCsvImportDialog_Type_OrgChart"] },
+        new() { Value = CsvDiagramType.Flowchart, Label = Loc["TmDiagramCsvImportDialog_Type_Flowchart"] },
+        new() { Value = CsvDiagramType.Timeline, Label = Loc["TmDiagramCsvImportDialog_Type_Timeline"] }
+    };
+
+    /// <summary>Localized display label for a semantic mapping field (falls back to the machine key).</summary>
+    private string GetSemanticFieldLabel(string semanticField) => semanticField switch
+    {
+        "Name" => Loc["TmDiagramCsvImportDialog_Field_Name"],
+        "Manager" => Loc["TmDiagramCsvImportDialog_Field_Manager"],
+        "From" => Loc["TmDiagramCsvImportDialog_Field_From"],
+        "To" => Loc["TmDiagramCsvImportDialog_Field_To"],
+        "Label" => Loc["TmDiagramCsvImportDialog_Field_Label"],
+        "Date" => Loc["TmDiagramCsvImportDialog_Field_Date"],
+        "Event" => Loc["TmDiagramCsvImportDialog_Field_Event"],
+        _ => semanticField
     };
 
     protected override void OnParametersSet()
@@ -186,6 +237,7 @@
         RefreshPreview();
     }
 
+    /// <summary>Live preview: re-parses the typed CSV on every input (@bind-Value:after + Immediate).</summary>
     private void OnCsvChanged()
     {
         ParseHeadersAndPreview();

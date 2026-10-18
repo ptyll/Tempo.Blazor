@@ -67,6 +67,13 @@ public partial class TmDiagramToolbox : TmComponentBase
             await StencilKeyboardInsert.InvokeAsync(stencilId);
     }
 
+    /// <summary>
+    /// Phase 6 (tablet and touch): tapping a tile is the non-drag alternative to the HTML5
+    /// drag — the same insert-at-viewport-centre path the keyboard uses (WCAG 2.5.7). An edge
+    /// stencil tap arms the edge tool instead of inserting a node, exactly like its drag does.
+    /// </summary>
+    private Task OnStencilActivated(string stencilId) => StencilKeyboardInsert.InvokeAsync(stencilId);
+
     private void OnSearchChanged(string value)
     {
         _searchQuery = value;

@@ -1,0 +1,64 @@
+{
+  "itemName": "TmDiagramConnectDialog",
+  "kind": "Component",
+  "category": "Diagram",
+  "description": "Modal picker for the shape to connect when the user drags a connect arrow off a node. By default it offers only the node stencils of the source node's own set (declared SetId, else the id family prefix), narrowed by a search box; the 'Show all' toggle opts into the whole node library. Renders a roving arrow-key tile grid on desktop and plain rows with a Close footer button on the mobile bottom sheet. Edge stencils are never offered.",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramConnectDialog.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Diagram"
+  ],
+  "examples": [
+    "<TmDiagramConnectDialog Show=\"_connectOpen\"\n                         SourceStencilId=\"_sourceStencilId\"\n                         OnClose=\"() => _connectOpen = false\"\n                         OnStencilSelected=\"ConnectAs\"\n                         RestoreFocusTarget=\"@_canvasRef\" />"
+  ],
+  "cssClasses": [
+    { "name": "tm-diagram-connect-modal", "description": "Dialog body column: toolbar, tile grid and the empty-state note." },
+    { "name": "tm-diagram-connect-modal__toolbar", "description": "One row holding the search field and the Show-all toggle." },
+    { "name": "tm-diagram-connect-modal__search", "description": "Class of the search TmTextInput (lands on the input element)." },
+    { "name": "tm-diagram-connect-modal__show-all", "description": "Show-all toggle button; aria-pressed mirrors the state." },
+    { "name": "tm-diagram-connect-modal__grid", "description": "Tile container; a 3-column grid on desktop, single-column rows below 640px." },
+    { "name": "tm-diagram-connect-modal__item", "description": "One stencil tile; roving tabindex carries the arrow-key tab stop." },
+    { "name": "tm-diagram-connect-modal__icon", "description": "40px stencil preview box." },
+    { "name": "tm-diagram-connect-modal__label", "description": "Localized stencil name under (desktop) or beside (mobile) the icon." },
+    { "name": "tm-diagram-connect-modal__close", "description": "Sheet footer Close button; the whole footer hides at 640px and up." },
+    { "name": "tm-diagram-connect-modal__empty", "description": "Localized empty-state note when the search matches nothing." }
+  ],
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "SourceStencilId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stencil id of the source node. Its set scopes the default palette; unknown or empty ids fall back to every node stencil."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnStencilSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the picked stencil id; the host creates the node and the edge."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "Auto follows the viewport (bottom sheet under 640px); a forced value never measures, so tests can render the sheet without a DOM."
+    },
+    {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "Element focus returns to when the dialog closes — typically the diagram canvas."
+    }
+  ]
+}

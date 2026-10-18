@@ -24,6 +24,10 @@ public class DiagramUml25Phase5E2ETests : PlaywrightTestBase
         await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}");
         await WaitForAppReadyAsync(page);
 
+        // The docked toolbox exists only in the DESKTOP band (the demo column is tablet at
+        // every default viewport, phase 6) — pin the container like a full-bleed host.
+        await DiagramEditorE2E.PinDesktopAsync(page);
+
         var toolbox = page.Locator(".tm-diagram-toolbox");
         await toolbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20000 });
 
