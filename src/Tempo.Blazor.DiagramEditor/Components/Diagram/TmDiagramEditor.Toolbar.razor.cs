@@ -13,10 +13,11 @@ namespace Tempo.Blazor.Components.Diagram;
 public partial class TmDiagramEditor
 {
     /// <summary>
-    /// Toolbar layout preset. <see cref="DiagramToolbarPreset.Full"/> (the default) renders every
-    /// toolbar group in the classic order — the look this component has always had.
-    /// <see cref="DiagramToolbarPreset.Viewer"/> renders only the zoom, view, search and export
-    /// groups for read-only preview surfaces.
+    /// Toolbar group set. <see cref="DiagramToolbarPreset.Full"/> (the default) renders every group —
+    /// a set of commands, not a screen order: the command groups share one toolbar row, search and
+    /// panel toggles live in the header, view/canvas-size in the header "⋯" menu and zoom/read-only
+    /// in the status bar. <see cref="DiagramToolbarPreset.Viewer"/> renders only the zoom, view,
+    /// search and export groups for read-only preview surfaces.
     /// </summary>
     [Parameter] public DiagramToolbarPreset ToolbarPreset { get; set; } = DiagramToolbarPreset.Full;
 
@@ -28,16 +29,10 @@ public partial class TmDiagramEditor
     /// </summary>
     [Parameter] public DiagramToolbarGroups? ToolbarGroups { get; set; }
 
-    /// <summary>
-    /// Host content rendered at the very start of the first toolbar row, before the document
-    /// title (G9 host slot).
-    /// </summary>
+    /// <summary>Host content rendered at the very start of the header bar, before the document title (G9 host slot).</summary>
     [Parameter] public RenderFragment? HeaderStart { get; set; }
 
-    /// <summary>
-    /// Host content rendered at the very end of the last toolbar row, after the built-in groups
-    /// (G9 host slot).
-    /// </summary>
+    /// <summary>Host content rendered at the very end of the header bar, after the built-in controls (G9 host slot).</summary>
     [Parameter] public RenderFragment? HeaderActions { get; set; }
 
     /// <summary>
@@ -48,16 +43,6 @@ public partial class TmDiagramEditor
         DiagramToolbarGroups.Zoom | DiagramToolbarGroups.View
         | DiagramToolbarGroups.Search | DiagramToolbarGroups.Export;
 
-    /// <summary>The groups visible in the first toolbar row before the trailing spacer.</summary>
-    private const DiagramToolbarGroups Row1LeadingGroups =
-        DiagramToolbarGroups.History | DiagramToolbarGroups.Clipboard | DiagramToolbarGroups.Tools
-        | DiagramToolbarGroups.Format | DiagramToolbarGroups.Insert | DiagramToolbarGroups.Arrange;
-
-    /// <summary>The groups the second-row divider separates from canvas-size.</summary>
-    private const DiagramToolbarGroups Row2TrailingGroups =
-        DiagramToolbarGroups.Layout | DiagramToolbarGroups.Export
-        | DiagramToolbarGroups.Templates | DiagramToolbarGroups.Import;
-
     /// <summary>Effective group selection: explicit flags win over the preset.</summary>
     private DiagramToolbarGroups EffectiveToolbarGroups =>
         ToolbarGroups
@@ -67,11 +52,6 @@ public partial class TmDiagramEditor
 
     private bool Shows(DiagramToolbarGroups group) => EffectiveToolbarGroups.HasFlag(group);
 
-    private bool ShowsRow1Divider => (EffectiveToolbarGroups & Row1LeadingGroups) != 0;
-
-    private bool ShowsRow2Divider =>
-        Shows(DiagramToolbarGroups.CanvasSize) && (EffectiveToolbarGroups & Row2TrailingGroups) != 0;
-
     /// <summary>
     /// Whether the built-in Read-only/Edit toggle renders: only when the host did not pin
     /// <see cref="ReadOnly"/> and the <c>readonly</c> group is enabled. A host-pinned read-only
@@ -79,29 +59,4 @@ public partial class TmDiagramEditor
     /// </summary>
     private bool ShowsReadOnlyToggle =>
         !ReadOnly && Shows(DiagramToolbarGroups.ReadOnly);
-
-    /// <summary>
-    /// The <c>data-tm-group</c> attribute value for a group. These values are a frozen public
-    /// contract — do not rename them.
-    /// </summary>
-    private static string GroupName(DiagramToolbarGroups group) => group switch
-    {
-        DiagramToolbarGroups.History => "history",
-        DiagramToolbarGroups.Clipboard => "clipboard",
-        DiagramToolbarGroups.Tools => "tools",
-        DiagramToolbarGroups.Format => "format",
-        DiagramToolbarGroups.Insert => "insert",
-        DiagramToolbarGroups.Arrange => "arrange",
-        DiagramToolbarGroups.Search => "search",
-        DiagramToolbarGroups.Panels => "panels",
-        DiagramToolbarGroups.Zoom => "zoom",
-        DiagramToolbarGroups.View => "view",
-        DiagramToolbarGroups.CanvasSize => "canvas-size",
-        DiagramToolbarGroups.Layout => "layout",
-        DiagramToolbarGroups.Export => "export",
-        DiagramToolbarGroups.Templates => "templates",
-        DiagramToolbarGroups.Import => "import",
-        DiagramToolbarGroups.ReadOnly => "readonly",
-        _ => throw new ArgumentOutOfRangeException(nameof(group), group, "Unknown toolbar group."),
-    };
 }

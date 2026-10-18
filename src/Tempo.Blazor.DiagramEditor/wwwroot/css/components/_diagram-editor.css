@@ -324,6 +324,17 @@
     color: var(--tm-color-primary);
 }
 
+/* X3 / WCAG 2.5.3: below the desktop band the header toggles collapse to icon-only —
+   the visible name stays as aria-label, the tooltip in title. The branch runs on the
+   editor's own NAMED container (tm-diagram-editor) so a narrow editor inside a wide
+   window hides the labels too (the data-editor-layout attribute only follows the shell's
+   resolved mode, which a host-overridable breakpoint pair may keep "tablet" past 1024). */
+@container tm-diagram-editor (max-width: 1023.98px) {
+    .tm-diagram-editor__header-bar .tm-diagram-editor__panel-toggle-label {
+        display: none;
+    }
+}
+
 /* "⋯" view settings menu */
 .tm-diagram-editor__view-menu {
     position: relative;

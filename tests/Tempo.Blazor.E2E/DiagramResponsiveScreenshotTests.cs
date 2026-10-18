@@ -97,13 +97,14 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await page.EvaluateAsync("() => window.scrollTo({ top: 0, behavior: 'instant' })");
                 await page.WaitForTimeoutAsync(100);
 
-                // 2. Layers panel: since phase 4 the panels share the inspector tabs — collapsing
-                //    the properties panel auto-selects the Layers tab. The minimap card below the
-                //    tabs gets the column's leftover height, so collapse it too (its own panels
+                // 2. Layers panel: since phase 4 the panels share the inspector tabs — the capture
+                //    switches to the Layers tab directly (X3: the header carries ONE Inspector
+                //    toggle, so the tab is the selector now). The minimap card below the tabs
+                //    gets the column's leftover height, so collapse it too (its own panels
                 //    toggle) and the capture shows the full layers panel.
-                await page.Locator("[data-tm-group='panels'] button[title='Toggle minimap']").First.ClickAsync();
-                await page.Locator("[data-tm-group='panels'] button[title='Toggle properties panel']")
-                    .First.ClickAsync();
+                await page.Locator("[data-testid='diagram-editor-toggle-minimap']").First.ClickAsync();
+                await page.Locator(".tm-diagram-editor__inspector [role='tab']")
+                    .Filter(new() { HasText = "Layers" }).First.ClickAsync();
                 var layers = page.Locator(".tm-diagram-editor__layers-wrap");
                 await layers.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
                 await page.WaitForTimeoutAsync(250);
@@ -113,9 +114,9 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                     Type = ScreenshotType.Png,
                     Timeout = 60_000,
                 });
-                await page.Locator("[data-tm-group='panels'] button[title='Toggle properties panel']")
-                    .First.ClickAsync();
-                await page.Locator("[data-tm-group='panels'] button[title='Toggle minimap']").First.ClickAsync();
+                await page.Locator(".tm-diagram-editor__inspector [role='tab']")
+                    .Filter(new() { HasText = "Properties" }).First.ClickAsync();
+                await page.Locator("[data-testid='diagram-editor-toggle-minimap']").First.ClickAsync();
                 await page.WaitForTimeoutAsync(150);
 
                 // 3. Template gallery

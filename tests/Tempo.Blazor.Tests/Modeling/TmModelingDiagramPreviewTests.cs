@@ -181,6 +181,20 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Preview_hides_the_document_title_through_the_editor_api()
+    {
+        // F6: the preview hides the editor's document title with ShowTitle="false" — never
+        // with CSS (Preview_has_no_positional_toolbar_css forbids __title there).
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        cut.FindAll("[data-testid='diagram-editor'] .tm-diagram-editor__title").Should().BeEmpty(
+            "the Modeling preview renders no document-title input");
+        cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull(
+            "the viewer chrome (zoom readout) still renders");
+    }
+
+    [Fact]
     public void Preview_has_no_positional_toolbar_css()
     {
         var css = File.ReadAllText(FindPreviewCssPath());

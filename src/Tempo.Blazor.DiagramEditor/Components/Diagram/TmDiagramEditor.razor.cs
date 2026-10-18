@@ -71,7 +71,14 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>Show the minimap at the bottom of the right sidebar.</summary>
     [Parameter] public bool ShowMinimap { get; set; } = true;
 
-    /// <summary>Show the top toolbar.</summary>
+    /// <summary>
+    /// Show the editor chrome around the canvas: the header bar's built-in controls (document title,
+    /// mobile undo/redo, search and panel toggles, "⋯" view menu), the command toolbar row and the
+    /// status bar (zoom, Read-only toggle); on a mobile layout also the floating zoom pill and the
+    /// action bar. <c>false</c> leaves the page tabs, canvas, docked panels and minimap (the
+    /// pre-redesign meaning: everything that lived in the old toolbar). The host slots
+    /// <see cref="HeaderStart"/> / <see cref="HeaderActions"/> still render. Default <c>true</c>.
+    /// </summary>
     [Parameter] public bool ShowToolbar { get; set; } = true;
 
     /// <summary>Show grid lines on the canvas background.</summary>
@@ -133,6 +140,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private bool CanArrange => _selectedIds.Length > 1;
 
     private bool _toolboxCollapsed;
+    // Invariant: _propsCollapsed/_layersCollapsed are always written together via
+    // SetInspectorOpen; per-panel presence is ShowPropertiesPanel/ShowLayersPanel.
     private bool _propsCollapsed;
     private bool _layersCollapsed;
     private bool _showTableInserter;

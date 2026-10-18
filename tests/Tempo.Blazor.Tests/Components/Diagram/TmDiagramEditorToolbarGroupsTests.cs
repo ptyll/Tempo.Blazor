@@ -106,6 +106,31 @@ public class TmDiagramEditorToolbarGroupsTests : LocalizationTestBase
         cut.FindAll("[data-testid='diagram-editor'] [data-tm-group='zoom']").Should().HaveCount(1);
     }
 
+    [Fact]
+    public void ImportGroup_IsPinnedToTheBar()
+    {
+        // A3: the Import group must never collapse into "More" — its JSON entry is the browser
+        // file picker (InputFile), which cannot be opened from a menu entry.
+        using var cut = RenderDefaultEditor();
+
+        var importItem = cut.FindComponents<Tempo.Blazor.Components.Toolbar.TmToolbarItem>()
+            .Single(c => c.Instance.MenuLabel == "Import");
+        importItem.Instance.Priority.Should().Be(Tempo.Blazor.Components.Toolbar.ToolbarButtonPriority.Pinned,
+            "the Import group is pinned at every toolbar width");
+    }
+
+    [Fact]
+    public void ImportDropdown_OffersTheJsonFilePicker()
+    {
+        using var cut = RenderDefaultEditor();
+
+        // The file input lives in the bar dropdown's open menu content.
+        cut.Find("[data-tm-group='import'] .tm-dropdown-trigger").Click();
+
+        cut.FindAll(".tm-diagram-editor__import-file-label input[type='file']").Should().HaveCount(1,
+            "the JSON import opens the browser file dialog from the bar dropdown");
+    }
+
     private IRenderedComponent<TmDiagramEditor> RenderDefaultEditor() =>
         Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, false));
 

@@ -125,6 +125,8 @@
             </div>
 
             @* ── Header bar: host slot, title, named panel toggles, "⋯" view settings ── *@
+            @if (ShowsHeaderBar)
+            {
             <div class="tm-diagram-editor__header-bar">
 
                 @if (HeaderStart is not null)
@@ -133,7 +135,7 @@
                     <div class="tm-diagram-editor__header-start">@HeaderStart</div>
                 }
 
-                @if (ShowTitle)
+                @if (ShowsHeaderControls && ShowTitle)
                 {
                     <input class="tm-diagram-editor__title"
                            type="text"
@@ -150,7 +152,7 @@
                 @* Phase 7 (mobile): compact header — title, Undo/Redo and the "⋯" view menu.
                    The panel toggles make no sense (the panels live in the sheet) and the search
                    moves into the "⋯" menu, so the header holds three icon targets at 320px. *@
-                @if (IsMobileLayout && Shows(DiagramToolbarGroups.History))
+                @if (ShowsHeaderControls && IsMobileLayout && Shows(DiagramToolbarGroups.History))
                 {
                     <div class="tm-diagram-editor__toolbar-group tm-diagram-editor__header-history" data-tm-group="history">
                         <button type="button"
@@ -173,13 +175,14 @@
                 }
 
                 @* Search toggle (named, with a visible label); on mobile it lives in the "⋯" menu. *@
-                @if (Shows(DiagramToolbarGroups.Search) && !IsMobileLayout)
+                @if (ShowsHeaderControls && Shows(DiagramToolbarGroups.Search) && !IsMobileLayout)
                 {
                     <div class="tm-diagram-editor__toolbar-group" data-tm-group="search">
                         <button type="button"
                                 class="tm-diagram-editor__panel-toggle @(_showSearchPanel ? "tm-diagram-editor__panel-toggle--active" : "")"
                                 title="@Loc["TmDiagramEditor_Search"]"
                                 aria-label="@Loc["TmDiagramEditor_Search"]"
+                                aria-pressed="@(_showSearchPanel.ToString().ToLowerInvariant())"
                                 @onclick="OnSearchClicked">
                             <TmIcon Name="@IconNames.Search" Size="IconSize.Sm" />
                             <span class="tm-diagram-editor__panel-toggle-label">@Loc["TmDiagramEditor_Search"]</span>
@@ -188,43 +191,35 @@
                 }
 
                 @* Named panel toggles (desktop/tablet chrome; on mobile the panels live in the sheet) *@
-                @if (Shows(DiagramToolbarGroups.Panels) && !IsMobileLayout)
+                @if (ShowsHeaderControls && Shows(DiagramToolbarGroups.Panels) && !IsMobileLayout)
                 {
                     <div class="tm-diagram-editor__toolbar-group" data-tm-group="panels">
                         @if (ShowToolbox)
                         {
+                            @* WCAG 2.5.3: the accessible name carries the VISIBLE label text; the
+                               tooltip keeps the action wording ("Toggle …"). *@
                             <button type="button"
-                                    class="tm-diagram-editor__panel-toggle @(!LeftDockOpen ? "" : "tm-diagram-editor__panel-toggle--active")"
+                                    class="tm-diagram-editor__panel-toggle @(IsToolboxExpanded ? "tm-diagram-editor__panel-toggle--active" : "")"
                                     title="@Loc["TmDiagramEditor_ToggleToolbox"]"
-                                    aria-label="@Loc["TmDiagramEditor_ToggleToolbox"]"
-                                    aria-pressed="@((!LeftDockOpen).ToString().ToLowerInvariant())"
-                                    @onclick="() => _toolboxCollapsed = !_toolboxCollapsed">
-                                <TmIcon Name="@IconNames.Sidebar" Size="IconSize.Sm" />
+                                    aria-label="@Loc["TmDiagramEditor_PanelToolbox"]"
+                                    aria-pressed="@(IsToolboxExpanded.ToString().ToLowerInvariant())"
+                                    data-testid="@TestId("diagram-editor-toggle-toolbox")"
+                                    @onclick="ToggleToolboxFromHeaderAsync">
+                                <TmIcon Name="@IconNames.Grid" Size="IconSize.Sm" />
                                 <span class="tm-diagram-editor__panel-toggle-label">@Loc["TmDiagramEditor_PanelToolbox"]</span>
                             </button>
                         }
-                        @if (ShowPropertiesPanel)
+                        @if (ShowPropertiesPanel || ShowLayersPanel)
                         {
                             <button type="button"
-                                    class="tm-diagram-editor__panel-toggle @(!_propsCollapsed ? "tm-diagram-editor__panel-toggle--active" : "")"
-                                    title="@Loc["TmDiagramEditor_ToggleProperties"]"
-                                    aria-label="@Loc["TmDiagramEditor_ToggleProperties"]"
-                                    aria-pressed="@((!_propsCollapsed).ToString().ToLowerInvariant())"
-                                    @onclick="TogglePropertiesPanel">
-                                <TmIcon Name="@IconNames.Sliders" Size="IconSize.Sm" />
-                                <span class="tm-diagram-editor__panel-toggle-label">@Loc["TmDiagramEditor_PanelProperties"]</span>
-                            </button>
-                        }
-                        @if (ShowLayersPanel)
-                        {
-                            <button type="button"
-                                    class="tm-diagram-editor__panel-toggle @(!_layersCollapsed ? "tm-diagram-editor__panel-toggle--active" : "")"
-                                    title="@Loc["TmDiagramEditor_ToggleLayers"]"
-                                    aria-label="@Loc["TmDiagramEditor_ToggleLayers"]"
-                                    aria-pressed="@((!_layersCollapsed).ToString().ToLowerInvariant())"
-                                    @onclick="ToggleLayersPanel">
-                                <TmIcon Name="@IconNames.Layers" Size="IconSize.Sm" />
-                                <span class="tm-diagram-editor__panel-toggle-label">@Loc["TmDiagramEditor_PanelLayers"]</span>
+                                    class="tm-diagram-editor__panel-toggle @(IsInspectorExpanded ? "tm-diagram-editor__panel-toggle--active" : "")"
+                                    title="@Loc["TmDiagramEditor_ToggleInspector"]"
+                                    aria-label="@InspectorToggleLabel"
+                                    aria-pressed="@(IsInspectorExpanded.ToString().ToLowerInvariant())"
+                                    data-testid="@TestId("diagram-editor-toggle-inspector")"
+                                    @onclick="ToggleInspectorFromHeaderAsync">
+                                <TmIcon Name="@(ShowPropertiesPanel ? IconNames.Sliders : IconNames.Layers)" Size="IconSize.Sm" />
+                                <span class="tm-diagram-editor__panel-toggle-label">@InspectorToggleLabel</span>
                             </button>
                         }
                         @if (ShowMinimap)
@@ -232,9 +227,10 @@
                             <button type="button"
                                     class="tm-diagram-editor__panel-toggle @(!_minimapCollapsed ? "tm-diagram-editor__panel-toggle--active" : "")"
                                     title="@Loc["TmDiagramEditor_ToggleMinimap"]"
-                                    aria-label="@Loc["TmDiagramEditor_ToggleMinimap"]"
+                                    aria-label="@Loc["TmDiagramEditor_PanelMinimap"]"
                                     aria-pressed="@((!_minimapCollapsed).ToString().ToLowerInvariant())"
-                                    @onclick="() => _minimapCollapsed = !_minimapCollapsed">
+                                    data-testid="@TestId("diagram-editor-toggle-minimap")"
+                                    @onclick="ToggleMinimap">
                                 <TmIcon Name="@IconNames.Map" Size="IconSize.Sm" />
                                 <span class="tm-diagram-editor__panel-toggle-label">@Loc["TmDiagramEditor_PanelMinimap"]</span>
                             </button>
@@ -253,15 +249,17 @@
                         }
                         <button type="button"
                                 class="tm-diagram-editor__more-btn"
-                                aria-haspopup="true"
                                 aria-expanded="@(_viewMenuOpen ? "true" : "false")"
-                                aria-label="@Loc["TmDiagramEditor_ViewSettings"]"
-                                title="@Loc["TmDiagramEditor_ViewSettings"]"
+                                aria-controls="@_viewMenuId"
+                                aria-label="@(IsMobileLayout ? Loc["TmDiagramEditor_MoreActions"] : Loc["TmDiagramEditor_ViewSettings"])"
+                                title="@(IsMobileLayout ? Loc["TmDiagramEditor_MoreActions"] : Loc["TmDiagramEditor_ViewSettings"])"
                                 data-testid="@TestId("diagram-editor-more")"
                                 @onclick="ToggleViewMenu">
                             <TmIcon Name="@IconNames.MoreHorizontal" Size="IconSize.Sm" />
                         </button>
-                        <div class="tm-diagram-editor__view-menu-panel" role="group" aria-label="@Loc["TmDiagramEditor_ViewSettings"]" hidden="@(!_viewMenuOpen)">
+                        <div id="@_viewMenuId" class="tm-diagram-editor__view-menu-panel" role="group"
+                             aria-label="@(IsMobileLayout ? Loc["TmDiagramEditor_MoreActions"] : Loc["TmDiagramEditor_ViewSettings"])"
+                             hidden="@(!_viewMenuOpen)">
 
                             @* Phase 7 (mobile): the compact header drops the search toggle, so the
                                "⋯" menu carries it; the read-only toggle lives here too (there is no
@@ -366,6 +364,7 @@
                     <div class="tm-diagram-editor__header-actions">@HeaderActions</div>
                 }
             </div>
+            }
         </Header>
 
         <Canvas>
@@ -484,7 +483,7 @@
                 @* ── Floating zoom overlay (phase 7, mobile): the status bar does not render on
                    a mobile layout — the + / % / − / fit pill floats over the canvas corner like
                    the minimap, outside the SVG (the mockup's left-side pill). *@
-                @if (IsMobileLayout && Shows(DiagramToolbarGroups.Zoom))
+                @if (IsMobileLayout && ShowToolbar && Shows(DiagramToolbarGroups.Zoom))
                 {
                     <div class="tm-diagram-editor__zoom-overlay"
                          role="group"
@@ -517,7 +516,7 @@
                 @* ── Minimap overlay (DI3, phase 6): from tablet down the minimap floats over
                    the canvas corner instead of taking a column of its own; a tap or drag on it
                    navigates the canvas. *@
-                @if (ShowMinimap && MinimapAsOverlay)
+                @if (ShowMinimap && MinimapAsOverlay && !_minimapCollapsed)
                 {
                     <div class="tm-diagram-editor__minimap-overlay" data-testid="@TestId("diagram-editor-minimap-overlay")">
                         <TmDiagramMinimap Document="_document"
@@ -613,7 +612,7 @@
                    class="tm-diagram-editor__rail-btn"
                    aria-label="@Loc["TmDiagramEditor_PanelToolbox"]"
                    title="@Loc["TmDiagramEditor_PanelToolbox"]"
-                   @onclick="() => _toolboxCollapsed = false">
+                   @onclick="() => SetToolboxExpandedAsync(true)">
             <TmIcon Name="@IconNames.Grid" Size="IconSize.Sm" />
         </button>
         : null;
@@ -793,14 +792,14 @@
             {
                 if (!MobilePanelsAllowed || !InspectorVisible) return null;
             }
-            else if (!InspectorVisible && !ShowMinimap) return null;
+            else if (!InspectorVisible && !ShowsMinimapCard) return null;
             return @<div class="tm-diagram-editor__right-stack">
                 @if (InspectorVisible)
                 {
                     <div class="tm-diagram-editor__inspector"
                          data-inspector-layout="@InspectorLayout.ToString().ToLowerInvariant()"
                          data-testid="@TestId("diagram-editor-inspector")">
-                        @if (InspectorLayout == DiagramInspectorLayout.Tabs)
+                        @if (InspectorLayout == DiagramInspectorLayout.Tabs && InspectorHasTabs)
                         {
                             <TmTabs ActiveTabId="@EffectiveInspectorTab"
                                     ActiveTabIdChanged="SelectInspectorTab"
@@ -871,14 +870,14 @@
                         }
                     </div>
                 }
-                @if (ShowMinimap && !MinimapAsOverlay)
+                @if (ShowsMinimapCard)
                 {
                     <div class="tm-diagram-editor__minimap-card" data-testid="@TestId("diagram-editor-minimap-card")">
                         <button type="button"
                                 class="tm-diagram-editor__minimap-card-toggle"
                                 aria-expanded="@(!_minimapCollapsed ? "true" : "false")"
                                 title="@Loc["TmDiagramEditor_ToggleMinimap"]"
-                                @onclick="() => _minimapCollapsed = !_minimapCollapsed">
+                                @onclick="ToggleMinimap">
                             <TmIcon Name="@IconNames.Map" Size="IconSize.Sm" />
                             <span class="tm-diagram-editor__minimap-card-title">@Loc["TmDiagramEditor_PanelMinimap"]</span>
                             <TmIcon Name="@(_minimapCollapsed ? IconNames.ChevronDown : IconNames.ChevronUp)" Size="IconSize.Sm" />
@@ -1082,14 +1081,14 @@
                         </TmToolbarGroup>
                     }
 
-                    @* Import (JSON via the file picker on the bar; SQL/CSV also in "More") *@
+                    @* Import: pinned to the bar — the JSON file picker lives in the bar dropdown (a "More" entry cannot open the browser file dialog); SQL/CSV are also offered as menu entries. *@
                     @if (Shows(DiagramToolbarGroups.Import))
                     {
                         <TmToolbarGroup Label="@Loc["TmDiagramEditor_Import"]"
                                         Class="tm-diagram-editor__toolbar-group"
                                         data-tm-group="import">
                             <TmToolbarItem MenuLabel="@Loc["TmDiagramEditor_Import"]"
-                                           Priority="ToolbarButtonPriority.Primary"
+                                           Priority="ToolbarButtonPriority.Pinned"
                                            MenuItems="@BuildImportMenuItems()">
                                 <TmDropdown Text="@Loc["TmDiagramEditor_Import"]" Icon="@IconNames.Upload" Disabled="@IsReadOnly" OnSelect="HandleImportSelect">
                                     <label class="tm-dropdown-item tm-diagram-editor__import-file-label" title="@Loc["TmDiagramEditor_ImportJson"]" aria-label="@Loc["TmDiagramEditor_ImportJson"]">

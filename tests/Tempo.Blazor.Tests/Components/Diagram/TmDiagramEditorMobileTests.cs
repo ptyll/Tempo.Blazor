@@ -297,6 +297,102 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         cut.FindAll(".tm-editor-shell__sheet").Should().BeEmpty();
     }
 
+    // ── F11: the mobile surfaces follow the host-made-viewer rule ────────────
+
+    [Fact]
+    public void ShowToolbar_False_Mobile_HasNoActionBarAndNoZoomPill()
+    {
+        var cut = RenderMobileEditor(extra: p => p.Add(e => e.ShowToolbar, false));
+
+        cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty(
+            "the action bar is toolbar chrome");
+        cut.FindAll(".tm-diagram-editor__zoom-overlay").Should().BeEmpty(
+            "the floating zoom pill is toolbar chrome");
+        cut.Find(".tm-diagram-canvas, [data-testid='diagram-canvas']").Should().NotBeNull(
+            "the canvas still renders");
+    }
+
+    [Fact]
+    public async Task UserReadOnlyToggle_Mobile_KeepsTheSheetAndActionBar()
+    {
+        // A4: the user's OWN Read-only toggle must not take the surfaces away — the panels
+        // render read-only and the user can always switch back.
+        var cut = RenderMobileEditor();
+
+        cut.Find("[data-testid='diagram-editor-more']").Click();
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.Instance.IsReadOnly.Should().BeTrue("the user toggled read-only");
+        cut.Find(".tm-mobile-action-bar__bar").Should().NotBeNull(
+            "the user's read-only keeps the action bar");
+        cut.FindAll("[data-tm-group='readonly']").Should().NotBeEmpty(
+            "the toggle stays reachable so the user can switch back");
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public void ViewerGroupSet_ViaToolbarGroups_Mobile_HasNoEditActionBar()
+    {
+        // The rule reads the EFFECTIVE group set: a ToolbarGroups selection equal to the Viewer
+        // preset (zoom | view | search | export) is a viewer, preset or not.
+        var cut = RenderMobileEditor(extra: p => p
+            .Add(e => e.ToolbarGroups, DiagramToolbarGroups.Zoom | DiagramToolbarGroups.View
+                | DiagramToolbarGroups.Search | DiagramToolbarGroups.Export));
+
+        cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty();
+        cut.FindAll(".tm-editor-shell__sheet").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ViewerPresetWithAllGroups_Mobile_KeepsTheActionBar()
+    {
+        // An explicit ToolbarGroups selection overrides the preset — with All the editor IS an
+        // editing surface (the group set decides, not the preset value).
+        var cut = RenderMobileEditor(extra: p => p
+            .Add(e => e.ToolbarPreset, DiagramToolbarPreset.Viewer)
+            .Add(e => e.ToolbarGroups, DiagramToolbarGroups.All));
+
+        cut.Find(".tm-mobile-action-bar__bar").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MoreMenu_Mobile_RendersForSearchAndReadOnlyWithoutViewGroups()
+    {
+        // On mobile Search and Read-only live ONLY in the "⋯" menu — a host that enables them
+        // without the view/canvas-size groups must still get the menu trigger.
+        var cut = RenderMobileEditor(extra: p => p
+            .Add(e => e.ToolbarGroups, DiagramToolbarGroups.Search | DiagramToolbarGroups.ReadOnly
+                | DiagramToolbarGroups.Zoom | DiagramToolbarGroups.History));
+
+        cut.Find("[data-testid='diagram-editor-more']").Should().NotBeNull(
+            "the ⋯ menu renders because it carries Search / Read-only");
+
+        cut.Find("[data-testid='diagram-editor-more']").Click();
+        var panel = cut.Find(".tm-diagram-editor__view-menu-panel");
+        panel.QuerySelectorAll("[data-tm-group='search']").Should().NotBeEmpty();
+        panel.QuerySelectorAll("[data-tm-group='readonly']").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void MoreMenu_Mobile_TriggerAndPanelAreNamedMoreActions()
+    {
+        // On mobile the "⋯" menu is the actions menu (search, read-only, view) — not "View settings".
+        var cut = RenderMobileEditor();
+
+        var trigger = cut.Find("[data-testid='diagram-editor-more']");
+        trigger.GetAttribute("aria-label").Should().Be("More actions");
+        trigger.GetAttribute("title").Should().Be("More actions");
+        trigger.GetAttribute("aria-controls").Should().NotBeNullOrEmpty(
+            "the trigger points at its panel through a per-instance id");
+
+        trigger.Click();
+        var reopenedTrigger = cut.Find("[data-testid='diagram-editor-more']");
+        cut.Find(".tm-diagram-editor__view-menu-panel")
+            .GetAttribute("aria-label").Should().Be("More actions");
+        reopenedTrigger.GetAttribute("aria-controls").Should().Be(
+            cut.Find(".tm-diagram-editor__view-menu-panel").GetAttribute("id"));
+    }
+
     // ── Mobile chrome: compact header, floating zoom, no status bar ─────────
 
     [Fact]

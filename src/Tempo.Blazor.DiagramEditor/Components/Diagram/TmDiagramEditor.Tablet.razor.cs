@@ -100,8 +100,7 @@ public partial class TmDiagramEditor
             if (ShowToolbox) _toolboxCollapsed = _shellCollapsed.HasFlag(EditorShellPanel.Left);
             if (_shellCollapsed.HasFlag(EditorShellPanel.Right))
             {
-                _propsCollapsed = true;
-                _layersCollapsed = true;
+                SetInspectorOpen(false);
             }
         }
     }
@@ -120,8 +119,7 @@ public partial class TmDiagramEditor
             if (ShowToolbox) _toolboxCollapsed = collapsed.HasFlag(EditorShellPanel.Left);
             if (collapsed.HasFlag(EditorShellPanel.Right))
             {
-                _propsCollapsed = true;
-                _layersCollapsed = true;
+                SetInspectorOpen(false);
             }
         }
         return ScheduleCanvasRelayoutAsync();
@@ -137,16 +135,8 @@ public partial class TmDiagramEditor
         if (!InspectorVisible && !ShowMinimap) return;
 
         _shellCollapsed &= ~EditorShellPanel.Right;
-        if (_propsCollapsed && ShowPropertiesPanel)
-        {
-            _propsCollapsed = false;
-            _inspectorTab = "properties";
-        }
-        else if (_layersCollapsed && ShowLayersPanel)
-        {
-            _layersCollapsed = false;
-            _inspectorTab = "layers";
-        }
+        if (!InspectorVisible) SetInspectorOpen(true);
+        _inspectorTab = ShowPropertiesPanel ? "properties" : "layers";
     }
 
     // ── Canvas re-measure ────────────────────────────────────────────────────

@@ -71,12 +71,22 @@ public partial class TmDiagramEditor
         return null;
     }
 
+    /// <summary>Groups that make the editor an editing surface on mobile: when the effective
+    /// selection contains none of them (the Viewer preset, or an equivalent ToolbarGroups set) the
+    /// editor is a viewer.</summary>
+    private const DiagramToolbarGroups MobileEditingGroups =
+        DiagramToolbarGroups.History | DiagramToolbarGroups.Clipboard | DiagramToolbarGroups.Tools
+        | DiagramToolbarGroups.Format | DiagramToolbarGroups.Insert | DiagramToolbarGroups.Arrange
+        | DiagramToolbarGroups.Layout | DiagramToolbarGroups.Import | DiagramToolbarGroups.Templates
+        | DiagramToolbarGroups.Panels;
+
     /// <summary>
-    /// Whether the mobile editing surfaces (panels sheet, action bar) render at all: a Viewer
-    /// preset or a host-pinned read-only editor is a viewer on mobile — no edit affordances,
-    /// only the floating zoom and the minimap (the Modeling preview contract).
+    /// Whether the mobile editing surfaces (panels sheet, action bar) render: not for a host-made
+    /// viewer — a host-pinned <see cref="ReadOnly"/> or an effective group set without any editing
+    /// group (the Modeling preview contract). The user's own Read-only toggle keeps them (the panels
+    /// render read-only) so the user can always switch back.
     /// </summary>
-    private bool MobilePanelsAllowed => !IsReadOnly && ToolbarPreset != DiagramToolbarPreset.Viewer;
+    private bool MobilePanelsAllowed => !ReadOnly && (EffectiveToolbarGroups & MobileEditingGroups) != 0;
 
     /// <summary>The mobile sheet title of the left (palette) panel: the mockup's "Shapes" tab.</summary>
     private string MobileShapesTitle => Loc["TmDiagramEditor_ShapesTab"];
@@ -118,7 +128,7 @@ public partial class TmDiagramEditor
     {
         get
         {
-            if (!IsMobileLayout || !MobilePanelsAllowed) return null;
+            if (!IsMobileLayout || !MobilePanelsAllowed || !ShowToolbar) return null;
             return BuildMobileActions();
         }
     }
@@ -168,8 +178,7 @@ public partial class TmDiagramEditor
     {
         if (!MobilePanelsAllowed) return;
         _toolboxCollapsed = false;
-        _propsCollapsed = false;
-        _layersCollapsed = false;
+        SetInspectorOpen(true);
         _activeMobilePanel = panel;
         _mobileSnapIndex = snapIndex;
         _canvas?.BeginChromeOnlyPass();
@@ -192,8 +201,7 @@ public partial class TmDiagramEditor
             && _mobileSnapIndex > MobilePeekSnapIndex;
         // Both panels stay available: the sheet keeps its Shapes | Inspector tab strip.
         _toolboxCollapsed = false;
-        _propsCollapsed = false;
-        _layersCollapsed = false;
+        SetInspectorOpen(true);
         _inspectorTab = "properties";
         _activeMobilePanel = EditorShellPanel.Right;
         if (!keepSnap)

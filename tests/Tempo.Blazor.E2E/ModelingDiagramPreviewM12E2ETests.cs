@@ -56,6 +56,10 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         Assert.AreEqual(0, await preview.Locator("button[aria-label='Switch to edit mode']").CountAsync());
         Assert.AreEqual(1, await preview.Locator(".tm-diagram-editor--readonly").CountAsync(),
             "the preview editor root carries the read-only state class");
+
+        // F6: the preview hides the document title through the editor API (ShowTitle="false").
+        Assert.AreEqual(0, await preview.Locator(".tm-diagram-editor__title").CountAsync(),
+            "the preview renders no document-title input");
     }
 
     [TestMethod]

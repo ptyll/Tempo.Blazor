@@ -29,8 +29,10 @@
   tap-insert from the palette; resize/rotate, edge drawing, align/distribute, layout and import
   stay tablet+. New `TmDiagramCanvas` parameters `ShowTransformHandles` and `ShowConnectArrows`
   (both default `true`) let any host drop the reshaping or edge-drawing affordances where the form
-  factor forbids them. A selection opens the sheet peeked on the properties panel; a `Viewer`
-  preset or pinned read-only host renders no edit action bar (the Modeling preview contract).
+  factor forbids them. A selection opens the sheet peeked on the properties panel; a host-made
+  viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the
+  `Viewer` preset) — renders no action bar or panels sheet; the user's own Read-only toggle keeps
+  them (read-only panels).
   Localization: `TmDiagramEditor_ShapesTab`, `TmDiagramEditor_ActionsSheetTitle` and
   `TmDiagramEditor_ZoomControls` (en/cs/sk/fr).
 
@@ -67,7 +69,8 @@
   internal DOM. `IsReadOnly` exposes the effective read-only state (see Breaking / Migration).
   The `Viewer` preset still renders the document-title input (disabled while read-only — the
   document name is a header element, not a toolbar group, so it intentionally stays outside the
-  group contract), while the search control received the standard toolbar-group chrome.
+  group contract), while the search control received the standard toolbar-group chrome. The
+  Modeling preview hides it with `ShowTitle="false"`.
 
 - **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
 
@@ -332,9 +335,10 @@
   presents as the shared F3 bottom sheet (`.tm-diagram-editor__context-sheet`) instead of the
   `position:fixed` menu, without the align/distribute (node menu) and auto-layout (canvas menu)
   entries; resize/rotate handles and quick-connect arrows are not rendered
-  (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` new, default `true`). A `Viewer`
-  preset or a host-pinned read-only editor renders no edit action bar and no panels sheet on
-  mobile — only the floating zoom and minimap (the Modeling preview contract).
+  (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` new, default `true`). A host-made
+  viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the
+  `Viewer` preset) — renders no action bar or panels sheet on mobile — only the floating zoom and
+  minimap; the user's own Read-only toggle keeps them (read-only panels).
 
   DOM/CSS impact and migration:
 
@@ -480,19 +484,33 @@
   collapsed can be `inert` until it is opened from the menu. `__toolbar-row` no longer exists;
   `__props-wrap`, `__layers-wrap`, `__right-stack` and `__right-wrap` remain as aliases inside
   the inspector, and `__toolbox-wrap`/`__minimap-card` wrap the docked panels. The toolbar
-  toggle buttons keep their tooltips ("Toggle toolbox", "Toggle properties panel",
-  "Toggle layers", "Toggle minimap"), so attribute selectors keep working; the new visible
-  labels are `TmDiagramEditor_Panel*` keys. The Properties/Layers panels now render behind
+  toggle buttons keep their tooltips ("Toggle toolbox", "Toggle inspector",
+  "Toggle minimap"; see the Inspector toggle entry), so attribute selectors keep working; the new
+  visible labels are `TmDiagramEditor_Panel*` keys. The Properties/Layers panels now render behind
   inspector tabs (`TmTabs`) — an inactive tab's panel is not in the DOM; opt out with the new
-  `InspectorLayout="DiagramInspectorLayout.Stacked"`.
+  `InspectorLayout="DiagramInspectorLayout.Stacked"`. With only one panel available
+  (`ShowPropertiesPanel`/`ShowLayersPanel`), it renders alone in `__right-wrap` without the tab
+  strip.
+
+  `ShowToolbar="false"` keeps its pre-redesign meaning: it hides every control that used to live
+  in the toolbar — now the header bar's built-in controls (title, search/panel toggles, "⋯" menu),
+  the command row and the status bar (and on mobile the zoom pill and the action bar). Page tabs,
+  panels, canvas, minimap and the `HeaderStart`/`HeaderActions` host slots stay. This restores
+  2.9.0 behaviour (not a new break).
 
   The Properties panel's order/grouping/collapse/lock actions moved into a dedicated
   **Actions** section (with a Delete button raised through `OnDeleteRequested`). The collapsed
   Import group offers SQL/CSV entries in "More"; the JSON file picker stays on the bar item
-  (a browser file dialog cannot be opened from a menu entry), and at desktop widths the Import
-  group stays on the bar. New parameters: `InspectorLayout` (`Tabs` default / `Stacked` opt-in),
-  `ShowStatusBar` (default `true`), `ShowTitle` (default `true` — hide the document title
-  through the API, never through CSS).
+  (a browser file dialog cannot be opened from a menu entry), and the Import group is pinned to
+  the bar (`Priority=Pinned`) at every toolbar width. New parameters: `InspectorLayout`
+  (`Tabs` default / `Stacked` opt-in), `ShowStatusBar` (default `true`), `ShowTitle`
+  (default `true` — hide the document title through the API, never through CSS).
+
+- **TmDiagramEditor header: the *Properties* and *Layers* toggles were merged into one *Inspector* toggle.** It shows/hides the whole inspector (on tablet it rails it); the inspector's Properties | Layers tabs choose the content. In the tablet band the header toggles are icon-only — the visible name stays as `aria-label`, the tooltip in `title`. The accessible names "Toggle properties panel" and "Toggle layers" are gone — migrate selectors to the new stable test ids:
+  ```text
+  before: button[title='Toggle layers'], button[title='Toggle properties panel'], GetByRole(Button, "Toggle layers")
+  after:  [data-testid='diagram-editor-toggle-inspector']   (also: diagram-editor-toggle-toolbox, diagram-editor-toggle-minimap)
+  ```
 
 - **`TmDiagramEditor`: the built-in Read-only/Edit toggle no longer overwrites the `[Parameter]
   ReadOnly` and disappears while the host pins read-only (DI1).**
@@ -873,7 +891,7 @@
 
 - **`TmDiagramEditor` search: Replace / Replace all respect read-only and notify the host.** In the effective read-only state the search panel is search-only (new `TmDiagramSearchPanel.ReadOnly`; Ctrl+H opens plain search). A plain (non-regex) query is replaced literally (`a.b` no longer matches `axb`), `$` in a plain replacement is literal text (`$0x` replaces to `$0x`, not group 0 + `x`), and every replacement raises `DocumentChanged`. The find/replace inputs no longer show the literal texts "Query"/"ReplaceQuery"/"_regexError", an invalid regex is announced through a localized `role="alert"` message tied to the query input (`aria-invalid` / `aria-describedby`), the result counter is a polite live region, and the layers panel marks the active layer again.
 
-- **`TmDropdown` disabled trigger renders as a real disabled control.** `Disabled` now puts the native `disabled` attribute on the trigger button (and omits `aria-expanded`, which is meaningless while disabled), so the browser blocks the click in every context; the wrapper already carried the `tm-dropdown-disabled` class and now also greys the trigger out via `--tm-opacity-disabled`.
+- **`TmDropdown` disabled trigger renders as a real disabled control.** `Disabled` now puts the native `disabled` attribute on the trigger button (and omits `aria-expanded`, which is meaningless while disabled), so the browser blocks the click in every context; the wrapper already carried the `tm-dropdown-disabled` class and now also greys the trigger out via `--tm-opacity-disabled`. Becoming disabled while the menu is open now closes the menu (`OnParametersSet`), so a disabled dropdown can no longer leave an open menu behind that its dead trigger could never close.
 
 - **`TmDiagramEditor` context menu stays inside the editor box (DiagramEditor redesign phase 8).**
   The editor is an inline-size container, so the fixed-position context menu resolves against the
@@ -1742,6 +1760,10 @@
   `{0}`-style placeholder — in every shipped table.
 
 ### Accessibility
+
+- **TmDiagramEditor: the header *Tools* toggle reports `aria-pressed="true"` while the palette is
+  expanded, like the other panel toggles (it was inverted).** On tablet the toggle and the rail
+  button collapse the palette to its rail instead of hiding it.
 
 - **`TmWidgetSelector` is a real modal surface and the `TmDashboard` switcher is a WAI-ARIA menu.**
   The widget selector previously rendered its own `position: fixed` overlay — no `role="dialog"`,

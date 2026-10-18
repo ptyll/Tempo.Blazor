@@ -34189,7 +34189,7 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Show the top toolbar."
+              "description": "Show the editor chrome around the canvas: the header bar's built-in controls (document title, mobile undo/redo, search and panel toggles, \"⋯\" view menu), the command toolbar row and the status bar (zoom, Read-only toggle); on a mobile layout also the floating zoom pill and the action bar. false leaves the page tabs, canvas, docked panels and minimap (the pre-redesign meaning: everything that lived in the old toolbar). The host slots HeaderStart / HeaderActions still render. Default true."
             },
             {
               "name": "ShowToolbox",
@@ -34759,7 +34759,8 @@
             {
               "name": "ReadOnly",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "The effective read-only state: inline edits (sections, swimlane and table cells) never start, and a flip closes any open inline editor without saving."
             },
             {
               "name": "SelectedTableCells",

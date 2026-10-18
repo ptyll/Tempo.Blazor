@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.Icons;
+using Tempo.Blazor.Components.Layout;
 
 namespace Tempo.Blazor.Components.Diagram;
 
@@ -36,6 +38,9 @@ public partial class TmDiagramEditor
     /// <summary>Whether the header "⋯" view-settings menu is open.</summary>
     private bool _viewMenuOpen;
 
+    /// <summary>Per-instance id of the "⋯" panel — the trigger's aria-controls target.</summary>
+    private readonly string _viewMenuId = $"tm-diagram-editor-view-menu-{Guid.NewGuid():N}";
+
     /// <summary>The selected inspector tab: "properties" or "layers" (DI2).</summary>
     private string _inspectorTab = "properties";
 
@@ -63,20 +68,40 @@ public partial class TmDiagramEditor
         DiagramToolbarGroups.View | DiagramToolbarGroups.CanvasSize;
 
     /// <summary>Whether the command row (the TmToolbar region) renders at all.</summary>
-    private bool HasCommandToolbar => (EffectiveToolbarGroups & CommandRowGroups) != 0;
+    private bool HasCommandToolbar => ShowToolbar && (EffectiveToolbarGroups & CommandRowGroups) != 0;
 
-    /// <summary>Whether the header "⋯" trigger and its view-settings panel render.</summary>
-    private bool ShowsViewMenu => (EffectiveToolbarGroups & ViewMenuGroups) != 0;
+    /// <summary>Whether the header "⋯" trigger and its panel render: for the view/canvas-size groups,
+    /// and on mobile also whenever it carries the Search or Read-only toggle (no other place there).</summary>
+    private bool ShowsViewMenu => ShowToolbar && (
+        (EffectiveToolbarGroups & ViewMenuGroups) != 0
+        || (IsMobileLayout && (Shows(DiagramToolbarGroups.Search) || ShowsReadOnlyToggle)));
 
     /// <summary>Whether the status bar region renders.</summary>
-    private bool ShowsStatusBar => ShowStatusBar
+    private bool ShowsStatusBar => ShowToolbar && ShowStatusBar
         && (Shows(DiagramToolbarGroups.Zoom) || ShowsReadOnlyToggle);
+
+    /// <summary>Whether the header bar renders its built-in controls (title, mobile history, search and panel toggles).</summary>
+    private bool ShowsHeaderControls => ShowToolbar;
+
+    /// <summary>
+    /// Whether the header bar region renders at all: the built-in controls, or a host slot
+    /// (an empty shell bar must not stay behind when <see cref="ShowToolbar"/> is false).
+    /// </summary>
+    private bool ShowsHeaderBar => ShowsHeaderControls || HeaderStart is not null || HeaderActions is not null;
 
     // ── Inspector state (DI2) ────────────────────────────────────────────────
 
+    /// <summary>The properties panel is shown in the inspector (host allows it and the user did not collapse it).</summary>
+    private bool PropertiesAvailable => ShowPropertiesPanel && !_propsCollapsed;
+
+    /// <summary>The layers panel is shown in the inspector (host allows it and the user did not collapse it).</summary>
+    private bool LayersAvailable => ShowLayersPanel && !_layersCollapsed;
+
+    /// <summary>Both panels are available: only then the inspector renders the Properties | Layers tab strip.</summary>
+    private bool InspectorHasTabs => PropertiesAvailable && LayersAvailable;
+
     /// <summary>Whether the right column shows the inspector (properties and/or layers panel).</summary>
-    private bool InspectorVisible =>
-        (ShowPropertiesPanel && !_propsCollapsed) || (ShowLayersPanel && !_layersCollapsed);
+    private bool InspectorVisible => PropertiesAvailable || LayersAvailable;
 
     /// <summary>The tab the inspector shows: the user's choice while both panels are available,
     /// otherwise the only expanded panel.</summary>
@@ -84,28 +109,88 @@ public partial class TmDiagramEditor
     {
         get
         {
-            var propertiesAvailable = ShowPropertiesPanel && !_propsCollapsed;
-            var layersAvailable = ShowLayersPanel && !_layersCollapsed;
-            if (_inspectorTab == "layers") return layersAvailable ? "layers" : "properties";
-            return propertiesAvailable ? "properties" : "layers";
+            if (_inspectorTab == "layers") return LayersAvailable ? "layers" : "properties";
+            return PropertiesAvailable ? "properties" : "layers";
         }
     }
 
-    /// <summary>Header "Properties" toggle: expands/collapses the properties panel and selects its tab.</summary>
-    private void TogglePropertiesPanel()
+    // ── Header panel toggles ─────────────────────────────────────────────────
+
+    /// <summary>Header label of the inspector toggle: named after its content when only one panel exists.</summary>
+    private string InspectorToggleLabel => (ShowPropertiesPanel, ShowLayersPanel) switch
     {
-        _propsCollapsed = !_propsCollapsed;
-        if (!_propsCollapsed) _inspectorTab = "properties";
-        _ = ScheduleCanvasRelayoutAsync();
+        (true, true) => Loc["TmDiagramEditor_PanelInspector"],
+        (true, false) => Loc["TmDiagramEditor_PanelProperties"],
+        _ => Loc["TmDiagramEditor_PanelLayers"],
+    };
+
+    /// <summary>Opens or closes the whole inspector (both panels move together; the tabs pick the content).</summary>
+    private void SetInspectorOpen(bool open)
+    {
+        _propsCollapsed = !open;
+        _layersCollapsed = !open;
     }
 
-    /// <summary>Header "Layers" toggle: expands/collapses the layers panel and selects its tab.</summary>
-    private void ToggleLayersPanel()
+    /// <summary>Whether the inspector is expanded: visible, docked and — on tablet — not railed.</summary>
+    private bool IsInspectorExpanded => InspectorVisible && RightDockOpen
+        && !(_resolvedLayout == TmLayoutMode.Tablet && _shellCollapsed.HasFlag(EditorShellPanel.Right));
+
+    /// <summary>
+    /// Header "Inspector" toggle. Desktop: shows/hides the whole inspector. Tablet: the collapsed
+    /// form is the rail (like the palette, F7) — only the shell's Right bit flips; expanding a
+    /// hidden inspector also re-opens its panels (the shell then rails the palette itself).
+    /// </summary>
+    private Task ToggleInspectorFromHeaderAsync()
     {
-        _layersCollapsed = !_layersCollapsed;
-        if (!_layersCollapsed) _inspectorTab = "layers";
-        _ = ScheduleCanvasRelayoutAsync();
+        var expand = !IsInspectorExpanded;
+        if (_resolvedLayout == TmLayoutMode.Tablet)
+        {
+            if (expand)
+            {
+                SetInspectorOpen(true);
+                _shellCollapsed &= ~EditorShellPanel.Right;
+            }
+            else
+            {
+                _shellCollapsed |= EditorShellPanel.Right;
+            }
+        }
+        else
+        {
+            SetInspectorOpen(expand);
+            _shellCollapsed &= ~EditorShellPanel.Right;
+        }
+        return ScheduleCanvasRelayoutAsync();
     }
+
+    /// <summary>Whether the palette is expanded (docked panel visible, not railed/hidden).</summary>
+    private bool IsToolboxExpanded => LeftDockOpen && !_shellCollapsed.HasFlag(EditorShellPanel.Left);
+
+    /// <summary>
+    /// Expands or collapses the palette from the header toggle or the rail button. Tablet: the
+    /// collapsed form is the rail — <c>LeftOpen</c> stays true and only the shell's Left bit flips
+    /// (the shell then rails the inspector itself). Desktop: collapsed means hidden — the Left bit
+    /// is cleared so no stale rail can appear when the panel comes back.
+    /// </summary>
+    private Task SetToolboxExpandedAsync(bool expanded)
+    {
+        if (!ShowToolbox) return Task.CompletedTask;
+        if (_resolvedLayout == TmLayoutMode.Tablet)
+        {
+            _toolboxCollapsed = false;
+            _shellCollapsed = expanded
+                ? _shellCollapsed & ~EditorShellPanel.Left
+                : _shellCollapsed | EditorShellPanel.Left;
+        }
+        else
+        {
+            _toolboxCollapsed = !expanded;
+            _shellCollapsed &= ~EditorShellPanel.Left;
+        }
+        return ScheduleCanvasRelayoutAsync();
+    }
+
+    private Task ToggleToolboxFromHeaderAsync() => SetToolboxExpandedAsync(!IsToolboxExpanded);
 
     private void SelectInspectorTab(string tabId) => _inspectorTab = tabId;
 
@@ -120,6 +205,12 @@ public partial class TmDiagramEditor
         && !(IsMobileLayout && !MobilePanelsAllowed)
         && !_toolboxCollapsed;
 
+    /// <summary>The minimap renders as the docked card inside the right dock (desktop / Panel placement).</summary>
+    private bool ShowsMinimapCard => ShowMinimap && !MinimapAsOverlay;
+
+    /// <summary>Header toggle and the minimap card header share one minimap flag (mobile has no toggle until phase 6).</summary>
+    private void ToggleMinimap() => _minimapCollapsed = !_minimapCollapsed;
+
     /// <summary>
     /// The right dock holds the inspector (and, from tablet up, the collapsible minimap card).
     /// On a mobile layout the minimap floats as an overlay, so the dock exists for the inspector
@@ -130,7 +221,7 @@ public partial class TmDiagramEditor
         get
         {
             if (IsMobileLayout) return InspectorVisible && MobilePanelsAllowed;
-            return InspectorVisible || ShowMinimap;
+            return InspectorVisible || ShowsMinimapCard;
         }
     }
 
@@ -144,27 +235,9 @@ public partial class TmDiagramEditor
 
     private Task OnShellRightDockOpenChanged(bool open)
     {
-        if (open)
-        {
-            // Reopen the panel behind the active tab (fall back to the other one when the
-            // host hid that panel type).
-            if (_inspectorTab == "layers")
-            {
-                _layersCollapsed = false;
-                if (!ShowLayersPanel) _propsCollapsed = false;
-            }
-            else
-            {
-                _propsCollapsed = false;
-                if (!ShowPropertiesPanel) _layersCollapsed = false;
-            }
-        }
-        else
-        {
-            // The shell's slim close toggle collapses the whole inspector.
-            _propsCollapsed = true;
-            _layersCollapsed = true;
-        }
+        // Reopen always opens the whole inspector (both panels move together); the choice of
+        // tab stays in _inspectorTab. The shell's slim close toggle collapses it entirely.
+        SetInspectorOpen(open);
 
         if (IsMobileLayout) _canvas?.BeginChromeOnlyPass();
         return ScheduleCanvasRelayoutAsync();
@@ -173,7 +246,7 @@ public partial class TmDiagramEditor
     /// <summary>Accessible name of the right dock: the inspector tab title, or the minimap when it is the only content.</summary>
     private string InspectorTitle =>
         InspectorVisible
-            ? (_inspectorTab == "layers" ? Loc["TmDiagramInspector_LayersTab"] : Loc["TmDiagramInspector_PropertiesTab"])
+            ? (EffectiveInspectorTab == "layers" ? Loc["TmDiagramInspector_LayersTab"] : Loc["TmDiagramInspector_PropertiesTab"])
             : Loc["TmDiagramEditor_PanelMinimap"];
 
     // ── Overflow "More" menu representations for the dropdown groups ─────────
@@ -221,9 +294,7 @@ public partial class TmDiagramEditor
         NewMenuItem("export-viewport-svg", Loc["TmDiagramEditor_ExportViewportSvg"], IconNames.Image, HandleExportSelect, "viewportSvg", _exporting),
     ];
 
-    /// <summary>The collapsed Import group offers SQL and CSV. The JSON import keeps the file
-    /// picker on the bar item (a menu entry cannot open the browser file dialog without JS
-    /// interop); at desktop widths the Import group is pinned to the bar.</summary>
+    /// <summary>SQL and CSV entries of the Import group. The group is Pinned (never collapses) because the JSON import needs the bar dropdown's InputFile; these entries are kept for the menu representation.</summary>
     private List<TmActionItem> BuildImportMenuItems() =>
     [
         NewMenuItem("import-sql", Loc["TmDiagramEditor_ImportSql"], IconNames.Database, value => { HandleImportSelect(value); return Task.CompletedTask; }, "sql", IsReadOnly),

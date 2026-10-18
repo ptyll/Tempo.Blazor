@@ -49,6 +49,16 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
 
         // ── Tap-to-insert: the palette rail expands into the tile grid ──────
         await page.Locator(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle").First.ClickAsync();
+
+        // F7: the header Tools toggle drives the same palette state — on tablet it collapses
+        // the palette BACK to its rail, and the rail's labelled button expands it again.
+        await page.Locator("[data-testid='diagram-editor-toggle-toolbox']").First.ClickAsync();
+        await page.Locator(".tm-editor-shell__rail--left").First.WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await page.Locator(".tm-diagram-editor__rail-btn").First.ClickAsync();
+        await page.Locator(".tm-diagram-toolbox").First.WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+
         var paletteTile = page.Locator("[data-stencil-id='general.rectangle']").First;
         await paletteTile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ScrollEditorStatusIntoViewAsync(page);
