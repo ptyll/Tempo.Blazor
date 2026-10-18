@@ -34,7 +34,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         var page = await OpenEditorAsync(390, 844);
 
         // ── Mobile presentation ─────────────────────────────────────────────
-        await ForceEditorWidthAsync(page, 390, "mobile");
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "mobile");
         Assert.AreEqual(0, await page.Locator(".tm-editor-shell__rail--left").CountAsync(),
             "no docked-panel rails on mobile");
         Assert.AreEqual(0, await page.Locator(".tm-diagram-editor__statusbar").CountAsync(),
@@ -206,7 +206,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
     public async Task Mobile_320Touch_NoHorizontalOverflow()
     {
         var page = await OpenEditorAsync(320, 640);
-        await ForceEditorWidthAsync(page, 320, "mobile");
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "mobile");
 
         await page.Locator(".tm-mobile-action-bar__bar").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
@@ -243,7 +243,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
     public async Task Desktop_1440_Regression()
     {
         var page = await OpenEditorAsync(1440, 900, touch: false);
-        await ForceEditorWidthAsync(page, 1400, "desktop");
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "desktop");
 
         Assert.AreEqual(0, await page.Locator(".tm-mobile-action-bar__bar").CountAsync(),
             "desktop renders no mobile action bar");
@@ -270,7 +270,7 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
     public async Task Tablet_1024_Regression()
     {
         var page = await OpenEditorAsync(1024, 768, touch: true);
-        await ForceEditorWidthAsync(page, 1024, "tablet");
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
 
         Assert.AreEqual(0, await page.Locator(".tm-mobile-action-bar__bar").CountAsync(),
             "the mobile action bar is a mobile-only presentation");
@@ -392,34 +392,6 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
 
     private static async Task<int> NodeCountAsync(IPage page) =>
         await page.EvaluateAsync<int>("() => document.querySelectorAll('.tm-diagram-node').length");
-
-    /// <summary>
-    /// Pins the editor container to the phone width inside the demo column and waits for the
-    /// resolution (the demo gutters shrink the available width; 24px covers them at 320).
-    /// </summary>
-    private static async Task ForceEditorWidthAsync(IPage page, double width, string expectedLayout)
-    {
-        var target = Math.Max(300, width - 24);
-        await page.EvaluateAsync(
-            """
-            (w) => {
-                const editor = document.querySelector('.tm-diagram-editor');
-                const host = editor?.parentElement;
-                if (!host) throw new Error('editor host not found');
-                host.style.width = w + 'px';
-                host.style.maxWidth = w + 'px';
-            }
-            """,
-            target);
-        await page.WaitForFunctionAsync(
-            """
-            (expected) => document.querySelector('.tm-diagram-editor')?.getAttribute('data-editor-layout') === expected
-            """,
-            expectedLayout,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
-        await page.Locator(".tm-diagram-editor").First.ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(250);
-    }
 
     private static async Task TapNodeAsync(IPage page, string nodeId)
     {

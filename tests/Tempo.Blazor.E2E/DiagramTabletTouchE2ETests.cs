@@ -31,9 +31,10 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         var page = await OpenEditorAsync(1024, 768, touch: true);
 
         // The demo page constrains the editor column (~664px at this viewport = mobile). The F1
-        // contract is container-owned layout: give the editor container the phase's tablet width
-        // explicitly, exactly like a full-bleed host would, and wait for the resolution.
-        await ForceEditorWidthAsync(page, 1024, "tablet");
+        // contract is container-owned layout: make the demo page full-bleed (hide the sidebar and
+        // the gutters) so the editor host gets the phase's tablet width, exactly like a full-bleed
+        // host would, and wait for the resolution.
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
 
         // ── Tablet presentation (F6-TABLET-DOCKED-PANELS + DI3) ─────────────
         await page.Locator(".tm-editor-shell__rail--left").First.WaitForAsync(
@@ -149,9 +150,9 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
     {
         var page = await OpenEditorAsync(1180, 820, touch: true);
 
-        // Container-owned layout: the demo column is narrower than the viewport, so pin the
-        // editor container to the phase's tablet width and wait for the resolution.
-        await ForceEditorWidthAsync(page, 1180, "tablet");
+        // Container-owned layout: the demo column is narrower than the viewport, so make the page
+        // full-bleed and let the editor host take the phase's tablet width; wait for the resolution.
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
 
         // ── Selection raises the inspector (the palette rails back) ─────────
         var nodeId = await page.EvaluateAsync<string?>(
@@ -187,6 +188,7 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             .Locator(".tm-diagram-layers__row-menu-trigger"));
         var moveUp = page.Locator(".tm-diagram-layers__row-menu-item--up").Last;
         await moveUp.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        await DiagramEditorE2E.AssertEditorFitsAsync(page);
         await ScrollEditorStatusIntoViewAsync(page);
         await ShotAsync(page, "tablet-1180-touch--layers-row-menu");
         await ClickFirstAsync(page, moveUp);
@@ -265,9 +267,9 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
     {
         var page = await OpenEditorAsync(1440, 900, touch: false);
 
-        // Container-owned layout: pin the editor container to a full desktop width (the demo
-        // column caps at ~920px, which resolves tablet) and wait for the resolution.
-        await ForceEditorWidthAsync(page, 1400, "desktop");
+        // Container-owned layout: make the page full-bleed so the editor gets a full desktop width
+        // (the demo column caps at ~920px, which resolves tablet) and wait for the resolution.
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "desktop");
 
         Assert.AreEqual(0, await page.Locator(".tm-editor-shell__rail--left").CountAsync(),
             "desktop keeps both panels docked by default");
@@ -420,36 +422,6 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             // DOM — the same event Blazor's delegation handles.
             await locator.First.EvaluateAsync("el => el.click()");
         }
-    }
-
-    /// <summary>
-    /// Pins the editor container to an explicit width and waits until the editor resolves the
-    /// requested layout (the shell reports the change, the editor mirrors data-editor-layout).
-    /// The width is shrunk by the demo page's gutters so the pinned editor still fits the
-    /// viewport (the requested mode band has plenty of headroom).
-    /// </summary>
-    private static async Task ForceEditorWidthAsync(IPage page, double width, string expectedLayout)
-    {
-        var target = Math.Max(320, width - 160);
-        await page.EvaluateAsync(
-            """
-            (w) => {
-                const editor = document.querySelector('.tm-diagram-editor');
-                const host = editor?.parentElement;
-                if (!host) throw new Error('editor host not found');
-                host.style.width = w + 'px';
-                host.style.maxWidth = w + 'px';
-            }
-            """,
-            target);
-        await page.WaitForFunctionAsync(
-            """
-            (expected) => document.querySelector('.tm-diagram-editor')?.getAttribute('data-editor-layout') === expected
-            """,
-            expectedLayout,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
-        await page.Locator(".tm-diagram-editor").First.ScrollIntoViewIfNeededAsync();
-        await page.WaitForTimeoutAsync(250);
     }
 
     private static async Task TapNodeAsync(IPage page, string nodeId)

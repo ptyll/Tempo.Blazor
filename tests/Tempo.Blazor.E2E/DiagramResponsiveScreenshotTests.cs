@@ -6,7 +6,7 @@ namespace Tempo.Blazor.E2E;
 /// <summary>
 /// DiagramEditor redesign phase 1 "before" baseline: the full editor plus the template gallery,
 /// the SQL/CSV import dialogs, the search panel and the connect modal captured at desktop
-/// 1440×900, tablet 1024×768 (touch) and mobile 390×844 / 320×640.
+/// 1440×900, tablet 1366×900 (touch) and mobile 390×844 / 320×640.
 /// Screenshots land in <c>tests/Tempo.Blazor.E2E/__screenshots__/diagram-editor/</c> — a
 /// committed, durable directory (vstest deletes the per-run TestResults deployment folder), and
 /// each file is also attached to the test result. Review them against
@@ -34,8 +34,10 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         // The demo sidebar takes ~290px: at a 1024 viewport a tablet-band editor (≥768) would
         // push the toolbar's right end past the viewport edge (overflow-x is hidden in the
         // demo shell, so the "More" button is unreachable). Widen the window so the pinned
-        // tablet band fits with room for the whole toolbar row.
-        await CaptureAllStatesAsync(1366, 900, touch: true, "tablet-1024-touch", scrollEditorIntoView: true, pinLayout: "tablet");
+        // tablet band fits with room for the whole toolbar row. The prefix carries the real
+        // window size (1366) so these captures cannot collide with the DiagramTabletTouchE2ETests
+        // shots taken at a 1024×768 window under the tablet-1024-touch-- prefix.
+        await CaptureAllStatesAsync(1366, 900, touch: true, "tablet-1366-touch", scrollEditorIntoView: true, pinLayout: "tablet");
     }
 
     [TestMethod]
@@ -181,9 +183,9 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         var isMobile = pinLayout == "mobile";
         if (pinLayout is not null)
         {
-            // Tablet pin: a 1200px container resolves as the DESKTOP band (the band edge is
-            // exclusive) — pin 1100 so the editor lands at 940 (tablet), which also fits the
-            // 1366px window next to the demo sidebar with the whole toolbar row on screen.
+            // The shared pin clamps the requested width to the real demo column, so the editor
+            // lands in the requested band without ever overflowing the viewport (a 1100px request
+            // resolves to the column width — still the tablet band next to the demo sidebar).
             await DiagramEditorE2E.ForceEditorWidthAsync(page, isMobile ? width : 1100, pinLayout);
         }
 

@@ -165,14 +165,18 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
             """
             () => {
                 const toolbox = document.querySelector('.tm-diagram-toolbox');
-                const body = document.querySelector('.tm-diagram-editor__body');
+                const editor = document.querySelector('.tm-diagram-editor');
+                const body = editor?.querySelector('.tm-editor-shell__main');
                 const rect = toolbox?.getBoundingClientRect();
                 return {
                     hasToolbox: !!toolbox,
+                    hasBody: !!body,
                     width: rect?.width ?? 0,
                     left: rect?.left ?? 0,
                     right: rect?.right ?? 0,
                     viewportWidth: window.innerWidth,
+                    editorScrollWidth: editor?.scrollWidth ?? 0,
+                    editorClientWidth: editor?.clientWidth ?? 0,
                     bodyScrollWidth: body?.scrollWidth ?? 0,
                     bodyClientWidth: body?.clientWidth ?? 0
                 };
@@ -183,6 +187,8 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
         Assert.IsTrue(result.Width > 120, "Toolbox should remain usable and not collapse to an unreadable rail.");
         Assert.IsTrue(result.Left >= 0, "Toolbox should not render outside the left viewport edge.");
         Assert.IsTrue(result.Right <= result.ViewportWidth + 2, "Toolbox should fit inside the visible viewport.");
+        Assert.IsTrue(result.HasBody, "Editor shell main region should be rendered (selector must not go stale).");
+        Assert.IsTrue(result.EditorScrollWidth <= result.EditorClientWidth + 2, "Diagram editor should not introduce horizontal overflow.");
         Assert.IsTrue(result.BodyScrollWidth <= result.BodyClientWidth + 2, "Diagram body should not introduce horizontal overflow.");
     }
 
@@ -211,6 +217,8 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
     {
         public bool HasToolbox { get; set; }
 
+        public bool HasBody { get; set; }
+
         public double Width { get; set; }
 
         public double Left { get; set; }
@@ -218,6 +226,10 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
         public double Right { get; set; }
 
         public double ViewportWidth { get; set; }
+
+        public double EditorScrollWidth { get; set; }
+
+        public double EditorClientWidth { get; set; }
 
         public double BodyScrollWidth { get; set; }
 

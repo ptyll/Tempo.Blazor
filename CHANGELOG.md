@@ -299,6 +299,13 @@
     ("Přidat {0}") and `TmWidgetSelector_Categories` in all four resource tables plus
     `MockTmLocalizer`.
 
+- **Core tokens: `--tm-data-table-cell-py` / `--tm-data-table-cell-px` are defined in
+  `tokens.css`.** `_data-table.css` already read them with `var(--tm-space-3)` /
+  `var(--tm-space-4)` fallbacks; the tokens are now declared with exactly those values, so
+  nothing renders differently, but hosts can tune `TmDataTable` cell density by overriding the
+  two tokens on `:root` (or on a wrapper). The strict CSS token audit no longer counts them as
+  undefined.
+
 ### Breaking / Migration
 
 - **Data-table defaults did not change.** `TmDataTable.Appearance` remains `Plain`, `TmFilterBuilder.Presentation` remains `Inline`, `MobileLayout` remains `None`, `KeyboardNavigation` remains `Rows`, and `ShowFilterSummary` remains `false`. The multi-view list defaults also remain unchanged.

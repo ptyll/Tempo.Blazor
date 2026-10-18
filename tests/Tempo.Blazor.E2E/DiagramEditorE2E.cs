@@ -16,31 +16,47 @@ namespace Tempo.Blazor.E2E;
 internal static class DiagramEditorE2E
 {
     /// <summary>
-    /// Pins the editor container to an explicit width and waits until the editor resolves the
-    /// requested layout (the editor mirrors the shell resolution on data-editor-layout).
+    /// Pins the editor host to <c>width</c> clamped to the real column width and waits until the
+    /// editor resolves the requested layout (the editor mirrors the shell resolution on
+    /// data-editor-layout), then asserts the editor still fits — the demo column is ~360px
+    /// narrower than the viewport (18.5rem sidebar + gutters), so an unclamped pin used to push
+    /// the editor up to 200px past the viewport where overflow-x clip hid it.
+    /// Use when the test needs the demo chrome (sidebar) present or a width below the column;
+    /// for "the editor owns the viewport" scenarios use <see cref="PinEditorFullBleedAsync"/>.
     /// </summary>
     public static async Task ForceEditorWidthAsync(IPage page, double width, string expectedLayout)
     {
-        var target = Math.Max(320, width - 160);
-        await page.EvaluateAsync(
+        var effective = await page.EvaluateAsync<double>(
             """
             (w) => {
-                const editor = document.querySelector('.tm-diagram-editor');
-                const host = editor?.parentElement;
+                const host = document.querySelector('.tm-diagram-editor')?.parentElement;
                 if (!host) throw new Error('editor host not found');
-                host.style.width = w + 'px';
-                host.style.maxWidth = w + 'px';
+                const avail = host.parentElement.getBoundingClientRect().width;
+                const t = Math.min(w, avail);
+                host.style.width = t + 'px';
+                host.style.maxWidth = t + 'px';
+                return t;
             }
             """,
-            target);
-        await page.WaitForFunctionAsync(
-            """
-            (expected) => document.querySelector('.tm-diagram-editor')?.getAttribute('data-editor-layout') === expected
-            """,
-            expectedLayout,
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            width);
+        try
+        {
+            await page.WaitForFunctionAsync(
+                """
+                (expected) => document.querySelector('.tm-diagram-editor')?.getAttribute('data-editor-layout') === expected
+                """,
+                expectedLayout,
+                new PageWaitForFunctionOptions { Timeout = 15_000 });
+        }
+        catch (TimeoutException)
+        {
+            throw new AssertFailedException(
+                $"editor pinned to {effective}px (requested {width}px) did not resolve '{expectedLayout}'");
+        }
+
         await page.Locator(".tm-diagram-editor").First.ScrollIntoViewIfNeededAsync();
         await page.WaitForTimeoutAsync(250);
+        await AssertEditorFitsAsync(page);
     }
 
     /// <summary>
@@ -51,6 +67,78 @@ internal static class DiagramEditorE2E
     {
         await page.SetViewportSizeAsync(1600, 900);
         await ForceEditorWidthAsync(page, 1600, "desktop");
+    }
+
+    /// <summary>
+    /// Makes the demo page full-bleed (hides the 18.5rem sidebar and the column gutters) and pins the
+    /// editor host to the viewport width minus a 16px gutter on each side, then waits for the band.
+    /// Throws if the editor still overflows the viewport, so a harness overflow can never hide again.
+    /// Preferred for band tests at real device widths.
+    /// </summary>
+    /// <remarks>
+    /// Coupled to the demo shell layout: the injected CSS targets the sidebar (<c>aside.w-72</c>)
+    /// and the content gutters (<c>main &gt; div[class*='py-8']</c>) as rendered by
+    /// <c>src/Tempo.Blazor.Demo.SharedUI/Layout/MainLayout.razor</c> — when that file changes,
+    /// the injected selectors and the staleness guards in the injected script must change with it.
+    /// </remarks>
+    public static async Task PinEditorFullBleedAsync(IPage page, string expectedLayout)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                if (!document.getElementById('e2e-full-bleed')) {
+                    const s = document.createElement('style');
+                    s.id = 'e2e-full-bleed';
+                    s.textContent = `
+                        aside.w-72 { display: none !important; }
+                        main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+                        main > div[class*='py-8'] { padding-left: 16px !important; padding-right: 16px !important; }
+                        main .max-w-7xl { max-width: none !important; }`;
+                    document.head.appendChild(s);
+                }
+                if (window.matchMedia('(min-width: 1024px)').matches && !document.querySelector('aside.w-72')) throw new Error('e2e full-bleed: demo sidebar selector aside.w-72 is stale (MainLayout.razor changed)');
+                if (!document.querySelector("main > div[class*='py-8']")) throw new Error('e2e full-bleed: demo gutter selector is stale');
+                const host = document.querySelector('.tm-diagram-editor')?.parentElement;
+                if (!host) throw new Error('editor host not found');
+                host.style.width = '';
+                host.style.maxWidth = '';
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            "(e) => document.querySelector('.tm-diagram-editor')?.getAttribute('data-editor-layout') === e",
+            expectedLayout, new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await page.Locator(".tm-diagram-editor").First.ScrollIntoViewIfNeededAsync();
+        await page.WaitForTimeoutAsync(250);
+        await AssertEditorFitsAsync(page);
+    }
+
+    /// <summary>Fails when the editor, or one of its chrome regions, leaves the viewport/editor box.</summary>
+    public static async Task AssertEditorFitsAsync(IPage page)
+    {
+        var problems = await page.EvaluateAsync<string[]>(
+            """
+            () => {
+              const ed = document.querySelector('.tm-diagram-editor');
+              if (!ed) return ['editor .tm-diagram-editor not found'];
+              const er = ed.getBoundingClientRect();
+              const vw = document.documentElement.clientWidth;
+              const bad = [];
+              if (er.left < -0.5 || er.right > vw + 0.5) bad.push(`editor [${er.left|0},${er.right|0}] outside viewport ${vw}`);
+              if (document.documentElement.scrollWidth > vw + 1) bad.push(`page scrollWidth ${document.documentElement.scrollWidth} > ${vw}`);
+              if (ed.scrollWidth > ed.clientWidth + 1) bad.push(`editor scrollWidth ${ed.scrollWidth} > clientWidth ${ed.clientWidth}`);
+              const sel = '.tm-diagram-editor__header-bar > *, .tm-diagram-editor__toolbar, [data-region="left"], [data-region="right"],'
+                        + ' .tm-diagram-editor__inspector, .tm-diagram-editor__minimap-overlay, .tm-diagram-editor__zoom-overlay,'
+                        + ' .tm-diagram-editor__statusbar, .tm-diagram-search-panel, .tm-diagram-layers__row-menu';
+              for (const el of ed.querySelectorAll(sel)) {
+                const r = el.getBoundingClientRect();
+                if (r.width === 0 && r.height === 0) continue;
+                if (r.left < er.left - 0.5 || r.right > er.right + 0.5)
+                  bad.push(`${el.getAttribute('class')} [${r.left|0},${r.right|0}] outside editor [${er.left|0},${er.right|0}]`);
+              }
+              return bad;
+            }
+            """);
+        Assert.AreEqual(0, problems.Length, string.Join("\n", problems));
     }
 
     /// <summary>

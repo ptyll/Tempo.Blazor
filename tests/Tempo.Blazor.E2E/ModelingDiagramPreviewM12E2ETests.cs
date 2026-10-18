@@ -36,21 +36,7 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         // band (phase 7: no command row, the viewer chrome is the zoom pill + the "⋯" menu),
         // so pin the preview editor to the desktop band like a full-bleed host. The editor
         // root IS the inline-size container, so the width goes on it directly.
-        await page.EvaluateAsync(
-            """
-            () => {
-                const editor = document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor");
-                if (!editor) throw new Error('preview editor not found');
-                editor.style.width = '1280px';
-                editor.style.maxWidth = '1280px';
-            }
-            """);
-        await page.WaitForFunctionAsync(
-            """
-            () => document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor")
-                ?.getAttribute('data-editor-layout') === 'desktop'
-            """,
-            null, new PageWaitForFunctionOptions { Timeout = 15_000 });
+        await PinPreviewEditorToDesktopAsync(page);
 
         var preview = page.Locator("[data-testid='modeling-diagram-preview']");
 
@@ -78,8 +64,12 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     {
         var page = await OpenLoadedModelingPageAsync();
         await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        await PinPreviewEditorToDesktopAsync(page);
 
         var preview = page.Locator("[data-testid='modeling-diagram-preview']");
+        // Precondition: the command row really rendered — otherwise every absence check below is vacuous.
+        Assert.AreEqual(1, await preview.Locator("[data-tm-group='zoom']").CountAsync(),
+            "the desktop viewer toolbar must be rendered before asserting what it lacks");
         Assert.AreEqual(0, await preview.Locator("[data-tm-group='import']").CountAsync(),
             "nothing may be imported into a read-only preview");
         Assert.AreEqual(0, await preview.Locator("[data-tm-group='templates']").CountAsync());
@@ -245,6 +235,26 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         return page;
+    }
+
+    /// <summary>Pins the preview editor to the desktop band (the editor root is the inline-size container).</summary>
+    private static async Task PinPreviewEditorToDesktopAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const editor = document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor");
+                if (!editor) throw new Error('preview editor not found');
+                editor.style.width = '1280px';
+                editor.style.maxWidth = '1280px';
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            """
+            () => document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor")
+                ?.getAttribute('data-editor-layout') === 'desktop'
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 15_000 });
     }
 
     private static async Task ExpectVisibleAsync(IPage page, string selector, int timeout = 5000)

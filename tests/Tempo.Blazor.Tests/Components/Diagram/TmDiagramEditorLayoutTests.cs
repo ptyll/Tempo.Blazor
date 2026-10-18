@@ -44,12 +44,12 @@ public class TmDiagramEditorLayoutTests : LocalizationTestBase
         // Localized through MockTmLocalizer — a raw resource key must never reach the UI
         texts.Should().ContainEquivalentOf("Hierarchical Top-Down");
         texts.Should().ContainEquivalentOf("Hierarchical Left-Right");
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutTree]");
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutTreeLR]");
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutForce]");
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutCircle]");
-        texts.Should().ContainEquivalentOf("[TmDiagram_LayoutGrid]");
-        texts.Should().NotContain(t => t.StartsWith('[') && t.Contains("Hierarchical"));
+        texts.Should().ContainEquivalentOf("Tree");
+        texts.Should().ContainEquivalentOf("Tree Left-Right");
+        texts.Should().ContainEquivalentOf("Force");
+        texts.Should().ContainEquivalentOf("Circle");
+        texts.Should().ContainEquivalentOf("Grid");
+        texts.Should().NotContain(t => t.StartsWith('['), "every layout entry is localized");
     }
 
     [Fact]
