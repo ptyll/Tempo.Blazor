@@ -48,10 +48,15 @@
 </div>
 
 @code {
+    /// <summary>Selected option value (arrowhead or dash pattern id).</summary>
     [Parameter] public string? Value { get; set; }
+    /// <summary>Raised when the user picks another option.</summary>
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    /// <summary>Options to choose from; each label is shown next to its preview.</summary>
     [Parameter] public IReadOnlyList<SelectOption<string>>? Options { get; set; }
+    /// <summary>Returns the inline SVG preview markup for an option value.</summary>
     [Parameter] public Func<string?, string>? PreviewRenderer { get; set; }
+    /// <summary>Additional CSS class applied to the root.</summary>
     [Parameter] public string? Class { get; set; }
 
     private bool _isOpen;

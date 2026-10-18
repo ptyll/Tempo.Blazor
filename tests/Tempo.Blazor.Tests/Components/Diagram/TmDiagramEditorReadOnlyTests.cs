@@ -255,9 +255,8 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
         cut.Find(".tm-diagram-layers__add-btn").Click();
         doc.Layers.Should().HaveCount(layersBefore, "add-layer must no-op in the effective read-only state");
 
-        cut.FindAll(".tm-diagram-layers__delete").Should().NotBeEmpty();
-        cut.Find(".tm-diagram-layers__delete").Click();
-        doc.Layers.Should().HaveCount(layersBefore, "delete-layer must no-op in the effective read-only state");
+        cut.FindAll(".tm-diagram-layers__row-menu").Should().BeEmpty("read-only renders no row menu, hence no delete path");
+        doc.Layers.Should().HaveCount(layersBefore, "delete-layer has no path in the effective read-only state");
 
         cut.Find(".tm-diagram-layers__name").TriggerEvent("ondblclick", new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
         cut.FindAll(".tm-diagram-layers__name-input").Should().BeEmpty(
@@ -283,8 +282,8 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
         cut.Find(".tm-diagram-layers__add-btn").Click();
         doc.Layers.Should().HaveCount(layersBefore, "add-layer must no-op when the host pins read-only");
 
-        cut.Find(".tm-diagram-layers__delete").Click();
-        doc.Layers.Should().HaveCount(layersBefore, "delete-layer must no-op when the host pins read-only");
+        cut.FindAll(".tm-diagram-layers__row-menu").Should().BeEmpty("read-only renders no row menu, hence no delete path");
+        doc.Layers.Should().HaveCount(layersBefore, "delete-layer has no path when the host pins read-only");
 
         cut.Find(".tm-diagram-layers__name").TriggerEvent("ondblclick", new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
         cut.FindAll(".tm-diagram-layers__name-input").Should().BeEmpty(

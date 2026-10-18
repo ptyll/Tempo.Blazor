@@ -436,8 +436,25 @@ public class TmDiagramEditorLayoutTests : LocalizationTestBase
         // ever marked active.
         cut.FindAll(".tm-diagram-layers__item--active").Should().ContainSingle(
             "exactly one layer row is the active one");
-        cut.FindAll(".tm-diagram-layers__active[aria-checked='true']").Should().ContainSingle(
-            "the active-layer radio reflects the same state");
+        cut.FindAll(".tm-diagram-layers__active[aria-pressed='true']").Should().ContainSingle(
+            "the active-layer toggle reflects the same state");
+    }
+
+    [Fact]
+    public void Inspector_LayersPanel_IsEmbedded()
+    {
+        using var cut = RenderDefaultEditor();
+
+        // Open the Layers tab of the inspector.
+        var layersTab = cut.FindAll(".tm-diagram-editor__inspector [role='tab']")
+            .FirstOrDefault(t => t.TextContent.Contains("Layers"));
+        layersTab.Should().NotBeNull("the inspector presents Properties | Layers");
+        layersTab!.Click();
+
+        // D17: the editor owns the inspector collapse, so the embedded layers panel renders no
+        // own ">" tab (that toggle only exists for standalone panel use).
+        cut.FindAll(".tm-diagram-layers__toggle").Should().BeEmpty();
+        cut.Find(".tm-diagram-layers").ClassList.Should().Contain("tm-diagram-layers--embedded");
     }
 
     [Fact]

@@ -29,6 +29,13 @@
       "isRequired": false
     },
     {
+      "name": "ShowCollapseToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false, the panel renders without its own collapse tab and fills its host's width — for hosts (TmDiagramEditor's inspector) that own the collapse. Default true (standalone use)."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false
@@ -47,6 +54,13 @@
       "name": "DocumentChanged",
       "type": "EventCallback<DiagramDocument>",
       "isRequired": false
+    },
+    {
+      "name": "RowMenuPresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "PanelPresentation.Auto",
+      "description": "How each row's \"⋯\" menu presents on a narrow viewport — handed to the core TmContextMenu.MobilePresentation. Default Auto resolves from the viewport scope (content-height bottom sheet on a phone, anchored popover otherwise). TmDiagramEditor passes Sheet on its mobile layout and Popover elsewhere."
     }
   ]
 }

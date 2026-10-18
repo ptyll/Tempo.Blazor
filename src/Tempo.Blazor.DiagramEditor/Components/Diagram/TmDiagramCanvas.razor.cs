@@ -25,6 +25,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
 
     // ── Cascaded command stack ───────────────────────────────────────────────
 
+    /// <summary>Undo stack canvas interactions push their commands to.</summary>
     [CascadingParameter] public DiagramCommandStack? CommandStack { get; set; }
 
     // ── Parameters ───────────────────────────────────────────────────────────
@@ -79,6 +80,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// <summary>Raised when the user presses Ctrl+F.</summary>
     [Parameter] public EventCallback OnShowSearch { get; set; }
 
+    /// <summary>Raised when the user presses Ctrl+H (find and replace).</summary>
     [Parameter] public EventCallback OnShowReplace { get; set; }
 
     /// <summary>Active group identifier. Only nodes with matching ParentGroupId are rendered.</summary>
@@ -1629,8 +1631,10 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         await OnToolboxDrop.InvokeAsync((StencilId: stencilId, X: x, Y: y));
     }
 
+    /// <summary>Raised when a toolbox stencil is dropped on the canvas, with the stencil id and the grid-snapped drop position.</summary>
     [Parameter] public EventCallback<(string StencilId, double X, double Y)> OnToolboxDrop { get; set; }
 
+    /// <summary>Raised when an edge drag ends; carries source/target node, port, side/offset, perimeter constraints, free end points and initial waypoints.</summary>
     [Parameter] public EventCallback<(string? SourceNodeId, string? SourcePortId, string? TargetNodeId, string? TargetPortId, string? SourceSide, double SourceOffset, string? TargetSide, double TargetOffset, string? TargetEdgeId, double TargetEdgeT, double? SourceConstraintRx, double? SourceConstraintRy, bool? SourceConstraintPerimeter, double? TargetConstraintRx, double? TargetConstraintRy, bool? TargetConstraintPerimeter, double? TargetPointX, double? TargetPointY, double? SourcePointX, double? SourcePointY, double[]? WaypointsXY)> OnEdgeCreated { get; set; }
 
     // ── Port interactions ────────────────────────────────────────────────────
@@ -1641,6 +1645,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         await OnPortMouseDownEvent.InvokeAsync((nodeId, portId));
     }
 
+    /// <summary>Raised when the pointer goes down on a node port (node id, port id); ignored in read-only.</summary>
     [Parameter] public EventCallback<(string NodeId, string PortId)> OnPortMouseDownEvent { get; set; }
 
     private void HandlePortMouseEnter(string nodeId, string portId) { }

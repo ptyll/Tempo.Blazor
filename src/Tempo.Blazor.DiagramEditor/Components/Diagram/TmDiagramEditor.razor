@@ -841,6 +841,8 @@
                                                               ActiveLayerId="@_activeLayerId"
                                                               ActiveLayerIdChanged="id => _activeLayerId = id"
                                                               ReadOnly="@IsReadOnly"
+                                                              ShowCollapseToggle="false"
+                                                              RowMenuPresentation="@(IsMobileLayout ? PanelPresentation.Sheet : PanelPresentation.Popover)"
                                                               Class="tm-diagram-editor__layers" />
                                     </div>
                                 </TmTabPanel>
@@ -876,6 +878,8 @@
                                                               ActiveLayerId="@_activeLayerId"
                                                               ActiveLayerIdChanged="id => _activeLayerId = id"
                                                               ReadOnly="@IsReadOnly"
+                                                              ShowCollapseToggle="false"
+                                                              RowMenuPresentation="@(IsMobileLayout ? PanelPresentation.Sheet : PanelPresentation.Popover)"
                                                               Class="tm-diagram-editor__layers" />
                                     </div>
                                 }

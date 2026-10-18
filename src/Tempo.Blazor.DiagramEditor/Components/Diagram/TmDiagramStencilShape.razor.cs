@@ -11,12 +11,19 @@ namespace Tempo.Blazor.Components.Diagram;
 /// <summary>Renders a diagram stencil shape inside a node.</summary>
 public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 {
+    /// <summary>Node rendered by this shape.</summary>
     [Parameter] public DiagramNode Node { get; set; } = default!;
+    /// <summary>Whether the node is selected (enables section editing affordances).</summary>
     [Parameter] public bool IsSelected { get; set; }
+    /// <summary>Raised with the port id when the pointer goes down on one of the node's ports.</summary>
     [Parameter] public EventCallback<string> OnPortMouseDownEvent { get; set; }
+    /// <summary>Raised with the data key and the new value when an inline section edit commits.</summary>
     [Parameter] public EventCallback<(string DataKey, object Value)> OnSectionEdit { get; set; }
+    /// <summary>Selected cells (row, column) when the node is a table.</summary>
     [Parameter] public List<(int Row, int Column)> SelectedTableCells { get; set; } = [];
+    /// <summary>Page that owns the node (used for page-relative lookups).</summary>
     [Parameter] public DiagramPage? Page { get; set; }
+    /// <summary>Document that owns the node (layers, styles).</summary>
     [Parameter] public DiagramDocument? Document { get; set; }
 
     /// <summary>The effective read-only state: inline edits (sections, swimlane and table cells)

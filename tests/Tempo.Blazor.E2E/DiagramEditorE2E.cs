@@ -129,7 +129,8 @@ internal static class DiagramEditorE2E
               if (ed.scrollWidth > ed.clientWidth + 1) bad.push(`editor scrollWidth ${ed.scrollWidth} > clientWidth ${ed.clientWidth}`);
               const sel = '.tm-diagram-editor__header-bar > *, .tm-diagram-editor__toolbar, [data-region="left"], [data-region="right"],'
                         + ' .tm-diagram-editor__inspector, .tm-diagram-editor__minimap-overlay, .tm-diagram-editor__zoom-overlay,'
-                        + ' .tm-diagram-editor__statusbar, .tm-diagram-search-panel, .tm-diagram-layers__row-menu';
+                        + ' .tm-diagram-editor__statusbar, .tm-diagram-search-panel,'
+                        + ' .tm-diagram-layers__row-menu, .tm-diagram-layers__row-menu .tm-overlay-panel';
               for (const el of ed.querySelectorAll(sel)) {
                 const r = el.getBoundingClientRect();
                 if (r.width === 0 && r.height === 0) continue;

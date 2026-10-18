@@ -394,6 +394,10 @@
 
   /* ── Charts ── */
   --tm-chart-area-fill-opacity: 0.25;
+  /* Font size of the tick/value/label text inside a dashboard widget chart (20 units default,
+     which renders ≈ 10 px at the widget chart's viewBox scale). Declared so the strict token
+     audit no longer counts the alias as undefined; the value matches the stylesheet fallback. */
+  --tm-widget-chart-font-size: 20px;
 
   /* ── Redesign surfaces (F0) ─────────────────────────────────── */
   /* The canvas behind cards. The default theme keeps the page white (decision G4);

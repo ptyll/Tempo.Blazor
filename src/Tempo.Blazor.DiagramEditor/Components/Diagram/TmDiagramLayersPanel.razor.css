@@ -12,6 +12,13 @@
     transition: width 0.2s ease;
 }
 
+/* D17: hosts that own the collapse (TmDiagramEditor's inspector) render the panel without
+   its own ">" tab — it then fills the host width and drops the tab's padding reserve. */
+.tm-diagram-layers--embedded {
+    width: 100%;
+    border-left: none;
+}
+
 .tm-diagram-layers[data-collapsed="True"] {
     width: 32px;
     overflow: hidden;
@@ -47,6 +54,10 @@
     padding: var(--tm-space-3);
     padding-left: var(--tm-space-6);
     overflow: hidden;
+}
+
+.tm-diagram-layers--embedded .tm-diagram-layers__inner {
+    padding-left: var(--tm-space-3);
 }
 
 .tm-diagram-layers[data-collapsed="True"] .tm-diagram-layers__inner {
@@ -98,6 +109,9 @@
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-1);
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .tm-diagram-layers__item {
@@ -116,7 +130,7 @@
     border-color: var(--tm-color-border);
 }
 
-/* Active (radio-selected) layer row */
+/* Active (toggle-pressed) layer row */
 .tm-diagram-layers__item--active {
     border-color: var(--tm-color-primary);
     background: var(--tm-color-primary-subtle);
@@ -128,9 +142,10 @@
     background: var(--tm-color-primary-subtle);
 }
 
-/* Keyboard parity with hover: row controls stay discoverable while focus is inside the row */
-.tm-diagram-layers__item:focus-within .tm-diagram-layers__delete {
-    opacity: 1;
+/* Hidden layer: the name is muted and italic — the row stays fully operable. */
+.tm-diagram-layers__item--hidden .tm-diagram-layers__name {
+    color: var(--tm-color-text-muted);
+    font-style: italic;
 }
 
 .tm-diagram-layers__drag-handle {
@@ -169,9 +184,7 @@
     box-shadow: inset 0 0 0 2px var(--tm-color-surface);
 }
 
-.tm-diagram-layers__visibility,
-.tm-diagram-layers__lock,
-.tm-diagram-layers__delete {
+.tm-diagram-layers__visibility {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -185,22 +198,31 @@
     cursor: pointer;
 }
 
-.tm-diagram-layers__visibility:hover:not(:disabled),
-.tm-diagram-layers__lock:hover:not(:disabled),
-.tm-diagram-layers__delete:hover:not(:disabled) {
+.tm-diagram-layers__visibility:hover:not(:disabled) {
     background: var(--tm-color-surface-hover);
     color: var(--tm-color-text);
 }
 
-.tm-diagram-layers__visibility:disabled,
-.tm-diagram-layers__lock:disabled,
-.tm-diagram-layers__delete:disabled {
+.tm-diagram-layers__visibility:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
+/* X5/D17: the name takes the priority width — the fixed controls never squeeze it away. */
+.tm-diagram-layers__name,
+.tm-diagram-layers__name-input {
+    flex: 1 1 auto;
+    min-width: 8ch;
+}
+
+.tm-diagram-layers__drag-handle,
+.tm-diagram-layers__active,
+.tm-diagram-layers__visibility,
+.tm-diagram-layers__locked {
+    flex: 0 0 auto;
+}
+
 .tm-diagram-layers__name {
-    flex: 1;
     font-size: var(--tm-font-size-sm);
     color: var(--tm-color-text);
     white-space: nowrap;
@@ -223,7 +245,6 @@
 }
 
 .tm-diagram-layers__name-input {
-    flex: 1;
     font-size: var(--tm-font-size-sm);
     padding: 2px 4px;
     border: 1px solid var(--tm-color-primary);
@@ -231,6 +252,12 @@
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     outline: none;
+}
+
+/* X5/D17: the lock is a non-interactive indicator — Lock/Unlock lives in the row's ⋯ menu. */
+.tm-diagram-layers__locked {
+    display: inline-flex;
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-layers__move-section {
@@ -248,85 +275,42 @@
     color: var(--tm-color-text-muted);
 }
 
-/* ── Phase 6 (tablet and touch): the row "⋯" menu — the non-drag alternative
-   to the layer drag-and-drop (Rename / Move up / Move down / Delete). ─────── */
+/* ── D4: the row "⋯" menu is the core TmContextMenu — only the trigger is styled here,
+   scoped with ::deep (the menu DOM belongs to the core component). ─────────── */
 
-.tm-diagram-layers__row-menu-trigger {
+.tm-diagram-layers__item ::deep .tm-diagram-layers__row-menu { flex: 0 0 auto; }
+
+.tm-diagram-layers__item ::deep .tm-diagram-layers__row-menu .tm-context-menu__trigger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    background: transparent;
-    border: none;
+    width: var(--tm-space-6);
+    height: var(--tm-space-6);
     border-radius: var(--tm-radius-sm);
     color: var(--tm-color-text-muted);
     cursor: pointer;
 }
 
-.tm-diagram-layers__row-menu-trigger:hover:not(:disabled) {
+.tm-diagram-layers__item ::deep .tm-diagram-layers__row-menu .tm-context-menu__trigger:hover,
+.tm-diagram-layers__item ::deep .tm-diagram-layers__row-menu .tm-context-menu__trigger[aria-expanded="true"] {
     background: var(--tm-color-surface-hover);
     color: var(--tm-color-text);
 }
 
-.tm-diagram-layers__row-menu-trigger[aria-expanded="true"] {
-    background: var(--tm-color-surface-hover);
-    color: var(--tm-color-text);
+.tm-diagram-layers__item ::deep .tm-diagram-layers__row-menu .tm-context-menu__trigger:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
 }
 
-.tm-diagram-layers__row-menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 5;
-}
+/* ── Phase 6: pointer-target sizing ─────────────────────────────────────────── */
 
-.tm-diagram-layers__row-menu {
-    position: absolute;
-    top: calc(100% + var(--tm-space-1));
-    inset-inline-end: 0;
-    z-index: 6;
-    min-width: 10rem;
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    box-shadow: var(--tm-shadow-lg);
-    padding: var(--tm-space-1);
-    display: flex;
-    flex-direction: column;
-}
-
-.tm-diagram-layers__row-menu-item {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    width: 100%;
-    min-height: 32px;
-    padding: var(--tm-space-1) var(--tm-space-2);
-    background: transparent;
-    border: none;
-    border-radius: var(--tm-radius-sm);
-    color: var(--tm-color-text);
-    font-size: var(--tm-font-size-sm);
-    text-align: start;
-    cursor: pointer;
-}
-
-.tm-diagram-layers__row-menu-item:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-diagram-layers__row-menu-item--delete {
-    color: var(--tm-color-danger);
-}
-
-/* ── Phase 6: coarse-pointer targets and hover-free visibility ────────────── */
-
-/* A finger has no hover: the destructive affordance stays discoverable, and the
-   row controls grow to the shared touch target. */
-@media (hover: none) {
-    .tm-diagram-layers__delete {
-        opacity: 1;
+/* Fine pointer: the active/visibility buttons get the standard 24px (var(--tm-space-6))
+   hit size — the 18/20px defaults are mouse-cramped. */
+@media (pointer: fine) {
+    .tm-diagram-layers__active,
+    .tm-diagram-layers__visibility {
+        width: var(--tm-space-6);
+        height: var(--tm-space-6);
     }
 }
 
@@ -337,15 +321,9 @@
 
     .tm-diagram-layers__active,
     .tm-diagram-layers__visibility,
-    .tm-diagram-layers__lock,
-    .tm-diagram-layers__delete,
-    .tm-diagram-layers__row-menu-trigger,
+    .tm-diagram-layers__item ::deep .tm-diagram-layers__row-menu .tm-context-menu__trigger,
     .tm-diagram-layers__add-btn {
         width: var(--tm-touch-target);
         height: var(--tm-touch-target);
-    }
-
-    .tm-diagram-layers__row-menu-item {
-        min-height: var(--tm-touch-target);
     }
 }

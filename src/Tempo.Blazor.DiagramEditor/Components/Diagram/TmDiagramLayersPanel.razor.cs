@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Diagram.Commands;
 using Tempo.Blazor.Components.Diagram.Models;
+using Tempo.Blazor.Components.Navigation;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Models;
 
 namespace Tempo.Blazor.Components.Diagram;
@@ -25,6 +27,10 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>When false, the panel renders without its own collapse tab and fills its host's width —
+    /// for hosts (TmDiagramEditor's inspector) that own the collapse. Default true (standalone use).</summary>
+    [Parameter] public bool ShowCollapseToggle { get; set; } = true;
+
     /// <summary>Id of the active (radio-selected) layer; two-way bound.</summary>
     [Parameter] public string? ActiveLayerId { get; set; }
 
@@ -34,6 +40,15 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     /// <summary>Raises after a command mutated the document so hosts can persist it.</summary>
     [Parameter] public EventCallback<DiagramDocument> DocumentChanged { get; set; }
 
+    /// <summary>
+    /// How each row's "⋯" menu presents on a narrow viewport — handed to the core
+    /// <see cref="TmContextMenu.MobilePresentation"/>. Default <see cref="PanelPresentation.Auto"/>
+    /// resolves from the viewport scope (content-height bottom sheet on a phone, anchored popover
+    /// otherwise). <c>TmDiagramEditor</c> passes <see cref="PanelPresentation.Sheet"/> on its
+    /// mobile layout and <see cref="PanelPresentation.Popover"/> elsewhere.
+    /// </summary>
+    [Parameter] public PanelPresentation RowMenuPresentation { get; set; } = PanelPresentation.Auto;
+
     private bool _collapsed;
     private string? _editingLayerId;
     private string _editName = "";
@@ -42,35 +57,16 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     private string? _draggedLayerId;
     private string? _dragOverLayerId;
     private string? _defaultLayerId;
-    private string? _rowMenuLayerId;
     private string? _moveTargetLayerId;
     private readonly string _moveSelectId = $"layers-move-{Guid.NewGuid().ToString("n")[..8]}";
-
-    /// <summary>Zero-based position of the row whose "⋯" menu is open (-1 when none).</summary>
-    private int _rowMenuLayerIndex
-    {
-        get
-        {
-            if (_rowMenuLayerId is null) return -1;
-            var ordered = SortedLayers.ToList();
-            return ordered.FindIndex(l => l.Id == _rowMenuLayerId);
-        }
-    }
-
-    /// <summary>Whether the open row menu's layer is the first in the z-order (Move up is then disabled).</summary>
-    private bool RowMenuIsFirst => _rowMenuLayerIndex <= 0;
-
-    /// <summary>Whether the open row menu's layer is the last in the z-order (Move down is then disabled).</summary>
-    private bool RowMenuIsLast
-    {
-        get
-        {
-            var count = Document?.Layers.Count ?? 0;
-            return _rowMenuLayerIndex < 0 || _rowMenuLayerIndex >= count - 1;
-        }
-    }
-
-    private void ToggleRowMenu(string layerId) => _rowMenuLayerId = _rowMenuLayerId == layerId ? null : layerId;
+    private readonly string _titleId = $"tm-diagram-layers-title-{Guid.NewGuid().ToString("n")[..8]}";
+    private readonly Dictionary<string, ElementReference> _nameRefs = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RowMenuHolder> _rowMenuRefs = new(StringComparer.Ordinal);
+    private string? _announcement;
+    private string? _focusNameAfterRender;   // layer id whose name span gets focus after the next render
+    private string? _focusRowMenuTriggerAfterRender; // layer id whose "⋯" trigger gets focus after the next render
+    private bool _focusAddButtonAfterRender;
+    private ElementReference _addButtonRef;
 
     private List<DiagramNode> SelectedNodes => SelectedIds
         .Select(id => Document?.Nodes.FirstOrDefault(n => n.Id == id))
@@ -87,6 +83,7 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     protected override void OnParametersSet()
     {
         EnsureDefaultLayer();
+        PruneStaleRefs();
         if (string.IsNullOrEmpty(ActiveLayerId) && !string.IsNullOrEmpty(_defaultLayerId))
         {
             ActiveLayerId = _defaultLayerId;
@@ -94,13 +91,83 @@ public partial class TmDiagramLayersPanel : TmComponentBase
         }
     }
 
+    /// <summary>
+    /// Drops name/menu references of layers that left <see cref="Document"/> (deleted elsewhere,
+    /// undo, a swapped document) so a later focus hand-back can never resolve a dead element and
+    /// the dictionaries do not grow unboundedly.
+    /// </summary>
+    private void PruneStaleRefs()
+    {
+        if (Document is null) return;
+        var ids = Document.Layers.Select(l => l.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var key in _nameRefs.Keys.Where(k => !ids.Contains(k)).ToList()) _nameRefs.Remove(key);
+        foreach (var key in _rowMenuRefs.Keys.Where(k => !ids.Contains(k)).ToList()) _rowMenuRefs.Remove(key);
+        if (_editingLayerId is not null && !ids.Contains(_editingLayerId)) _editingLayerId = null;
+        if (_focusNameAfterRender is not null && !ids.Contains(_focusNameAfterRender)) _focusNameAfterRender = null;
+        if (_focusRowMenuTriggerAfterRender is not null && !ids.Contains(_focusRowMenuTriggerAfterRender)) _focusRowMenuTriggerAfterRender = null;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_pendingNameFocus)
         {
             _pendingNameFocus = false;
-            await _nameInputRef.FocusAsync();
+            await SafeFocusAsync(_nameInputRef);
+            return;
         }
+        if (_focusNameAfterRender is { } id)
+        {
+            _focusNameAfterRender = null;
+            if (_nameRefs.TryGetValue(id, out var nameRef)) await SafeFocusAsync(nameRef);
+        }
+        else if (_focusRowMenuTriggerAfterRender is { } menuLayerId)
+        {
+            _focusRowMenuTriggerAfterRender = null;
+            await FocusRowMenuTriggerAsync(menuLayerId);
+        }
+        else if (_focusAddButtonAfterRender)
+        {
+            _focusAddButtonAfterRender = false;
+            await SafeFocusAsync(_addButtonRef);
+        }
+    }
+
+    /// <summary>
+    /// Per-row slot for the core menu component reference: razor <c>@ref</c> needs a field/property,
+    /// so each row binds into its own holder (keyed by layer id).
+    /// </summary>
+    private sealed class RowMenuHolder
+    {
+        public TmContextMenu? Menu { get; set; }
+    }
+
+    /// <summary>Returns the row's existing holder or creates and remembers one.</summary>
+    private RowMenuHolder GetRowMenuHolder(string layerId)
+    {
+        if (!_rowMenuRefs.TryGetValue(layerId, out var holder))
+            _rowMenuRefs[layerId] = holder = new RowMenuHolder();
+        return holder;
+    }
+
+    /// <summary>Focuses the row's "⋯" trigger through the core menu's safe focus API, with the
+    /// name span as fallback (read-only renders no menu).</summary>
+    private async Task FocusRowMenuTriggerAsync(string layerId)
+    {
+        if (_rowMenuRefs.TryGetValue(layerId, out var holder) && holder.Menu is { } menu)
+        {
+            await menu.FocusTriggerAsync();
+        }
+        else if (_nameRefs.TryGetValue(layerId, out var nameRef))
+        {
+            await SafeFocusAsync(nameRef);
+        }
+    }
+
+    private static async Task SafeFocusAsync(ElementReference element)
+    {
+        try { await element.FocusAsync(); }
+        catch (InvalidOperationException) { }
+        catch (Microsoft.JSInterop.JSException) { }
     }
 
     private void EnsureDefaultLayer()
@@ -129,7 +196,7 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     private async Task OnAddLayer()
     {
         if (Document is null || ReadOnly) return;
-        var name = Loc["TmDiagramLayers_NewLayerName", Document.Layers.Count + 1];
+        var name = NextNewLayerName();
         var cmd = new AddLayerCommand(Document, name);
         if (CommandStack is not null)
             CommandStack.Push(cmd);
@@ -138,11 +205,38 @@ public partial class TmDiagramLayersPanel : TmComponentBase
 
         await ActiveLayerIdChanged.InvokeAsync(cmd.Layer.Id);
         await DocumentChanged.InvokeAsync(Document);
+        _focusNameAfterRender = cmd.Layer.Id;
+    }
+
+    /// <summary>
+    /// "New layer {n}" with the smallest free ordinal ≥ 1 (case-insensitive). The probe is
+    /// BOUNDED — at most existing.Count + 1 ordinals, so a host localizer that ignores the
+    /// argument cannot loop forever — and then falls back to the base name plus a unique short
+    /// suffix, so two consecutive adds always finish and stay distinct.
+    /// </summary>
+    private string NextNewLayerName()
+    {
+        var existing = new HashSet<string>(Document!.Layers.Select(l => l.Name), StringComparer.OrdinalIgnoreCase);
+        var baseName = Loc["TmDiagramLayers_NewLayerName", Document.Layers.Count + 1];
+        if (!existing.Contains(baseName)) return baseName;
+        for (var n = 1; n <= existing.Count; n++)
+        {
+            var candidate = Loc["TmDiagramLayers_NewLayerName", n];
+            if (!existing.Contains(candidate)) return candidate;
+        }
+        string fallback;
+        do { fallback = $"{baseName} ({Guid.NewGuid().ToString("N")[..4]})"; }
+        while (existing.Contains(fallback));
+        return fallback;
     }
 
     private async Task OnRemoveLayer(DiagramLayer layer)
     {
         if (Document is null || ReadOnly) return;
+        var ordered = SortedLayers.ToList();
+        var idx = ordered.FindIndex(l => l.Id == layer.Id);
+        var neighbour = idx > 0 ? ordered[idx - 1] : ordered.ElementAtOrDefault(idx + 1);
+
         var cmd = new RemoveLayerCommand(Document, layer.Id);
         if (CommandStack is not null)
             CommandStack.Push(cmd);
@@ -151,16 +245,13 @@ public partial class TmDiagramLayersPanel : TmComponentBase
 
         if (ActiveLayerId == layer.Id)
             await ActiveLayerIdChanged.InvokeAsync(_defaultLayerId);
-        _rowMenuLayerId = null;
         await DocumentChanged.InvokeAsync(Document);
+        Announce(Loc["TmDiagramLayers_Announce_Deleted", layer.Name]);
+        if (neighbour is not null) _focusRowMenuTriggerAfterRender = neighbour.Id; else _focusAddButtonAfterRender = true;
     }
 
-    /// <summary>The row menu's rename entry: closes the menu and starts the inline edit.</summary>
-    private void OnRowMenuRename(DiagramLayer layer)
-    {
-        _rowMenuLayerId = null;
-        OnStartEdit(layer);
-    }
+    /// <summary>The row menu's rename entry: starts the inline edit.</summary>
+    private void OnRowMenuRename(DiagramLayer layer) => OnStartEdit(layer);
 
     /// <summary>The row menu's delete entry: the same undoable removal as the row's trash.</summary>
     private Task OnRowMenuDelete(DiagramLayer layer) => OnRemoveLayer(layer);
@@ -188,8 +279,11 @@ public partial class TmDiagramLayersPanel : TmComponentBase
         else
             cmd.Execute();
 
-        _rowMenuLayerId = null;
         await DocumentChanged.InvokeAsync(Document);
+        Announce(Loc[direction < 0 ? "TmDiagramLayers_Announce_MovedUp" : "TmDiagramLayers_Announce_MovedDown", layer.Name]);
+        // Keyboard/touch alternative to DnD: the menu just closed, so hand focus back to the
+        // moved row's "⋯" trigger (the row element survives the reorder through @key).
+        _focusRowMenuTriggerAfterRender = layer.Id;
     }
 
     private async Task OnSetActive(string layerId)
@@ -207,6 +301,7 @@ public partial class TmDiagramLayersPanel : TmComponentBase
         else
             cmd.Execute();
         await DocumentChanged.InvokeAsync(Document);
+        Announce(Loc[layer.IsVisible ? "TmDiagramLayers_Announce_Shown" : "TmDiagramLayers_Announce_Hidden", layer.Name]);
     }
 
     private async Task OnToggleLock(DiagramLayer layer)
@@ -218,7 +313,11 @@ public partial class TmDiagramLayersPanel : TmComponentBase
         else
             cmd.Execute();
         await DocumentChanged.InvokeAsync(Document);
+        Announce(Loc[layer.IsLocked ? "TmDiagramLayers_Announce_Locked" : "TmDiagramLayers_Announce_Unlocked", layer.Name]);
     }
+
+    /// <summary>Sets the polite live-region text; the next render exposes it to screen readers.</summary>
+    private void Announce(string message) => _announcement = message;
 
     private void OnStartEdit(DiagramLayer layer)
     {
@@ -249,11 +348,14 @@ public partial class TmDiagramLayersPanel : TmComponentBase
         if (_editingLayerId == layer.Id)
         {
             if (e.Key == "Enter" && !e.Repeat)
+            {
                 await CommitRename(layer);
+                _focusNameAfterRender = layer.Id;      // keyboard commit → focus back on the name
+            }
             else if (e.Key == "Escape")
             {
                 _editingLayerId = null;
-                StateHasChanged();
+                _focusNameAfterRender = layer.Id;      // keyboard cancel → focus back on the name
             }
             return;
         }
@@ -272,9 +374,10 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     private async Task CommitRename(DiagramLayer layer)
     {
         if (_editingLayerId != layer.Id) return;
-        if (!string.IsNullOrWhiteSpace(_editName) && _editName != layer.Name)
+        var newName = _editName.Trim();
+        if (newName.Length > 0 && !string.Equals(newName, layer.Name, StringComparison.Ordinal))
         {
-            var cmd = new RenameLayerCommand(layer, _editName.Trim());
+            var cmd = new RenameLayerCommand(layer, newName);
             if (CommandStack is not null)
                 CommandStack.Push(cmd);
             else
@@ -357,5 +460,8 @@ public partial class TmDiagramLayersPanel : TmComponentBase
             cmd.Execute();
         _moveTargetLayerId = null;
         await DocumentChanged.InvokeAsync(Document);
+        var targetName = Document.Layers.FirstOrDefault(l => l.Id == layerId)?.Name;
+        if (targetName is not null)
+            Announce(Loc["TmDiagramLayers_Announce_NodesMoved", targetName]);
     }
 }

@@ -114,6 +114,25 @@
     /// <summary>A keyboard-opened menu hands focus to its first enabled item (shared owner: MenuNavInterop).</summary>
     private Task FocusFirstItemAsync() => _disposed ? Task.CompletedTask : (_menuNav ??= new MenuNavInterop(JS)).FocusFirstAsync(_wrapperRef);
 
+    /// <summary>
+    /// Moves focus to the menu trigger. Safe to call after an action replaced or removed the
+    /// row the trigger lives on — a trigger that left the DOM is a no-op, not an exception.
+    /// Hosts use it where the built-in close-focus-restore cannot run, e.g. the diagram layers
+    /// panel focusing the moved row's "⋯" trigger after a menu-driven reorder.
+    /// </summary>
+    public async ValueTask FocusTriggerAsync()
+    {
+        if (_disposed) return;
+        try
+        {
+            await _triggerRef.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
+    }
+
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

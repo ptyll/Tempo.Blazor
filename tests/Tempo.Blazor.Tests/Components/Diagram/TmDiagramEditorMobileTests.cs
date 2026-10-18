@@ -80,6 +80,27 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
     }
 
     [Fact]
+    public void LayersRowMenu_MobileLayout_PresentsAsSheet()
+    {
+        // The editor forces RowMenuPresentation=Sheet on its mobile layout, so a row's "⋯"
+        // menu renders the bottom sheet (no measuring needed — a forced value renders as-is).
+        var doc = new DiagramDocument();
+        doc.Layers.Add(new DiagramLayer { Name = "Base", Order = 0 });
+        var cut = RenderMobileEditor(doc);
+
+        cut.FindAll(".tm-diagram-editor__inspector [role='tab']")
+            .Single(t => t.TextContent.Trim() == "Layers").Click();
+        cut.Find(".tm-diagram-layers").Should().NotBeNull();
+
+        cut.Find(".tm-diagram-layers__row-menu .tm-context-menu__trigger").Click();
+
+        cut.Find(".tm-diagram-layers__row-menu .tm-overlay-panel-sheet").Should().NotBeNull(
+            "the editor forces Sheet on its mobile layout — the row menu presents as the bottom sheet");
+        cut.Find(".tm-diagram-layers__row-menu .tm-overlay-panel-sheet__title").TextContent.Trim()
+            .Should().Be("Base", "the sheet is titled with the layer name");
+    }
+
+    [Fact]
     public async Task SelectingNode_OpensPropertiesTab_Peek()
     {
         var cut = RenderMobileEditor();

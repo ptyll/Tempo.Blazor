@@ -88,8 +88,11 @@
 </TmModal>
 
 @code {
+    /// <summary>Whether the gallery is visible; hiding it resets the search, category filter and selection.</summary>
     [Parameter] public bool Show { get; set; }
+    /// <summary>Raised when the user cancels or closes the gallery.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+    /// <summary>Raised with the chosen template on Create, double-click or Enter on a card.</summary>
     [Parameter] public EventCallback<DiagramTemplate> OnSelect { get; set; }
 
     /// <summary>

@@ -376,6 +376,13 @@
     ("Přidat {0}") and `TmWidgetSelector_Categories` in all four resource tables plus
     `MockTmLocalizer`.
 
+- **Core: `TmContextMenu.FocusTriggerAsync()`.** The core context menu now exposes a public
+  `ValueTask FocusTriggerAsync()` that moves focus to the menu trigger (`preventScroll`) and treats
+  a trigger that already left the DOM as a no-op instead of throwing. Hosts call it after an action
+  replaced or removed the row the trigger lived on — the diagram layers panel uses it to focus the
+  moved row's "⋯" trigger after a menu-driven reorder and the neighbour's trigger after a delete,
+  paths where the built-in close-focus-restore cannot run.
+
 - **Core tokens: `--tm-data-table-cell-py` / `--tm-data-table-cell-px` are defined in
   `tokens.css`.** `_data-table.css` already read them with `var(--tm-space-3)` /
   `var(--tm-space-4)` fallbacks; the tokens are now declared with exactly those values, so
@@ -384,6 +391,33 @@
   undefined.
 
 ### Breaking / Migration
+
+- **DiagramEditor – `TmDiagramLayersPanel` row menu now uses the core `TmContextMenu`.**
+  `.tm-diagram-layers__row-menu` is now the `TmContextMenu` wrapper. The trigger is a
+  `div[role="button"]` carrying the core `.tm-context-menu__trigger` class (the inner
+  `.tm-diagram-layers__row-menu-trigger` span remains, so clicks on it still bubble) — selectors
+  like `button.tm-diagram-layers__row-menu-trigger` no longer match anything. The trigger's
+  accessible name comes from the inner sr-only "Actions for layer {name}" span, and in
+  `TmDiagramEditor` the panel root's `data-collapsed` is always `False` (the editor owns the
+  collapse through its own chrome — key off that, not off the panel attribute). The item classes
+  (`…row-menu-item--rename/--lock/--up/--down/--delete`, new `--move-selected`) are kept, but they
+  now ride the core `tm-context-menu__item` markup, and a "Move selected nodes here" entry appears
+  when nodes are selected. In read-only the menu is not rendered at all. Before:
+  `.tm-diagram-layers__row-menu { … }` styled the popup. After: style the core menu
+  (`.tm-context-menu`); host CSS targeting the old popup classes must move to the core classes.
+
+- **DiagramEditor – `TmDiagramLayersPanel` accessibility tree is a list, not a radiogroup.**
+  The layer list is a `ul`/`li` list (was `div role="radiogroup"`), and the active-layer control is
+  a toggle button with `aria-pressed` (was `role="radio"` + `aria-checked`). Class hooks are
+  unchanged. Before: `[role='radio'][aria-checked='true']`. After:
+  `.tm-diagram-layers__active[aria-pressed='true']`.
+
+- **DiagramEditor – `TmDiagramLayersPanel` row: the inline lock and delete buttons are removed in
+  every mode.** Lock/Unlock and Delete live in the row's ⋯ menu, and a locked layer shows a
+  non-interactive `.tm-diagram-layers__locked` indicator. The hooks `.tm-diagram-layers__lock` /
+  `.tm-diagram-layers__delete` are gone. New parameter `ShowCollapseToggle` (default `true`,
+  standalone rendering unchanged); `TmDiagramEditor` passes `false`, so the embedded panel fills
+  the inspector and has no `>` tab.
 
 - **DiagramEditor – recently used shapes are per editor.** The connect dialog no longer shares one
   process-wide list (on Blazor Server it leaked picks between users). New optional

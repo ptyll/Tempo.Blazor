@@ -2349,6 +2349,13 @@ circle.tm-diagram-rotate-handle-hit {
     border-color: var(--tm-color-primary);
 }
 
+/* Mixed multi-selection: a neutral hatch instead of a misleading fallback colour. */
+.tm-diagram-properties__color-swatch--mixed {
+    background: repeating-linear-gradient(45deg,
+        var(--tm-color-surface) 0 var(--tm-space-1),
+        var(--tm-color-border) var(--tm-space-1) var(--tm-space-2));
+}
+
 .tm-diagram-properties__color-swatch input[type="color"] {
     position: absolute;
     inset: -50%;

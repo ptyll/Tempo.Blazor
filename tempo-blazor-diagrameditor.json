@@ -4166,27 +4166,32 @@
         {
           "name": "Class",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Additional CSS class applied to the root."
         },
         {
           "name": "Options",
           "type": "IReadOnlyList<SelectOption<string>>?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Options to choose from; each label is shown next to its preview."
         },
         {
           "name": "PreviewRenderer",
           "type": "Func<string?, string>?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Returns the inline SVG preview markup for an option value."
         },
         {
           "name": "Value",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Selected option value (arrowhead or dash pattern id)."
         },
         {
           "name": "ValueChanged",
           "type": "EventCallback<string?>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the user picks another option."
         }
       ]
     },
@@ -4267,7 +4272,8 @@
         {
           "name": "OnEdgeCreated",
           "type": "EventCallback<(string? SourceNodeId, string? SourcePortId, string? TargetNodeId, string? TargetPortId, string? SourceSide, double SourceOffset, string? TargetSide, double TargetOffset, string? TargetEdgeId, double TargetEdgeT, double? SourceConstraintRx, double? SourceConstraintRy, bool? SourceConstraintPerimeter, double? TargetConstraintRx, double? TargetConstraintRy, bool? TargetConstraintPerimeter, double? TargetPointX, double? TargetPointY, double? SourcePointX, double? SourcePointY, double[]? WaypointsXY)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when an edge drag ends; carries source/target node, port, side/offset, perimeter constraints, free end points and initial waypoints."
         },
         {
           "name": "OnEnterGroup",
@@ -4320,7 +4326,8 @@
         {
           "name": "OnPortMouseDownEvent",
           "type": "EventCallback<(string NodeId, string PortId)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the pointer goes down on a node port (node id, port id); ignored in read-only."
         },
         {
           "name": "OnQuickInsert",
@@ -4397,7 +4404,8 @@
         {
           "name": "OnToolboxDrop",
           "type": "EventCallback<(string StencilId, double X, double Y)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when a toolbox stencil is dropped on the canvas, with the stencil id and the grid-snapped drop position."
         },
         {
           "name": "OnToolModeChanged",
@@ -4913,11 +4921,25 @@
           "description": "When true, all editing paths (add, delete, rename, reorder, toggles) are blocked."
         },
         {
+          "name": "RowMenuPresentation",
+          "type": "PanelPresentation",
+          "isRequired": false,
+          "default": "PanelPresentation.Auto",
+          "description": "How each row's \"⋯\" menu presents on a narrow viewport — handed to the core TmContextMenu.MobilePresentation. Default Auto resolves from the viewport scope (content-height bottom sheet on a phone, anchored popover otherwise). TmDiagramEditor passes Sheet on its mobile layout and Popover elsewhere."
+        },
+        {
           "name": "SelectedIds",
           "type": "string[]",
           "isRequired": false,
           "default": "[]",
           "description": "Ids of the currently selected nodes — enables the \"move nodes to layer\" section."
+        },
+        {
+          "name": "ShowCollapseToggle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When false, the panel renders without its own collapse tab and fills its host's width — for hosts (TmDiagramEditor's inspector) that own the collapse. Default true (standalone use)."
         }
       ]
     },
@@ -4990,23 +5012,27 @@
         {
           "name": "Class",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Additional CSS class applied to the panel root."
         },
         {
           "name": "Document",
           "type": "DiagramDocument?",
           "isRequired": true,
+          "description": "Document whose selected elements (or page, when nothing is selected) the panel edits.",
           "editorRequired": true
         },
         {
           "name": "DocumentChanged",
           "type": "EventCallback<DiagramDocument>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised after an edit mutated the document so the host can persist it."
         },
         {
           "name": "OnApplyLayout",
           "type": "EventCallback<(string Algorithm, string Direction)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised by Arrange → Auto layout with the algorithm and direction to run."
         },
         {
           "name": "OnDeleteRequested",
@@ -5023,34 +5049,40 @@
         {
           "name": "OnEdgeRoutingChanged",
           "type": "EventCallback<(string EdgeId, string OldRouting, string NewRouting)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when an edge's routing style changes, with the edge id and the old and new routing values."
         },
         {
           "name": "OnPageSizeChanged",
           "type": "EventCallback",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised after the page size or orientation changed so the canvas can re-measure."
         },
         {
           "name": "ReadOnly",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "When true, every field is disabled and no command is pushed."
         },
         {
           "name": "SelectedIds",
           "type": "string[]",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Ids of the selected nodes and edges; drives single, multi and mixed editing modes."
         },
         {
           "name": "SelectedTableCells",
           "type": "List<(int Row, int Column)>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Selected cells (row, column) of the selected table node; edited by the table cell section."
         },
         {
           "name": "SelectedTableCellsChanged",
           "type": "EventCallback<List<(int Row, int Column)>>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the table cell selection changes inside the panel."
         }
       ]
     },
@@ -5070,18 +5102,21 @@
         {
           "name": "IsSelected",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Whether the tile shows the current routing (selected state)."
         },
         {
           "name": "OnClick",
           "type": "EventCallback",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the tile is activated."
         },
         {
           "name": "Routing",
           "type": "string",
           "isRequired": false,
-          "default": "\"straight\""
+          "default": "\"straight\"",
+          "description": "Edge routing style previewed by the tile (\"straight\", \"orthogonal\", \"curved\", …)."
         }
       ]
     },
@@ -5339,32 +5374,38 @@
         {
           "name": "Document",
           "type": "DiagramDocument?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Document that owns the node (layers, styles)."
         },
         {
           "name": "IsSelected",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Whether the node is selected (enables section editing affordances)."
         },
         {
           "name": "Node",
           "type": "DiagramNode",
-          "isRequired": true
+          "isRequired": true,
+          "description": "Node rendered by this shape."
         },
         {
           "name": "OnPortMouseDownEvent",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the port id when the pointer goes down on one of the node's ports."
         },
         {
           "name": "OnSectionEdit",
           "type": "EventCallback<(string DataKey, object Value)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the data key and the new value when an inline section edit commits."
         },
         {
           "name": "Page",
           "type": "DiagramPage?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Page that owns the node (used for page-relative lookups)."
         },
         {
           "name": "ReadOnly",
@@ -5376,7 +5417,8 @@
           "name": "SelectedTableCells",
           "type": "List<(int Row, int Column)>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Selected cells (row, column) when the node is a table."
         }
       ]
     },
@@ -5472,12 +5514,14 @@
         {
           "name": "OnClose",
           "type": "EventCallback",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the user cancels or closes the gallery."
         },
         {
           "name": "OnSelect",
           "type": "EventCallback<DiagramTemplate>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the chosen template on Create, double-click or Enter on a card."
         },
         {
           "name": "RestoreFocusTarget",
@@ -5488,7 +5532,8 @@
         {
           "name": "Show",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Whether the gallery is visible; hiding it resets the search, category filter and selection."
         }
       ]
     },
