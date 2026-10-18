@@ -18,6 +18,9 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
     [Parameter] public List<(int Row, int Column)> SelectedTableCells { get; set; } = [];
     [Parameter] public DiagramPage? Page { get; set; }
     [Parameter] public DiagramDocument? Document { get; set; }
+
+    /// <summary>The effective read-only state: inline edits (sections, swimlane and table cells)
+    /// never start, and a flip closes any open inline editor without saving.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
     [Inject] private DiagramStencilRegistry StencilRegistry { get; set; } = default!;
@@ -51,6 +54,15 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
     protected override void OnParametersSet()
     {
         _stencil = StencilRegistry.GetStencil(Node.StencilId);
+
+        // A read-only flip (host parameter or the editor toggle) closes every open inline
+        // editor WITHOUT saving — the blur commit path is not allowed to fire in read-only.
+        if (ReadOnly)
+        {
+            CancelEdit();
+            CancelSwimlaneEdit();
+            CancelTableCellEdit();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -110,6 +122,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 
     private void StartEdit(string? dataKey, string text)
     {
+        if (ReadOnly || Node.IsLocked) return;
         if (string.IsNullOrEmpty(dataKey)) return;
         _editingDataKey = dataKey;
         _editingText = text;
@@ -118,6 +131,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 
     private void StartEditList(string? dataKey, IEnumerable<string> list)
     {
+        if (ReadOnly || Node.IsLocked) return;
         if (string.IsNullOrEmpty(dataKey)) return;
         _editingDataKey = dataKey;
         _editingText = string.Join("\n", list);
@@ -377,6 +391,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 
     private void StartSwimlaneEdit(int row, int column)
     {
+        if (ReadOnly || Node.IsLocked) return;
         _editingSwimlaneCell = (row, column);
         _editingSwimlaneText = GetSwimlaneLabel(row, column);
         _editSwimlaneFocusPending = true;

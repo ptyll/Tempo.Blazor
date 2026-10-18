@@ -172,6 +172,21 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
 
     private string GetNodeDataText(string dataKey) => FirstSelectedNode?.Data.GetValueOrDefault(dataKey)?.ToString() ?? "";
 
+    /// <summary>Read-only summary (review L): a one-line plain-text value — list values collapse
+    /// their newlines so a <c>&lt;dd&gt;</c> stays a single inline row.</summary>
+    private static string PlainText(string? value)
+        => (value ?? string.Empty)
+            .Replace("\r\n", " / ", StringComparison.Ordinal)
+            .Replace('\n', ' ')
+            .Replace('\r', ' ');
+
+    /// <summary>Read-only summary (review L): the stencil's display name, or a dash when the
+    /// element hangs free (a dangling edge end).</summary>
+    private string GetReadOnlyStencilName(string? stencilId)
+        => StencilRegistry.GetStencil(stencilId ?? string.Empty) is { } stencil
+            ? GetStencilDisplayName(stencil)
+            : "—";
+
     private string GetNodeDataListText(string dataKey)
     {
         if (FirstSelectedNode?.Data.TryGetValue(dataKey, out var value) == true)

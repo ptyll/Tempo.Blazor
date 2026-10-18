@@ -369,6 +369,401 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
         cut.Instance.Document!.Title.Should().Be("Read-only Test Template");
     }
 
+    // ── Phase 1 (read-only & broken bindings): F3 / F2 / F4 / F5 / D9 ─────────
+
+    [Fact]
+    public void SearchPanel_OpensWithEmptyInputs_AndNoRegexError()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "OpenSearchPanel");
+        cut.Render();
+
+        cut.FindAll(".tm-diagram-search-panel input[type='search']")
+            .Should().NotBeEmpty("the panel opened");
+        foreach (var input in cut.FindAll(".tm-diagram-search-panel input[type='search']"))
+        {
+            input.GetAttribute("value").Should().BeEmpty(
+                "the F3 literal bindings once showed the C# field names");
+        }
+        cut.FindAll(".tm-diagram-search-panel__error").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_ReplaceAll_DoesNotChangeTheDocument()
+    {
+        var doc = CreateDocument();
+        var node = new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 10, W = 100, H = 50 };
+        node.Data["text"] = "Alpha";
+        doc.Nodes.Add(node);
+
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        InvokePrivate(cut.Instance, "OpenSearchPanel");
+        InvokePrivate(cut.Instance, "OnSearchQueryChanged", "Alpha");
+        InvokePrivate(cut.Instance, "OnReplaceQueryChanged", "Beta");
+        InvokePrivate(cut.Instance, "OnReplaceAll");
+        InvokePrivate(cut.Instance, "OnReplace");
+
+        node.Data["text"].Should().Be("Alpha",
+            "replace must not run in the effective read-only state");
+        GetActiveCommandStack(cut.Instance).CanUndo.Should().BeFalse();
+        cut.FindAll(".tm-diagram-search-panel__replace").Should().BeEmpty(
+            "the panel renders search-only while read-only");
+    }
+
+    [Fact]
+    public async Task HostReadOnly_CtrlH_OpensSearchOnlyPanel()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, true));
+
+        // Ctrl+H arrives from diagram-editor.js (case 'h') as JsOnShowReplace → OpenReplacePanel.
+        await cut.InvokeAsync(() => cut.FindComponent<TmDiagramCanvas>().Instance.JsOnShowReplace());
+
+        cut.FindAll(".tm-diagram-search-panel").Should().HaveCount(1);
+        cut.FindAll(".tm-diagram-search-panel__replace").Should().BeEmpty(
+            "a host-pinned read-only editor opens plain search only");
+    }
+
+    [Fact]
+    public void WritableEditor_ReplaceAll_RaisesDocumentChanged_AndIsOneUndoStep()
+    {
+        var doc = CreateDocument();
+        var node = new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 10, W = 100, H = 50 };
+        node.Data["text"] = "Alpha";
+        doc.Nodes.Add(node);
+        var calls = 0;
+
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false)
+            .Add(e => e.DocumentChanged, _ => calls++));
+
+        InvokePrivate(cut.Instance, "OpenSearchPanel");
+        InvokePrivate(cut.Instance, "OnSearchQueryChanged", "Alpha");
+        InvokePrivate(cut.Instance, "OnReplaceQueryChanged", "Beta");
+        InvokePrivate(cut.Instance, "OnReplaceAll");
+
+        calls.Should().BeGreaterThanOrEqualTo(1, "the host must learn about the replacement");
+        node.Data["text"].Should().Be("Beta");
+
+        var stack = GetActiveCommandStack(cut.Instance);
+        stack.Undo();
+        node.Data["text"].ToString().Should().Be("Alpha",
+            "replace all is exactly one undo step (DeepCopy round-trips values as JSON)");
+    }
+
+    [Fact]
+    public void WritableEditor_Replace_PlainQueryWithRegexChars_ReplacesLiterally()
+    {
+        var doc = CreateDocument();
+        var dot = new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 10, W = 100, H = 50 };
+        dot.Data["text"] = "a.b";
+        var cross = new DiagramNode { StencilId = "general.rectangle", X = 200, Y = 10, W = 100, H = 50 };
+        cross.Data["text"] = "axb";
+        doc.Nodes.Add(dot);
+        doc.Nodes.Add(cross);
+
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "OpenSearchPanel");
+        InvokePrivate(cut.Instance, "OnSearchQueryChanged", "a.b");
+        InvokePrivate(cut.Instance, "OnReplaceQueryChanged", "x");
+        InvokePrivate(cut.Instance, "OnReplaceAll");
+
+        dot.Data["text"].Should().Be("x", "a plain query with regex metacharacters matches literally");
+        cross.Data["text"].Should().Be("axb", "a plain query must not act as a wildcard");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_RulerUnitSelect_IsDisabledAndIgnored()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        var select = cut.Find(".tm-diagram-editor__unit-select");
+        select.HasAttribute("disabled").Should().BeTrue(
+            "the ruler unit is a serialized document property (A5)");
+
+        InvokePrivate(cut.Instance, "OnRulerUnitChanged", MeasurementUnit.Mm);
+        doc.ActivePage.RulerUnit.Should().Be(MeasurementUnit.Px,
+            "the read-only guard ignores the change even if the event fires");
+    }
+
+    [Fact]
+    public void WritableEditor_RulerUnitChange_RaisesDocumentChanged()
+    {
+        var doc = CreateDocument();
+        var changes = 0;
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false)
+            .Add(e => e.DocumentChanged, _ => changes++));
+
+        cut.Find(".tm-diagram-editor__unit-select").Change("Mm");
+
+        doc.ActivePage.RulerUnit.Should().Be(MeasurementUnit.Mm);
+        changes.Should().BeGreaterThanOrEqualTo(1, "a serialized document property notifies the host (A5)");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_TemplatesButton_IsDisabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='templates'] button").HasAttribute("disabled").Should().BeFalse(
+            "precondition: the templates button is enabled while writable");
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.Find("[data-tm-group='templates'] button").HasAttribute("disabled")
+            .Should().BeTrue("the templates gallery is an editing surface");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_LayoutDropdown_IsDisabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        // The TmDropdown disabled contract is twofold: the wrapper class AND the native
+        // `disabled` attribute on the trigger button (so the browser blocks the click).
+        var layoutTrigger = cut.Find("[data-tm-group='layout'] .tm-dropdown-trigger");
+        layoutTrigger.HasAttribute("disabled").Should().BeTrue("the layout menu changes the document");
+        layoutTrigger.GetAttribute("aria-expanded").Should().BeNull(
+            "an expanded state is meaningless on a disabled trigger");
+        cut.Find("[data-tm-group='layout'] .tm-dropdown-wrapper").ClassList
+            .Should().Contain("tm-dropdown-disabled");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_InsertAndImportDropdowns_AreDisabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.Find("[data-tm-group='insert'] .tm-dropdown-trigger").HasAttribute("disabled")
+            .Should().BeTrue("inserting shapes is an editing path");
+        cut.Find("[data-tm-group='import'] .tm-dropdown-trigger").HasAttribute("disabled")
+            .Should().BeTrue("importing replaces the document");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_CanvasSizeButton_IsDisabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.Find("[data-tm-group='canvas-size'] button").HasAttribute("disabled")
+            .Should().BeTrue("the canvas size editor changes the serialized page size");
+    }
+
+    [Fact]
+    public void ReadOnlyToggle_ClosesAnOpenContextMenu()
+    {
+        var doc = CreateDocument();
+        var node = new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 10, W = 100, H = 50 };
+        doc.Nodes.Add(node);
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "OnCanvasContextMenu", (10d, 10d, 10d, 10d));
+        cut.FindAll(".tm-diagram-editor__context-menu").Should().HaveCount(1,
+            "precondition: the context menu opened");
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.FindAll(".tm-diagram-editor__context-menu").Should().BeEmpty(
+            "entering read-only closes surfaces that only make sense while editing");
+    }
+
+    [Fact]
+    public void HostReadOnlyFlip_ClosesTheCanvasSizeEditor()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "OpenCanvasSize");
+        cut.Render();
+        cut.FindAll(".tm-diagram-editor__canvas-size-input").Should().NotBeEmpty(
+            "precondition: the canvas size editor opened");
+
+        cut.Render(p => p.Add(e => e.ReadOnly, true));
+
+        cut.FindAll(".tm-diagram-editor__canvas-size-input").Should().BeEmpty(
+            "a host flip to read-only closes the edit-only surfaces like the user toggle");
+    }
+
+    [Fact]
+    public void WritableEditor_TemplatesAndLayout_AreEnabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='templates'] button").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-tm-group='layout'] .tm-dropdown-wrapper").ClassList
+            .Should().NotContain("tm-dropdown-disabled");
+        cut.Find("[data-tm-group='canvas-size'] button").HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
+    public void HostReadOnly_ToolboxTilesAreAriaDisabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, true));
+
+        cut.Find("[data-stencil-id='general.rectangle']").GetAttribute("aria-disabled")
+            .Should().Be("true", "A8: read-only tiles stay visible and discoverable but inert");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_EdgeTileDrag_DoesNotArmTheEdgeTool()
+    {
+        var edgeStencilId = Services.GetRequiredService<DiagramStencilRegistry>()
+            .GetAll().First(s => s.Kind == Tempo.Blazor.Components.Diagram.Models.DiagramStencilKind.Edge).Id;
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        InvokePrivate(cut.Instance, "OnToolboxDragStart", edgeStencilId);
+
+        GetPrivateField<string>(cut.Instance, "_toolMode").Should().Be("select",
+            "arming the edge tool is an editing path");
+    }
+
+    // ── R1 review: the Select tool stays reachable in read-only ───────────────
+
+    [Fact]
+    public void EffectiveReadOnly_SelectTool_IsEnabled()
+    {
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var selectButton = cut.Find("[data-tm-group='tools'] button");
+        selectButton.HasAttribute("disabled").Should().BeFalse(
+            "precondition: the Select tool is enabled while writable");
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.Find("[data-tm-group='tools'] button").HasAttribute("disabled").Should().BeFalse(
+            "R1: selecting a node for inspection is not an editing path — the tool stays enabled");
+    }
+
+    [Fact]
+    public void EffectiveReadOnly_EdgeToolActive_ResetsToSelect()
+    {
+        var edgeStencilId = Services.GetRequiredService<DiagramStencilRegistry>()
+            .GetAll().First(s => s.Kind == Tempo.Blazor.Components.Diagram.Models.DiagramStencilKind.Edge).Id;
+        var doc = CreateDocument();
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "OnToolboxDragStart", edgeStencilId);
+        GetPrivateField<string>(cut.Instance, "_toolMode").Should().Be("edge",
+            "precondition: the edge draw tool is armed");
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        GetPrivateField<string>(cut.Instance, "_toolMode").Should().Be("select",
+            "an armed click-to-connect must not survive the read-only flip");
+    }
+
+    // ── Review: the replacement text is literal in non-regex mode ─────────────
+
+    [Fact]
+    public void WritableEditor_Replace_DollarInLiteralReplacement_ReplacesLiterally()
+    {
+        var doc = CreateDocument();
+        // A node whose id and stencil id contain no "a": the search yields the Data match for
+        // "a" (an Id/StencilId match is not replaceable and would swallow the whole query).
+        var node = new DiagramNode { Id = "n1", StencilId = "uml.component", X = 10, Y = 10, W = 100, H = 50 };
+        node.Data["text"] = "a";
+        doc.Nodes.Add(node);
+
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        InvokePrivate(cut.Instance, "OpenSearchPanel");
+        InvokePrivate(cut.Instance, "OnSearchQueryChanged", "a");
+        InvokePrivate(cut.Instance, "OnReplaceQueryChanged", "$0x");
+        InvokePrivate(cut.Instance, "OnReplaceAll");
+
+        node.Data["text"].Should().Be("$0x",
+            "$ in a plain (non-regex) replacement is literal text, not a group reference");
+    }
+
+    // ── Review: entering read-only closes the connect dialog too ──────────────
+
+    [Fact]
+    public async Task ReadOnlyToggle_ClosesAnOpenConnectDialog()
+    {
+        var doc = CreateDocument();
+        var node = new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 10, W = 100, H = 50 };
+        doc.Nodes.Add(node);
+        using var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        await cut.InvokeAsync(() => InvokePrivate(cut.Instance, "OnConnectArrowClicked", (node.Id, "right")));
+        cut.FindAll(".tm-diagram-connect-modal").Should().NotBeEmpty(
+            "precondition: the connect dialog opened");
+
+        cut.Find("[data-tm-group='readonly'] button").Click();
+
+        cut.FindAll(".tm-diagram-connect-modal").Should().BeEmpty(
+            "entering read-only closes the connect dialog");
+    }
+
+    private static T? GetPrivateField<T>(TmDiagramEditor editor, string fieldName)
+        => (T?)typeof(TmDiagramEditor)
+            .GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance)!
+            .GetValue(editor);
+
     private static DiagramDocument CreateDocument()
     {
         var doc = new DiagramDocument();

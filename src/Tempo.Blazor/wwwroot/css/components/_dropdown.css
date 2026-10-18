@@ -2,6 +2,13 @@
    matched anything, so this also fixes a dead rule. */
 .tm-dropdown-wrapper { position: relative; display: inline-flex; }
 
+/* A disabled dropdown greys out its trigger (the wrapper class comes from TmDropdown.Disabled;
+   the native `disabled` attribute blocks the click, this only paints the state). */
+.tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger {
+  opacity: var(--tm-opacity-disabled);
+  cursor: not-allowed;
+}
+
 /* The menu is a TmOverlayPanel: position:fixed + popover="manual" + z-index come from
    _overlay-panel.css and overlay.js writes top/left — no absolute-position declarations here. */
 .tm-dropdown-menu {

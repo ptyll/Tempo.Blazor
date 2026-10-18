@@ -59,6 +59,30 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("Read-only preview (R1): clicking a node selects it for inspection; no resize handles render")]
+    public async Task DiagramPreview_ClickNode_SelectsForInspection()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        await PinPreviewEditorToDesktopAsync(page);
+
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector(\"[data-testid='modeling-diagram-preview'] g.tm-diagram-node\")?.getAttribute('data-node-id')");
+        Assert.IsNotNull(nodeId, "the preview must render a node");
+
+        await page.Locator($"[data-testid='modeling-diagram-preview'] g.tm-diagram-node[data-node-id='{nodeId}']").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.AreEqual(1,
+            await page.Locator($"[data-testid='modeling-diagram-preview'] g.tm-diagram-node--selected[data-node-id='{nodeId}']").CountAsync(),
+            "a click in the read-only preview selects the node for the read-only properties panel");
+        Assert.AreEqual(0,
+            await page.Locator("[data-testid='modeling-diagram-preview'] .tm-diagram-resize-handle").CountAsync(),
+            "the read-only preview never renders resize handles");
+    }
+
+    [TestMethod]
     [Description("Viewer preview offers no import, template or other editing toolbar commands")]
     public async Task DiagramPreview_HasNoImportOrTemplateCommands()
     {

@@ -54,6 +54,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>User-toggled read-only state; deliberately separate from <see cref="ReadOnly"/>.</summary>
     private bool _userReadOnly;
 
+    /// <summary>The effective read-only state seen by the last transition pass: every change
+    /// (host parameter or user toggle) runs <see cref="ApplyReadOnlyTransition"/> so the state
+    /// flip applies once — closing edit-only surfaces and disarming the edge tool.</summary>
+    private bool _lastEffectiveReadOnly;
+
     /// <summary>Show the component toolbox panel on the left.</summary>
     [Parameter] public bool ShowToolbox { get; set; } = true;
 
@@ -266,6 +271,25 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
         {
             ApplyResolvedLayout(LayoutMode);
+        }
+
+        // Every effective read-only change (host parameter or user toggle) applies its transition
+        // here exactly once — so a host flip behaves like the user's toggle.
+        ApplyReadOnlyTransition();
+    }
+
+    /// <summary>Applies a change of the effective read-only state: entering read-only closes the
+    /// surfaces that only make sense while editing and disarms the edge draw tool (an armed
+    /// click-to-connect would otherwise be the one editing path left open).</summary>
+    private void ApplyReadOnlyTransition()
+    {
+        if (IsReadOnly == _lastEffectiveReadOnly) return;
+        _lastEffectiveReadOnly = IsReadOnly;
+        if (!IsReadOnly) return;
+        CloseEditSurfaces();
+        if (_toolMode == "edge")
+        {
+            _ = SetToolMode("select");
         }
     }
 
@@ -1036,6 +1060,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _ = _canvas.SetActiveSearchResult(null);
     }
 
+    /// <summary>Ctrl+H. In the effective read-only state the panel renders search-only (TmDiagramSearchPanel.ReadOnly).</summary>
     private void OpenReplacePanel()
     {
         _showSearchPanel = true;
@@ -1093,9 +1118,22 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         {
             if (!DiagramSearchService.TryCreateRegex(_searchQuery.Trim(), out _, out var error))
             {
-                _regexError = error;
+                _regexError = Loc["TmDiagram_RegexError", error ?? string.Empty];
             }
         }
+    }
+
+    /// <summary>The replacement text handed to Regex.Replace: as typed in regex mode, with `$`
+    /// escaped in literal mode so "$0x" replaces to the text "$0x" instead of group 0 + "x".</summary>
+    private string ReplacementText => _searchUseRegex ? _replaceQuery : _replaceQuery.Replace("$", "$$");
+
+    /// <summary>The replace pattern: the query as typed in regex mode, the escaped literal otherwise.</summary>
+    private bool TryCreateReplaceRegex(out System.Text.RegularExpressions.Regex? regex)
+    {
+        var pattern = _searchUseRegex
+            ? _searchQuery.Trim()
+            : System.Text.RegularExpressions.Regex.Escape(_searchQuery.Trim());
+        return DiagramSearchService.TryCreateRegex(pattern, out regex, out _);
     }
 
     private void ExecuteSearch()
@@ -1167,9 +1205,10 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnReplace()
     {
+        if (IsReadOnly || _document is null) return;
         if (_searchResults.Count == 0 || _searchCurrentIndex < 0 || _searchCurrentIndex >= _searchResults.Count)
             return;
-        if (!DiagramSearchService.TryCreateRegex(_searchQuery.Trim(), out var regex, out _))
+        if (!TryCreateReplaceRegex(out var regex))
             return;
 
         var result = _searchResults[_searchCurrentIndex];
@@ -1178,7 +1217,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             : _document?.ActivePage;
         if (page is null) return;
 
-        var replaceResult = DiagramSearchService.ReplaceInResult(_document!, result, regex!, _replaceQuery);
+        var replaceResult = DiagramSearchService.ReplaceInResult(_document!, result, regex!, ReplacementText);
         if (replaceResult is null) return;
 
         if (result.NodeId is not null)
@@ -1203,51 +1242,58 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             var nextIndex = Math.Min(_searchCurrentIndex, _searchResults.Count - 1);
             await OnSearchIndexChanged(nextIndex);
         }
-        await InvokeAsync(StateHasChanged);
+        // A replacement mutates the document: the host must learn about it (DocumentChanged).
+        await OnDocumentChanged(_document!);
     }
 
     private async Task OnReplaceAll()
     {
-        if (_searchResults.Count == 0 || !DiagramSearchService.TryCreateRegex(_searchQuery.Trim(), out var regex, out _))
+        if (IsReadOnly || _document is null) return;
+        if (_searchResults.Count == 0 || !TryCreateReplaceRegex(out var regex))
             return;
-        if (_document is null) return;
 
-        using var tx = ActiveCommandStack.TransactionScope("Replace all");
-
-        var processed = new HashSet<string>();
-        foreach (var result in _searchResults)
+        var changed = false;
+        // The transaction commits BEFORE the document notification (one undo step).
+        using (ActiveCommandStack.TransactionScope("Replace all"))
         {
-            var replaceResult = DiagramSearchService.ReplaceInResult(_document, result, regex!, _replaceQuery);
-            if (replaceResult is null) continue;
-
-            var key = result.NodeId is not null ? $"node:{result.NodeId}:{replaceResult.DataKey}" : $"edge:{result.EdgeId}:{replaceResult.DataKey}";
-            if (!processed.Add(key)) continue;
-
-            var page = result.PageIndex.HasValue
-                ? _document.Pages[result.PageIndex.Value]
-                : _document.ActivePage;
-            if (page is null) continue;
-
-            if (result.NodeId is not null)
+            var processed = new HashSet<string>();
+            foreach (var result in _searchResults.ToList())   // ToList: ExecuteSearch() replaces the list later
             {
-                var node = page.Nodes.FirstOrDefault(n => n.Id == result.NodeId);
-                if (node is null) continue;
-                var oldData = DeepCopy(node.Data);
-                var newData = DeepCopy(node.Data);
-                newData[replaceResult.DataKey] = regex!.Replace(replaceResult.OldValue, _replaceQuery);
-                ActiveCommandStack.Push(new UpdateNodeDataCommand(_document, result.NodeId, oldData, newData));
-            }
-            else if (result.EdgeId is not null)
-            {
-                var edge = page.Edges.FirstOrDefault(e => e.Id == result.EdgeId);
-                if (edge is null) continue;
-                ActiveCommandStack.Push(new UpdateEdgeLabelCommand(_document, result.EdgeId, replaceResult.OldValue, regex!.Replace(replaceResult.OldValue, _replaceQuery)));
+                var replaceResult = DiagramSearchService.ReplaceInResult(_document, result, regex!, ReplacementText);
+                if (replaceResult is null) continue;
+
+                var key = result.NodeId is not null ? $"node:{result.NodeId}:{replaceResult.DataKey}" : $"edge:{result.EdgeId}:{replaceResult.DataKey}";
+                if (!processed.Add(key)) continue;
+
+                var page = result.PageIndex.HasValue
+                    ? _document.Pages[result.PageIndex.Value]
+                    : _document.ActivePage;
+                if (page is null) continue;
+
+                if (result.NodeId is not null)
+                {
+                    var node = page.Nodes.FirstOrDefault(n => n.Id == result.NodeId);
+                    if (node is null) continue;
+                    var oldData = DeepCopy(node.Data);
+                    var newData = DeepCopy(node.Data);
+                    newData[replaceResult.DataKey] = regex!.Replace(replaceResult.OldValue, ReplacementText);
+                    ActiveCommandStack.Push(new UpdateNodeDataCommand(_document, result.NodeId, oldData, newData));
+                    changed = true;
+                }
+                else if (result.EdgeId is not null)
+                {
+                    var edge = page.Edges.FirstOrDefault(e => e.Id == result.EdgeId);
+                    if (edge is null) continue;
+                    ActiveCommandStack.Push(new UpdateEdgeLabelCommand(_document, result.EdgeId, replaceResult.OldValue, regex!.Replace(replaceResult.OldValue, ReplacementText)));
+                    changed = true;
+                }
             }
         }
         ExecuteSearch();
         if (_searchResults.Count > 0)
             await OnSearchIndexChanged(0);
-        await InvokeAsync(StateHasChanged);
+        if (changed) await OnDocumentChanged(_document);
+        else await InvokeAsync(StateHasChanged);
     }
 
     private static Dictionary<string, object> DeepCopy(Dictionary<string, object> source)
@@ -1282,11 +1328,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task OnRulerUnitChanged(MeasurementUnit unit)
     {
-        if (_document?.ActivePage is null) return;
+        if (_document?.ActivePage is null || IsReadOnly) return;
         _document.ActivePage.RulerUnit = unit;
         if (_canvas is not null)
             await _canvas.SetRulerUnit(unit.ToString().ToLowerInvariant());
-        StateHasChanged();
+        // A document property (serialized): the host must learn about it. Not undoable (like canvas size).
+        await OnDocumentChanged(_document);
     }
 
     private async Task OnPageScaleChanged(double scale)
@@ -1509,6 +1556,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task RunLayout(string algorithm, string direction = "TB")
     {
         _layoutMenuOpen = false;
+        if (IsReadOnly) return;
         if (_canvas is null) return;
         await _canvas.RunLayoutAsync(algorithm, direction);
     }
@@ -1544,6 +1592,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task HandleInsertSelect(string value)
     {
+        if (IsReadOnly) return;
         switch (value)
         {
             case "table":
@@ -1818,12 +1867,32 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     // DI1: the toggle flips the internal user state only. Assigning the [Parameter] ReadOnly
     // from inside the component let a hosted read-only preview unlock itself — that is gone.
-    private void ToggleReadOnly() => _userReadOnly = !_userReadOnly;
+    private void ToggleReadOnly()
+    {
+        _userReadOnly = !_userReadOnly;
+        ApplyReadOnlyTransition();
+    }
+
+    /// <summary>Entering the effective read-only state closes the surfaces that only make sense
+    /// while editing (open context menu, canvas-size editor, table picker, template gallery,
+    /// SQL/CSV dialogs, connect dialog, layout menu).</summary>
+    private void CloseEditSurfaces()
+    {
+        if (_contextMenuOpen) _ = CloseContextMenu();
+        _canvasSizeEditing = false;
+        _showTableInserter = false;
+        _showTemplateGallery = false;
+        _sqlImportDialogOpen = false;
+        _csvImportDialogOpen = false;
+        CloseConnectModal();
+        _layoutMenuOpen = false;
+    }
 
     // ── Toolbox drag activation ──────────────────────────────────────────────
 
     private async Task OnToolboxDragStart(string stencilId)
     {
+        if (IsReadOnly) return;
         var stencil = StencilRegistry.GetStencil(stencilId);
         if (stencil?.Kind == DiagramStencilKind.Edge)
         {

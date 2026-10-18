@@ -34611,6 +34611,12 @@
               "description": "Fires when the query changes."
             },
             {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the panel is search-only: the replace field and the Replace / Replace all buttons are not rendered (the editor passes its effective read-only state)."
+            },
+            {
               "name": "RegexError",
               "type": "string?",
               "isRequired": false,
@@ -34895,6 +34901,12 @@
               "description": "Additional CSS class."
             },
             {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys (the editor passes its effective read-only state)."
+            },
+            {
               "name": "StencilDragStart",
               "type": "EventCallback<string>",
               "isRequired": false,
@@ -34977,6 +34989,10 @@
         },
         {
           "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/diagram-editor.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/__tests__/diagram-editor-engine.test.mjs",
           "kind": "JavaScript"
         },
         {

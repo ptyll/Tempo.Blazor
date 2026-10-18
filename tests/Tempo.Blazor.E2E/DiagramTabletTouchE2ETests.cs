@@ -262,6 +262,95 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    [Description("Read-only tablet (R1): a tap on a node selects it for inspection; no resize handles render")]
+    public async Task Tablet_ReadOnly_TapNode_SelectsForInspection()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id')");
+        Assert.IsNotNull(nodeId, "the sample document must render a node");
+
+        await ClickFirstAsync(page, page.Locator("[data-tm-group='readonly'] button"));
+        await page.WaitForTimeoutAsync(300);
+
+        await TapNodeAsync(page, nodeId!);
+
+        Assert.AreEqual(1,
+            await page.Locator($"g.tm-diagram-node--selected[data-node-id='{nodeId}']").CountAsync(),
+            "a tap in read-only selects the node for the read-only properties panel");
+        Assert.AreEqual(0, await page.Locator(".tm-diagram-resize-handle-hit").CountAsync(),
+            "read-only never renders the transform handles");
+        await ScrollEditorStatusIntoViewAsync(page);
+        await ShotAsync(page, "tablet-1024-touch--readonly-inspect");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("Read-only tablet (R1): a finger that lands on a node pans the canvas instead of dragging it")]
+    public async Task Tablet_ReadOnly_FingerDragOnNode_PansTheCanvas()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id')");
+        Assert.IsNotNull(nodeId, "the sample document must render a node");
+
+        await ClickFirstAsync(page, page.Locator("[data-tm-group='readonly'] button"));
+        await page.WaitForTimeoutAsync(300);
+
+        var svg = page.Locator(".tm-diagram-canvas__svg").First;
+        var viewBoxBefore = await svg.GetAttributeAsync("viewBox");
+        var transformBefore = await page.EvaluateAsync<string?>(
+            "(id) => document.querySelector(`g.tm-diagram-node[data-node-id='${id}']`)?.getAttribute('transform')",
+            nodeId);
+
+        await FingerDragNodeAsync(page, nodeId!, 80);
+
+        var viewBoxAfter = await svg.GetAttributeAsync("viewBox");
+        Assert.IsFalse(string.Equals(viewBoxBefore, viewBoxAfter, StringComparison.Ordinal),
+            $"a finger drag that starts on a node must pan the canvas in read-only (viewBox {viewBoxBefore} -> {viewBoxAfter})");
+        var transformAfter = await page.EvaluateAsync<string?>(
+            "(id) => document.querySelector(`g.tm-diagram-node[data-node-id='${id}']`)?.getAttribute('transform')",
+            nodeId);
+        Assert.AreEqual(transformBefore, transformAfter,
+            "the read-only drag must never move the node itself");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("Read-only tablet (review D): a tap on an edge selects it for inspection; no edge handles render")]
+    public async Task Tablet_ReadOnly_TapEdge_SelectsForInspection()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        var edgeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector('.tm-diagram-edge-hit-path')?.getAttribute('data-edge-id')");
+        Assert.IsNotNull(edgeId, "the sample document must render an edge");
+
+        await ClickFirstAsync(page, page.Locator("[data-tm-group='readonly'] button"));
+        await page.WaitForTimeoutAsync(300);
+
+        // A straight edge hit path has a zero-height bounding box, so Playwright's tap action
+        // refuses it ("element is not visible"); a synthetic touch-pointer tap dispatches the
+        // same pointerdown/up pair the gesture stack consumes.
+        await TapEdgeAsync(page, edgeId!);
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.AreEqual(1,
+            await page.Locator($"g.tm-diagram-edge-group[data-edge-id='{edgeId}'] .tm-diagram-edge-path--selected-outline").CountAsync(),
+            "a tap in read-only selects the edge for the read-only properties panel");
+        Assert.AreEqual(0, await page.Locator(".tm-diagram-edge-handle").CountAsync(),
+            "read-only never renders the edge reshape handles");
+        Assert.AreEqual(0, await page.Locator(".tm-diagram-edge-toolbar").CountAsync(),
+            "read-only never renders the inline edge toolbar");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     [Description("1440 desktop regression: minimap card, no default rail, mouse-driven resize and rotate still work")]
     public async Task Desktop_1440_Regression_MousePathsAndChrome()
     {
@@ -432,6 +521,31 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(250);
     }
 
+    /// <summary>Dispatches a synthetic touch-pointer TAP on an edge hit path (no movement — a
+    /// tap, never a drag; the read-only touch layer selects the edge for inspection).</summary>
+    private static async Task TapEdgeAsync(IPage page, string edgeId)
+    {
+        await page.EvaluateAsync(
+            """
+            async ([id]) => {
+                const hit = document.querySelector(`.tm-diagram-edge-hit-path[data-edge-id='${id}']`);
+                if (!hit) throw new Error('edge hit path not found');
+                const r = hit.getBoundingClientRect();
+                const x = r.left + r.width / 2, y = r.top + Math.max(r.height / 2, 4);
+                const opts = (bx) => ({
+                    bubbles: true, cancelable: true, composed: true,
+                    pointerId: 7, pointerType: 'touch', isPrimary: true,
+                    button: 0, buttons: bx, clientX: x, clientY: y,
+                });
+                hit.dispatchEvent(new PointerEvent('pointerdown', opts(1)));
+                await new Promise(res => setTimeout(res, 40));
+                hit.dispatchEvent(new PointerEvent('pointerup', opts(0)));
+            }
+            """,
+            new object[] { edgeId });
+        await page.WaitForTimeoutAsync(300);
+    }
+
     private static async Task<(double w, double h)> GetNodeSizeAsync(IPage page, string nodeId)
     {
         var json = await page.EvaluateAsync<string>(
@@ -470,6 +584,35 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             }
             """,
             new object[] { nodeId, handle, delta });
+        await page.WaitForTimeoutAsync(400);
+    }
+
+    /// <summary>Dispatches a synthetic touch-pointer drag that starts on the node body itself
+    /// (the read-only pan path — the press lands on the node, not on a handle).</summary>
+    private static async Task FingerDragNodeAsync(IPage page, string nodeId, double dx)
+    {
+        await page.EvaluateAsync(
+            """
+            async ([id, dx]) => {
+                const node = document.querySelector(`g.tm-diagram-node[data-node-id='${id}']`);
+                if (!node) throw new Error('node not found');
+                const r = node.getBoundingClientRect();
+                const startX = r.left + r.width / 2, startY = r.top + r.height / 2;
+                const opts = (x, y) => ({
+                    bubbles: true, cancelable: true, composed: true,
+                    pointerId: 7, pointerType: 'touch', isPrimary: true,
+                    button: 0, buttons: 1, clientX: x, clientY: y,
+                });
+                node.dispatchEvent(new PointerEvent('pointerdown', opts(startX, startY)));
+                const steps = 8;
+                for (let i = 1; i <= steps; i++) {
+                    await new Promise(res => setTimeout(res, 16));
+                    node.dispatchEvent(new PointerEvent('pointermove', opts(startX + dx * i / steps, startY)));
+                }
+                node.dispatchEvent(new PointerEvent('pointerup', { ...opts(startX + dx, startY), buttons: 0 }));
+            }
+            """,
+            new object[] { nodeId, dx });
         await page.WaitForTimeoutAsync(400);
     }
 

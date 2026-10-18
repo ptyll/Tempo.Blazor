@@ -267,8 +267,9 @@
                         var tgtCard = ComputeCardinalityPosition(edge, false);
                         @((MarkupString)$"<text x=\"{F(tgtCard.X)}\" y=\"{F(tgtCard.Y)}\" text-anchor=\"{tgtCard.TextAnchor}\" dominant-baseline=\"{tgtCard.Baseline}\" class=\"tm-diagram-edge-cardinality\">{edge.TargetCardinality}</text>")
                     }
-                    @* Selection handles (control points) *@
-                    @if (isSelected)
+                    @* Selection handles (control points) — never in read-only: they are
+                       drag/reshape affordances, while the outline above stays as the selection cue *@
+                    @if (isSelected && !ReadOnly)
                     {
                         var pts = DiagramGeometryHelper.GetEdgePoints(Document, edge);
                         for (int i = 0; i < pts.Length; i++)
@@ -565,7 +566,7 @@
         @{
             var _toolbarEdge = Document?.Edges.FirstOrDefault(e => _currentSelectionIds.Contains(e.Id));
         }
-        @if (_toolbarEdge is not null && _currentSelectionIds.Length == 1 && Document is not null)
+        @if (_toolbarEdge is not null && _currentSelectionIds.Length == 1 && Document is not null && !ReadOnly)
         {
             var _toolbarPts = DiagramGeometryHelper.GetEdgePoints(Document, _toolbarEdge);
             var _toolbarMidX = (_toolbarPts[0].X + _toolbarPts[^1].X) / 2;

@@ -18,6 +18,12 @@
       "description": "Additional CSS class."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys (the editor passes its effective read-only state)."
+    },
+    {
       "name": "StencilDragStart",
       "type": "EventCallback<string>",
       "isRequired": false,

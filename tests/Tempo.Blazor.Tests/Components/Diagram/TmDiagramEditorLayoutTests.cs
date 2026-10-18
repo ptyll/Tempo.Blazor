@@ -347,6 +347,25 @@ public class TmDiagramEditorLayoutTests : LocalizationTestBase
     }
 
     [Fact]
+    public void LayersTab_MarksTheActiveLayer()
+    {
+        using var cut = RenderDefaultEditor();
+
+        // Open the Layers tab of the inspector.
+        var layersTab = cut.FindAll(".tm-diagram-editor__inspector [role='tab']")
+            .FirstOrDefault(t => t.TextContent.Contains("Layers"));
+        layersTab.Should().NotBeNull("the inspector presents Properties | Layers");
+        layersTab!.Click();
+
+        // F3: the ActiveLayerId binding used to receive the literal field name, so no layer was
+        // ever marked active.
+        cut.FindAll(".tm-diagram-layers__item--active").Should().ContainSingle(
+            "exactly one layer row is the active one");
+        cut.FindAll(".tm-diagram-layers__active[aria-checked='true']").Should().ContainSingle(
+            "the active-layer radio reflects the same state");
+    }
+
+    [Fact]
     public void LayersToggle_SelectsTheLayersTab()
     {
         using var cut = RenderDefaultEditor();

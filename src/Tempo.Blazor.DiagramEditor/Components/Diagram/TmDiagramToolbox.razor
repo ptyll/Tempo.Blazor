@@ -13,12 +13,19 @@
     <div class="tm-diagram-toolbox__inner">
         <h3 class="tm-diagram-toolbox__title">@Loc["TmDiagramToolbox_Title"]</h3>
 
+        @* Read-only (D9/R1 review): the tiles stay visible and focusable but inert; one
+           visually-hidden hint, referenced by aria-describedby from every tile, tells screen
+           readers why — per-tile text would repeat it once per stencil. *@
+        @if (ReadOnly)
+        {
+            <span id="tm-diagram-toolbox-readonly-hint" class="tm-diagram-toolbox__sr-hint">@Loc["TmDiagramToolbox_ReadOnlyHint"]</span>
+        }
+
         <div class="tm-diagram-toolbox__search">
             <TmSearchInput Value="@_searchQuery"
                            ValueChanged="OnSearchChanged"
                            Placeholder="@Loc["TmDiagramToolbox_SearchPlaceholder"]"
-                           aria-label="@Loc["TmDiagramToolbox_SearchAriaLabel"]"
-                           Clearable="true" />
+                           aria-label="@Loc["TmDiagramToolbox_SearchAriaLabel"]" />
         </div>
 
         @if (_filteredLibraries.Count == 0)
@@ -59,14 +66,17 @@
                                         <div class="@GetStencilItemCssClass(stencil)"
                                              data-stencil-id="@stencil.Id"
                                              data-stencil-kind="@GetStencilKindValue(stencil)"
-                                             draggable="true"
+                                             draggable="@(ReadOnly ? "false" : "true")"
                                              tabindex="0"
                                              role="button"
+                                             aria-disabled="@(ReadOnly ? "true" : null)"
                                              aria-label="@stencilAriaLabel"
                                              @ondragstart="e => OnDragStart(e, stencil.Id)"
                                              @onkeydown="e => OnStencilKeyDown(e, stencil.Id)"
+                                             @onkeyup="e => OnStencilKeyUp(e, stencil.Id)"
                                              @onclick="() => OnStencilActivated(stencil.Id)"
-                                             title="@stencilTooltip">
+                                             title="@(ReadOnly ? GetReadOnlyHint() : stencilTooltip)"
+                                             aria-describedby="@(ReadOnly ? "tm-diagram-toolbox-readonly-hint" : null)">
                                             <div class="tm-diagram-toolbox__preview @(stencil.Kind == DiagramStencilKind.Edge ? "tm-diagram-toolbox__edge-preview" : "")">
                                                 @if (!string.IsNullOrEmpty(stencil.IconSvg))
                                                 {

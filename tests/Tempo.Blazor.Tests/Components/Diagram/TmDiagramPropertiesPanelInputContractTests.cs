@@ -1,5 +1,10 @@
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Components.Diagram;
+using Tempo.Blazor.Components.Diagram.Models;
+using Tempo.Blazor.Components.Diagram.Stencils;
+using Tempo.Blazor.Tests.Localization;
 using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
@@ -12,12 +17,72 @@ namespace Tempo.Blazor.Tests.Components.Diagram;
 /// text (final UX review, DiagramEditor phase 8, dark editor capture). Freeze the contract:
 /// the package stylesheet itself must give the fields the tokenized control look that follows
 /// the theme — surface background, primary text, a real border — instead of UA chrome.
+/// Also freezes the input binding contract (F3): the replace-shape search opens empty, never
+/// pre-filled with the C# field name.
 /// </summary>
-public class TmDiagramPropertiesPanelInputContractTests
+public class TmDiagramPropertiesPanelInputContractTests : LocalizationTestBase
 {
-    private static string PackageCss()
+    public TmDiagramPropertiesPanelInputContractTests()
     {
-        var root = ThemeCss.RepositoryRoot().FullName;
+        Services.GetRequiredService<DiagramStencilRegistry>()
+            .RegisterProvider(new BuiltInDiagramStencilProvider());
+    }
+
+    [Fact]
+    public void ReplaceShapeSearch_IsEmptyOnFirstRender()
+    {
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+        doc.Nodes.Add(new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 10, W = 100, H = 50 });
+
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.SelectedIds, new[] { doc.Nodes[0].Id })
+            .Add(c => c.ReadOnly, false));
+
+        // Expand the "Replace shape" section (click the header of its TmSection).
+        var header = cut.FindAll(".tm-section__header, .tm-section-header")
+            .FirstOrDefault(h => h.TextContent.Contains("Replace shape", StringComparison.OrdinalIgnoreCase))
+            ?? cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Replace shape", StringComparison.OrdinalIgnoreCase));
+        header.Should().NotBeNull("the Replace shape section renders a collapsible header");
+        header!.Click();
+        cut.Render();
+
+        var input = cut.Find(".tm-diagram-properties input[type='search']");
+        input.GetAttribute("value").Should().BeEmpty(
+            "the F3 literal binding used to pre-fill the field with '_replaceShapeSearch'");
+    }
+
+    [Fact]
+    public void ReadOnly_SelectedNode_ShowsReadOnlySummary()
+    {
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+        var node = new DiagramNode { StencilId = "general.rectangle", X = 10, Y = 20, W = 120, H = 60 };
+        node.Data["label"] = "Alpha";
+        doc.Nodes.Add(node);
+
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.SelectedIds, new[] { node.Id })
+            .Add(c => c.ReadOnly, true));
+
+        cut.FindAll(".tm-diagram-properties__readonly-summary").Should().HaveCount(1,
+            "the R1 inspection selection stays visible as a plain fact list");
+        var summary = cut.Find(".tm-diagram-properties__readonly-summary").TextContent;
+        summary.Should().Contain("Rectangle", "the shape display name is part of the summary");
+        summary.Should().Contain("Alpha", "text fields render as plain text");
+        summary.Should().Contain("10", "X is part of the summary");
+        summary.Should().Contain("120", "W is part of the summary");
+        cut.FindAll(".tm-diagram-properties__readonly-summary input, .tm-diagram-properties__readonly-summary textarea")
+            .Should().BeEmpty("the summary shows facts, never editing widgets");
+
+        // The read-only note stays as the header hint above the summary.
+        cut.Find(".tm-diagram-properties__empty").TextContent.Should().Contain("Read-only mode");
+    }
+
+    private static string PackageCss()
+    {        var root = ThemeCss.RepositoryRoot().FullName;
         return Path.Combine(root, "src", "Tempo.Blazor.DiagramEditor", "wwwroot", "css",
             "components", "_diagram-editor.css");
     }

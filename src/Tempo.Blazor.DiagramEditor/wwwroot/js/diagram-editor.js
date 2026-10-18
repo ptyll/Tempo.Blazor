@@ -564,7 +564,20 @@ window.tmDiagramEditor = {
     // ── Mouse down ───────────────────────────────────────────────────────────
 
     _onMouseDown: function (e, inst) {
-        if (inst.readOnly && e.button !== 1) return;
+        // Read-only (R1): the left button inspects (selects a node, clears on the empty surface);
+        // middle button, Space+drag and the Pan tool still pan below. Edges select through the
+        // Blazor @onclick (OnEdgeClicked), so a press on an edge is left alone here.
+        if (inst.readOnly && e.button !== 1 && !inst.spaceHeld && inst.toolMode !== 'pan') {
+            if (e.button !== 0) return;
+            // Read-only keeps the canvas focusable (keyboard panning, Escape): the writable
+            // path below focuses it, so the inspection branch must do the same.
+            inst.container.focus({ preventScroll: true });
+            if (e.target.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')) return;
+            const roNodeEl = e.target.closest('[data-node-id]');
+            if (roNodeEl) this.selectNodeForInspection(inst, roNodeEl, !!(e.ctrlKey || e.metaKey));
+            else this.clearSelectionForInspection(inst);
+            return;
+        }
 
         // Ignore when interacting with inline edit inputs or edge toolbars
         if (e.target.closest('.tm-diagram-node__inline-input, .tm-diagram-node__inline-textarea, .tm-diagram-edge-label-input, .tm-diagram-edge-toolbar')) {
@@ -1874,6 +1887,45 @@ window.tmDiagramEditor = {
     // There is deliberately no second pinch and no second long-press here (decision
     // F7-POINTER-DRAG-PLURALS-RELATIVE-TIME).
 
+    /** R1: read-only inspection — selects a node (mouse click or finger tap) without arming a
+     *  drag, resize, rotate or connect. `additive` toggles it (Ctrl/Cmd+click). */
+    selectNodeForInspection: function (inst, nodeEl, additive) {
+        const id = nodeEl ? nodeEl.getAttribute('data-node-id') : null;
+        if (!id || !this._isNodeInActiveGroup(inst, nodeEl)) return false;
+        if (additive) {
+            if (inst.selectedIds.has(id)) inst.selectedIds.delete(id);
+            else inst.selectedIds.add(id);
+        } else {
+            if (inst.selectedIds.size === 1 && inst.selectedIds.has(id)) return true;
+            inst.selectedIds = new Set([id]);
+        }
+        this._updateSelection(inst);
+        inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [...inst.selectedIds]);
+        return true;
+    },
+
+    /** R1: read-only inspection — a finger tap on an edge selects it (the touch layer prevents
+     *  the default, so the Blazor @onclick never fires for taps; the mouse keeps using it). */
+    selectEdgeForInspection: function (inst, el) {
+        const idEl = el && el.closest ? el.closest('[data-edge-id]') : null;
+        const id = (idEl ?? el)?.getAttribute?.('data-edge-id');
+        if (!id) return false;
+        if (!(inst.selectedIds.size === 1 && inst.selectedIds.has(id))) {
+            inst.selectedIds = new Set([id]);
+            this._updateSelection(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+        }
+        return true;
+    },
+
+    /** R1: read-only inspection — a click/tap on the empty surface clears the selection. */
+    clearSelectionForInspection: function (inst) {
+        if (inst.selectedIds.size === 0) return;
+        inst.selectedIds.clear();
+        this._updateSelection(inst);
+        inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', []);
+    },
+
     touchPressNode: function (inst, nodeEl, clientX, clientY) {
         if (inst.readOnly) return false;
         const id = nodeEl.getAttribute('data-node-id');
@@ -1927,7 +1979,7 @@ window.tmDiagramEditor = {
         inst.dragStartPositions = {};
         inst.dragNodeIds.forEach(nid => {
             const r = this._nodeRect(inst, nid);
-            if (r) inst.dragStartPositions[nid] = { x: r.x, y: r.y };
+            if (r) inst.dragStartPositions[nid] = { x: r.x, y: r.y, w: r.w, h: r.h };
         });
         inst.dotNetRef.invokeMethodAsync('OnDragStarted', inst.dragNodeIds);
     },
@@ -1979,7 +2031,12 @@ window.tmDiagramEditor = {
         }
     },
 
-    touchCancelNodeDrag: function (inst) {
+    touchCancelNodeDrag: function (inst) { this._cancelNodeDrag(inst); },
+
+    // Shared node-drag rollback (mouse path, touch path, read-only flip, pinch hand-over):
+    // every dragged node returns to its start position, the guides drop, and C# learns the
+    // drag died so ShouldRender() resumes (OnDragStarted latched it off — J1b).
+    _cancelNodeDrag: function (inst) {
         if (!inst.isDragging) return;
         // Roll the gesture back: every dragged node returns to its start position.
         inst.dragNodeIds.forEach(id => {
@@ -1993,6 +2050,8 @@ window.tmDiagramEditor = {
         inst.dragStartPositions = {};
         this._clearGuideLines(inst);
         this._updateSelectionTransforms(inst);
+        // C# stopped rendering at OnDragStarted (ShouldRender => !_isJsDragging): release it.
+        if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('OnDragCancelled');
     },
 
     touchBeginPan: function (inst, clientX, clientY) {
@@ -2969,9 +3028,9 @@ window.tmDiagramEditor = {
             }
         }
 
-        // Quick-insert stencils (A,S,D,F,R)
-        if (!e.ctrlKey && !e.metaKey && !e.target.matches('input,textarea,select')) {
-            if (inst.readOnly) return;
+        // Quick-insert stencils (A,S,D,F,R). Read-only skips THIS block only — an early
+        // return here would also kill the H/V tool shortcuts that stay live in read-only.
+        if (!e.ctrlKey && !e.metaKey && !inst.readOnly && !e.target.matches('input,textarea,select')) {
             const stencilMap = {
                 'KeyA': 'general.text',
                 'KeyS': 'general.sticky-note',
@@ -2999,8 +3058,9 @@ window.tmDiagramEditor = {
         // Tool-mode shortcuts: H → pan, V → select, L/C/E → edge.
         // `E` was added in Phase 3 to match draw.io's edge shortcut; `L`
         // and `C` are kept for backwards compatibility.
+        // R1: read-only keeps H and V live (navigation/inspection tools); the edge
+        // shortcuts are edit-only and stay blocked.
         if (!e.ctrlKey && !e.metaKey && !e.target.matches('input,textarea,select')) {
-            if (inst.readOnly) return;
             if (e.code === 'KeyH') {
                 e.preventDefault();
                 this._applyToolMode(inst, 'pan');
@@ -3014,6 +3074,7 @@ window.tmDiagramEditor = {
                 return;
             }
             if (e.code === 'KeyL' || e.code === 'KeyC' || e.code === 'KeyE') {
+                if (inst.readOnly) return;
                 e.preventDefault();
                 this._applyToolMode(inst, 'edge');
                 inst.dotNetRef.invokeMethodAsync('OnToolModeChanged', 'edge');
@@ -3584,6 +3645,16 @@ window.tmDiagramEditor = {
         if (!inst) return;
         inst.readOnly = !!readOnly;
 
+        if (inst.readOnly) {
+            // Touch/pen editing sessions (node drag, long-press, resize, rotate): their onCancel
+            // callbacks roll back through the engine hooks and OnResizeCancelled.
+            if (inst.__touchDetach && typeof inst.__touchDetach.cancelEditing === 'function') {
+                try { inst.__touchDetach.cancelEditing('read-only'); } catch (_e) { /* best effort */ }
+            }
+            // Mouse or touch rotation: restore the start angle (the mouse listener leak is J8, phase 3).
+            this._cancelRotateSession(inst);
+        }
+
         if (inst.isPendingEdgeDraw) {
             inst.isPendingEdgeDraw = false;
             inst.pendingEdgeStart = null;
@@ -3617,13 +3688,7 @@ window.tmDiagramEditor = {
             // transaction when one is in flight, no-op otherwise.
             if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('OnCancelEdgeEdit');
         }
-        if (inst.isDragging) {
-            inst.isDragging = false;
-            inst.dragNodeIds = [];
-            inst.dragStartScreen = null;
-            inst.dragStartPositions = {};
-            this._clearGuideLines(inst);
-        }
+        this._cancelNodeDrag(inst);
         if (inst.isRubberBand) {
             inst.isRubberBand = false;
             inst.rubberStartDoc = null;

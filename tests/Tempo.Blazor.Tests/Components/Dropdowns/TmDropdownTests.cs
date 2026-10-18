@@ -102,6 +102,35 @@ public class TmDropdownTests : LocalizationTestBase
         cut.Find("button.tm-dropdown-trigger").GetAttribute("aria-expanded").Should().Be("true");
     }
 
+    [Fact]
+    public void TmDropdown_Disabled_TriggerHasDisabledAttribute()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .Add(c => c.Disabled, true)
+            .AddChildContent("<div>Item</div>"));
+
+        var trigger = cut.Find("button.tm-dropdown-trigger");
+        trigger.HasAttribute("disabled").Should().BeTrue(
+            "the native disabled attribute blocks the click in every browser");
+        trigger.HasAttribute("aria-expanded").Should().BeFalse(
+            "an expanded state is meaningless on a disabled trigger");
+        cut.Find(".tm-dropdown-wrapper").ClassList.Should().Contain("tm-dropdown-disabled");
+    }
+
+    [Fact]
+    public void TmDropdown_Disabled_Click_DoesNotOpenMenu()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .Add(c => c.Disabled, true)
+            .AddChildContent("<div class='item'>Item 1</div>"));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        cut.FindAll(".tm-dropdown-menu").Should().BeEmpty();
+    }
+
     /// <summary>
     /// N319: the menu must close BEFORE <c>OnSelect</c> runs — a handler that opens a dialog
     /// would otherwise render it under the still-open top-layer popover.

@@ -12,7 +12,8 @@
     <button type="button"
             @ref="_triggerRef"
             class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn tm-btn-outline" : "")"
-            aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
+            disabled="@Disabled"
+            aria-expanded="@(Disabled ? null : _isOpen ? "true" : "false")"
             aria-haspopup="true"
             data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
             @onclick="Toggle">

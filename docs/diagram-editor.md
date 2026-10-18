@@ -70,8 +70,14 @@ Host action buttons (save/share per G9) go through the `HeaderStart` / `HeaderAc
 Read-only/Edit toggle drives only the internal `_userReadOnly` state, exposed as
 `IsReadOnly` (`ReadOnly || _userReadOnly`) and propagated to the JS canvas. When the host sets
 `ReadOnly="true"` the toggle hides itself and the editor stays read-only no matter what the user
-does. Effective read-only blocks every editing path: toolbar, keyboard shortcuts, context menu,
-imports, templates, paste and JS.
+does. Effective read-only blocks every editing path: toolbar, keyboard shortcuts (the Select/Pan
+`KeyV`/`KeyH` shortcuts stay live), context menu, imports, templates, paste and JS. Read-only
+keeps navigation (pan, pinch, zoom) and inspection: a click or tap selects a node or an edge for
+the read-only properties panel, which shows a plain summary (shape name, text/data fields,
+position/size, fill/stroke; label, routing, source/target for edges) instead of the editing
+widgets; nothing is moved, resized, rotated or connected. Note for keyboard users: with the focus
+in the toolbox palette column, `Space` may scroll the palette column as well as activating the
+focused tile (the column is scrollable; a tile keeps its own `Space` activation on keyup).
 
 ## Inspector (`InspectorLayout`, DI2)
 

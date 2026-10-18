@@ -308,6 +308,10 @@
 
 ### Breaking / Migration
 
+- **`TmDiagramEditor` read-only: nodes are selectable for inspection, and a finger always pans.** In the effective read-only state a mouse click or a finger tap selects a node (Ctrl/Cmd+click toggles) — a tap on an edge selects the edge through the engine (`selectEdgeForInspection`) — so the read-only properties panel shows a plain summary (shape name, text/data fields, position/size, fill/stroke swatches; label, routing, source/target for edges); nothing can be moved, resized, rotated or connected. The Select tool stays enabled and `KeyV` keeps working in read-only (only the edge shortcuts stay blocked, and entering read-only disarms an armed edge tool); the read-only toggle keeps the constant "Read-only" label with only the icon swapping. A host read-only flip reaches the JS instance in the same parameter pass even while a JS drag latches the render gate, closes the connect dialog and any open inline editor (edge label, stencil sections, table cells) without saving, and a mouse press focuses the canvas so keyboard panning keeps working. A finger that lands on a node or an edge pans the canvas in read-only; in edit mode a finger drag that starts on an edge now pans too (a tap still selects the edge). Toolbox tiles carry a localized read-only hint (`TmDiagramToolbox_ReadOnlyHint`) as their title and a single visually-hidden `aria-describedby` description. Migration: hosts that relied on read-only clicks never changing the selection must ignore `OnSelectedIdsChanged` while read-only.
+
+- **`TmDiagramToolbox` keyboard: Space inserts on keyup, Enter ignores auto-repeat; new `ReadOnly` parameter.** Follows docs/keyboard-activation-convention.md: Space now activates on keyup (was keydown) and a held Enter inserts exactly one shape. With `ReadOnly="true"` (the editor passes its effective read-only state) tiles stay visible and focusable but are `aria-disabled`, not draggable and insert nothing. Migration: tests that pressed Space with `KeyDown(" ")` alone must dispatch `KeyDown(" ")` + `KeyUp(" ")`.
+
 - **Data-table defaults did not change.** `TmDataTable.Appearance` remains `Plain`, `TmFilterBuilder.Presentation` remains `Inline`, `MobileLayout` remains `None`, `KeyboardNavigation` remains `Rows`, and `ShowFilterSummary` remains `false`. The multi-view list defaults also remain unchanged.
 - A table without a pager now displays `Total {0} records` rather than the previous page-range summary; provide `PaginationInfoTemplate` to retain custom wording.
 - `CardMode` also emits the cards class when `MobileLayout` is unset (`None`); an explicit `Scroll` or `Cards` layout takes precedence.
@@ -866,6 +870,10 @@
 - **`TmDataTable.KeyboardNavigation` becomes `Grid` by default in the next major release.** Keep today's behavior by explicitly setting `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`.
 
 ### Fixed
+
+- **`TmDiagramEditor` search: Replace / Replace all respect read-only and notify the host.** In the effective read-only state the search panel is search-only (new `TmDiagramSearchPanel.ReadOnly`; Ctrl+H opens plain search). A plain (non-regex) query is replaced literally (`a.b` no longer matches `axb`), `$` in a plain replacement is literal text (`$0x` replaces to `$0x`, not group 0 + `x`), and every replacement raises `DocumentChanged`. The find/replace inputs no longer show the literal texts "Query"/"ReplaceQuery"/"_regexError", an invalid regex is announced through a localized `role="alert"` message tied to the query input (`aria-invalid` / `aria-describedby`), the result counter is a polite live region, and the layers panel marks the active layer again.
+
+- **`TmDropdown` disabled trigger renders as a real disabled control.** `Disabled` now puts the native `disabled` attribute on the trigger button (and omits `aria-expanded`, which is meaningless while disabled), so the browser blocks the click in every context; the wrapper already carried the `tm-dropdown-disabled` class and now also greys the trigger out via `--tm-opacity-disabled`.
 
 - **`TmDiagramEditor` context menu stays inside the editor box (DiagramEditor redesign phase 8).**
   The editor is an inline-size container, so the fixed-position context menu resolves against the

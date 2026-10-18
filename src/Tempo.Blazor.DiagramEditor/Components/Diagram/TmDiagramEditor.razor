@@ -280,7 +280,7 @@
                             {
                                 <div class="tm-diagram-editor__toolbar-group" data-tm-group="readonly">
                                     <TmToolbarButton Icon="@(IsReadOnly ? IconNames.Lock : IconNames.Unlock)"
-                                                     Text="@(IsReadOnly ? Loc["TmDiagramEditor_ReadOnly"] : Loc["TmDiagramEditor_Edit"])"
+                                                     Text="@Loc["TmDiagramEditor_ReadOnly"]"
                                                      Tooltip="@(IsReadOnly ? Loc["TmDiagramEditor_SwitchToEditMode"] : Loc["TmDiagramEditor_SwitchToReadOnlyMode"])"
                                                      Pressed="IsReadOnly"
                                                      OnClick="ToggleReadOnly" />
@@ -318,7 +318,7 @@
                             @if (Shows(DiagramToolbarGroups.CanvasSize))
                             {
                                 <div class="tm-diagram-editor__toolbar-group" data-tm-group="canvas-size">
-                                    <select class="tm-diagram-editor__unit-select"
+                                    <select class="tm-diagram-editor__unit-select" disabled="@IsReadOnly"
                                             aria-label="@Loc["TmDiagramEditor_RulerUnitLabel"]"
                                             title="@Loc["TmDiagramEditor_RulerUnitLabel"]"
                                             value="@(_document?.ActivePage?.RulerUnit ?? MeasurementUnit.Px)"
@@ -351,7 +351,7 @@
                                     else
                                     {
                                         <TmToolbarButton Text="@($"{(int)(_document?.Width ?? 3000)}×{(int)(_document?.Height ?? 2000)}")"
-                                                         Tooltip="@Loc["TmDiagramEditor_ChangeCanvasSize"]"
+                                                         Tooltip="@Loc["TmDiagramEditor_ChangeCanvasSize"]" Disabled="@IsReadOnly"
                                                          OnClick="OpenCanvasSize" />
                                     }
                                 </div>
@@ -383,7 +383,8 @@
                                       ReplaceQueryChanged="OnReplaceQueryChanged"
                                       UseRegex="_searchUseRegex"
                                       UseRegexChanged="OnSearchUseRegexChanged"
-                                      RegexError="_regexError"
+                                      RegexError="@_regexError"
+                                      ReadOnly="@IsReadOnly"
                                       OnReplace="OnReplace"
                                       OnReplaceAll="OnReplaceAll"
                                       OnClose="CloseSearchPanel" />
@@ -776,6 +777,7 @@
             return @<div class="tm-diagram-editor__toolbox-wrap">
                 <TmDiagramToolbox StencilDragStart="OnToolboxDragStart"
                                   StencilKeyboardInsert="HandleQuickInsert"
+                                  ReadOnly="@IsReadOnly"
                                   Class="tm-diagram-editor__toolbox" />
             </div>;
         }
@@ -824,7 +826,7 @@
                                         <TmDiagramLayersPanel Document="_document"
                                                               DocumentChanged="OnDocumentChanged"
                                                               SelectedIds="_selectedIds"
-                                                              ActiveLayerId="_activeLayerId"
+                                                              ActiveLayerId="@_activeLayerId"
                                                               ActiveLayerIdChanged="id => _activeLayerId = id"
                                                               ReadOnly="@IsReadOnly"
                                                               Class="tm-diagram-editor__layers" />
@@ -859,7 +861,7 @@
                                         <TmDiagramLayersPanel Document="_document"
                                                               DocumentChanged="OnDocumentChanged"
                                                               SelectedIds="_selectedIds"
-                                                              ActiveLayerId="_activeLayerId"
+                                                              ActiveLayerId="@_activeLayerId"
                                                               ActiveLayerIdChanged="id => _activeLayerId = id"
                                                               ReadOnly="@IsReadOnly"
                                                               Class="tm-diagram-editor__layers" />
@@ -959,7 +961,6 @@
                                              Tooltip="@Loc["TmDiagramEditor_SelectTool"]"
                                              LabelPosition="ToolbarLabelPosition.Below"
                                              Pressed="@(_toolMode == "select")"
-                                             Disabled="@IsReadOnly"
                                              OnClick='() => SetToolMode("select")' />
                             <TmToolbarButton Icon="@IconNames.Hand"
                                              Text="@Loc["TmDiagramEditor_ToolPan"]"
@@ -1043,7 +1044,7 @@
                             <TmToolbarItem MenuLabel="@Loc["TmDiagram_Layout"]"
                                            Priority="ToolbarButtonPriority.Primary"
                                            MenuItems="@BuildLayoutMenuItems()">
-                                <TmDropdown Text="@Loc["TmDiagram_Layout"]" Icon="@IconNames.Layout" OnSelect="HandleLayoutSelect">
+                                <TmDropdown Text="@Loc["TmDiagram_Layout"]" Icon="@IconNames.Layout" Disabled="@IsReadOnly" OnSelect="HandleLayoutSelect">
                                     <TmDropdownItem Value="dagre-tb" Icon="@IconNames.ArrowDown">@Loc["TmDiagram_LayoutHierarchicalTopDown"]</TmDropdownItem>
                                     <TmDropdownItem Value="dagre-lr" Icon="@IconNames.ArrowRight">@Loc["TmDiagram_LayoutHierarchicalLeftRight"]</TmDropdownItem>
                                     <TmDropdownItem Value="tree-tb" Icon="@IconNames.FolderOpen">@Loc["TmDiagram_LayoutTree"]</TmDropdownItem>
@@ -1113,7 +1114,7 @@
                                              Text="@Loc["TmDiagramEditor_Templates"]"
                                              Tooltip="@Loc["TmDiagramEditor_Templates"]"
                                              LabelPosition="ToolbarLabelPosition.Below"
-                                             Priority="ToolbarButtonPriority.Secondary"
+                                             Priority="ToolbarButtonPriority.Secondary" Disabled="@IsReadOnly"
                                              OnClick="OpenTemplateGallery" />
                         </TmToolbarGroup>
                     }
@@ -1149,7 +1150,7 @@
                     @* Read-only toggle: hidden when the host pins ReadOnly (DI1) or the group is off *@
                     <div class="tm-diagram-editor__toolbar-group" data-tm-group="readonly">
                         <TmToolbarButton Icon="@(IsReadOnly ? IconNames.Lock : IconNames.Unlock)"
-                                         Text="@(IsReadOnly ? Loc["TmDiagramEditor_ReadOnly"] : Loc["TmDiagramEditor_Edit"])"
+                                         Text="@Loc["TmDiagramEditor_ReadOnly"]"
                                          Tooltip="@(IsReadOnly ? Loc["TmDiagramEditor_SwitchToEditMode"] : Loc["TmDiagramEditor_SwitchToReadOnlyMode"])"
                                          Pressed="IsReadOnly"
                                          OnClick="ToggleReadOnly" />

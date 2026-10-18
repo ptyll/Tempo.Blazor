@@ -108,7 +108,7 @@
             {
                 <TmSection Title="@Loc["TmDiagramProperties_ReplaceShape"]" Icon="@IconNames.Edit" Collapsible="true" Collapsed="@(!IsSectionExpanded("replaceShape"))" CollapsedChanged="OnReplaceShapeCollapsedChanged">
                     <div class="tm-diagram-properties__field">
-                        <TmSearchInput Value="_replaceShapeSearch"
+                        <TmSearchInput Value="@_replaceShapeSearch"
                                        ValueChanged="OnReplaceShapeSearchChanged"
                                        Placeholder="@Loc["TmDiagramProperties_ReplaceShapeSearch"]"
                                        Clearable="true" />
@@ -681,6 +681,76 @@
                     </div>
                 </div>
             </TmSection>
+        }
+        else if (ReadOnly && (SelectedNodes.Count > 0 || SelectedEdges.Count > 0))
+        {
+            @* ── Read-only summary (review L): the R1 inspection selection stays visible as a
+               plain dl — facts only, no editing widgets. The "Read-only mode" note stays as the
+               header hint above it. *@
+            <p class="tm-diagram-properties__empty">@Loc["TmDiagramProperties_ReadOnly"]</p>
+            <dl class="tm-diagram-properties__readonly-summary">
+                @if (SelectedNodes.Count > 0)
+                {
+                    var node = FirstSelectedNode!;
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_NodeTitle"]</dt>
+                        <dd>@GetReadOnlyStencilName(node.StencilId)</dd>
+                    </div>
+                    @if (SelectedStencil is not null)
+                    {
+                        @foreach (var section in SelectedStencil.Layout.Sections.Where(s => s.DataKey is not null && (s.Type == "text" || s.Type == "list")))
+                        {
+                            <div class="tm-diagram-properties__readonly-row">
+                                <dt>@GetDataSectionLabel(section.DataKey!)</dt>
+                                <dd>@PlainText(section.Type == "list" ? GetNodeDataListText(section.DataKey!) : GetNodeDataText(section.DataKey!))</dd>
+                            </div>
+                        }
+                    }
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_PositionX"]</dt>
+                        <dd>@N(node.X)</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_PositionY"]</dt>
+                        <dd>@N(node.Y)</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_SizeWidth"]</dt>
+                        <dd>@N(node.W)</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_SizeHeight"]</dt>
+                        <dd>@N(node.H)</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_Fill"]</dt>
+                        <dd><span class="tm-diagram-properties__readonly-swatch" style="background-color:@GetNodeFill()"></span>@FormatHex(GetNodeFill())</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_Stroke"]</dt>
+                        <dd><span class="tm-diagram-properties__readonly-swatch" style="background-color:@GetNodeStroke()"></span>@FormatHex(GetNodeStroke())</dd>
+                    </div>
+                }
+                else if (FirstSelectedEdge is { } edge)
+                {
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_Label"]</dt>
+                        <dd>@PlainText(edge.Label)</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_Routing"]</dt>
+                        <dd>@GetEdgeRouting()</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_Source"]</dt>
+                        <dd>@GetReadOnlyStencilName(edge.SourceNodeId)</dd>
+                    </div>
+                    <div class="tm-diagram-properties__readonly-row">
+                        <dt>@Loc["TmDiagramProperties_Target"]</dt>
+                        <dd>@GetReadOnlyStencilName(edge.TargetNodeId)</dd>
+                    </div>
+                }
+            </dl>
         }
         else if (SelectedIds.Length == 0)
         {

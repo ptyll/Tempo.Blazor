@@ -6,20 +6,27 @@
 <div class="tm-diagram-search-panel">
     <div class="tm-diagram-search-panel__inputs">
         <div class="tm-diagram-search-panel__input-wrap">
-            <TmSearchInput Value="Query"
+            <TmSearchInput Value="@Query"
                            ValueChanged="OnQueryChanged"
                            Placeholder="@Loc["TmDiagram_SearchPlaceholder"]"
-                           Clearable="true" />
+                           Clearable="true"
+                           aria-invalid="@(HasError ? "true" : null)"
+                           aria-describedby="@(HasError ? "tm-diagram-search-error" : null)" />
         </div>
-        <div class="tm-diagram-search-panel__input-wrap">
-            <TmSearchInput Value="ReplaceQuery"
-                           ValueChanged="OnReplaceQueryChanged"
-                           Placeholder="@Loc["TmDiagram_ReplacePlaceholder"]"
-                           Clearable="true" />
-        </div>
-        @if (!string.IsNullOrEmpty(RegexError))
+        @if (!ReadOnly)
         {
-            <span class="tm-diagram-search-panel__error">@RegexError</span>
+            <div class="tm-diagram-search-panel__input-wrap tm-diagram-search-panel__replace">
+                <TmSearchInput Value="@ReplaceQuery"
+                               ValueChanged="OnReplaceQueryChanged"
+                               Placeholder="@Loc["TmDiagram_ReplacePlaceholder"]"
+                               Clearable="true" />
+            </div>
+        }
+        @if (HasError)
+        {
+            @* role="alert" announces the pattern error immediately; the id ties it to the
+               query input through aria-describedby / aria-invalid (review M). *@
+            <span id="tm-diagram-search-error" class="tm-diagram-search-panel__error" role="alert">@RegexError</span>
         }
     </div>
     <label class="tm-diagram-search-panel__all-pages">
@@ -33,7 +40,9 @@
               Label=".*"
               Class="tm-diagram-search-panel__regex-toggle"
               title="@Loc["TmDiagram_UseRegex"]" />
-    <span class="tm-diagram-search-panel__counter">
+    @* The result counter is a live region: prev/next navigation announces "n of m" without
+       moving focus (review O). *@
+    <span class="tm-diagram-search-panel__counter" role="status" aria-live="polite" aria-atomic="true">
         @if (ResultsCount > 0)
         {
             @string.Format(Loc["TmDiagram_SearchResults"], CurrentIndex + 1, ResultsCount)
@@ -43,20 +52,23 @@
             @Loc["TmDiagram_SearchNoResults"]
         }
     </span>
-    <div class="tm-diagram-search-panel__actions">
-        <TmButton Variant="ButtonVariant.Default"
-                  Size="ButtonSize.Sm"
-                  OnClick="OnReplaceClick"
-                  Disabled="@(!CanReplace)">
-            @Loc["TmDiagram_Replace"]
-        </TmButton>
-        <TmButton Variant="ButtonVariant.Primary"
-                  Size="ButtonSize.Sm"
-                  OnClick="OnReplaceAllClick"
-                  Disabled="@(!CanReplaceAll)">
-            @Loc["TmDiagram_ReplaceAll"]
-        </TmButton>
-    </div>
+    @if (!ReadOnly)
+    {
+        <div class="tm-diagram-search-panel__actions">
+            <TmButton Variant="ButtonVariant.Default"
+                      Size="ButtonSize.Sm"
+                      OnClick="OnReplaceClick"
+                      Disabled="@(!CanReplace)">
+                @Loc["TmDiagram_Replace"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary"
+                      Size="ButtonSize.Sm"
+                      OnClick="OnReplaceAllClick"
+                      Disabled="@(!CanReplaceAll)">
+                @Loc["TmDiagram_ReplaceAll"]
+            </TmButton>
+        </div>
+    }
     <button type="button"
             class="tm-diagram-search-panel__nav"
             aria-label="@Loc["TmDiagram_SearchPrevious"]"

@@ -21,6 +21,9 @@ public partial class TmDiagramToolbox : TmComponentBase
     /// <summary>Raised when a focused stencil item is activated from the keyboard.</summary>
     [Parameter] public EventCallback<string> StencilKeyboardInsert { get; set; }
 
+    /// <summary>When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     private bool _collapsed;
     private readonly HashSet<string> _collapsedPalettes = new(StringComparer.Ordinal);
     private ElementReference _containerRef;
@@ -58,21 +61,30 @@ public partial class TmDiagramToolbox : TmComponentBase
 
     private async Task OnDragStart(DragEventArgs e, string stencilId)
     {
+        if (ReadOnly) return;
         await StencilDragStart.InvokeAsync(stencilId);
     }
 
-    private async Task OnStencilKeyDown(KeyboardEventArgs e, string stencilId)
-    {
-        if (e.Key is "Enter" or " " or "Spacebar")
-            await StencilKeyboardInsert.InvokeAsync(stencilId);
-    }
+    /// <summary>Enter inserts on keydown (one per press — auto-repeat ignored); Space is handled on keyup.</summary>
+    private Task OnStencilKeyDown(KeyboardEventArgs e, string stencilId) =>
+        !ReadOnly && e.Key == "Enter" && !e.Repeat
+            ? StencilKeyboardInsert.InvokeAsync(stencilId)
+            : Task.CompletedTask;
+
+    /// <summary>Space activates on keyup, where a native button fires its click (keyboard convention).</summary>
+    private Task OnStencilKeyUp(KeyboardEventArgs e, string stencilId) =>
+        !ReadOnly && e.Key is " " or "Spacebar"
+            ? StencilKeyboardInsert.InvokeAsync(stencilId)
+            : Task.CompletedTask;
 
     /// <summary>
     /// Phase 6 (tablet and touch): tapping a tile is the non-drag alternative to the HTML5
     /// drag — the same insert-at-viewport-centre path the keyboard uses (WCAG 2.5.7). An edge
     /// stencil tap arms the edge tool instead of inserting a node, exactly like its drag does.
+    /// Inert in read-only.
     /// </summary>
-    private Task OnStencilActivated(string stencilId) => StencilKeyboardInsert.InvokeAsync(stencilId);
+    private Task OnStencilActivated(string stencilId) =>
+        ReadOnly ? Task.CompletedTask : StencilKeyboardInsert.InvokeAsync(stencilId);
 
     private void OnSearchChanged(string value)
     {
@@ -143,6 +155,11 @@ public partial class TmDiagramToolbox : TmComponentBase
 
     private string GetStencilAriaLabel(string stencilDisplayName)
         => Loc["TmDiagramToolbox_InsertStencil", stencilDisplayName];
+
+    /// <summary>Read-only tiles stay visible but inert (A8/D9): the hint replaces the drag
+    /// tooltip so the tile never advertises an interaction it refuses.</summary>
+    private string GetReadOnlyHint()
+        => Loc["TmDiagramToolbox_ReadOnlyHint"];
 
     private static string GetStencilItemCssClass(DiagramStencil stencil)
         => stencil.Kind == DiagramStencilKind.Edge

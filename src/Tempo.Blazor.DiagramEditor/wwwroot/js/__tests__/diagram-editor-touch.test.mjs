@@ -120,6 +120,10 @@ async function rig({ readOnly = false } = {}) {
             calls.push(['touchPressEdge', edgeEl?.attrs?.get?.('data-edge-id')]);
             return true;
         },
+        selectNodeForInspection: (inst, el) => calls.push(['selectNodeForInspection', el?.attrs?.get?.('data-node-id')]),
+        selectEdgeForInspection: (inst, el) => calls.push(['selectEdgeForInspection', el?.closest?.('[data-edge-id]')?.attrs?.get?.('data-edge-id')]),
+        clearSelectionForInspection: () => calls.push(['clearSelectionForInspection']),
+        _updateSelection: () => {},
         touchBeginPan: (inst, x, y) => calls.push(['touchBeginPan', x, y]),
         touchMovePan: (inst, x, y) => calls.push(['touchMovePan', x, y]),
         touchEndPan: (inst) => calls.push(['touchEndPan']),
@@ -312,12 +316,126 @@ test('read-only keeps navigation but vetoes every editing gesture', async () => 
     assert.equal(names.includes('touchPressNode'), false, 'read-only never selects through the touch press');
     assert.equal(names.includes('touchBeginNodeDrag'), false, 'read-only never drags');
     assert.equal(names.includes('OnNodeContextMenu'), false, 'read-only never opens the context menu');
+    assert.ok(calls.some(c => c[0] === 'touchBeginPan' && c[1] === 100),
+        'R1: a finger that lands on a node pans');
+    assert.ok(calls.some(c => c[0] === 'touchMovePan'), 'the pan keeps moving');
+    assert.equal(names.includes('selectNodeForInspection'), false,
+        'a DRAG must not inspect — only a tap does');
 
     const hitDown = pointer('pointerdown', 2, 200, 200);
     hitDown.target = hit;
     hit.dispatch('pointerdown', hitDown);
     hit.dispatch('pointerup', { ...pointer('pointerup', 2, 200, 200), target: hit });
     assert.equal(calls.some(c => c[0] === 'OnResizeStarted'), false, 'read-only never resizes');
+});
+
+test('read-only: a tap on a node selects it for inspection', async () => {
+    const { node, calls } = await rig({ readOnly: true });
+
+    const down = pointer('pointerdown', 1, 100, 100);
+    down.target = node;
+    node.dispatch('pointerdown', down);
+    node.dispatch('pointerup', { ...pointer('pointerup', 1, 100, 100), target: node });
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    const names = calls.map(c => c[0]);
+    assert.deepEqual(
+        calls.filter(c => c[0] === 'selectNodeForInspection').map(c => c[1]),
+        ['n1'],
+        'the tap selects the node for the read-only properties panel');
+    assert.equal(names.includes('touchBeginNodeDrag'), false, 'a tap never drags');
+    assert.equal(names.includes('touchBeginPan'), false, 'a tap never pans');
+});
+
+test('read-only: a finger on an edge pans', async () => {
+    const { edgeHit, calls } = await rig({ readOnly: true });
+
+    const down = pointer('pointerdown', 1, 10, 10);
+    down.target = edgeHit;
+    edgeHit.dispatch('pointerdown', down);
+    edgeHit.dispatch('pointermove', { ...pointer('pointermove', 1, 60, 10), target: edgeHit });
+    edgeHit.dispatch('pointerup', { ...pointer('pointerup', 1, 60, 10), target: edgeHit });
+
+    assert.ok(calls.some(c => c[0] === 'touchBeginPan' && c[1] === 10),
+        'R1: a finger that lands on an edge pans');
+    assert.equal(calls.some(c => c[0] === 'touchPressEdge'), false,
+        'the read-only pan press never routes through the edit-mode edge selection');
+    assert.equal(calls.some(c => c[0] === 'selectEdgeForInspection'), false,
+        'a DRAG on an edge must not inspect — only a tap does');
+});
+
+test('read-only: a tap on an edge selects it for inspection', async () => {
+    const { edgeHit, calls } = await rig({ readOnly: true });
+
+    const down = pointer('pointerdown', 1, 10, 10);
+    down.target = edgeHit;
+    edgeHit.dispatch('pointerdown', down);
+    edgeHit.dispatch('pointerup', { ...pointer('pointerup', 1, 11, 10), target: edgeHit });
+
+    assert.deepEqual(
+        calls.filter(c => c[0] === 'selectEdgeForInspection').map(c => c[1]),
+        ['e1'],
+        'the tap selects the edge for the read-only properties panel');
+    assert.equal(calls.some(c => c[0] === 'touchPressEdge'), false,
+        'read-only never routes through the edit-mode edge selection');
+    assert.equal(calls.some(c => c[0] === 'touchBeginPan'), false, 'a tap never pans');
+});
+
+test('a drag that starts on an edge pans; a tap still selects it', async () => {
+    const { edgeHit, calls } = await rig();
+
+    // Tap selects the edge (edit mode routes through touchPressEdge).
+    const tapDown = pointer('pointerdown', 1, 10, 10);
+    tapDown.target = edgeHit;
+    edgeHit.dispatch('pointerdown', tapDown);
+    edgeHit.dispatch('pointerup', { ...pointer('pointerup', 1, 11, 10), target: edgeHit });
+    assert.deepEqual(
+        calls.filter(c => c[0] === 'touchPressEdge').map(c => c[1]),
+        ['e1'],
+        'a tap on an edge selects it');
+
+    // A drag from the edge now pans too (J12d: previously nothing happened).
+    const dragDown = pointer('pointerdown', 1, 50, 50);
+    dragDown.target = edgeHit;
+    edgeHit.dispatch('pointerdown', dragDown);
+    edgeHit.dispatch('pointermove', { ...pointer('pointermove', 1, 120, 50), target: edgeHit });
+    edgeHit.dispatch('pointerup', { ...pointer('pointerup', 1, 120, 50), target: edgeHit });
+    assert.ok(calls.some(c => c[0] === 'touchBeginPan' && c[1] === 50),
+        'a drag that starts on an edge pans');
+});
+
+test('cancelEditing rolls back an active node drag and resize but keeps a pan running', async () => {
+    const rigOut = await rig();
+    const { node, hit, calls, detach } = rigOut;
+    const svg = node.parent;
+
+    // Node drag in flight (primary pointer).
+    const down = pointer('pointerdown', 1, 100, 100);
+    down.target = node;
+    node.dispatch('pointerdown', down);
+    node.dispatch('pointermove', { ...pointer('pointermove', 1, 130, 130), target: node });
+    detach.cancelEditing('read-only');
+    assert.ok(calls.some(c => c[0] === 'touchCancelNodeDrag'), 'the node drag rolled back');
+
+    // Resize in flight (a fresh primary press after the cancelled drag).
+    const hitDown = pointer('pointerdown', 1, 200, 200);
+    hitDown.target = hit;
+    hit.dispatch('pointerdown', hitDown);
+    hit.dispatch('pointermove', { ...pointer('pointermove', 1, 220, 220), target: hit });
+    detach.cancelEditing('read-only');
+    assert.ok(calls.some(c => c[0] === 'OnResizeCancelled'), 'the resize rolled back');
+
+    // A pan in flight survives the editing cancellation and keeps navigating.
+    const panDown = pointer('pointerdown', 1, 300, 300);
+    panDown.target = svg;
+    svg.dispatch('pointerdown', panDown);
+    svg.dispatch('pointermove', { ...pointer('pointermove', 1, 320, 300), target: svg });
+    detach.cancelEditing('read-only');
+    assert.equal(calls.some(c => c[0] === 'touchCancelPan'), false,
+        'navigation (pan) is not an editing gesture');
+    svg.dispatch('pointermove', { ...pointer('pointermove', 1, 340, 300), target: svg });
+    assert.ok(calls.some(c => c[0] === 'touchMovePan' && c[1] === 340),
+        'the pan keeps moving after cancelEditing');
 });
 
 test('detach ends every session and cancels an active drag', async () => {
@@ -334,4 +452,25 @@ test('detach ends every session and cancels an active drag', async () => {
     const movesAfterDetach = calls.filter(c => c[0] === 'touchMoveNodeDrag' && c[1] === 150).length;
     assert.equal(movesAfterDetach, 0, 'a detached session no longer drives the editor');
     assert.ok(calls.some(c => c[0] === 'touchCancelNodeDrag'), 'detach cancels the drag in progress');
+});
+
+test('detach.cancel cancels navigation too, unlike cancelEditing', async () => {
+    const { node, calls, detach } = await rig();
+    const svg = node.parent;
+
+    // A pan in flight.
+    const panDown = pointer('pointerdown', 1, 50, 50);
+    panDown.target = svg;
+    svg.dispatch('pointerdown', panDown);
+    svg.dispatch('pointermove', { ...pointer('pointermove', 1, 70, 50), target: svg });
+    detach.cancel('destroyed');
+    assert.ok(calls.some(c => c[0] === 'touchCancelPan'), 'destroy cancels every session, pan included');
+
+    // And a fresh gesture is dead: nothing further reaches the engine.
+    const again = pointer('pointerdown', 2, 100, 100);
+    again.target = node;
+    node.dispatch('pointerdown', again);
+    node.dispatch('pointermove', { ...pointer('pointermove', 2, 130, 130), target: node });
+    assert.equal(calls.filter(c => c[0] === 'touchBeginNodeDrag').length, 0,
+        'a cancelled session never re-arms');
 });

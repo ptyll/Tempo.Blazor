@@ -246,6 +246,30 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             }
             _lastAppliedPageScale = scale;
         }
+
+        // A read-only flip mid-gesture (host parameter or the editor's user toggle) rolls the live
+        // resize back to its start geometry: read-only must never end with a half-applied edit.
+        if (ReadOnly && _resizeNodeId is not null)
+        {
+            RollbackResize();
+        }
+
+        // An open edge label editor must not survive the flip: its blur handler would otherwise
+        // commit the label in read-only.
+        if (ReadOnly && _editingEdgeLabelId is not null)
+        {
+            CancelEdgeLabelEdit();
+        }
+
+        // A read-only flip that reaches the canvas mid-gesture must reach the JS instance in the
+        // same parameter pass: OnAfterRenderAsync is gated off while a JS drag latches
+        // ShouldRender(), so the flip would stay invisible there until the gesture ends.
+        if (_jsInitialized && ReadOnly != _lastAppliedReadOnly)
+        {
+            _lastAppliedReadOnly = ReadOnly;
+            try { _ = JS.InvokeVoidAsync("tmDiagramEditor.setReadOnly", _containerRef, ReadOnly); }
+            catch { /* JS may be mid-teardown */ }
+        }
     }
 
     // Tracks the last Page.Scale value we've pushed into the JS viewBox so we can
@@ -296,15 +320,9 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
                 catch { /* JS may be mid-teardown */ }
             }
 
-            // Propagate read-only flips (user toggle or host parameter change)
-            // into the JS instance so keyboard and pointer interactions stop
-            // mutating the document.
-            if (ReadOnly != _lastAppliedReadOnly)
-            {
-                _lastAppliedReadOnly = ReadOnly;
-                try { await JS.InvokeVoidAsync("tmDiagramEditor.setReadOnly", _containerRef, ReadOnly); }
-                catch { /* JS may be mid-teardown */ }
-            }
+            // Read-only flips are pushed from OnParametersSet — OnAfterRenderAsync is gated off
+            // while a JS drag latches ShouldRender(), so the flip must not depend on it. The init
+            // options above seed the state; nothing to re-send on the ordinary render path.
 
             if (_currentSelectionIds.Length > 0)
             {
@@ -435,6 +453,18 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
             if (node is not null)
                 _dragStartPositions[id] = new NodeMoveState(node.X, node.Y, node.ParentNodeId, node.SwimlaneRow, node.SwimlaneColumn);
         }
+    }
+
+    /// <summary>A JS node drag that reported <see cref="OnDragStarted"/> was rolled back (pinch
+    /// hand-over, Escape, read-only flip, dispose): resume rendering and drop the start snapshot.</summary>
+    [JSInvokable]
+    public Task OnDragCancelled()
+    {
+        if (!_isJsDragging) return Task.CompletedTask;
+        _isJsDragging = false;
+        _dragStartPositions = [];
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     [JSInvokable]
@@ -663,11 +693,11 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>The touch/pen resize session was cancelled: roll the geometry back.</summary>
-    [JSInvokable]
-    public Task OnResizeCancelled()
+    /// <summary>Restores the geometry captured at resize start (node and group members) and clears the
+    /// gesture. No-op without an active resize.</summary>
+    private void RollbackResize()
     {
-        if (_resizeNodeId is null || Document is null) return Task.CompletedTask;
+        if (_resizeNodeId is null || Document is null) { ResetResizeState(); return; }
         var node = Document.Nodes.FirstOrDefault(n => n.Id == _resizeNodeId);
         if (node is not null)
         {
@@ -690,11 +720,19 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         }
         ResetResizeState();
         MarkContentDirty();
-        StateHasChanged();
         if (_jsInitialized)
         {
             _ = JS.InvokeVoidAsync("tmDiagramEditor.updateSelectionOutlines", _containerRef);
         }
+    }
+
+    /// <summary>The touch/pen resize session was cancelled: roll the geometry back.</summary>
+    [JSInvokable]
+    public Task OnResizeCancelled()
+    {
+        if (_resizeNodeId is null || Document is null) return Task.CompletedTask;
+        RollbackResize();
+        StateHasChanged();
         return Task.CompletedTask;
     }
 
@@ -749,6 +787,11 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// session (OnResizeMoved) both land here, so the maths exist exactly once.</summary>
     private void ApplyResizeMove(double screenX, double screenY)
     {
+        if (ReadOnly)
+        {
+            if (_resizeNodeId is not null) { RollbackResize(); StateHasChanged(); }
+            return;
+        }
         if (_resizeNodeId is null || Document is null || string.IsNullOrEmpty(_resizeHandle) || Zoom <= 0) return;
 
         var dx = (screenX - _resizeStartScreen.X) / Zoom;
@@ -798,6 +841,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     private void CommitResize()
     {
         if (_resizeNodeId is null || Document is null) return;
+        if (ReadOnly) { RollbackResize(); return; }   // never commit a gesture that outlived edit mode
 
         var node = Document.Nodes.FirstOrDefault(n => n.Id == _resizeNodeId);
         if (node is not null && CommandStack is not null)
@@ -2226,6 +2270,12 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
 
     private async Task SaveEdgeLabel()
     {
+        if (ReadOnly)
+        {
+            // The flip can land between the edit start and this blur: cancel instead of commit.
+            CancelEdgeLabelEdit();
+            return;
+        }
         if (Document is null || _editingEdgeLabelId is null) return;
         var edge = Document.Edges.FirstOrDefault(e => e.Id == _editingEdgeLabelId);
         if (edge is null)
@@ -2255,7 +2305,7 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
 
     private async Task HandleSectionEdit(string nodeId, string dataKey, object value)
     {
-        if (Document is null) return;
+        if (ReadOnly || Document is null) return;
         var node = Document.Nodes.FirstOrDefault(n => n.Id == nodeId);
         if (node is null) return;
         var oldData = JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(node.Data)) ?? new Dictionary<string, object>();

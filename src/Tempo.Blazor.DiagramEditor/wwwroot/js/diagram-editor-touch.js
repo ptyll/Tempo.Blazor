@@ -44,8 +44,6 @@ const OTHER_GESTURE_SELECTOR = [
     '.tm-diagram-edge-toolbar',
 ].join(', ');
 
-const PAN_VETO_SELECTOR = OTHER_GESTURE_SELECTOR + ', ' + NODE_SELECTOR;
-
 // The helpers resolve from this module's own URL: the deployed _content layout first (two
 // levels up out of the package base), then the source tree for the Node tests (wwwroot is
 // part of the path there). Production always takes the first import.
@@ -69,8 +67,11 @@ async function loadHelpers() {
  *
  * @param {object} engine `window.tmDiagramEditor` (the touch* hooks and geometry internals).
  * @param {object} inst the engine instance for one canvas.
- * @returns {Promise<function(): void>} a detach that cancels a gesture in progress and ends
- *   every session — safe to call twice, safe before the helpers finished loading.
+ * @returns {Promise<(function(): void & { cancelEditing: (reason?: string) => void, cancel: (reason?: string) => void })>}
+ *   a detach that cancels a gesture in progress and ends every session — safe to call twice, safe
+ *   before the helpers finished loading. `detach.cancelEditing(reason)` rolls back every EDITING
+ *   gesture in flight (node drag, long-press, resize, rotate) while navigation keeps running — the
+ *   read-only flip hook; `detach.cancel(reason)` cancels every session once.
  */
 export async function attachTouch(engine, inst) {
     const { drag, gesture } = await loadHelpers();
@@ -125,15 +126,27 @@ export async function attachTouch(engine, inst) {
     // a tap on an edge hit path selects the edge so a tablet can edit it. A press on the empty
     // surface clears the selection — the touch parity of the mouse rubber-band start (which
     // clears at mousedown), so a phone can deselect without a keyboard (G2 mobile light edits).
+    // In read-only a finger on a node or an edge pans too, and a tap selects the node for
+    // inspection (R1).
+    let roPressTarget = null;   // read-only: the press target a tap inspects
     const panDrag = drag.attach(inst.container, {
         pointerTypes: TOUCH_POINTERS,
         threshold: 6,
         touchAction: null,
         onPress: (info) => {
             const target = info.event?.target;
-            if (target?.closest?.(PAN_VETO_SELECTOR)) return false;
-            if (target?.closest?.('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')) {
-                return engine.touchPressEdge(inst, target.closest('.tm-diagram-edge-hit-path') ?? target);
+            if (target?.closest?.(OTHER_GESTURE_SELECTOR)) return false;
+            if (inst.readOnly) {
+                // R1: every surface navigates in read-only; a TAP (onRelease) inspects.
+                roPressTarget = target ?? null;
+                return true;
+            }
+            if (target?.closest?.(NODE_SELECTOR)) return false;
+            const edgeEl = target?.closest?.('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group');
+            if (edgeEl) {
+                const idEl = target.closest('[data-edge-id]') ?? edgeEl;
+                engine.touchPressEdge(inst, idEl);   // selects (editable mode); never vetoes the pan
+                return true;
             }
             if (inst.selectedIds.size > 0) {
                 inst.selectedIds.clear();
@@ -141,6 +154,21 @@ export async function attachTouch(engine, inst) {
                 inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', []);
             }
             return true;
+        },
+        onRelease: (info) => {
+            const target = roPressTarget;
+            roPressTarget = null;
+            if (!inst.readOnly || info.outcome !== 'tap' || !target) return;
+            // R1: the touch layer preventDefaults the press, so the Blazor @onclick never
+            // follows a tap — edges select through the engine hook, nodes likewise.
+            const edgeEl = target.closest?.('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group');
+            if (edgeEl) {
+                engine.selectEdgeForInspection(inst, edgeEl);
+                return;
+            }
+            const nodeEl = target.closest?.(NODE_SELECTOR);
+            if (nodeEl) engine.selectNodeForInspection(inst, nodeEl, false);
+            else engine.clearSelectionForInspection(inst);
         },
         onStart: (info) => engine.touchBeginPan(inst, info.startX, info.startY),
         onMove: (info) => engine.touchMovePan(inst, info.x, info.y),
@@ -225,9 +253,19 @@ export async function attachTouch(engine, inst) {
     }
 
     let detached = false;
-    return function detach() {
+    function detach() {
         if (detached) return;
         detached = true;
         for (const session of sessions) session.detach?.();
+    }
+    // The EDITING sessions a read-only flip must roll back. A new editing session
+    // (portDrag, Phase 3) MUST be added here — navigation sessions (pan, pinch) stay live.
+    const editingSessions = [nodeDrag, nodeMenu, resizeDrag, rotateDrag];
+    // Read-only flip: roll back every EDITING gesture in flight (their onCancel callbacks restore
+    // the engine/C# state); navigation (pan, pinch) keeps running.
+    detach.cancelEditing = (reason = 'read-only') => {
+        for (const session of editingSessions) session.cancel?.(reason);
     };
+    detach.cancel = (reason = 'cancelled') => cancelSessions(reason, []);
+    return detach;
 }

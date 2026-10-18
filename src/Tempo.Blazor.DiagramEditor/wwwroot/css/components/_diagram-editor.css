@@ -1815,6 +1815,20 @@ circle.tm-diagram-rotate-handle-hit {
     color: var(--tm-color-text-muted);
 }
 
+/* Read-only hint (D9/R1 review): one visually-hidden span referenced by aria-describedby from
+   every inert tile — present for assistive tech, invisible in the layout. */
+.tm-diagram-toolbox__sr-hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
 .tm-diagram-toolbox__library {
     display: flex;
     flex-direction: column;
@@ -1905,6 +1919,10 @@ circle.tm-diagram-rotate-handle-hit {
 .tm-diagram-toolbox__item:active {
     cursor: grabbing;
 }
+
+.tm-diagram-toolbox__item[aria-disabled="true"] { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
+.tm-diagram-toolbox__item[aria-disabled="true"]:hover,
+.tm-diagram-toolbox__item[aria-disabled="true"]:active { background: var(--tm-color-surface); border-color: var(--tm-color-border); cursor: not-allowed; }
 
 .tm-diagram-toolbox__item--edge .tm-diagram-toolbox__label {
     color: var(--tm-color-text);
@@ -2174,6 +2192,46 @@ circle.tm-diagram-rotate-handle-hit {
     font-size: var(--tm-font-size-sm, 14px);
     color: var(--tm-color-text-muted);
     margin: 0;
+}
+
+/* ── Read-only summary (review L) ─────────────────────────────────────────── */
+/* The R1 inspection selection renders as a plain fact list — the read-only
+   counterpart of the editing widgets above. */
+.tm-diagram-properties__readonly-summary {
+    margin: var(--tm-space-2, 8px) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1, 4px);
+    font-size: var(--tm-font-size-sm, 14px);
+}
+
+.tm-diagram-properties__readonly-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-2, 8px);
+}
+
+.tm-diagram-properties__readonly-row dt {
+    flex: 0 0 auto;
+    min-width: 5.5em;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-diagram-properties__readonly-row dd {
+    margin: 0;
+    color: var(--tm-color-text);
+    overflow-wrap: anywhere;
+}
+
+.tm-diagram-properties__readonly-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm, 4px);
+    margin-inline-end: var(--tm-space-2, 8px);
+    vertical-align: middle;
 }
 
 /* ── Color Swatches ───────────────────────────────────────────────────────── */
