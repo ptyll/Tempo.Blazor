@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using System.Globalization;
 using Tempo.Blazor.Components.Diagram.Models;
 
 namespace Tempo.Blazor.Components.Diagram;
@@ -96,14 +97,42 @@ public partial class TmDiagramToolbox : TmComponentBase
         RefreshFilter();
     }
 
+    /// <summary>Culture-aware comparer for the visible labels: Czech users get Czech alphabetical order.
+    /// Cached per culture — the comparer is created once per culture, not once per call.</summary>
+    private StringComparer DisplayComparer
+    {
+        get
+        {
+            var culture = Loc.Culture ?? CultureInfo.CurrentUICulture;
+            if (_displayComparer is null || !Equals(_displayComparerCulture, culture))
+            {
+                _displayComparer = StringComparer.Create(culture, ignoreCase: true);
+                _displayComparerCulture = culture;
+            }
+            return _displayComparer;
+        }
+    }
+
+    private StringComparer? _displayComparer;
+    private CultureInfo? _displayComparerCulture;
+
     private void RefreshFilter()
     {
         var query = _searchQuery.Trim();
-        var stencils = string.IsNullOrWhiteSpace(query)
-            ? StencilRegistry.GetAll()
-            : StencilRegistry.Search(query);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            _filteredLibraries = BuildLibraryGroups(StencilRegistry.GetAll());
+            return;
+        }
 
-        _filteredLibraries = BuildLibraryGroups(stencils);
+        // Registry search covers tags/keywords/set ids; the localized display name and the raw
+        // name are matched diacritic-insensitively on top (D7), so "obdelnik" finds the rectangle.
+        var registryHits = new HashSet<string>(
+            StencilRegistry.Search(query).Select(s => s.Id),
+            StringComparer.Ordinal);
+        _filteredLibraries = BuildLibraryGroups(StencilRegistry.GetAll().Where(s =>
+            registryHits.Contains(s.Id)
+            || DiagramSearchText.MatchesAny(query, GetStencilDisplayName(s), s.Name)));
     }
 
     private List<ToolboxLibraryGroup> BuildLibraryGroups(IEnumerable<DiagramStencil> stencils)
@@ -123,11 +152,11 @@ public partial class TmDiagramToolbox : TmComponentBase
                             GetPaletteFallbackName(firstPaletteStencil),
                             GetPaletteOrder(firstPaletteStencil),
                             paletteGroup.OrderBy(stencil => stencil.Order)
-                                        .ThenBy(GetStencilDisplayName, StringComparer.Ordinal)
+                                        .ThenBy(GetStencilDisplayName, DisplayComparer)
                                         .ToList());
                     })
                     .OrderBy(palette => palette.Order)
-                    .ThenBy(palette => GetLocalizedText(palette.NameResourceKey, palette.FallbackName), StringComparer.Ordinal)
+                    .ThenBy(palette => GetLocalizedText(palette.NameResourceKey, palette.FallbackName), DisplayComparer)
                     .ToList();
 
                 return new ToolboxLibraryGroup(
@@ -137,7 +166,7 @@ public partial class TmDiagramToolbox : TmComponentBase
                     ShouldShowLibraryHeader(firstSetStencil, palettes),
                     palettes);
             })
-            .OrderBy(library => GetLocalizedText(library.NameResourceKey, library.FallbackName), StringComparer.Ordinal)
+            .OrderBy(library => GetLocalizedText(library.NameResourceKey, library.FallbackName), DisplayComparer)
             .ToList();
 
     private string GetLocalizedText(string? resourceKey, string fallback)

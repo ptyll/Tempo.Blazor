@@ -589,7 +589,13 @@
         @* ── Pane 3 / overlayPane: selection outlines (JS SVG &lt;rect&gt;), future transient overlays ──── *@
         <g class="tm-diagram-overlay-pane"></g>
 
-        @* ── Pane 4 / decoratorPane: resize/rotate handles, connect arrows, edge waypoint handles ──────── *@
+        @* ── Pane 4 / decoratorPane: resize/rotate handles, port hit circles, connect arrows ────────
+           Fixed paint order per node (review fix — "buttons > gesture hit areas > visual handles"):
+           1. g.tm-diagram-node-handles   — the visible resize/rotate handles + their gesture hits
+           2. g.tm-diagram-port-hits      — finger-sized gesture hit circles over the ports
+           3. g.tm-diagram-connect-arrows — the quick-connect arrow BUTTONS (controls)
+           Whatever a finger must REACH (the connect arrows) paints last; a press lands on the
+           topmost painted element, so the arrows stay reachable over the port hit discs. *@
         <g class="tm-diagram-decorator-pane">
             @* F5 — per-node handles group. Each selected, non-locked, non-readonly
                node gets a single <g class="tm-diagram-node-handles"> mirroring its
@@ -670,34 +676,6 @@
                             </circle>
                         }
 
-                        @* Quick-connect arrows N/E/S/W (<foreignObject><button> for a11y). *@
-                        @if (ShowConnectArrows)
-                        {
-                            @foreach (var _dir in _connectDirections)
-                        {
-                            var (_ax, _ay) = _dir.Css switch
-                            {
-                                "n" => (_hNode.W / 2.0 - 11.0, -24.0),
-                                "e" => (_hNode.W + 2.0, _hNode.H / 2.0 - 11.0),
-                                "s" => (_hNode.W / 2.0 - 11.0, _hNode.H + 2.0),
-                                "w" => (-24.0, _hNode.H / 2.0 - 11.0),
-                                _   => (0.0, 0.0),
-                            };
-                            <foreignObject class="tm-diagram-connect-arrow-wrap"
-                                           x="@F(_ax)" y="@F(_ay)" width="22" height="22">
-                                <button xmlns="http://www.w3.org/1999/xhtml"
-                                        type="button"
-                                        class="tm-diagram-connect-arrow tm-diagram-connect-arrow--@_dir.Css"
-                                        aria-label="@Loc[$"TmDiagramEditor_ConnectArrow{_dir.Label}"]"
-                                        title="@Loc[$"TmDiagramEditor_ConnectArrow{_dir.Label}"]"
-                                        @onmousedown:stopPropagation="true"
-                                        @onclick:stopPropagation="true"
-                                        @onclick="() => HandleConnectArrowClicked(_hNode.Id, _dir.Css)">
-                                    <span class="tm-diagram-connect-arrow__icon">+</span>
-                                </button>
-                            </foreignObject>
-                            }
-                        }
                     </g>
                 }
             }
@@ -707,6 +685,9 @@
                groups, so at a port position the hit circle wins the paint order and the port
                drag claims the press (the resize/rotate sessions veto through engine.touchPortAt).
                Same data-port-id attribute as the visible circle — the engine resolves either.
+               The quick-connect arrow buttons render in their own group AFTER these hits: a
+               press on an arrow reaches the button (controls paint last), a press on the disc
+               still claims the port drag — both stay reachable on a coarse pointer.
                Connection points get NO hit circle: a stencil's connection points sit exactly on
                the resize handles (the default rectangle set is 4 corners + 4 midpoints + centre)
                and a fat invisible circle there steals the handles' and the node body's presses.
@@ -737,6 +718,54 @@
                                     cx="@F(absX - _pNode.X)"
                                     cy="@F(absY - _pNode.Y)">
                             </circle>
+                        }
+                    </g>
+                }
+            }
+
+            @* Quick-connect arrows N/E/S/W (<foreignObject><button> for a11y) — the CONTROLS of
+               the decorator pane, rendered in their own per-node group AFTER the port hits
+               (review fix: buttons > gesture hit areas > visual handles). Inside the handles
+               group the finger-sized port hit discs painted over the arrows and a finger could
+               never reach them; here the arrows stay the topmost hit target at their position.
+               The coarse-pointer CSS gives the arrow a 44px hit area and offsets the wrap
+               outward so it clears the port hit discs (the N arrow moves straight up — staying
+               centred — to clear the rotate hit); the E2E tablet suite asserts elementFromPoint
+               finds the arrow under a finger. *@
+            @if (Document is not null && !ReadOnly && ShowConnectArrows)
+            {
+                @foreach (var _sid in _currentSelectionIds)
+                {
+                    var _aNode = Document.Nodes.FirstOrDefault(n => n.Id == _sid);
+                    if (_aNode is null || IsNodeLocked(_aNode)) continue;
+                    var _aCx = _aNode.W / 2.0;
+                    var _aCy = _aNode.H / 2.0;
+                    var _aTx = $"translate({F(_aNode.X)},{F(_aNode.Y)}) rotate({F(_aNode.Rotation)} {F(_aCx)} {F(_aCy)})";
+
+                    <g class="tm-diagram-connect-arrows" data-node-id="@_aNode.Id" transform="@_aTx">
+                        @foreach (var _dir in _connectDirections)
+                        {
+                            var (_ax, _ay) = _dir.Css switch
+                            {
+                                "n" => (_aNode.W / 2.0 - 11.0, -24.0),
+                                "e" => (_aNode.W + 2.0, _aNode.H / 2.0 - 11.0),
+                                "s" => (_aNode.W / 2.0 - 11.0, _aNode.H + 2.0),
+                                "w" => (-24.0, _aNode.H / 2.0 - 11.0),
+                                _   => (0.0, 0.0),
+                            };
+                            <foreignObject class="tm-diagram-connect-arrow-wrap tm-diagram-connect-arrow-wrap--@_dir.Css"
+                                           x="@F(_ax)" y="@F(_ay)" width="22" height="22">
+                                <button xmlns="http://www.w3.org/1999/xhtml"
+                                        type="button"
+                                        class="tm-diagram-connect-arrow tm-diagram-connect-arrow--@_dir.Css"
+                                        aria-label="@Loc[$"TmDiagramEditor_ConnectArrow{_dir.Label}"]"
+                                        title="@Loc[$"TmDiagramEditor_ConnectArrow{_dir.Label}"]"
+                                        @onmousedown:stopPropagation="true"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="() => HandleConnectArrowClicked(_aNode.Id, _dir.Css)">
+                                    <span class="tm-diagram-connect-arrow__icon">+</span>
+                                </button>
+                            </foreignObject>
                         }
                     </g>
                 }

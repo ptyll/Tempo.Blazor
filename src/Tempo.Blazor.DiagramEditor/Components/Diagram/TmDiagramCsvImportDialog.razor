@@ -6,6 +6,7 @@
 @using Tempo.Blazor.Components.Diagram.Models
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Abstractions.Layout
+@implements IDisposable
 
 <TmModal Show="@Show"
          OnClose="OnClose"
@@ -29,7 +30,9 @@
                             Immediate="true"
                             Rows="8"
                             Placeholder="@Loc["TmDiagramCsvImportDialog_CsvPlaceholder"]"
-                            Class="tm-diagram-csv-import__textarea" />
+                            Class="tm-diagram-csv-import__textarea"
+                            aria-invalid="@(HasPreviewError ? "true" : null)"
+                            aria-describedby="@(HasPreviewError ? _previewErrorId : null)" />
             </div>
 
             <div class="tm-diagram-csv-import__field">
@@ -62,6 +65,7 @@
                                           ValueChanged="(string? v) => OnMappingChanged(mapping, v)"
                                           Options="_headerOptions"
                                           Placeholder="@Loc["TmDiagramCsvImportDialog_SelectColumn"]"
+                                          Required="mapping.IsRequired"
                                           Class="tm-diagram-csv-import__mapping-select" />
                             </div>
                         }
@@ -99,21 +103,34 @@
                 </div>
             }
 
-            @if (_previewNodes >= 0)
-            {
-                @* Mockup: the live parse result paints as one summary box holding icon stats. *@
-                <div class="tm-diagram-csv-import__preview" role="status" aria-live="polite">
-                    <span class="tm-diagram-csv-import__stat">
-                        <TmIcon Name="@IconNames.Square" Size="IconSize.Sm" />
-                        @Loc["TmDiagramCsvImportDialog_PreviewNodes", _previewNodes]
-                    </span>
-                    <span class="tm-diagram-csv-import__stat">
-                        <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Sm" />
-                        @Loc["TmDiagramCsvImportDialog_PreviewEdges", _previewEdges]
-                    </span>
-                </div>
-            }
+            @* Live region (D12): the wrapper is always in the DOM so screen readers announce the
+               preview (and the debounced preview error — POLITE, never role=alert) when it appears.
+               The debounced preview reports problems as you type; only the Import click promotes
+               an error to the assertive TmAlert below. The textarea points aria-describedby here
+               and carries aria-invalid while a preview error is shown. *@
+            <div class="tm-diagram-csv-import__status" role="status" aria-live="polite" aria-atomic="true">
+                @if (_previewNodes >= 0)
+                {
+                    @* Mockup: the live parse result paints as one summary box holding icon stats. *@
+                    <div class="tm-diagram-csv-import__preview">
+                        <span class="tm-diagram-csv-import__stat">
+                            <TmIcon Name="@IconNames.Square" Size="IconSize.Sm" />
+                            @Loc["TmDiagramCsvImportDialog_PreviewNodes", _previewNodes]
+                        </span>
+                        <span class="tm-diagram-csv-import__stat">
+                            <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Sm" />
+                            @Loc["TmDiagramCsvImportDialog_PreviewEdges", _previewEdges]
+                        </span>
+                    </div>
+                }
+                @if (HasPreviewError)
+                {
+                    <p class="tm-diagram-csv-import__status-error" id="@_previewErrorId">@_previewError</p>
+                }
+            </div>
 
+            @* Import-click failures only: role=alert, asserted. Typing-time problems stay polite
+               in the status region above. *@
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
                 <TmAlert Severity="AlertSeverity.Error" Dismissable="false" Class="tm-diagram-csv-import__error">
@@ -155,6 +172,7 @@
 
     private string _csvText = string.Empty;
     private CsvDiagramType _diagramType = CsvDiagramType.OrgChart;
+    private string? _previewError;
     private string? _errorMessage;
 
     private readonly List<CsvColumnMapping> _mappings = [];
@@ -170,6 +188,8 @@
     private readonly string _uid = Guid.NewGuid().ToString("n")[..8];
     private string _csvFieldId => $"csv-data-{_uid}";
     private string _typeFieldId => $"diagram-type-{_uid}";
+    private string _previewErrorId => $"csv-preview-error-{_uid}";
+    private bool HasPreviewError => !string.IsNullOrEmpty(_previewError);
 
     /// <summary>Diagram type choices, localized at render time.</summary>
     private List<SelectOption<CsvDiagramType>> TypeOptions => new()
@@ -198,6 +218,7 @@
         {
             _csvText = string.Empty;
             _diagramType = CsvDiagramType.OrgChart;
+            _previewError = null;
             _errorMessage = null;
             _mappings.Clear();
             _headerOptions.Clear();
@@ -205,6 +226,8 @@
             _previewRows.Clear();
             _previewNodes = -1;
             _previewEdges = -1;
+            CancelPreviewTimer();
+            _parsed = null;
         }
         if (_mappings.Count == 0)
             InitMappings();
@@ -234,67 +257,189 @@
     private void OnDiagramTypeChanged()
     {
         InitMappings();
+        if (_parsed is not null)
+        {
+            _previewError = null;
+            _errorMessage = null;
+        }
         RefreshPreview();
     }
 
-    /// <summary>Live preview: re-parses the typed CSV on every input (@bind-Value:after + Immediate).</summary>
-    private void OnCsvChanged()
+    /// <summary>Live-preview debounce. Internal so tests can reference it.</summary>
+    internal const int PreviewDebounceMs = DiagramPreviewDebouncer.DebounceMs;
+
+    [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
+    private TimeProvider Clock => _clock ??= ServiceProvider.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
+    /// <summary>Shared debounced-timer plumbing (see <see cref="DiagramPreviewDebouncer"/>).</summary>
+    private DiagramPreviewDebouncer? _debouncer;
+    private DiagramPreviewDebouncer Debouncer => _debouncer ??= new DiagramPreviewDebouncer(InvokeAsync, Clock);
+
+    /// <summary>Last successful parse of <c>_csvText</c> — parsed ONCE per debounced edit.</summary>
+    private CsvParseResult? _parsed;
+
+    /// <summary>Live preview: each input re-arms a single-shot timer; the parse runs once typing pauses.</summary>
+    private void OnCsvChanged() => SchedulePreview();
+
+    private void SchedulePreview()
     {
-        ParseHeadersAndPreview();
+        Debouncer.Cancel();
+        if (string.IsNullOrWhiteSpace(_csvText))
+        {
+            ReparseCsv();
+            return;
+        }
+
+        Debouncer.Schedule(() =>
+        {
+            ReparseCsv();
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private void CancelPreviewTimer() => _debouncer?.Cancel();
+
+    /// <summary>Stops a pending preview timer.</summary>
+    public void Dispose()
+    {
+        _debouncer?.Dispose();
+    }
+
+    /// <summary>Re-parses the typed CSV once per debounced edit and refreshes every dependent surface.</summary>
+    private void ReparseCsv()
+    {
+        _parsed = null;
+        _headerOptions.Clear();
+        _previewHeaders.Clear();
+        _previewRows.Clear();
+        _previewError = null;
+        _errorMessage = null;
+
+        if (!string.IsNullOrWhiteSpace(_csvText))
+        {
+            try
+            {
+                _parsed = CsvParser.Parse(_csvText);
+                _headerOptions.AddRange(_parsed.Headers.Select(h => new SelectOption<string> { Value = h, Label = h }));
+                _previewHeaders.AddRange(_parsed.Headers);
+                _previewRows.AddRange(_parsed.Rows.Take(5).Select(r => r.ToList()));
+            }
+            catch (Exception ex)
+            {
+                _previewError = GetPreviewError(ex);
+            }
+        }
+
+        AutoMapEmptyMappings();
+        ClearInvalidMappings();
         RefreshPreview();
+    }
+
+    /// <summary>
+    /// Fills still-empty mappings with the header that matches the semantic field name or its
+    /// localized label (case/diacritic-insensitive fold compare, D7) — pasting a CSV whose
+    /// header reads "Název" or "name" pre-selects the Name column without a manual step.
+    /// </summary>
+    private void AutoMapEmptyMappings()
+    {
+        if (_parsed is null) return;
+        foreach (var mapping in _mappings)
+        {
+            if (!string.IsNullOrEmpty(mapping.SelectedColumn)) continue;
+            var foldedField = DiagramSearchText.Fold(mapping.SemanticField);
+            var foldedLabel = DiagramSearchText.Fold(GetSemanticFieldLabel(mapping.SemanticField));
+            var match = _parsed.Headers.FirstOrDefault(h =>
+                string.Equals(DiagramSearchText.Fold(h), foldedField, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(DiagramSearchText.Fold(h), foldedLabel, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+                mapping.SelectedColumn = match;
+        }
+    }
+
+    /// <summary>
+    /// A mapping whose column vanished from the header (edited CSV) is cleared, never kept stale —
+    /// and the user is told through the POLITE preview error (the mapping is their data, the alert
+    /// stays reserved for the Import click). A transient failed parse wipes nothing: the previous
+    /// mappings survive until a successful parse re-validates them.
+    /// </summary>
+    private void ClearInvalidMappings()
+    {
+        if (_parsed is null) return;
+        var headers = _parsed.Headers;
+        foreach (var mapping in _mappings)
+        {
+            if (string.IsNullOrEmpty(mapping.SelectedColumn)) continue;
+            if (headers.Any(h => string.Equals(h, mapping.SelectedColumn, StringComparison.OrdinalIgnoreCase))) continue;
+            var cleared = mapping.SelectedColumn;
+            mapping.SelectedColumn = string.Empty;
+            _previewError = Loc["TmDiagramCsvImportDialog_ErrorColumnNotFound",
+                cleared, GetSemanticFieldLabel(mapping.SemanticField)];
+        }
     }
 
     private void OnMappingChanged(CsvColumnMapping mapping, string? value)
     {
         mapping.SelectedColumn = value ?? string.Empty;
+        if (_parsed is not null)
+        {
+            _previewError = null;
+            _errorMessage = null;
+        }
         RefreshPreview();
-    }
-
-    private void ParseHeadersAndPreview()
-    {
-        _headerOptions.Clear();
-        _previewHeaders.Clear();
-        _previewRows.Clear();
-        _errorMessage = null;
-
-        if (string.IsNullOrWhiteSpace(_csvText))
-            return;
-
-        try
-        {
-            var result = CsvParser.Parse(_csvText);
-            _headerOptions.AddRange(result.Headers.Select(h => new SelectOption<string> { Value = h, Label = h }));
-            _previewHeaders.AddRange(result.Headers);
-            _previewRows.AddRange(result.Rows.Take(5).Select(r => r.ToList()));
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = FormatError(ex.Message);
-        }
     }
 
     private void RefreshPreview()
     {
         _previewNodes = -1;
         _previewEdges = -1;
-
-        if (string.IsNullOrWhiteSpace(_csvText) || !AreRequiredMappingsFilled())
-            return;
+        if (_parsed is null || !AreRequiredMappingsFilled()) return;
 
         try
         {
-            var parseResult = CsvParser.Parse(_csvText);
-            var doc = GenerateDocument(parseResult);
+            var doc = GenerateDocument(_parsed);
             _previewNodes = doc.ActivePage.Nodes.Count;
             _previewEdges = doc.ActivePage.Edges.Count;
-            _errorMessage = null;
         }
-        catch
+        catch (Exception ex)
         {
-            _previewNodes = -1;
-            _previewEdges = -1;
+            _previewError = GetErrorMessage(ex);   // surfaced politely, not swallowed
         }
     }
+
+    /// <summary>
+    /// Localized POLITE preview error for a parse failure. The "no data rows" and "fewer than
+    /// two columns" wordings wait until the pasted text has at least two lines — with a single
+    /// line typed the user is still mid-paste, and shouting about a half-written snippet is noise.
+    /// </summary>
+    private string? GetPreviewError(Exception ex)
+    {
+        if (ex is not DiagramImportException import)
+            return Loc["TmDiagramCsvImportDialog_ErrorUnexpected"];
+        if (import.Error is DiagramImportError.CsvNoData or DiagramImportError.CsvMinColumns
+            && LineCount(_csvText) < 2)
+            return null;
+        return GetErrorMessage(import);
+    }
+
+    private static int LineCount(string text) =>
+        string.IsNullOrEmpty(text) ? 0 : text.Split('\n').Length;
+
+    /// <summary>Localized text for an import failure. Never returns <see cref="Exception.Message"/>.</summary>
+    private string GetErrorMessage(Exception ex) => ex is DiagramImportException import
+        ? import.Error switch
+        {
+            DiagramImportError.CsvEmpty => Loc["TmDiagramCsvImportDialog_ErrorEmpty"],
+            DiagramImportError.CsvNoData => Loc["TmDiagramCsvImportDialog_ErrorNoData"],
+            DiagramImportError.CsvMinColumns => Loc["TmDiagramCsvImportDialog_ErrorMinColumns"],
+            DiagramImportError.MappingMissing => Loc["TmDiagramCsvImportDialog_ErrorMappings"],
+            DiagramImportError.ColumnNotFound => Loc["TmDiagramCsvImportDialog_ErrorColumnNotFound",
+                import.Column ?? string.Empty, GetSemanticFieldLabel(import.Field ?? string.Empty)],
+            DiagramImportError.InputTooComplex => Loc["TmDiagramCsvImportDialog_ErrorTooLarge"],
+            _ => Loc["TmDiagramCsvImportDialog_ErrorUnexpected"]
+        }
+        : Loc["TmDiagramCsvImportDialog_ErrorUnexpected"];
 
     private bool AreRequiredMappingsFilled()
     {
@@ -305,25 +450,35 @@
     {
         if (string.IsNullOrWhiteSpace(_csvText))
         {
+            _previewError = null;
             _errorMessage = Loc["TmDiagramCsvImportDialog_ErrorEmpty"];
             return;
         }
 
         if (!AreRequiredMappingsFilled())
         {
+            _previewError = null;
             _errorMessage = Loc["TmDiagramCsvImportDialog_ErrorMappings"];
+            return;
+        }
+
+        CancelPreviewTimer();
+        ReparseCsv();
+        if (_parsed is null)
+        {
+            // The parse failed: promote the polite preview wording to the assertive alert.
+            _errorMessage = _previewError ?? Loc["TmDiagramCsvImportDialog_ErrorUnexpected"];
+            _previewError = null;
             return;
         }
 
         try
         {
-            var parseResult = CsvParser.Parse(_csvText);
-            var doc = GenerateDocument(parseResult);
+            var doc = GenerateDocument(_parsed);
             var layout = _diagramType switch
             {
                 CsvDiagramType.OrgChart => "tree",
                 CsvDiagramType.Flowchart => "dagre",
-                CsvDiagramType.Timeline => string.Empty,
                 _ => string.Empty
             };
             await OnImport.InvokeAsync(new CsvImportResult(doc, layout));
@@ -331,7 +486,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = string.Format(Loc["TmDiagramCsvImportDialog_ErrorParse"], ex.Message);
+            _previewError = null;
+            _errorMessage = GetErrorMessage(ex);
         }
     }
 
@@ -343,18 +499,6 @@
             CsvDiagramType.Flowchart => CsvToFlowchartGenerator.Generate(parseResult, _mappings),
             CsvDiagramType.Timeline => CsvToTimelineGenerator.Generate(parseResult, _mappings),
             _ => throw new InvalidOperationException("Unsupported diagram type.")
-        };
-    }
-
-    private string FormatError(string keyOrMessage)
-    {
-        // Some parser exceptions use resource keys as messages
-        return keyOrMessage switch
-        {
-            "CsvImportDialog_ErrorEmpty" => Loc["TmDiagramCsvImportDialog_ErrorEmpty"],
-            "CsvImportDialog_ErrorNoData" => Loc["TmDiagramCsvImportDialog_ErrorNoData"],
-            "CsvImportDialog_ErrorMinColumns" => Loc["TmDiagramCsvImportDialog_ErrorMinColumns"],
-            _ => keyOrMessage
         };
     }
 }

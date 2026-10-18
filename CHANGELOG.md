@@ -4,6 +4,57 @@
 
 ### Added
 
+- **DiagramEditor: public `DiagramImportException` / `DiagramImportError` for CSV/SQL import
+  failures.** `CsvParser`, the CSV generators and `SqlParser` throw the typed
+  `DiagramImportException` (deriving from `InvalidOperationException`, so existing catch blocks
+  keep working); the `DiagramImportError` enum pins explicit values (`Unknown = 0`, then
+  `CsvEmpty`, `CsvNoData`, `CsvMinColumns`, `MappingMissing`, `ColumnNotFound`,
+  `InputTooComplex`) and the dialogs map it to localized texts — `Exception.Message` stays an
+  English developer sentence and is never shown to end users. `SqlParser.Parse` enforces an
+  overall ~1 s deadline (Stopwatch, checked between matches and column lines; internal
+  overload takes a `TimeSpan` budget for tests) and a 512 KB input cap, `CsvParser.Parse`
+  shares the 512 KB cap.
+
+- **DiagramEditor: template thumbnail generation API.** The public `DiagramThumbnailOptions`
+  type (`Tempo.Blazor.Abstractions`, init-only setters, `Width`/`Height` defaulting to
+  300×200) and the `DiagramThumbnailSvgGenerator.Generate(document, options)` overload let
+  hosts render fitted 16:10 SVG thumbnails of any `DiagramDocument`; `Generate` validates the
+  viewport (`ArgumentOutOfRangeException` for non-positive `Width`/`Height`).
+
+- **DiagramEditor review fixes (phase 4 follow-up).** Connect arrows are finger-reachable on a
+  coarse pointer: the decorator pane renders per node, in paint order, the visible
+  resize/rotate handles (`g.tm-diagram-node-handles`), then the finger-sized port hit discs
+  (`g.tm-diagram-port-hits`), then the quick-connect arrow buttons in their own group
+  (`g.tm-diagram-connect-arrows`) — the rule is **buttons > gesture hit areas > visual
+  handles**. The arrows get a 44 px hit area on coarse pointers (`--tm-diagram-connect-hit`,
+  a `::before` inset) and the wrap offsets outward by `handle-hit/2 + gap` (the N arrow stays
+  centred horizontally and shifts straight up by the offset plus the rotate-hit size, so its
+  press area clears the rotate handle's hit circle); the JS transform sync keeps every
+  `[data-node-id]` group glued to the node during drags and hides the port hits and arrows
+  while a resize runs. The SQL/CSV import dialogs separate the debounced preview error
+  (polite `role=status` region, textarea `aria-describedby` + `aria-invalid`) from the
+  import-click failure (`TmAlert role=alert` only after Import); the CSV wording for
+  no-data/min-columns waits until the pasted text has two lines, a vanished mapped column is
+  cleared with a polite explanation (mappings survive a transient failed parse), and empty
+  mappings auto-map to headers matching the semantic field name or localized label
+  (fold-compare). The connect dialog owns its placeholder key, offers a "Search all shapes"
+  escape hatch outside the live region when the narrowed palette has no match, moves focus
+  into the grid on ArrowDown from search (`FocusAsync(preventScroll: true)` + scrollIntoView
+  `nearest`), clears its tile references when hidden, takes the column count from a single
+  source (`--tm-connect-cols`) and opens in the editor's resolved layout (no grid→list flash
+  on mobile). Template thumbnails draw no labels on a transparent 16:10 viewport fitted to
+  the node bounds (`xMidYMid meet`), return no thumbnail for node-less documents (the card
+  falls back to the category icon), respect an explicit `thumbnailUrl` from `index.json` and
+  load through `Lazy<Task>` caches; the built-in templates resolve by exact embedded resource
+  name (csproj `LogicalName`) and `DiagramTemplateRegistry.InitializeAsync` is thread-safe
+  (parallel callers await one load); a faulted cached load resets under its lock so the next
+  call retries instead of replaying the exception forever (the same for each provider's
+  `Lazy<Task>` catalog cache). `TmDiagramEditor` recents adopt host values only when
+  the host reference changes (a stale re-render can no longer clobber a just-added recent),
+  and the preview debounce is shared through an internal `DiagramPreviewDebouncer`. New keys:
+  `TmDiagramConnectDialog_SearchPlaceholder`, `TmDiagramConnectDialog_SearchAllShapes`,
+  `TmDiagramCsvImportDialog_ErrorTooLarge` (en/cs/sk/fr).
+
 - **DiagramEditor tablet: finger edge-drawing discoverability (phase 3 review fixes).** The
   selected node's ports render invisible finger-sized hit circles (`.tm-diagram-port-hit`, same
   `data-port-id`, sized by `--tm-diagram-handle-hit`) AFTER the transform-handles group, so the
@@ -333,6 +384,30 @@
   undefined.
 
 ### Breaking / Migration
+
+- **DiagramEditor – recently used shapes are per editor.** The connect dialog no longer shares one
+  process-wide list (on Blazor Server it leaked picks between users). New optional
+  `TmDiagramEditor.RecentStencilIds` / `RecentStencilIdsChanged` let a host persist them:
+  before – nothing to do (global list); after –
+  `<TmDiagramEditor @bind-RecentStencilIds="_userRecents" />` to keep recents per user.
+
+- **DiagramEditor – SQL/CSV import preview is debounced (300 ms).** The live preview no longer
+  parses on every keystroke. Consumer bUnit tests that type into `TmDiagramSqlImportDialog` /
+  `TmDiagramCsvImportDialog` and assert the preview immediately must register a `FakeTimeProvider`
+  and advance it: before – `textarea.Input(sql); cut.Find(".tm-diagram-sql-import__preview");`
+  after – `Services.AddSingleton<TimeProvider>(time); textarea.Input(sql);
+  time.Advance(TimeSpan.FromMilliseconds(301)); await cut.InvokeAsync(() => {})`. The resource keys
+  `TmDiagramSqlImportDialog_ErrorParse` and `TmDiagramCsvImportDialog_ErrorParse` are deprecated
+  (no longer read) and will be removed in the next minor release.
+
+- **DiagramEditor – template gallery is one flat grid and the built-in catalog loads again.** The
+  per-category `<h4 class="tm-diagram-template-gallery__section-title">` headings are gone (category
+  chips and the per-card category stay); the embedded built-in templates (Blank, Basic Flowchart,
+  UML Class, ER, Network) were silently missing because of a resource-name bug and now appear in
+  every host, with generated thumbnails also for the ArchiMate/BPMN/C4/UML 2.5 templates. Before –
+  selectors on `.tm-diagram-template-gallery__section(-title)`; after – use
+  `.tm-diagram-template-card__category`. Hosts that register their own "blank" template: the
+  registry dedupes by id with provider priority.
 
 - **`TmDiagramCanvas` context-menu callbacks gained a trailing `string Origin` element.**
   The pointer type that opened the menu (`"mouse"` or `"touch"`) now rides with every context-menu

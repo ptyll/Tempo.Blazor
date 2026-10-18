@@ -1015,3 +1015,123 @@ test('a pinch after a started pan hands over: touchCancelPan then touchPinchEnd'
         'the cancel precedes the pinch commit');
     assert.equal(calls.includes('touchPinchCancel'), false, 'the pinch itself was never cancelled');
 });
+
+// ── Review fix: a tap on a quick-connect arrow clicks the button ────────────
+// The arrows are HTML inside an SVG foreignObject; Chromium never delivers the touch's
+// compatibility click to the button there, so a dedicated tap session (10px touch slop)
+// clicks the button the press landed on.
+
+/** One quick-connect arrow button on the rig's node; returns the arrow plus a click counter. */
+function addArrow(rigOut) {
+    const clicks = [];
+    const arrowsG = el({ tag: 'g', attrs: { class: 'tm-diagram-connect-arrows', 'data-node-id': 'n1' }, parent: rigOut.inst.svg });
+    const arrow = el({ tag: 'button', attrs: { class: 'tm-diagram-connect-arrow tm-diagram-connect-arrow--e' }, parent: arrowsG });
+    arrow.click = () => clicks.push('click');
+    return { arrow, clicks };
+}
+
+test('a tap on a quick-connect arrow clicks the button (no move, no drag)', async () => {
+    const rigOut = await rig();
+    const { arrow, clicks } = addArrow(rigOut);
+
+    const down = pointer('pointerdown', 1, 300, 300);
+    down.target = arrow;
+    arrow.dispatch('pointerdown', down);
+    arrow.dispatch('pointerup', { ...pointer('pointerup', 1, 300, 300), target: arrow });
+
+    assert.deepEqual(clicks, ['click'], 'a tap on the arrow must click the button (the connect dialog opens)');
+    assert.ok(down.prevented, 'the claimed press is preventDefaulted so the missing native click cannot double-fire');
+});
+
+test('a finger that drifts 3px before the lift still taps the arrow (touch slop)', async () => {
+    const rigOut = await rig();
+    const { arrow, clicks } = addArrow(rigOut);
+
+    const down = pointer('pointerdown', 1, 300, 300);
+    down.target = arrow;
+    arrow.dispatch('pointerdown', down);
+    arrow.dispatch('pointermove', { ...pointer('pointermove', 1, 303, 301), target: arrow });
+    arrow.dispatch('pointerup', { ...pointer('pointerup', 1, 303, 301), target: arrow });
+
+    assert.deepEqual(clicks, ['click'],
+        'a 3px drift is touch slop, not a drag — the button must still activate');
+});
+
+test('a drag that starts on a quick-connect arrow never clicks the button', async () => {
+    const rigOut = await rig();
+    const { arrow, clicks } = addArrow(rigOut);
+
+    const down = pointer('pointerdown', 1, 300, 300);
+    down.target = arrow;
+    arrow.dispatch('pointerdown', down);
+    arrow.dispatch('pointermove', { ...pointer('pointermove', 1, 340, 300), target: arrow });
+    arrow.dispatch('pointerup', { ...pointer('pointerup', 1, 340, 300), target: arrow });
+
+    assert.deepEqual(clicks, [], 'a press that moved is not a tap — the button must not click (no accidental dialog)');
+});
+
+test('the trailing compatibility click after an arrow tap is swallowed for ~350ms, near the tap point only', async () => {
+    const docBag = bag();
+    globalThis.document = docBag;
+    try {
+        const rigOut = await rig();
+        const { arrow } = addArrow(rigOut);
+        let prevented = 0;
+        const clickAt = (x, y) => docBag.dispatch('click', {
+            clientX: x, clientY: y,
+            preventDefault() { prevented++; },
+            stopPropagation() { },
+        });
+
+        const down = pointer('pointerdown', 1, 300, 300);
+        down.target = arrow;
+        arrow.dispatch('pointerdown', down);
+        arrow.dispatch('pointerup', { ...pointer('pointerup', 1, 300, 300), target: arrow });
+
+        // 50 ms later, at the lift point (under the freshly opened dialog): swallowed.
+        await sleep(50);
+        clickAt(300, 300);
+        assert.equal(prevented, 1, 'the trailing compatibility click at the tap point is swallowed');
+
+        // A click far away from the tap point is never touched by the guard.
+        clickAt(600, 500);
+        assert.equal(prevented, 1, 'clicks outside the ~30px radius pass untouched');
+
+        // …and the first swallowed click disarms the guard: exactly ONE click is ever eaten.
+        clickAt(305, 300);
+        assert.equal(prevented, 1, 'the guard is removed by the first swallowed click — the next click passes');
+
+        await sleep(400);
+        clickAt(300, 300);
+        assert.equal(prevented, 1, 'long after, with the guard already gone, the click passes');
+    } finally {
+        delete globalThis.document;
+    }
+});
+
+test('any new pointerdown disarms the arrow-tap trailing-click swallow', async () => {
+    const docBag = bag();
+    globalThis.document = docBag;
+    try {
+        const rigOut = await rig();
+        const { arrow } = addArrow(rigOut);
+        let prevented = 0;
+
+        const down = pointer('pointerdown', 1, 300, 300);
+        down.target = arrow;
+        arrow.dispatch('pointerdown', down);
+        arrow.dispatch('pointerup', { ...pointer('pointerup', 1, 300, 300), target: arrow });
+
+        // The user presses again immediately (e.g. an intentional dialog click): the press
+        // itself disarms the guard — the next click must pass.
+        docBag.dispatch('pointerdown', { pointerId: 2, pointerType: 'mouse' });
+        docBag.dispatch('click', {
+            clientX: 300, clientY: 300,
+            preventDefault() { prevented++; },
+            stopPropagation() { },
+        });
+        assert.equal(prevented, 0, 'a real press clears the swallow window — the next click passes');
+    } finally {
+        delete globalThis.document;
+    }
+});

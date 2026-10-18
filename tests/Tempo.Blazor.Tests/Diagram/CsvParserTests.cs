@@ -66,6 +66,14 @@ public class CsvParserTests
     }
 
     [Fact]
+    public void SingleColumn_ThrowsCsvMinColumns()
+    {
+        var act = () => CsvParser.Parse("a\n1");
+        act.Should().Throw<DiagramImportException>()
+            .Which.Error.Should().Be(DiagramImportError.CsvMinColumns);
+    }
+
+    [Fact]
     public void Parse_RespectsMaxRowsLimit()
     {
         var rows = Enumerable.Range(0, 10).Select(i => $"A{i},B{i}");
@@ -73,5 +81,25 @@ public class CsvParserTests
         var result = CsvParser.Parse(csv);
 
         result.Rows.Count.Should().Be(10);
+    }
+
+    [Fact]
+    public void Parse_InputOver512Kb_ThrowsInputTooComplex()
+    {
+        // The up-front length cap rejects an oversized paste without running CsvHelper.
+        var csv = "ColA,ColB\n" + new string('x', 512 * 1024);
+
+        var act = () => CsvParser.Parse(csv);
+        act.Should().Throw<DiagramImportException>()
+            .Which.Error.Should().Be(DiagramImportError.InputTooComplex);
+    }
+
+    [Fact]
+    public void DeveloperMessages_AreEnglishSentences_NotResourceKeys()
+    {
+        // The exception Message is developer-facing English; UIs map Error to a localized text.
+        var act = () => CsvParser.Parse("   ");
+        act.Should().Throw<DiagramImportException>()
+            .Which.Message.Should().Be("The CSV input is empty.");
     }
 }

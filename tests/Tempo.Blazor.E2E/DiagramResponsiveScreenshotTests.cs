@@ -42,13 +42,13 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("390×844: editor, search panel, connect modal (G2: gallery/imports stay tablet+)")]
+    [Description("390×844: editor, search panel, connect modal bottom sheet via forced tablet layout (G2: gallery/imports stay tablet+)")]
     public async Task Mobile_390_CapturesEditorDialogsAndConnectModal() =>
         await CaptureAllStatesAsync(390, 844, touch: false, "mobile-390", pinLayout: "mobile");
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("320×640: editor, search panel, connect modal (G2: gallery/imports stay tablet+)")]
+    [Description("320×640: editor, search panel, connect modal bottom sheet via forced tablet layout (G2: gallery/imports stay tablet+)")]
     public async Task Mobile_320_CapturesEditorDialogsAndConnectModal() =>
         await CaptureAllStatesAsync(320, 640, touch: false, "mobile-320", pinLayout: "mobile");
 
@@ -271,9 +271,11 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
 
         // 6. Connect modal (selecting a node renders the connect arrows in the decorator pane;
         //    the JS selection path is the stable entry point DiagramBaselineScreenshots uses).
-        //    Mobile skips it: G2 keeps edge work (the connect arrows) tablet+, so the arrows —
-        //    and with them the modal entry — do not render on a phone. The mobile sheet
-        //    PRESENTATION of the dialog is exercised by the phase-5 dialog tests.
+        //    G2 keeps the arrows tablet+, so the mobile pass grows the window until the editor
+        //    resolves tablet (the arrows render), opens the dialog, then shrinks back: TmModal
+        //    re-resolves to the bottom-sheet presentation below the 640px viewport scope while
+        //    the editor passes its (now mobile) resolved layout — a genuine mobile connect-modal
+        //    sheet capture via forced layout.
         if (!isMobile)
         {
             await page.EvaluateAsync(
@@ -291,7 +293,14 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                     return 'ok';
                 }
                 """);
-            await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
+            // The connect arrows render in their own decorator-pane group AFTER the port hits
+            // (buttons > gesture hit areas > visual handles), so even on a coarse pointer a real
+            // click lands on the arrow itself — no DOM .click() bypass is needed anymore
+            // (DiagramTabletTouchE2ETests asserts elementFromPoint finds the arrow under a finger).
+            // The flow clicks the S arrow: on a coarse pointer the N arrow shifts UP (clear of the
+            // rotate handle's hit circle) and a node hugging the canvas top pushes it under the
+            // shell's toolbar, where the click would be intercepted.
+            await page.Locator(".tm-diagram-connect-arrow--s").First.ClickAsync();
             await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
                 new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
             // The connect picker's primary action is a palette tile; on the mobile sheet the
@@ -299,6 +308,32 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             // mid slide-up would read the footer below the fold.
             await ShotSettledAsync(page, $"{prefix}--connect-modal");
             await AssertDialogFitsViewportAsync(page, ".tm-diagram-connect-modal", expectFooter: width < 640);
+        }
+        else
+        {
+            // Grow into the tablet band (the arrows render), open the dialog, then shrink back
+            // to the phone viewport so the modal re-resolves into the bottom sheet.
+            await page.SetViewportSizeAsync(900, height);
+            await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+            await page.EvaluateAsync(
+                """
+                () => {
+                    const canvas = document.querySelector('.tm-diagram-canvas');
+                    const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                    const id = document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id');
+                    inst.selectedIds = new Set([id]);
+                    window.tmDiagramEditor._updateSelection(inst);
+                    inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+                }
+                """);
+            // The S arrow (same choice as the desktop/tablet flow above).
+            await page.Locator(".tm-diagram-connect-arrow--s").First.ClickAsync();
+            await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
+                new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+            await page.SetViewportSizeAsync(width, height);
+            await page.WaitForTimeoutAsync(500);
+            await ShotSettledAsync(page, $"{prefix}--connect-modal");
+            await AssertDialogFitsViewportAsync(page, ".tm-diagram-connect-modal", expectFooter: true);
         }
     }
 

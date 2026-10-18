@@ -27,11 +27,41 @@ public class TmDiagramTemplateGalleryTests : DiagramTestBase
         var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
             .Add(p => p.Show, true));
 
-        var sections = cut.FindAll(".tm-diagram-template-gallery__section-title");
-        sections.Should().HaveCount(2);
-        sections[0].TextContent.Should().Be("Flowcharts",
-            "the section heading resolves through the category key scheme");
-        sections[1].TextContent.Should().Be("General");
+        // Flat grid (D15): all cards share one grid, no per-category sections.
+        cut.FindAll(".tm-diagram-template-gallery__grid").Should().ContainSingle();
+        cut.FindAll(".tm-diagram-template-gallery__section-title").Should().BeEmpty();
+        var categories = cut.FindAll(".tm-diagram-template-card__category").Select(c => c.TextContent.Trim()).ToList();
+        categories.Should().BeEquivalentTo(["Flowcharts", "General"],
+            "every card carries its (localized) category label");
+    }
+
+    [Fact]
+    public void AllTemplates_RenderInOneGrid()
+    {
+        var registry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t1", Name = "A", Category = "General" });
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t2", Name = "B", Category = "UML" });
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t3", Name = "C", Category = "BPMN" });
+
+        var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        cut.FindAll(".tm-diagram-template-gallery__grid").Should().ContainSingle();
+        cut.FindAll(".tm-diagram-template-card").Should().HaveCount(3);
+        cut.FindAll(".tm-diagram-template-gallery__section-title").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Search_HasAccessibleName()
+    {
+        var registry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t1", Name = "Blank", Category = "General" });
+
+        var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        cut.Find(".tm-diagram-template-gallery__search").GetAttribute("aria-label")
+            .Should().Be("Search templates");
     }
 
     [Fact]
@@ -170,9 +200,68 @@ public class TmDiagramTemplateGalleryTests : DiagramTestBase
         names.Should().NotContain("Blank Diagram");
         names.Should().NotContain("UML Class Diagram");
 
-        // Categories localize through the same by-name key scheme.
-        var sections = cut.FindAll(".tm-diagram-template-gallery__section-title").Select(s => s.TextContent.Trim()).ToList();
-        sections.Should().Contain("Obecné");
+        // Categories localize through the same by-name key scheme (now on the per-card label).
+        var categories = cut.FindAll(".tm-diagram-template-card__category").Select(s => s.TextContent.Trim()).ToList();
+        categories.Should().Contain("Obecné");
+    }
+
+    [Fact]
+    public void Search_MatchesLocalizedName_DiacriticInsensitive()
+    {
+        UseCzechLocalization();
+        var registry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        registry.RegisterTemplate(new DiagramTemplate { Id = "blank", Name = "Blank Diagram", Category = "General" });
+        registry.RegisterTemplate(new DiagramTemplate { Id = "uml-class", Name = "UML Class Diagram", Category = "UML" });
+
+        var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        cut.Find(".tm-diagram-template-gallery__search").Input("prazdny");
+        cut.Render();
+
+        var names = cut.FindAll(".tm-diagram-template-card__name").Select(n => n.TextContent.Trim()).ToList();
+        names.Should().Equal(new[] { "Prázdný diagram" },
+            "the localized display name is searchable without diacritics (D7)");
+    }
+
+    [Fact]
+    public void Categories_SortByLocalizedName()
+    {
+        UseCzechLocalization();
+        var registry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t-db", Name = "X", Category = "Database" });
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t-gen", Name = "Y", Category = "General" });
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t-flow", Name = "Z", Category = "Flowchart" });
+
+        var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        // Skip the first "All" chip; the rest follow the Czech alphabetical order.
+        var chips = cut.FindAll(".tm-diagram-template-gallery__filter")
+            .Select(f => f.TextContent.Trim()).Skip(1).ToList();
+        chips.Should().Equal("Databáze", "Obecné", "Vývojové diagramy");
+    }
+
+    [Fact]
+    public void EmptyState_IsInsideLiveRegion()
+    {
+        var registry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        registry.RegisterTemplate(new DiagramTemplate { Id = "t1", Name = "Blank", Category = "General" });
+
+        var cut = Render<TmDiagramTemplateGallery>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        var status = cut.Find(".tm-diagram-template-gallery__status");
+        status.GetAttribute("role").Should().Be("status");
+        status.TextContent.Should().BeEmpty("the live region renders before the empty state appears");
+
+        cut.Find(".tm-diagram-template-gallery__search").Input("zzzz-no-match");
+        cut.Render();
+
+        status = cut.Find(".tm-diagram-template-gallery__status");
+        status.TextContent.Should().Contain("No templates match your search.");
+        status.QuerySelector(".tm-diagram-template-gallery__empty").Should().NotBeNull(
+            "the empty state renders inside the live region");
     }
 
     [Fact]

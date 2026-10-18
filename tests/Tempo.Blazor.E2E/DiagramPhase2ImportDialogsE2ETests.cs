@@ -80,14 +80,22 @@ public sealed class DiagramPhase2ImportDialogsE2ETests : PlaywrightTestBase
         StringAssert.Contains(string.Join("|", mappingLabels), "Manager");
 
         var importButton = page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Import" });
-        Assert.IsFalse(await importButton.IsEnabledAsync(),
-            "import must stay disabled until the required column mappings are chosen");
+        // Review fix (auto-map): the headers "name"/"manager" match the semantic fields, so the
+        // mappings pre-select themselves and Import enables without a manual mapping step.
+        var enabled = false;
+        for (var attempt = 0; attempt < 20 && !enabled; attempt++)
+        {
+            await page.WaitForTimeoutAsync(250);
+            enabled = await importButton.IsEnabledAsync();
+        }
+        Assert.IsTrue(enabled,
+            "import must enable itself once the CSV headers auto-map to the required fields");
 
         await page.SetViewportSizeAsync(1440, 900);
         await page.WaitForTimeoutAsync(300);
         await SaveDialogScreenshotAsync(page, "diagram-csv-import-dialog--desktop");
 
-        TestContext.WriteLine("UX (CSV dialog, vs. mockup diagram-csv-import-dialog--desktop.png): the dialog keeps the CSV textarea, diagram-type select, per-field mapping selects with localized labels, and a first-5-rows data preview; the import action in the modal footer is correctly disabled until mappings are chosen. Visual polish is deferred to the redesign wave.");
+        TestContext.WriteLine("UX (CSV dialog, vs. mockup diagram-csv-import-dialog--desktop.png): the dialog keeps the CSV textarea, diagram-type select, per-field mapping selects with localized labels, and a first-5-rows data preview; matching headers auto-map (Import enables itself), and the import action in the modal footer is disabled only while a required mapping is missing. Visual polish is deferred to the redesign wave.");
     }
 
     private async Task<IPage> CreateDiagramPageAsync()

@@ -2428,6 +2428,16 @@
       ]
     },
     {
+      "kind": "Class",
+      "category": "Diagram",
+      "namespace": "Tempo.Blazor.Components.Diagram.Services",
+      "description": "Options for Generate.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Services/DiagramThumbnailSvgGenerator.cs",
+      "documentationStatus": "generated",
+      "itemName": "DiagramThumbnailOptions"
+    },
+    {
       "itemName": "DiagramThumbnailSvgGenerator",
       "kind": "Class",
       "category": "Diagram",
@@ -37265,11 +37275,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1488,
+    "itemCount": 1489,
     "manualItemCount": 1488,
-    "generatedItemCount": 1471,
-    "generatedOnlyItemCount": 0,
+    "generatedItemCount": 1472,
+    "generatedOnlyItemCount": 1,
     "componentCount": 0,
-    "publicApiTypeCount": 1471
+    "publicApiTypeCount": 1472
   }
 }

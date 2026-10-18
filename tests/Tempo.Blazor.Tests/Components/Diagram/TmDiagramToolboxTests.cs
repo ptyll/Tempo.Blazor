@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Tests.Diagram;
@@ -115,5 +116,32 @@ public class TmDiagramToolboxTests : DiagramTestBase
 
         var restoredCategories = cut.FindAll(".tm-diagram-toolbox__category-header").Count;
         restoredCategories.Should().Be(initialCategories);
+    }
+
+    [Fact]
+    public void Search_IsDiacriticInsensitive()
+    {
+        // D7: the visible (localized) label is searchable without diacritics — "obdelnik"
+        // must find the rectangle even though its raw name is the English "Rectangle".
+        UseCzechLocalization();
+        var registry = Services.GetRequiredService<Tempo.Blazor.Components.Diagram.Stencils.DiagramStencilRegistry>();
+        registry.RegisterStencil(new DiagramStencil
+        {
+            Id = "general.rectangle",
+            Name = "Rectangle",
+            NameResourceKey = "TmDiagramEditor_Rectangle",
+            Category = "General",
+            Kind = DiagramStencilKind.Node,
+            Origin = DiagramStencilOrigin.TempoOriginal
+        }, priority: 1);
+
+        var cut = Render<TmDiagramToolbox>();
+
+        var searchInput = cut.Find(".tm-diagram-toolbox__search input");
+        searchInput.Input("obdelnik");
+
+        var items = cut.FindAll(".tm-diagram-toolbox__item");
+        items.Should().Contain(i => i.GetAttribute("data-stencil-id") == "general.rectangle",
+            "the Czech label 'Obdélník' matches the unaccented query");
     }
 }

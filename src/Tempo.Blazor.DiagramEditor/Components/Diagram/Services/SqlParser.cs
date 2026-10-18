@@ -6,54 +6,112 @@ namespace Tempo.Blazor.Components.Diagram.Services;
 /// <summary>Parses SQL DDL statements into structured table definitions.</summary>
 public static class SqlParser
 {
-    public static List<SqlTableDefinition> Parse(string sql)
+    private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan DefaultOverallBudget = TimeSpan.FromSeconds(1);
+    private const RegexOptions Opts = RegexOptions.CultureInvariant;
+
+    /// <summary>Maximum accepted input length (512 KB); a larger script is rejected up front.</summary>
+    internal const int MaxInputLength = 512 * 1024;
+
+    private static readonly Regex CreateTableRegex = new(
+        @"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?" +
+        @"(?:\[(?<schema2>[^\]\s\.]+)\]\.|`?(?<schema>[^`\s\.]+)`?\.)?" +
+        @"(?:\[(?<table2>[^\]\s\(]+)\]|`?(?<table>[^`\s\(]+)`?|""(?<table3>[^""\s\(]+)"")\s*\((?<body>.*?)\)\s*(?:;|GO\s*$|ENGINE|CHARSET|TABLESPACE|$)",
+        Opts | RegexOptions.IgnoreCase | RegexOptions.Singleline, MatchTimeout);
+
+    private static readonly Regex SqlServerIdent = new(@"\[\w+\]", Opts, MatchTimeout);
+    private static readonly Regex MySqlIdent = new(@"`\w+`", Opts, MatchTimeout);
+    private static readonly Regex PgIdent = new("\"\\w+\"", Opts, MatchTimeout);
+
+    private static readonly Regex ColumnRegex = new(
+        @"^(?:`?\[?(?<name>[^`\s\]\(]+)\]?`?)\s+(?<type>[A-Z_0-9]+(?:\s*\([^\)]*\))?)" +
+        @"(?<rest>.*)$",
+        Opts | RegexOptions.IgnoreCase, MatchTimeout);
+
+    private static readonly Regex PkRegex = new(
+        @"(?:CONSTRAINT\s+[^\s(]+\s+)?PRIMARY\s+KEY\s*\((?<cols>[^)]+)\)",
+        Opts | RegexOptions.IgnoreCase, MatchTimeout);
+
+    private static readonly Regex FkRegex = new(
+        @"(?:CONSTRAINT\s+[^\s(]+\s+)?FOREIGN\s+KEY\s*\((?:`?\[?)(?<col>[^`\s\]\)]+)(?:\]?`?)\)\s*" +
+        @"REFERENCES\s+(?:`?\[?)(?<refTable>[^`\s\]\(]+)(?:\]?`?)(?:\s*\((?:`?\[?)(?<refCol>[^`\s\]\)]+)(?:\]?`?)\))?",
+        Opts | RegexOptions.IgnoreCase, MatchTimeout);
+
+    private static readonly Regex BlockComment = new(@"/\*[\s\S]*?\*/", Opts, MatchTimeout);
+    private static readonly Regex LineComment = new(@"--.*$", Opts | RegexOptions.Multiline, MatchTimeout);
+
+    /// <summary>
+    /// Parses <paramref name="sql"/> into table definitions. Throws <see cref="DiagramImportException"/>
+    /// with <see cref="DiagramImportError.InputTooComplex"/> when a statement exceeds the parser's
+    /// per-match time budget (a pathological input must burn at most the timeout, not the CPU),
+    /// when the whole input exceeds <see cref="MaxInputLength"/>, or when the overall
+    /// <paramref name="overallBudget"/> is exhausted (checked between matches and column lines).
+    /// </summary>
+    public static List<SqlTableDefinition> Parse(string sql) => Parse(sql, DefaultOverallBudget);
+
+    internal static List<SqlTableDefinition> Parse(string sql, TimeSpan overallBudget)
     {
         var tables = new List<SqlTableDefinition>();
         if (string.IsNullOrWhiteSpace(sql))
             return tables;
 
-        sql = RemoveComments(sql);
-        var dialect = DetectDialect(sql);
+        if (sql.Length > MaxInputLength)
+            throw new DiagramImportException(DiagramImportError.InputTooComplex,
+                $"The SQL input exceeds the maximum length of {MaxInputLength / 1024} KB.");
 
-        var createTableRegex = new Regex(
-            @"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?" +
-            @"(?:\[(?<schema2>[^\]\s\.]+)\]\.|`?(?<schema>[^`\s\.]+)`?\.)?" +
-            @"(?:\[(?<table2>[^\]\s\(]+)\]|`?(?<table>[^`\s\(]+)`?|""(?<table3>[^""\s\(]+)"")\s*\((?<body>.*?)\)\s*(?:;|GO\s*$|ENGINE|CHARSET|TABLESPACE|$)",
-            RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-        foreach (Match match in createTableRegex.Matches(sql))
+        var deadline = System.Diagnostics.Stopwatch.StartNew();
+        try
         {
-            var tableName = match.Groups["table"].Success ? match.Groups["table"].Value :
-                            match.Groups["table2"].Success ? match.Groups["table2"].Value :
-                            match.Groups["table3"].Value;
-            var body = match.Groups["body"].Value;
-            var table = ParseTableBody(NormalizeName(tableName), body);
-            table.Dialect = dialect;
-            tables.Add(table);
-        }
+            sql = RemoveComments(sql);
+            var dialect = DetectDialect(sql);
 
-        DetectJunctionTables(tables);
-        return tables;
+            foreach (Match match in CreateTableRegex.Matches(sql))
+            {
+                ThrowIfBudgetExhausted(deadline, overallBudget);
+                var tableName = match.Groups["table"].Success ? match.Groups["table"].Value :
+                                match.Groups["table2"].Success ? match.Groups["table2"].Value :
+                                match.Groups["table3"].Value;
+                var body = match.Groups["body"].Value;
+                var table = ParseTableBody(NormalizeName(tableName), body, deadline, overallBudget);
+                table.Dialect = dialect;
+                tables.Add(table);
+            }
+
+            DetectJunctionTables(tables);
+            return tables;
+        }
+        catch (RegexMatchTimeoutException ex)
+        {
+            throw new DiagramImportException(DiagramImportError.InputTooComplex, "The SQL input exceeded the parser's time budget.", inner: ex);
+        }
+    }
+
+    private static void ThrowIfBudgetExhausted(System.Diagnostics.Stopwatch deadline, TimeSpan overallBudget)
+    {
+        if (deadline.Elapsed > overallBudget)
+            throw new DiagramImportException(DiagramImportError.InputTooComplex,
+                $"The SQL input exceeded the parser's overall time budget of {overallBudget}.");
     }
 
     private static SqlDialect DetectDialect(string sql)
     {
-        if (Regex.IsMatch(sql, @"\[\w+\]", RegexOptions.None))
+        if (SqlServerIdent.IsMatch(sql))
             return SqlDialect.SqlServer;
-        if (Regex.IsMatch(sql, @"`\w+`"))
+        if (MySqlIdent.IsMatch(sql))
             return SqlDialect.MySql;
-        if (Regex.IsMatch(sql, "\"\\w+\""))
+        if (PgIdent.IsMatch(sql))
             return SqlDialect.PostgreSql;
         return SqlDialect.Generic;
     }
 
-    private static SqlTableDefinition ParseTableBody(string tableName, string body)
+    private static SqlTableDefinition ParseTableBody(string tableName, string body, System.Diagnostics.Stopwatch deadline, TimeSpan overallBudget)
     {
         var table = new SqlTableDefinition { Name = tableName };
         var lines = SplitColumns(body);
 
         foreach (var line in lines)
         {
+            ThrowIfBudgetExhausted(deadline, overallBudget);
             var trimmed = line.Trim();
             if (string.IsNullOrEmpty(trimmed))
                 continue;
@@ -95,12 +153,7 @@ public static class SqlParser
 
     private static SqlColumnDefinition? TryParseColumn(string line)
     {
-        var regex = new Regex(
-            @"^(?:`?\[?(?<name>[^`\s\]\(]+)\]?`?)\s+(?<type>[A-Z_0-9]+(?:\s*\([^\)]*\))?)" +
-            @"(?<rest>.*)$",
-            RegexOptions.IgnoreCase);
-
-        var match = regex.Match(line);
+        var match = ColumnRegex.Match(line);
         if (!match.Success)
             return null;
 
@@ -122,10 +175,7 @@ public static class SqlParser
     private static bool TryParseConstraintPrimaryKey(string line, out List<string> columns)
     {
         columns = [];
-        var regex = new Regex(
-            @"(?:CONSTRAINT\s+[^\s(]+\s+)?PRIMARY\s+KEY\s*\((?<cols>[^)]+)\)",
-            RegexOptions.IgnoreCase);
-        var match = regex.Match(line);
+        var match = PkRegex.Match(line);
 
         if (match.Success)
         {
@@ -139,11 +189,7 @@ public static class SqlParser
     private static bool TryParseConstraintForeignKey(string line, out SqlForeignKeyDefinition fk)
     {
         fk = new SqlForeignKeyDefinition();
-        var regex = new Regex(
-            @"(?:CONSTRAINT\s+[^\s(]+\s+)?FOREIGN\s+KEY\s*\((?:`?\[?)(?<col>[^`\s\]\)]+)(?:\]?`?)\)\s*" +
-            @"REFERENCES\s+(?:`?\[?)(?<refTable>[^`\s\]\(]+)(?:\]?`?)(?:\s*\((?:`?\[?)(?<refCol>[^`\s\]\)]+)(?:\]?`?)\))?",
-            RegexOptions.IgnoreCase);
-        var match = regex.Match(line);
+        var match = FkRegex.Match(line);
 
         if (match.Success)
         {
@@ -194,8 +240,8 @@ public static class SqlParser
 
     private static string RemoveComments(string sql)
     {
-        sql = Regex.Replace(sql, @"/\*[\s\S]*?\*/", string.Empty);
-        sql = Regex.Replace(sql, @"--.*$", string.Empty, RegexOptions.Multiline);
+        sql = BlockComment.Replace(sql, string.Empty);
+        sql = LineComment.Replace(sql, string.Empty);
         return sql;
     }
 

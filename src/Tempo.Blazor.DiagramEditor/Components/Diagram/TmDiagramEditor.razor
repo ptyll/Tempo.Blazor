@@ -580,9 +580,16 @@
 
 @* Connect stencil picker (DI4): its own component — the default palette is the source
    node's stencil set, "Show all" opts into the whole node library, focus returns to the
-   canvas through the modal's public focus scope. *@
+   canvas through the modal's public focus scope. The editor's resolved layout is passed as
+   the dialog's LayoutMode so the picker opens directly in grid/list form — a forced value
+   never measures, so there is no grid→list flash while the modal resolves on a phone.
+   The recents travel as a per-render snapshot: the internal list mutates in place, and a
+   stable reference would let the renderer skip the (possibly open) dialog on a re-render. *@
 <TmDiagramConnectDialog Show="@_connectModalOpen"
                         SourceStencilId="@ConnectSourceStencilId"
+                        RecentStencilIds="@_recentStencilIds.ToArray()"
+                        SourceLabel="@ConnectSourceLabel"
+                        LayoutMode="@(LayoutMode != TmLayoutMode.Auto ? LayoutMode : _resolvedLayout)"
                         OnClose="CloseConnectModal"
                         OnStencilSelected="OnStencilSelectedForConnect"
                         RestoreFocusTarget="@(_canvas?.GetContainerRef())" />

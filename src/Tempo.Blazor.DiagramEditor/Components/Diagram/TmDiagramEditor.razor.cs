@@ -99,6 +99,28 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>Raised when selected diagram item identifiers change.</summary>
     [Parameter] public EventCallback<string[]> OnSelectedIdsChanged { get; set; }
 
+    /// <summary>
+    /// Stencil ids the connect dialog offers first (newest first, at most 8). The list is never
+    /// shared between editor instances. Two usages:
+    /// <list type="bullet">
+    /// <item><description><b>Controlled</b> — the host owns the recents and replaces the reference when they
+    /// change (bind it together with <see cref="RecentStencilIdsChanged"/> to persist them per user).
+    /// The editor adopts a new reference whenever it changes and raises every update.</description></item>
+    /// <item><description><b>Uncontrolled</b> — the parameter is left unset (<c>null</c>) and the editor keeps
+    /// its own per-instance list; <see cref="RecentStencilIdsChanged"/> still fires, so a host can
+    /// observe picks without taking ownership.</description></item>
+    /// </list>
+    /// </summary>
+    [Parameter] public IReadOnlyList<string>? RecentStencilIds { get; set; }
+
+    /// <summary>
+    /// Raised with the updated recents (newest first) after the user connects a shape through the
+    /// connect dialog. In controlled usage the host feeds the value back through
+    /// <see cref="RecentStencilIds"/> (a <c>@bind</c> does this automatically); the editor adopts it
+    /// only when the reference changes, so a stale render can never clobber a just-added recent.
+    /// </summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> RecentStencilIdsChanged { get; set; }
+
     // ── Child component refs ─────────────────────────────────────────────────
 
     private TmDiagramCanvas? _canvas;
@@ -208,6 +230,43 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             ? null
             : _document?.Nodes.FirstOrDefault(n => n.Id == _connectSourceNodeId)?.StencilId;
 
+    internal const int MaxRecentStencils = 8;
+    private readonly List<string> _recentStencilIds = [];
+
+    /// <summary>
+    /// The last host-supplied recents value the editor adopted. Tracked separately from the
+    /// snapshot raised through <see cref="RecentStencilIdsChanged"/>: adoption runs only when
+    /// the host REFERENCE changes, so an unrelated re-render before the binding feeds back can
+    /// never clobber a recent the user just added.
+    /// </summary>
+    private IReadOnlyList<string>? _lastHostRecents;
+
+    private async Task RememberRecentStencilAsync(string stencilId)
+    {
+        _recentStencilIds.Remove(stencilId);
+        _recentStencilIds.Insert(0, stencilId);
+        if (_recentStencilIds.Count > MaxRecentStencils)
+            _recentStencilIds.RemoveRange(MaxRecentStencils, _recentStencilIds.Count - MaxRecentStencils);
+        await RecentStencilIdsChanged.InvokeAsync(_recentStencilIds.ToArray());
+    }
+
+    /// <summary>Label of the connect source for the dialog title: the node's own text, else its stencil name; capped at 40 text elements.</summary>
+    private string? ConnectSourceLabel
+    {
+        get
+        {
+            var node = _connectSourceNodeId is null ? null : _document?.Nodes.FirstOrDefault(n => n.Id == _connectSourceNodeId);
+            if (node is null) return null;
+            var text = DiagramNodeText.GetDisplayLabel(node);
+            if (string.IsNullOrEmpty(text))
+            {
+                var stencil = StencilRegistry.GetStencil(node.StencilId);
+                text = stencil is null ? null : DiagramStencilDisplayNames.GetStencilDisplayName(stencil, Loc);
+            }
+            return text is null ? null : DiagramNodeText.Truncate(text);
+        }
+    }
+
     // SQL import dialog state
     private bool _sqlImportDialogOpen;
     private bool _csvImportDialogOpen;
@@ -296,6 +355,24 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         // Every effective read-only change (host parameter or user toggle) applies its transition
         // here exactly once — so a host flip behaves like the user's toggle.
         ApplyReadOnlyTransition();
+
+        // Adopt the host's recents only when the host reference changes (controlled usage:
+        // the host owns the list and may replace it at any time). Uncontrolled usage — the
+        // parameter never set — keeps the editor's own per-instance list; the snapshot raised
+        // through RecentStencilIdsChanged is NOT the adoption baseline, so a re-render that
+        // arrives before the binding feeds back cannot wipe a just-added recent.
+        if (!ReferenceEquals(RecentStencilIds, _lastHostRecents))
+        {
+            _lastHostRecents = RecentStencilIds;
+            if (RecentStencilIds is not null)
+            {
+                _recentStencilIds.Clear();
+                _recentStencilIds.AddRange(RecentStencilIds
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(MaxRecentStencils));
+            }
+        }
     }
 
     /// <summary>Applies a change of the effective read-only state: entering read-only closes the
@@ -2463,6 +2540,10 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await _canvas.SetSelection(newNode.Id);
             await OnSelectionChanged([newNode.Id]);
         }
+
+        // The recent is recorded only after the node and edge exist: a failed creation leaves the
+        // recents untouched.
+        await RememberRecentStencilAsync(stencilId);
 
         CloseConnectModal();
     }

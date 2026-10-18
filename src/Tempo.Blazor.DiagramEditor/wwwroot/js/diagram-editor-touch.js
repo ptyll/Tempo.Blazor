@@ -18,6 +18,7 @@
 //                    (a press ring grows under the finger after ~150 ms, vibrate on open; the
 //                    release-click guard swallows the compatibility click on the menu)
 //  3a. portDrag      finger/pen drag from a port or connection point draws an edge (tablet+, R2)
+//  3b. arrowTap      a tap on a quick-connect arrow clicks the button (touch-slop tolerant)
 //   3. panDrag       drag from the empty surface pans; a tap on an edge selects the edge
 //   4. resizeDrag    zero-threshold drag on a resize hit rect → OnResizeStarted/Moved/Ended
 //   5. rotateDrag    zero-threshold drag on the rotate hit circle → the engine rotation session
@@ -66,8 +67,9 @@ async function loadHelpers() {
  * @returns {Promise<(function(): void & { cancelEditing: (reason?: string) => void, cancel: (reason?: string) => void })>}
  *   a detach that cancels a gesture in progress and ends every session — safe to call twice, safe
  *   before the helpers finished loading. `detach.cancelEditing(reason)` rolls back every EDITING
- *   gesture in flight (node drag, long-press, resize, rotate) while navigation keeps running — the
- *   read-only flip hook; `detach.cancel(reason)` cancels every session once.
+ *   gesture in flight (node drag, long-press, port edge-draw, arrow tap, resize, rotate) while
+ *   navigation keeps running — the read-only flip hook; `detach.cancel(reason)` cancels every
+ *   session once.
  */
 export async function attachTouch(engine, inst, helpers = null) {
     const { drag, gesture } = helpers ?? await loadHelpers();
@@ -211,6 +213,68 @@ export async function attachTouch(engine, inst, helpers = null) {
         onRelease: () => { portEl = null; },
     });
     sessions.push(portDrag);
+
+    // (3b) Quick-connect arrows: a TAP activates the button. The arrows are HTML inside an SVG
+    // <foreignObject>, and Chromium never delivers the touch's compatibility click TO the button
+    // inside foreignObject content — without this session a finger could press the arrow (it is
+    // the topmost hit target, review fix) yet the connect dialog would never open. The session
+    // claims the press and clicks the button itself on a tap. The tap tolerates the ~10px touch
+    // slop: a finger that drifts a few pixels before the lift still activates, a real drag
+    // (past the slop) never does. Read-only keeps it: the decorator pane renders no arrows
+    // there, so the selector never matches.
+    const ARROW_TAP_SLOP = 10;
+    const ARROW_CLICK_SWALLOW_MS = 350;
+    const ARROW_CLICK_SWALLOW_RADIUS = 30;
+    // The trailing-click guard of the LAST tap; detach() disarms it with everything else.
+    let dismissArrowClickGuard = null;
+    const arrowTap = drag.attach(inst.container, {
+        pointerTypes: TOUCH_POINTERS,
+        selector: '.tm-diagram-connect-arrow',
+        threshold: ARROW_TAP_SLOP,
+        touchAction: null,
+        onPress: () => true,
+        onRelease: (info) => {
+            if (info.outcome !== 'tap') return;
+            info.target?.click?.();
+            // Guard the tap point against the ONE trailing compatibility click: preventDefault
+            // on pointerdown does not cancel it in Chromium — it never reaches the button inside
+            // the foreignObject (that is why this session clicks the button itself), but it does
+            // dispatch at the lift point, which the just-opened connect dialog now paints over:
+            // the first tile would select-and-close instantly. Our own click() above ran
+            // synchronously, so the capture listener only ever meets that native one. It lives
+            // until the first swallowed click, ANY new pointerdown (a real press must never be
+            // eaten) or a 350 ms window — whichever comes first — and only within a ~30px
+            // radius of the tap point.
+            if (typeof document === 'undefined') return;
+            dismissArrowClickGuard?.();
+            const tapX = info.x ?? 0;
+            const tapY = info.y ?? 0;
+            let done = false;
+            let timer = 0;
+            const dismiss = () => {
+                if (done) return;
+                done = true;
+                if (timer) clearTimeout(timer);
+                document.removeEventListener('click', swallow, true);
+                document.removeEventListener('pointerdown', dismiss, true);
+                if (dismissArrowClickGuard === dismiss) dismissArrowClickGuard = null;
+            };
+            const swallow = (e) => {
+                const cx = e.clientX ?? tapX;
+                const cy = e.clientY ?? tapY;
+                if (Math.abs(cx - tapX) > ARROW_CLICK_SWALLOW_RADIUS
+                    || Math.abs(cy - tapY) > ARROW_CLICK_SWALLOW_RADIUS) return;
+                e.preventDefault?.();
+                e.stopPropagation?.();
+                dismiss();   // the first swallowed click ends the guard
+            };
+            timer = setTimeout(dismiss, ARROW_CLICK_SWALLOW_MS);
+            document.addEventListener('click', swallow, true);
+            document.addEventListener('pointerdown', dismiss, true);
+            dismissArrowClickGuard = dismiss;
+        },
+    });
+    sessions.push(arrowTap);
 
     // (3) Pan: a drag from the empty surface pans the canvas (navigation works read-only too);
     // a tap on an edge hit path selects the edge so a tablet can edit it. A press on the empty
@@ -385,6 +449,8 @@ export async function attachTouch(engine, inst, helpers = null) {
         if (detached) return;
         detached = true;
         removePressRing();
+        dismissArrowClickGuard?.();
+        dismissArrowClickGuard = null;
         for (const session of sessions) session.detach?.();
         inst.container.removeEventListener('pointerdown', onContactDown, true);
         if (typeof document !== 'undefined') {
@@ -397,7 +463,7 @@ export async function attachTouch(engine, inst, helpers = null) {
     }
     // The EDITING sessions a read-only flip must roll back. A new editing session
     // MUST be added here — navigation sessions (pan, pinch) stay live.
-    const editingSessions = [nodeDrag, contextMenu, portDrag, resizeDrag, rotateDrag];
+    const editingSessions = [nodeDrag, contextMenu, portDrag, arrowTap, resizeDrag, rotateDrag];
     // Read-only flip: roll back every EDITING gesture in flight (their onCancel callbacks restore
     // the engine/C# state); navigation (pan, pinch) keeps running.
     detach.cancelEditing = (reason = 'read-only') => {

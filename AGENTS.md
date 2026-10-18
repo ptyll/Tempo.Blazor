@@ -522,6 +522,7 @@ Key consequences:
 - **Edges** live in the same scene pane and can be placed above or below nodes via `ZIndex`.
 - **Selection outlines** are SVG `<rect>` elements injected into the overlay pane by `diagram-editor.js`.
 - **Resize/rotate handles** are SVG `<rect>`/`<circle>` elements rendered by Blazor into the decorator pane and kept in sync during JS drags.
+- **Decorator pane paint order** follows the rule **buttons > gesture hit areas > visual handles**: each selected node renders, in order, (1) `g.tm-diagram-node-handles` (the visible resize/rotate handles plus their enlarged hit areas), (2) `g.tm-diagram-port-hits` (the finger-sized gesture hit circles over the ports) and (3) `g.tm-diagram-connect-arrows` (the quick-connect arrow buttons). Whatever a finger must reach paints last — a press lands on the topmost painted element, so the arrows stay reachable over the port hit discs on a coarse pointer. The JS transform sync (`_updateSelectionTransforms`, `_applyNodeRotation`) keeps every `[data-node-id]` group in the pane in sync generically, and a live resize hides `.tm-diagram-port-hits` and `.tm-diagram-connect-arrows` (their last-rendered positions would be stale while the geometry changes).
 - Pan and zoom are driven exclusively by the SVG `viewBox`; there is no `_syncHtmlTransform` or HTML overlay CSS transform.
 
 ### Auto Layout (dagre)

@@ -1177,6 +1177,26 @@
       ]
     },
     {
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Diagram.Services",
+      "description": "Machine-readable reason a CSV/SQL import failed; UIs map it to a localized message. Explicit numeric values: the enum ships in the same (unreleased) version that introduced it, so the values may be pinned; Unknown reserves 0 for a reason outside the list.",
+      "packageId": "Tempo.Blazor.DiagramEditor",
+      "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Services/DiagramImportException.cs",
+      "documentationStatus": "generated",
+      "itemName": "DiagramImportError"
+    },
+    {
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Diagram.Services",
+      "description": "Thrown by CsvParser, the CSV generators and SqlParser. Derives from InvalidOperationException so existing catch blocks keep working; Message is an English developer message and must never be shown to end users — map Error to a localized text instead.",
+      "packageId": "Tempo.Blazor.DiagramEditor",
+      "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Services/DiagramImportException.cs",
+      "documentationStatus": "generated",
+      "itemName": "DiagramImportException"
+    },
+    {
       "itemName": "DiagramInspectorLayout",
       "kind": "Enum",
       "category": "Components",
@@ -1676,12 +1696,6 @@
               "default": "0"
             }
           ]
-        },
-        {
-          "name": "Count",
-          "kind": "Property",
-          "type": "int",
-          "description": "Total number of registered templates."
         }
       ]
     },
@@ -2973,6 +2987,7 @@
           "name": "Parse",
           "kind": "Method",
           "type": "List<SqlTableDefinition>",
+          "description": "Parses sql into table definitions. Throws DiagramImportException with InputTooComplex when a statement exceeds the parser's per-match time budget (a pathological input must burn at most the timeout, not the CPU), when the whole input exceeds MaxInputLength, or when the overall overallBudget is exhausted (checked between matches and column lines).",
           "parameters": [
             {
               "name": "sql",
@@ -4491,6 +4506,13 @@
           "description": "Raised with the picked stencil id; the host creates the node and the edge."
         },
         {
+          "name": "RecentStencilIds",
+          "type": "IReadOnlyList<string>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Stencil ids offered first; owned by the host editor. The dialog only reads it."
+        },
+        {
           "name": "RestoreFocusTarget",
           "type": "ElementReference?",
           "isRequired": false,
@@ -4501,6 +4523,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the dialog is visible."
+        },
+        {
+          "name": "SourceLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Display label of the source node (its text or stencil name). When set, the title reads \"Connect from {label}\"; otherwise the generic \"Select shape to connect\"."
         },
         {
           "name": "SourceStencilId",
@@ -4531,15 +4559,19 @@
         },
         {
           "name": "tm-diagram-connect-modal__grid",
-          "description": "Tile container; a 3-column grid on desktop, single-column rows below 640px."
+          "description": "Tile container; a 3-column grid on desktop, single-column rows on the mobile sheet (the --list modifier)."
+        },
+        {
+          "name": "tm-diagram-connect-modal__grid--list",
+          "description": "List modifier on the mobile sheet: one plain row per stencil, keyed off the resolved layout so the CSS column count and the arrow-key column count share one source."
         },
         {
           "name": "tm-diagram-connect-modal__item",
-          "description": "One stencil tile; roving tabindex carries the arrow-key tab stop."
+          "description": "One stencil tile; roving tabindex carries the arrow-key tab stop and DOM focus follows it."
         },
         {
           "name": "tm-diagram-connect-modal__icon",
-          "description": "40px stencil preview box."
+          "description": "40px stencil preview box (multi-character label text is stripped from the icon markup)."
         },
         {
           "name": "tm-diagram-connect-modal__label",
@@ -4548,6 +4580,10 @@
         {
           "name": "tm-diagram-connect-modal__close",
           "description": "Sheet footer Close button; the whole footer hides at 640px and up."
+        },
+        {
+          "name": "tm-diagram-connect-modal__status",
+          "description": "Always-rendered role=status live region wrapping the empty-state note."
         },
         {
           "name": "tm-diagram-connect-modal__empty",
@@ -4696,6 +4732,18 @@
           "type": "bool",
           "isRequired": false,
           "description": "Host-pinned read-only mode: prevents all editing interactions and hides the built-in Read-only/Edit toggle. The component never assigns this parameter — the toggle flips the internal user state exposed by IsReadOnly, so a hosted read-only preview cannot be unlocked from the UI."
+        },
+        {
+          "name": "RecentStencilIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Stencil ids the connect dialog offers first (newest first, at most 8). Optional: when null the editor keeps its own per-instance list. Bind it together with RecentStencilIdsChanged to persist recents per user. The list is never shared between editor instances."
+        },
+        {
+          "name": "RecentStencilIdsChanged",
+          "type": "EventCallback<IReadOnlyList<string>>",
+          "isRequired": false,
+          "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog."
         },
         {
           "name": "ShowGrid",
@@ -5406,7 +5454,7 @@
       "category": "Diagram",
       "subcategory": "Templates",
       "namespace": "Tempo.Blazor.Components.Diagram",
-      "description": "Modal gallery (extra-large dialog, bottom sheet on phones) for browsing and picking a starter diagram template from the DiagramTemplateRegistry. The search field and the localized category chips share one toolbar row; matching templates group into sections of vertical TmDiagramTemplateCard tiles. Double-click/Enter on a card or the Create footer button raises OnSelect with the chosen template; template and category names resolve through TmDiagramTemplate_*/TmDiagramTemplateCategory_* resource keys with the raw values as fallback.",
+      "description": "Modal gallery (extra-large dialog, bottom sheet on phones) for browsing and picking a starter diagram template from the DiagramTemplateRegistry. The search field and the localized category chips share one toolbar row; matching templates render as one flat grid of vertical TmDiagramTemplateCard tiles (no per-category sections — the chips and the per-card category label carry the grouping), sorted by the localized name. The search matches the localized template and category names diacritic-insensitively. Double-click/Enter on a card or the Create footer button raises OnSelect with the chosen template; template and category names resolve through TmDiagramTemplate_*/TmDiagramTemplateCategory_* resource keys with the raw values as fallback.",
       "packageId": "Tempo.Blazor.DiagramEditor",
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/TmDiagramTemplateGallery.razor",
       "documentationStatus": "merged",
@@ -5568,11 +5616,11 @@
     }
   ],
   "summary": {
-    "itemCount": 141,
+    "itemCount": 143,
     "manualItemCount": 141,
-    "generatedItemCount": 132,
-    "generatedOnlyItemCount": 0,
+    "generatedItemCount": 134,
+    "generatedOnlyItemCount": 2,
     "componentCount": 17,
-    "publicApiTypeCount": 115
+    "publicApiTypeCount": 117
   }
 }

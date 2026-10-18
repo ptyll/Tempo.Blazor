@@ -152,6 +152,14 @@
     margin-top: var(--tm-space-2);
 }
 
+/* Debounced preview problem: POLITE text inside the status live region (never role=alert) —
+   the Import click promotes it to the assertive alert above. */
+.tm-diagram-csv-import__status-error {
+    margin: 0;
+    color: var(--tm-color-error);
+    font-size: var(--tm-text-sm);
+}
+
 /* Narrow-viewport sheet mitigation (UX review phase 2): on phones the TmModal renders this
    dialog as a bottom sheet capped at 0.85 of the viewport, and the full sheet scroll contract
    (min-height: 0 on the core .tm-modal-body) belongs to the foundational sheet plan — it is

@@ -50,6 +50,18 @@
       "description": "Raised when selected diagram item identifiers change."
     },
     {
+      "name": "RecentStencilIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Stencil ids the connect dialog offers first (newest first, at most 8). Optional: when null the editor keeps its own per-instance list. Bind it together with RecentStencilIdsChanged to persist recents per user. The list is never shared between editor instances."
+    },
+    {
+      "name": "RecentStencilIdsChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,

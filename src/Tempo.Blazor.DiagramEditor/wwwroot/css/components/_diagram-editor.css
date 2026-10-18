@@ -329,7 +329,7 @@
    editor's own NAMED container (tm-diagram-editor) so a narrow editor inside a wide
    window hides the labels too (the data-editor-layout attribute only follows the shell's
    resolved mode, which a host-overridable breakpoint pair may keep "tablet" past 1024). */
-@container tm-diagram-editor (max-width: 1023.98px) {
+@container tm-diagram-editor (width < 1024px) {
     .tm-diagram-editor__header-bar .tm-diagram-editor__panel-toggle-label {
         display: none;
     }
@@ -1405,10 +1405,12 @@ circle.tm-diagram-port-hit {
     opacity: 1;
 }
 
-/* A live resize rebuilds the node geometry in C# while the finger-sized port hit circles keep
- * their last-rendered positions — they would cover the growing edge with a stale hit area.
- * The JS engine adds `tm-diagram-canvas--resizing` for the gesture's duration. */
-.tm-diagram-canvas--resizing .tm-diagram-port-hits {
+/* A live resize rebuilds the node geometry in C# while the finger-sized port hit circles and
+ * the quick-connect arrows keep their last-rendered positions — they would cover the growing
+ * edge with a stale hit area. The JS engine adds `tm-diagram-canvas--resizing` for the
+ * gesture's duration. */
+.tm-diagram-canvas--resizing .tm-diagram-port-hits,
+.tm-diagram-canvas--resizing .tm-diagram-connect-arrows {
     display: none;
 }
 
@@ -2600,11 +2602,25 @@ line.tm-diagram-rotate-handle-stem {
  * connect-arrow-wrap"> via SVG x/y/width/height attributes (so it rotates with
  * the node). The HTML <button> inside just fills the foreignObject; we keep
  * it as HTML for a11y (real button semantics, keyboard focus, screen readers)
- * — same approach as draw.io's mxConnectionHandler. */
+ * — same approach as draw.io's mxConnectionHandler. The buttons render in
+ * their own per-node <g class="tm-diagram-connect-arrows"> AFTER the port
+ * hits (buttons > gesture hit areas > visual handles), so the arrows stay the
+ * topmost hit target at their position and a finger can reach them. */
+.tm-diagram-connect-arrows {
+    /* The arrow's press target: the button is 22px and the ::before grows it
+       symmetrically to this size. Redeclared on this group (a SIBLING of the
+       handles and port-hits groups, not a child) together with the handle-hit
+       variable the coarse-pointer offset is computed from. */
+    --tm-diagram-connect-hit: 22px;
+    --tm-diagram-handle-hit: 24px;
+}
+
 .tm-diagram-connect-arrow-wrap {
     overflow: visible;
 }
+
 .tm-diagram-connect-arrow {
+    position: relative;
     width: 100%;
     height: 100%;
     padding: 0;
@@ -2619,6 +2635,16 @@ line.tm-diagram-rotate-handle-stem {
     box-shadow: var(--tm-shadow-sm);
     transition: transform 0.12s, background 0.12s;
 }
+
+/* Invisible hit area centred on the button: total press target =
+   var(--tm-diagram-connect-hit). No background — it only extends the button's
+   own hit area outward. */
+.tm-diagram-connect-arrow::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--tm-diagram-connect-hit) - 100%) / -2);
+    border-radius: 50%;
+}
 .tm-diagram-connect-arrow:hover {
     background: var(--tm-color-primary);
     transform: scale(1.15);
@@ -2631,6 +2657,37 @@ line.tm-diagram-rotate-handle-stem {
     line-height: 1;
     color: var(--tm-color-primary);
     pointer-events: none;
+}
+
+/* Coarse pointer (review fix — the connect arrows must be finger-reachable):
+ * the press target grows to 44px and every wrap offsets outward by
+ * handle-hit/2 + a gap so the expanded hit clears the 44px port hit discs (a
+ * finger still draws edges from the ports). The N arrow keeps its horizontal
+ * centre (an off-centre top arrow reads as misplaced) and shifts straight UP
+ * by the offset PLUS the rotate-hit size: its 44px press circle then clears the
+ * rotate handle's 44px hit circle parked directly above the top edge. */
+@media (pointer: coarse) {
+    .tm-diagram-connect-arrows {
+        --tm-diagram-connect-hit: 44px;
+        --tm-diagram-handle-hit: 44px;
+        --tm-diagram-connect-offset: calc(var(--tm-diagram-handle-hit) / 2 + var(--tm-space-1));
+    }
+
+    .tm-diagram-connect-arrow-wrap--n {
+        transform: translate(0, calc(-1 * (var(--tm-diagram-connect-offset) + var(--tm-diagram-handle-hit))));
+    }
+
+    .tm-diagram-connect-arrow-wrap--e {
+        transform: translate(var(--tm-diagram-connect-offset), 0);
+    }
+
+    .tm-diagram-connect-arrow-wrap--s {
+        transform: translate(0, var(--tm-diagram-connect-offset));
+    }
+
+    .tm-diagram-connect-arrow-wrap--w {
+        transform: translate(calc(-1 * var(--tm-diagram-connect-offset)), 0);
+    }
 }
 
 /* Rotate the "+" glyph to suggest the direction. Actual button placement is
@@ -2687,17 +2744,14 @@ line.tm-diagram-rotate-handle-stem {
 
 /* No fixed pixel cap here: the palette keeps whole tile rows visible on desktop
    and a tall offer (Show all) scrolls the modal body instead of slicing the
-   last row in half. */
+   last row in half. The column count comes from the component
+   (--tm-connect-cols = the Columns property) — the SAME source the arrow-key
+   navigation uses, so CSS and keys can never disagree. */
 .tm-diagram-connect-modal__grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--tm-connect-cols, 3), 1fr);
     gap: var(--tm-space-2);
     padding: var(--tm-space-1);
-}
-@media (max-width: 480px) {
-    .tm-diagram-connect-modal__grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
 .tm-diagram-connect-modal__item {
@@ -2730,12 +2784,15 @@ line.tm-diagram-rotate-handle-stem {
     color: var(--tm-color-text-muted);
 }
 
-/* The stencil preview svg fills its wrapper (moved here from inline styles). */
+/* The stencil preview svg fills its wrapper (moved here from inline styles). Long-text
+   previews are stripped in markup (DiagramStencilIconMarkup); the clip is the backstop. */
 .tm-diagram-connect-modal__icon svg {
     width: 100%;
     height: 100%;
     display: block;
 }
+.tm-diagram-connect-modal__icon svg,
+.tm-diagram-toolbox__preview svg { overflow: hidden; }
 .tm-diagram-connect-modal__item:hover .tm-diagram-connect-modal__icon {
     color: var(--tm-color-primary);
 }
@@ -2750,29 +2807,35 @@ line.tm-diagram-rotate-handle-stem {
     max-width: 100%;
 }
 
-/* Mobile sheet (DI4): the palette presents as plain rows — icon and label on one
-   line, no tiles, no chevrons. */
-@media (width < 640px) {
-    .tm-diagram-connect-modal__grid {
-        grid-template-columns: 1fr;
-        max-height: none;
-    }
+/* Mobile sheet (DI4): plain rows. Keyed off the resolved layout (modifier set by the
+   component), so the CSS column count and the arrow-key column count share one source
+   (--tm-connect-cols; the modifier keeps the row layout). */
+.tm-diagram-connect-modal__grid--list { max-height: none; }
+.tm-diagram-connect-modal__grid--list .tm-diagram-connect-modal__item { flex-direction: row; justify-content: flex-start; gap: var(--tm-space-3); padding: var(--tm-space-3); }
+.tm-diagram-connect-modal__grid--list .tm-diagram-connect-modal__icon { flex: 0 0 auto; }
+.tm-diagram-connect-modal__grid--list .tm-diagram-connect-modal__label { text-align: start; white-space: normal; }
 
-    .tm-diagram-connect-modal__item {
-        flex-direction: row;
-        justify-content: flex-start;
-        gap: var(--tm-space-3);
-        padding: var(--tm-space-3);
-    }
+/* No-result escape hatch (rendered OUTSIDE the live region): widen the scope to the whole
+   stencil library with one tap when the narrowed palette has no match. */
+.tm-diagram-connect-modal__empty-actions {
+    display: flex;
+    justify-content: center;
+}
 
-    .tm-diagram-connect-modal__icon {
-        flex: 0 0 auto;
-    }
+.tm-diagram-connect-modal__search-all {
+    padding: var(--tm-space-2) var(--tm-space-4);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+}
 
-    .tm-diagram-connect-modal__label {
-        text-align: start;
-        white-space: normal;
-    }
+.tm-diagram-connect-modal__search-all:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
 }
 
 /* Desktop dialog: the header close ✕ is the close affordance, so the sheet's sticky
@@ -3002,16 +3065,9 @@ line.tm-diagram-rotate-handle-stem {
     gap: 20px;
 }
 
-.tm-diagram-template-gallery__section-title {
-    margin: 0 0 8px;
-    font-size: var(--tm-font-size-sm, 14px);
-    font-weight: 600;
-    color: var(--tm-color-text-muted);
-}
-
 .tm-diagram-template-gallery__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
 }
 
@@ -3068,7 +3124,7 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-template-card__thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .tm-diagram-template-card__placeholder {
@@ -3079,8 +3135,6 @@ line.tm-diagram-rotate-handle-stem {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
-    font-weight: 700;
     color: var(--tm-color-text-muted);
 }
 
@@ -3369,6 +3423,21 @@ line.tm-diagram-rotate-handle-stem {
     }
 
     .tm-diagram-toolbox__item {
+        min-height: var(--tm-touch-target);
+    }
+
+    /* Dialog chrome (review fix): the gallery filter chips, the connect "Show all" toggle and
+       the "Search all shapes" escape hatch grow to the finger target; both dialog search
+       fields carry their class directly on the input (TmTextInput puts Class on the element),
+       so the input itself takes the min-height. */
+    .tm-diagram-template-gallery__filter,
+    .tm-diagram-connect-modal__show-all,
+    .tm-diagram-connect-modal__search-all {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-template-gallery__search,
+    .tm-diagram-connect-modal__search {
         min-height: var(--tm-touch-target);
     }
 }

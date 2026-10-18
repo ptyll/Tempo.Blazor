@@ -39,7 +39,58 @@ public class TmDiagramTemplateCardTests : DiagramTestBase
             .Add(p => p.Template, template)
             .Add(p => p.Selected, false));
 
-        cut.Find(".tm-diagram-template-card__placeholder").TextContent.Should().Be("B");
+        // Placeholder (X6): the notation icon — never a first letter.
+        var placeholder = cut.Find(".tm-diagram-template-card__placeholder");
+        placeholder.QuerySelector("svg").Should().NotBeNull("the placeholder paints a category icon");
+        placeholder.TextContent.Trim().Should().BeEmpty("no letter text renders inside the placeholder");
+    }
+
+    [Fact]
+    public void EmptyName_RendersPlaceholder_WithoutThrowing()
+    {
+        var template = new DiagramTemplate { Id = "no-name", Name = "", Category = "General" };
+
+        var cut = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, false));
+
+        cut.Find(".tm-diagram-template-card__placeholder").Should().NotBeNull();
+        cut.Find(".tm-diagram-template-card").GetAttribute("aria-label")
+            .Should().Be("no-name", "an empty name falls back to the template id, never an index crash");
+    }
+
+    [Fact]
+    public void Placeholder_UsesCategoryIcon()
+    {
+        var template = new DiagramTemplate { Id = "t1", Name = "Blank", Category = "Database" };
+
+        var cut = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, false));
+
+        var placeholder = cut.Find(".tm-diagram-template-card__placeholder");
+        placeholder.QuerySelector("svg.tm-icon-lg").Should().NotBeNull("the category icon renders");
+        placeholder.TextContent.Trim().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Tags_ThatRepeatTheCategory_AreHidden()
+    {
+        var template = new DiagramTemplate
+        {
+            Id = "t1",
+            Name = "ArchiMate 3 Layered Baseline",
+            Category = "ArchiMate",
+            Tags = ["archimate", "layers", "LAYERS"]
+        };
+
+        var cut = Render<TmDiagramTemplateCard>(parameters => parameters
+            .Add(p => p.Template, template)
+            .Add(p => p.Selected, false));
+
+        cut.FindAll(".tm-diagram-template-card__tag")
+            .Select(t => t.TextContent.Trim())
+            .Should().Equal(new[] { "layers" }, "tags that merely repeat the category are deduplicated away");
     }
 
     [Fact]

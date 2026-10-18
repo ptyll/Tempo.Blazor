@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Diagram
 @using Tempo.Blazor.Components.Diagram.Templates
+@using Tempo.Blazor.Components.Icons
 @using Microsoft.AspNetCore.Components.Web
 
 @* Mockup: vertical cards — preview on top, then name, category and tags (category + tags clamped
@@ -14,7 +15,7 @@
      @onkeyup="OnCardKeyUp"
      role="button"
      tabindex="0"
-     aria-label="@DisplayName"
+     aria-label="@AccessibleName"
      aria-pressed="@(_selected ? "true" : "false")">
     <div class="tm-diagram-template-card__thumb">
         @if (!string.IsNullOrEmpty(Template.ThumbnailUrl))
@@ -23,8 +24,10 @@
         }
         else
         {
-            <div class="tm-diagram-template-card__placeholder">
-                <span>@DisplayName[0]</span>
+            @* Placeholder (X6): the notation/category icon — never a first letter, which crashed on
+               an empty name and split emoji surrogate pairs. *@
+            <div class="tm-diagram-template-card__placeholder" aria-hidden="true">
+                <TmIcon Name="@PlaceholderIcon" Size="IconSize.Lg" />
             </div>
         }
     </div>
@@ -32,7 +35,7 @@
         <span class="tm-diagram-template-card__name">@DisplayName</span>
         <div class="tm-diagram-template-card__meta">
             <span class="tm-diagram-template-card__category">@CategoryName</span>
-            @foreach (var tag in Template.Tags.Take(3))
+            @foreach (var tag in DisplayTags)
             {
                 <span class="tm-diagram-template-card__tag">@tag</span>
             }
@@ -60,6 +63,29 @@
     [Parameter] public string BaseUri { get; set; } = "";
 
     private bool _selected => Selected;
+
+    /// <summary>Accessible name: the display name, or the template id when the name is empty (never crashes).</summary>
+    private string AccessibleName => string.IsNullOrWhiteSpace(DisplayName) ? Template.Id : DisplayName;
+
+    /// <summary>Notation/category icon for cards without a thumbnail (X6) — never a letter.</summary>
+    private string PlaceholderIcon => Template.Category?.ToLowerInvariant() switch
+    {
+        "flowchart" => IconNames.ListTree,
+        "uml" => IconNames.Box,
+        "database" => IconNames.Database,
+        "network" => IconNames.Server,
+        "archimate" => IconNames.Layers,
+        "bpmn" => IconNames.Activity,
+        "c4" => IconNames.Package,
+        _ => IconNames.Layout
+    };
+
+    /// <summary>Tags minus those that merely repeat the category (raw or localized), case/diacritic-insensitive; max 3.</summary>
+    private IEnumerable<string> DisplayTags => Template.Tags
+        .Where(tag => !string.Equals(DiagramSearchText.Fold(tag), DiagramSearchText.Fold(Template.Category), StringComparison.OrdinalIgnoreCase)
+                   && !string.Equals(DiagramSearchText.Fold(tag), DiagramSearchText.Fold(CategoryName), StringComparison.OrdinalIgnoreCase))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Take(3);
 
     /// <summary>Localized display name (resource key derived from the template Id, raw-name fallback).</summary>
     private string DisplayName => DiagramTemplateDisplayNames.GetTemplateName(Template, Loc);

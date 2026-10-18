@@ -1427,28 +1427,31 @@ test('init() destroys a previous instance registered for the same container id',
 
 // ── Re-review fixes: port-hit transform parity, resize hiding, Tab dismissal ─────────────────
 
-/** A decoratorPane stub whose handles / port-hit groups record the transforms they receive. */
+/** A decoratorPane stub whose per-node groups (handles, port hits, connect arrows) record the
+ *  transforms they receive through the generic [data-node-id] selector. */
 function decoratorWithGroups(nodeId) {
-    const make = () => {
+    const make = (cls) => {
         const attrs = new Map();
         return {
             attrs,
+            className: cls,
             setAttribute(n, v) { attrs.set(n, String(v)); },
             getAttribute(n) { return attrs.has(n) ? attrs.get(n) : null; },
         };
     };
-    const handles = make(), portHits = make();
+    const handles = make('tm-diagram-node-handles');
+    const portHits = make('tm-diagram-port-hits');
+    const connectArrows = make('tm-diagram-connect-arrows');
+    const groups = [handles, portHits, connectArrows];
     return {
-        handles, portHits,
-        querySelector(sel) {
-            if (sel === 'g.tm-diagram-node-handles[data-node-id="' + nodeId + '"]') return handles;
-            if (sel === 'g.tm-diagram-port-hits[data-node-id="' + nodeId + '"]') return portHits;
-            return null;
+        handles, portHits, connectArrows,
+        querySelectorAll(sel) {
+            return sel === '[data-node-id="' + nodeId + '"]' ? groups : [];
         },
     };
 }
 
-test('_updateSelectionTransforms keeps the port-hit group glued to the handles group', () => {
+test('_updateSelectionTransforms keeps every per-node decorator group in sync', () => {
     const engine = loadEngine();
     const { inst } = fakeInst({ selectedIds: new Set(['n1']) });
     const nodeEl = {
@@ -1464,6 +1467,8 @@ test('_updateSelectionTransforms keeps the port-hit group glued to the handles g
     assert.equal(dec.handles.getAttribute('transform'), expected);
     assert.equal(dec.portHits.getAttribute('transform'), expected,
         'the finger-sized port hit circles follow the same transform as the handles during a drag');
+    assert.equal(dec.connectArrows.getAttribute('transform'), expected,
+        'the quick-connect arrows live in their own per-node group and follow the same transform');
 });
 
 test('_applyNodeRotation rotates the port-hit group together with the handles group', () => {
@@ -1484,6 +1489,8 @@ test('_applyNodeRotation rotates the port-hit group together with the handles gr
     assert.equal(dec.handles.getAttribute('transform'), expected);
     assert.equal(dec.portHits.getAttribute('transform'), expected,
         'a live rotation moves the port hits with the handles so a finger press lands on the rotated port');
+    assert.equal(dec.connectArrows.getAttribute('transform'), expected,
+        'a live rotation moves the quick-connect arrows with the node');
 });
 
 test('setResizing toggles tm-diagram-canvas--resizing on the canvas (the CSS hides the port hits)', () => {

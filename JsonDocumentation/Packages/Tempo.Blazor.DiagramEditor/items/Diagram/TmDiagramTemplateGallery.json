@@ -2,7 +2,7 @@
   "itemName": "TmDiagramTemplateGallery",
   "kind": "Component",
   "category": "Diagram",
-  "description": "Modal gallery (extra-large dialog, bottom sheet on phones) for browsing and picking a starter diagram template from the DiagramTemplateRegistry. The search field and the localized category chips share one toolbar row; matching templates group into sections of vertical TmDiagramTemplateCard tiles. Double-click/Enter on a card or the Create footer button raises OnSelect with the chosen template; template and category names resolve through TmDiagramTemplate_*/TmDiagramTemplateCategory_* resource keys with the raw values as fallback.",
+  "description": "Modal gallery (extra-large dialog, bottom sheet on phones) for browsing and picking a starter diagram template from the DiagramTemplateRegistry. The search field and the localized category chips share one toolbar row; matching templates render as one flat grid of vertical TmDiagramTemplateCard tiles (no per-category sections — the chips and the per-card category label carry the grouping), sorted by the localized name. The search matches the localized template and category names diacritic-insensitively. Double-click/Enter on a card or the Create footer button raises OnSelect with the chosen template; template and category names resolve through TmDiagramTemplate_*/TmDiagramTemplateCategory_* resource keys with the raw values as fallback.",
   "packageId": "Tempo.Blazor.DiagramEditor",
   "namespace": "Tempo.Blazor.Components.Diagram",
   "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/TmDiagramTemplateGallery.razor",

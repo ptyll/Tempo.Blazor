@@ -7,7 +7,6 @@ src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
-src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css | 480
 src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css | 959
 src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css | 960
 src/Tempo.Blazor.Signing/wwwroot/css/components/_pdf-template-designer.css | 1100

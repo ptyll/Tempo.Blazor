@@ -115,7 +115,7 @@ public static class CsvToOrgChartGenerator
             !string.IsNullOrWhiteSpace(m.SelectedColumn));
 
         if (mapping is null)
-            throw new InvalidOperationException($"Column mapping for '{semanticField}' is missing.");
+            throw new DiagramImportException(DiagramImportError.MappingMissing, $"Column mapping for '{semanticField}' is missing.", field: semanticField);
 
         for (int i = 0; i < headers.Count; i++)
         {
@@ -123,7 +123,7 @@ public static class CsvToOrgChartGenerator
                 return i;
         }
 
-        throw new InvalidOperationException($"Selected column '{mapping.SelectedColumn}' for '{semanticField}' was not found in CSV headers.");
+        throw new DiagramImportException(DiagramImportError.ColumnNotFound, $"Selected column '{mapping.SelectedColumn}' for '{semanticField}' was not found in CSV headers.", column: mapping.SelectedColumn, field: semanticField);
     }
 
     private static string GetValue(IReadOnlyList<string> row, int index)

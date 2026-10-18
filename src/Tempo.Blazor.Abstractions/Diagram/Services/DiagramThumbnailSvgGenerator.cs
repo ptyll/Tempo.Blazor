@@ -4,6 +4,22 @@ using Tempo.Blazor.Components.Diagram.Models;
 
 namespace Tempo.Blazor.Components.Diagram.Services;
 
+/// <summary>Options for <see cref="DiagramThumbnailSvgGenerator.Generate(DiagramDocument, DiagramThumbnailOptions)"/>.</summary>
+public sealed class DiagramThumbnailOptions
+{
+    /// <summary>Render node labels (default <c>true</c>; template card previews pass <c>false</c> — the text is illegible at card size).</summary>
+    public bool IncludeLabels { get; init; } = true;
+
+    /// <summary>Paint an opaque white background rect (default <c>true</c>; template card previews pass <c>false</c> — the card provides the surface).</summary>
+    public bool OpaqueBackground { get; init; } = true;
+
+    /// <summary>Viewport width of the generated SVG (must be positive). Defaults to 300 (template card previews use 320 for a 16:10 box).</summary>
+    public int Width { get; init; } = 300;
+
+    /// <summary>Viewport height of the generated SVG (must be positive). Defaults to 200 (template card previews use 200 for a 16:10 box).</summary>
+    public int Height { get; init; } = 200;
+}
+
 /// <summary>
 /// Generates a lightweight SVG thumbnail from a <see cref="DiagramDocument"/>.
 /// Used for template previews when no static PNG thumbnail is available.
@@ -11,11 +27,25 @@ namespace Tempo.Blazor.Components.Diagram.Services;
 public static class DiagramThumbnailSvgGenerator
 {
     /// <summary>
-    /// Generates an SVG string representing the document.
+    /// Generates an SVG string representing the document (labels on, opaque white background,
+    /// 300×200 viewport).
     /// </summary>
     public static string Generate(DiagramDocument document)
+        => Generate(document, new DiagramThumbnailOptions());
+
+    /// <summary>
+    /// Generates an SVG string representing the document. The viewBox is fitted to the node
+    /// bounds plus a fixed padding; the viewport (<see cref="DiagramThumbnailOptions.Width"/> ×
+    /// <see cref="DiagramThumbnailOptions.Height"/>) meets it with
+    /// <c>preserveAspectRatio="xMidYMid meet"</c>, so any viewport aspect renders the whole
+    /// diagram without cropping.
+    /// </summary>
+    public static string Generate(DiagramDocument document, DiagramThumbnailOptions options)
     {
         ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.Width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.Height);
         document.EnsurePages();
 
         var page = document.ActivePage;
@@ -39,8 +69,9 @@ public static class DiagramThumbnailSvgGenerator
         var viewBoxH = Math.Max(maxY - minY + padding * 2, 1);
 
         var sb = new StringBuilder();
-        sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{viewBoxX.ToString(CultureInfo.InvariantCulture)} {viewBoxY.ToString(CultureInfo.InvariantCulture)} {viewBoxW.ToString(CultureInfo.InvariantCulture)} {viewBoxH.ToString(CultureInfo.InvariantCulture)}\" width=\"300\" height=\"200\">");
-        sb.AppendLine("<rect x=\"" + viewBoxX.ToString(CultureInfo.InvariantCulture) + "\" y=\"" + viewBoxY.ToString(CultureInfo.InvariantCulture) + "\" width=\"" + viewBoxW.ToString(CultureInfo.InvariantCulture) + "\" height=\"" + viewBoxH.ToString(CultureInfo.InvariantCulture) + "\" fill=\"#ffffff\" />");
+        sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"{viewBoxX.ToString(CultureInfo.InvariantCulture)} {viewBoxY.ToString(CultureInfo.InvariantCulture)} {viewBoxW.ToString(CultureInfo.InvariantCulture)} {viewBoxH.ToString(CultureInfo.InvariantCulture)}\" width=\"{options.Width}\" height=\"{options.Height}\" preserveAspectRatio=\"xMidYMid meet\">");
+        if (options.OpaqueBackground)
+            sb.AppendLine("<rect x=\"" + viewBoxX.ToString(CultureInfo.InvariantCulture) + "\" y=\"" + viewBoxY.ToString(CultureInfo.InvariantCulture) + "\" width=\"" + viewBoxW.ToString(CultureInfo.InvariantCulture) + "\" height=\"" + viewBoxH.ToString(CultureInfo.InvariantCulture) + "\" fill=\"#ffffff\" />");
 
         // Render edges first (behind nodes)
         foreach (var edge in edges)
@@ -59,14 +90,14 @@ public static class DiagramThumbnailSvgGenerator
 
         foreach (var node in nodes)
         {
-            RenderNode(sb, node);
+            RenderNode(sb, node, options.IncludeLabels);
         }
 
         sb.AppendLine("</svg>");
         return sb.ToString();
     }
 
-    private static void RenderNode(StringBuilder sb, DiagramNode node)
+    private static void RenderNode(StringBuilder sb, DiagramNode node, bool includeLabels)
     {
         var fill = node.Style.Fill ?? GetDefaultFill(node.StencilId);
         var stroke = node.Style.Stroke ?? GetDefaultStroke(node.StencilId);
@@ -96,13 +127,14 @@ public static class DiagramThumbnailSvgGenerator
                 break;
 
             case NodeShape.Text:
-                sb.AppendLine($"<text x=\"{cx.ToString(CultureInfo.InvariantCulture)}\" y=\"{cy.ToString(CultureInfo.InvariantCulture)}\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"14\" fill=\"#111827\">{EscapeSvgText(GetNodeLabel(node))}</text>");
+                if (includeLabels)
+                    sb.AppendLine($"<text x=\"{cx.ToString(CultureInfo.InvariantCulture)}\" y=\"{cy.ToString(CultureInfo.InvariantCulture)}\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"14\" fill=\"#111827\">{EscapeSvgText(GetNodeLabel(node))}</text>");
                 break;
 
             case NodeShape.Rectangle:
             default:
                 sb.AppendLine($"<rect x=\"{x.ToString(CultureInfo.InvariantCulture)}\" y=\"{y.ToString(CultureInfo.InvariantCulture)}\" width=\"{w.ToString(CultureInfo.InvariantCulture)}\" height=\"{h.ToString(CultureInfo.InvariantCulture)}\" rx=\"{radius.ToString(CultureInfo.InvariantCulture)}\" fill=\"{fill}\" stroke=\"{stroke}\" stroke-width=\"{strokeWidth.ToString(CultureInfo.InvariantCulture)}\" />");
-                var label = GetNodeLabel(node);
+                var label = includeLabels ? GetNodeLabel(node) : string.Empty;
                 if (!string.IsNullOrWhiteSpace(label) && shape != NodeShape.Text)
                 {
                     sb.AppendLine($"<text x=\"{cx.ToString(CultureInfo.InvariantCulture)}\" y=\"{cy.ToString(CultureInfo.InvariantCulture)}\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"{(Math.Min(14, h / 3)).ToString(CultureInfo.InvariantCulture)}\" fill=\"#111827\">{EscapeSvgText(label)}</text>");

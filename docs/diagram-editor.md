@@ -149,6 +149,21 @@ long-press) and `pointer-gesture.js` (two-finger pinch/pan) — imported by the 
   centre), so they stay reachable through the mouse-sized visible circle and the edge-corridor hit
   stack. Without `ShowConnectArrows` (mobile) no ports, connection points or hit circles render at
   all — no invisible dead zone on the touch surface.
+- **Decorator pane paint order (review fix): buttons > gesture hit areas > visual handles.** Each
+  selected node renders, in order, (1) `g.tm-diagram-node-handles` (the visible resize/rotate
+  handles + their enlarged hit areas), (2) `g.tm-diagram-port-hits` (the finger-sized port hit
+  discs) and (3) `g.tm-diagram-connect-arrows` (the quick-connect arrow buttons). A press lands on
+  the topmost painted element — parking the arrows inside the handles group made the port hit discs
+  cover them on a coarse pointer, so the arrows were unreachable by finger. Now they paint last and
+  stay reachable; on a coarse pointer the CSS gives each arrow a 44px hit area (`--tm-diagram-connect-hit`,
+  a `::before` inset) and offsets the wrap outward by `handle-hit/2 + gap` so the expanded hit
+  clears the port hit discs (the N arrow also shifts sideways, clear of the rotate hit above the top
+  edge). The JS transform sync keeps every `[data-node-id]` group glued to the node during drags,
+  and a live resize hides the port hits and the connect arrows (stale positions). One more
+  foreignObject fact: Chromium never synthesizes a compatibility click for a touch that starts in
+  `foreignObject` content, so the touch module carries a dedicated arrow-tap session — a stationary
+  press/release clicks the button (opening the connect dialog) and swallows the native click that
+  follows, while a moved press stays a drag and never clicks.
 - Pinch zooms and pans the canvas (`viewBox`-driven); a host that needs custom pinch behaviour
   cancels the drag from the pinch's `onStart`.
 - Long-press opens the context menu — **mobile only** as the F3 bottom sheet; on tablet and

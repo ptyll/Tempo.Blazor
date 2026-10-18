@@ -18,11 +18,13 @@
     { "name": "tm-diagram-connect-modal__toolbar", "description": "One row holding the search field and the Show-all toggle." },
     { "name": "tm-diagram-connect-modal__search", "description": "Class of the search TmTextInput (lands on the input element)." },
     { "name": "tm-diagram-connect-modal__show-all", "description": "Show-all toggle button; aria-pressed mirrors the state." },
-    { "name": "tm-diagram-connect-modal__grid", "description": "Tile container; a 3-column grid on desktop, single-column rows below 640px." },
-    { "name": "tm-diagram-connect-modal__item", "description": "One stencil tile; roving tabindex carries the arrow-key tab stop." },
-    { "name": "tm-diagram-connect-modal__icon", "description": "40px stencil preview box." },
+    { "name": "tm-diagram-connect-modal__grid", "description": "Tile container; a 3-column grid on desktop, single-column rows on the mobile sheet (the --list modifier)." },
+    { "name": "tm-diagram-connect-modal__grid--list", "description": "List modifier on the mobile sheet: one plain row per stencil, keyed off the resolved layout so the CSS column count and the arrow-key column count share one source." },
+    { "name": "tm-diagram-connect-modal__item", "description": "One stencil tile; roving tabindex carries the arrow-key tab stop and DOM focus follows it." },
+    { "name": "tm-diagram-connect-modal__icon", "description": "40px stencil preview box (multi-character label text is stripped from the icon markup)." },
     { "name": "tm-diagram-connect-modal__label", "description": "Localized stencil name under (desktop) or beside (mobile) the icon." },
     { "name": "tm-diagram-connect-modal__close", "description": "Sheet footer Close button; the whole footer hides at 640px and up." },
+    { "name": "tm-diagram-connect-modal__status", "description": "Always-rendered role=status live region wrapping the empty-state note." },
     { "name": "tm-diagram-connect-modal__empty", "description": "Localized empty-state note when the search matches nothing." }
   ],
   "parameters": [
@@ -36,6 +38,18 @@
       "type": "string?",
       "isRequired": false,
       "description": "Stencil id of the source node. Its set scopes the default palette; unknown or empty ids fall back to every node stencil."
+    },
+    {
+      "name": "RecentStencilIds",
+      "type": "IReadOnlyList<string>",
+      "isRequired": false,
+      "description": "Stencil ids offered first; owned by the host editor. The dialog only reads it."
+    },
+    {
+      "name": "SourceLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Display label of the source node (its text or stencil name). When set, the title reads \"Connect from {label}\"; otherwise the generic \"Select shape to connect\"."
     },
     {
       "name": "OnClose",

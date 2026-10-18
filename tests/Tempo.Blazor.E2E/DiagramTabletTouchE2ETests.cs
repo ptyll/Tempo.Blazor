@@ -899,6 +899,65 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             "a finger drag from a selected node's port must create an edge (the finger-sized port hit wins over the handles)");
     }
 
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch (review fix): connect arrows are finger-reachable — elementFromPoint finds the arrow and a real tap opens the connect dialog")]
+    public async Task Tablet_ConnectArrow_FingerReachable_TapOpensDialog()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        // Select the first node through the same JS entry the other decorator-pane tests use,
+        // so the pane renders its handles group, port hits and the connect-arrow group.
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id')");
+        Assert.IsNotNull(nodeId, "the sample document must render a node");
+        await page.EvaluateAsync(
+            """
+            (id) => {
+                const canvas = document.querySelector('.tm-diagram-canvas');
+                const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                inst.selectedIds = new Set([id]);
+                window.tmDiagramEditor._updateSelection(inst);
+                inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+            }
+            """, nodeId);
+
+        var arrow = page.Locator($"g.tm-diagram-connect-arrows[data-node-id='{nodeId}'] .tm-diagram-connect-arrow--e").First;
+        await arrow.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await arrow.ScrollIntoViewIfNeededAsync();
+
+        // Reachability: at the arrow's centre the topmost element must BE the arrow button.
+        // The arrows render in their own decorator-pane group AFTER the finger-sized port hit
+        // discs (buttons > gesture hit areas > visual handles), so a finger lands on the
+        // button — never on a port hit painting over it (the pre-fix defect).
+        var probe = await page.EvaluateAsync<string?>(
+            """
+            (id) => {
+                const arrow = document.querySelector(`g.tm-diagram-connect-arrows[data-node-id='${id}'] .tm-diagram-connect-arrow--e`);
+                if (!arrow) return null;
+                const r = arrow.getBoundingClientRect();
+                const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                const hit = document.elementFromPoint(cx, cy);
+                if (!hit) return 'none';
+                if (hit.closest('.tm-diagram-connect-arrow')) return 'arrow';
+                return hit.className?.toString() || hit.tagName;
+            }
+            """, nodeId);
+        Assert.AreEqual("arrow", probe,
+            $"elementFromPoint at the arrow centre must find the connect arrow, not '{probe}'");
+
+        // A real touch tap on the arrow opens the connect dialog. The arrows are HTML inside an
+        // SVG foreignObject, where Chromium never synthesizes a compatibility click for a touch
+        // — the touch module's dedicated arrow-tap session clicks the button on a tap (a moved
+        // press is a drag and never clicks; covered by the node engine tests).
+        var box = await arrow.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the connect arrow must have a bounding box");
+        await page.Touchscreen.TapAsync((float)(box.X + box.Width / 2), (float)(box.Y + box.Height / 2));
+        await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+    }
+
     /// <summary>Two-finger pinch around the canvas centre by the given spread delta.
     /// Synthetic PointerEvents: setPointerCapture throws for an inactive id, so this cannot
     /// prove capture behaviour — see the Cdp* tests.</summary>

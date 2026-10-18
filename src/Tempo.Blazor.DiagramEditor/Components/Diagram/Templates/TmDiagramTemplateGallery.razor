@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Diagram
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Diagram.Templates
 @using Tempo.Blazor.Abstractions.Layout
@@ -23,7 +24,10 @@
                viewports wrap the chips under the field without leaving the row container. *@
             <div class="tm-diagram-template-gallery__toolbar">
                 <TmTextInput @bind-Value="_searchQuery"
+                             Type="search"
+                             LeftIcon="@IconNames.Search"
                              Placeholder="@Loc["TmDiagramTemplateGallery_SearchPlaceholder"]"
+                             aria-label="@Loc["TmDiagramTemplateGallery_SearchAriaLabel"]"
                              Class="tm-diagram-template-gallery__search" />
                 @if (_categories.Length > 0)
                 {
@@ -33,7 +37,7 @@
                                 @onclick="() => _selectedCategory = null">
                             @Loc["TmDiagramTemplateGallery_All"]
                         </button>
-                        @foreach (var cat in _categories)
+                        @foreach (var cat in _categories.OrderBy(c => DiagramTemplateDisplayNames.GetCategoryName(c, Loc), DisplayComparer))
                         {
                             <button type="button" class="tm-diagram-template-gallery__filter @(_selectedCategory == cat ? "tm-diagram-template-gallery__filter--active" : "")"
                                     aria-pressed="@(_selectedCategory == cat ? "true" : "false")"
@@ -46,29 +50,28 @@
             </div>
 
             <div class="tm-diagram-template-gallery__body">
-                @foreach (var category in GetVisibleCategories())
-                {
-                    <div class="tm-diagram-template-gallery__section">
-                        <h4 class="tm-diagram-template-gallery__section-title">@DiagramTemplateDisplayNames.GetCategoryName(category.Name, Loc)</h4>
-                        <div class="tm-diagram-template-gallery__grid">
-                            @foreach (var template in category.Templates)
-                            {
-                                <TmDiagramTemplateCard Template="template"
-                                                       Selected="_selectedTemplate?.Id == template.Id"
-                                                       OnClick="() => SelectTemplate(template)"
-                                                       OnActivateRequest="() => ActivateTemplate(template)"
-                                                       BaseUri="@Navigation.BaseUri" />
-                            }
-                        </div>
-                    </div>
-                }
+                @{ var visible = GetVisibleCategories().ToList(); }
+                @* Flat grid (D15): one shared card grid across all categories — the category chips
+                   and the per-card category label carry the grouping; no per-category sections. *@
+                <div class="tm-diagram-template-gallery__grid">
+                    @foreach (var template in visible.SelectMany(c => c.Templates))
+                    {
+                        <TmDiagramTemplateCard @key="template.Id"
+                                               Template="template"
+                                               Selected="_selectedTemplate?.Id == template.Id"
+                                               OnClick="() => SelectTemplate(template)"
+                                               OnActivateRequest="() => ActivateTemplate(template)"
+                                               BaseUri="@Navigation.BaseUri" />
+                    }
+                </div>
 
-                @if (!GetVisibleCategories().Any())
-                {
-                    <div class="tm-diagram-template-gallery__empty">
-                        @Loc["TmDiagramTemplateGallery_NoResults"]
-                    </div>
-                }
+                @* Live region (D12): always in the DOM so screen readers announce the empty state. *@
+                <div class="tm-diagram-template-gallery__status" role="status" aria-live="polite" aria-atomic="true">
+                    @if (visible.Count == 0)
+                    {
+                        <div class="tm-diagram-template-gallery__empty">@Loc["TmDiagramTemplateGallery_NoResults"]</div>
+                    }
+                </div>
             </div>
         </div>
     </ChildContent>
@@ -119,21 +122,45 @@
         }
     }
 
+    /// <summary>Culture-aware comparer for the visible labels: Czech users get Czech alphabetical order (D7).
+    /// Cached per culture — the property is read for every card during a render, and creating a
+    /// comparer per call wasted an object each time.</summary>
+    private StringComparer DisplayComparer
+    {
+        get
+        {
+            var culture = Loc.Culture ?? System.Globalization.CultureInfo.CurrentUICulture;
+            if (_displayComparer is null || !Equals(_displayComparerCulture, culture))
+            {
+                _displayComparer = StringComparer.Create(culture, ignoreCase: true);
+                _displayComparerCulture = culture;
+            }
+            return _displayComparer;
+        }
+    }
+
+    private StringComparer? _displayComparer;
+    private System.Globalization.CultureInfo? _displayComparerCulture;
+
     private IEnumerable<DiagramTemplateCategory> GetVisibleCategories()
     {
         var query = _searchQuery.Trim();
-        var all = TemplateRegistry.GetAll()
-            .Where(t => string.IsNullOrEmpty(query)
-                || t.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || t.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)));
+        var all = TemplateRegistry.GetAll().Where(t =>
+            DiagramSearchText.MatchesAny(query,
+                [DiagramTemplateDisplayNames.GetTemplateName(t, Loc), t.Name,
+                 DiagramTemplateDisplayNames.GetCategoryName(t.Category, Loc), t.Category, .. t.Tags]));
 
         if (!string.IsNullOrEmpty(_selectedCategory))
             all = all.Where(t => t.Category == _selectedCategory);
 
         return all
             .GroupBy(t => t.Category)
-            .Select(g => new DiagramTemplateCategory { Name = g.Key, Templates = g.ToList() })
-            .OrderBy(c => c.Name);
+            .Select(g => new DiagramTemplateCategory
+            {
+                Name = g.Key,
+                Templates = g.OrderBy(t => DiagramTemplateDisplayNames.GetTemplateName(t, Loc), DisplayComparer).ToList()
+            })
+            .OrderBy(c => DiagramTemplateDisplayNames.GetCategoryName(c.Name, Loc), DisplayComparer);
     }
 
     private void SelectTemplate(DiagramTemplate template)

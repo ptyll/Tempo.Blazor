@@ -3332,19 +3332,17 @@ window.tmDiagramEditor = {
                 const outline = inst.overlayPane.querySelector('[data-sel-for="' + id + '"]');
                 if (outline) outline.setAttribute('transform', tr);
             }
-            // F5: keep the decorator-pane per-node handles group (resize rects,
-            // rotate circle, connect-arrow foreignObjects) in sync with the
-            // live node during JS-driven drags. Blazor re-renders it after the
-            // drag commits, but during the drag we must update the DOM directly
-            // otherwise the handles would lag behind the node.
+            // F5: keep the decorator-pane per-node groups (transform handles, the finger-sized
+            // port hit circles and the quick-connect arrows — every group Blazor renders with
+            // data-node-id for this node) in sync with the live node during JS-driven drags.
+            // Blazor re-renders them after the drag commits, but during the drag we must update
+            // the DOM directly otherwise the handles would lag behind the node. The generic
+            // [data-node-id] selector covers whichever groups exist (a mobile host renders no
+            // handles group, a read-only host renders none at all) without a per-class lookup.
             if (inst.decoratorPane) {
-                const handles = inst.decoratorPane.querySelector('g.tm-diagram-node-handles[data-node-id="' + id + '"]');
-                if (handles) handles.setAttribute('transform', tr);
-                // The finger-sized port hit circles (review fix) live in a sibling group with
-                // the same per-node transform — keep them glued to the node during drags too,
-                // otherwise a finger press would land on a stale circle after a drag.
-                const portHits = inst.decoratorPane.querySelector('g.tm-diagram-port-hits[data-node-id="' + id + '"]');
-                if (portHits) portHits.setAttribute('transform', tr);
+                inst.decoratorPane.querySelectorAll('[data-node-id="' + id + '"]').forEach(el => {
+                    el.setAttribute('transform', tr);
+                });
             }
         });
     },
@@ -4149,14 +4147,22 @@ window.tmDiagramEditor = {
     },
 
     // Live resize (mouse C# drag or the touch/pen session): the finger-sized port hit circles
-    // keep their last-rendered positions while the node geometry changes under them, so the
-    // canvas carries `tm-diagram-canvas--resizing` for the gesture's duration and the CSS
-    // hides `.tm-diagram-port-hits`. C# sets true in TryBeginResize and false on commit/rollback
-    // (Blazor re-renders the hits at the new geometry afterwards).
+    // and the quick-connect arrows keep their last-rendered positions while the node geometry
+    // changes under them, so the canvas carries `tm-diagram-canvas--resizing` for the gesture's
+    // duration and the CSS hides `.tm-diagram-port-hits` and `.tm-diagram-connect-arrows`.
+    // C# sets true in TryBeginResize and false on commit/rollback
+    // (Blazor re-renders the hits and arrows at the new geometry afterwards).
     setResizing: function (container, resizing) {
         const inst = this.instances.get(container ? container.id : null);
         if (!inst || !inst.container) return;
         inst.container.classList.toggle('tm-diagram-canvas--resizing', !!resizing);
+    },
+
+    // Scrolls the element's nearest scrollable ancestor just enough to make it visible —
+    // the companion to ElementReference.FocusAsync(preventScroll: true), so roving focus
+    // (the connect dialog's arrow-key grid) never jolts the page scroll position.
+    scrollNearest: function (el) {
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     },
 
     getDragStencilId: function () {
@@ -4171,15 +4177,13 @@ window.tmDiagramEditor = {
         const h = parseFloat(el.getAttribute('data-h') || '0');
         const tr = this._buildNodeTransform(p.x, p.y, angle, w, h);
         el.setAttribute('transform', tr);
-        // F5: also rotate the handles group in decorator-pane so the resize
-        // squares, rotate knob and connect arrows track the live rotation.
+        // F5: also rotate the decorator-pane groups (handles, port hits, connect arrows) so
+        // every affordance tracks the live rotation. The generic [data-node-id] selector
+        // covers whichever per-node groups Blazor rendered.
         if (inst.decoratorPane) {
-            const handles = inst.decoratorPane.querySelector('g.tm-diagram-node-handles[data-node-id="' + nodeId + '"]');
-            if (handles) handles.setAttribute('transform', tr);
-            // The port hit circles mirror the same per-node transform — rotate them with the
-            // handles so a finger press keeps landing on the rotated port position.
-            const portHits = inst.decoratorPane.querySelector('g.tm-diagram-port-hits[data-node-id="' + nodeId + '"]');
-            if (portHits) portHits.setAttribute('transform', tr);
+            inst.decoratorPane.querySelectorAll('[data-node-id="' + nodeId + '"]').forEach(handle => {
+                handle.setAttribute('transform', tr);
+            });
         }
         this._updateSelection(inst);
     },

@@ -81,7 +81,7 @@
                                                 @if (!string.IsNullOrEmpty(stencil.IconSvg))
                                                 {
                                                     <svg viewBox="0 0 32 32" aria-hidden="true" style="width:32px;height:32px;">
-                                                        @((MarkupString)stencil.IconSvg)
+                                                        @((MarkupString)DiagramStencilIconMarkup.ForPreview(stencil.IconSvg))
                                                     </svg>
                                                 }
                                                 else if (stencil.Kind == DiagramStencilKind.Edge)
