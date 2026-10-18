@@ -44,9 +44,9 @@
     },
     {
       "name": "OnCanvasContextMenu",
-      "type": "EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY)>",
+      "type": "EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY, string Origin)>",
       "isRequired": false,
-      "description": "Raised when the empty canvas is right-clicked to open a context menu."
+      "description": "Raised when the empty canvas is right-clicked or long-pressed to open a context menu."
     },
     {
       "name": "OnClearTableCellSelection",
@@ -62,9 +62,9 @@
     },
     {
       "name": "OnEdgeContextMenu",
-      "type": "EventCallback<(string EdgeId, double ScreenX, double ScreenY)>",
+      "type": "EventCallback<(string EdgeId, double ScreenX, double ScreenY, string Origin)>",
       "isRequired": false,
-      "description": "Raised when an edge is right-clicked to open a context menu."
+      "description": "Raised when an edge is right-clicked or long-pressed to open a context menu."
     },
     {
       "name": "ShowPageView",
@@ -121,7 +121,7 @@
     },
     {
       "name": "OnNodeContextMenu",
-      "type": "EventCallback<(string NodeId, double ScreenX, double ScreenY)>",
+      "type": "EventCallback<(string NodeId, double ScreenX, double ScreenY, string Origin)>",
       "isRequired": false,
       "description": "Raised when a node is right-clicked or long-pressed to open a context menu."
     },
@@ -181,9 +181,9 @@
     },
     {
       "name": "OnTableCellContextMenu",
-      "type": "EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY)>",
+      "type": "EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY, string Origin)>",
       "isRequired": false,
-      "description": "Raised when a table cell is right-clicked to open a context menu."
+      "description": "Raised when a table cell is right-clicked or long-pressed to open a context menu."
     },
     {
       "name": "OnTableCellSelect",

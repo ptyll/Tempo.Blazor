@@ -1,0 +1,48 @@
+name: JS unit tests (Node)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: js-node-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # esbuild (devDependency) is required by scripts/headless-*.test.mjs in the document-editor lane.
+      - name: Install
+        run: npm ci
+
+      - name: Core helpers + overlay (pointer-drag, pointer-gesture, workflow, scheduler, dashboard, …)
+        run: npm run test:overlay
+
+      - name: Diagram editor
+        run: npm run test:diagram-editor
+
+      - name: Reporting modules
+        run: npm run test:reporting-modules
+
+      - name: Document editor
+        run: npm run test:document-editor
+
+      - name: Document editor bundle is current
+        run: npm run check:document-editor-bundle

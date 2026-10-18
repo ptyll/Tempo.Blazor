@@ -599,7 +599,7 @@ public class TmDiagramEditorReadOnlyTests : LocalizationTestBase
             .Add(e => e.Document, doc)
             .Add(e => e.ReadOnly, false));
 
-        InvokePrivate(cut.Instance, "OnCanvasContextMenu", (10d, 10d, 10d, 10d));
+        InvokePrivate(cut.Instance, "OnCanvasContextMenu", (10d, 10d, 10d, 10d, "mouse"));
         cut.FindAll(".tm-diagram-editor__context-menu").Should().HaveCount(1,
             "precondition: the context menu opened");
 

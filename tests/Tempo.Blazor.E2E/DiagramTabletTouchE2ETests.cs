@@ -113,9 +113,9 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         await LongPressNodeAsync(page, nodeId);
         var menu = page.Locator(".tm-diagram-editor__context-menu");
         await menu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
-        // Close it the way a finger would — a press outside (the canvas Escape clears the
+        // Close it the way a finger would — a TOUCH TAP outside (the canvas Escape clears the
         // selection, which the later steps do not want).
-        await page.Mouse.ClickAsync(20, 20);
+        await page.Touchscreen.TapAsync(20, 20);
         await menu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10_000 });
 
         // ── Two-finger pinch zooms ──────────────────────────────────────────
@@ -682,7 +682,226 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             nodeId);
     }
 
-    /// <summary>Two-finger pinch around the canvas centre by the given spread delta.</summary>
+    // ── Phase 3 (J1/J1b/J4/J5/J12a): real CDP touch fingers over the gesture stack ──────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch, real CDP fingers: a pinch from the empty canvas after finger one moved zooms (J1)")]
+    public async Task Tablet_CdpPinch_FromEmptyCanvas_AfterFirstFingerMoved_Zooms()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+        var (x, y) = await DiagramEditorE2E.EmptyCanvasPointAsync(page);
+        var session = await page.Context.NewCDPSessionAsync(page);
+        var widthBefore = await DiagramEditorE2E.CanvasViewBoxWidthAsync(page);
+
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, x - 40, y));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, x - 38, y));     // finger one's capture goes live
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, x - 38, y), (2, x + 40, y));
+        for (var i = 1; i <= 6; i++)
+            await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, x - 38 - 15 * i, y), (2, x + 40 + 15 * i, y));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.IsTrue(await DiagramEditorE2E.CanvasViewBoxWidthAsync(page) < widthBefore - 1,
+            "a real two-finger pinch that starts with a moving finger must zoom (the pan hand-over must not cancel it)");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch, real CDP fingers: a pinch handed over from a dragged node keeps the canvas alive (J1b)")]
+    public async Task Tablet_CdpPinch_FromDraggedNode_CanvasKeepsRendering()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        // Insert and select a node the same way the tap-insert test does: the palette rail
+        // expands into the tile grid first, then the rectangle tile is tappable.
+        await page.Locator(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle").First.ClickAsync();
+        var paletteTile = page.Locator("[data-stencil-id='general.rectangle']").First;
+        await paletteTile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        var before = await NodeCountAsync(page);
+        await paletteTile.TapAsync();
+        await page.WaitForFunctionAsync(
+            "(n) => document.querySelectorAll('.tm-diagram-node').length > n",
+            before, new PageWaitForFunctionOptions { Timeout = 15_000 });
+
+        var centre = await page.EvaluateAsync<double[]>(
+            "() => { const n = document.querySelector('.tm-diagram-node'); const r = n.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }");
+        var (nx, ny) = (centre[0], centre[1]);
+
+        var session = await page.Context.NewCDPSessionAsync(page);
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, nx, ny));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, nx + 12, ny));   // the node drag arms
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, nx + 24, ny));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, nx + 24, ny), (2, nx + 224, ny));
+        for (var i = 1; i <= 4; i++)
+            await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, nx + 24 - 10 * i, ny), (2, nx + 224 + 10 * i, ny));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(400);
+
+        // J1b: the canvas survived the session hand-over — a palette tap still inserts. The
+        // selection railed the palette back (at most one expanded panel), so expand it again.
+        if (await page.Locator("[data-stencil-id='general.ellipse']").CountAsync() == 0
+            || !await page.Locator("[data-stencil-id='general.ellipse']").First.IsVisibleAsync())
+        {
+            await page.Locator(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle").First.ClickAsync();
+        }
+        var ellipseTile = page.Locator("[data-stencil-id='general.ellipse']").First;
+        await ellipseTile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        var afterPinch = await NodeCountAsync(page);
+        await ellipseTile.TapAsync();
+        await page.WaitForFunctionAsync(
+            "(n) => document.querySelectorAll('.tm-diagram-node').length > n",
+            afterPinch, new PageWaitForFunctionOptions { Timeout = 15_000 });
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch, real CDP long-press on the empty canvas opens exactly one canvas menu (J5/R4)")]
+    public async Task Tablet_CdpLongPress_OnEmptyCanvas_OpensOneCanvasMenu()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+        var (x, y) = await DiagramEditorE2E.EmptyCanvasPointAsync(page);
+        var session = await page.Context.NewCDPSessionAsync(page);
+        await DiagramEditorE2E.ArmMenuOpenCounterAsync(page, "OnCanvasContextMenu");
+
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, x, y));
+        await page.WaitForTimeoutAsync(900);
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.AreEqual(1, await DiagramEditorE2E.MenuOpenCountAsync(page),
+            "C# must be told to open the canvas menu exactly once (the native touch contextmenu is swallowed)");
+        Assert.AreEqual(1, await page.Locator(".tm-diagram-editor__context-menu").CountAsync(),
+            "a long-press on the empty canvas opens exactly one canvas context menu (the release click on the menu must not activate an item)");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch, real CDP long-press then a touch tap on the canvas closes the menu (review fix)")]
+    public async Task Tablet_CdpLongPress_ThenTapCanvas_ClosesMenu()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+        var (x, y) = await DiagramEditorE2E.EmptyCanvasPointAsync(page);
+        // The tap point is measured BEFORE the menu opens: the open fixed menu would otherwise
+        // cover the canvas and the empty-strip probe would find nothing.
+        var (tapX, tapY) = await DiagramEditorE2E.EmptyCanvasPointAsync(page);
+        var session = await page.Context.NewCDPSessionAsync(page);
+        await DiagramEditorE2E.ArmMenuOpenCounterAsync(page, "OnCanvasContextMenu");
+
+        // The hold opens the menu.
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, x, y));
+        await page.WaitForTimeoutAsync(900);
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(300);
+        Assert.AreEqual(1, await DiagramEditorE2E.MenuOpenCountAsync(page), "the long-press opens the menu once");
+        Assert.AreEqual(1, await page.Locator(".tm-diagram-editor__context-menu").CountAsync(), "the menu is open");
+
+        // A touch TAP on the empty canvas dismisses it (pointerdown capture, touch button 0).
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, tapX, tapY));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(400);
+
+        Assert.AreEqual(0, await page.Locator(".tm-diagram-editor__context-menu").CountAsync(),
+            "a touch tap on the canvas dismisses the context menu");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch, real CDP long-press on an edge opens exactly one edge menu (J5/R4)")]
+    public async Task Tablet_CdpLongPress_OnEdge_OpensOneMenu()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        var edgeCentre = await page.EvaluateAsync<double[]?>(
+            "() => { const hit = document.querySelector('.tm-diagram-edge-hit-path'); if (!hit) return null; const r = hit.getBoundingClientRect(); return [r.left + r.width / 2, r.top + Math.max(r.height / 2, 4)]; }");
+        Assert.IsNotNull(edgeCentre, "the sample document must render an edge");
+        var session = await page.Context.NewCDPSessionAsync(page);
+        await DiagramEditorE2E.ArmMenuOpenCounterAsync(page, "OnEdgeContextMenu");
+
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, edgeCentre[0], edgeCentre[1]));
+        await page.WaitForTimeoutAsync(900);
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.AreEqual(1, await DiagramEditorE2E.MenuOpenCountAsync(page),
+            "C# must be told to open the edge menu exactly once");
+        Assert.AreEqual(1, await page.Locator(".tm-diagram-editor__context-menu").CountAsync(),
+            "a long-press on an edge opens exactly one context menu");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("1024 touch, real CDP fingers: a drag from a port of a SELECTED node draws an edge (J12a/R2, review fix)")]
+    public async Task Tablet_CdpFingerDragFromPort_CreatesEdge()
+    {
+        var page = await OpenEditorAsync(1024, 768, touch: true);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
+
+        // Insert a fresh rectangle: the stencil carries four ports (the sample document's
+        // nodes predate the port model and render none).
+        await page.Locator(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle").First.ClickAsync();
+        var paletteTile = page.Locator("[data-stencil-id='general.rectangle']").First;
+        await paletteTile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        var beforeNodes = await NodeCountAsync(page);
+        await paletteTile.TapAsync();
+        await page.WaitForFunctionAsync(
+            "(n) => document.querySelectorAll('.tm-diagram-node').length > n",
+            beforeNodes, new PageWaitForFunctionOptions { Timeout = 15_000 });
+
+        // The node with ports (a sample-document node — the inserted rectangle lands selected at
+        // the canvas centre, so tap-selection is unreliable: select through the same JS entry the
+        // connect modal uses).
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => { const n = [...document.querySelectorAll('.tm-diagram-node')].find(n => n.querySelector('circle.tm-diagram-port')); return n?.getAttribute('data-node-id'); }");
+        if (nodeId is null)
+        {
+            Assert.Inconclusive("the sample document rendered no node with ports");
+            return;
+        }
+        await page.EvaluateAsync(
+            """
+            (id) => {
+                const canvas = document.querySelector('.tm-diagram-canvas');
+                const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                inst.selectedIds = new Set([id]);
+                window.tmDiagramEditor._updateSelection(inst);
+                inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+            }
+            """, nodeId);
+        await page.Locator($".tm-diagram-port-hits[data-node-id='{nodeId}'] circle.tm-diagram-port-hit").First.WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+
+        var edgesBefore = await page.Locator(".tm-diagram-edge-hit-path").CountAsync();
+        var port = page.Locator($".tm-diagram-node--selected[data-node-id='{nodeId}'] circle.tm-diagram-port").First;
+        await port.ScrollIntoViewIfNeededAsync();
+        var portBox = await port.BoundingBoxAsync();
+        Assert.IsNotNull(portBox, "the selected node's port must have a bounding box");
+        var sx = portBox.X + portBox.Width / 2;
+        var sy = portBox.Y + portBox.Height / 2;
+        var target = await page.EvaluateAsync<double[]>(
+            @"(selfId) => { const nodes = [...document.querySelectorAll('.tm-diagram-node')]; const other = nodes.find(n => n.getAttribute('data-node-id') !== selfId) || nodes[0]; const r = other.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }",
+            nodeId);
+
+        var session = await page.Context.NewCDPSessionAsync(page);
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, sx, sy));
+        for (var i = 1; i <= 6; i++)
+            await DiagramEditorE2E.CdpTouchAsync(session, "touchMove",
+                (1, sx + (target[0] - sx) * i / 6, sy + (target[1] - sy) * i / 6));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(400);
+
+        Assert.IsTrue(await page.Locator(".tm-diagram-edge-hit-path").CountAsync() > edgesBefore,
+            "a finger drag from a selected node's port must create an edge (the finger-sized port hit wins over the handles)");
+    }
+
+    /// <summary>Two-finger pinch around the canvas centre by the given spread delta.
+    /// Synthetic PointerEvents: setPointerCapture throws for an inactive id, so this cannot
+    /// prove capture behaviour — see the Cdp* tests.</summary>
     private static async Task TwoFingerPinchAsync(IPage page, double spread)
     {
         await page.EvaluateAsync(

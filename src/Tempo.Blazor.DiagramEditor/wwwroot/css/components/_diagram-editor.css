@@ -1338,6 +1338,80 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     filter: drop-shadow(0 0 2px color-mix(in srgb, var(--tm-color-primary) 50%, transparent));
 }
 
+/* ── Finger-sized port hit circles (review fix: finger edge-drawing discoverability) ──────────
+ * Invisible circles over the SELECTED node's ports, rendered AFTER the transform-handles
+ * groups. They are pointer-active ONLY on a coarse pointer: a finger cannot hit the small
+ * visible port circles, and the n/e/s/w mid-edge resize hits are dropped there, so the port
+ * drag claims the press where they paint (the resize/rotate sessions veto through
+ * engine.touchPortAt). On a fine pointer they stay inert (pointer-events: none — no dead zone,
+ * no shadow over the mid-edge resize handles a mouse still uses); the mouse keeps the small
+ * visible ports and the hit-stack corridor lookup (J6) is untouched because elementsFromPoint
+ * skips inert elements. Sized by --tm-diagram-handle-hit (24px, 44px on coarse); the variable
+ * is redeclared on this group (a SIBLING of the handles groups, not a child). */
+.tm-diagram-port-hits {
+    --tm-diagram-handle-hit: 24px;
+}
+
+circle.tm-diagram-port-hit {
+    r: calc(var(--tm-diagram-handle-hit, 24px) / 2);
+    fill: transparent;
+    stroke: none;
+    pointer-events: none;
+    cursor: crosshair;
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-port-hits {
+        --tm-diagram-handle-hit: 44px;
+    }
+
+    circle.tm-diagram-port-hit {
+        pointer-events: all;
+    }
+
+    .tm-diagram-node--selected circle.tm-diagram-port,
+    .tm-diagram-node--selected circle.tm-diagram-connection-point {
+        opacity: 1;
+    }
+
+    /* The mid-edge resize handles would sit exactly on the port hit circles — drop them on a
+     * coarse pointer, but only on nodes that render port hits (`data-has-ports="true"`); a
+     * port-less node keeps the full handle set. The four corners always keep the resize
+     * affordance. */
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="n"],
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="e"],
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="s"],
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="w"] {
+        display: none;
+    }
+}
+
+/* A finger has no hover at all: the sticky :hover after a tap must not reveal the ports of an
+ * unselected node — only the SELECTED node's ports show (opacity 1). Keyed off `(hover: none)`
+ * rather than `(pointer: coarse)`: a coarse PRIMARY pointer paired with a hover-capable
+ * secondary (hybrid laptop) must not suppress real hover. */
+@media (hover: none) {
+    .tm-diagram-node:hover circle.tm-diagram-port,
+    .tm-diagram-node:hover circle.tm-diagram-connection-point {
+        opacity: 0;
+    }
+}
+
+/* During edge drawing the ports must show even on devices without hover. Specificity matches
+ * the `(hover: none)` :hover suppression above (three in the class column — the canvas class,
+ * the node class, the port class — plus the circle element) and this comes later in source
+ * order, so it wins while drawing. */
+.tm-diagram-canvas--edge-drawing .tm-diagram-node circle.tm-diagram-port {
+    opacity: 1;
+}
+
+/* A live resize rebuilds the node geometry in C# while the finger-sized port hit circles keep
+ * their last-rendered positions — they would cover the growing edge with a stale hit area.
+ * The JS engine adds `tm-diagram-canvas--resizing` for the gesture's duration. */
+.tm-diagram-canvas--resizing .tm-diagram-port-hits {
+    display: none;
+}
+
 /* ── Edge path ────────────────────────────────────────────────────────────── */
 .tm-diagram-edge-path {
     fill: none;
@@ -2430,6 +2504,46 @@ circle.tm-diagram-rotate-handle-hit {
 
 .tm-diagram-editor__context-item:disabled:hover {
     background: transparent;
+}
+
+/* Tablet (coarse pointer): finger-sized menu items (WCAG 2.5.8) — the shared touch-target token. */
+@media (pointer: coarse) {
+    .tm-diagram-editor__context-item {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Long-press feedback (review fix) ─────────────────────────────────────────
+ * A ring grows under the finger for the remaining hold time before the context menu opens.
+ * Purely decorative: it never intercepts events. */
+.tm-diagram-press-ring {
+    position: fixed;
+    width: 56px;
+    height: 56px;
+    margin: -28px 0 0 -28px;
+    border-radius: 50%;
+    border: 2px solid var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
+    pointer-events: none;
+    z-index: 999;
+    transform: scale(0.4);
+    opacity: 0.9;
+    animation: tm-diagram-press-ring 450ms ease-out forwards;
+}
+
+@keyframes tm-diagram-press-ring {
+    to {
+        transform: scale(1);
+        opacity: 0.35;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-diagram-press-ring {
+        animation: none;
+        transform: scale(1);
+        opacity: 0.5;
+    }
 }
 
 .tm-diagram-node__table-cell--selected {

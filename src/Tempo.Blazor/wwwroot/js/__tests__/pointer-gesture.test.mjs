@@ -567,3 +567,119 @@ test('a pinch and a single-finger drag coexist: the host cancels the drag from t
 
     drag.detach();
 });
+
+// ── the pinch hand-over: a drag cancelled from onStart shares the capture ───────────────────
+
+/** An element with the Pointer Events capture model: set/release only change the PENDING target;
+ *  got/lostpointercapture fire when `process(id)` runs, which the browser does right before it
+ *  dispatches that pointer's next event. */
+function captureModelElement() {
+    const map = new Map();
+    const current = new Map();   // pointerId → true while this element holds the capture
+    const pending = new Map();   // pointerId → true | false (set / released, not yet processed)
+    const el = {
+        style: {},
+        addEventListener(type, fn) { map.set(type, [...(map.get(type) ?? []), fn]); },
+        removeEventListener(type, fn) { map.set(type, (map.get(type) ?? []).filter(f => f !== fn)); },
+        dispatch(type, event = {}) { for (const fn of [...(map.get(type) ?? [])]) fn(event); return event; },
+        hasPointerCapture(id) { return pending.has(id) ? pending.get(id) : current.get(id) === true; },
+        setPointerCapture(id) { pending.set(id, true); },
+        releasePointerCapture(id) { if (el.hasPointerCapture(id)) pending.set(id, false); },
+        lost: [],
+        process(id) {
+            if (!pending.has(id)) return;
+            const want = pending.get(id);
+            pending.delete(id);
+            const had = current.get(id) === true;
+            if (want === had) return;          // released and re-captured before processing: no event
+            if (want) { current.set(id, true); el.dispatch('gotpointercapture', { pointerId: id }); }
+            else { current.delete(id); el.lost.push(id); el.dispatch('lostpointercapture', { pointerId: id }); }
+        },
+        /** Dispatches a pointer event the way the browser does: pending capture first. */
+        send(type, event) { el.process(event.pointerId); el.dispatch(type, event); el.process(event.pointerId); },
+    };
+    return el;
+}
+
+// pointer-drag drops events whose button !== 0, so the hand-over tests need button/buttons.
+const touchDrag = (pointerId, clientX, clientY) => ({
+    pointerId, pointerType: 'touch', isPrimary: pointerId === 1, button: 0, buttons: 1, clientX, clientY,
+    preventDefault() {}, stopPropagation() {},
+});
+
+test('a drag on the SAME element hands over without rolling the pinch back (shared capture re-asserted)', () => {
+    const el = captureModelElement();
+    const log = [];
+    const drag = attach(el, { threshold: 6, touchAction: null, onCancel: i => log.push('drag:cancel:' + i.reason) });
+    attachPinch(el, {
+        touchAction: null,
+        onStart: () => { log.push('pinch:start'); drag.cancel('pinch'); },
+        onChange: () => log.push('pinch:change'),
+        onEnd: () => log.push('pinch:end'),
+        onCancel: i => log.push('pinch:cancel:' + i.reason),
+    });
+    el.send('pointerdown', touchDrag(1, 100, 100));
+    el.send('pointermove', touchDrag(1, 102, 100));      // finger one jitters: its capture is now ACTIVE
+    el.send('pointerdown', touchDrag(2, 200, 100));      // pinch starts, the host cancels the drag
+    el.send('pointermove', touchDrag(1, 80, 100));       // the browser processes finger one's capture here
+    el.send('pointermove', touchDrag(2, 220, 100));
+    assert.deepEqual(el.lost, [], 'the hand-over must not lose the first finger\'s capture');
+    el.send('pointerup', touchDrag(1, 80, 100));
+    assert.equal(log.includes('pinch:cancel:lostpointercapture'), false, 'the pinch survives its own hand-over');
+    assert.deepEqual(log.filter(e => e.startsWith('pinch:')), ['pinch:start', 'pinch:change', 'pinch:change', 'pinch:end']);
+    assert.equal(el.hasPointerCapture(1), false, 'the pinch released finger one by id on pointerup');
+});
+
+test('an engine that fires lostpointercapture synchronously on release does not cancel the hand-over', () => {
+    const el = captureModelElement();
+    const realRelease = el.releasePointerCapture;
+    el.releasePointerCapture = (id) => { realRelease(id); el.process(id); };   // synchronous engine
+    const log = [];
+    const drag = attach(el, { threshold: 6, touchAction: null });
+    const pinch = attachPinch(el, {
+        touchAction: null,
+        onStart: () => drag.cancel('pinch'),
+        onEnd: () => log.push('end'),
+        onCancel: i => log.push('cancel:' + i.reason),
+    });
+    el.send('pointerdown', touchDrag(1, 100, 100));
+    el.send('pointermove', touchDrag(1, 102, 100));
+    el.send('pointerdown', touchDrag(2, 200, 100));
+    el.send('pointermove', touchDrag(2, 240, 100));
+    assert.deepEqual(log, [], 'no cancel from the synchronous hand-over release');
+    assert.equal(pinch.active, true, 'the pinch is still running');
+});
+
+test('a genuine lostpointercapture mid-pinch (outside the hand-over) still cancels', () => {
+    const el = captureModelElement();
+    const log = [];
+    attachPinch(el, { touchAction: null, onEnd: () => log.push('end'), onCancel: i => log.push('cancel:' + i.reason) });
+    el.send('pointerdown', touchDrag(1, 100, 100));
+    el.send('pointerdown', touchDrag(2, 200, 100));
+    el.releasePointerCapture(1);                    // e.g. another element took the capture
+    el.send('pointermove', touchDrag(1, 90, 100));
+    assert.deepEqual(log, ['cancel:lostpointercapture']);
+});
+
+test('a setPointerCapture that throws during the hand-over re-assert cancels the pinch (lostpointercapture)', () => {
+    const el = captureModelElement();
+    let throwOnCapture = false;
+    const realSet = el.setPointerCapture;
+    el.setPointerCapture = (id) => { if (throwOnCapture) throw new Error('pointer gone'); realSet(id); };
+    const log = [];
+    const drag = attach(el, { threshold: 6, touchAction: null, onCancel: i => log.push('drag:cancel:' + i.reason) });
+    const pinch = attachPinch(el, {
+        touchAction: null,
+        onStart: () => { log.push('pinch:start'); drag.cancel('pinch'); },
+        onEnd: () => log.push('pinch:end'),
+        onCancel: i => log.push('pinch:cancel:' + i.reason),
+    });
+    el.send('pointerdown', touchDrag(1, 100, 100));
+    el.send('pointermove', touchDrag(1, 102, 100));      // finger one jitters: its capture is ACTIVE
+    throwOnCapture = true;                               // the engine now refuses the re-assert
+    el.send('pointerdown', touchDrag(2, 200, 100));      // pinch starts, the host cancels the drag
+    assert.deepEqual(log, ['pinch:start', 'pinch:cancel:lostpointercapture'],
+        'the failed re-assert rolls the pinch back with the lostpointercapture reason');
+    assert.equal(pinch.active, false, 'the pinch is no longer running');
+    assert.deepEqual(el.lost, [], 'no silent capture loss before the cancel');
+});

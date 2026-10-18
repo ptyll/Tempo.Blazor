@@ -9,12 +9,19 @@ minimap, layers) and the JS modules (`diagram-editor.js`, `diagram-editor-touch.
 ```
 <link rel="stylesheet" href="_content/Tempo.Blazor/css/tempo-blazor.css" />
 <link rel="stylesheet" href="_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css" />
-<script type="module" src="_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/dagre.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/d3-dispatch.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/d3-timer.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/d3-quadtree.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/d3-hierarchy.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/d3-force.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js"></script>
 ```
 
-`diagram-editor.js` is an ES module that imports `diagram-editor-touch.js` (which imports the core
-`pointer-drag.js` / `pointer-gesture.js`) and `dagre.min.js`; host pages load it once, everything
-else is pulled by the module graph.
+`diagram-editor.js` is a classic script (it defines `window.tmDiagramEditor`). It loads
+`diagram-editor-touch.js` with a dynamic `import()` resolved from its own URL, and that module
+imports the core `pointer-drag.js` / `pointer-gesture.js`. `dagre` and the d3 bundles are globals:
+load them before it. Auto layout warns and does nothing without them.
 
 ## Responsive scope (G2)
 
@@ -112,7 +119,7 @@ Pages stay as tabs at the top in every layout (DI3); there is no page drawer.
 | Minimap | Card or overlay per `MinimapPlacement` | Floating overlay |
 | Zoom | Status bar group + `__zoom-label` | Floating zoom pill |
 | Search | `Ctrl+F` / toolbar group, floating panel | Same floating panel |
-| Context menu | Viewport-anchored menu | Long-press bottom sheet (shared F3 sheet) |
+| Context menu | Viewport-anchored menu | Tablet: anchored finger-sized menu, offset from the finger (`data-anchor="touch"`, items ≥ `--tm-touch-target`); mobile: long-press bottom sheet (shared F3 sheet) |
 | Status bar | `ShowStatusBar` (read-only toggle lives here) | Not rendered |
 | All of the above (`ShowToolbar`) | `ShowToolbar="false"` keeps its pre-redesign meaning: it hides every built-in control that used to live in the toolbar — the header bar's built-in controls (title, mobile history, search and panel toggles, "⋯" menu), the command row and the status bar (and on mobile the zoom pill and the action bar). Page tabs, panels, canvas, minimap and the `HeaderStart`/`HeaderActions` host slots stay. | Same rule |
 
@@ -128,11 +135,32 @@ long-press) and `pointer-gesture.js` (two-finger pinch/pan) — imported by the 
 `diagram-editor-touch.js`; see [touch-interaction.md](touch-interaction.md). Diagram specifics:
 
 - Resize/rotate handles render an invisible hit area sized by `--tm-diagram-handle-hit`
-  (24px, 44px on coarse pointers) so fingers can grab them.
+  (24px, 44px on coarse pointers) so fingers can grab them. On a coarse pointer the n/e/s/w
+  mid-edge resize hits do not render (they would sit exactly on the port hit circles); the four
+  corners keep the full resize affordance.
+- A **selected** node's ports get finger-sized invisible hit circles (`.tm-diagram-port-hit`,
+  same `data-port-id`, rendered after the transform-handles group so they win the paint order;
+  pointer-active only on a coarse pointer — on desktop they stay inert so the mid-edge resize
+  handles and the small visible ports keep the mouse): a finger drag from a port draws an edge.
+  **Occlusion rule:** the port only claims a press whose raw target is the port/hit circle itself
+  or an edge corridor painting over it — a port buried under another control (a resize handle, a
+  node body) is covered, not pressed. Connection points get NO hit circle: a stencil's connection
+  points sit exactly on the resize handles (the default rectangle set is 4 corners + 4 midpoints +
+  centre), so they stay reachable through the mouse-sized visible circle and the edge-corridor hit
+  stack. Without `ShowConnectArrows` (mobile) no ports, connection points or hit circles render at
+  all — no invisible dead zone on the touch surface.
 - Pinch zooms and pans the canvas (`viewBox`-driven); a host that needs custom pinch behaviour
   cancels the drag from the pinch's `onStart`.
-- Long-press opens the context menu (as a bottom sheet on tablet/mobile); a tap is press/release
-  only — tap-time behaviour hooks `onPress`, never `onEnd`.
+- Long-press opens the context menu — **mobile only** as the F3 bottom sheet; on tablet and
+  desktop it stays an anchored `position:fixed` menu that a finger can hit: opened by touch it
+  carries `data-anchor="touch"` and is parked above the finger (flipping below at the top edge,
+  `x + 16`, then clamped), its items are at least `--tm-touch-target` tall, a press ring grows
+  under the finger during the hold, and the menu opens exactly once. **Release-click guard:** the
+  compatibility click of the lifting finger is swallowed (armed per hold, plus a 350 ms window
+  after the lift, scoped to this editor's menu), so the release never activates a menu item the
+  user never pressed. A tap elsewhere while the menu is open dismisses it (`pointerdown` capture —
+  touch taps included), as does starting a pan, a pinch or an edge draw.
+- A tap is press/release only — tap-time behaviour hooks `onPress`, never `onEnd`.
 - Toolbox tiles insert on tap; dragging a tile still performs drag-and-drop insertion.
 
 ## E2E anchors (stable selectors)

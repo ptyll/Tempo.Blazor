@@ -101,9 +101,11 @@ scripts/run-e2e-smoke.ps1   # PR gate: TestCategory=Smoke, < 20 min
 scripts/run-e2e-full.ps1    # full lane: entire suite (~1450 tests, ~4h sharded)
 
 # JS engine unit tests (explicit file enumeration, no globs)
+npm ci                         # once: installs esbuild for the document-editor bundle tests
 npm run test:document-editor
 npm run test:reporting-modules
-npm run test:overlay
+npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
+npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
 ```
 
 ### Package Creation
@@ -500,8 +502,9 @@ overlay through `MinimapPlacement`; pages stay as top tabs in every layout. Full
 **Touch:** all pointer work runs on the shared `pointer-drag.js` / `pointer-gesture.js` helpers
 (imported by the package's `diagram-editor-touch.js`) — resize/rotate handles carry an invisible
 hit area sized by `--tm-diagram-handle-hit` (24px, 44px on coarse pointers), two fingers pinch/pan
-the `viewBox`, long-press opens the context menu (a bottom sheet on tablet/mobile), and toolbox
-tiles insert on tap while drag-and-drop keeps working.
+the `viewBox`, long-press opens the context menu (mobile: the F3 bottom sheet; tablet/desktop: an
+anchored finger-sized menu offset from the finger via `data-anchor="touch"`), and toolbox tiles
+insert on tap while drag-and-drop keeps working.
 
 ### Unified SVG Canvas Architecture (4-pane model)
 
@@ -586,7 +589,7 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 
 Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.PdfViewer`: `_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js`
-- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (imports `diagram-editor-touch.js`, `dagre.min.js` and the d3 bundles), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
+- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (classic script; it dynamically imports `diagram-editor-touch.js`; `dagre.min.js` and the d3 bundles are separate `<script>` tags), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
 - `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js`
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`
@@ -611,6 +614,8 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (no suffix): `1.0.0`
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
+
+`.github/workflows/js-node-tests.yml` runs the four Node lanes on every push/PR.
 
 ## Useful Commands Reference
 

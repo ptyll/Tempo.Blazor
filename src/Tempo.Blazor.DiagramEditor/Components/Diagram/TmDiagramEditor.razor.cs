@@ -137,6 +137,13 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private double _zoomLevel = 1.0;
     private string _zoomLabel => $"{(int)Math.Round(_zoomLevel * 100)}%";
 
+    /// <summary>Zoom-in is a no-op at the shared maximum (DiagramZoomLimits): the button disables
+    /// there instead of pretending to zoom (review fix, mirrors the JS wheel no-op).</summary>
+    private bool CanZoomIn => _zoomLevel < DiagramZoomLimits.MaxScale - 1e-9;
+
+    /// <summary>Zoom-out disables at the shared minimum (DiagramZoomLimits).</summary>
+    private bool CanZoomOut => _zoomLevel > DiagramZoomLimits.MinScale + 1e-9;
+
     private bool CanArrange => _selectedIds.Length > 1;
 
     private bool _toolboxCollapsed;
@@ -214,6 +221,10 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private bool _contextMenuOpen;
     private ContextMenuType _contextMenuType;
+
+    /// <summary>The pointer type that opened the context menu ('mouse' or 'touch'). A touch menu
+    /// is anchored offset from the finger (data-anchor="touch" on the menu element).</summary>
+    private string? _contextMenuOrigin;
     private string? _contextMenuNodeId;
     private string? _contextMenuEdgeId;
     private (int Row, int Column)? _contextMenuTableCell;
@@ -384,11 +395,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     // ── Context menu ─────────────────────────────────────────────────────────
 
-    private async Task OnNodeContextMenu((string NodeId, double ScreenX, double ScreenY) args)
+    private async Task OnNodeContextMenu((string NodeId, double ScreenX, double ScreenY, string Origin) args)
     {
         if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.Node;
         _contextMenuOpen = true;
+        _contextMenuOrigin = args.Origin;
         _contextMenuNodeId = args.NodeId;
         _contextMenuEdgeId = null;
         _contextMenuTableCell = null;
@@ -406,11 +418,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
-    private async Task OnEdgeContextMenu((string EdgeId, double ScreenX, double ScreenY) args)
+    private async Task OnEdgeContextMenu((string EdgeId, double ScreenX, double ScreenY, string Origin) args)
     {
         if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.Edge;
         _contextMenuOpen = true;
+        _contextMenuOrigin = args.Origin;
         _contextMenuEdgeId = args.EdgeId;
         _contextMenuNodeId = null;
         _contextMenuTableCell = null;
@@ -425,11 +438,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
-    private async Task OnTableCellContextMenu((string NodeId, int Row, int Column, double ScreenX, double ScreenY) args)
+    private async Task OnTableCellContextMenu((string NodeId, int Row, int Column, double ScreenX, double ScreenY, string Origin) args)
     {
         if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.TableCell;
         _contextMenuOpen = true;
+        _contextMenuOrigin = args.Origin;
         _contextMenuNodeId = args.NodeId;
         _contextMenuEdgeId = null;
         _contextMenuTableCell = (args.Row, args.Column);
@@ -452,11 +466,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await JS.InvokeVoidAsync("tmDiagramEditor.openContextMenu", _canvas.GetContainerRef(), _contextMenuRef);
     }
 
-    private async Task OnCanvasContextMenu((double CanvasX, double CanvasY, double ScreenX, double ScreenY) args)
+    private async Task OnCanvasContextMenu((double CanvasX, double CanvasY, double ScreenX, double ScreenY, string Origin) args)
     {
         if (IsReadOnly) return;
         _contextMenuType = ContextMenuType.Canvas;
         _contextMenuOpen = true;
+        _contextMenuOrigin = args.Origin;
         _contextMenuNodeId = null;
         _contextMenuEdgeId = null;
         _contextMenuTableCell = null;
@@ -483,6 +498,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task CloseContextMenu()
     {
         _contextMenuOpen = false;
+        _contextMenuOrigin = null;
         if (_canvas is not null)
         {
             try
@@ -1526,7 +1542,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     // ── Toolbar: Zoom ────────────────────────────────────────────────────────
 
-    private static readonly double[] ZoomSteps = [0.25, 0.33, 0.5, 0.67, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
+    private static readonly double[] ZoomSteps =
+        [DiagramZoomLimits.MinScale, 0.25, 0.33, 0.5, 0.67, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, DiagramZoomLimits.MaxScale];
 
     private async Task ZoomIn()
     {
@@ -1544,9 +1561,9 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private async Task ApplyZoom(double level)
     {
-        _zoomLevel = level;
+        _zoomLevel = DiagramZoomLimits.Clamp(level);
         if (_canvas is not null)
-            await _canvas.SetZoom(level);
+            await _canvas.SetZoom(_zoomLevel);
     }
 
     private async Task FitToView()

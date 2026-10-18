@@ -516,8 +516,10 @@
                        is none on it, so HTML ports positioned at the node's edges are
                        not reliably clickable. Keeping ports as native SVG ensures
                        `document.elementFromPoint` / real mouse events target the port
-                       element, matching draw.io's approach. *@
-                    @if (!ReadOnly)
+                       element, matching draw.io's approach.
+                       G2/mobile: without the connect affordances the ports would be a
+                       dead zone on the touch surface — render none (review fix). *@
+                    @if (!ReadOnly && ShowConnectArrows)
                     {
                         @foreach (var port in node.Ports)
                         {
@@ -598,7 +600,10 @@
                Phase 7 (mobile, G2): the group splits — resize/rotate follow
                ShowTransformHandles and the quick-connect arrows follow
                ShowConnectArrows, so a mobile host keeps selection outlines
-               without reshaping or edge-drawing affordances. *@
+               without reshaping or edge-drawing affordances. `data-has-ports="true"`
+               marks nodes that render port hit circles: the coarse-pointer CSS drops
+               the n/e/s/w mid-edge resize hits only there (they would sit on the
+               port hits); port-less nodes keep the full handle set. *@
             @if (Document is not null && !ReadOnly && (ShowTransformHandles || ShowConnectArrows))
             {
                 @foreach (var _sid in _currentSelectionIds)
@@ -609,9 +614,11 @@
                     var _hCy = F(_hNode.H / 2.0);
                     var _hW = F(_hNode.W);
                     var _hH = F(_hNode.H);
+                    var _hHasPorts = _hNode.Ports.Any(p =>
+                        !(_hNode is { IsCollapsible: true, Collapsed: true }) || p.Side is PortSide.Top or PortSide.Bottom);
                     var _hTx = $"translate({F(_hNode.X)},{F(_hNode.Y)}) rotate({F(_hNode.Rotation)} {_hCx} {_hCy})";
 
-                    <g class="tm-diagram-node-handles" data-node-id="@_hNode.Id" transform="@_hTx">
+                    <g class="tm-diagram-node-handles" data-node-id="@_hNode.Id" data-has-ports="@(_hHasPorts ? "true" : null)" transform="@_hTx">
                         @* Phase 6 (tablet and touch): each direction renders the visible 8x8
                            square PLUS an enlarged invisible hit rect centred on the same point.
                            The hit rect carries the gesture — Pointer Events, so a finger drives
@@ -690,6 +697,46 @@
                                 </button>
                             </foreignObject>
                             }
+                        }
+                    </g>
+                }
+            }
+
+            @* Finger-sized invisible hit circles over the SELECTED node's PORTS (review fix:
+               finger edge-drawing discoverability). They render AFTER the transform-handles
+               groups, so at a port position the hit circle wins the paint order and the port
+               drag claims the press (the resize/rotate sessions veto through engine.touchPortAt).
+               Same data-port-id attribute as the visible circle — the engine resolves either.
+               Connection points get NO hit circle: a stencil's connection points sit exactly on
+               the resize handles (the default rectangle set is 4 corners + 4 midpoints + centre)
+               and a fat invisible circle there steals the handles' and the node body's presses.
+               They stay reachable through the mouse-sized visible circle and the edge-corridor
+               hit stack (J6). G2: only when the connect affordances render (tablet+); mobile
+               keeps the connect arrow / Connect dialog. *@
+            @if (Document is not null && !ReadOnly && ShowConnectArrows)
+            {
+                @foreach (var _sid in _currentSelectionIds)
+                {
+                    var _pNode = Document.Nodes.FirstOrDefault(n => n.Id == _sid);
+                    if (_pNode is null || IsNodeLocked(_pNode)) continue;
+                    var _pCx = _pNode.W / 2.0;
+                    var _pCy = _pNode.H / 2.0;
+                    var _pTx = $"translate({F(_pNode.X)},{F(_pNode.Y)}) rotate({F(_pNode.Rotation)} {F(_pCx)} {F(_pCy)})";
+
+                    <g class="tm-diagram-port-hits" data-node-id="@_pNode.Id" transform="@_pTx">
+                        @foreach (var port in _pNode.Ports)
+                        {
+                            if (_pNode is { IsCollapsible: true, Collapsed: true } && port.Side is not (PortSide.Top or PortSide.Bottom))
+                                continue;
+                            var (absX, absY) = DiagramGeometryHelper.ComputePortPosition(_pNode, port);
+                            @* r / fill / pointer-events are owned by CSS
+                               (.tm-diagram-port-hit): inert on a fine pointer, pointer-active
+                               only inside @media (pointer: coarse). No inline attributes. *@
+                            <circle class="tm-diagram-port-hit"
+                                    data-port-id="@port.Id"
+                                    cx="@F(absX - _pNode.X)"
+                                    cy="@F(absY - _pNode.Y)">
+                            </circle>
                         }
                     </g>
                 }

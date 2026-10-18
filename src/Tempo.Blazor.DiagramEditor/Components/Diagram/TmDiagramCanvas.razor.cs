@@ -126,22 +126,24 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     /// <summary>Raised when a port is clicked to start drawing an edge.</summary>
     [Parameter] public EventCallback<(string NodeId, string PortId)> OnPortMouseDown { get; set; }
 
-    /// <summary>Raised when a node is right-clicked or long-pressed to open a context menu.</summary>
-    [Parameter] public EventCallback<(string NodeId, double ScreenX, double ScreenY)> OnNodeContextMenu { get; set; }
+    /// <summary>Raised when a node is right-clicked or long-pressed to open a context menu.
+    /// <c>Origin</c> is the pointer type that opened it ('mouse' or 'touch' — a touch menu is
+    /// anchored offset from the finger instead of under it).</summary>
+    [Parameter] public EventCallback<(string NodeId, double ScreenX, double ScreenY, string Origin)> OnNodeContextMenu { get; set; }
 
-    /// <summary>Raised when an edge is right-clicked to open a context menu.</summary>
-    [Parameter] public EventCallback<(string EdgeId, double ScreenX, double ScreenY)> OnEdgeContextMenu { get; set; }
+    /// <summary>Raised when an edge is right-clicked or long-pressed to open a context menu.</summary>
+    [Parameter] public EventCallback<(string EdgeId, double ScreenX, double ScreenY, string Origin)> OnEdgeContextMenu { get; set; }
 
     /// <summary>Raised when a table cell is right-clicked to open a context menu.</summary>
-    [Parameter] public EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY)> OnTableCellContextMenu { get; set; }
+    [Parameter] public EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY, string Origin)> OnTableCellContextMenu { get; set; }
 
     /// <summary>Raised when the user presses Escape and there is a table cell sub-selection
     /// that should be cleared before the node selection. Used to implement the draw.io-style
     /// "drill-out" cascade (first Escape exits cell mode, second Escape clears node selection).</summary>
     [Parameter] public EventCallback OnClearTableCellSelection { get; set; }
 
-    /// <summary>Raised when the empty canvas is right-clicked to open a context menu.</summary>
-    [Parameter] public EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY)> OnCanvasContextMenu { get; set; }
+    /// <summary>Raised when the empty canvas is right-clicked or long-pressed to open a context menu.</summary>
+    [Parameter] public EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY, string Origin)> OnCanvasContextMenu { get; set; }
 
     /// <summary>Raised when the context menu should be closed (e.g. second right-click).</summary>
     [Parameter] public EventCallback OnCloseContextMenu { get; set; }
@@ -665,6 +667,13 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
                 _resizeGroupMemberStartRects[member.Id] = (member.X, member.Y, member.W, member.H);
             }
         }
+
+        // Hide the finger-sized port hit circles for the gesture (JS class → CSS display:none):
+        // they keep their last-rendered positions while the geometry changes under them.
+        if (_jsInitialized)
+        {
+            _ = JS.InvokeVoidAsync("tmDiagramEditor.setResizing", _containerRef, true);
+        }
         return true;
     }
 
@@ -884,6 +893,10 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         _resizeNodeId = null;
         _resizeHandle = null;
         _resizeGroupMemberStartRects = null;
+        if (_jsInitialized)
+        {
+            _ = JS.InvokeVoidAsync("tmDiagramEditor.setResizing", _containerRef, false);
+        }
     }
 
     private void ResetResizeState()
@@ -891,6 +904,10 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         _resizeNodeId = null;
         _resizeHandle = null;
         _resizeGroupMemberStartRects = null;
+        if (_jsInitialized)
+        {
+            _ = JS.InvokeVoidAsync("tmDiagramEditor.setResizing", _containerRef, false);
+        }
     }
 
     private (double X, double Y, double W, double H) ComputeResize(
@@ -1290,16 +1307,16 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         => await OnExitGroup.InvokeAsync();
 
     [JSInvokable("OnNodeContextMenu")]
-    public async Task JsOnNodeContextMenu(string nodeId, double screenX, double screenY)
-        => await OnNodeContextMenu.InvokeAsync((nodeId, screenX, screenY));
+    public async Task JsOnNodeContextMenu(string nodeId, double screenX, double screenY, string origin)
+        => await OnNodeContextMenu.InvokeAsync((nodeId, screenX, screenY, origin ?? "mouse"));
 
     [JSInvokable("OnEdgeContextMenu")]
-    public async Task JsOnEdgeContextMenu(string edgeId, double screenX, double screenY)
-        => await OnEdgeContextMenu.InvokeAsync((edgeId, screenX, screenY));
+    public async Task JsOnEdgeContextMenu(string edgeId, double screenX, double screenY, string origin)
+        => await OnEdgeContextMenu.InvokeAsync((edgeId, screenX, screenY, origin ?? "mouse"));
 
     [JSInvokable("OnTableCellContextMenu")]
-    public async Task JsOnTableCellContextMenu(string nodeId, int row, int column, double screenX, double screenY)
-        => await OnTableCellContextMenu.InvokeAsync((nodeId, row, column, screenX, screenY));
+    public async Task JsOnTableCellContextMenu(string nodeId, int row, int column, double screenX, double screenY, string origin)
+        => await OnTableCellContextMenu.InvokeAsync((nodeId, row, column, screenX, screenY, origin ?? "mouse"));
 
     /// <summary>Invoked from JS when the user left-clicks (without drag) on a table cell
     /// of an already-selected node (drill-in pattern).</summary>
@@ -1308,8 +1325,8 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         => await OnTableCellSelect.InvokeAsync((nodeId, row, column, isCtrlHeld));
 
     [JSInvokable("OnCanvasContextMenu")]
-    public async Task JsOnCanvasContextMenu(double canvasX, double canvasY, double screenX, double screenY)
-        => await OnCanvasContextMenu.InvokeAsync((canvasX, canvasY, screenX, screenY));
+    public async Task JsOnCanvasContextMenu(double canvasX, double canvasY, double screenX, double screenY, string origin)
+        => await OnCanvasContextMenu.InvokeAsync((canvasX, canvasY, screenX, screenY, origin ?? "mouse"));
 
     [JSInvokable("CloseContextMenu")]
     public async Task JsOnCloseContextMenu()

@@ -17,6 +17,14 @@
 //   const drag = attach(handle, { ... });
 //   const pinch = attachPinch(handle, { onStart() { drag.cancel('pinch'); } });
 //
+// When the drag and the pinch share an element, the drag's release on cancel also drops the
+// pinch's capture of that finger. The pinch re-asserts both captures right after onStart, so the
+// hand-over never rolls the pinch back. After onStart the pinch OWNS both fingers' capture: a host
+// that must keep a finger elsewhere cancels the pinch from onStart (pinch.cancel('host')), and a
+// failed re-assert cancels the pinch with 'lostpointercapture' when the capture had been HELD —
+// the finger can no longer be tracked, so the gesture rolls back instead of committing half-seen.
+// A re-assert that never had a capture (synthetic PointerEvents cannot be captured) is tolerated.
+//
 // WCAG 2.5.7 (Dragging Movements): a pinch is a dragging movement, so every host must ship a
 // single-pointer alternative in the same change — typically zoom buttons beside the canvas.
 //
@@ -115,13 +123,18 @@ export function attachPinch(element, options = {}) {
     let wheelSession = null;      // pending ctrl+wheel burst: { scale, centerX, centerY, timer }
     let detached = false;
     let docKeyBound = false;
+    let handingOver = false;      // true while the host's onStart runs (the drag hand-over)
 
+    /** @returns {boolean} false when the capture could not be taken (the pointer is already gone) */
     function capture(id) {
         try {
             element.setPointerCapture?.(id);
             captured.add(id);
+            return true;
         }
-        catch { /* the pointer is already gone */ }
+        catch {
+            return false;   // the pointer is already gone
+        }
     }
 
     function releaseCapture(id) {
@@ -163,7 +176,32 @@ export function attachPinch(element, options = {}) {
             startCenterX: centerX, startCenterY: centerY, startDistance: distance,
             centerX, centerY, scale: 1,
         };
-        call('start', { centerX, centerY, distance, reducedMotion: reducedMotion() });
+        handingOver = true;
+        try {
+            call('start', { centerX, centerY, distance, reducedMotion: reducedMotion() });
+        }
+        finally {
+            handingOver = false;
+        }
+        // The hand-over: onStart cancels the host's single-finger drag, and a pointer-drag
+        // session attached to THIS element releases the first finger's capture by id - which is
+        // the capture this pinch shares. After onStart the pinch OWNS both fingers' capture: a
+        // host that must keep a finger elsewhere (e.g. a drag that survives the pinch) cancels
+        // the pinch from onStart instead of relying on this re-assert. When the re-assert fails
+        // for a finger whose capture we HELD (an engine that fires lostpointercapture
+        // synchronously on release leaves the pointer uncapturable), the pinch can no longer
+        // track it: roll back rather than commit a half-captured gesture. A failed re-assert for
+        // a finger we never captured is tolerated: synthetic PointerEvents cannot be captured at
+        // all, and the pinch still tracks them by their events (the pre-hand-over behaviour).
+        if (session) {
+            for (const id of [...pointers.keys()]) {
+                const hadCapture = captured.has(id);
+                if (!capture(id) && hadCapture) {
+                    cancelPinch('lostpointercapture');
+                    break;
+                }
+            }
+        }
     }
 
     function endPinch() {
@@ -258,6 +296,9 @@ export function attachPinch(element, options = {}) {
     function onLostPointerCapture(event) {
         // Our own releases fire this too — by then the id is no longer tracked and we ignore it.
         if (!pointers.has(event.pointerId)) return;
+        // An engine that fires lostpointercapture synchronously from releasePointerCapture does
+        // so INSIDE the hand-over; beginPinch re-captures right after onStart returns.
+        if (handingOver) return;
         if (session) {
             // A finger whose capture was lost mid-pinch (the element left the DOM, the browser
             // took the capture back) can no longer be tracked: roll back instead of committing

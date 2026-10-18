@@ -4,6 +4,29 @@
 
 ### Added
 
+- **DiagramEditor tablet: finger edge-drawing discoverability (phase 3 review fixes).** The
+  selected node's ports render invisible finger-sized hit circles (`.tm-diagram-port-hit`, same
+  `data-port-id`, sized by `--tm-diagram-handle-hit`) AFTER the transform-handles group, so the
+  port drag claims the press where they paint; the resize/rotate sessions veto through
+  `engine.touchPortAt` (memoized per event), so only one session claims a pointer. The hit
+  circles are pointer-active only on a coarse pointer — on desktop they stay inert (no shadow
+  over the mid-edge resize handles or the small visible ports). The occlusion rule is explicit:
+  a port only wins when the raw press target is the port/hit circle or an edge corridor over it —
+  a port buried under another control is covered. Connection points get no hit circle: a
+  stencil's connection points sit exactly on the resize handles (the default rectangle set is
+  4 corners + 4 midpoints + centre) — they stay reachable via the visible circle or an edge
+  corridor only. On a coarse pointer the n/e/s/w mid-edge resize hits do not render
+  (`data-has-ports` scope: only where the node renders port hits) and only the selected node's
+  ports show — no sticky hover (a `(hover: none)` query, so a hybrid laptop keeps its hover). Mobile (`ShowConnectArrows="false"`) renders no ports, connection points or hit circles
+  at all: no invisible dead zone on the touch surface.
+
+- **CI: `js-node-tests.yml` runs the Node lanes (`test:overlay`, `test:diagram-editor`,
+  `test:reporting-modules`, `test:document-editor`) on Node 24 for every push and pull request.**
+
+- **DiagramEditor tablet: drag a finger or a pen from a port or connection point to draw an edge
+  (same commit path as the mouse, `_commitEdgeDraw`).** Mobile keeps the connect arrow / Connect
+  dialog.
+
 - **DiagramEditor redesign — plan summary (phases 1–7).** `TmDiagramEditor` was rebuilt on the
   core responsive primitives (`TmEditorShell`, `TmToolbar Overflow=Menu`, `TmOverlayPanel`,
   `TmModal.MobilePresentation`, `TmMobileActionBar`, `pointer-drag.js`/`pointer-gesture.js`)
@@ -310,6 +333,19 @@
   undefined.
 
 ### Breaking / Migration
+
+- **`TmDiagramCanvas` context-menu callbacks gained a trailing `string Origin` element.**
+  The pointer type that opened the menu (`"mouse"` or `"touch"`) now rides with every context-menu
+  event — a touch-originated menu anchors offset from the finger instead of under it. Migration:
+  widen the handler tuple on all four callbacks (the new element arrives last):
+  `EventCallback<(string NodeId, double ScreenX, double ScreenY)>` →
+  `EventCallback<(string NodeId, double ScreenX, double ScreenY, string Origin)>` (`OnNodeContextMenu`),
+  `EventCallback<(string EdgeId, double ScreenX, double ScreenY)>` →
+  `EventCallback<(string EdgeId, double ScreenX, double ScreenY, string Origin)>` (`OnEdgeContextMenu`),
+  `EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY)>` →
+  `EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY, string Origin)>` (`OnTableCellContextMenu`),
+  `EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY)>` →
+  `EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY, string Origin)>` (`OnCanvasContextMenu`).
 
 - **`TmDiagramEditor` read-only: nodes are selectable for inspection, and a finger always pans.** In the effective read-only state a mouse click or a finger tap selects a node (Ctrl/Cmd+click toggles) — a tap on an edge selects the edge through the engine (`selectEdgeForInspection`) — so the read-only properties panel shows a plain summary (shape name, text/data fields, position/size, fill/stroke swatches; label, routing, source/target for edges); nothing can be moved, resized, rotated or connected. The Select tool stays enabled and `KeyV` keeps working in read-only (only the edge shortcuts stay blocked, and entering read-only disarms an armed edge tool); the read-only toggle keeps the constant "Read-only" label with only the icon swapping. A host read-only flip reaches the JS instance in the same parameter pass even while a JS drag latches the render gate, closes the connect dialog and any open inline editor (edge label, stencil sections, table cells) without saving, and a mouse press focuses the canvas so keyboard panning keeps working. A finger that lands on a node or an edge pans the canvas in read-only; in edit mode a finger drag that starts on an edge now pans too (a tap still selects the edge). Toolbox tiles carry a localized read-only hint (`TmDiagramToolbox_ReadOnlyHint`) as their title and a single visually-hidden `aria-describedby` description. Migration: hosts that relied on read-only clicks never changing the selection must ignore `OnSelectedIdsChanged` while read-only.
 
@@ -888,6 +924,49 @@
 - **`TmDataTable.KeyboardNavigation` becomes `Grid` by default in the next major release.** Keep today's behavior by explicitly setting `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`.
 
 ### Fixed
+
+- **Core `pointer-gesture.js`: a failed capture re-assert cancels the pinch instead of committing a
+  half-captured gesture.** `capture()` now reports success; when the re-assert after `onStart`
+  throws (an engine that fires `lostpointercapture` synchronously on release leaves the pointer
+  uncapturable) the pinch cancels itself with `lostpointercapture`. After `onStart` the pinch owns
+  both fingers' capture — a host that must keep a finger elsewhere cancels the pinch from `onStart`.
+  Documented in `docs/touch-interaction.md` ("Coexistence with `attach()`").
+
+- **`TmDiagramEditor` touch review batch (phase 3 review fixes).** The context menu dismisses on a
+  `pointerdown` capture anywhere outside (a touch tap on the canvas closes it, as does starting a
+  pan, a pinch or an edge draw). The release-click guard is armed per hold and scoped to this
+  editor's menu (`closest('.tm-diagram-editor')`), so a long hold no longer swallows unrelated
+  clicks and the lift click of an unrelated tap passes. Touch contacts are tracked as a
+  `pointerId` set (lifts on the document, `lostpointercapture`, mouse/pen clears) and the native
+  touch `contextmenu` is only swallowed while the touch stack is attached. The touch-press ring
+  grows under the finger after ~150 ms (static under `prefers-reduced-motion`) with a
+  `navigator.vibrate(10)` tick on open. Zoom limits are a single source on every path: `zoomToRect`
+  clamps through `_clampScale` (the ad-hoc 0.25 floor is gone), the empty-document `fitToView`
+  branch clamps, and a wheel tick already outside the range only moves toward the range — never
+  jumps; the zoom-in/zoom-out buttons (mobile overlay pill and status bar) disable at
+  `DiagramZoomLimits.MaxScale`/`MinScale`. `init()` destroys a stale instance registered for the
+  same container id first, and the context menu/table-inserter containing block is probed from the
+  popover's own parent.
+
+- **`TmDiagramEditor` context menu is finger-friendly and keyboard-operable on a tablet.** Opened
+  by a touch long-press it carries `data-anchor="touch"` (the pointer type rides
+  `touchOpenContextMenu` → the C# handler) and parks above the finger, flipping below at the top
+  edge, offset `x + 16`, then clamped; on a coarse pointer the items are at least
+  `--tm-touch-target` tall. After placement the first enabled item is focused (no page scroll) and
+  ArrowUp/ArrowDown/Home/End rove between the native `role="menuitem"` buttons (no Enter/Space
+  emulation); closing returns the focus to the canvas.
+
+- **Core `pointer-gesture.js`: a pinch whose host cancels a pointer-drag attached to the SAME
+  element in `onStart` no longer rolls itself back (`lostpointercapture`) when the first finger
+  moved before the second landed.** Fixes the two-finger zoom from an empty canvas in
+  `TmDiagramEditor` and `TmWorkflowDesignerCanvas`. No API change.
+
+- **`TmDiagramEditor` context menu: coordinates render culture-invariant (`cs`/`sk`/`fr` produced
+  `left:123,5px`), and re-opening at the same point no longer shifts the menu by the editor
+  offset.** The anchored menu now carries its viewport point in `data-screen-x`/`data-screen-y`
+  (invariant format) and the JS placement re-reads those attributes on every open instead of its
+  own `style.left`/`style.top`, resets a stale `max-height` cap and clamps through the same
+  measured containing block as the table-inserter popover.
 
 - **`TmDiagramEditor` search: Replace / Replace all respect read-only and notify the host.** In the effective read-only state the search panel is search-only (new `TmDiagramSearchPanel.ReadOnly`; Ctrl+H opens plain search). A plain (non-regex) query is replaced literally (`a.b` no longer matches `axb`), `$` in a plain replacement is literal text (`$0x` replaces to `$0x`, not group 0 + `x`), and every replacement raises `DocumentChanged`. The find/replace inputs no longer show the literal texts "Query"/"ReplaceQuery"/"_regexError", an invalid regex is announced through a localized `role="alert"` message tied to the query input (`aria-invalid` / `aria-describedby`), the result counter is a polite live region, and the layers panel marks the active layer again.
 
@@ -2337,6 +2416,16 @@
   ```
 
 ### Changed
+
+- **DiagramEditor zoom: the zoom buttons now step through 15 %…500 % (added 15 %, 400 %, 500 %),
+  the same range as wheel, pinch, `zoomTo` and fit-to-view.** At a limit, a pinch or a wheel tick
+  clamps exactly to the limit instead of freezing just before it, and the two-finger pan keeps
+  working.
+
+- **DiagramEditor touch: a 600 ms long-press opens the context menu on edges and on the empty
+  canvas too (it was node-only, so iOS had no edge/canvas menu), and the native touch
+  `contextmenu` is swallowed, so the menu opens exactly once. Pen keeps the native press-and-hold
+  menu.**
 
 - **`TmDiagramEditor` visual layer aligned with the redesign mockups — tokenized, no structure
   change (DiagramEditor redesign phase 3).** Paint-only pass over the package's CSS plus small

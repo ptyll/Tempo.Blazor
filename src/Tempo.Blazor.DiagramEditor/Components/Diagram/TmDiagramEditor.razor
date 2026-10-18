@@ -493,6 +493,7 @@
                                 class="tm-diagram-editor__zoom-overlay-btn"
                                 aria-label="@Loc["TmDiagramEditor_ZoomIn"]"
                                 title="@Loc["TmDiagramEditor_ZoomIn"]"
+                                disabled="@(!CanZoomIn)"
                                 @onclick="ZoomIn">
                             <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
                         </button>
@@ -501,6 +502,7 @@
                                 class="tm-diagram-editor__zoom-overlay-btn"
                                 aria-label="@Loc["TmDiagramEditor_ZoomOut"]"
                                 title="@Loc["TmDiagramEditor_ZoomOut"]"
+                                disabled="@(!CanZoomOut)"
                                 @onclick="ZoomOut">
                             <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
                         </button>
@@ -533,7 +535,11 @@
                    (<see cref="ContextMenuItems"/>) so the two presentations cannot drift. *@
                 @if (_contextMenuOpen && !IsMobileLayout)
                 {
-                    <div @ref="_contextMenuRef" class="tm-diagram-editor__context-menu" role="menu" style="position:fixed;left:@($"{_contextMenuScreenX}px");top:@($"{_contextMenuScreenY}px");z-index:1000;"
+                    <div @ref="_contextMenuRef" class="tm-diagram-editor__context-menu" role="menu"
+                         data-screen-x="@_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         data-screen-y="@_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         data-anchor="@(_contextMenuOrigin == "touch" ? "touch" : null)"
+                         style="@($"position:fixed;left:{_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;top:{_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;z-index:1000;")"
                          @onclick:stopPropagation
                          @oncontextmenu:preventDefault>
                         @ContextMenuItems
@@ -1137,9 +1143,9 @@
                 @if (Shows(DiagramToolbarGroups.Zoom))
                 {
                     <div class="tm-diagram-editor__toolbar-group tm-diagram-editor__zoom-group" data-tm-group="zoom">
-                        <TmToolbarButton Icon="@IconNames.Minus" Tooltip="@Loc["TmDiagramEditor_ZoomOut"]" OnClick="ZoomOut" />
+                        <TmToolbarButton Icon="@IconNames.Minus" Tooltip="@Loc["TmDiagramEditor_ZoomOut"]" OnClick="ZoomOut" Disabled="@(!CanZoomOut)" />
                         <span class="tm-diagram-editor__zoom-label" role="status" aria-live="polite" aria-label="@(string.Format(Loc["TmDiagramEditor_ZoomAria"], _zoomLabel))">@_zoomLabel</span>
-                        <TmToolbarButton Icon="@IconNames.Plus" Tooltip="@Loc["TmDiagramEditor_ZoomIn"]" OnClick="ZoomIn" />
+                        <TmToolbarButton Icon="@IconNames.Plus" Tooltip="@Loc["TmDiagramEditor_ZoomIn"]" OnClick="ZoomIn" Disabled="@(!CanZoomIn)" />
                         <TmToolbarButton Icon="@IconNames.Maximize2" Tooltip="@Loc["TmDiagramEditor_FitToView"]" OnClick="FitToView" />
                     </div>
                 }

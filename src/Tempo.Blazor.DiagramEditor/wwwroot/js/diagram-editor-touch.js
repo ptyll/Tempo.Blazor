@@ -14,8 +14,10 @@
 //
 // Sessions (in attach order):
 //   1. nodeDrag      finger drag on a node — the press selects, the move drags
-//   2. nodeMenu      600 ms hold on a node (longPressMs) opens the context menu and rolls
-//                    the armed drag back; a finger that moves first never opens it
+//   2. contextMenu   600 ms hold on a node, an edge or the empty canvas opens the context menu
+//                    (a press ring grows under the finger after ~150 ms, vibrate on open; the
+//                    release-click guard swallows the compatibility click on the menu)
+//  3a. portDrag      finger/pen drag from a port or connection point draws an edge (tablet+, R2)
 //   3. panDrag       drag from the empty surface pans; a tap on an edge selects the edge
 //   4. resizeDrag    zero-threshold drag on a resize hit rect → OnResizeStarted/Moved/Ended
 //   5. rotateDrag    zero-threshold drag on the rotate hit circle → the engine rotation session
@@ -44,22 +46,14 @@ const OTHER_GESTURE_SELECTOR = [
     '.tm-diagram-edge-toolbar',
 ].join(', ');
 
-// The helpers resolve from this module's own URL: the deployed _content layout first (two
-// levels up out of the package base), then the source tree for the Node tests (wwwroot is
-// part of the path there). Production always takes the first import.
+// The helpers resolve from this module's own URL in the deployed _content layout
+// (_content/Tempo.Blazor.DiagramEditor/js/ → ../../Tempo.Blazor/js/). Tests inject the pair.
+const HELPER_BASE = '../../Tempo.Blazor/js/';
+
 async function loadHelpers() {
-    const bases = ['../../Tempo.Blazor/js/', '../../../../src/Tempo.Blazor/wwwroot/js/'];
-    let lastError = null;
-    for (const base of bases) {
-        try {
-            const drag = await import(new URL(base + 'pointer-drag.js', import.meta.url).href);
-            const gesture = await import(new URL(base + 'pointer-gesture.js', import.meta.url).href);
-            return { drag, gesture };
-        } catch (err) {
-            lastError = err;
-        }
-    }
-    throw lastError ?? new Error('pointer helpers not found');
+    const drag = await import(new URL(HELPER_BASE + 'pointer-drag.js', import.meta.url).href);
+    const gesture = await import(new URL(HELPER_BASE + 'pointer-gesture.js', import.meta.url).href);
+    return { drag, gesture };
 }
 
 /**
@@ -67,16 +61,28 @@ async function loadHelpers() {
  *
  * @param {object} engine `window.tmDiagramEditor` (the touch* hooks and geometry internals).
  * @param {object} inst the engine instance for one canvas.
+ * @param {{ drag: object, gesture: object }} [helpers] the core helper modules; omitted in the
+ *   browser (loaded from the deployed layout), injected by the Node tests.
  * @returns {Promise<(function(): void & { cancelEditing: (reason?: string) => void, cancel: (reason?: string) => void })>}
  *   a detach that cancels a gesture in progress and ends every session — safe to call twice, safe
  *   before the helpers finished loading. `detach.cancelEditing(reason)` rolls back every EDITING
  *   gesture in flight (node drag, long-press, resize, rotate) while navigation keeps running — the
  *   read-only flip hook; `detach.cancel(reason)` cancels every session once.
  */
-export async function attachTouch(engine, inst) {
-    const { drag, gesture } = await loadHelpers();
+export async function attachTouch(engine, inst, helpers = null) {
+    const { drag, gesture } = helpers ?? await loadHelpers();
 
     const sessions = [];
+
+    // touchPortAt runs the hit-stack walk for EVERY session veto on the same press (nodeDrag,
+    // contextMenu, panDrag, resizeDrag, rotateDrag): memoize the resolution per event object.
+    const portAtMemo = new WeakMap();
+    const portAt = (event) => {
+        if (portAtMemo.has(event)) return portAtMemo.get(event);
+        const resolved = engine.touchPortAt(inst, event);
+        portAtMemo.set(event, resolved);
+        return resolved;
+    };
 
     // (1) Node drag: the press selects the node (like the old touchstart), the move drags the
     // whole selection — children and groups included, through the engine's own drag state.
@@ -87,6 +93,7 @@ export async function attachTouch(engine, inst) {
         touchAction: null,          // CSS owns touch-action on the canvas
         onPress: (info) => {
             if (info.event?.target?.closest?.(OTHER_GESTURE_SELECTOR)) return false;
+            if (portAt(info.event)) return false;
             return engine.touchPressNode(inst, info.target, info.startX, info.startY);
         },
         onStart: (info) => engine.touchBeginNodeDrag(inst, info.target, info.startX, info.startY),
@@ -96,31 +103,114 @@ export async function attachTouch(engine, inst) {
     });
     sessions.push(nodeDrag);
 
-    // (2) Long-press menu: the helper's longPressMs replaces the hand-rolled 600ms timer. The
-    // hold opens the node context menu and rolls the armed drag back; a moving finger aborts
-    // the hold, so a drag never turns into a menu.
-    const nodeMenu = drag.attach(inst.container, {
-        selector: NODE_SELECTOR,
+    // (2) Long-press context menu on a node, an edge or the empty canvas (R4). Touch only: a pen
+    // keeps the native press-and-hold contextmenu. The hold rolls every armed gesture back.
+    let menuTarget = null;
+    // The long-press opens the menu AT the finger, so the compatibility click of the lifting
+    // finger lands on a menu item the user never pressed — it would run that command and close
+    // the menu instantly. Release-click guard (review fix): ARMED per hold — set when the menu
+    // opens, disarmed on the first swallowed click or on ANY new pointerdown — and, once the
+    // finger lifts, a 350 ms window swallows the compatibility click itself. Scoped to THIS
+    // editor's menu: a click on another editor's menu is that editor's business.
+    let menuClickArmed = false;
+    let menuClickSuppressUntil = 0;
+    let menuOpened = false;   // only the hold that ACTUALLY opened a menu guards its release click
+    const onMenuClickGuard = (e) => {
+        if (!menuClickArmed && Date.now() >= menuClickSuppressUntil) return;
+        const menu = e.target?.closest?.('.tm-diagram-editor__context-menu');
+        if (!menu) return;
+        // Scoped to THIS editor: the click counts only when the menu lives in our editor root.
+        const editorRoot = inst.container.closest?.('.tm-diagram-editor') ?? null;
+        if (editorRoot && menu.closest('.tm-diagram-editor') !== editorRoot) return;
+        e.preventDefault?.();
+        e.stopPropagation?.();
+        menuClickArmed = false;   // the first swallowed click disarms the hold
+    };
+    // ANY new press cancels the release-click guard entirely: a real press means the user is
+    // interacting with the surface (or another control), so neither the armed flag nor the
+    // lift-click suppression window may swallow the next click (review fix).
+    const onAnyPointerDown = () => { menuClickArmed = false; menuClickSuppressUntil = 0; };
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', onMenuClickGuard, true);
+        document.addEventListener('pointerdown', onAnyPointerDown, true);
+    }
+
+    // Long-press feedback (review): after ~150 ms of hold a press ring grows under the finger for
+    // the remaining hold time; it is removed on every exit (open/release/cancel/move-abort) and
+    // stays a static ring under prefers-reduced-motion (CSS).
+    const PRESS_RING_DELAY = 150;
+    let pressRing = null;
+    let pressRingTimer = 0;
+    const removePressRing = () => {
+        if (pressRingTimer) { clearTimeout(pressRingTimer); pressRingTimer = 0; }
+        pressRing?.remove?.();
+        pressRing = null;
+    };
+    const showPressRing = (clientX, clientY) => {
+        if (typeof document === 'undefined' || !document.createElement) return;
+        pressRing = document.createElement('div');
+        pressRing.className = 'tm-diagram-press-ring';
+        pressRing.style.left = clientX + 'px';
+        pressRing.style.top = clientY + 'px';
+        (document.body ?? inst.container).appendChild?.(pressRing);
+    };
+
+    const contextMenu = drag.attach(inst.container, {
         pointerTypes: ['touch'],
         threshold: 0,
         longPressMs: MENU_LONG_PRESS_MS,
         touchAction: null,
-        onPress: (info) => !inst.readOnly
-            && !info.event?.target?.closest?.(OTHER_GESTURE_SELECTOR),
+        onPress: (info) => {
+            const target = info.event?.target;
+            if (target?.closest?.(OTHER_GESTURE_SELECTOR)) return false;
+            if (portAt(info.event)) return false;
+            menuTarget = engine.touchContextMenuTarget(inst, target);
+            if (menuTarget === null) return false;
+            pressRingTimer = setTimeout(() => showPressRing(info.startX, info.startY), PRESS_RING_DELAY);
+            return true;
+        },
         onStart: (info) => {
             // Hold completed: the menu opens while the finger is still down, and a drag that
             // already armed rolls back exactly once (a hold that never started a drag is a no-op).
-            cancelSessions('long-press-menu', [nodeMenu]);
+            cancelSessions('long-press-menu', [contextMenu]);
             engine.touchCancelNodeDrag(inst);
             engine.touchCancelPan(inst);
-            const id = info.target?.getAttribute?.('data-node-id');
-            if (id) {
-                inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', id, info.x, info.y);
+            removePressRing();
+            if (menuTarget) {
+                // The origin (pointerType) rides to C#, which mirrors it as data-anchor="touch"
+                // so the menu parks offset from the finger instead of under it.
+                engine.touchOpenContextMenu(inst, menuTarget, info.x, info.y, info.event?.pointerType);
+                menuClickArmed = true;
+                menuOpened = true;
+                try { globalThis.navigator?.vibrate?.(10); } catch (_e) { /* haptics unsupported */ }
             }
             return false;   // the long-press never becomes a drag
         },
+        onRelease: () => {
+            menuTarget = null;
+            removePressRing();
+            // The lift: this hold's compatibility click is about to fire — swallow it.
+            menuClickArmed = false;
+            if (menuOpened) menuClickSuppressUntil = Date.now() + 350;
+            menuOpened = false;
+        },
     });
-    sessions.push(nodeMenu);
+    sessions.push(contextMenu);
+
+    // (3a) Edge drawing from a port / connection point (tablet+, touch and pen, R2).
+    let portEl = null;
+    const portDrag = drag.attach(inst.container, {
+        pointerTypes: TOUCH_POINTERS,
+        threshold: 4,
+        touchAction: null,
+        onPress: (info) => { portEl = engine.touchPortAt(inst, info.event); return portEl !== null; },
+        onStart: (info) => engine.touchBeginEdgeDraw(inst, portEl, info.startX, info.startY),
+        onMove: (info) => engine.touchMoveEdgeDraw(inst, info.x, info.y),
+        onEnd: (info) => engine.touchEndEdgeDraw(inst, info.x, info.y),
+        onCancel: () => engine.touchCancelEdgeDraw(inst),
+        onRelease: () => { portEl = null; },
+    });
+    sessions.push(portDrag);
 
     // (3) Pan: a drag from the empty surface pans the canvas (navigation works read-only too);
     // a tap on an edge hit path selects the edge so a tablet can edit it. A press on the empty
@@ -136,6 +226,7 @@ export async function attachTouch(engine, inst) {
         onPress: (info) => {
             const target = info.event?.target;
             if (target?.closest?.(OTHER_GESTURE_SELECTOR)) return false;
+            if (portAt(info.event)) return false;
             if (inst.readOnly) {
                 // R1: every surface navigates in read-only; a TAP (onRelease) inspects.
                 roPressTarget = target ?? null;
@@ -185,7 +276,13 @@ export async function attachTouch(engine, inst) {
         pointerTypes: TOUCH_POINTERS,
         threshold: 0,
         touchAction: null,
-        onPress: () => !inst.readOnly,
+        onPress: (info) => {
+            if (inst.readOnly) return false;
+            // A port hit circle paints over the handle on a coarse pointer: the port drag owns
+            // the press (only ONE session may claim a pointer).
+            if (portAt(info.event)) return false;
+            return true;
+        },
         onStart: (info) => {
             const nodeId = info.target?.closest?.('g.tm-diagram-node-handles')?.getAttribute?.('data-node-id');
             const handle = info.target?.getAttribute?.('data-resize-handle')
@@ -205,7 +302,11 @@ export async function attachTouch(engine, inst) {
         pointerTypes: TOUCH_POINTERS,
         threshold: 0,
         touchAction: null,
-        onPress: () => !inst.readOnly,
+        onPress: (info) => {
+            if (inst.readOnly) return false;
+            if (portAt(info.event)) return false;   // the port drag owns the press, not the rotate
+            return true;
+        },
         onStart: (info) => {
             const nodeId = info.target?.closest?.('g.tm-diagram-node-handles')?.getAttribute?.('data-node-id');
             if (!nodeId) return false;
@@ -229,6 +330,7 @@ export async function attachTouch(engine, inst) {
             cancelSessions('pinch', [pinch]);
             engine.touchCancelNodeDrag(inst);
             engine.touchCancelPan(inst);
+            engine.touchCancelEdgeDraw(inst);
             pinchStartVb = engine.touchPinchBegin(inst);
         },
         onChange: (info) => {
@@ -252,15 +354,50 @@ export async function attachTouch(engine, inst) {
         }
     }
 
+    // Touch contact tracker for _isTouchContextMenu (diagram-editor.js): the native long-press
+    // contextmenu of Android / Windows touch must not open the menu a second time. A SET of the
+    // touch pointerIds currently down: a lift is only ever counted for the finger it belonged
+    // to, whatever element it happened over (the lift listener lives on the DOCUMENT — a finger
+    // captured by a drag session lifts off the element). A mouse/press pointer down clears the
+    // set: no touch hold can be running while the mouse is pressing.
+    const touchContacts = new Set();
+    inst.__touchContacts = touchContacts;
+    inst.__lastTouchUpAt = 0;
+    const onContactDown = (e) => {
+        if (e.pointerType === 'touch') touchContacts.add(e.pointerId);
+        else touchContacts.clear();
+    };
+    const onContactUp = (e) => {
+        if (e.pointerType !== 'touch') return;
+        touchContacts.delete(e.pointerId);
+        inst.__lastTouchUpAt = Date.now();
+    };
+    const onContactLost = (e) => { touchContacts.delete(e.pointerId); };
+    inst.container.addEventListener('pointerdown', onContactDown, true);
+    if (typeof document !== 'undefined') {
+        document.addEventListener('pointerup', onContactUp, true);
+        document.addEventListener('pointercancel', onContactUp, true);
+        document.addEventListener('lostpointercapture', onContactLost, true);
+    }
+
     let detached = false;
     function detach() {
         if (detached) return;
         detached = true;
+        removePressRing();
         for (const session of sessions) session.detach?.();
+        inst.container.removeEventListener('pointerdown', onContactDown, true);
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('pointerup', onContactUp, true);
+            document.removeEventListener('pointercancel', onContactUp, true);
+            document.removeEventListener('lostpointercapture', onContactLost, true);
+            document.removeEventListener('click', onMenuClickGuard, true);
+            document.removeEventListener('pointerdown', onAnyPointerDown, true);
+        }
     }
     // The EDITING sessions a read-only flip must roll back. A new editing session
-    // (portDrag, Phase 3) MUST be added here — navigation sessions (pan, pinch) stay live.
-    const editingSessions = [nodeDrag, nodeMenu, resizeDrag, rotateDrag];
+    // MUST be added here — navigation sessions (pan, pinch) stay live.
+    const editingSessions = [nodeDrag, contextMenu, portDrag, resizeDrag, rotateDrag];
     // Read-only flip: roll back every EDITING gesture in flight (their onCancel callbacks restore
     // the engine/C# state); navigation (pan, pinch) keeps running.
     detach.cancelEditing = (reason = 'read-only') => {

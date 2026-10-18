@@ -249,6 +249,63 @@ public class WorkflowDesignerTouchE2ETests : WasmTestBase
         Assert.IsTrue(await ViewBoxWidthAsync(page) < 800, "the committed viewBox is zoomed in");
     }
 
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("J1: a pinch whose first finger moved before the second landed still zooms (the pan hand-over must not roll the pinch back)")]
+    public async Task Touch_PinchZoom_AfterFirstFingerMoved_StillZooms()
+    {
+        var page = await OpenDesignerAsync(touch: true, 768, 900);
+        var viewBoxBefore = await ViewBoxAsync(page);
+
+        Assert.AreEqual(2, await FirstCanvas(page).Locator(".tm-wf-zoom-overlay button").CountAsync(), "zoom buttons exist");
+
+        var box = (await CanvasSvg(page).BoundingBoxAsync())!;
+        var cx = box.X + box.Width / 2f;
+        var cy = box.Y + box.Height / 2f;
+        var session = await page.Context.NewCDPSessionAsync(page);
+
+        // Finger one lands alone and moves 2 px: its pointer capture goes live on the canvas,
+        // the element the pinch is attached to as well.
+        await TouchAsync(session, "touchStart", cx - 40, cy, id: 1);
+        await TouchAsync(session, "touchMove", cx - 38, cy, id: 1);
+
+        // The second finger joins with BOTH touchPoints listed.
+        await session.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+        {
+            ["type"] = "touchStart",
+            ["touchPoints"] = new object[]
+            {
+                new Dictionary<string, object> { ["x"] = cx - 38, ["y"] = cy, ["id"] = 1 },
+                new Dictionary<string, object> { ["x"] = cx + 40, ["y"] = cy, ["id"] = 2 },
+            },
+        });
+        for (var i = 1; i <= 6; i++)
+        {
+            var spread = 40 + 30 * i; // 40 -> 220 px apart: scale 2.75
+            await session.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+            {
+                ["type"] = "touchMove",
+                ["touchPoints"] = new object[]
+                {
+                    new Dictionary<string, object> { ["x"] = cx - spread, ["y"] = cy, ["id"] = 1 },
+                    new Dictionary<string, object> { ["x"] = cx + spread, ["y"] = cy, ["id"] = 2 },
+                },
+            });
+        }
+        Assert.IsTrue((await ViewBoxWidthAsync(page)) < 800, "the spread zooms in live despite the moving first finger");
+
+        await session.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+        {
+            ["type"] = "touchEnd",
+            ["touchPoints"] = Array.Empty<object>(),
+        });
+        await page.WaitForTimeoutAsync(300);
+
+        var after = await ViewBoxAsync(page);
+        Assert.AreNotEqual(viewBoxBefore, after, "the pinch committed the new viewBox");
+        Assert.IsTrue(await ViewBoxWidthAsync(page) < 800, "the committed viewBox is zoomed in");
+    }
+
     private static async Task<double> ViewBoxWidthAsync(IPage page)
     {
         var vb = await ViewBoxAsync(page);

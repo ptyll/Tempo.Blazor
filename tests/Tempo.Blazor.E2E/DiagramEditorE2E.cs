@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Tempo.Blazor.E2E;
 
@@ -160,4 +161,63 @@ internal static class DiagramEditorE2E
         await entry.ScrollIntoViewIfNeededAsync();
         await entry.ClickAsync();
     }
+
+    /// <summary>Real CDP touch: every listed point is down; an empty list lifts all fingers.</summary>
+    public static Task CdpTouchAsync(ICDPSession session, string type, params (int id, double x, double y)[] points)
+        => session.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+        {
+            ["type"] = type,
+            ["touchPoints"] = points.Select(p => (object)new Dictionary<string, object>
+                { ["x"] = p.x, ["y"] = p.y, ["id"] = p.id }).ToArray(),
+        });
+
+    /// <summary>A canvas point whose ±140 px horizontal neighbourhood hits no node/edge/port.</summary>
+    public static async Task<(double x, double y)> EmptyCanvasPointAsync(IPage page)
+    {
+        var p = await page.EvaluateAsync<double[]?>(@"() => {
+            const svg = document.querySelector('.tm-diagram-canvas__svg');
+            const r = svg.getBoundingClientRect();
+            const busy = (x, y) => { const el = document.elementFromPoint(x, y);
+                return !el || !svg.contains(el) || !!el.closest('[data-node-id], .tm-diagram-edge-hit-path, .tm-diagram-edge-label-group, .tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'); };
+            for (let fy = 0.85; fy > 0.15; fy -= 0.05)
+                for (let fx = 0.25; fx < 0.75; fx += 0.05) {
+                    const x = r.left + r.width * fx, y = r.top + r.height * fy;
+                    if (![-140, -60, 0, 60, 140].some(d => busy(x + d, y))) return [x, y];
+                }
+            return null; }");
+        Assert.IsNotNull(p, "no empty canvas strip to pinch on");
+        return (p![0], p[1]);
+    }
+
+    /// <summary>Width of the canvas viewBox (shrinks when zooming in).</summary>
+    public static async Task<double> CanvasViewBoxWidthAsync(IPage page)
+    {
+        var vb = await page.Locator(".tm-diagram-canvas__svg").First.GetAttributeAsync("viewBox") ?? "";
+        return double.Parse(vb.Split(' ')[2], System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Wraps the canvas instance's dotNetRef so every menu-open interop call
+    /// (<paramref name="method"/>: OnNodeContextMenu / OnEdgeContextMenu / OnCanvasContextMenu)
+    /// increments window.__menuOpenCount — the "opened exactly once" assertion rides on the
+    /// real JS → .NET boundary, not on the DOM.</summary>
+    public static async Task ArmMenuOpenCounterAsync(IPage page, string method)
+    {
+        await page.EvaluateAsync(
+            """
+            (method) => {
+                const canvas = document.querySelector('.tm-diagram-canvas');
+                const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                window.__menuOpenCount = 0;
+                const orig = inst.dotNetRef.invokeMethodAsync.bind(inst.dotNetRef);
+                inst.dotNetRef.invokeMethodAsync = (name, ...args) => {
+                    if (name === method) window.__menuOpenCount++;
+                    return orig(name, ...args);
+                };
+            }
+            """, method);
+    }
+
+    /// <summary>The count recorded by <see cref="ArmMenuOpenCounterAsync"/>.</summary>
+    public static async Task<int> MenuOpenCountAsync(IPage page)
+        => await page.EvaluateAsync<int>("() => window.__menuOpenCount ?? -1");
 }

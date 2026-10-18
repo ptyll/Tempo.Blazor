@@ -57,6 +57,10 @@ window.tmDiagramEditor = {
 
     init: function (container, dotNetRef, options) {
         const id = container.id || 'tmd-' + Math.random().toString(36).substr(2, 9);
+        // A Blazor re-render can call init on a container whose previous instance is still
+        // registered (no dispose between): tear it down first so no listener or touch session
+        // survives onto the fresh instance.
+        if (this.instances.has(id)) this.destroy(container);
         container.id = id;
 
         const svg = container.querySelector('.tm-diagram-canvas__svg');
@@ -188,11 +192,13 @@ window.tmDiagramEditor = {
         const id = container.id;
         const inst = this.instances.get(id);
         if (!inst) return;
+        inst.__destroyed = true;   // a touch module still importing must not attach onto this canvas
 
         if (inst.__touchDetach) {
             try { inst.__touchDetach(); } catch (_e) { /* the sessions are already gone */ }
             inst.__touchDetach = null;
         }
+        this._cancelRotateSession(inst);   // before inst.svg = null: the rollback needs the geometry
         this._detachEvents(inst);
         if (inst.rubberEl) inst.rubberEl.remove();
         this._clearSelectionOutlines(inst);
@@ -244,26 +250,59 @@ window.tmDiagramEditor = {
     // The mouse path stays here (characterization parity, phase 6); every touch/pen gesture is
     // the shared-helper session stack in diagram-editor-touch.js — no touchstart handlers.
 
-    // Resolved NOW: document.currentScript is only set while this classic script runs.
+    // Resolved NOW: document.currentScript is only set while this classic script runs. When it
+    // is null (type="module", a loader or an injected script) find our own <script> tag; the last
+    // resort resolves the deployed path against document.baseURI so <base href> is honoured and
+    // the result is always an absolute URL (a bare '_content/...' string is not a module
+    // specifier: import() would throw TypeError).
     _touchModuleUrl: (function () {
+        const TOUCH = 'diagram-editor-touch.js';
         try {
             const script = document.currentScript;
-            if (script && script.src) return new URL('diagram-editor-touch.js', script.src).href;
-        } catch (_e) { /* fall through to the deployed default */ }
-        return '_content/Tempo.Blazor.DiagramEditor/js/diagram-editor-touch.js';
+            if (script && script.src) return new URL(TOUCH, script.src).href;
+        } catch (_e) { /* fall through */ }
+        try {
+            const tags = document.querySelectorAll ? document.querySelectorAll('script[src]') : [];
+            for (let i = tags.length - 1; i >= 0; i--) {
+                const src = tags[i].src || '';
+                // diagram-editor.js or a fingerprinted diagram-editor.<hash>.js, never -touch.js
+                if (/\/diagram-editor(\.[A-Za-z0-9_-]+)?\.js(?:[?#]|$)/.test(src)) return new URL(TOUCH, src).href;
+            }
+        } catch (_e) { /* fall through */ }
+        try {
+            return new URL('_content/Tempo.Blazor.DiagramEditor/js/' + TOUCH, document.baseURI).href;
+        } catch (_e) {
+            return '/_content/Tempo.Blazor.DiagramEditor/js/' + TOUCH;
+        }
     })(),
 
+    // Test seam: the Node tests replace this to avoid a real dynamic import.
+    _importTouchModule: function (url) { return import(url); },
+
     _loadTouchModule: function (inst) {
-        if (inst.__touchDetach) return;
-        import(this._touchModuleUrl).then(function (module) {
-            if (!inst.container || inst.__touchDetach) return;
-            module.attachTouch(window.tmDiagramEditor, inst).then(function (detach) {
-                if (inst.__touchDetach) { detach(); return; }
+        if (inst.__touchDetach) return Promise.resolve();
+        if (inst.__touchLoading) return inst.__touchLoading;
+        const self = this;
+        // Alive = not destroyed and still THE instance for its container id (a re-init replaces it).
+        const alive = function () {
+            return !inst.__destroyed && !!inst.container && self.instances.get(inst.container.id) === inst;
+        };
+        inst.__touchLoading = Promise.resolve()
+            .then(function () { return self._importTouchModule(self._touchModuleUrl); })
+            .then(function (module) {
+                if (!alive()) return null;
+                return module.attachTouch(self, inst);     // returned: a rejection reaches .catch
+            })
+            .then(function (detach) {
+                if (typeof detach !== 'function') return;
+                if (!alive() || inst.__touchDetach) { detach(); return; }
                 inst.__touchDetach = detach;
-            });
-        }).catch(function (err) {
-            console.warn('tmDiagramEditor: the touch module could not be loaded; touch gestures are unavailable', err);
-        });
+            })
+            .catch(function (err) {
+                console.warn('tmDiagramEditor: the touch module could not be loaded; touch gestures are unavailable', err);
+            })
+            .finally(function () { inst.__touchLoading = null; });
+        return inst.__touchLoading;
     },
 
     _attachEvents: function (inst) {
@@ -318,54 +357,73 @@ window.tmDiagramEditor = {
     _onContextMenu: function (e, inst) {
         if (inst.readOnly || !inst.dotNetRef) return;
 
+        e.preventDefault();
+
+        // R4: every touch long-press (node, edge, empty canvas) is owned by the contextMenu
+        // session (600 ms, diagram-editor-touch.js). Android Chrome and Windows touch also fire a
+        // native contextmenu for the same hold — swallow it BEFORE the close-on-menu branch, or
+        // the touch-synthesized event ON the just-opened menu would close it again.
+        if (this._isTouchContextMenu(e, inst)) return;
+
         // If clicking on the custom context menu itself, close it and prevent native menu
         if (e.target.closest('.tm-diagram-editor__context-menu')) {
-            e.preventDefault();
             inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
             return;
         }
 
-        e.preventDefault();
+        this._openContextMenuFor(inst, this._contextMenuTarget(e.target), e.clientX, e.clientY);
+    },
 
-        // No need to call CloseContextMenu here — OnNodeContextMenu/OnEdgeContextMenu/OnCanvasContextMenu
-        // will set _contextMenuOpen = true and openContextMenu will replace the old menu and listeners.
-
-        const labelGroupEl = e.target.closest('.tm-diagram-edge-label-group');
+    // Shared by the right-click and the touch long-press: what the press is on.
+    _contextMenuTarget: function (target) {
+        if (!target || !target.closest) return { kind: 'canvas' };
+        const labelGroupEl = target.closest('.tm-diagram-edge-label-group');
         if (labelGroupEl) {
             const labelHandle = labelGroupEl.querySelector('[data-label-handle]');
-            const edgeId = labelHandle ? labelHandle.getAttribute('data-edge-id') : null;
-            if (edgeId) {
-                inst.dotNetRef.invokeMethodAsync('OnEdgeContextMenu', edgeId, e.clientX, e.clientY);
-                return;
-            }
+            const edgeId = (labelHandle && labelHandle.getAttribute('data-edge-id')) || labelGroupEl.getAttribute('data-edge-id');
+            if (edgeId) return { kind: 'edge', id: edgeId };
         }
-
-        const tableCellEl = e.target.closest('.tm-diagram-node__table-cell');
-        const nodeEl = e.target.closest('.tm-diagram-node');
-        const edgeEl = e.target.closest('.tm-diagram-edge-hit-path');
-
+        const tableCellEl = target.closest('.tm-diagram-node__table-cell');
+        const nodeEl = target.closest('.tm-diagram-node');
         if (tableCellEl && nodeEl) {
-            const nodeId = nodeEl.getAttribute('data-node-id');
+            const id = nodeEl.getAttribute('data-node-id');
             const row = parseInt(tableCellEl.getAttribute('data-row'), 10);
             const col = parseInt(tableCellEl.getAttribute('data-col'), 10);
-            if (nodeId && !isNaN(row) && !isNaN(col)) {
-                inst.dotNetRef.invokeMethodAsync('OnTableCellContextMenu', nodeId, row, col, e.clientX, e.clientY);
-            }
-        } else if (nodeEl) {
-            const nodeId = nodeEl.getAttribute('data-node-id');
-            if (nodeId) {
-                inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', nodeId, e.clientX, e.clientY);
-            }
-        } else if (edgeEl) {
-            const edgeId = edgeEl.getAttribute('data-edge-id');
-            if (edgeId) {
-                inst.dotNetRef.invokeMethodAsync('OnEdgeContextMenu', edgeId, e.clientX, e.clientY);
-            }
-        } else {
-            const docPt = this._screenToDoc(inst, e.clientX, e.clientY);
-            inst.dotNetRef.invokeMethodAsync('OnCanvasContextMenu', docPt.x, docPt.y, e.clientX, e.clientY);
+            return (id && !isNaN(row) && !isNaN(col)) ? { kind: 'cell', id, row, col } : null;
+        }
+        if (nodeEl) { const id = nodeEl.getAttribute('data-node-id'); return id ? { kind: 'node', id } : null; }
+        const edgeEl = target.closest('.tm-diagram-edge-hit-path');
+        if (edgeEl) { const id = edgeEl.getAttribute('data-edge-id'); return id ? { kind: 'edge', id } : null; }
+        return { kind: 'canvas' };
+    },
+
+    _openContextMenuFor: function (inst, t, clientX, clientY, origin) {
+        if (!t || !inst.dotNetRef) return;
+        const src = origin || 'mouse';
+        if (t.kind === 'cell') inst.dotNetRef.invokeMethodAsync('OnTableCellContextMenu', t.id, t.row, t.col, clientX, clientY, src);
+        else if (t.kind === 'node') inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', t.id, clientX, clientY, src);
+        else if (t.kind === 'edge') inst.dotNetRef.invokeMethodAsync('OnEdgeContextMenu', t.id, clientX, clientY, src);
+        else {
+            const docPt = this._screenToDoc(inst, clientX, clientY);
+            inst.dotNetRef.invokeMethodAsync('OnCanvasContextMenu', docPt.x, docPt.y, clientX, clientY, src);
         }
     },
+
+    _isTouchContextMenu: function (e, inst) {
+        if (!inst.__touchDetach) return false;   // no touch stack on this canvas: a contextmenu is a mouse right-click
+        if (e.pointerType === 'touch') return true;                                    // contextmenu is a PointerEvent in Chromium/Firefox
+        if (inst.__touchContacts && inst.__touchContacts.size > 0) return true;        // fired during the hold
+        return inst.__lastTouchUpAt > 0 && Date.now() - inst.__lastTouchUpAt < 800;     // Windows: fired on lift
+    },
+
+    // Touch hooks for the long-press session (R4).
+    touchContextMenuTarget: function (inst, target) {
+        if (inst.readOnly || !target || !target.closest || !target.closest('.tm-diagram-canvas__svg')) return null;
+        return this._contextMenuTarget(target);
+    },
+    // `origin` is the pointer type that opened the menu ('touch'); C# mirrors it as
+    // data-anchor="touch" so openContextMenu can offset the menu away from the finger.
+    touchOpenContextMenu: function (inst, t, clientX, clientY, origin) { this._openContextMenuFor(inst, t, clientX, clientY, origin); },
 
     // ── Coordinate helpers ────────────────────────────────────────────────────
 
@@ -389,6 +447,14 @@ window.tmDiagramEditor = {
         if (inst.dotNetRef)
             inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', x, y, w, h);
     },
+
+    // Zoom limits shared by wheel, pinch, zoomTo and fitToView. C# mirror: DiagramZoomLimits.cs
+    // (the zoom buttons step between them); DiagramZoomLimitsTests keeps both equal.
+    MIN_SCALE: 0.15,
+    MAX_SCALE: 5.0,
+    // The fit ceiling: zoomToRect and fitToView never fit content LARGER than this on screen.
+    FIT_MAX_SCALE: 2.0,
+    _clampScale: function (s) { return Math.min(this.MAX_SCALE, Math.max(this.MIN_SCALE, s)); },
 
     _snap: function (inst, v) {
         const g = inst.gridSize;
@@ -557,6 +623,26 @@ window.tmDiagramEditor = {
                     return all[i];
                 }
             }
+        }
+        return null;
+    },
+
+    // First element carrying `className` at the press: the raw target first, then the hit stack
+    // (edges paint over nodes, so a port / connection point under an edge corridor is not the
+    // event target). `stack` is computed once per mousedown by the caller. A search for a port
+    // or a connection point also accepts the finger-sized `.tm-diagram-port-hit` circle rendered
+    // over them (it carries the same data-port-id / data-cp-* attributes).
+    _firstWithClass: function (target, stack, className) {
+        const hitAlias = className === 'tm-diagram-port' || className === 'tm-diagram-connection-point';
+        const direct = target && target.closest ? target.closest('.' + className) : null;
+        if (direct) return direct;
+        if (hitAlias && target && target.closest) {
+            const hit = target.closest('.tm-diagram-port-hit');
+            if (hit) return hit;
+        }
+        for (let i = 0; i < stack.length; i++) {
+            const el = stack[i];
+            if (el.classList && (el.classList.contains(className) || (hitAlias && el.classList.contains('tm-diagram-port-hit')))) return el;
         }
         return null;
     },
@@ -776,20 +862,11 @@ window.tmDiagramEditor = {
         // invisible hit path is the top element at a port's position and the raw target is
         // the hit path, not the port (phase 8 regression — pressing a port that carries an
         // attached edge started a whole-edge drag and edge drawing became impossible).
+        const pointerStack = (typeof document.elementsFromPoint === 'function') ? document.elementsFromPoint(e.clientX, e.clientY) : [];
         if (!isRightClick && !inst.readOnly) {
             const edgeHitEl = this._findHitPath(e);
-            var portUnderPointer = false;
-            if (edgeHitEl && typeof document.elementsFromPoint === 'function') {
-                var stackAtPointer = document.elementsFromPoint(e.clientX, e.clientY);
-                for (var stackIndex = 0; stackIndex < stackAtPointer.length; stackIndex++) {
-                    var stackEl = stackAtPointer[stackIndex];
-                    if (stackEl.classList && (stackEl.classList.contains('tm-diagram-port')
-                        || stackEl.classList.contains('tm-diagram-connection-point'))) {
-                        portUnderPointer = true;
-                        break;
-                    }
-                }
-            }
+            var portUnderPointer = !!edgeHitEl && !!(this._firstWithClass(e.target, pointerStack, 'tm-diagram-port')
+                || this._firstWithClass(e.target, pointerStack, 'tm-diagram-connection-point'));
             if (edgeHitEl && !portUnderPointer) {
                 const edgeId = edgeHitEl.getAttribute('data-edge-id');
                 if (edgeId) {
@@ -824,19 +901,17 @@ window.tmDiagramEditor = {
         // Port clicked? -> start edge drawing (skip if node is locked). The port may sit
         // UNDER an edge hit path (edges paint over nodes and the hit path becomes the event
         // target), so when the raw target is not a port, resolve the element stack under
-        // the pointer (phase 8).
-        var portEl = e.target.closest('.tm-diagram-port');
-        if (!portEl && typeof document.elementsFromPoint === 'function') {
-            var stackUnderPointer = document.elementsFromPoint(e.clientX, e.clientY);
-            for (var portIndex = 0; portIndex < stackUnderPointer.length; portIndex++) {
-                var portCandidate = stackUnderPointer[portIndex];
-                if (portCandidate.classList && portCandidate.classList.contains('tm-diagram-port')) {
-                    portEl = portCandidate;
-                    break;
-                }
-            }
-        }
-        if (portEl && !inst.readOnly) {
+        // the pointer (phase 8, _firstWithClass). Occlusion: the stack is only consulted when
+        // the raw target is the port itself or an edge corridor that paints over it — a press on
+        // another control (a resize/rotate handle hit, a node body, …) is that control's
+        // gesture, and a port buried deeper in the stack under it is COVERED, not pressed.
+        var rawHit = e.target && e.target.closest ? e.target : null;
+        var stackAllowed = !!rawHit && (!!(rawHit.closest('.tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'))
+            || !!(rawHit.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')));
+        var portEl = stackAllowed ? this._firstWithClass(e.target, pointerStack, 'tm-diagram-port') : null;
+        // A `.tm-diagram-port-hit` circle may stand in for a CONNECTION POINT (data-cp-*): only a
+        // real port carries data-port-id — let the connection-point branch handle the rest.
+        if (portEl && portEl.getAttribute('data-port-id') && !inst.readOnly) {
             const nodeEl = portEl.closest('[data-node-id]');
             if (nodeEl && nodeEl.getAttribute('data-locked') === 'true') return;
             e.preventDefault();
@@ -848,7 +923,7 @@ window.tmDiagramEditor = {
         }
 
         // Connection point clicked? -> start edge drawing with fixed constraint
-        const cpEl = e.target.closest('.tm-diagram-connection-point');
+        const cpEl = stackAllowed ? this._firstWithClass(e.target, pointerStack, 'tm-diagram-connection-point') : null;
         if (cpEl && !inst.readOnly) {
             const nodeEl = cpEl.closest('[data-node-id]');
             if (nodeEl && nodeEl.getAttribute('data-locked') === 'true') return;
@@ -1445,6 +1520,116 @@ window.tmDiagramEditor = {
 
     // ── Mouse up ─────────────────────────────────────────────────────────────
 
+    // The edge-draw commit shared by the mouse path (_onMouseUp) and the touch path
+    // (touchEndEdgeDraw, J12a). One commit path, one JsOnEdgeCreated shape.
+    _commitEdgeDraw: function (inst, clientX, clientY) {
+        // When the source is floating (free-line from empty canvas) pass
+        // the doc-space source point so the backend can create an edge
+        // with SourcePoint instead of a source node/port. Floating
+        // coordinates are grid-snapped when `gridSize > 0` so free
+        // endpoints line up with the grid just like node positions do.
+        const floatingSource = !inst.drawSource.nodeId;
+        const srcPtX = floatingSource ? this._snap(inst, inst.drawSource.x) : null;
+        const srcPtY = floatingSource ? this._snap(inst, inst.drawSource.y) : null;
+
+        // Edge-to-edge connection takes priority
+        if (inst.drawHoverEdgeId && inst.drawHoverEdgeT !== null) {
+            inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+                inst.drawSource.nodeId, inst.drawSource.portId,
+                null, null,
+                inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+                inst.drawHoverEdgeId, inst.drawHoverEdgeT,
+                inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+                null, null, null,
+                null, null,
+                srcPtX, srcPtY,
+                null);
+            this._cancelEdgeDraw(inst);
+            return;
+        }
+        // Use elementFromPoint because e.target may hit SVG grid/path instead of HTML port overlay
+        const hitEl = document.elementFromPoint(clientX, clientY);
+        let portEl = hitEl ? hitEl.closest('.tm-diagram-port') : null;
+        // Phase 3.2 smart-snap to port — if the cursor isn't directly on
+        // a port but _is_ over a node, pull the target onto the closest
+        // port within the same threshold used by `_updateEdgeDraw`
+        // (15 / scale in doc units). This mirrors the preview behavior
+        // so what the user sees during drag is what they get on release.
+        let smartSnapNodeEl = null;
+        if (!portEl) {
+            const nodeUnderCursor = hitEl ? hitEl.closest('[data-node-id]') : null;
+            if (nodeUnderCursor) {
+                const nId = nodeUnderCursor.getAttribute('data-node-id');
+                const upDoc = this._screenToDoc(inst, clientX, clientY);
+                const nearest = this._findNearestPortOnNode(inst, nId, upDoc.x, upDoc.y, 15 / Math.max(inst.scale, 0.01));
+                if (nearest && nearest.portEl) {
+                    portEl = nearest.portEl;
+                    smartSnapNodeEl = nodeUnderCursor;
+                }
+            }
+        }
+        if (portEl) {
+            const nodeEl = portEl.closest('[data-node-id]') || smartSnapNodeEl;
+            if (nodeEl) {
+                const targetNodeId = nodeEl.getAttribute('data-node-id');
+                const targetPortId = portEl.getAttribute('data-port-id');
+                console.log('[EdgeDraw] Port connect -> nodeId=' + targetNodeId + ' portId=' + targetPortId);
+                // Allow self-connections (loop edges)
+                inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+                    inst.drawSource.nodeId, inst.drawSource.portId,
+                    targetNodeId, targetPortId,
+                    inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+                    null, 0.5,
+                    inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+                    null, null, null,
+                    null, null,
+                    srcPtX, srcPtY,
+                    null);
+                this._cancelEdgeDraw(inst);
+                return;
+            }
+        }
+        const cpEl = hitEl ? hitEl.closest('.tm-diagram-connection-point') : null;
+        if (cpEl) {
+            const nodeEl = cpEl.closest('[data-node-id]');
+            if (nodeEl) {
+                const targetNodeId = nodeEl.getAttribute('data-node-id');
+                const targetRx = parseFloat(cpEl.getAttribute('data-cp-rx'));
+                const targetRy = parseFloat(cpEl.getAttribute('data-cp-ry'));
+                const targetPerimeter = cpEl.getAttribute('data-cp-perimeter') === 'true';
+
+                inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+                    inst.drawSource.nodeId, inst.drawSource.portId,
+                    targetNodeId, null,
+                    inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+                    null, 0.5,
+                    inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+                    targetRx, targetRy, targetPerimeter,
+                    null, null,
+                    srcPtX, srcPtY,
+                    null);
+                this._cancelEdgeDraw(inst);
+                return;
+            }
+        }
+        // Dangling edge: drop on empty canvas
+        const docPt = this._screenToDoc(inst, clientX, clientY);
+        const tgtX = this._snap(inst, docPt.x);
+        const tgtY = this._snap(inst, docPt.y);
+        console.log('[EdgeDraw] Dangling -> pt=' + tgtX + ',' + tgtY);
+        inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+            inst.drawSource.nodeId, inst.drawSource.portId,
+            null, null,
+            inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+            null, 0.5,
+            inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+            null, null, null,
+            tgtX, tgtY,
+            srcPtX, srcPtY,
+            null);
+        this._cancelEdgeDraw(inst);
+    },
+
     _onMouseUp: function (e, inst) {
         // Pending free-line draw that never escalated (user just *clicked*
         // on empty canvas in edge mode — no drag). In phase 2 this promotes
@@ -1480,111 +1665,7 @@ window.tmDiagramEditor = {
         }
 
         if (inst.isDrawingEdge) {
-            // When the source is floating (free-line from empty canvas) pass
-            // the doc-space source point so the backend can create an edge
-            // with SourcePoint instead of a source node/port. Floating
-            // coordinates are grid-snapped when `gridSize > 0` so free
-            // endpoints line up with the grid just like node positions do.
-            const floatingSource = !inst.drawSource.nodeId;
-            const srcPtX = floatingSource ? this._snap(inst, inst.drawSource.x) : null;
-            const srcPtY = floatingSource ? this._snap(inst, inst.drawSource.y) : null;
-
-            // Edge-to-edge connection takes priority
-            if (inst.drawHoverEdgeId && inst.drawHoverEdgeT !== null) {
-                inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                    inst.drawSource.nodeId, inst.drawSource.portId,
-                    null, null,
-                    inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                    inst.drawHoverEdgeId, inst.drawHoverEdgeT,
-                    inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                    null, null, null,
-                    null, null,
-                    srcPtX, srcPtY,
-                    null);
-                this._cancelEdgeDraw(inst);
-                return;
-            }
-            // Use elementFromPoint because e.target may hit SVG grid/path instead of HTML port overlay
-            const hitEl = document.elementFromPoint(e.clientX, e.clientY);
-            let portEl = hitEl ? hitEl.closest('.tm-diagram-port') : null;
-            // Phase 3.2 smart-snap to port — if the cursor isn't directly on
-            // a port but _is_ over a node, pull the target onto the closest
-            // port within the same threshold used by `_updateEdgeDraw`
-            // (15 / scale in doc units). This mirrors the preview behavior
-            // so what the user sees during drag is what they get on release.
-            let smartSnapNodeEl = null;
-            if (!portEl) {
-                const nodeUnderCursor = hitEl ? hitEl.closest('[data-node-id]') : null;
-                if (nodeUnderCursor) {
-                    const nId = nodeUnderCursor.getAttribute('data-node-id');
-                    const upDoc = this._screenToDoc(inst, e.clientX, e.clientY);
-                    const nearest = this._findNearestPortOnNode(inst, nId, upDoc.x, upDoc.y, 15 / Math.max(inst.scale, 0.01));
-                    if (nearest && nearest.portEl) {
-                        portEl = nearest.portEl;
-                        smartSnapNodeEl = nodeUnderCursor;
-                    }
-                }
-            }
-            if (portEl) {
-                const nodeEl = portEl.closest('[data-node-id]') || smartSnapNodeEl;
-                if (nodeEl) {
-                    const targetNodeId = nodeEl.getAttribute('data-node-id');
-                    const targetPortId = portEl.getAttribute('data-port-id');
-                    console.log('[EdgeDraw] Port connect -> nodeId=' + targetNodeId + ' portId=' + targetPortId);
-                    // Allow self-connections (loop edges)
-                    inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                        inst.drawSource.nodeId, inst.drawSource.portId,
-                        targetNodeId, targetPortId,
-                        inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                        null, 0.5,
-                        inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                        null, null, null,
-                        null, null,
-                        srcPtX, srcPtY,
-                        null);
-                    this._cancelEdgeDraw(inst);
-                    return;
-                }
-            }
-            const cpEl = hitEl ? hitEl.closest('.tm-diagram-connection-point') : null;
-            if (cpEl) {
-                const nodeEl = cpEl.closest('[data-node-id]');
-                if (nodeEl) {
-                    const targetNodeId = nodeEl.getAttribute('data-node-id');
-                    const targetRx = parseFloat(cpEl.getAttribute('data-cp-rx'));
-                    const targetRy = parseFloat(cpEl.getAttribute('data-cp-ry'));
-                    const targetPerimeter = cpEl.getAttribute('data-cp-perimeter') === 'true';
-
-                    inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                        inst.drawSource.nodeId, inst.drawSource.portId,
-                        targetNodeId, null,
-                        inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                        null, 0.5,
-                        inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                        targetRx, targetRy, targetPerimeter,
-                        null, null,
-                        srcPtX, srcPtY,
-                        null);
-                    this._cancelEdgeDraw(inst);
-                    return;
-                }
-            }
-            // Dangling edge: drop on empty canvas
-            const docPt = this._screenToDoc(inst, e.clientX, e.clientY);
-            const tgtX = this._snap(inst, docPt.x);
-            const tgtY = this._snap(inst, docPt.y);
-            console.log('[EdgeDraw] Dangling -> pt=' + tgtX + ',' + tgtY);
-            inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                inst.drawSource.nodeId, inst.drawSource.portId,
-                null, null,
-                inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                null, 0.5,
-                inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                null, null, null,
-                tgtX, tgtY,
-                srcPtX, srcPtY,
-                null);
-            this._cancelEdgeDraw(inst);
+            this._commitEdgeDraw(inst, e.clientX, e.clientY);
             return;
         }
 
@@ -1866,15 +1947,28 @@ window.tmDiagramEditor = {
         const vb = this._getViewBox(inst);
         const pt = this._screenToDoc(inst, e.clientX, e.clientY);
 
-        const newW = vb.w * factor;
-        const newH = vb.h * factor;
-
         const svgRect = inst.svg.getBoundingClientRect();
-        const newScale = svgRect.width / newW;
-        if (newScale < 0.15 || newScale > 5.0) return;
-
-        const newX = pt.x - (pt.x - vb.x) * factor;
-        const newY = pt.y - (pt.y - vb.y) * factor;
+        const curScale = svgRect.width / vb.w;
+        // Outside the range (a restored viewBox the limits no longer cover): only a tick that
+        // moves TOWARD the range applies, capped at the boundary — never a jump past it.
+        let newScale = curScale / factor;
+        if (curScale < this.MIN_SCALE) {
+            if (newScale <= curScale) return;
+            newScale = Math.min(newScale, this.MIN_SCALE);
+        }
+        else if (curScale > this.MAX_SCALE) {
+            if (newScale >= curScale) return;
+            newScale = Math.max(newScale, this.MAX_SCALE);
+        }
+        else {
+            newScale = this._clampScale(newScale);
+            if (Math.abs(newScale - curScale) < 1e-9) return;   // already at the limit
+        }
+        const f = curScale / newScale;                      // effective factor after the clamp
+        const newW = vb.w * f;
+        const newH = vb.h * f;
+        const newX = pt.x - (pt.x - vb.x) * f;
+        const newY = pt.y - (pt.y - vb.y) * f;
 
         this._setViewBox(inst, newX, newY, newW, newH);
         inst.dotNetRef.invokeMethodAsync('OnZoomChanged', newScale);
@@ -2054,7 +2148,14 @@ window.tmDiagramEditor = {
         if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('OnDragCancelled');
     },
 
+    // A touch gesture starting while the context menu is open dismisses it (the finger is
+    // clearly doing something else). The _menuOpen flag is kept by openContextMenu/closeContextMenu.
+    _closeMenuIfOpen: function (inst) {
+        if (inst._menuOpen && inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
+    },
+
     touchBeginPan: function (inst, clientX, clientY) {
+        this._closeMenuIfOpen(inst);
         if (inst.isPanning) return;
         inst.isPanning = true;
         inst.panStartScreen = { x: clientX, y: clientY };
@@ -2090,9 +2191,53 @@ window.tmDiagramEditor = {
         inst.viewBoxStart = null;
     },
 
+    // A port / connection point under the finger (the raw target first, then the hit stack —
+    // an edge corridor paints over it, see _firstWithClass, J6). The invisible
+    // `.tm-diagram-port-hit` circles rendered for the selected node's ports count as ports too:
+    // they are the finger-sized press target a coarse pointer actually hits.
+    touchPortAt: function (inst, event) {
+        if (inst.readOnly || !event) return null;
+        const stack = typeof document.elementsFromPoint === 'function' ? document.elementsFromPoint(event.clientX, event.clientY) : [];
+        const el = this._firstWithClass(event.target, stack, 'tm-diagram-port')
+            || this._firstWithClass(event.target, stack, 'tm-diagram-connection-point');
+        if (!el) return null;
+        // Occlusion: the port/cp only wins when the raw press target is the port itself (or its
+        // finger-sized hit circle) or an edge corridor that paints over it (J6). A press on
+        // another control (a resize/rotate handle hit, a node body, …) is that control's gesture
+        // — a port buried deeper in the hit stack under it is COVERED, not pressed.
+        const raw = event.target;
+        const rawIsPort = !!(raw && raw.closest && raw.closest('.tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'));
+        const rawIsEdge = !!(raw && raw.closest && raw.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group'));
+        if (!rawIsPort && !rawIsEdge) return null;
+        const nodeEl = el.closest('[data-node-id]');
+        if (!nodeEl || nodeEl.getAttribute('data-locked') === 'true') return null;
+        // G2: edge drawing is tablet+ (the editor mirrors its layout on the root).
+        const root = inst.container.closest('[data-editor-layout]');
+        if (root && root.getAttribute('data-editor-layout') === 'mobile') return null;
+        return el;
+    },
+    touchBeginEdgeDraw: function (inst, el, clientX, clientY) {
+        this._closeMenuIfOpen(inst);
+        const nodeEl = el.closest('[data-node-id]');
+        const nodeId = nodeEl.getAttribute('data-node-id');
+        // A `.tm-diagram-port-hit` circle carries EITHER data-port-id (a port) or the data-cp-*
+        // attributes (a connection point) — decide by the attribute, not the class.
+        if (el.getAttribute('data-port-id')) {
+            this._startEdgeDraw(inst, nodeId, el.getAttribute('data-port-id'), clientX, clientY);
+        } else {
+            this._startEdgeDraw(inst, nodeId, null, clientX, clientY, null, 0.5,
+                parseFloat(el.getAttribute('data-cp-rx')), parseFloat(el.getAttribute('data-cp-ry')),
+                el.getAttribute('data-cp-perimeter') === 'true');
+        }
+    },
+    touchMoveEdgeDraw: function (inst, clientX, clientY) { this._updateEdgeDraw(inst, clientX, clientY); },
+    touchEndEdgeDraw: function (inst, clientX, clientY) { if (inst.isDrawingEdge) this._commitEdgeDraw(inst, clientX, clientY); },
+    touchCancelEdgeDraw: function (inst) { if (inst.isDrawingEdge) this._cancelEdgeDraw(inst); },
+
     // ── Two-finger pinch/pan (pointer-gesture.js reports the geometry) ───────
 
     touchPinchBegin: function (inst) {
+        this._closeMenuIfOpen(inst);
         return this._getViewBox(inst);
     },
 
@@ -2100,10 +2245,12 @@ window.tmDiagramEditor = {
         if (!startVb || !isFinite(scale) || scale <= 0) return;
         const rect = inst.svg.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
-        const newW = startVb.w / scale;
-        const newH = startVb.h / scale;
-        const newScale = rect.width / newW;
-        if (newScale < 0.15 || newScale > 5.0) return;
+        // Clamp instead of rejecting: at a limit the pinch sits exactly at the limit and the
+        // two-finger pan keeps working (a rejected frame froze both).
+        const startScale = rect.width / startVb.w;
+        const effective = this._clampScale(startScale * scale) / startScale;
+        const newW = startVb.w / effective;
+        const newH = startVb.h / effective;
 
         // The viewport point under the gesture's START centre stays under the centre, plus the
         // two-finger pan in new-scale document units.
@@ -2191,6 +2338,7 @@ window.tmDiagramEditor = {
     },
 
     _cancelRotateSession: function (inst) {
+        if (inst.__rotateMouseDetach) inst.__rotateMouseDetach();   // never leak the mouse listeners
         if (!inst.isRotating) return;
         inst.isRotating = false;
         if (inst.rotateNodeId) {
@@ -2207,23 +2355,26 @@ window.tmDiagramEditor = {
 
     startRotate: function (container, nodeId, clientX, clientY, initialRotation, snap) {
         const inst = this.instances.get(container ? container.id : null);
-        if (!inst) return;
+        if (!inst || inst.readOnly || inst.isRotating) return;   // re-entry: a second press mid-rotation is ignored
         this._beginRotateSession(inst, nodeId, clientX, clientY, initialRotation, snap);
         if (!inst.isRotating) return;
 
         const self = this;
+        const detach = function () {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            if (inst.__rotateMouseDetach === detach) inst.__rotateMouseDetach = null;
+        };
         const move = function (e) {
-            if (!inst.isRotating) return;
+            if (!inst.isRotating) { detach(); return; }
             e.preventDefault();
             self._moveRotateSession(inst, e.clientX, e.clientY);
         };
         const up = function () {
-            if (!inst.isRotating) return;
-            self._endRotateSession(inst);
-            document.removeEventListener('mousemove', move);
-            document.removeEventListener('mouseup', up);
+            detach();                       // ALWAYS first: a cancelled session must not leak listeners
+            self._endRotateSession(inst);   // no-op when the session was cancelled
         };
-
+        inst.__rotateMouseDetach = detach;
         document.addEventListener('mousemove', move);
         document.addEventListener('mouseup', up);
     },
@@ -2879,6 +3030,7 @@ window.tmDiagramEditor = {
 
         if (e.key === 'Escape') {
             e.preventDefault();
+            if (inst.isRotating) { this._cancelRotateSession(inst); return; }
             if (inst.isPendingEdgeDraw) {
                 inst.isPendingEdgeDraw = false;
                 inst.pendingEdgeStart = null;
@@ -3188,6 +3340,11 @@ window.tmDiagramEditor = {
             if (inst.decoratorPane) {
                 const handles = inst.decoratorPane.querySelector('g.tm-diagram-node-handles[data-node-id="' + id + '"]');
                 if (handles) handles.setAttribute('transform', tr);
+                // The finger-sized port hit circles (review fix) live in a sibling group with
+                // the same per-node transform — keep them glued to the node during drags too,
+                // otherwise a finger press would land on a stale circle after a drag.
+                const portHits = inst.decoratorPane.querySelector('g.tm-diagram-port-hits[data-node-id="' + id + '"]');
+                if (portHits) portHits.setAttribute('transform', tr);
             }
         });
     },
@@ -3708,6 +3865,7 @@ window.tmDiagramEditor = {
     zoomTo: function (container, scale) {
         const inst = this.instances.get(container.id);
         if (!inst) return;
+        scale = this._clampScale(scale);
         const vb = this._getViewBox(inst);
         const cx = vb.x + vb.w / 2;
         const cy = vb.y + vb.h / 2;
@@ -3746,19 +3904,24 @@ window.tmDiagramEditor = {
 
         if (!hasNodes) {
             const svgRect = inst.svg.getBoundingClientRect();
-            this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH);
-            const emptyScale = inst.scale;
+            // The empty-document branch obeys the same limits: the raw canvas size can resolve
+            // outside [MIN_SCALE, MAX_SCALE] (a small canvas on a big screen zooms past the max).
+            const emptyScale = this._clampScale(svgRect.width / inst.canvasW);
+            const newW = svgRect.width / emptyScale;
+            const newH = svgRect.height / emptyScale;
+            this._setViewBox(inst, 0, 0, newW, newH);
+            const settled = inst.scale;
             if (inst.dotNetRef) {
-                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', 0, 0, inst.canvasW, inst.canvasH);
-                inst.dotNetRef.invokeMethodAsync('OnZoomChanged', emptyScale);
+                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', 0, 0, newW, newH);
+                inst.dotNetRef.invokeMethodAsync('OnZoomChanged', settled);
             }
-            return emptyScale;
+            return settled;
         }
 
         const contentW = maxX - minX + padding * 2;
         const contentH = maxY - minY + padding * 2;
         const svgRect = inst.svg.getBoundingClientRect();
-        const fitScale = Math.min(svgRect.width / contentW, svgRect.height / contentH, 2.0);
+        const fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
         const newW = svgRect.width / fitScale;
         const newH = svgRect.height / fitScale;
         const nx = minX - padding;
@@ -3771,125 +3934,159 @@ window.tmDiagramEditor = {
         return fitScale;
     },
 
+    // ── Fixed-position placement (context menu, table inserter) ─────────────
+    // The box a position:fixed descendant of `host` resolves against, in viewport coordinates:
+    // the viewport, or an ancestor that establishes a containing block for fixed descendants
+    // (layout/paint containment, container-type in some engines, transform, filter). MEASURED
+    // with an inset:0 probe, never assumed: its rect IS the containing block's padding box.
+    _fixedContainingBlock: function (host) {
+        const viewport = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+        if (!host || typeof document === 'undefined' || !document.createElement) return viewport;
+        const probe = document.createElement('div');
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;margin:0;border:0;padding:0;visibility:hidden;pointer-events:none;';
+        host.appendChild(probe);
+        const r = probe.getBoundingClientRect();
+        probe.remove();
+        if (!(r.width > 0 && r.height > 0)) return viewport;
+        return { left: r.left, top: r.top, width: r.width, height: r.height };
+    },
+
+    // Clamps a w×h box anchored at the VIEWPORT point (x, y) into the visible part of the
+    // containing block `cb` (cb ∩ viewport, minus `margin`); returns the cb-LOCAL left/top to
+    // write into style, plus the available height of that visible region.
+    _placeFixed: function (cb, x, y, w, h, margin) {
+        const minX = Math.max(cb.left, 0) + margin;
+        const minY = Math.max(cb.top, 0) + margin;
+        const maxX = Math.min(cb.left + cb.width, window.innerWidth) - margin;
+        const maxY = Math.min(cb.top + cb.height, window.innerHeight) - margin;
+        const vx = Math.max(minX, Math.min(x, maxX - w));
+        const vy = Math.max(minY, Math.min(y, maxY - h));
+        return { left: vx - cb.left, top: vy - cb.top, availHeight: Math.max(0, maxY - minY) };
+    },
+
     openContextMenu: function (container, menuEl) {
         if (!container || !menuEl) return;
         const inst = this.instances.get(container.id);
         if (!inst) return;
+        const self = this;
         // Clean up any existing dismiss handlers first
-        if (inst._menuDismissHandler) {
-            document.removeEventListener('mousedown', inst._menuDismissHandler);
-            document.removeEventListener('keydown', inst._menuKeyHandler);
-            inst._menuDismissHandler = null;
-            inst._menuKeyHandler = null;
-        }
+        self._teardownMenu(inst);
         setTimeout(function () {
             if (!menuEl) return;
-            let rect = menuEl.getBoundingClientRect();
             const margin = 8;
-            let left = parseFloat(menuEl.style.left) || 0;
-            let top = parseFloat(menuEl.style.top) || 0;
-
-            // Phase 8: detect what position:fixed ACTUALLY resolves against for this editor.
-            // The editor root carries container-type: inline-size; engines differ on whether
-            // that makes it the containing block for fixed descendants (layout containment
-            // does, Chromium's inline-size does not). Phase 6 assumed the editor box and
-            // translated the stored viewport coordinates into it — under viewport semantics
-            // that translation displaces the menu by the editor offset and can park it partly
-            // off-screen. Measure a probe instead of assuming; translate and clamp into the
-            // editor box only when the editor really is the containing block, else clamp
-            // against the viewport.
-            const editor = container.closest('.tm-diagram-editor');
-            let editorBox = null;
-            if (editor) {
-                const probe = document.createElement('div');
-                probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;';
-                editor.appendChild(probe);
-                const probeRect = probe.getBoundingClientRect();
-                const editorRect = editor.getBoundingClientRect();
-                probe.remove();
-                if (Math.abs(probeRect.left - editorRect.left) <= 1
-                    && Math.abs(probeRect.top - editorRect.top) <= 1) {
-                    editorBox = editorRect;
-                }
+            // VIEWPORT coordinates from C# (data-screen-x/y); the style is OUR output and may
+            // already be translated by an earlier call — never read it back.
+            const readCoord = function (attr, styleProp) {
+                const v = parseFloat(menuEl.getAttribute(attr));
+                return Number.isFinite(v) ? v : (parseFloat(menuEl.style[styleProp]) || 0);
+            };
+            let x = readCoord('data-screen-x', 'left');
+            let y = readCoord('data-screen-y', 'top');
+            // The containing block the FIXED menu resolves against, MEASURED with the probe from
+            // the menu's own parent (its real ancestor chain); the editor root is the fallback
+            // for hosts that render the menu elsewhere.
+            const cb = self._fixedContainingBlock(menuEl.parentElement || container.closest('.tm-diagram-editor'));
+            menuEl.style.maxHeight = '';
+            let rect = menuEl.getBoundingClientRect();
+            const avail = Math.max(160, self._placeFixed(cb, 0, 0, 0, 0, margin).availHeight);
+            if (rect.height > avail) {
+                menuEl.style.maxHeight = avail + 'px';
+                rect = menuEl.getBoundingClientRect();
             }
-
-            if (editorBox) {
-                // Containing block = editor box: the editor box is the menu's effective
-                // viewport. Translate, cap the menu's height to the box, and clamp the
-                // positioned box inside it (a viewport clamp translated to a negative
-                // editor-box top once painted the menu above the editor's clip).
-                const er = editorBox;
-                left -= er.left;
-                top -= er.top;
-                const availHeight = Math.max(160, er.height - 2 * margin);
-                if (rect.height > availHeight) {
-                    menuEl.style.maxHeight = availHeight + 'px';
-                    rect = menuEl.getBoundingClientRect();
-                }
-                if (left + rect.width + margin > er.width) {
-                    left = Math.max(margin, er.width - rect.width - margin);
-                }
-                if (top + rect.height + margin > er.height) {
-                    top = Math.max(margin, er.height - rect.height - margin);
-                }
-                if (top < margin) {
-                    top = margin;
-                }
-                if (left < margin) {
-                    left = margin;
-                }
-            } else {
-                const vw = window.innerWidth;
-                const vh = window.innerHeight;
-                if (left + rect.width + margin > vw) {
-                    left = Math.max(margin, vw - rect.width - margin);
-                }
-                if (top + rect.height + margin > vh) {
-                    top = Math.max(margin, vh - rect.height - margin);
-                }
-                if (top < margin) {
-                    top = margin;
-                }
-                if (left < margin) {
-                    left = margin;
-                }
+            if (menuEl.getAttribute('data-anchor') === 'touch') {
+                // Opened by a finger long-press: park the finger-sized menu ABOVE the finger so
+                // the release never lands on an item (flip below when there is no room).
+                const fingerY = y;
+                y = fingerY - rect.height - 16;
+                if (y < Math.max(cb.top, 0) + margin) y = fingerY + 16;
+                x = x + 16;
             }
-            menuEl.style.left = left + 'px';
-            menuEl.style.top = top + 'px';
+            const pos = self._placeFixed(cb, x, y, rect.width, rect.height, margin);
+            menuEl.style.left = pos.left + 'px';
+            menuEl.style.top = pos.top + 'px';
+
+            inst._menuOpen = true;
+
+            // A11y: roving focus over the native menuitem buttons — focus the first ENABLED item
+            // after placement, ArrowUp/Down/Home/End move (no Enter/Space emulation: the items are
+            // native <button>s and activate themselves), Escape closes in the key handler below.
+            const menuItems = function () {
+                const all = menuEl.querySelectorAll ? [...menuEl.querySelectorAll('[role="menuitem"]')] : [];
+                return all.filter(it => !it.disabled && it.getAttribute('aria-disabled') !== 'true');
+            };
+            const items = menuItems();
+            items.forEach((it) => { it.tabIndex = -1; });
+            if (items.length > 0 && typeof items[0].focus === 'function') {
+                items[0].tabIndex = 0;
+                items[0].focus({ preventScroll: true });
+            }
 
             inst._menuDismissHandler = function (e) {
-                if (e.button !== 0) return; // only left click outside
+                if (e.button !== undefined && e.button !== 0) return; // only a primary press outside
                 if (e.target.closest('.tm-diagram-editor__context-menu')) return;
                 if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
-                document.removeEventListener('mousedown', inst._menuDismissHandler);
-                document.removeEventListener('keydown', inst._menuKeyHandler);
-                inst._menuDismissHandler = null;
-                inst._menuKeyHandler = null;
+                self._teardownMenu(inst);
             };
             inst._menuKeyHandler = function (e) {
                 if (e.key === 'Escape') {
                     if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
-                    document.removeEventListener('mousedown', inst._menuDismissHandler);
-                    document.removeEventListener('keydown', inst._menuKeyHandler);
-                    inst._menuDismissHandler = null;
-                    inst._menuKeyHandler = null;
+                    self._teardownMenu(inst);
+                    return;
                 }
+                if (e.key === 'Tab') {
+                    // Tab closes the menu and lets the default Tab proceed: focus leaves the
+                    // closed menu and follows the document's natural tab order (a11y review fix).
+                    if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
+                    self._teardownMenu(inst);
+                    return;
+                }
+                const step = { ArrowDown: 1, ArrowUp: -1 };
+                if (!(e.key in step) && e.key !== 'Home' && e.key !== 'End') return;
+                const enabled = menuItems();
+                if (enabled.length === 0) return;
+                const current = enabled.indexOf(typeof document !== 'undefined' ? document.activeElement : null);
+                let next;
+                if (e.key === 'Home') next = 0;
+                else if (e.key === 'End') next = enabled.length - 1;
+                else if (current < 0) next = step[e.key] > 0 ? 0 : enabled.length - 1;
+                else next = (current + step[e.key] + enabled.length) % enabled.length;
+                enabled.forEach((it) => { it.tabIndex = -1; });
+                enabled[next].tabIndex = 0;
+                enabled[next].focus({ preventScroll: true });
+                e.preventDefault?.();
             };
-            document.addEventListener('mousedown', inst._menuDismissHandler);
+            // pointerdown in the CAPTURE phase, not mousedown: a touch tap on the canvas must
+            // dismiss the menu too, before the pan / edge-draw sessions claim the press.
+            document.addEventListener('pointerdown', inst._menuDismissHandler, true);
             document.addEventListener('keydown', inst._menuKeyHandler);
         }, 0);
+    },
+
+    // Removes the dismissal/key listeners, marks the menu closed and returns the focus to the
+    // canvas when the menu owned it.
+    _teardownMenu: function (inst) {
+        if (inst._menuDismissHandler) {
+            document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
+            inst._menuDismissHandler = null;
+        }
+        if (inst._menuKeyHandler) {
+            document.removeEventListener('keydown', inst._menuKeyHandler);
+            inst._menuKeyHandler = null;
+        }
+        inst._menuOpen = false;
+        const active = typeof document !== 'undefined' ? document.activeElement : null;
+        if (active && active.closest && active.closest('.tm-diagram-editor__context-menu')
+            && inst.container && typeof inst.container.focus === 'function') {
+            inst.container.focus({ preventScroll: true });
+        }
     },
 
     closeContextMenu: function (container) {
         if (!container) return;
         const inst = this.instances.get(container.id);
         if (!inst) return;
-        if (inst._menuDismissHandler) {
-            document.removeEventListener('mousedown', inst._menuDismissHandler);
-            document.removeEventListener('keydown', inst._menuKeyHandler);
-            inst._menuDismissHandler = null;
-            inst._menuKeyHandler = null;
-        }
+        this._teardownMenu(inst);
     },
 
     scrollTo: function (container, centreX, centreY) {
@@ -3910,15 +4107,14 @@ window.tmDiagramEditor = {
         const svgRect = inst.svg.getBoundingClientRect();
         const contentW = w + padding * 2;
         const contentH = h + padding * 2;
-        const scale = Math.min(svgRect.width / contentW, svgRect.height / contentH, 2.0);
-        const clampedScale = Math.max(0.25, scale);
-        const newW = svgRect.width / clampedScale;
-        const newH = svgRect.height / clampedScale;
+        const scale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
+        const newW = svgRect.width / scale;
+        const newH = svgRect.height / scale;
         const nx = x + w / 2 - newW / 2;
         const ny = y + h / 2 - newH / 2;
         this._setViewBox(inst, nx, ny, newW, newH);
         if (inst.dotNetRef)
-            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', clampedScale);
+            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
         if (inst.dotNetRef)
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', nx, ny, newW, newH);
     },
@@ -3952,6 +4148,17 @@ window.tmDiagramEditor = {
         if (inst) this._updateSelection(inst);
     },
 
+    // Live resize (mouse C# drag or the touch/pen session): the finger-sized port hit circles
+    // keep their last-rendered positions while the node geometry changes under them, so the
+    // canvas carries `tm-diagram-canvas--resizing` for the gesture's duration and the CSS
+    // hides `.tm-diagram-port-hits`. C# sets true in TryBeginResize and false on commit/rollback
+    // (Blazor re-renders the hits at the new geometry afterwards).
+    setResizing: function (container, resizing) {
+        const inst = this.instances.get(container ? container.id : null);
+        if (!inst || !inst.container) return;
+        inst.container.classList.toggle('tm-diagram-canvas--resizing', !!resizing);
+    },
+
     getDragStencilId: function () {
         return window.__tmDiagramDragStencil ?? null;
     },
@@ -3969,6 +4176,10 @@ window.tmDiagramEditor = {
         if (inst.decoratorPane) {
             const handles = inst.decoratorPane.querySelector('g.tm-diagram-node-handles[data-node-id="' + nodeId + '"]');
             if (handles) handles.setAttribute('transform', tr);
+            // The port hit circles mirror the same per-node transform — rotate them with the
+            // handles so a finger press keeps landing on the rotated port position.
+            const portHits = inst.decoratorPane.querySelector('g.tm-diagram-port-hits[data-node-id="' + nodeId + '"]');
+            if (portHits) portHits.setAttribute('transform', tr);
         }
         this._updateSelection(inst);
     },
@@ -3977,72 +4188,6 @@ window.tmDiagramEditor = {
         const inst = this.instances.get(container ? container.id : null);
         if (!inst) return;
         this._applyNodeRotation(inst, nodeId, angle);
-    },
-
-    startRotate: function (container, nodeId, clientX, clientY, initialRotation, snap) {
-        const inst = this.instances.get(container ? container.id : null);
-        if (!inst) return;
-        const r = this._nodeRect(inst, nodeId);
-        if (!r) return;
-
-        inst.isRotating = true;
-        inst.rotateNodeId = nodeId;
-        inst.rotateCenterDoc = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
-        inst.rotateStartNodeRotation = initialRotation;
-        inst.rotateSnap = snap || 0;
-        inst.rotateGroupMembers = null;
-
-        const startPt = this._screenToDoc(inst, clientX, clientY);
-        inst.rotateStartAngle = Math.atan2(startPt.y - inst.rotateCenterDoc.y, startPt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
-
-        // If rotating a group, cache member start rotations for real-time updates
-        const nodeEl = this._nodeEl(inst, nodeId);
-        if (nodeEl && nodeEl.getAttribute('data-stencil-id') === 'general.group' && inst.scenePane) {
-            inst.rotateGroupMembers = [];
-            inst.scenePane.querySelectorAll('g.tm-diagram-node[data-node-id]').forEach(el => {
-                if (el.getAttribute('data-parent-group-id') === nodeId) {
-                    const memberId = el.getAttribute('data-node-id');
-                    const memberRot = this._getNodeRotation(el);
-                    inst.rotateGroupMembers.push({ id: memberId, startRotation: memberRot });
-                }
-            });
-        }
-
-        const self = this;
-        const move = function (e) {
-            if (!inst.isRotating) return;
-            e.preventDefault();
-            const pt = self._screenToDoc(inst, e.clientX, e.clientY);
-            const angle = Math.atan2(pt.y - inst.rotateCenterDoc.y, pt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
-            let delta = angle - inst.rotateStartAngle;
-            let rot = inst.rotateStartNodeRotation + delta;
-            if (inst.rotateSnap > 0) {
-                rot = Math.round(rot / inst.rotateSnap) * inst.rotateSnap;
-            }
-            self._applyNodeRotation(inst, inst.rotateNodeId, rot);
-            if (inst.rotateGroupMembers) {
-                const groupDelta = rot - inst.rotateStartNodeRotation;
-                inst.rotateGroupMembers.forEach(function (m) {
-                    self._applyNodeRotation(inst, m.id, m.startRotation + groupDelta);
-                });
-            }
-        };
-        const up = function (e) {
-            if (!inst.isRotating) return;
-            inst.isRotating = false;
-            document.removeEventListener('mousemove', move);
-            document.removeEventListener('mouseup', up);
-            const nodeEl = self._nodeEl(inst, inst.rotateNodeId);
-            const rot = nodeEl ? self._getNodeRotation(nodeEl) : inst.rotateStartNodeRotation;
-            if (inst.dotNetRef) {
-                inst.dotNetRef.invokeMethodAsync('OnRotateEnded', inst.rotateNodeId, rot);
-            }
-            inst.rotateNodeId = null;
-            inst.rotateGroupMembers = null;
-        };
-
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', up);
     },
 
     computeOrthogonalWaypoints: function (x1, y1, side1, x2, y2, side2, routing, sourceSpacing, targetSpacing, srcBounds, tgtBounds, obstacles) {
@@ -4097,16 +4242,12 @@ window.tmDiagramEditor = {
         if (!anchorEl) return null;
         const rect = anchorEl.getBoundingClientRect();
         if (rect.width === 0 && rect.height === 0) return null;
-        // The grid popover is ~200×230; keep it inside the viewport.
+        // The grid popover is ~200×230; keep it inside the visible containing block. Probe from
+        // the popover's own parent (its real ancestor chain) — the editor root is the fallback.
         const width = 208, height = 240, margin = 8, gap = 6;
-        let x = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
-        let y = Math.max(margin, Math.min(rect.bottom + gap, window.innerHeight - height - margin));
-        // Phase 6: layout containment (the editor root is an inline-size container) resolves the
-        // fixed popover against the editor box — translate the viewport anchor into it.
-        const er = root.getBoundingClientRect();
-        x -= er.left;
-        y -= er.top;
-        return [x, y];
+        const cbHost = root.parentElement || root;
+        const pos = this._placeFixed(this._fixedContainingBlock(cbHost), rect.left, rect.bottom + gap, width, height, margin);
+        return [pos.left, pos.top];
     },
 
     // ── Magnetic guidelines ────────────────────────────────────────────────

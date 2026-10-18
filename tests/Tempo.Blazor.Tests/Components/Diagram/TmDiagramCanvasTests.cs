@@ -68,6 +68,77 @@ public class TmDiagramCanvasTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task SelectedNodeWithPorts_RendersPortHitCirclesWithCssOwnedAttributes()
+    {
+        var doc = new DiagramDocument();
+        var node = new DiagramNode
+        {
+            StencilId = "general.rectangle",
+            X = 100,
+            Y = 100,
+            W = 120,
+            H = 60
+        };
+        node.Ports.Add(new DiagramPort { Side = PortSide.Right });
+        node.Ports.Add(new DiagramPort { Side = PortSide.Left });
+        doc.Nodes.Add(node);
+
+        var cut = Render<TmDiagramCanvas>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.ReadOnly, false));
+
+        await cut.Instance.SetSelection(node.Id);
+        cut.Render();
+
+        var hits = cut.FindAll("circle.tm-diagram-port-hit");
+        hits.Should().NotBeEmpty("the selected node's ports render the finger-sized hit circles");
+        foreach (var hit in hits)
+        {
+            hit.HasAttribute("style").Should().BeFalse("pointer-events is owned by CSS (none by default, all only on a coarse pointer)");
+            hit.HasAttribute("r").Should().BeFalse("the hit radius is owned by CSS (--tm-diagram-handle-hit)");
+            hit.HasAttribute("fill").Should().BeFalse("the fill is owned by CSS");
+        }
+    }
+
+    [Fact]
+    public async Task SelectedNodeWithPorts_MarksHandlesGroupWithDataHasPorts()
+    {
+        var doc = new DiagramDocument();
+        var withPorts = new DiagramNode
+        {
+            StencilId = "general.rectangle",
+            X = 100,
+            Y = 100,
+            W = 120,
+            H = 60
+        };
+        withPorts.Ports.Add(new DiagramPort { Side = PortSide.Right });
+        var withoutPorts = new DiagramNode
+        {
+            StencilId = "general.rectangle",
+            X = 300,
+            Y = 100,
+            W = 120,
+            H = 60
+        };
+        doc.Nodes.Add(withPorts);
+        doc.Nodes.Add(withoutPorts);
+
+        var cut = Render<TmDiagramCanvas>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.ReadOnly, false));
+
+        await cut.Instance.SetSelection([withPorts.Id, withoutPorts.Id]);
+        cut.Render();
+
+        cut.Find($"g.tm-diagram-node-handles[data-node-id='{withPorts.Id}']")
+            .GetAttribute("data-has-ports").Should().Be("true");
+        cut.Find($"g.tm-diagram-node-handles[data-node-id='{withoutPorts.Id}']")
+            .HasAttribute("data-has-ports").Should().BeFalse(
+                "a port-less node keeps every resize handle — the coarse-pointer hiding scopes to data-has-ports");
+    }
+
+    [Fact]
     public async Task ConnectArrowClick_RaisesEventCallback()
     {
         var doc = new DiagramDocument();

@@ -233,7 +233,7 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         var cut = RenderMobileEditor();
 
         var canvas = cut.FindComponent<TmDiagramCanvas>();
-        await cut.InvokeAsync(async () => await canvas.Instance.JsOnNodeContextMenu("n1", 20, 20));
+        await cut.InvokeAsync(async () => await canvas.Instance.JsOnNodeContextMenu("n1", 20, 20, "touch"));
 
         // The fixed viewport menu must not render on mobile…
         cut.FindAll(".tm-diagram-editor__context-menu").Should().BeEmpty(
@@ -258,7 +258,7 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         var cut = RenderMobileEditor();
 
         var canvas = cut.FindComponent<TmDiagramCanvas>();
-        await cut.InvokeAsync(async () => await canvas.Instance.JsOnCanvasContextMenu(50, 50, 20, 20));
+        await cut.InvokeAsync(async () => await canvas.Instance.JsOnCanvasContextMenu(50, 50, 20, 20, "touch"));
 
         var items = cut.FindAll(".tm-overlay-panel-sheet [role='menuitem']")
             .Select(i => i.TextContent.Trim()).ToList();

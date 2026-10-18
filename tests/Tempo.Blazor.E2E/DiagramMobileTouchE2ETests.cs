@@ -329,6 +329,69 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         await ShotSettledAsync(page, "mobile-390-modeling-preview");
     }
 
+    // ── Phase 3 (J1/J12a): real CDP touch fingers on the mobile band ────────────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("390 touch, real CDP fingers: a pinch from the empty canvas after finger one moved zooms (J1)")]
+    public async Task Mobile_CdpPinch_FromEmptyCanvas_AfterFirstFingerMoved_Zooms()
+    {
+        var page = await OpenEditorAsync(390, 844);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "mobile");
+        var (x, y) = await DiagramEditorE2E.EmptyCanvasPointAsync(page);
+        var session = await page.Context.NewCDPSessionAsync(page);
+        var widthBefore = await DiagramEditorE2E.CanvasViewBoxWidthAsync(page);
+
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, x - 40, y));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, x - 38, y));     // finger one's capture goes live
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, x - 38, y), (2, x + 40, y));
+        for (var i = 1; i <= 6; i++)
+            await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, x - 38 - 12 * i, y), (2, x + 40 + 12 * i, y));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.IsTrue(await DiagramEditorE2E.CanvasViewBoxWidthAsync(page) < widthBefore - 1,
+            "a real two-finger pinch that starts with a moving finger must zoom on mobile too");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("390 touch, real CDP fingers: no ports render on mobile and a drag from the node edge creates NO edge (G2/R2, review fix)")]
+    public async Task Mobile_CdpFingerDragFromPort_CreatesNoEdge()
+    {
+        var page = await OpenEditorAsync(390, 844);
+        await DiagramEditorE2E.PinEditorFullBleedAsync(page, "mobile");
+
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector('.tm-diagram-node')?.getAttribute('data-node-id')");
+        Assert.IsNotNull(nodeId, "the sample document must render a node");
+        await TapNodeAsync(page, nodeId!);
+
+        // Review fix: without the connect affordances the canvas renders no ports / connection
+        // points / port hit circles at all — no invisible dead zone on the touch surface.
+        Assert.AreEqual(0, await page.Locator(".tm-diagram-node--selected circle.tm-diagram-port").CountAsync(),
+            "mobile (!ShowConnectArrows) renders no ports on the selected node");
+        Assert.AreEqual(0, await page.Locator(".tm-diagram-port-hits").CountAsync(),
+            "mobile renders no port hit circles either");
+
+        // A drag from the node's edge midpoint (where a port would sit on a tablet) creates no edge.
+        var edgesBefore = await page.Locator(".tm-diagram-edge-hit-path").CountAsync();
+        var box = await page.Locator($"g.tm-diagram-node[data-node-id='{nodeId}']").First.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the node must be on screen");
+        var sx = box.X + box.Width;
+        var sy = box.Y + box.Height / 2;
+
+        var session = await page.Context.NewCDPSessionAsync(page);
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchStart", (1, sx, sy));
+        for (var i = 1; i <= 6; i++)
+            await DiagramEditorE2E.CdpTouchAsync(session, "touchMove", (1, sx + 15 * i, sy));
+        await DiagramEditorE2E.CdpTouchAsync(session, "touchEnd");
+        await page.WaitForTimeoutAsync(400);
+
+        Assert.AreEqual(edgesBefore, await page.Locator(".tm-diagram-edge-hit-path").CountAsync(),
+            "edge drawing is tablet+: a drag from the node edge on the mobile layout never creates an edge");
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────
 
     private async Task<IPage> OpenEditorAsync(int width, int height, bool touch = true)
@@ -441,7 +504,9 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(400);
     }
 
-    /// <summary>Two-finger pinch around the canvas centre by the given spread delta.</summary>
+    /// <summary>Two-finger pinch around the canvas centre by the given spread delta.
+    /// Synthetic PointerEvents: setPointerCapture throws for an inactive id, so this cannot
+    /// prove capture behaviour — see the Cdp* tests.</summary>
     private static async Task TwoFingerPinchAsync(IPage page, double spread)
     {
         await page.EvaluateAsync(

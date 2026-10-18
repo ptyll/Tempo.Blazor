@@ -149,7 +149,7 @@ pinch.detach();                      // on dispose; cancels an active pinch, saf
 | Concern | Behaviour |
 |---------|-----------|
 | **Two pointers** | The first two pointers of the allowed types are tracked by id: the pinch starts when the second finger lands and ends exactly once when the count drops below two. A third finger is ignored — it neither starts, moves, nor ends anything. |
-| **Pointer capture** | Both fingers are captured by id (they may slide off the element mid-gesture); every exit releases by id. A `lostpointercapture` for a tracked finger — the element left the DOM, the browser took the capture back — cannot be tracked around: mid-pinch it cancels (below), with a lone finger it just forgets the finger. |
+| **Pointer capture** | Both fingers are captured by id (they may slide off the element mid-gesture); every exit releases by id. A `lostpointercapture` for a tracked finger — the element left the DOM, the browser took the capture back — cannot be tracked around: mid-pinch it cancels (below), with a lone finger it just forgets the finger. When the drag and the pinch share an element, the drag's release on cancel also drops the pinch's capture of that finger. The pinch re-asserts both captures right after `onStart`, so the hand-over never rolls the pinch back. |
 | **Scale** | `onChange`/`onEnd` report the scale relative to the gesture start, clamped to `minScale`/`maxScale`, with the centre of the two fingers and its pan `dx`/`dy` from the start centre. |
 | **Cancel** | `pointercancel` of either finger, `lostpointercapture` of a tracked finger, `Escape` and `detach()` call `onCancel({ reason })`, never `onEnd`. The `Escape` listener sits on `document` in the capture phase with `stopPropagation` (as in the drag helper): an ACTIVE pinch consumes the key, a lone finger leaves it to the surrounding dialog. |
 | **ctrl+wheel** | A non-passive wheel listener; each tick reports `scale = Math.exp(-deltaY / 100)` around the cursor and calls `preventDefault` only while ctrl is held — plain wheel keeps scrolling the page. A burst is one gesture: `onStart` on the first tick, `onChange` per tick with the cumulative scale, and one `onEnd` 150 ms after the last tick (`detach()` flushes a pending one). |
@@ -164,6 +164,15 @@ pinch takes over:
 const drag = attach(handle, { /* ... */ });
 const pinch = attachPinch(handle, { onStart() { drag.cancel('pinch'); } });
 ```
+
+When the drag and the pinch share an element, the drag's release on cancel also drops the pinch's
+capture of that finger. The pinch re-asserts both captures right after `onStart`, so the hand-over
+never rolls the pinch back. After `onStart` the pinch OWNS both fingers' capture: a host that must
+keep a finger elsewhere cancels the pinch from `onStart` (`pinch.cancel('host')`) instead of
+relying on the re-assert. And when the re-assert itself fails (an engine that fires
+`lostpointercapture` synchronously on release leaves the pointer uncapturable), the pinch can no
+longer track the finger: it cancels itself with `lostpointercapture` instead of committing a
+half-captured gesture.
 
 **A pinch is never the only way (WCAG 2.5.7).** Zoom buttons (+/−) beside the canvas are the
 single-pointer alternative and must ship in the same change; `onChange` already carries the scale a
@@ -232,11 +241,38 @@ touch users who cannot drag precisely.
 Gantt, Dashboard, DiagramEditor, Wireframe and the Signing designer adopt it in their own plans; none
 of them may add a second implementation.
 
+## Diagram editor touch notes (occlusion, release-click guard, contact tracking)
+
+`diagram-editor-touch.js` stacks several delegated sessions on ONE container (node drag,
+long-press context menu, port edge draw, pan, resize, rotate, pinch). Two conventions keep the
+stack unambiguous:
+
+- **Occlusion.** Sessions that resolve their target through the hit stack (`engine.touchPortAt`)
+  only claim a press whose RAW target is that control itself (or an edge corridor painting over
+  it). A port buried under a resize handle or a node body is COVERED, not pressed — the topmost
+  control owns the press, and only one session claims a pointer. Conversely, the finger-sized
+  `.tm-diagram-port-hit` circles render after the transform handles on purpose: where they paint,
+  the port drag wins.
+- **Release-click guard.** A touch long-press opens the context menu while the finger is still
+  down, so the compatibility `click` of the lifting finger would land on a menu item. The guard is
+  armed per hold (set when the menu opens, disarmed on the first swallowed click or any new
+  `pointerdown`) and, after the lift, swallows clicks for 350 ms — scoped to THIS editor's menu by
+  comparing `closest('.tm-diagram-editor')` against the canvas's own editor root. A tap that never
+  opened a menu arms nothing.
+- **Contact tracking.** The stack keeps a `Set` of the touch `pointerId`s currently down (added on
+  the container's capture `pointerdown`, deleted on the DOCUMENT's capture `pointerup` /
+  `pointercancel` / `lostpointercapture` — a captured finger lifts off the element — and cleared
+  by any mouse/pen press). The engine's `_isTouchContextMenu` consults the set so the native
+  touch `contextmenu` (Android/Windows) is swallowed while the long-press session owns the menu —
+  but only when the touch stack is actually attached (`inst.__touchDetach` exists).
+
 ## Testing
 
 `src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs` drives the helper with hand-rolled
 DOM stubs (`npm run test:overlay`), and `__tests__/pointer-gesture.test.mjs` does the same for
-`pointer-gesture.js` (pinch sessions, ctrl+wheel, the auto-scroller). A node test with fake pointer
+`pointer-gesture.js` (pinch sessions, ctrl+wheel, the auto-scroller). `captureModelElement()` in
+`pointer-gesture.test.mjs` models the pending-capture rules; a fake that releases synchronously
+cannot see hand-over bugs. A node test with fake pointer
 events cannot prove a gesture in a
 browser: drive every JS-owned gesture with a real Playwright mouse/touch drag and assert the result
 (width, persisted value, notified delta).
