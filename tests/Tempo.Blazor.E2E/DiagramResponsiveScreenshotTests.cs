@@ -24,7 +24,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
     [TestCategory("WASM")]
     [Description("1440×900: editor, template gallery, SQL/CSV import dialogs, search panel, connect modal")]
     public async Task Desktop_1440_CapturesEditorDialogsAndConnectModal() =>
-        await CaptureAllStatesAsync(1440, 900, touch: false, "desktop-1440");
+        await CaptureAllStatesAsync(1440, 900, touch: false, "desktop-1440", pinLayout: "desktop");
 
     [TestMethod]
     [TestCategory("WASM")]
@@ -70,6 +70,9 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             {
                 var theme = (dark ? "dark" : "light") + "-" + (indigo ? "indigo" : "default");
                 var page = await OpenDiagramEditorAsync(1440, 900, touch: false);
+                // The demo column (viewport − 360px) resolves the tablet band even at 1440 — pin
+                // the desktop band so the matrix asserts (and captures) the desktop chrome.
+                await DiagramEditorE2E.PinEditorFullBleedAsync(page, "desktop");
                 await page.EvaluateAsync(
                     $$"""
                     () => {
@@ -79,6 +82,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                     }
                     """);
                 await page.WaitForTimeoutAsync(150);
+                await AssertThemeSurfacesAsync(page, theme, dark, EditorSurfaces);
 
                 // 1. Full editor. At the 900px viewport height the shell's status bar (zoom
                 //    controls) sits at the page bottom — below the fold — so the capture scrolls
@@ -123,6 +127,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
                 await page.Locator(".tm-diagram-template-gallery").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await AssertThemeSurfacesAsync(page, theme, dark, [".tm-diagram-template-gallery"]);
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--template-gallery");
                 await page.Keyboard.PressAsync("Escape");
                 await ExpectHiddenAsync(page, ".tm-diagram-template-gallery");
@@ -131,6 +136,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await OpenImportMenuItemAsync(page, "Import SQL");
                 await page.Locator(".tm-diagram-sql-import").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await AssertThemeSurfacesAsync(page, theme, dark, [".tm-diagram-sql-import"]);
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--sql-import-dialog");
                 await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
                     .First.ClickAsync();
@@ -140,6 +146,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await OpenImportMenuItemAsync(page, "Import CSV");
                 await page.Locator(".tm-diagram-csv-import").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await AssertThemeSurfacesAsync(page, theme, dark, [".tm-diagram-csv-import"]);
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--csv-import-dialog");
                 await page.Locator(".tm-modal-footer button", new PageLocatorOptions { HasText = "Cancel" })
                     .First.ClickAsync();
@@ -164,6 +171,7 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
                 await page.Locator(".tm-diagram-connect-arrow").First.ClickAsync();
                 await page.Locator(".tm-diagram-connect-modal__grid").WaitForAsync(
                     new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+                await AssertThemeSurfacesAsync(page, theme, dark, [".tm-diagram-connect-modal__grid"]);
                 await ShotSettledAsync(page, $"desktop-1440-{theme}--connect-modal");
 
                 await page.CloseAsync();
@@ -178,16 +186,24 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         // Band pin: the editor resolves its presentation from its own container, and the demo
         // column keeps a 1024 viewport BELOW the 768px mobile threshold (phase 7 band). A test
         // that captures a specific presentation pins the container, exactly like a full-bleed
-        // host would. Mobile additionally scopes the set: per G2 the template gallery and the
-        // SQL/CSV imports stay tablet+ — the mobile sheet offers Shapes/Properties, the search
-        // panel and the connect picker only.
+        // host would. Desktop needs the full-bleed pin: the demo column (viewport − 360px)
+        // never reaches the 1200px desktop breakpoint. Mobile additionally scopes the set: per
+        // G2 the template gallery and the SQL/CSV imports stay tablet+ — the mobile sheet offers
+        // Shapes/Properties, the search panel and the connect picker only.
         var isMobile = pinLayout == "mobile";
         if (pinLayout is not null)
         {
-            // The shared pin clamps the requested width to the real demo column, so the editor
-            // lands in the requested band without ever overflowing the viewport (a 1100px request
-            // resolves to the column width — still the tablet band next to the demo sidebar).
-            await DiagramEditorE2E.ForceEditorWidthAsync(page, isMobile ? width : 1100, pinLayout);
+            if (pinLayout == "desktop")
+            {
+                await DiagramEditorE2E.PinEditorFullBleedAsync(page, "desktop");
+            }
+            else
+            {
+                // The shared pin clamps the requested width to the real demo column, so the editor
+                // lands in the requested band without ever overflowing the viewport (a 1100px request
+                // resolves to the column width — still the tablet band next to the demo sidebar).
+                await DiagramEditorE2E.ForceEditorWidthAsync(page, isMobile ? width : 1100, pinLayout);
+            }
         }
 
         // 1. Full editor. On the tablet viewport the demo column is taller than the window: the
@@ -551,6 +567,90 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
             """);
         await page.WaitForTimeoutAsync(100);
         await ShotAsync(page, name);
+    }
+
+    private static readonly string[] EditorSurfaces =
+    [
+        ".tm-diagram-editor__header-bar",
+        ".tm-diagram-editor__toolbar",
+        ".tm-diagram-toolbox",
+        ".tm-diagram-properties",
+        ".tm-diagram-editor__statusbar",
+        ".tm-diagram-canvas",
+    ];
+
+    /// <summary>
+    /// Computed-style dark-mode guard: every surface resolves (walking up to the first
+    /// non-transparent background) to a dark background with light text in dark themes and to a
+    /// light background in light themes; in dark, no chrome element outside the page paper
+    /// paints pure white. The page itself (inside .tm-diagram-canvas) is paper and stays white.
+    /// </summary>
+    private static async Task AssertThemeSurfacesAsync(IPage page, string theme, bool dark, string[] selectors)
+    {
+        var surfaces = await page.EvaluateAsync<SurfaceProbe[]>(
+            """
+            (selectors) => {
+                const lum = (c) => {
+                    const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null;
+                    const [r, g, b, a = 1] = m[1].split(',').map(s => parseFloat(s));
+                    if (a === 0) return null;
+                    const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+                    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+                };
+                const bgOf = (el) => {
+                    for (let e = el; e; e = e.parentElement) {
+                        const l = lum(getComputedStyle(e).backgroundColor);
+                        if (l !== null) return l;
+                    }
+                    return null;
+                };
+                return selectors.map(sel => {
+                    const el = document.querySelector(sel);
+                    if (!el) return { selector: sel, found: false, bg: -1, fg: -1 };
+                    return { selector: sel, found: true, bg: bgOf(el) ?? -1, fg: lum(getComputedStyle(el).color) ?? -1 };
+                });
+            }
+            """, selectors);
+
+        foreach (var s in surfaces)
+        {
+            Assert.IsTrue(s.Found, $"{theme}: {s.Selector} not rendered");
+            if (dark)
+            {
+                Assert.IsTrue(s.Bg >= 0 && s.Bg < 0.2, $"{theme}: {s.Selector} background luminance {s.Bg:F3} is not dark");
+                // The canvas inherits the shell colour but paints paper content; its text is not chrome.
+                if (s.Selector != ".tm-diagram-canvas")
+                    Assert.IsTrue(s.Fg > 0.4, $"{theme}: {s.Selector} text luminance {s.Fg:F3} is not light");
+            }
+            else
+            {
+                Assert.IsTrue(s.Bg > 0.6, $"{theme}: {s.Selector} background luminance {s.Bg:F3} is not light");
+            }
+        }
+
+        if (!dark) return;
+        // Content, not chrome: the paper (canvas/minimap/template thumbnails), a colour swatch
+        // previewing the SELECTED NODE's actual fill, and the toggle knob (deliberately white in
+        // every theme, design-system wide) may paint pure white in dark mode.
+        var whiteIslands = await page.EvaluateAsync<string[]>(
+            """
+            () => [...document.querySelectorAll('.tm-diagram-editor *, .tm-modal *')]
+                  .filter(e => !e.closest('.tm-diagram-canvas, .tm-diagram-minimap svg, .tm-diagram-template-card__thumb, .tm-diagram-properties__color-swatch, .tm-toggle-slider'))
+                  .filter(e => e.getClientRects().length > 0 && getComputedStyle(e).backgroundColor === 'rgb(255, 255, 255)')
+                  .map(e => (e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className) || e.tagName)
+                  .slice(0, 10)
+            """);
+        Assert.AreEqual(0, whiteIslands.Length, $"{theme}: white backgrounds in dark mode: {string.Join(", ", whiteIslands)}");
+    }
+
+    // Mutable class (not a record): Playwright's EvaluateAsync converter needs a public
+    // parameterless constructor and settable properties.
+    private sealed class SurfaceProbe
+    {
+        public string Selector { get; set; } = string.Empty;
+        public bool Found { get; set; }
+        public double Bg { get; set; }
+        public double Fg { get; set; }
     }
 
     private static async Task ExpectHiddenAsync(IPage page, string selector)

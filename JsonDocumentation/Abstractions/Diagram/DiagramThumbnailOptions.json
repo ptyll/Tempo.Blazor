@@ -1,0 +1,32 @@
+{
+  "kind": "Class",
+  "category": "Diagram",
+  "namespace": "Tempo.Blazor.Components.Diagram.Services",
+  "description": "Options for DiagramThumbnailSvgGenerator: thumbnail size, whether edge/node labels render, and whether the thumbnail paints an opaque paper background (false keeps transparent for hosts that compose thumbnails over their own surface).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Services/DiagramThumbnailSvgGenerator.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "IncludeLabels",
+      "kind": "Property",
+      "type": "bool"
+    },
+    {
+      "name": "OpaqueBackground",
+      "kind": "Property",
+      "type": "bool"
+    },
+    {
+      "name": "Width",
+      "kind": "Property",
+      "type": "int"
+    },
+    {
+      "name": "Height",
+      "kind": "Property",
+      "type": "int"
+    }
+  ],
+  "itemName": "DiagramThumbnailOptions"
+}

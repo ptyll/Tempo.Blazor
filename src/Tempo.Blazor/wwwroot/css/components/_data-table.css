@@ -757,10 +757,11 @@
   gap: var(--tm-space-1);
 }
 .tm-view-manager-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + var(--tm-space-1));
-  z-index: var(--tm-z-dropdown);
+  /* Positioning contract: the panel is a top-layer popover positioned by overlay.js in viewport
+     coordinates (position:fixed from the :where() reset) — declaring position/top/right here
+     would resolve those coordinates against the page origin and park the panel offscreen whenever
+     the page is scrolled. Chrome (surface/border/shadow/padding/size) only — no position/inset/
+     z-index (the contract in _overlay-panel.css). */
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);

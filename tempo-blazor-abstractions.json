@@ -2428,14 +2428,36 @@
       ]
     },
     {
+      "itemName": "DiagramThumbnailOptions",
       "kind": "Class",
       "category": "Diagram",
       "namespace": "Tempo.Blazor.Components.Diagram.Services",
-      "description": "Options for Generate.",
+      "description": "Options for DiagramThumbnailSvgGenerator: thumbnail size, whether edge/node labels render, and whether the thumbnail paints an opaque paper background (false keeps transparent for hosts that compose thumbnails over their own surface).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Services/DiagramThumbnailSvgGenerator.cs",
-      "documentationStatus": "generated",
-      "itemName": "DiagramThumbnailOptions"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IncludeLabels",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "OpaqueBackground",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Width",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Height",
+          "kind": "Property",
+          "type": "int"
+        }
+      ]
     },
     {
       "itemName": "DiagramThumbnailSvgGenerator",
@@ -37276,9 +37298,9 @@
   "libraryExamples": [],
   "summary": {
     "itemCount": 1489,
-    "manualItemCount": 1488,
+    "manualItemCount": 1489,
     "generatedItemCount": 1472,
-    "generatedOnlyItemCount": 1,
+    "generatedOnlyItemCount": 0,
     "componentCount": 0,
     "publicApiTypeCount": 1472
   }

@@ -312,12 +312,7 @@ public class PluralLocalizerTests
 
     // ── the real localizer over the embedded JSON ───────────────────────────────────────────
 
-    private static ITmLocalizer Real(string culture)
-    {
-        CultureInfo.CurrentUICulture = Culture(culture);
-        CultureInfo.CurrentCulture = Culture(culture);
-        return new DefaultTmLocalizer(new JsonStringLocalizer<TmResources>());
-    }
+    private static ITmLocalizer Real() => new DefaultTmLocalizer(new JsonStringLocalizer<TmResources>());
 
     [Theory]
     [InlineData("cs", 1, "1 čekající změna")]
@@ -332,7 +327,10 @@ public class PluralLocalizerTests
     [InlineData("sk", 3, "3 čakajúce zmeny")]
     [InlineData("sk", 5, "5 čakajúcich zmien")]
     public void The_shipped_B16_texts_are_natural_in_every_language(string culture, int count, string expected)
-        => Real(culture).Plural("TmDocumentEditor_ReviewSummaryRevisions", count).Should().Be(expected);
+    {
+        using var _ = CultureScope.Use(culture);
+        Real().Plural("TmDocumentEditor_ReviewSummaryRevisions", count).Should().Be(expected);
+    }
 
     [Theory]
     [InlineData("cs", 1, "1 nález")]
@@ -346,7 +344,10 @@ public class PluralLocalizerTests
     [InlineData("sk", 3, "3 nálezy")]
     [InlineData("sk", 7, "7 nálezov")]
     public void The_modeling_issue_count_is_natural_in_every_language(string culture, int count, string expected)
-        => Real(culture).Plural("TmModelingIssuePanel_Count", count).Should().Be(expected);
+    {
+        using var _ = CultureScope.Use(culture);
+        Real().Plural("TmModelingIssuePanel_Count", count).Should().Be(expected);
+    }
 
     // ── resource parity: a plural family is complete in every language ──────────────────────
 

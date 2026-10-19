@@ -160,6 +160,37 @@
     </div>
 </section>
 
+<!-- Responsive export -->
+<section class="demo-section" data-testid="dt-export-responsive-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_ExportTitle"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">MobileLayout=Scroll</span>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            @Loc["TmDataTableDemo_ExportDescription"]
+        </p>
+        <div data-testid="dt-export-responsive">
+            <TmDataTable TItem="TransactionDemo"
+                         Items="_transactions"
+                         ViewContext="transaction-export-responsive-demo"
+                         ShowExport="true"
+                         MobileLayout="DataTableMobileLayout.Scroll"
+                         CsvDelimiter=";"
+                         DefaultPageSize="5">
+                <ChildContent>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Date"]" PropertyName="Date" Field="transaction => transaction.Date">
+                        <CellTemplate Context="transaction">@transaction.Date.ToString("d")</CellTemplate>
+                    </TmDataTableColumn>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Amount"]" PropertyName="Amount" Field="transaction => transaction.Amount" />
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Category"]" PropertyName="Category" Field="transaction => transaction.Category" />
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Note"]" PropertyName="Note" Field="transaction => transaction.Note" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+    </div>
+</section>
+
 <!-- Basic Table -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">

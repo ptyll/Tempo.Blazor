@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Modeling;
 using Tempo.Blazor.Configuration;
@@ -209,6 +210,31 @@ public sealed class TmModelingLocalizationM15Tests : LocalizationTestBase
         });
     }
 
+    [Fact]
+    public void Modeling_editor_sends_the_request_culture_and_runs_the_loading_delay_on_the_clock()
+    {
+        // Review fix: the load request carries CultureInfo.CurrentUICulture — pin the ambient
+        // culture with a CultureScope (a bare assignment would leak into every later test on the
+        // thread), drive the minimum-loading delay with a FakeTimeProvider (no real 150 ms
+        // sleep) and read the culture back through a recording provider.
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var recorder = new RecordingModelProvider();
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(recorder));
+
+        using var culture = CultureScope.Use("cs");
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, RecordingModelProvider.Key));
+
+        // Before the delay elapses the provider must not have been asked yet.
+        recorder.Request.Should().BeNull();
+        time.Advance(TimeSpan.FromMilliseconds(200));
+
+        cut.WaitForAssertion(() => recorder.Request.Should().NotBeNull(), TimeSpan.FromSeconds(5));
+        recorder.Request!.Culture.Should().Be("cs");
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Model tree"), TimeSpan.FromSeconds(5));
+    }
+
     private static Dictionary<string, string> BuildMarkerLocalization()
         => ModelingResourceKeys
             .Select((key, index) => (key, value: key switch
@@ -304,6 +330,45 @@ public sealed class TmModelingLocalizationM15Tests : LocalizationTestBase
             });
 
             return Task.FromResult(model);
+        }
+    }
+
+    /// <summary>Records the request so a test can assert the culture the editor sent.</summary>
+    private sealed class RecordingModelProvider : IModelingModelProvider
+    {
+        public const string Key = "tempo.tests.modeling.localization.recording";
+
+        public string ProviderKey => Key;
+
+        public ModelingModelRequest? Request { get; private set; }
+
+        public Task<ModelingModelDto> GetModelAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(new ModelingModelDto
+            {
+                Id = "recorded-model",
+                Title = "Recorded",
+                Notation = "bpmn",
+                Metadata = new ModelingMetadataDto
+                {
+                    SourceSystem = "SYS",
+                    SourceVersion = "1",
+                    LoadedAt = DateTimeOffset.UtcNow
+                },
+                Elements =
+                [
+                    new()
+                    {
+                        Id = "task-a",
+                        SourceId = "source-a",
+                        SourceType = "type-a",
+                        Name = "Task A",
+                        SemanticType = "task",
+                        Notation = "bpmn"
+                    }
+                ]
+            });
         }
     }
 }

@@ -2,6 +2,8 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
@@ -182,6 +184,31 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             autosaves.Should().Be(1);
             cut.Find(".tm-signing-form-runner__autosave").TextContent.Should().Contain("Offline");
         });
+    }
+
+    [Fact]
+    public void Autosave_DebouncesOnFakeClock_ExactlyOneSave()
+    {
+        // Review fix: the debounce runs on the injected TimeProvider — two rapid changes collapse
+        // into ONE autosave when the fake clock advances past the delay, with no real sleeping.
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var autosaves = 0;
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.AutoSaveDelay, TimeSpan.FromSeconds(1))
+            .Add(p => p.OnAutoSave, EventCallback.Factory.Create<IReadOnlyDictionary<string, object?>>(this, _ => autosaves++)));
+
+        var input = cut.Find("input.tm-signing-text-step__input");
+        input.Change("A");
+        input.Change("Al");
+
+        time.Advance(TimeSpan.FromSeconds(2));
+
+        cut.WaitForAssertion(() => autosaves.Should().Be(1), TimeSpan.FromSeconds(5));
+        // Advancing again without new changes must not re-fire the debounce.
+        time.Advance(TimeSpan.FromSeconds(5));
+        autosaves.Should().Be(1);
     }
 
     [Fact]

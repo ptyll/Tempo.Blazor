@@ -293,37 +293,65 @@ public sealed class OverlayRound1FixE2ETests : WasmTestBase
         await trigger.ScrollIntoViewIfNeededAsync();
         if (touch) await trigger.TapAsync(); else await trigger.ClickAsync();
 
-        if (width <= 390)
+        // Fáze 7 changed the contract on purpose: the export dropdown opts into automatic mobile
+        // presentation only when the table is responsive (MobileLayout != None). The demo export
+        // table is NOT responsive, so at 390 the menu stays a top-layer popover — the sheet branch
+        // for a responsive table lives in DataTable_ExportMenu_ResponsiveTable_PresentsSheet_At390
+        // below (the column-picker sheet is a different component, tested next door).
+        var menu = page.Locator("[data-testid='dt-export-section'] .tm-dropdown-menu");
+        await menu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        Assert.IsTrue(await menu.EvaluateAsync<bool>("el => el.matches(':popover-open')"),
+            "the export menu presents as a top-layer popover at every viewport for a non-responsive table");
+        Assert.AreEqual(0, await page.Locator(".tm-overlay-panel-sheet").CountAsync());
+        if (touch)
         {
-            var sheet = page.Locator(".tm-overlay-panel-sheet");
-            await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
-            Assert.AreEqual("Export", await sheet.Locator(".tm-overlay-panel-sheet__title").InnerTextAsync());
-            Assert.AreEqual("Done", (await sheet.Locator(".tm-overlay-panel-sheet__done").InnerTextAsync()).Trim());
-            var itemBox = await sheet.Locator(".tm-dropdown-item").First.BoundingBoxAsync();
-            Assert.IsTrue(itemBox!.Height >= 44, $"export items must be 44px tap targets on touch, got {itemBox.Height}");
-            // The page behind the sheet must show through DIMMED, not vanish under an opaque root:
-            // the promoted root resets the UA [popover] paint (Canvas background), and the scrim
-            // lives on the drawer's own overlay. IsVisibleAsync cannot detect occlusion (round-2
-            // review R2-B1) — assert the computed paint instead.
-            var rootBg = await sheet.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
-            Assert.AreEqual("rgba(0, 0, 0, 0)", rootBg,
-                "the promoted sheet root must be transparent — the page behind stays dimmed, not a flat grey wall");
-            var backdropBg = await sheet.Locator(".tm-drawer__overlay").EvaluateAsync<string>(
-                "el => getComputedStyle(el).backgroundColor");
-            StringAssert.Contains(backdropBg, "0.5", "the dimming scrim paints on the drawer overlay");
-            await page.WaitForTimeoutAsync(400);
-            await ShootAsync(page, $"t10-{width}-dt-export-sheet");
+            // Coarse-pointer contract: even in the popover presentation the export items stay
+            // finger-sized on a phone.
+            var itemBox = await menu.Locator(".tm-data-table__export-item").First.BoundingBoxAsync();
+            Assert.IsTrue(itemBox!.Height >= 44, $"export items must be ≥44px on a coarse pointer, got {itemBox.Height}");
+        }
+
+        await ShootAsync(page, $"t10-{width}-dt-export-popover");
+        if (touch)
+        {
             await AssertCoarsePointerStillMatchesAsync(page);
         }
-        else
-        {
-            var menu = page.Locator("[data-testid='dt-export-section'] .tm-dropdown-menu");
-            await menu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-            Assert.IsTrue(await menu.EvaluateAsync<bool>("el => el.matches(':popover-open')"),
-                "at desktop widths the export menu stays a top-layer popover");
-            Assert.AreEqual(0, await page.Locator(".tm-overlay-panel-sheet").CountAsync());
-            await ShootAsync(page, $"t10-{width}-dt-export-popover");
-        }
+
+        await page.Keyboard.PressAsync("Escape");
+    }
+
+    [TestMethod]
+    public async Task DataTable_ExportMenu_ResponsiveTable_PresentsSheet_At390()
+    {
+        // The responsive sibling (MobileLayout=Scroll) opts the SAME export dropdown into the
+        // automatic mobile presentation: on a phone it opens as the content-height bottom sheet,
+        // not the top-layer popover.
+        var page = await OpenPageAsync("/data-table", 390, 844, touch: true);
+
+        var trigger = page.Locator("[data-testid='dt-export-responsive'] .tm-dropdown-trigger");
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await trigger.TapAsync();
+
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        Assert.AreEqual(0, await page.Locator("[data-testid='dt-export-section'] .tm-dropdown-menu:popover-open").CountAsync(),
+            "a responsive table's export menu must not also open as a popover");
+
+        // The sheet root paints nothing — the surface lives on the panel, the dim on the scrim.
+        var rootBackground = await sheet.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        Assert.AreEqual("rgba(0, 0, 0, 0)", rootBackground, "the sheet root must be transparent (the scrim paints the dim)");
+        var scrim = sheet.Locator(".tm-drawer__overlay");
+        Assert.AreEqual(1, await scrim.CountAsync(), "the sheet carries the .tm-drawer__overlay scrim");
+        Assert.IsTrue(await scrim.EvaluateAsync<bool>("el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }"),
+            "the scrim must cover the viewport");
+
+        // Coarse-pointer contract inside the sheet too.
+        var itemBox = await sheet.Locator(".tm-data-table__export-item").First.BoundingBoxAsync();
+        Assert.IsTrue(itemBox!.Height >= 44, $"export items must be ≥44px in the sheet on a coarse pointer, got {itemBox.Height}");
+
+        await page.WaitForTimeoutAsync(400);
+        await ShootAsync(page, "t10-390-dt-export-responsive-sheet");
+        await AssertCoarsePointerStillMatchesAsync(page);
 
         await page.Keyboard.PressAsync("Escape");
     }

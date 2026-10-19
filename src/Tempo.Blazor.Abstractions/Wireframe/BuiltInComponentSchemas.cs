@@ -2563,10 +2563,17 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title",      "Title",      PropType.String, "Diagram",   cat: "Content"),
                 P("nodeCount",  "Node Count", PropType.Int,    4,           cat: "Appearance"),
-                // The editor's responsive band is a stated wireframe decision (tablet sheet,
-                // mobile sheet presentation) — mirrors TmDashboard.LayoutMode.
-                P("layoutMode", "Layout Mode", PropType.Enum,  "auto",      cat: "Behavior",
+                // The editor's responsive band (tablet rail + drawer, mobile action bar) — maps to
+                // TmDiagramEditor.LayoutMode (TmLayoutMode). "auto" renders the desktop variant.
+                P("layoutMode",    "Layout Mode",    PropType.Enum,   "auto",    cat: "Behavior",
                     opts: ["auto", "desktop", "tablet", "mobile"]),
+                // Maps to TmDiagramEditor.ToolbarPreset (DiagramToolbarPreset.Full / .Viewer).
+                P("toolbarPreset", "Toolbar Preset", PropType.Enum,   "full",    cat: "Behavior",
+                    opts: ["full", "viewer"]),
+                // Maps to TmDiagramEditor.ReadOnly (host-pinned read-only).
+                P("readOnly",      "Read Only",      PropType.Bool,   false,     cat: "Behavior"),
+                // Maps to TmDiagramEditor.ShowMinimap.
+                P("showMinimap",   "Show Minimap",   PropType.Bool,   true,      cat: "Appearance"),
             ]
         };
 

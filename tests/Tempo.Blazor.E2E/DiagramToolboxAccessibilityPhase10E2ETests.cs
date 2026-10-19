@@ -43,6 +43,15 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
 
         await page.SetViewportSizeAsync(430, 900);
         await OpenDiagramEditorAsync(page, requireCanvas: false);
+        // X1 (redesign review phase 6): the mobile Shapes sheet starts CLOSED, so the toolbox is
+        // not visible at load. Open the sheet through the action bar's Shapes tile — the one
+        // reopen path a user has — before asserting on the toolbox.
+        await page.Locator(".tm-mobile-action-bar__action").Filter(new() { HasText = "Shapes" }).First
+            .ClickAsync();
+        await page.Locator(".tm-editor-shell__sheet").First.WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        await page.Locator(".tm-diagram-toolbox").First.WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await SearchDecisionStencilAsync(page);
         await AssertToolboxFitsViewportAsync(page);
         await SaveStableScreenshotAsync(page, "mobile");
@@ -52,7 +61,9 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
     private static async Task OpenDiagramEditorAsync(IPage page, bool requireCanvas)
     {
         await page.GotoAsync("http://localhost:5010" + DiagramEditorUrl);
-        await page.WaitForSelectorAsync(".tm-diagram-toolbox", new PageWaitForSelectorOptions
+        // The editor root renders in every band; the toolbox does NOT (on mobile it lives in the
+        // closed-at-load panels sheet), so only the root is awaited here.
+        await page.WaitForSelectorAsync(".tm-diagram-editor", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
             Timeout = 30000
@@ -65,6 +76,11 @@ public sealed class DiagramToolboxAccessibilityPhase10E2ETests : PlaywrightTestB
         }
 
         await page.WaitForSelectorAsync(".tm-diagram-canvas", new PageWaitForSelectorOptions
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 30000
+        });
+        await page.WaitForSelectorAsync(".tm-diagram-toolbox", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
             Timeout = 30000

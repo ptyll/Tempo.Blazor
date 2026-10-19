@@ -114,6 +114,14 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // onto the shared panel (the TmDropdown pattern) — its surface keeps the same chrome.
         new("TmDashboard.razor", "tm-dashboard-menu",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
+        // The view-manager dropdown rides the shared panel too — _data-table.css owns the class and
+        // declares the full chrome (surface, border, radius, shadow, padding).
+        new("TmViewManager.razor", "tm-view-manager-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
+        // The multi-view-list group-by picker: the surface/border ride the tokens directly —
+        // no hardcoded fallbacks (CSS-tokens-only audit).
+        new("TmMultiViewList.razor", "tm-mvl-group-dropdown",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>
@@ -190,6 +198,27 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         {
             AssertOwned(row, "display", row.Display);
         }
+    }
+
+    /// <summary>
+    /// The positioning contract (N196 follow-up): overlay.js writes <c>top/left</c> in VIEWPORT
+    /// coordinates, which map 1:1 only because the zero-specificity <c>:where()</c> reset keeps
+    /// <c>position: fixed</c>. A consumer class that re-declares <c>position</c> (e.g. the legacy
+    /// <c>.tm-view-manager-panel { position: absolute }</c>) wins over <c>:where()</c> by
+    /// specificity and resolves those coordinates against the PAGE origin — the panel then parks
+    /// offscreen whenever the page is scrolled (E2E: ViewManager on the data-table page). Every
+    /// panel-carrying row must therefore still resolve <c>position</c> to the reset's <c>fixed</c>.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ConsumerData))]
+    public void ConsumerPanel_PositioningContract_KeepsViewportFixed(Consumer row)
+    {
+        var winner = CssCascade.Resolve(Bundle, PanelChain(row.PanelClass!), "position");
+        winner.Value.Should().Be("fixed",
+            "{0}: the panel class must not declare position/inset/z-index — overlay.js writes " +
+            "viewport coordinates that only position:fixed (the :where() reset) interprets " +
+            "correctly; a consumer position:absolute resolves them against the page origin and " +
+            "the panel flies offscreen on a scrolled page", row.File);
     }
 
     /// <summary>Rows that carry a panel class — TmQueryInput's null-Class row is asserted by its

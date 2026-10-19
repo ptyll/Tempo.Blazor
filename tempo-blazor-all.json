@@ -30638,24 +30638,44 @@
           ]
         },
         {
+          "itemName": "DiagramImportError",
           "kind": "Enum",
           "category": "Components",
           "namespace": "Tempo.Blazor.Components.Diagram.Services",
           "description": "Machine-readable reason a CSV/SQL import failed; UIs map it to a localized message. Explicit numeric values: the enum ships in the same (unreleased) version that introduced it, so the values may be pinned; Unknown reserves 0 for a reason outside the list.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Services/DiagramImportException.cs",
-          "documentationStatus": "generated",
-          "itemName": "DiagramImportError"
+          "documentationStatus": "merged"
         },
         {
+          "itemName": "DiagramImportException",
           "kind": "Class",
           "category": "Components",
           "namespace": "Tempo.Blazor.Components.Diagram.Services",
-          "description": "Thrown by CsvParser, the CSV generators and SqlParser. Derives from InvalidOperationException so existing catch blocks keep working; Message is an English developer message and must never be shown to end users — map Error to a localized text instead.",
+          "description": "Thrown by CsvParser, the CSV generators and SqlParser. Derives from InvalidOperationException so existing catch blocks keep working; Exception.Message is an English developer message and must never be shown to end users — map Error to a localized text instead.",
           "packageId": "Tempo.Blazor.DiagramEditor",
           "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Services/DiagramImportException.cs",
-          "documentationStatus": "generated",
-          "itemName": "DiagramImportException"
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Error",
+              "kind": "Property",
+              "type": "DiagramImportError",
+              "description": "The failure reason."
+            },
+            {
+              "name": "Column",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The CSV column involved (user data), when any."
+            },
+            {
+              "name": "Field",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The semantic field involved (\"Name\", \"Manager\", …), when any."
+            }
+          ]
         },
         {
           "itemName": "DiagramInspectorLayout",
@@ -35157,9 +35177,9 @@
       ],
       "summary": {
         "itemCount": 143,
-        "manualItemCount": 141,
+        "manualItemCount": 143,
         "generatedItemCount": 134,
-        "generatedOnlyItemCount": 2,
+        "generatedOnlyItemCount": 0,
         "componentCount": 17,
         "publicApiTypeCount": 117
       }
@@ -67052,14 +67072,36 @@
           ]
         },
         {
+          "itemName": "DiagramThumbnailOptions",
           "kind": "Class",
           "category": "Diagram",
           "namespace": "Tempo.Blazor.Components.Diagram.Services",
-          "description": "Options for Generate.",
+          "description": "Options for DiagramThumbnailSvgGenerator: thumbnail size, whether edge/node labels render, and whether the thumbnail paints an opaque paper background (false keeps transparent for hosts that compose thumbnails over their own surface).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Services/DiagramThumbnailSvgGenerator.cs",
-          "documentationStatus": "generated",
-          "itemName": "DiagramThumbnailOptions"
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "IncludeLabels",
+              "kind": "Property",
+              "type": "bool"
+            },
+            {
+              "name": "OpaqueBackground",
+              "kind": "Property",
+              "type": "bool"
+            },
+            {
+              "name": "Width",
+              "kind": "Property",
+              "type": "int"
+            },
+            {
+              "name": "Height",
+              "kind": "Property",
+              "type": "int"
+            }
+          ]
         },
         {
           "itemName": "DiagramThumbnailSvgGenerator",
@@ -101900,9 +101942,9 @@
       "libraryExamples": [],
       "summary": {
         "itemCount": 1489,
-        "manualItemCount": 1488,
+        "manualItemCount": 1489,
         "generatedItemCount": 1472,
-        "generatedOnlyItemCount": 1,
+        "generatedOnlyItemCount": 0,
         "componentCount": 0,
         "publicApiTypeCount": 1472
       }
@@ -116415,8 +116457,8 @@
   "summary": {
     "packageCount": 26,
     "itemCount": 3231,
-    "manualItemCount": 3228,
-    "generatedOnlyItemCount": 3,
+    "manualItemCount": 3231,
+    "generatedOnlyItemCount": 0,
     "componentCount": 475,
     "publicApiTypeCount": 2703
   }

@@ -79,6 +79,29 @@ public class TmOverlayPanelTests : LocalizationTestBase
         return module;
     }
 
+    [Fact]
+    public async Task Dismissal_RestoresFocusThroughOverlayModule_WithPreventScroll()
+    {
+        // Review fix: the dismissal focus restore must ride the overlay.js focusById export —
+        // never eval — and pass preventScroll: true so the page does not jump on dismissal.
+        var module = SetupOverlayModule();
+        module.SetupVoid("focusById", _ => true).SetVoidResult();
+
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.RestoreFocusTargetId, "filter-trigger")
+            .AddChildContent("<div>Body</div>"));
+
+        await cut.InvokeAsync(() => cut.Instance.NotifyDismissedAsync("escape"));
+
+        var invocation = module.Invocations.Single(i => i.Identifier == "focusById");
+        invocation.Arguments.Should().HaveCount(2);
+        invocation.Arguments[0].Should().Be("filter-trigger");
+        invocation.Arguments[1].Should().BeEquivalentTo(new { preventScroll = true });
+        // No eval anywhere: the restore is a typed module call.
+        JSInterop.Invocations.Should().NotContain(i => i.Identifier == "eval");
+    }
+
     /// <summary>
     /// N198 (review 2026-09-22): a JSInterop handler for the <c>import</c> call whose result
     /// completes only when the test releases it — the window in which a first

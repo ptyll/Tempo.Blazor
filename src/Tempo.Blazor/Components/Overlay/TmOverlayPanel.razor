@@ -481,7 +481,13 @@
         {
             try
             {
-                await JS.InvokeVoidAsync("eval", $"document.getElementById({System.Text.Json.JsonSerializer.Serialize(RestoreFocusTargetId)})?.focus()");
+                // preventScroll: restoring focus must not move the page — the trigger is where the
+                // user left it, and a focus-driven scroll jump breaks anchored overlays (and the
+                // E2E contract that dismiss-on-Escape leaves the page scrolled where it was).
+                // The restore rides the overlay.js module (focusById), never eval: the id travels
+                // as a JSON argument, not as an executed script string.
+                _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+                await _module.InvokeVoidAsync("focusById", RestoreFocusTargetId, new { preventScroll = true });
             }
             catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
         }

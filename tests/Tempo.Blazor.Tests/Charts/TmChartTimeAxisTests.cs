@@ -18,20 +18,7 @@ public class TmChartTimeAxisTests : LocalizationTestBase
 
     private static IDisposable UseCulture(string name)
     {
-        var previous = CultureInfo.CurrentCulture;
-        var previousUi = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentCulture = new CultureInfo(name);
-        CultureInfo.CurrentUICulture = new CultureInfo(name);
-        return new CultureRestore(previous, previousUi);
-    }
-
-    private sealed class CultureRestore(CultureInfo culture, CultureInfo uiCulture) : IDisposable
-    {
-        public void Dispose()
-        {
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = uiCulture;
-        }
+        return CultureScope.Use(name);
     }
 
     // ── TIM-1: nerovnoměrná řada → proporcionální X pozice ─────────────────

@@ -15,13 +15,15 @@ minimap, layers) and the JS modules (`diagram-editor.js`, `diagram-editor-touch.
 <script src="_content/Tempo.Blazor.DiagramEditor/js/d3-quadtree.min.js"></script>
 <script src="_content/Tempo.Blazor.DiagramEditor/js/d3-hierarchy.min.js"></script>
 <script src="_content/Tempo.Blazor.DiagramEditor/js/d3-force.min.js"></script>
+<script src="_content/Tempo.Blazor.DiagramEditor/js/diagram-arrow-select.js"></script>
 <script src="_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js"></script>
 ```
 
 `diagram-editor.js` is a classic script (it defines `window.tmDiagramEditor`). It loads
-`diagram-editor-touch.js` with a dynamic `import()` resolved from its own URL, and that module
-imports the core `pointer-drag.js` / `pointer-gesture.js`. `dagre` and the d3 bundles are globals:
-load them before it. Auto layout warns and does nothing without them.
+`diagram-editor-touch.js` with a dynamic `import()` resolved from its own URL (falling back to
+`document.baseURI`), and that module imports the core `pointer-drag.js` / `pointer-gesture.js`.
+`dagre` and the d3 bundles are globals: load them before it — auto layout warns and does nothing
+without them.
 
 ## Responsive scope (G2)
 
@@ -34,6 +36,19 @@ The editor resolves its presentation from its own container (see
 | **Desktop** | ≥ 1200 | Full redesign chrome: header (page tabs, title, panel toggles, "⋯" view menu), one command toolbar row, docked toolbox / inspector, status bar, minimap card. Full editing: resize/rotate handles, edge drawing, align/distribute, auto layout, imports. |
 | **Tablet** | 768–1199 | Same docked panels through `TmEditorShell` (at most one side panel expanded, the other rails), touch gestures from the shared pointer helpers, 44px finger handles (`--tm-diagram-handle-hit`), **floating minimap overlay** over the canvas corner, long-press context menu. Full editing stays available. |
 | **Mobile** | < 768 | **Viewing + light edits only (G2).** Canvas plus a non-modal bottom sheet (peek / half / full) holding the flat *Shapes | Properties | Layers* tabs (sheet closed at load — the action bar, a selection or `MobileSheetInitiallyOpen` opens it), the F5 action bar (Select / Shapes / Properties tiles, Pan and exports in "More"), the floating horizontal zoom pill and the opt-in minimap (the header "⋯" menu toggle), long-press context menu as a bottom sheet. Light edits: selection, node text/style in the properties, layer visibility/lock/active/"move to layer", delete, undo/redo and tap-insert from the palette. **Resize/rotate, edge drawing, align/distribute, layout and import stay tablet+.** A host-made viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the `Viewer` preset) — renders no action bar or panels sheet; the user's own Read-only toggle keeps them (read-only panels). |
+
+**Mobile sheet.** The sheet starts **closed** at load; the action bar's *Shapes* tile opens it on
+the shapes tab (the *Properties* tile on the properties tab). Selecting a node on mobile scrolls
+the canvas so the selection peeks above the sheet (the reveal is gesture-guarded so a drag never
+triggers it). The node/edge actions list keeps **Delete as a sticky bottom row** in the danger
+style, and on a coarse pointer the action labels drop the keyboard-shortcut hints (a finger has no
+shortcut keys). The sheet and the action bar disappear only for a **host-made viewer** (A4) — the
+user's own Read-only toggle keeps both, in their read-only form.
+
+`LayoutMode` (`Auto` default) overrides the measured band: `Desktop` / `Tablet` / `Mobile` pin the
+presentation (e.g. for tests and kiosk hosts), and `LayoutBreakpoints` replaces the default
+768 / 1200 thresholds. The wireframe stencil exposes the same choice as its `layoutMode` prop,
+where `auto` always renders the desktop variant.
 
 `TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` (both default `true`) are the knobs a
 mobile host uses to drop the reshaping / edge-drawing affordances; the editor sets them from the
@@ -95,6 +110,34 @@ whether a panel exists at all; a lone panel renders without the tab strip: with 
 available it renders alone in `__right-wrap`, and the header carries a single
 **Inspector** toggle whose icon/label follow the lone panel's content.
 
+**Header (X3).** Since 2.9.1 the header carries ONE **Inspector** toggle instead of separate
+Properties and Layers toggles (X3 breaking change): it shows/hides the whole inspector and the
+tabs choose the content. Below 1024px of *editor* width (a container query on the editor root,
+not the whole tablet band) the header toggles render **icon-only** — the visible name stays as
+`aria-label` and the tooltip in `title`.
+
+## Layers panel (row contract)
+
+Each layer row is one `<li>` carrying, in order: the drag handle (reorder by drag, disabled while
+a rename is in progress), the visibility eye toggle, the active-layer radio, the name — a
+`<span tabindex="0" role="button">` that renames on double-click or Enter, takes the width
+priority and truncates with an ellipsis — the non-interactive lock **indicator** (Lock/Unlock
+lives in the row menu; a locked row keeps the indicator so the state stays visible) and the ⋯ row
+menu. The row menu is the **core `TmContextMenu`** (D4/X5), not a hand-rolled popup: it owns
+Escape/outside dismissal, arrow roving, the mobile bottom sheet and focus return. Its trigger is
+the `.tm-diagram-layers__row-menu-trigger` span; `MobilePresentation` follows the resolved layout
+(`RowMenuPresentation`: bottom sheet on mobile, anchored menu elsewhere) and after rename, move or
+delete the panel returns focus to the trigger through `TmContextMenu.FocusTriggerAsync` (the rows
+carry `@key`, so the DOM survives the operation). The menu offers Rename, Lock/Unlock, Move
+up/down, **Move selected nodes here** (only with a selection, disabled when every selected node
+already lives on the row's layer) and Delete (danger, hidden for the last/default layer).
+
+The same "move the selection to a layer" action **also** appears as the panel's bottom
+*Move to layer* `TmSelect` — the two are intentional duplicates with different ergonomics: the
+select is the discoverable bulk path (pick any target once), the row-menu item is the contextual
+shortcut (the target is the row under your finger). Both run the same undoable
+`MoveNodesToLayerCommand`.
+
 ## Minimap (`MinimapPlacement`, DI3)
 
 `MinimapPlacement="DiagramMinimapPlacement.*"`:
@@ -125,16 +168,16 @@ Pages stay as tabs at the top in every layout (DI3); there is no page drawer.
 
 | Region | Desktop | Tablet / mobile |
 |---|---|---|
-| Pages | Header tab strip | Same tab strip (wraps/clips on 320) |
-| Document title | Header input (`ShowTitle`, disabled while read-only) | Hidden on mobile |
+| Pages | Header tab strip | Same tab strip, horizontally scrollable on narrow widths |
+| Document title | Header input (`ShowTitle`, disabled while read-only) | Same input in the compact header (flexes to the free width; `ShowTitle`) |
 | Command toolbar | One `TmToolbar` row, overflow "More" menu | F5 action bar tiles on mobile |
 | Toolbox | Left docked panel | Shapes tab of the mobile sheet |
-| Inspector | Right docked column, tabs per `InspectorLayout` | Flat Properties / Layers sheet tabs (via the shell `Extra` slot) |
-| Minimap | Card or overlay per `MinimapPlacement` | Floating overlay, opt-in on mobile (hidden at load ONLY while the "⋯" toggle exists — a group set without Panels/View keeps it visible) |
+| Inspector | Right docked column, tabs per `InspectorLayout` | Flat sheet tabs Shapes \| Properties \| Layers (TmEditorShell third panel) |
+| Minimap | Card or overlay per `MinimapPlacement` | Tablet: ~160px collapsible overlay, visible by default. Mobile: hidden, toggled from "⋯" |
 | Zoom | Status bar group + `__zoom-label` | Floating zoom pill |
 | Search | `Ctrl+F` / toolbar group, floating panel | Same floating panel |
-| Context menu | Viewport-anchored menu | Tablet: anchored finger-sized menu, offset from the finger (`data-anchor="touch"`, items ≥ `--tm-touch-target`); mobile: long-press bottom sheet (shared F3 sheet) |
-| Status bar | `ShowStatusBar` (read-only toggle lives here) | Not rendered |
+| Context menu | Fixed menu at the pointer, clamped into the editor box or the viewport (whichever is its containing block); long-press on nodes, edges and empty canvas on touch | Same menu: tablet anchors it finger-sized and offset from the finger (`data-anchor="touch"`, items ≥ `--tm-touch-target`); mobile renders it as the long-press bottom sheet (shared F3 sheet) |
+| Status bar | `ShowStatusBar` (read-only toggle lives here) | Tablet: same status bar. Mobile: not rendered (zoom → floating pill, Read-only → "⋯" menu) |
 | All of the above (`ShowToolbar`) | `ShowToolbar="false"` keeps its pre-redesign meaning: it hides every built-in control that used to live in the toolbar — the header bar's built-in controls (title, mobile history, search and panel toggles, "⋯" menu), the command row and the status bar (and on mobile the zoom pill and the action bar). Page tabs, panels, canvas, minimap and the `HeaderStart`/`HeaderActions` host slots stay. | Same rule |
 
 Docked panels resize/collapse through `TmEditorShell` (strip toggles, rails); on tablet the shell
@@ -142,7 +185,21 @@ rails the non-expanded side while `LeftOpen`/`RightOpen` keep meaning *shown*. A
 always re-raises the inspector with the **Properties** tab active — even when the user had railed
 it after switching to Layers (the selection pins the tab; the palette returns to its rail).
 
+## Motion
+
+Under `prefers-reduced-motion: reduce` the search-match pulse, template-card hover lift,
+connect-arrow/swatch scale, layers-panel width and colour transitions are disabled (a static
+highlight replaces the pulse). `ReducedMotionSelectorTests` scans this package's stylesheets for
+both the media query and the motion-suppressing rules.
+
 ## Canvas tokens (paper and ink)
+
+The page itself — and everything painted on it — is theme-invariant: the page rect, edge-label
+pills and node bodies resolve the core `--tm-paper*` tokens (`--tm-paper`, `--tm-paper-ink`,
+`--tm-paper-ink-muted`, `--tm-paper-border`, `--tm-paper-backdrop`), which are deliberately
+declared light-only (NOT re-declared in `tokens-dark.css`) so the paper stays white and the ink
+stays dark grey in every theme. Hosts rebrand them by targeting `:root`, `[data-theme="dark"]`
+and `.tm-dark` together, or per-canvas through the aliases below.
 
 Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves two
 canvas-scoped aliases declared on `.tm-diagram-canvas`:
@@ -174,7 +231,8 @@ long-press) and `pointer-gesture.js` (two-finger pinch/pan) — imported by the 
 `diagram-editor-touch.js`; see [touch-interaction.md](touch-interaction.md). Diagram specifics:
 
 - Resize/rotate handles render an invisible hit area sized by `--tm-diagram-handle-hit`
-  (24px, 44px on coarse pointers) so fingers can grab them. On a coarse pointer the n/e/s/w
+  (`var(--tm-space-6)` = 24px, `var(--tm-touch-target)` = 44px on coarse pointers) so fingers can
+  grab them. On a coarse pointer the n/e/s/w
   mid-edge resize hits do not render (they would sit exactly on the port hit circles); the four
   corners keep the full resize affordance.
 - A **selected** node's ports get finger-sized invisible hit circles (`.tm-diagram-port-hit`,
@@ -204,7 +262,11 @@ long-press) and `pointer-gesture.js` (two-finger pinch/pan) — imported by the 
   press/release clicks the button (opening the connect dialog) and swallows the native click that
   follows, while a moved press stays a drag and never clicks.
 - Pinch zooms and pans the canvas (`viewBox`-driven); a host that needs custom pinch behaviour
-  cancels the drag from the pinch's `onStart`.
+  cancels the drag from the pinch's `onStart`. Zoom is clamped to a single shared range
+  (0.15–5.0, `DiagramZoomLimits`) on every path — wheel, pinch, `zoomTo`, fit-to-view and the
+  zoom buttons — and a gesture past a limit clamps exactly to it instead of freezing.
+- On tablet an edge draws from a finger/pen drag starting on a port (or the edge corridor of a
+  connection point); on mobile only the connect dialog creates edges (G2).
 - Long-press opens the context menu — **mobile only** as the F3 bottom sheet; on tablet and
   desktop it stays an anchored `position:fixed` menu that a finger can hit: opened by touch it
   carries `data-anchor="touch"` and is parked above the finger (flipping below at the top edge,
@@ -223,4 +285,6 @@ long-press) and `pointer-gesture.js` (two-finger pinch/pan) — imported by the 
 `__props-wrap`; the header toggles carry
 `data-testid="diagram-editor-toggle-toolbox|inspector|minimap"`; mobile sheet content is
 reachable through `aria-label` on the shared overlay-panel sheet. `data-tm-group`
-values above are the stable toolbar anchors.
+values above are the stable toolbar anchors. Selectors removed in 2.9.1 (`__body`,
+`__minimap-wrap`, `__toolbar-row`, `__toolbar-spacer`, `tm-toolbar-btn--active`, …): see
+CHANGELOG 2.9.1 Breaking / Migration.

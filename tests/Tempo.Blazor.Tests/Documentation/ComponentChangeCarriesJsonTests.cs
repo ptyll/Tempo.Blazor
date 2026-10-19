@@ -57,6 +57,10 @@ public sealed class ComponentChangeCarriesJsonTests
     ///   (both components are documented today; the same-commit contract was the broken part).</item>
     /// <item><c>ac24881a</c> — false positive: removed Width/Height of a private interop DTO +
     ///   JSInvokable method, no [Parameter] change</item>
+    /// <item><c>798b8ba9</c> — data-table fáze 4 added <c>TmDropdown.OutlineTrigger</c>; the gate was
+    ///   present but not run before commit, and the <c>OutlineTrigger</c> overlay row landed in
+    ///   49e3257f (same window), so no documentation gap ships — the same-commit contract was the
+    ///   broken part, first measured here.</item>
     /// </list>
     /// </summary>
     private static readonly HashSet<string> GrandfatheredViolations = new(StringComparer.Ordinal)
@@ -71,6 +75,9 @@ public sealed class ComponentChangeCarriesJsonTests
         // Width/Height properties of a private JS-interop DTO and a [JSInvokable] method — no
         // [Parameter] surface changed, so there was no overlay to update.
         "ac24881a1c01b75791c3835ea5ccb1ae338e6a68",
+        // Data-table fáze 4: gate present but not run before commit; the OutlineTrigger overlay
+        // row landed in 49e3257f (same window).
+        "798b8ba9822aed1e3cbafdcefedb9dceb2ba26c5",
     };
 
     /// <summary>

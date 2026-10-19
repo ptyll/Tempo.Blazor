@@ -557,49 +557,312 @@ internal static class TempoNativeRendererDefinitions
         Svg(b, sb.ToString());
     }
 
+    // X11: the wireframe prop "auto" (and any unknown value) ALWAYS renders the desktop variant —
+    // the stencil communicates the chosen presentation, it does not re-flow the canvas layout.
+    private static string ResolveDiagramLayout(WireframeElement el)
+        => el.Props.GetString("layoutMode", "auto") is { } mode && mode is "desktop" or "tablet" or "mobile"
+            ? mode
+            : "desktop";
+
     private static void RenderDiagramEditor(WireframeElement el, RenderTreeBuilder b)
     {
         var title = el.Props.GetString("title", "Diagram");
         var nodeCount = el.Props.GetInt("nodeCount", 4);
+        var layout = ResolveDiagramLayout(el);
+        var viewer = el.Props.GetString("toolbarPreset", "full") == "viewer";
+        var readOnly = el.Props.GetBool("readOnly", false);
+        var showMinimap = el.Props.GetBool("showMinimap", true);
+
         var sb = new StringBuilder();
         sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 4));
-        var railW = el.W * 0.12;
-        sb.Append(Rect(0, 0, railW, el.H, FillDark, "none", 4));
-        sb.Append(VLine(railW, 0, el.H, Border));
-        sb.Append(Text("⋮", railW / 2, 20, 14, ColorMuted, "middle"));
-        for (var s = 0; s < 4; s++)
-            sb.Append(Rect(4, 32 + s * 28, railW - 8, 20, Fill, Border, 3));
-        sb.Append(Rect(railW, 0, el.W - railW, 32, FillDark, "none", 4));
-        sb.Append(HLine(railW, el.W, 32));
-        sb.Append(Text(title, railW + 8, 16, 11, ColorText, "start", "500"));
-        var nodePositions = new (double x, double y)[]
+        sb.Append($"<g data-layout='{layout}' data-preset='{(viewer ? "viewer" : "full")}'>");
+
+        if (layout == "mobile")
         {
-            (railW + 20, 50),
-            ((railW + el.W) / 2 - 50, 48),
-            (railW + 20, el.H - 70),
-            ((railW + el.W) / 2 - 50, el.H - 70)
-        };
-        for (var n = 0; n < Math.Min(nodeCount, nodePositions.Length); n++)
+            // The host-pinned viewer state hides every editing surface on mobile, exactly like
+            // ReadOnly="true" on the real component (no action bar, no panels sheet, a Read-only
+            // header label).
+            var hostViewer = readOnly || viewer;
+            RenderDiagramEditorMobile(el, sb, title, nodeCount, hostViewer);
+        }
+        else
         {
-            var (nx, ny) = nodePositions[n];
-            sb.Append(Rect(nx, ny, 80, 36, n == 0 ? FillAccent : Fill, n == 0 ? "#93c5fd" : Border, 6));
-            sb.Append(Text($"Node {n + 1}", nx + 40, ny + 18, 9, n == 0 ? Accent : ColorText, "middle"));
+            RenderDiagramEditorDesktopTablet(el, sb, title, nodeCount, layout, viewer, readOnly, showMinimap);
         }
 
-        if (nodeCount >= 2)
-        {
-            var (x1, y1) = (nodePositions[0].x + 80, nodePositions[0].y + 18);
-            var (x2, y2) = (nodePositions[1].x, nodePositions[1].y + 18);
-            sb.Append($"<line x1='{F(x1)}' y1='{F(y1)}' x2='{F(x2)}' y2='{F(y2)}' stroke='{Border}' stroke-width='1.5' marker-end='url(#arr)'></line>");
-        }
-
-        var panelW = el.W * 0.22;
-        sb.Append(Rect(el.W - panelW, 32, panelW, el.H - 32, FillDark, "none", 0));
-        sb.Append(VLine(el.W - panelW, 32, el.H, Border));
-        sb.Append(Text("Properties", el.W - panelW / 2, 48, 9, ColorMuted, "middle", "500"));
-        for (var p = 0; p < 4; p++)
-            sb.Append(Rect(el.W - panelW + 4, 58 + p * 24, panelW - 8, 18, Fill, Border, 2));
+        sb.Append("</g>");
         Svg(b, sb.ToString());
+    }
+
+    private static void RenderDiagramEditorDesktopTablet(
+        WireframeElement el, StringBuilder sb, string title, int nodeCount,
+        string layout, bool viewer, bool readOnly, bool showMinimap)
+    {
+        // Header: page tabs + document title + icon-only panel toggles.
+        const double headerH = 30;
+        sb.Append("<g data-region='header'>");
+        sb.Append(Rect(0, 0, el.W, headerH, FillDark, "none", 4));
+        sb.Append(HLine(0, el.W, headerH));
+        sb.Append(Rect(8, 6, 56, 18, Fill, Border, 3));
+        sb.Append(Text("Page 1", 36, 15, 9, ColorText, "middle"));
+        sb.Append(Text(title, 76, 15, 10, ColorText, "start", "500"));
+        var toggleX = el.W - 20;
+        // The viewer preset docks neither the palette nor the minimap, so their header toggles
+        // are hidden; the inspector toggle stays (the viewer can still inspect the document).
+        var toggles = viewer ? new[] { "☰" } : new[] { "▦", "☰", "▢" };
+        for (var t = 0; t < toggles.Length; t++)
+        {
+            sb.Append(Rect(toggleX - 22, 5, 20, 20, Fill, Border, 3));
+            sb.Append(Text(toggles[t], toggleX - 12, 15, 9, ColorMuted, "middle"));
+            toggleX -= 26;
+        }
+
+        sb.Append(Text("⋯", toggleX - 8, 15, 12, ColorMuted, "middle"));
+        sb.Append("</g>");
+
+        // Command row (one core toolbar row; the viewer preset keeps only zoom/view/search/export).
+        var top = headerH;
+        sb.Append("<g data-region='command-row'>");
+        sb.Append(Rect(0, top, el.W, 30, Fill, "none", 0));
+        sb.Append(HLine(0, el.W, top + 30));
+        var tools = viewer
+            ? new[] { "🔍", "⤢", "⭳" }
+            : new[] { "↶", "↷", "✂", "⧉", "⌖", "✋", "↗", "＋", "⧩", "⭳" };
+        var toolX = 10.0;
+        foreach (var tool in tools)
+        {
+            sb.Append(Rect(toolX, top + 5, 20, 20, Fill, Border, 3));
+            sb.Append(Text(tool, toolX + 10, top + 15, 9, ColorMuted, "middle"));
+            toolX += 24;
+            if (toolX > el.W - 30) break;
+        }
+
+        sb.Append(Text("⋯", el.W - 12, top + 15, 12, ColorMuted, "middle"));
+        sb.Append("</g>");
+        top += 30;
+
+        // Side panels: full preset docks the palette and the inspector on desktop; on tablet the
+        // palette collapses to a 44px rail and the inspector becomes a floating drawer.
+        var leftW = 0.0;
+        var rightW = 0.0;
+        if (!viewer)
+            leftW = layout == "desktop" ? Math.Max(64, el.W * 0.16) : 44;
+        if (layout == "desktop" && !viewer)
+            rightW = Math.Max(80, el.W * 0.22);
+        if (leftW + rightW > el.W * 0.6) { leftW = 0; rightW = 0; }   // too narrow: canvas only
+        var statusH = 22.0;
+        var bottom = Math.Max(top, el.H - statusH);
+        var bodyH = Math.Max(0, bottom - top);
+
+        // Palette (docked grid on desktop, rail on tablet).
+        if (leftW > 0)
+        {
+            sb.Append("<g data-region='palette'>");
+            sb.Append(Rect(0, top, leftW, bodyH, FillDark, "none", 0));
+            sb.Append(VLine(leftW, top, bottom));
+            if (layout == "desktop")
+            {
+                sb.Append(Text("Shapes", leftW / 2, top + 12, 9, ColorMuted, "middle", "500"));
+                var tiles = Math.Max(1, (int)(leftW / 32));
+                var tile = Math.Min(26.0, (leftW - 8) / tiles - 4);
+                for (var g = 0; g < 6; g++)
+                {
+                    var gx = 4 + (g % tiles) * (tile + 4);
+                    var gy = top + 20 + (g / tiles) * (tile + 4);
+                    if (gy + tile > bottom - 4) break;
+                    sb.Append(Rect(gx, gy, tile, tile, g == 0 ? FillAccent : Fill, g == 0 ? "#93c5fd" : Border, 3));
+                }
+            }
+            else
+            {
+                sb.Append(Text("▦", leftW / 2, top + 14, 10, ColorMuted, "middle"));
+                sb.Append(Rect(6, top + 26, leftW - 12, 20, Fill, Border, 3));
+                sb.Append(Rect(6, top + 52, leftW - 12, 20, Fill, Border, 3));
+            }
+
+            sb.Append("</g>");
+        }
+
+        var canvasX = leftW;
+        var canvasW = Math.Max(0, el.W - leftW - rightW);
+        var ch = bodyH;
+
+        // Canvas with the paper page and a few nodes.
+        sb.Append("<g data-region='canvas'>");
+        sb.Append(Rect(canvasX, top, canvasW, ch, "white", "none", 0));
+        var pageW = Math.Min(canvasW - 16, ch * 0.9);
+        var pageH = Math.Min(ch - 12, pageW / 1.4);
+        if (pageW > 20 && pageH > 20)
+        {
+            var pageX = canvasX + (canvasW - pageW) / 2;
+            var pageY = top + (ch - pageH) / 2;
+            sb.Append(Rect(pageX, pageY, pageW, pageH, "white", Border, 2));
+            var nodeW = Math.Min(80, pageW * 0.32);
+            var nodeH = 30.0;
+            var nodePositions = new (double x, double y)[]
+            {
+                (pageX + pageW * 0.12, pageY + pageH * 0.2),
+                (pageX + pageW * 0.6, pageY + pageH * 0.2),
+                (pageX + pageW * 0.12, pageY + pageH * 0.62),
+                (pageX + pageW * 0.6, pageY + pageH * 0.62)
+            };
+            for (var n = 0; n < Math.Min(nodeCount, nodePositions.Length); n++)
+            {
+                var (nx, ny) = nodePositions[n];
+                if (nodeW < 12 || ny + nodeH > pageY + pageH - 4) continue;
+                sb.Append(Rect(nx, ny, nodeW, nodeH, n == 0 ? FillAccent : Fill, n == 0 ? "#93c5fd" : Border, 6));
+                sb.Append(Text($"Node {n + 1}", nx + nodeW / 2, ny + nodeH / 2, 9, n == 0 ? Accent : ColorText, "middle"));
+            }
+
+            if (nodeCount >= 2 && nodeW >= 12)
+            {
+                var (x1, y1) = (nodePositions[0].x + nodeW, nodePositions[0].y + nodeH / 2);
+                var (x2, y2) = (nodePositions[1].x, nodePositions[1].y + nodeH / 2);
+                sb.Append($"<line x1='{F(x1)}' y1='{F(y1)}' x2='{F(x2)}' y2='{F(y2)}' stroke='{BorderStrong}' stroke-width='1.5' marker-end='url(#arr)'></line>");
+            }
+        }
+
+        sb.Append("</g>");
+
+        // Inspector: docked column with Properties | Layers tabs on desktop, floating drawer on tablet.
+        if (layout == "desktop" && rightW > 0)
+        {
+            var minimapH = showMinimap ? Math.Min(60, bodyH * 0.3) : 0;
+            var inspectorH = Math.Max(0, bodyH - minimapH);
+            sb.Append("<g data-region='inspector'>");
+            sb.Append(Rect(el.W - rightW, top, rightW, inspectorH, FillDark, "none", 0));
+            sb.Append(VLine(el.W - rightW, top, top + inspectorH));
+            sb.Append(Text("Properties", el.W - rightW + rightW * 0.3, top + 12, 9, ColorText, "middle", "500"));
+            sb.Append(Text("Layers", el.W - rightW + rightW * 0.75, top + 12, 9, ColorMuted, "middle", "500"));
+            sb.Append(HLine(el.W - rightW + 6, el.W - 6, top + 20));
+            for (var p = 0; p < 4; p++)
+            {
+                var py = top + 26 + p * 22;
+                if (py + 16 > top + inspectorH - 4) break;
+                sb.Append(Rect(el.W - rightW + 6, py, rightW - 12, 16, Fill, Border, 2));
+            }
+
+            sb.Append("</g>");
+
+            if (showMinimap)
+            {
+                sb.Append("<g data-region='minimap'>");
+                sb.Append(Rect(el.W - rightW, top + inspectorH, rightW, minimapH, Fill, Border, 0));
+                sb.Append(Text("Minimap", el.W - rightW + 8, top + inspectorH + 10, 8, ColorMuted, "start"));
+                sb.Append(Rect(el.W - rightW + 8, top + inspectorH + 16, rightW - 16, Math.Max(0, minimapH - 24), FillDark, Border, 2));
+                sb.Append("</g>");
+            }
+        }
+        else if (layout == "tablet" && !viewer)
+        {
+            // Floating inspector drawer over the canvas edge + the collapsible minimap overlay.
+            var drawerW = Math.Min(Math.Max(70, el.W * 0.25), Math.Max(0, el.W - leftW - 16));
+            if (drawerW >= 60)
+            {
+                var drawerH = Math.Max(0, bodyH - 16);
+                sb.Append("<g data-region='inspector-drawer'>");
+                sb.Append(Rect(el.W - drawerW - 6, top + 8, drawerW, drawerH, Fill, BorderStrong, 4));
+                sb.Append(Text("Properties", el.W - drawerW - 6 + drawerW * 0.3, top + 22, 9, ColorText, "middle", "500"));
+                sb.Append(Text("Layers", el.W - drawerW - 6 + drawerW * 0.75, top + 22, 9, ColorMuted, "middle", "500"));
+                sb.Append(HLine(el.W - drawerW, el.W - 12, top + 30));
+                for (var p = 0; p < 3; p++)
+                    sb.Append(Rect(el.W - drawerW, top + 36 + p * 22, drawerW - 12, 16, FillDark, Border, 2));
+                sb.Append("</g>");
+            }
+
+            if (showMinimap)
+            {
+                var minimapH = Math.Min(60, bodyH * 0.3);
+                var minimapW = Math.Min(160, Math.Max(0, canvasW - 24));
+                if (minimapW >= 60 && minimapH >= 30)
+                {
+                    sb.Append("<g data-region='minimap'>");
+                    sb.Append(Rect(canvasX + canvasW - minimapW - 8, bottom - minimapH - 8, minimapW, minimapH,
+                        Fill, BorderStrong, 4));
+                    sb.Append(Text("▾ Minimap", canvasX + canvasW - minimapW, bottom - minimapH + 4, 8, ColorMuted, "start"));
+                    sb.Append(Rect(canvasX + canvasW - minimapW, bottom - minimapH + 12, minimapW - 16, Math.Max(0, minimapH - 22),
+                        FillDark, Border, 2));
+                    sb.Append("</g>");
+                }
+            }
+        }
+
+        // Status bar: zoom controls + the editing state label.
+        sb.Append("<g data-region='status-bar'>");
+        sb.Append(Rect(0, bottom, el.W, statusH, FillDark, "none", 0));
+        sb.Append(HLine(0, el.W, bottom));
+        sb.Append(Text("− 100 % +", 12, bottom + statusH / 2, 9, ColorMuted, "start"));
+        var state = readOnly || viewer ? "Read-only" : "Editing";
+        sb.Append(Text(state, el.W - 12, bottom + statusH / 2, 9, ColorMuted, "end", "500"));
+        sb.Append("</g>");
+    }
+
+    private static void RenderDiagramEditorMobile(
+        WireframeElement el, StringBuilder sb, string title, int nodeCount, bool hostViewer)
+    {
+        // Compact header with the page tabs and the document title.
+        const double headerH = 34;
+        sb.Append("<g data-region='header'>");
+        sb.Append(Rect(0, 0, el.W, headerH, FillDark, "none", 4));
+        sb.Append(HLine(0, el.W, headerH));
+        sb.Append(Rect(8, 8, 52, 18, Fill, Border, 3));
+        sb.Append(Text("Page 1", 34, 17, 9, ColorText, "middle"));
+        sb.Append(Text(title, 70, 17, 10, ColorText, "start", "500"));
+        if (hostViewer)
+            sb.Append(Text("Read-only", el.W - 10, 17, 9, ColorMuted, "end"));
+        sb.Append("</g>");
+
+        // The action bar (Select | Shapes | Properties | More) drives the mobile surfaces; a
+        // host-pinned read-only viewer hides it (and the panels sheet) entirely.
+        var barH = 44.0;
+        var canvasH = Math.Max(0, el.H - headerH - (hostViewer ? 0 : barH));
+        sb.Append("<g data-region='canvas'>");
+        sb.Append(Rect(0, headerH, el.W, canvasH, "white", "none", 0));
+        var pageW = Math.Min(el.W - 16, canvasH * 0.9);
+        var pageH = Math.Min(canvasH - 10, pageW / 1.4);
+        if (pageW > 20 && pageH > 20)
+        {
+            var pageX = (el.W - pageW) / 2;
+            var pageY = headerH + (canvasH - pageH) / 2;
+            sb.Append(Rect(pageX, pageY, pageW, pageH, "white", Border, 2));
+            var nodeW = Math.Min(80, pageW * 0.32);
+            var nodeH = 30.0;
+            var positions = new (double x, double y)[]
+            {
+                (pageX + pageW * 0.12, pageY + pageH * 0.2),
+                (pageX + pageW * 0.6, pageY + pageH * 0.2),
+                (pageX + pageW * 0.12, pageY + pageH * 0.62),
+                (pageX + pageW * 0.6, pageY + pageH * 0.62)
+            };
+            for (var n = 0; n < Math.Min(nodeCount, positions.Length); n++)
+            {
+                var (nx, ny) = positions[n];
+                if (nodeW < 12 || ny + nodeH > pageY + pageH - 4) continue;
+                sb.Append(Rect(nx, ny, nodeW, nodeH, n == 0 ? FillAccent : Fill, n == 0 ? "#93c5fd" : Border, 6));
+                sb.Append(Text($"Node {n + 1}", nx + nodeW / 2, ny + nodeH / 2, 9, n == 0 ? Accent : ColorText, "middle"));
+            }
+        }
+
+        sb.Append("</g>");
+
+        if (!hostViewer)
+        {
+            sb.Append("<g data-region='action-bar'>");
+            sb.Append(Rect(0, el.H - barH, el.W, barH, FillDark, "none", 0));
+            sb.Append(HLine(0, el.W, el.H - barH));
+            var labels = new[] { "Select", "Shapes", "Properties", "More" };
+            var tileW = el.W / labels.Length;
+            for (var i = 0; i < labels.Length; i++)
+            {
+                var tx = i * tileW;
+                sb.Append(Rect(tx + 3, el.H - barH + 5, Math.Max(0, tileW - 6), barH - 10,
+                    i == 0 ? FillAccent : Fill, i == 0 ? "#93c5fd" : Border, 4));
+                sb.Append(Text(labels[i], tx + tileW / 2, el.H - barH / 2, 8,
+                    i == 0 ? Accent : ColorText, "middle", i == 0 ? "500" : "normal"));
+            }
+
+            sb.Append("</g>");
+        }
     }
 
     private static void RenderDocumentEditor(WireframeElement el, RenderTreeBuilder b)

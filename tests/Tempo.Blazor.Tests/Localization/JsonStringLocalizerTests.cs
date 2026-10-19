@@ -13,31 +13,42 @@ namespace Tempo.Blazor.Tests.Localization;
 /// </summary>
 public class JsonStringLocalizerTests
 {
-    private static JsonStringLocalizer<TmResources> ForCulture(string culture)
-    {
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-        return new JsonStringLocalizer<TmResources>();
-    }
+    // Culture is read PER LOOKUP (the localizer walks CultureInfo.CurrentUICulture at indexer time),
+    // so every test pins the culture with a CultureScope for its whole body — a bare
+    // "CurrentUICulture = …" in a helper leaked the language into every later test on the thread.
+    private static readonly JsonStringLocalizer<TmResources> Localizer = new();
+
+    private static CultureScope UseCulture(string culture) => CultureScope.Use(culture);
 
     [Fact]
     public void Resolves_czech_value()
-        => ForCulture("cs")["TmFileDropZone_DragDrop"].Value.Should().Be("Přetáhněte soubory sem");
+    {
+        using var _ = UseCulture("cs");
+        Localizer["TmFileDropZone_DragDrop"].Value.Should().Be("Přetáhněte soubory sem");
+    }
 
     [Fact]
     public void Resolves_slovak_value()
-        => ForCulture("sk")["TmFileDropZone_DragDrop"].Value.Should().Be("Presuňte sem súbory");
+    {
+        using var _ = UseCulture("sk");
+        Localizer["TmFileDropZone_DragDrop"].Value.Should().Be("Presuňte sem súbory");
+    }
 
     [Fact]
     public void Slovak_region_culture_falls_back_to_slovak() // sk-SK → sk
-        => ForCulture("sk-SK")["TmFileDropZone_DragDrop"].Value.Should().Be("Presuňte sem súbory");
+    {
+        using var _ = UseCulture("sk-SK");
+        Localizer["TmFileDropZone_DragDrop"].Value.Should().Be("Presuňte sem súbory");
+    }
 
     [Fact]
     public void Slovak_resolves_the_color_palette_keys_reported_missing_by_applications()
     {
         // SpravaFinanci reported these keys missing in sk (plan Fáze 3 context).
-        ForCulture("sk")["TmColorPalette_SelectColor"].Value.Should().Be("Vybrať farbu");
-        ForCulture("sk")["TmColorPalette_Clear"].Value.Should().Be("Vymazať");
-        ForCulture("sk")["TmColorPalette_SelectColorNamed", "Červená"].Value.Should().Be("Vybrať farbu Červená");
+        using var _ = UseCulture("sk");
+        Localizer["TmColorPalette_SelectColor"].Value.Should().Be("Vybrať farbu");
+        Localizer["TmColorPalette_Clear"].Value.Should().Be("Vymazať");
+        Localizer["TmColorPalette_SelectColorNamed", "Červená"].Value.Should().Be("Vybrať farbu Červená");
     }
 
     /// <summary>
@@ -49,30 +60,40 @@ public class JsonStringLocalizerTests
     /// empty <c>CultureInfo.Name</c>), so this member stays on <c>TmResources.json</c> by
     /// construction. The rule is scoped to the SUBJECT: it binds a member that asserts WHICH table
     /// served a value, not one that pins a culture only to spell an expectation. Such a pin also
-    /// buys less than it looks — <c>ForCulture</c> sets <c>CurrentUICulture</c>, which selects the
+    /// buys less than it looks — the scope sets <c>CurrentUICulture</c>, which selects the
     /// table; the argument-taking indexer still formats under the ambient <c>CurrentCulture</c>
     /// (<c>string.Format(CultureInfo.CurrentCulture, …)</c> in <c>JsonStringLocalizer</c>).
     /// The sibling <see cref="Unknown_culture_falls_back_to_neutral"/> still covers the key
-    /// through <c>de</c>. (<c>ForCulture("")</c> passes <c>CultureInfo.GetCultureInfo("")</c>: an
+    /// through <c>de</c>. (<c>UseCulture("")</c> passes <c>CultureInfo.GetCultureInfo("")</c>: an
     /// empty <c>Name</c>, equal to <see cref="CultureInfo.InvariantCulture"/> though not the same
     /// instance, so it takes that same neutral-only chain.)
     /// </summary>
     [Fact]
     public void Resolves_neutral_english_value()
-        => ForCulture("")["TmFileDropZone_DragDrop"].Value.Should().Be("Drag and drop files here");
+    {
+        using var _ = UseCulture("");
+        Localizer["TmFileDropZone_DragDrop"].Value.Should().Be("Drag and drop files here");
+    }
 
     [Fact]
     public void Region_culture_falls_back_to_language() // cs-CZ → cs
-        => ForCulture("cs-CZ")["TmDataTable_ShowingItems"].Value.Should().Be("Zobrazeno {0}–{1} z {2}");
+    {
+        using var _ = UseCulture("cs-CZ");
+        Localizer["TmDataTable_ShowingItems"].Value.Should().Be("Zobrazeno {0}–{1} z {2}");
+    }
 
     [Fact]
     public void Unknown_culture_falls_back_to_neutral() // de has no table → neutral English
-        => ForCulture("de")["TmFileDropZone_DragDrop"].Value.Should().Be("Drag and drop files here");
+    {
+        using var _ = UseCulture("de");
+        Localizer["TmFileDropZone_DragDrop"].Value.Should().Be("Drag and drop files here");
+    }
 
     [Fact]
     public void Missing_key_returns_the_key_and_flags_not_found()
     {
-        var localized = ForCulture("cs")["This_Key_Does_Not_Exist_12345"];
+        using var _ = UseCulture("cs");
+        var localized = Localizer["This_Key_Does_Not_Exist_12345"];
 
         localized.Value.Should().Be("This_Key_Does_Not_Exist_12345");
         localized.ResourceNotFound.Should().BeTrue();
@@ -80,25 +101,34 @@ public class JsonStringLocalizerTests
 
     [Fact]
     public void Found_key_is_flagged_resource_found()
-        => ForCulture("cs")["TmFileDropZone_DragDrop"].ResourceNotFound.Should().BeFalse();
+    {
+        using var _ = UseCulture("cs");
+        Localizer["TmFileDropZone_DragDrop"].ResourceNotFound.Should().BeFalse();
+    }
 
     [Fact]
     public void Formats_placeholder_arguments()
-        => ForCulture("en")["TmDataTable_ShowingItems", 1, 10, 42].Value.Should().Be("Showing 1–10 of 42");
+    {
+        using var _ = UseCulture("en");
+        Localizer["TmDataTable_ShowingItems", 1, 10, 42].Value.Should().Be("Showing 1–10 of 42");
+    }
 
     [Fact]
     public void Tm_Time_date_format_is_a_real_format_string_not_the_key()
     {
         // Regression for the scrambled-timestamp bug: the key must resolve to a date format pattern.
         // (The old TmTimeline_DateFormat keys were removed in 2.9.1 — the formatter reads Tm_Time_DateFormat.)
-        ForCulture("en")["Tm_Time_DateFormat"].Value.Should().Be("MMM d, yyyy");
-        ForCulture("cs")["Tm_Time_DateFormat"].Value.Should().Be("d. M. yyyy");
+        using (UseCulture("en"))
+            Localizer["Tm_Time_DateFormat"].Value.Should().Be("MMM d, yyyy");
+        using (UseCulture("cs"))
+            Localizer["Tm_Time_DateFormat"].Value.Should().Be("d. M. yyyy");
     }
 
     [Fact]
     public void GetAllStrings_includes_neutral_keys_with_parent_cultures()
     {
-        var all = ForCulture("cs")
+        using var _ = UseCulture("cs");
+        var all = Localizer
             .GetAllStrings(includeParentCultures: true)
             .Select(s => s.Name)
             .ToHashSet(StringComparer.Ordinal);

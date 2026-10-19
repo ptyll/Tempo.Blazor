@@ -458,6 +458,18 @@ function focusWentNowhere(entry, active) {
         || entry.panel.contains(active);
 }
 
+// Restores focus to an element by id — the dismissal focus-restore path
+// (TmOverlayPanel.RestoreFocusTargetId). preventScroll defaults to true: restoring focus must
+// not move the page, the trigger is where the user left it and a focus-driven scroll jump
+// breaks anchored overlays (and the contract that dismiss-on-Escape leaves the page scrolled
+// where it was).
+export function focusById(id, { preventScroll = true } = {}) {
+    const el = id ? document.getElementById(id) : null;
+    if (el && typeof el.focus === 'function') {
+        el.focus({ preventScroll });
+    }
+}
+
 // Outside pointerdown: give focus back to the anchor ONLY when the pointerdown target cannot
 // take focus itself. A click into a field/button earns its focus through the browser's own
 // mousedown — pulling it back to the anchor would steal it (B1). For dead-space clicks the

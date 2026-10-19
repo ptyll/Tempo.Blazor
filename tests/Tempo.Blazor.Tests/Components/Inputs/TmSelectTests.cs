@@ -285,15 +285,16 @@ public class TmSelectTests : LocalizationTestBase
     {
         var previousCulture = CultureInfo.CurrentCulture;
         var previousUiCulture = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentCulture = culture;
-        CultureInfo.CurrentUICulture = culture;
-
-        // The pin must actually have taken before the tests below rely on it -- otherwise a broken pin
-        // would leave every "under Czech culture" assertion vacuously true under the machine's own default.
-        CultureInfo.CurrentCulture.Name.Should().Be(culture.Name);
 
         try
         {
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+
+            // The pin must actually have taken before the tests below rely on it -- otherwise a broken pin
+            // would leave every "under Czech culture" assertion vacuously true under the machine's own default.
+            CultureInfo.CurrentCulture.Name.Should().Be(culture.Name);
+
             action();
         }
         finally

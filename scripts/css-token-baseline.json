@@ -1,5 +1,5 @@
 {
-  "count": 5352,
+  "count": 5348,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2210,10 +2210,8 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-column-combobox.css|box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|background: rgba(59, 130, 246, 0.15) !important;": 3,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|background: var(--tm-surface-secondary, #f9fafb);": 5,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|background: var(--tm-surface, white);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|border-bottom-color: rgba(59, 130, 246, 0.15);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|border-bottom: 1px solid var(--tm-border-color, #d1d5db);": 3,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|border: 1px solid var(--tm-border-color, #d1d5db);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1));": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|color: var(--tm-text-secondary, #6b7280);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css|color: var(--tm-text-tertiary, #9ca3af);": 1,

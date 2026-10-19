@@ -52,6 +52,11 @@ public partial class TmModelingEditor : IDisposable
     /// <summary>JavaScript runtime used for focus restoration after editor overlay transitions.</summary>
     [Inject] public IJSRuntime JSRuntime { get; set; } = default!;
 
+    /// <summary>Clock the loading delays run on; falls back to <see cref="TimeProvider.System"/> when
+    /// the host registered none (the AddTempoBlazorModeling default registers one). Injectable so a
+    /// test advances a FakeTimeProvider past the minimum-loading delay instead of sleeping.</summary>
+    [Inject] public TimeProvider? Clock { get; set; }
+
     /// <summary>Provider key used to select the semantic model provider. Null or empty values render the empty state.</summary>
     [Parameter] public string? ProviderKey { get; set; }
 
@@ -226,7 +231,7 @@ public partial class TmModelingEditor : IDisposable
 
         try
         {
-            await Task.Delay(MinimumLoadingDelayMilliseconds, loadCts.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(MinimumLoadingDelayMilliseconds), Clock ?? TimeProvider.System, loadCts.Token);
 
             var request = new ModelingModelRequest
             {
@@ -240,7 +245,7 @@ public partial class TmModelingEditor : IDisposable
                 ? ModelLoaderOverride(request, loadCts.Token)
                 : provider!.GetModelAsync(request, loadCts.Token);
 
-            var longLoadingTask = Task.Delay(LongLoadingMessageDelayMilliseconds, loadCts.Token);
+            var longLoadingTask = Task.Delay(TimeSpan.FromMilliseconds(LongLoadingMessageDelayMilliseconds), Clock ?? TimeProvider.System, loadCts.Token);
             var completedTask = await Task.WhenAny(model, longLoadingTask);
             if (completedTask == longLoadingTask)
             {

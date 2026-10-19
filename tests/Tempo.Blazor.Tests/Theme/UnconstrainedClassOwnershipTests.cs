@@ -209,6 +209,15 @@ public class UnconstrainedClassOwnershipTests
         // .tm-dashboard-create-modal sheet, which is strictly narrower than _modal.css's own
         // .tm-modal-footer .tm-btn floor, so the manifest order decides nothing new.
         ".tm-btn Tempo.Blazor/_dashboard.css|Tempo.Blazor/_modal.css",
+
+        // Dashboard widget charts: SVG text painted at 11/12px inside a widget slot renders ≈6px
+        // and illegible, so _dashboard.css re-declares font-size on the chart text classes through
+        // the strictly narrower .tm-widget .tm-chart chain (specificity (0,3,0)) — an intentional,
+        // strictly-narrower override: _chart.css's bare rules always lose inside widgets and keep
+        // everywhere else.
+        ".tm-chart__axis-label Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
+        ".tm-chart__label Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
+        ".tm-chart__value Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
     ];
 
     [Fact]

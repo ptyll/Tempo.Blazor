@@ -100,7 +100,7 @@ dotnet test tests/Tempo.Blazor.E2E/
 scripts/run-e2e-smoke.ps1   # PR gate: TestCategory=Smoke, < 20 min
 scripts/run-e2e-full.ps1    # full lane: entire suite (~1450 tests, ~4h sharded)
 
-# JS engine unit tests (explicit file enumeration, no globs)
+# JS engine unit tests (node --test via scripts/run-node-tests.mjs; explicit file enumeration, no globs)
 npm ci                         # once: installs esbuild for the document-editor bundle tests
 npm run test:document-editor
 npm run test:reporting-modules
@@ -477,9 +477,10 @@ The diagram editor (`TmDiagramEditor`, `TmDiagramCanvas`) supports several advan
 
 Since the DiagramEditor redesign the editor renders through the core `TmEditorShell` and resolves
 its presentation from its own container (`data-editor-layout` on the root, default breakpoints
-768/1200): desktop (≥1200) shows the full chrome — header (page tabs, document title, named panel
-toggles, "⋯" view-settings menu), one `TmToolbar` command row (`Overflow=Menu` with a "More"
-overflow), docked toolbox / inspector, status bar (zoom + Read-only toggle) and a minimap card;
+768/1200): desktop (≥1200) shows the full chrome — header (page tabs, document title, ONE
+Inspector toggle, "⋯" view-settings menu), one `TmToolbar` command row (`Overflow=Menu` with a
+"More" overflow), docked toolbox / inspector, status bar (zoom + Read-only toggle) and a minimap
+card;
 tablet (768–1199) keeps the docked panels (at most one expanded, the other rails), touch gestures
 and the **floating minimap overlay**; mobile (<768) is **viewing + light edits** (G2): a non-modal
 bottom sheet (peek/half/full) holds the Shapes palette and the Properties | Layers inspector, a
@@ -505,7 +506,8 @@ overlay through `MinimapPlacement`; pages stay as top tabs in every layout. Full
 
 **Touch:** all pointer work runs on the shared `pointer-drag.js` / `pointer-gesture.js` helpers
 (imported by the package's `diagram-editor-touch.js`) — resize/rotate handles carry an invisible
-hit area sized by `--tm-diagram-handle-hit` (24px, 44px on coarse pointers), two fingers pinch/pan
+hit area sized by `--tm-diagram-handle-hit` (`var(--tm-space-6)` = 24px,
+`var(--tm-touch-target)` = 44px on coarse pointers), two fingers pinch/pan
 the `viewBox`, long-press opens the context menu (mobile: the F3 bottom sheet; tablet/desktop: an
 anchored finger-sized menu offset from the finger via `data-anchor="touch"`), and toolbox tiles
 insert on tap while drag-and-drop keeps working.
@@ -594,7 +596,7 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 
 Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.PdfViewer`: `_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js`
-- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (classic script; it dynamically imports `diagram-editor-touch.js`; `dagre.min.js` and the d3 bundles are separate `<script>` tags), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
+- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (classic script; it dynamically imports `diagram-editor-touch.js`; `dagre.min.js`, the d3 bundles and `diagram-arrow-select.js` are separate `<script>` tags), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
 - `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js`
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`

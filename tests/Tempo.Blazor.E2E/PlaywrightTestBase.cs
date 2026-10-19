@@ -330,10 +330,27 @@ public abstract class PlaywrightTestBase
         // which prerendering never calls — so the attribute lands exactly when an interactive
         // runtime has rendered (WASM boot finished / server circuit up). A host whose runtime
         // never comes up now fails this wait instead of silently passing under the sleep.
+        // The budget is generous on purpose: this is the authoritative gate, and a cold WASM boot
+        // in Firefox under full-suite CPU load can exceed 15 s without anything being broken —
+        // the wait is on a state attribute, so a longer cap only extends the wait, never sleeps.
+        // TM_E2E_READY_TIMEOUT_MS overrides the cap for slow hosts; boots past 15 s are logged so
+        // a creeping regression is visible in the test output instead of only in the duration.
+        var readyTimeoutMs = 60_000;
+        if (int.TryParse(Environment.GetEnvironmentVariable("TM_E2E_READY_TIMEOUT_MS"), out var envTimeout) && envTimeout > 0)
+        {
+            readyTimeoutMs = envTimeout;
+        }
+
+        var bootWatch = System.Diagnostics.Stopwatch.StartNew();
         await page.WaitForFunctionAsync(
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null,
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+            new PageWaitForFunctionOptions { Timeout = readyTimeoutMs });
+        bootWatch.Stop();
+        if (bootWatch.Elapsed > TimeSpan.FromSeconds(15))
+        {
+            TestContext.WriteLine($"[e2e] slow boot: data-blazor-ready after {bootWatch.Elapsed.TotalSeconds:F1}s (timeout {readyTimeoutMs}ms)");
+        }
     }
 
     /// <summary>

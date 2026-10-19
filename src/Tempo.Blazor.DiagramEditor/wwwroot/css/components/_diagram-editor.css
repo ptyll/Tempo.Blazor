@@ -2948,6 +2948,9 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-properties__slider {
     width: 100%;
     accent-color: var(--tm-color-primary);
+    /* A range input paints its own track — an inherited/UA background would leak a
+       white box into dark mode (the theme-matrix white-island guard caught it). */
+    background-color: transparent;
 }
 
 .tm-diagram-properties__color-wrap {

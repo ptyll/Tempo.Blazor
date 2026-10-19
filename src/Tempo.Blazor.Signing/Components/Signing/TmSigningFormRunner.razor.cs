@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Inputs;
 
@@ -19,6 +20,16 @@ public partial class TmSigningFormRunner : IDisposable
     private bool _mobileExpanded;
     private readonly Dictionary<string, TmSignatureCaptureMode> _signatureCaptureModes = new(StringComparer.Ordinal);
     private CancellationTokenSource? _autoSaveCts;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider? _clock;
+
+    // The autosave debounce runs on an injectable clock so tests advance a FakeTimeProvider instead
+    // of sleeping. Resolved lazily (not [Inject]-ed directly): an unregistered optional service
+    // fails property injection outright, and hosts that never called AddTempoBlazorSigning must
+    // keep working off TimeProvider.System.
+    private TimeProvider Clock => _clock ??= Services.GetService<TimeProvider>() ?? TimeProvider.System;
 
     /// <summary>Document pages shown during signing.</summary>
     [Parameter] public IReadOnlyList<SigningDocumentPage> Pages { get; set; } = [];
@@ -438,7 +449,7 @@ public partial class TmSigningFormRunner : IDisposable
         {
             try
             {
-                await Task.Delay(AutoSaveDelay, token);
+                await Task.Delay(AutoSaveDelay, Clock, token);
                 if (token.IsCancellationRequested)
                 {
                     return;

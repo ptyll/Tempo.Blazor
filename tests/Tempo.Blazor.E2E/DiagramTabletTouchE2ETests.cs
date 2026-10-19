@@ -340,6 +340,24 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
     [Description("Read-only tablet (review D): a tap on an edge selects it for inspection; no edge handles render")]
     public async Task Tablet_ReadOnly_TapEdge_SelectsForInspection()
     {
+        // The self-hosted WASM demo occasionally performs a same-URL full reload mid-test
+        // ("Execution context was destroyed, most likely because of a navigation") under host
+        // startup load — observed ~50 % of isolated runs, independent of the tested code. Retry
+        // the whole flow ONLY for that failure (a generic catch would hide real regressions),
+        // and log the first failure so the flake stays visible in the test output.
+        try
+        {
+            await Tablet_ReadOnly_TapEdge_SelectsForInspectionCoreAsync();
+        }
+        catch (Exception ex) when (ex.Message.Contains("Execution context was destroyed", StringComparison.Ordinal))
+        {
+            TestContext.WriteLine($"[e2e] first attempt hit a mid-test navigation, retrying: {ex.GetType().Name}: {ex.Message}");
+            await Tablet_ReadOnly_TapEdge_SelectsForInspectionCoreAsync();
+        }
+    }
+
+    private async Task Tablet_ReadOnly_TapEdge_SelectsForInspectionCoreAsync()
+    {
         var page = await OpenEditorAsync(1024, 768, touch: true);
         await DiagramEditorE2E.PinEditorFullBleedAsync(page, "tablet");
 
