@@ -9,20 +9,26 @@
 
     @if (Document is not null)
     {
-        var scale = ComputeScale();
-        var mapH = (int)Math.Round(Document.Height * scale);
+        @* UX review: the bounds/scale are computed ONCE per render (the razor reads the cached
+           values); while a viewport drag runs, the FROZEN pointerdown-time values drive both the
+           render and the client→svg mapping, so a pan feedback (the Viewport parameter update)
+           can never rescale the map under the finger and break the drag deltas. *@
+        var b = RenderBounds;
+        var scale = RenderScale;
+        var mapW = (int)Math.Round(b.W * scale);
+        var mapH = (int)Math.Round(b.H * scale);
 
         <svg @ref="_svg"
              class="tm-diagram-minimap__svg"
-             width="@Width"
+             width="@mapW"
              height="@mapH"
-             viewBox="0 0 @F(Document.Width) @F(Document.Height)"
+             viewBox="@F(b.X) @F(b.Y) @F(b.W) @F(b.H)"
              xmlns="http://www.w3.org/2000/svg"
              @onpointerdown="OnSvgPointerDown"
              @onpointermove="OnSvgPointerMove"
              @onpointerup="OnSvgPointerUp"
              @onpointercancel="OnSvgPointerUp"
-             @onpointerleave="OnSvgPointerLeave">
+             @onlostpointercapture="OnSvgPointerUp">
 
             @* Canvas background *@
             <rect x="0" y="0"
@@ -32,9 +38,27 @@
                   stroke="var(--tm-color-border, #e5e7eb)"
                   stroke-width="1" />
 
-            @* Simplified edges *@
+            @* Viewport rectangle: a transparent outline UNDER the nodes (X4) — it must never
+               hide the content it frames. *@
+            @if (_viewportRect is { } vp)
+            {
+                <rect x="@F(vp.X)"
+                      y="@F(vp.Y)"
+                      width="@F(Math.Max(1, vp.W))"
+                      height="@F(Math.Max(1, vp.H))"
+                      fill="none"
+                      stroke="var(--tm-color-primary)"
+                      stroke-width="@F(1.5 / scale)"
+                      stroke-dasharray="@F(4 / scale) @F(3 / scale)"
+                      rx="1"
+                      class="tm-diagram-minimap__viewport"
+                      style="cursor:move" />
+            }
+
+            @* Simplified edges (hidden layers' edges are not mapped). *@
             @foreach (var edge in Document.Edges)
             {
+                if (!IsLayerVisible(edge)) continue;
                 var src = Document.Nodes.FirstOrDefault(n => n.Id == edge.SourceNodeId);
                 var tgt = Document.Nodes.FirstOrDefault(n => n.Id == edge.TargetNodeId);
                 if (src is null || tgt is null) continue;
@@ -46,9 +70,10 @@
                       stroke-width="@F(1.5 / scale)" />
             }
 
-            @* Node boxes *@
+            @* Node boxes (hidden layers' nodes are not mapped). *@
             @foreach (var node in Document.Nodes.OrderBy(n => n.ZIndex))
             {
+                if (!IsLayerVisible(node)) continue;
                 var isSelected = SelectedIds.Contains(node.Id);
                 <rect class="tm-diagram-minimap__node"
                       x="@F(node.X)"
@@ -59,22 +84,6 @@
                       stroke="@(isSelected ? "var(--tm-color-primary, #3b82f6)" : "var(--tm-color-text-muted, #6b7280)")"
                       stroke-width="@(isSelected ? F(2 / scale) : F(1 / scale))"
                       rx="1" />
-            }
-
-            @* Viewport rectangle *@
-            @if (_viewportRect is { } vp)
-            {
-                <rect x="@F(vp.X)"
-                      y="@F(vp.Y)"
-                      width="@F(Math.Max(1, vp.W))"
-                      height="@F(Math.Max(1, vp.H))"
-                      fill="var(--tm-color-primary-subtle)"
-                      stroke="var(--tm-color-primary)"
-                      stroke-width="@F(1.5 / scale)"
-                      stroke-dasharray="@F(4 / scale) @F(3 / scale)"
-                      rx="1"
-                      class="tm-diagram-minimap__viewport"
-                      style="cursor:move" />
             }
         </svg>
     }

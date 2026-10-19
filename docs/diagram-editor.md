@@ -33,7 +33,7 @@ The editor resolves its presentation from its own container (see
 |---|---|---|
 | **Desktop** | ≥ 1200 | Full redesign chrome: header (page tabs, title, panel toggles, "⋯" view menu), one command toolbar row, docked toolbox / inspector, status bar, minimap card. Full editing: resize/rotate handles, edge drawing, align/distribute, auto layout, imports. |
 | **Tablet** | 768–1199 | Same docked panels through `TmEditorShell` (at most one side panel expanded, the other rails), touch gestures from the shared pointer helpers, 44px finger handles (`--tm-diagram-handle-hit`), **floating minimap overlay** over the canvas corner, long-press context menu. Full editing stays available. |
-| **Mobile** | < 768 | **Viewing + light edits only (G2).** Canvas plus a non-modal bottom sheet (peek / half / full) holding *Shapes* and the *Properties \| Layers* inspector, the F5 action bar (Select / Pan / Properties tiles, export-only "More"), floating zoom pill and minimap, long-press context menu as a bottom sheet. Light edits: selection, node text/style in the properties, layer visibility/lock/active/"move to layer", delete, undo/redo and tap-insert from the palette. **Resize/rotate, edge drawing, align/distribute, layout and import stay tablet+.** A host-made viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the `Viewer` preset) — renders no action bar or panels sheet; the user's own Read-only toggle keeps them (read-only panels). |
+| **Mobile** | < 768 | **Viewing + light edits only (G2).** Canvas plus a non-modal bottom sheet (peek / half / full) holding the flat *Shapes | Properties | Layers* tabs (sheet closed at load — the action bar, a selection or `MobileSheetInitiallyOpen` opens it), the F5 action bar (Select / Shapes / Properties tiles, Pan and exports in "More"), the floating horizontal zoom pill and the opt-in minimap (the header "⋯" menu toggle), long-press context menu as a bottom sheet. Light edits: selection, node text/style in the properties, layer visibility/lock/active/"move to layer", delete, undo/redo and tap-insert from the palette. **Resize/rotate, edge drawing, align/distribute, layout and import stay tablet+.** A host-made viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the `Viewer` preset) — renders no action bar or panels sheet; the user's own Read-only toggle keeps them (read-only panels). |
 
 `TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` (both default `true`) are the knobs a
 mobile host uses to drop the reshaping / edge-drawing affordances; the editor sets them from the
@@ -102,7 +102,21 @@ available it renders alone in `__right-wrap`, and the header carries a single
 - `Auto` (default) — panel card in the right inspector column on desktop, floating overlay over
   the canvas corner on tablet and mobile (the tablet/mobile DOM is
   `.tm-diagram-editor__minimap-overlay`; host CSS that pinned the card must cover both roots or
-  pin the placement).
+  pin the placement). The overlay width follows the resolved layout — 200px card, 160px tablet
+  overlay, 112px mobile — and the same value drives the tap/drag navigation mapping, so host CSS
+  must never resize the minimap svg. The map frames the diagram content (the union of all VISIBLE
+  node boxes, the edge geometry — waypoints, free ends, label anchors — and the current viewport,
+  padded) instead of the whole page; nodes and edges on hidden layers are not mapped. The
+  viewport rectangle is a transparent outline drawn under the node boxes. The tablet overlay
+  collapses in place (`.tm-diagram-editor__minimap-overlay-collapse`, in a header strip that
+  never covers the map) and reopens from the floating `.tm-diagram-editor__minimap-overlay-reopen`
+  button; on mobile the minimap starts hidden and the header "⋯" menu carries its toggle. The
+  default-hide applies ONLY while that toggle exists — `ShowToolbar && ShowMinimap && (Panels ||
+  View group)` — so a `ToolbarGroups` selection without Panels/View keeps the overlay visible
+  (hiding it would leave no reopen path); a Viewer preset with `ShowMinimap` keeps the toggle
+  reachable through the View group. A viewport drag freezes the pointerdown-time bounds/scale
+  (the render and the client→svg mapping keep them, so pan feedback cannot rescale the map under
+  the finger), captures the pointer and clamps to the frozen bounds.
 - `Panel` — always the card. `Overlay` — always the floating overlay.
 
 Pages stay as tabs at the top in every layout (DI3); there is no page drawer.
@@ -115,8 +129,8 @@ Pages stay as tabs at the top in every layout (DI3); there is no page drawer.
 | Document title | Header input (`ShowTitle`, disabled while read-only) | Hidden on mobile |
 | Command toolbar | One `TmToolbar` row, overflow "More" menu | F5 action bar tiles on mobile |
 | Toolbox | Left docked panel | Shapes tab of the mobile sheet |
-| Inspector | Right docked column, tabs per `InspectorLayout` | Properties \| Layers tabs of the sheet |
-| Minimap | Card or overlay per `MinimapPlacement` | Floating overlay |
+| Inspector | Right docked column, tabs per `InspectorLayout` | Flat Properties / Layers sheet tabs (via the shell `Extra` slot) |
+| Minimap | Card or overlay per `MinimapPlacement` | Floating overlay, opt-in on mobile (hidden at load ONLY while the "⋯" toggle exists — a group set without Panels/View keeps it visible) |
 | Zoom | Status bar group + `__zoom-label` | Floating zoom pill |
 | Search | `Ctrl+F` / toolbar group, floating panel | Same floating panel |
 | Context menu | Viewport-anchored menu | Tablet: anchored finger-sized menu, offset from the finger (`data-anchor="touch"`, items ≥ `--tm-touch-target`); mobile: long-press bottom sheet (shared F3 sheet) |

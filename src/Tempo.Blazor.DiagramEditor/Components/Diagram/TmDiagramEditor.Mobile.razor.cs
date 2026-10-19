@@ -10,11 +10,11 @@ namespace Tempo.Blazor.Components.Diagram;
 /// <summary>
 /// Phase 7 (mobile viewing and light edits, G2): with the resolved layout below the tablet
 /// breakpoint the editor renders the core shell's mobile presentation — a non-modal bottom
-/// sheet (peek/half/full) holding the Shapes | Inspector panels, the F5 action bar
-/// (Select | Pan | Properties | More), a floating zoom overlay and the floating minimap,
-/// and the long-press context menu as a sheet. Viewing survives everywhere; the full editing
-/// chrome (resize/rotate, edge drawing, layout, import) stays tablet+ and the More menu
-/// carries the export commands only.
+/// sheet (peek/half/full) holding the flat Shapes | Properties | Layers tabs, the F5 action bar
+/// (Select | Shapes | Properties, Pan and the exports in More), a floating zoom overlay and
+/// the opt-in floating minimap ("⋯"), and the long-press context menu as a sheet. Viewing
+/// survives everywhere; the full editing chrome (resize/rotate, edge drawing, layout, import)
+/// stays tablet+ and the More menu carries the export commands only.
 /// </summary>
 public partial class TmDiagramEditor
 {
@@ -91,6 +91,16 @@ public partial class TmDiagramEditor
     /// <summary>The mobile sheet title of the left (palette) panel: the mockup's "Shapes" tab.</summary>
     private string MobileShapesTitle => Loc["TmDiagramEditor_ShapesTab"];
 
+    /// <summary>X2: the layers panel as the shell's third flat sheet tab (Shapes | Properties | Layers) — mobile only, when both panels exist.</summary>
+    private RenderFragment? MobileExtraSlot => IsMobileLayout && MobilePanelsAllowed && InspectorHasTabs
+        ? LayersPanelContent(false)
+        : null;
+
+    /// <summary>Mobile right sheet tab title: the panel it really holds.</summary>
+    private string ShellRightTitle => IsMobileLayout
+        ? (PropertiesAvailable ? Loc["TmDiagramInspector_PropertiesTab"] : Loc["TmDiagramInspector_LayersTab"])
+        : InspectorTitle;
+
     // A receiver that is deliberately NOT IHandleEvent: EventCallback only re-renders the
     // receiver when it implements IHandleEvent, so this makes the callback SILENT.
     private static readonly object SilentReceiver = new();
@@ -116,57 +126,123 @@ public partial class TmDiagramEditor
             _canvas?.BeginChromeOnlyPass();
         });
 
-    // ── The F5 action bar (Select | Pan | Properties | More) ────────────────
+    // ── The F5 action bar (Select | Shapes | Properties | More) ─────────────
+
+    /// <summary>Whether the editor renders its mobile action bar (the sheet's one reopen path —
+    /// the shell's own closed-state panels toggle stays hidden then, see
+    /// <c>ShowMobilePanelsToggle</c>).</summary>
+    private bool HasMobileActionBar => IsMobileLayout && MobilePanelsAllowed && ShowToolbar;
 
     /// <summary>
     /// The shell's mobile actions, or null when the layout is not mobile or the editor is a
-    /// viewer (no edit action bar). MaxVisible stays at the bar default of 3: Select, Pan and
-    /// Properties are the tiles; the overflow ("More") carries the export commands only —
-    /// layout and import are tablet+ commands (G2).
+    /// viewer (no edit action bar). MaxVisible stays at the bar default of 3: the mode tile
+    /// (Select, or Pan while panning), Shapes and Properties are the tiles; the overflow ("More")
+    /// carries Pan (while Select is active) and the export commands — layout and import are
+    /// tablet+ commands (G2).
     /// </summary>
     private List<TmActionItem>? EffectiveMobileActions
-    {
-        get
-        {
-            if (!IsMobileLayout || !MobilePanelsAllowed || !ShowToolbar) return null;
-            return BuildMobileActions();
-        }
-    }
+        => HasMobileActionBar ? BuildMobileActions() : null;
 
     private List<TmActionItem> BuildMobileActions()
     {
-        var items = new List<TmActionItem>
-        {
-            new()
+        // UX review: the first tile mirrors the active tool mode — with Pan armed it IS the Pan
+        // tile (hand icon, checked; tapping returns to Select), and Pan moves out of "More".
+        // With Select active the first tile is Select and Pan stays in "More" (checkable).
+        var modeItem = _toolMode == "pan"
+            ? new TmActionItem
+            {
+                Id = "pan",
+                Label = Loc["TmDiagramEditor_ToolPan"],
+                Icon = IconNames.Hand,
+                Checked = true,
+                OnClick = EventCallback.Factory.Create(this, () => SetToolMode("select")),
+            }
+            : new TmActionItem
             {
                 Id = "select",
                 Label = Loc["TmDiagramEditor_ToolSelect"],
                 Icon = IconNames.MousePointer,
                 Checked = _toolMode == "select",
                 OnClick = EventCallback.Factory.Create(this, () => SetToolMode("select")),
-            },
+            };
+
+        var items = new List<TmActionItem>
+        {
+            modeItem,
             new()
             {
-                Id = "pan",
-                Label = Loc["TmDiagramEditor_ToolPan"],
-                Icon = IconNames.Hand,
-                Checked = _toolMode == "pan",
-                OnClick = EventCallback.Factory.Create(this, () => SetToolMode("pan")),
+                Id = "shapes",
+                Label = Loc["TmDiagramEditor_ShapesTab"],
+                Icon = IconNames.Square,
+                // UX review: the tile is checked while the sheet is open on the Shapes tab;
+                // tapping the active tile closes the sheet again.
+                Checked = IsMobileSheetOpen && _activeMobilePanel == EditorShellPanel.Left,
+                OnClick = EventCallback.Factory.Create(this, ToggleMobileShapesSheet),
             },
             new()
             {
                 Id = "properties",
                 Label = Loc["TmDiagramInspector_PropertiesTab"],
                 Icon = IconNames.Sliders,
-                OnClick = EventCallback.Factory.Create(this, () => OpenMobileSheet(EditorShellPanel.Right, MobileHalfSnapIndex)),
+                Checked = IsMobileSheetOpen && _activeMobilePanel == EditorShellPanel.Right,
+                OnClick = EventCallback.Factory.Create(this, ToggleMobilePropertiesSheet),
             },
         };
-        // "More" (the bar overflow): export only on mobile — no layout, no import (G2).
+        // "More" (the bar overflow): Pan (while Select is the active mode) and the export
+        // commands — no layout, no import (G2).
+        if (_toolMode != "pan")
+        {
+            items.Add(new()
+            {
+                Id = "pan",
+                Label = Loc["TmDiagramEditor_ToolPan"],
+                Icon = IconNames.Hand,
+                Checked = _toolMode == "pan",
+                OnClick = EventCallback.Factory.Create(this, () => SetToolMode("pan")),
+            });
+        }
         items.AddRange(BuildExportMenuItems());
         return items;
     }
 
     // ── Sheet open/close ─────────────────────────────────────────────────────
+
+    /// <summary>UX review: tapping the active Shapes tile closes the sheet; otherwise it opens
+    /// the Shapes tab (half snap).</summary>
+    private void ToggleMobileShapesSheet()
+    {
+        if (IsMobileSheetOpen && _activeMobilePanel == EditorShellPanel.Left)
+        {
+            CloseMobileSheet();
+        }
+        else
+        {
+            OpenMobileSheet(EditorShellPanel.Left, MobileHalfSnapIndex);
+        }
+    }
+
+    /// <summary>UX review: tapping the active Properties tile closes the sheet; otherwise it
+    /// opens the Properties tab (half snap).</summary>
+    private void ToggleMobilePropertiesSheet()
+    {
+        if (IsMobileSheetOpen && _activeMobilePanel == EditorShellPanel.Right)
+        {
+            CloseMobileSheet();
+        }
+        else
+        {
+            OpenMobileSheet(EditorShellPanel.Right, MobileHalfSnapIndex);
+        }
+    }
+
+    /// <summary>Closes the mobile panels sheet: both panels collapse (the shell's sheet unmounts)
+    /// and the canvas render is skipped — the chrome change re-renders the shell only.</summary>
+    private void CloseMobileSheet()
+    {
+        _toolboxCollapsed = true;
+        SetInspectorOpen(false);
+        _canvas?.BeginChromeOnlyPass();
+    }
 
     /// <summary>
     /// Opens the mobile panels sheet on the given panel: the Shapes | Inspector tab strip with
@@ -186,8 +262,10 @@ public partial class TmDiagramEditor
 
     /// <summary>
     /// Phase 7 (mobile): a selection is an editing intent — the sheet re-opens PEEKED on the
-    /// properties panel so the user sees the context of what they tapped. A sheet the user
-    /// already drove to half/full on the properties tab keeps that snap.
+    /// properties panel so the user sees the context of what they tapped. UX review: a sheet the
+    /// user already had open on the INSPECTOR (the Properties tab or the Layers tab — the shell's
+    /// Extra panel) keeps its tab AND snap; the tab switches to Properties only from a closed
+    /// sheet or from the Shapes tab.
     /// </summary>
     private void ExpandPropertiesForSelectionOnMobile()
     {
@@ -195,18 +273,90 @@ public partial class TmDiagramEditor
         if (_selectedIds.Length == 0) return;
 
         var sheetWasOpen = !_toolboxCollapsed || !_propsCollapsed || !_layersCollapsed;
-        // The user already had the sheet on the properties at half/full: keep their snap.
-        var keepSnap = sheetWasOpen
-            && _activeMobilePanel == EditorShellPanel.Right
-            && _mobileSnapIndex > MobilePeekSnapIndex;
-        // Both panels stay available: the sheet keeps its Shapes | Inspector tab strip.
+        var keepInspectorContext = sheetWasOpen
+            && (_activeMobilePanel == EditorShellPanel.Right || _activeMobilePanel == EditorShellPanel.Extra);
+        // Both panels stay available: the sheet keeps its Shapes | Properties | Layers tab strip.
         _toolboxCollapsed = false;
         SetInspectorOpen(true);
         _inspectorTab = "properties";
-        _activeMobilePanel = EditorShellPanel.Right;
-        if (!keepSnap)
+        if (!keepInspectorContext)
         {
+            _activeMobilePanel = EditorShellPanel.Right;
             _mobileSnapIndex = MobilePeekSnapIndex;
+        }
+        // U3: the peeked sheet covers the lower canvas — pan so the selection stays visible
+        // above the sheet once this render lands.
+        _revealSelectionPending = true;
+    }
+
+    /// <summary>Armed by <see cref="ExpandPropertiesForSelectionOnMobile"/>: the JS pan runs after the render so the sheet's new snap has laid out.</summary>
+    private bool _revealSelectionPending;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        // UX review: the minimap overlay collapse/reopen and the mobile "⋯" menu actions re-assert
+        // focus on the control that owns the map next — through the element reference, so a layout
+        // flip that unmounted the target simply skips (TryFocusAsync).
+        if (_minimapFocusTarget != MinimapFocusTarget.None)
+        {
+            var target = _minimapFocusTarget;
+            _minimapFocusTarget = MinimapFocusTarget.None;
+            switch (target)
+            {
+                case MinimapFocusTarget.CollapseButton: await TryFocusAsync(_minimapCollapseBtn); break;
+                case MinimapFocusTarget.ReopenButton: await TryFocusAsync(_minimapReopenBtn); break;
+                case MinimapFocusTarget.ViewMenuTrigger: await TryFocusAsync(_viewMenuTrigger); break;
+            }
+        }
+
+        if (_viewMenuTriggerFocusPending)
+        {
+            _viewMenuTriggerFocusPending = false;
+            await TryFocusAsync(_viewMenuTrigger);
+        }
+
+        if (_mobileActionBarFocusPending)
+        {
+            _mobileActionBarFocusPending = false;
+            await FocusMobileActionBarAsync();
+        }
+
+        if (!_revealSelectionPending) return;
+        _revealSelectionPending = false;
+        if (!IsMobileLayout || _document is null || _selectedIds.Length == 0) return;
+        var nodes = _document.Nodes.Where(n => _selectedIds.Contains(n.Id)).ToList();
+        if (nodes.Count == 0) return; // edge-only selection: edges have no stored box
+        var x = nodes.Min(n => n.X); var y = nodes.Min(n => n.Y);
+        var r = nodes.Max(n => n.X + n.W); var b = nodes.Max(n => n.Y + n.H);
+        try { await JS.InvokeAsync<bool>("tmDiagramEditor.revealRectAboveSheet", _editorRoot, x, y, r - x, b - y, 16); }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+    }
+
+    /// <summary>
+    /// Re-asserts focus on an element that may have unmounted in the same batch (a layout flip) or
+    /// whose JS focus call may fail (prerendering, a disconnecting host): every outcome just skips.
+    /// </summary>
+    private static async Task TryFocusAsync(ElementReference element)
+    {
+        try
+        {
+            await element.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // The target is not in the DOM (a layout flip happened in the same batch).
+        }
+        catch (JSException)
+        {
+            // The JS focus call failed; the browser keeps its own focus placement.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Host is going away.
         }
     }
 

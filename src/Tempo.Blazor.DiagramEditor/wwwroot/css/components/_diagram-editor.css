@@ -2080,11 +2080,15 @@ circle.tm-diagram-rotate-handle-hit {
     min-width: 0;
 }
 
+/* UX review: the tile labels wrap to at most two lines (a nowrap ellipsis truncates the
+   stencil names too aggressively in the sheet's tile grid) — the full name stays available
+   through the tile's aria-label. */
 .tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__label {
     min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 /* TmDiagramLayersPanel styles live ONLY in the component's scoped stylesheet
@@ -2488,6 +2492,28 @@ circle.tm-diagram-rotate-handle-hit {
 
 .tm-diagram-editor__context-item--danger:hover {
     background: var(--tm-color-danger-subtle);
+}
+
+/* X7: on the mobile actions sheet the destructive action stays reachable without scrolling —
+   it sticks to the bottom of the sheet body's scroll port (it is the fragment's last item). */
+.tm-overlay-panel-sheet .tm-diagram-editor__context-item--danger {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 1;
+    background: var(--tm-color-surface-elevated);
+    border-block-start: 1px solid var(--tm-color-border);
+}
+
+/* UX review: the sticky Delete must never have scrollable content showing through below it —
+   the drawer's body padding would leave a strip the items scroll into view under the sticky
+   row. The body gives its bottom padding up; the danger item itself carries the inset (the
+   safe-area padding rides on the last visible row). */
+.tm-overlay-panel-sheet .tm-drawer__body:has(.tm-diagram-editor__context-item--danger) {
+    padding-block-end: 0;
+}
+
+.tm-overlay-panel-sheet .tm-diagram-editor__context-item--danger {
+    padding-block-end: max(var(--tm-space-3), env(safe-area-inset-bottom));
 }
 
 .tm-diagram-editor__context-sep {
@@ -3322,17 +3348,73 @@ line.tm-diagram-rotate-handle-stem {
     inset-block-end: auto;
 }
 
-/* UX review phase 7 (mobile): the phone canvas gives the overlays a narrow strip,
-   so the map preview shrinks to a compact corner card — three touch targets wide,
-   the SVG keeps its document aspect through its viewBox and the important width
-   beats the component's inline pin. Tablet and desktop keep the full preview. */
-.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__minimap-overlay .tm-diagram-minimap {
-    width: auto !important;
+/* U2/X4: the map width now travels as the component Width parameter per layout
+   (112/160/200px) — the tap mapping is computed from it, so CSS must never resize
+   the svg (a CSS resize would break tap navigation without any build error). */
+.tm-diagram-editor__minimap-overlay {
+    overflow: hidden;
 }
 
-.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__minimap-overlay .tm-diagram-minimap__svg {
-    width: calc(var(--tm-touch-target) * 3);
-    height: auto;
+/* UX review: the collapse affordance lives in a header strip (small title + button) so it
+   never covers the map's corner; the strip is part of the overlay frame, the svg below it. */
+.tm-diagram-editor__minimap-overlay-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-block-end: var(--tm-space-1);
+}
+
+.tm-diagram-editor__minimap-overlay-title {
+    font-size: var(--tm-font-size-xs, 12px);
+    font-weight: 600;
+    color: var(--tm-color-text-muted);
+    white-space: nowrap;
+}
+
+.tm-diagram-editor__minimap-overlay-collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-input-height-xs);
+    block-size: var(--tm-input-height-xs);
+    padding: 0;
+    margin-inline-start: auto;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+
+.tm-diagram-editor__minimap-overlay-collapse:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-editor__minimap-overlay-reopen {
+    position: absolute;
+    inset-inline-end: var(--tm-space-3);
+    inset-block-end: var(--tm-space-3);
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+    cursor: pointer;
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-editor__minimap-overlay-collapse {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
 }
 
 /* UX review phase 7 (minor): the standalone title reads as a big caption floating
@@ -3568,6 +3650,19 @@ line.tm-diagram-rotate-handle-stem {
     color: var(--tm-color-text-secondary);
     border-block: 1px solid var(--tm-color-border);
     white-space: nowrap;
+}
+
+/* U2/X4: on the phone layout the vertical pill would cover a third of the narrow
+   canvas, so the zoom overlay reads horizontally (+ | % | − | fit) along the bottom
+   edge — the label's separators move from block to inline borders. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__zoom-overlay {
+    flex-direction: row;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__zoom-overlay .tm-diagram-editor__zoom-label {
+    border-block: none;
+    border-inline: 1px solid var(--tm-color-border);
+    min-inline-size: var(--tm-touch-target);
 }
 
 /* ── Panels sheet: the palette presents the phase-6 tile grid inside the sheet

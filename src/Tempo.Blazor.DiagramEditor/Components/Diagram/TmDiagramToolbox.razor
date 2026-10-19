@@ -11,7 +11,10 @@
     </button>
 
     <div class="tm-diagram-toolbox__inner">
-        <h3 class="tm-diagram-toolbox__title">@Loc["TmDiagramToolbox_Title"]</h3>
+        @if (ShowTitle)
+        {
+            <h3 class="tm-diagram-toolbox__title">@Loc["TmDiagramToolbox_Title"]</h3>
+        }
 
         @* Read-only (D9/R1 review): the tiles stay visible and focusable but inert; one
            visually-hidden hint, referenced by aria-describedby from every tile, tells screen
@@ -49,13 +52,13 @@
                         <div class="tm-diagram-toolbox__category" data-palette-id="@palette.Id">
                             <button type="button" class="tm-diagram-toolbox__category-header"
                                     @onclick="() => TogglePalette(palette.Id)"
-                                    aria-expanded="@((!_collapsedPalettes.Contains(palette.Id)).ToString().ToLowerInvariant())">
+                                    aria-expanded="@(IsPaletteExpanded(palette.Id).ToString().ToLowerInvariant())">
                                 @* Mockup: label first, chevron on the far right (margin-left: auto). *@
                                 <span>@GetLocalizedText(palette.NameResourceKey, palette.FallbackName)</span>
-                                <TmIcon Name="@(_collapsedPalettes.Contains(palette.Id) ? IconNames.ChevronRight : IconNames.ChevronDown)" />
+                                <TmIcon Name="@(IsPaletteExpanded(palette.Id) ? IconNames.ChevronDown : IconNames.ChevronRight)" />
                             </button>
 
-                            @if (!_collapsedPalettes.Contains(palette.Id))
+                            @if (IsPaletteExpanded(palette.Id))
                             {
                                 <div class="tm-diagram-toolbox__category-body">
                                     @foreach (var stencil in palette.Stencils)

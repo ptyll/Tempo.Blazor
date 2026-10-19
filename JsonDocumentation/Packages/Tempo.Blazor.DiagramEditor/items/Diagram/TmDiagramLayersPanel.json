@@ -36,6 +36,13 @@
       "description": "When false, the panel renders without its own collapse tab and fills its host's width — for hosts (TmDiagramEditor's inspector) that own the collapse. Default true (standalone use)."
     },
     {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false

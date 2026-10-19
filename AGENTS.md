@@ -482,9 +482,13 @@ toggles, "⋯" view-settings menu), one `TmToolbar` command row (`Overflow=Menu`
 overflow), docked toolbox / inspector, status bar (zoom + Read-only toggle) and a minimap card;
 tablet (768–1199) keeps the docked panels (at most one expanded, the other rails), touch gestures
 and the **floating minimap overlay**; mobile (<768) is **viewing + light edits** (G2): a non-modal
-bottom sheet (peek/half/full) holds the Shapes palette and the Properties | Layers inspector, an
-F5 action bar drives Select/Pan/Properties, and resize/rotate, edge drawing, layout and import
-stay tablet+ (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` drop the affordances).
+bottom sheet (peek/half/full) holds the Shapes palette and the Properties | Layers inspector, a
+Select/Shapes/Properties action bar (Pan in More) drives the surfaces, the sheet starts closed at
+load, the minimap is opt-in via "⋯" (hidden at load only while that toggle exists), the Shapes
+sheet keeps the General category first with the rest collapsed, and resize/rotate, edge drawing,
+layout and import stay tablet+ (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` drop
+the affordances). The mobile inspector presents flat Shapes | Properties | Layers sheet tabs (the
+shell's one `Extra` sheet tab).
 
 **Stable toolbar contract (frozen since phase 1):** groups carry `data-tm-group` from the frozen
 set `history | clipboard | tools | format | insert | arrange | search | panels | zoom | view |

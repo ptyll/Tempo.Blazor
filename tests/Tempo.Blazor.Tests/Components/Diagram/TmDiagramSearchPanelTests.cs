@@ -153,4 +153,28 @@ public class TmDiagramSearchPanelTests : LocalizationTestBase
         counter.GetAttribute("aria-live").Should().Be("polite");
         counter.GetAttribute("aria-atomic").Should().Be("true");
     }
+
+    // ── UX review: the options row (all-pages + regex) shares one flex wrapper ──
+
+    [Fact]
+    public void OptionsRow_AllPagesAndRegex_ShareOneWrapper()
+    {
+        var cut = Render<TmDiagramSearchPanel>(p => p
+            .Add(c => c.Query, "a"));
+
+        var options = cut.Find(".tm-diagram-search-panel__options");
+        options.QuerySelector(".tm-diagram-search-panel__all-pages").Should().NotBeNull();
+        options.QuerySelector(".tm-diagram-search-panel__regex-toggle").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void RegexToggle_CarriesTheUseRegexAccessibleName()
+    {
+        var cut = Render<TmDiagramSearchPanel>(p => p
+            .Add(c => c.Query, "a"));
+
+        // The switch's inner input carries the aria-label (never the ".*" glyph alone).
+        cut.Find(".tm-diagram-search-panel__regex-toggle input")
+            .GetAttribute("aria-label").Should().Be("Use regular expressions");
+    }
 }

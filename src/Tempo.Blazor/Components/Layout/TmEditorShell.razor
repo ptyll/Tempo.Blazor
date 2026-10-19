@@ -123,6 +123,7 @@
                                     <div class="tm-editor-shell__tabs" role="tablist" aria-label="@PanelsTitle">
                                         @RenderTab(EditorShellPanel.Left)
                                         @RenderTab(EditorShellPanel.Right)
+                                        @RenderExtraTab()
                                     </div>
                                 }
                                 else
@@ -160,6 +161,7 @@
                                          data-region="right"
                                          hidden="@(OpenPanelCount > 1 && SheetActive != EditorShellPanel.Right)">@Right</div>
                                 }
+                                @RenderSheetExtraPanel()
                             </ChildContent>
                         </TmDrawer>
                     }
@@ -168,7 +170,7 @@
                 {
                     <div class="tm-editor-shell__status" data-region="status-bar">@StatusBar</div>
                 }
-                @if (!AnyPanelOpen && HasAnyPanelContent)
+                @if (!AnyPanelOpen && HasAnyPanelContent && ShowMobilePanelsToggle)
                 {
                     @RenderMobileToggle()
                 }
@@ -366,7 +368,10 @@
     /// </summary>
     [Parameter] public TmLayoutBreakpoints? Breakpoints { get; set; }
 
-    /// <summary>The panel a mobile layout shows: the selected tab of the sheet (<see cref="EditorShellPanel.Left"/> or <see cref="EditorShellPanel.Right"/>) or of the Tabs presentation (<see cref="EditorShellPanel.None"/> is the canvas tab). Two-way with <see cref="ActiveMobilePanelChanged"/>, so a host can switch to the properties when a block is selected.</summary>
+    /// <summary>The panel a mobile layout shows: the selected tab of the sheet (<see cref="EditorShellPanel.Left"/>,
+    /// <see cref="EditorShellPanel.Right"/> or the optional <see cref="EditorShellPanel.Extra"/> sheet tab) or of
+    /// the Tabs presentation (<see cref="EditorShellPanel.None"/> is the canvas tab). Two-way with
+    /// <see cref="ActiveMobilePanelChanged"/>, so a host can switch to the properties when a block is selected.</summary>
     [Parameter] public EditorShellPanel ActiveMobilePanel { get; set; }
 
     /// <summary>Raised when the user selects another mobile tab.</summary>
@@ -389,6 +394,14 @@
 
     /// <summary>The label of the canvas tab in the <see cref="MobilePanelPresentation.Tabs"/> presentation. Null uses the localized default.</summary>
     [Parameter] public string? CanvasTitle { get; set; }
+
+    /// <summary>
+    /// Whether the closed-state mobile panels toggle (the labelled bar naming the hidden panels)
+    /// renders while the sheet is closed. Default <c>true</c>. A host that renders its own mobile
+    /// action bar (the F5 pattern — its tiles reopen the panels) sets this to <c>false</c> so the
+    /// sheet has exactly ONE reopen path and the bar is the focus target after the sheet closes.
+    /// </summary>
+    [Parameter] public bool ShowMobilePanelsToggle { get; set; } = true;
 
     /// <summary>Content rendered inside the left panel's collapsed rail, below the expand button (an icon strip of the toolbox).</summary>
     [Parameter] public RenderFragment? LeftRail { get; set; }
@@ -541,7 +554,7 @@
     private bool HasMobileActions => MobileActions is { Count: > 0 };
     private bool AnyPanelOpen => (LeftOpen && Left is not null) || (RightOpen && Right is not null);
     private bool HasAnyPanelContent => Left is not null || Right is not null;
-    private int OpenPanelCount => (LeftOpen && Left is not null ? 1 : 0) + (RightOpen && Right is not null ? 1 : 0);
+    private int OpenPanelCount => (LeftOpen && Left is not null ? 1 : 0) + (RightOpen && Right is not null ? 1 : 0) + (ExtraOpen ? 1 : 0);
 
     private string PanelsTitle => Loc["TmEditorShell_Panels"];
 
@@ -549,6 +562,7 @@
     {
         EditorShellPanel.Left => LeftTitle ?? Loc["TmEditorShell_LeftPanel"],
         EditorShellPanel.Right => RightTitle ?? Loc["TmEditorShell_RightPanel"],
+        EditorShellPanel.Extra => ExtraTitle ?? Loc["TmEditorShell_ExtraPanel"],
         _ => CanvasTitle ?? Loc["TmEditorShell_Canvas"],
     };
 
@@ -559,18 +573,6 @@
     private static readonly Dictionary<string, object> SheetFocusAttributes = new() { ["data-restore-focus"] = "false" };
 
     private string SheetAriaLabel => OpenPanelCount > 1 ? PanelsTitle : PanelTitle(SheetActive);
-
-    /// <summary>The panel the Sheet presentation shows: the selected tab when two panels are open, otherwise the one open panel.</summary>
-    private EditorShellPanel SheetActive
-    {
-        get
-        {
-            var leftOpen = LeftOpen && Left is not null;
-            var rightOpen = RightOpen && Right is not null;
-            if (leftOpen && rightOpen) return _active == EditorShellPanel.Right ? EditorShellPanel.Right : EditorShellPanel.Left;
-            return leftOpen ? EditorShellPanel.Left : EditorShellPanel.Right;
-        }
-    }
 
     /// <summary>The tab the Tabs presentation shows; None is the canvas.</summary>
     private EditorShellPanel TabsActive => _active switch
@@ -591,6 +593,7 @@
     {
         EditorShellPanel.Left => $"{_leftPanelId}-tab",
         EditorShellPanel.Right => $"{_rightPanelId}-tab",
+        EditorShellPanel.Extra => $"{_extraPanelId}-tab",
         _ => $"{_canvasPanelId}-tab",
     };
 
@@ -598,6 +601,7 @@
     {
         EditorShellPanel.Left => _leftPanelId,
         EditorShellPanel.Right => _rightPanelId,
+        EditorShellPanel.Extra => _extraPanelId,
         _ => _canvasPanelId,
     };
 
@@ -697,10 +701,14 @@
     /// <summary>The closed-state affordance of the Sheet presentation: a labelled bar naming what is behind it.</summary>
     private RenderFragment RenderMobileToggle()
     {
+        // The bar names every hidden panel — Left, Right and, when set, the one extra sheet tab
+        // (Extra opens and closes with Right; the design limit is ONE extra tab, see
+        // docs/editor-shell.md).
         var label = string.Join(" · ", new[]
         {
             Left is not null ? PanelTitle(EditorShellPanel.Left) : null,
             Right is not null ? PanelTitle(EditorShellPanel.Right) : null,
+            Extra is not null ? PanelTitle(EditorShellPanel.Extra) : null,
         }.Where(static t => !string.IsNullOrEmpty(t)));
 
         return @<button type="button"
@@ -847,7 +855,7 @@
             if (Right is not null) all.Add(EditorShellPanel.Right);
             return all;
         }
-        return [EditorShellPanel.Left, EditorShellPanel.Right];
+        return SheetTabOrder();
     }
 
     private async Task HandleTabKeydownAsync(EditorShellPanel current, KeyboardEventArgs args)

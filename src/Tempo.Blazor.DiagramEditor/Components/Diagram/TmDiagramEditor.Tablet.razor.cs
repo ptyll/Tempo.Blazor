@@ -39,6 +39,9 @@ public partial class TmDiagramEditor
     /// </summary>
     [Parameter] public DiagramMinimapPlacement MinimapPlacement { get; set; } = DiagramMinimapPlacement.Auto;
 
+    /// <summary>Whether the mobile panels sheet starts open (peek) on the first mobile render. Defaults to false: the canvas gets the whole stage and the action bar (Shapes / Properties) or a selection opens the sheet.</summary>
+    [Parameter] public bool MobileSheetInitiallyOpen { get; set; }
+
     /// <summary>The editor's own tablet/desktop thresholds (the phase-6 band).</summary>
     private static readonly TmLayoutBreakpoints EditorBreakpoints = new(768, 1200);
 
@@ -46,6 +49,30 @@ public partial class TmDiagramEditor
 
     /// <summary>The layout the shell currently renders (reported through <see cref="ResolvedLayoutChanged"/>).</summary>
     private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
+
+    /// <summary>Whether the X1 mobile defaults (sheet closed, minimap hidden) were applied once.</summary>
+    private bool _mobileDefaultsApplied;
+
+    /// <summary>The panel/minimap collapse state before the layout turned mobile; restored when it turns back.</summary>
+    private bool _preMobileToolboxCollapsed, _preMobilePropsCollapsed, _preMobileMinimapCollapsed;
+
+    /// <summary>Whether the mobile snapshot was initialised (a lazily-applied one-time step).</summary>
+    private bool _mobileSnapshotInitialised;
+
+    /// <summary>
+    /// The mobile session's own collapse state (X1 snapshot): initialised to the X1 defaults
+    /// (sheet closed unless <see cref="MobileSheetInitiallyOpen"/>, minimap hidden), SAVED on
+    /// every mobile exit (before the pre-mobile state is restored) and APPLIED on every mobile
+    /// entry — so mobile → desktop → mobile keeps the sheet/minimap state the user left behind,
+    /// while the desktop state in between is untouched.
+    /// </summary>
+    private bool _mobileToolboxCollapsed = true;
+
+    /// <summary>The mobile snapshot's inspector flag (the two inspector flags are written together — see <see cref="TmDiagramEditor.Shell.SetInspectorOpen"/>).</summary>
+    private bool _mobileInspectorCollapsed = true;
+
+    /// <summary>The mobile snapshot's minimap flag.</summary>
+    private bool _mobileMinimapCollapsed = true;
 
     /// <summary>The collapse set in effect, two-way bound with the shell. The shell raises it when
     /// it rails a side (at most one expanded panel on a tablet layout) and when its toggles run.</summary>
@@ -62,6 +89,14 @@ public partial class TmDiagramEditor
         _ => _resolvedLayout is TmLayoutMode.Tablet or TmLayoutMode.Mobile,
     };
 
+    /// <summary>Minimap pixel width per resolved layout (X4): the parameter drives both the render and the tap mapping, so CSS must never resize the svg.</summary>
+    private int MinimapWidth => _resolvedLayout switch
+    {
+        TmLayoutMode.Mobile => 112,
+        TmLayoutMode.Tablet => 160,
+        _ => 200,
+    };
+
     private Task OnShellResolvedLayoutChanged(TmLayoutMode mode)
     {
         if (_resolvedLayout == mode) return Task.CompletedTask;
@@ -71,10 +106,47 @@ public partial class TmDiagramEditor
     }
 
     /// <summary>Enters/exits the tablet presentation around the resolved layout.</summary>
+    /// <remarks>
+    /// The EXIT branches run before the ENTRY branches: leaving mobile restores the pre-mobile
+    /// desktop state (and saves the mobile-era state into the mobile snapshot) BEFORE the tablet
+    /// entry rails the palette — so a desktop → mobile → tablet trip ends with the palette railed
+    /// and the (restored, expanded) inspector in the single expanded dock slot.
+    /// </remarks>
     private void ApplyResolvedLayout(TmLayoutMode mode)
     {
         var previous = _resolvedLayout;
         _resolvedLayout = mode;
+
+        // ── Exit branches (before the entries) ──────────────────────────────
+
+        if (previous == TmLayoutMode.Mobile && mode != TmLayoutMode.Mobile)
+        {
+            // Save the mobile session's state into the mobile snapshot FIRST (mobile → desktop →
+            // mobile keeps it), THEN restore the state from before this mobile session. The two
+            // inspector flags are only ever written together (SetInspectorOpen), so the one saved
+            // value restores both.
+            _mobileToolboxCollapsed = _toolboxCollapsed;
+            _mobileInspectorCollapsed = _propsCollapsed;
+            _mobileMinimapCollapsed = _minimapCollapsed;
+            _toolboxCollapsed = _preMobileToolboxCollapsed;
+            SetInspectorOpen(!_preMobilePropsCollapsed);
+            _minimapCollapsed = _preMobileMinimapCollapsed;
+        }
+
+        if (previous == TmLayoutMode.Tablet && mode != TmLayoutMode.Tablet)
+        {
+            // Back to desktop/mobile: give the user their pre-tablet choice back. The Left bit
+            // the shell imposed at tablet entry (captured before the layout was known) is not a
+            // user choice — strip it and re-derive the desktop mirror for the panel flags.
+            _shellCollapsed = _preTabletCollapsed & ~EditorShellPanel.Left;
+            if (ShowToolbox) _toolboxCollapsed = _shellCollapsed.HasFlag(EditorShellPanel.Left);
+            if (_shellCollapsed.HasFlag(EditorShellPanel.Right))
+            {
+                SetInspectorOpen(false);
+            }
+        }
+
+        // ── Entry branches ──────────────────────────────────────────────────
 
         if (mode == TmLayoutMode.Tablet && previous != TmLayoutMode.Tablet)
         {
@@ -91,18 +163,41 @@ public partial class TmDiagramEditor
                 _shellCollapsed |= EditorShellPanel.Left;
             }
         }
-        else if (previous == TmLayoutMode.Tablet && mode != TmLayoutMode.Tablet)
+
+        if (mode == TmLayoutMode.Mobile && previous != TmLayoutMode.Mobile)
         {
-            // Back to desktop/mobile: give the user their pre-tablet choice back. The Left bit
-            // the shell imposed at tablet entry (captured before the layout was known) is not a
-            // user choice — strip it and re-derive the desktop mirror for the panel flags.
-            _shellCollapsed = _preTabletCollapsed & ~EditorShellPanel.Left;
-            if (ShowToolbox) _toolboxCollapsed = _shellCollapsed.HasFlag(EditorShellPanel.Left);
-            if (_shellCollapsed.HasFlag(EditorShellPanel.Right))
+            EnsureMobileSnapshot();
+            // Remember the pre-mobile state for the exit restore, then apply the mobile snapshot
+            // on EVERY entry (the first entry applies the X1 defaults).
+            _preMobileToolboxCollapsed = _toolboxCollapsed;
+            _preMobilePropsCollapsed = _propsCollapsed;
+            _preMobileMinimapCollapsed = _minimapCollapsed;
+            _toolboxCollapsed = _mobileToolboxCollapsed;
+            SetInspectorOpen(!_mobileInspectorCollapsed);
+            _minimapCollapsed = _mobileMinimapCollapsed;
+            if (!_mobileDefaultsApplied)
             {
-                SetInspectorOpen(false);
+                // X1: first mobile paint — the canvas gets the whole stage; the sheet snap
+                // starts at the peek.
+                _mobileDefaultsApplied = true;
+                _mobileSnapIndex = MobilePeekSnapIndex;
             }
         }
+    }
+
+    /// <summary>
+    /// Initialises the mobile snapshot to the X1 defaults: the panels sheet closed unless the
+    /// host opted into <see cref="MobileSheetInitiallyOpen"/>, the minimap hidden — but ONLY
+    /// when the "⋯" minimap toggle exists (<see cref="MobileMinimapToggleAvailable"/>): without
+    /// it the user could never reopen the map, so it stays visible.
+    /// </summary>
+    private void EnsureMobileSnapshot()
+    {
+        if (_mobileSnapshotInitialised) return;
+        _mobileSnapshotInitialised = true;
+        _mobileToolboxCollapsed = !MobileSheetInitiallyOpen;
+        _mobileInspectorCollapsed = !MobileSheetInitiallyOpen;
+        _mobileMinimapCollapsed = MobileMinimapToggleAvailable;
     }
 
     /// <summary>

@@ -67,21 +67,32 @@ a private flag that could disagree with the host.
   nothing or ignores the callback. Host state stays the truth: after a tablet → desktop rotation the
   railed panel is still a rail (the host-bound `CollapsedPanels` kept the flag) — that is intended;
   the user expands it again.
-* `ActiveMobilePanel` is the selected mobile tab: `Left`/`Right` in the sheet, and in the Tabs
+* `ActiveMobilePanel` is the selected mobile tab: `Left`/`Right` (and `Extra`) in the sheet, and in the Tabs
   presentation `None` is the **canvas** tab. The sheet treats `Left` | `Right` as `None` when that
   panel is not open or has no content (it falls back to the one open panel), and raises
   `ActiveMobilePanelChanged` when the effective tab moves because the host closed a panel. A host switches to the properties when a block is
   selected by setting `ActiveMobilePanel="EditorShellPanel.Right"`; it collapses the sheet on an
   "add block" action by setting `MobileSheetSnapIndex` (0 = the lowest snap). A layout flip resets the
-  snap to 0 and raises the callback.
+  snap to 0 and raises the callback. `Extra` adds an optional third sheet tab after `Right` (opens
+  and closes with it; MOBILE Sheet presentation only — desktop, tablet and the Tabs presentation
+  ignore it), selected as `EditorShellPanel.Extra`. **Design limit: ONE extra sheet tab.** A future
+  `SheetTabs` list would generalize the slot; until then hosts nest further content inside
+  `Right` (or the `Extra` panel itself).
+* `ShowMobilePanelsToggle` (default `true`) renders the labelled closed-state bar naming the
+  hidden panels while the mobile sheet is closed. A host that renders its own mobile action bar
+  (the F5 `TmMobileActionBar` — its tiles reopen the panels) sets it to `false`: the sheet then
+  has exactly one reopen path, and focus after a close lands on the host's bar instead of the
+  (hidden) shell toggle. With the toggle hidden the shell moves focus on close to nothing — the
+  host owns focus restoration after the sheet closes (typically its action bar, per the F5
+  contract).
 * `MobileSheetSnapPoints` overrides the sheet's snap fractions (ascending, 0–1; default
   `[0.5, 1.0]`): invalid values are dropped, the list is sorted/deduplicated with the `TmDrawer`
   rules, an empty result falls back to the default, and the lowest snap drives the canvas reserve.
   On a short stage the 14rem floor applies to the whole sheet panel (header, tabs and body), capped
   at the stage height (`--tm-editor-shell-sheet-min-block`).
 * `CanvasTitle` labels the canvas tab of the Tabs presentation (localized default).
-* On a closed mobile sheet a labelled bar names what is behind it ("Blocks · Properties", from
-  `LeftTitle` / `RightTitle`).
+* On a closed mobile sheet a labelled bar names what is behind it ("Blocks · Properties · Layers", from
+  `LeftTitle` / `RightTitle` / `ExtraTitle`; the bar renders only while `ShowMobilePanelsToggle` is true).
 
 ### Layout thresholds (`Breakpoints`)
 

@@ -25,10 +25,28 @@ public partial class TmDiagramToolbox : TmComponentBase
     /// <summary>When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true.</summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
+
+    /// <summary>
+    /// UX review (the mobile Shapes sheet): when true, every category except the FIRST one (the
+    /// General/basic palette) starts collapsed — the sheet opens on the essentials and the user
+    /// expands the rest. Applied once; the user's own expand/collapse choices win afterwards.
+    /// </summary>
+    [Parameter] public bool CollapseCategoriesExceptFirst { get; set; }
+
     private bool _collapsed;
     private readonly HashSet<string> _collapsedPalettes = new(StringComparer.Ordinal);
     private ElementReference _containerRef;
     private bool _initialized;
+
+    /// <summary>Whether the <see cref="CollapseCategoriesExceptFirst"/> default was applied.</summary>
+    private bool _categoryDefaultsApplied;
+
+    /// <summary>The last-applied <see cref="CollapseCategoriesExceptFirst"/> value — a change
+    /// rebuilds the library groups (the flag drives the General-first ordering inside
+    /// <see cref="RefreshFilter"/>).</summary>
+    private bool _collapseCategoriesExceptFirstApplied;
 
     /// <summary>Per-instance id of the visually-hidden read-only hint: two toolboxes on one page
     /// must never share an id (a duplicate id breaks every aria-describedby reference).</summary>
@@ -40,6 +58,33 @@ public partial class TmDiagramToolbox : TmComponentBase
     protected override void OnInitialized()
     {
         RefreshFilter();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // The flag decides the General-first library ordering inside RefreshFilter — a change
+        // must rebuild the groups, otherwise the General library stays pinned first (or the
+        // alphabetical order keeps it pinned away) until the next search keystroke.
+        if (CollapseCategoriesExceptFirst != _collapseCategoriesExceptFirstApplied)
+        {
+            _collapseCategoriesExceptFirstApplied = CollapseCategoriesExceptFirst;
+            RefreshFilter();
+        }
+
+        // UX review: the mobile Shapes sheet starts with only the FIRST LIBRARY (the General/basic
+        // set) expanded — every palette outside it starts collapsed. Applied exactly once —
+        // afterwards the user's own choices own the set.
+        if (CollapseCategoriesExceptFirst && !_categoryDefaultsApplied && _filteredLibraries.Count > 0)
+        {
+            _categoryDefaultsApplied = true;
+            for (var i = 1; i < _filteredLibraries.Count; i++)
+            {
+                foreach (var palette in _filteredLibraries[i].Palettes)
+                {
+                    _collapsedPalettes.Add(palette.Id);
+                }
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -136,7 +181,8 @@ public partial class TmDiagramToolbox : TmComponentBase
     }
 
     private List<ToolboxLibraryGroup> BuildLibraryGroups(IEnumerable<DiagramStencil> stencils)
-        => stencils
+    {
+        var libraries = stencils
             .GroupBy(GetSetId, StringComparer.Ordinal)
             .Select(setGroup =>
             {
@@ -168,6 +214,29 @@ public partial class TmDiagramToolbox : TmComponentBase
             })
             .OrderBy(library => GetLocalizedText(library.NameResourceKey, library.FallbackName), DisplayComparer)
             .ToList();
+
+        // UX review (the mobile Shapes sheet): the General/basic library leads — the sheet
+        // opens on the essentials and the other categories stay collapsed by default.
+        if (CollapseCategoriesExceptFirst)
+        {
+            libraries = libraries
+                .OrderByDescending(l => IsGeneralLibrary(l))
+                .ToList();
+        }
+
+        return libraries;
+    }
+
+    /// <summary>The built-in essentials set ("general"): identified by its set id only — a
+    /// localized-name comparison would also match a custom library whose name translates to
+    /// "General" and wrongly pin it first.</summary>
+    private bool IsGeneralLibrary(ToolboxLibraryGroup library)
+        => string.Equals(library.Id, "general", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether a palette body renders: a live search expands every palette that has
+    /// matches — the collapsed mobile defaults must never hide a search hit.</summary>
+    private bool IsPaletteExpanded(string paletteId)
+        => !string.IsNullOrWhiteSpace(_searchQuery) || !_collapsedPalettes.Contains(paletteId);
 
     private string GetLocalizedText(string? resourceKey, string fallback)
     {

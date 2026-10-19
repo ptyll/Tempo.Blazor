@@ -108,6 +108,13 @@
       "description": "Where the minimap renders. Auto shows the right-column card on a desktop layout and floats the minimap over the canvas corner from tablet down (DI3); Panel and Overlay force the choice for every layout."
     },
     {
+      "name": "MobileSheetInitiallyOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the mobile panels sheet starts open (peek) on the first mobile render. Defaults to false: the canvas gets the whole stage and the action bar (Shapes / Properties) or a selection opens the sheet (X1). Pass true to restore the pre-2.9.1 open-on-load behaviour."
+    },
+    {
       "name": "ShowStatusBar",
       "type": "bool",
       "isRequired": false,

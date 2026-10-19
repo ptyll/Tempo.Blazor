@@ -17,7 +17,10 @@
 
     <div class="tm-diagram-layers__inner">
         <div class="tm-diagram-layers__header">
-            <h3 class="tm-diagram-layers__title" id="@_titleId">@Loc["TmDiagramLayers_Title"]</h3>
+            @if (ShowTitle)
+            {
+                <h3 class="tm-diagram-layers__title" id="@_titleId">@Loc["TmDiagramLayers_Title"]</h3>
+            }
             <button type="button" class="tm-diagram-layers__add-btn"
                     aria-label="@Loc["TmDiagramLayers_AddLayer"]"
                     title="@Loc["TmDiagramLayers_AddLayer"]"
@@ -28,7 +31,7 @@
             </button>
         </div>
 
-        <ul class="tm-diagram-layers__list" aria-labelledby="@_titleId">
+        <ul class="tm-diagram-layers__list" aria-labelledby="@(ShowTitle ? _titleId : null)">
             @{ var orderedLayers = SortedLayers.ToList(); var layerCount = orderedLayers.Count; }
             @for (var rowIndex = 0; rowIndex < orderedLayers.Count; rowIndex++)
             {

@@ -44,6 +44,12 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         var overlay = page.Locator(".tm-diagram-editor__minimap-overlay");
         await overlay.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
 
+        // U2/X4: the tablet overlay is 160px wide (+ the card padding) — the layout, not CSS,
+        // sizes the map so the tap mapping can never drift.
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            "() => { const o = document.querySelector('.tm-diagram-editor__minimap-overlay'); const w = o.getBoundingClientRect().width; const pad = parseFloat(getComputedStyle(o).paddingLeft) + parseFloat(getComputedStyle(o).paddingRight); return w <= 160 + pad + 2; }"),
+            "the tablet minimap overlay is 160px wide plus its padding");
+
         await ScrollEditorStatusIntoViewAsync(page);
         await ShotSettledAsync(page, "tablet-1024-touch--editor");
 

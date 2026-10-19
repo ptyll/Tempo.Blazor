@@ -43,19 +43,24 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await page.Locator(".tm-diagram-editor__zoom-overlay").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        await page.Locator(".tm-diagram-editor__minimap-overlay").First.WaitForAsync(
-            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
-        // The capture must read like the mockup: the diagram visible ABOVE the sheet, the sheet
-        // only at the bottom. The sheet opens on the lowest (peek) snap and the editor fills the
-        // viewport (below the demo's fixed header), so the canvas keeps its full strip.
-        await SetMobileSheetPeekAsync(page);
+        // X1 geometry contract at load: sheet closed, minimap hidden, no horizontal overflow,
+        // the canvas owns most of the editor.
+        await AssertMobileLoadGeometryAsync(page, 0.6);
+        // The capture must read like the mockup: the diagram fills the stage (the sheet is
+        // closed at load) and the editor fills the viewport (below the demo's fixed header).
         await FrameEditorInViewportAsync(page);
         await FrameDiagramAboveSheetAsync(page);
         await ShotSettledAsync(page, "mobile-390-touch--editor");
 
-        // ── Action bar: Select | Pan | Properties tiles + More ──────────────
+        // ── Action bar: Select | Shapes | Properties tiles + More ───────────
         var tiles = page.Locator(".tm-mobile-action-bar__action");
-        Assert.AreEqual(3, await tiles.CountAsync(), "Select | Pan | Properties are the visible tiles");
+        Assert.AreEqual(3, await tiles.CountAsync(), "Select | Shapes | Properties are the visible tiles");
+        var tileIdsJson = await page.EvaluateAsync<string>(
+            "() => JSON.stringify([...document.querySelectorAll('.tm-mobile-action-bar__action')].map(e => e.getAttribute('data-action-id')))");
+        using var tileIds = System.Text.Json.JsonDocument.Parse(tileIdsJson);
+        CollectionAssert.AreEqual(new[] { "select", "shapes", "properties" },
+            tileIds.RootElement.EnumerateArray().Select(e => e.GetString()).ToArray(),
+            "the action bar reads Select | Shapes | Properties (Pan lives in More)");
         Assert.IsTrue(await page.Locator(".tm-mobile-action-bar__more").CountAsync() > 0,
             "the More trigger closes the bar");
 
@@ -66,8 +71,12 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         await page.Locator("[role='tabpanel'][data-region='right']").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
 
-        // ── Sheet tabs: Shapes | Inspector (inspector keeps Properties | Layers) ──
-        await sheet.Locator(".tm-editor-shell__tabs [role='tab']").First.TapAsync();
+        // ── Sheet tabs: flat Shapes | Properties | Layers (X2, no nested TmTabs) ──
+        var sheetTabs = sheet.Locator(".tm-editor-shell__tabs [role='tab']");
+        Assert.AreEqual(3, await sheetTabs.CountAsync(), "the sheet offers Shapes | Properties | Layers");
+        Assert.AreEqual(0, await sheet.Locator(".tm-tabs").CountAsync(),
+            "no nested inspector tabs inside the mobile sheet");
+        await sheetTabs.First.TapAsync();
         await page.Locator(".tm-diagram-toolbox").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         await ShotAsync(page, "mobile-390-touch--sheet-shapes");
@@ -120,6 +129,12 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         Assert.AreEqual("0", snapIndex, "a selection opens the sheet at the PEEK snap");
         await ShotSettledAsync(page, "mobile-390-touch--selection-peek");
 
+        // U3: the reveal pans the canvas so the selected node stays visible ABOVE the sheet.
+        await page.WaitForTimeoutAsync(300);
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            "(id) => { const n = document.querySelector(`g.tm-diagram-node[data-node-id='${id}']`).getBoundingClientRect(); const p = document.querySelector('.tm-editor-shell__sheet .tm-drawer__panel').getBoundingClientRect(); const c = document.querySelector('.tm-diagram-canvas').getBoundingClientRect(); return n.bottom <= p.top - 8 && n.top >= c.top; }",
+            insertedId), "the selection stays visible above the peeked sheet");
+
         // ── Light edit: change the fill in the properties ───────────────────
         var fillInput = page.Locator(".tm-diagram-properties input[type='color']").First;
         await fillInput.ScrollIntoViewIfNeededAsync();
@@ -128,8 +143,8 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
             "(id) => (document.querySelector(`g.tm-diagram-node[data-node-id='${id}'] .tm-diagram-node__shape-bg`)?.getAttribute('fill') ?? '').toLowerCase() === '#ff8800'",
             insertedId, new PageWaitForFunctionOptions { Timeout = 15_000 });
 
-        // ── Layers: switch to the Layers surface, add a layer, toggle visibility ──
-        var layersTab = page.Locator(".tm-diagram-editor__inspector [role='tab']").Filter(new() { HasText = "Layers" }).First;
+        // ── Layers: the flat Layers sheet tab, add a layer, toggle visibility ──
+        var layersTab = page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tabs [role='tab']").Filter(new() { HasText = "Layers" }).First;
         await ClickFirstAsync(page, layersTab);
         var layersPanel = page.Locator(".tm-diagram-layers").First;
         await layersPanel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
@@ -151,12 +166,57 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         var zoomAfter = await ZoomLabelAsync(page);
         Assert.AreNotEqual(zoomBefore, zoomAfter, "a two-finger pinch must change the zoom");
 
+        // The pinch zooms into the canvas centre: the inserted node (parked in the upper band by
+        // the selection reveal) leaves the viewport and the canvas CULLS it from the DOM. Fit the
+        // content back through the zoom pill so every node renders again before the long-press.
+        await ClickFirstAsync(page, page.Locator(".tm-diagram-editor__zoom-overlay button[aria-label='Fit to view']"));
+        await page.WaitForFunctionAsync(
+            "() => { const c = document.querySelector('.tm-diagram-canvas'); const i = window.tmDiagramEditor.instances.get(c.id); return i.scale < 1; }",
+            null, new PageWaitForFunctionOptions { Timeout = 15_000 });
+
         // ── Long-press: the context menu is a SHEET ─────────────────────────
         await LongPressNodeAsync(page, insertedId!);
         var contextSheet = page.Locator(".tm-overlay-panel-sheet[aria-label='Actions']");
         await contextSheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
         Assert.AreEqual(0, await page.Locator(".tm-diagram-editor__context-menu").CountAsync(),
             "the fixed menu must not render on mobile");
+        // U5/X7: Delete is the sticky bottom row — reachable without scrolling, and no desktop
+        // shortcut rides in the touch labels.
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            "() => { const d = [...document.querySelectorAll('.tm-overlay-panel-sheet .tm-diagram-editor__context-item--danger')].pop(); if (!d) return false; const r = d.getBoundingClientRect(); return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight; }"),
+            "Delete stays visible at the bottom of the actions sheet without scrolling");
+        // UX review (sticky Delete overlap): the danger row is the fragment's LAST item, the sheet
+        // body's bottom padding gives way to it, and whatever scrolls into its band is COVERED by
+        // it — no item ever shows under/through Delete.
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const sheet = document.querySelector('.tm-overlay-panel-sheet');
+                const d = [...sheet.querySelectorAll('.tm-diagram-editor__context-item--danger')].pop();
+                if (!d) return false;
+                const r = d.getBoundingClientRect();
+                if (!(r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight)) return false;
+                const body = d.closest('.tm-drawer__body') ?? d.parentElement;
+                if (parseFloat(getComputedStyle(body).paddingBottom) > 0.5) return false;
+                const items = [...body.querySelectorAll('.tm-diagram-editor__context-item')];
+                if (items[items.length - 1] !== d) return false;
+                const cx = r.left + r.width / 2;
+                for (const it of items) {
+                    if (it === d) continue;
+                    const ir = it.getBoundingClientRect();
+                    if (ir.height > 0 && ir.top < r.bottom && ir.bottom > r.top) {
+                        const probeY = Math.min(ir.bottom - 1, r.bottom - 1);
+                        const top = document.elementFromPoint(cx, probeY);
+                        if (top !== d && !d.contains(top)) return false;
+                    }
+                }
+                return true;
+            }
+            """),
+            "no action sheet item ever shows under the sticky Delete (body padding gives way and the row covers the scroll port)");
+        var actionLabels = await contextSheet.Locator("[role='menuitem']").AllTextContentsAsync();
+        Assert.IsFalse(actionLabels.Any(l => l.Contains("Ctrl")),
+            "no desktop shortcuts in the mobile actions sheet labels");
         await ScrollEditorActionBarIntoViewAsync(page);
         await ShotSettledAsync(page, "mobile-390-touch--long-press-sheet");
         await ClickFirstAsync(page, contextSheet.Locator(".tm-overlay-panel-sheet__done"));
@@ -195,6 +255,10 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         Assert.IsFalse(string.IsNullOrWhiteSpace(activeTab), "a page tab must be active after switching");
         // Back to the page holding the inserted node (the switch-back is part of the flow).
         await ClickFirstAsync(page, page.Locator(".tm-diagram-editor__page-tab").Nth(0));
+        // The flow's reveal/pinch left the viewBox centred on a band that can cull the inserted
+        // node: zoom out to the minimum so the whole page (and the node) renders again.
+        await page.EvaluateAsync(
+            "() => { const c = document.querySelector('.tm-diagram-canvas'); window.tmDiagramEditor.zoomTo(c, 0.15); }");
         await page.WaitForFunctionAsync(
             "(id) => !!document.querySelector(`g.tm-diagram-node[data-node-id='${id}']`)",
             insertedId, new PageWaitForFunctionOptions { Timeout = 15_000 });
@@ -210,6 +274,10 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
 
         await page.Locator(".tm-mobile-action-bar__bar").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+
+        // X1 geometry contract at load (the canvas share threshold is lower on the short 640px
+        // viewport).
+        await AssertMobileLoadGeometryAsync(page, 0.5);
 
         // The page never scrolls horizontally; the action bar fits its container.
         var metrics = await page.EvaluateAsync<string>(
@@ -227,6 +295,16 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         await page.Locator(".tm-mobile-action-bar__action").Filter(new() { HasText = "Properties" }).First.TapAsync();
         await page.Locator(".tm-editor-shell__sheet").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+
+        // X1: the minimap is opt-in — enabling it through the "⋯" toggle keeps the overlay card
+        // fully inside the canvas (right edge within the canvas right − 8, left ≥ canvas left).
+        await page.Locator("[data-testid='diagram-editor-more']").First.TapAsync();
+        await page.Locator(".tm-diagram-editor__view-menu-panel [data-tm-group='panels'] button").First.TapAsync();
+        var overlay = page.Locator(".tm-diagram-editor__minimap-overlay").First;
+        await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            "() => { const o = document.querySelector('.tm-diagram-editor__minimap-overlay').getBoundingClientRect(); const c = document.querySelector('.tm-diagram-canvas').getBoundingClientRect(); return o.right <= c.right - 8 + 1 && o.left >= c.left - 1; }"),
+            "the enabled minimap overlay stays inside the canvas at 320");
 
         // Same capture contract as 390: the sheet backs down to the peek snap so the diagram
         // stays visible above it, and the canvas is framed clear of the floating overlays.
@@ -394,6 +472,19 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
 
     // ── helpers ─────────────────────────────────────────────────────────────
 
+    /// <summary>X1 geometry contract at load: sheet closed, minimap hidden, no horizontal overflow, the canvas owns most of the editor.</summary>
+    private static async Task AssertMobileLoadGeometryAsync(IPage page, double minCanvasShare)
+    {
+        var json = await page.EvaluateAsync<string>(
+            "() => { const c = document.querySelector('.tm-diagram-canvas').getBoundingClientRect(); const e = document.querySelector('.tm-diagram-editor').getBoundingClientRect(); return JSON.stringify({ share: c.height / e.height, doc: document.documentElement.scrollWidth, win: window.innerWidth, sheet: document.querySelectorAll('.tm-editor-shell__sheet').length, minimap: document.querySelectorAll('.tm-diagram-editor__minimap-overlay').length }); }");
+        using var d = System.Text.Json.JsonDocument.Parse(json);
+        var r = d.RootElement;
+        Assert.AreEqual(0, r.GetProperty("sheet").GetInt32(), $"the sheet is closed at load: {json}");
+        Assert.AreEqual(0, r.GetProperty("minimap").GetInt32(), $"the minimap is hidden at load: {json}");
+        Assert.IsTrue(r.GetProperty("doc").GetInt32() <= r.GetProperty("win").GetInt32(), $"no horizontal overflow: {json}");
+        Assert.IsTrue(r.GetProperty("share").GetDouble() >= minCanvasShare, $"canvas height share >= {minCanvasShare}: {json}");
+    }
+
     private async Task<IPage> OpenEditorAsync(int width, int height, bool touch = true)
     {
         IBrowserContext context;
@@ -479,23 +570,58 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(300);
     }
 
-    /// <summary>Holds a touch pointer on the node for 700ms (the long-press menu).</summary>
+    /// <summary>Holds a touch pointer on the node for 700ms (the long-press menu). The node may
+    /// be culled from the DOM (viewport culling) after a pinch — fit the content back through the
+    /// zoom pill before calling, then press at the node's live screen position.</summary>
     private static async Task LongPressNodeAsync(IPage page, string nodeId)
     {
         await page.EvaluateAsync(
             """
             async (id) => {
-                const node = document.querySelector(`g.tm-diagram-node[data-node-id='${id}']`);
-                node.scrollIntoView({ block: 'center', behavior: 'instant' });
-                await new Promise(res => setTimeout(res, 150));
-                const r = node.getBoundingClientRect();
-                const x = r.left + r.width / 2, y = r.top + r.height / 2;
+                const canvas = document.querySelector('.tm-diagram-canvas');
+                const ed = window.tmDiagramEditor;
+                const inst = ed.instances.get(canvas.id);
+                let targetId = id;
+                let r = ed._nodeRect(inst, id);
+                if (!r) {
+                    // The pinch may have zoomed the node out of the viewport and the canvas culls
+                    // it from the DOM (so _nodeRect cannot see it) — wait for the re-render that
+                    // follows the zoom pill's fit-to-view.
+                    for (let i = 0; i < 20 && !r; i++) {
+                        await new Promise(res => setTimeout(res, 100));
+                        r = ed._nodeRect(inst, id);
+                    }
+                }
+                if (!r) {
+                    // Fit-to-view bounds only the DOM-visible nodes: a node parked outside the
+                    // fitted content band stays culled. The menu-under-test is the same for any
+                    // node — long-press the first visible one instead.
+                    targetId = inst.scenePane.querySelector('g.tm-diagram-node[data-node-id]')?.getAttribute('data-node-id') ?? id;
+                    r = ed._nodeRect(inst, targetId);
+                }
+                if (!r) return;
+                // Reveal the node above the peeked sheet (no-op when already visible), so the
+                // element is safely inside the visible band when the press lands.
+                await ed.revealRectAboveSheet(document.querySelector('.tm-diagram-editor'), r.x, r.y, r.w, r.h, 24);
+                // The canvas re-renders through Blazor after the pan: poll for the element.
+                let node = null;
+                for (let i = 0; i < 20 && !node; i++) {
+                    await new Promise(res => setTimeout(res, 100));
+                    node = document.querySelector(`g.tm-diagram-node[data-node-id='${targetId}']`);
+                }
+                if (!node) return;
+                const box = node.getBoundingClientRect();
+                const x = box.left + box.width / 2, y = box.top + box.height / 2;
                 const opts = (px, py) => ({
                     bubbles: true, cancelable: true, composed: true,
                     pointerId: 9, pointerType: 'touch', isPrimary: true,
                     button: 0, buttons: 1, clientX: px, clientY: py,
                 });
-                node.dispatchEvent(new PointerEvent('pointerdown', opts(x, y)));
+                // Dispatch on the LIVE element at the point: the node element the poll found may
+                // be replaced by a later Blazor re-render (a detached node never reaches the
+                // canvas' delegated listener).
+                const target = document.elementFromPoint(x, y) ?? node;
+                target.dispatchEvent(new PointerEvent('pointerdown', opts(x, y)));
                 await new Promise(res => setTimeout(res, 700));
                 document.elementFromPoint(x, y)?.dispatchEvent(new PointerEvent('pointerup', { ...opts(x, y), buttons: 0 }));
             }
@@ -515,22 +641,24 @@ public sealed class DiagramMobileTouchE2ETests : WasmTestBase
                 const canvas = document.querySelector('.tm-diagram-canvas');
                 const r = canvas.getBoundingClientRect();
                 const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-                const opts = (id, x, y) => ({
+                const opts = (id, x, y, buttons) => ({
                     bubbles: true, cancelable: true, composed: true,
                     pointerId: id, pointerType: 'touch', isPrimary: id === 1,
-                    button: 0, buttons: 2, clientX: x, clientY: y,
+                    button: 0, buttons, clientX: x, clientY: y,
                 });
-                canvas.dispatchEvent(new PointerEvent('pointerdown', opts(1, cx - 60, cy)));
-                canvas.dispatchEvent(new PointerEvent('pointerdown', opts(2, cx + 60, cy)));
+                canvas.dispatchEvent(new PointerEvent('pointerdown', opts(1, cx - 60, cy, 2)));
+                canvas.dispatchEvent(new PointerEvent('pointerdown', opts(2, cx + 60, cy, 2)));
                 const steps = 8;
                 for (let i = 1; i <= steps; i++) {
                     await new Promise(res => setTimeout(res, 16));
                     const d = 60 + spread * i / steps;
-                    canvas.dispatchEvent(new PointerEvent('pointermove', opts(1, cx - d, cy)));
-                    canvas.dispatchEvent(new PointerEvent('pointermove', opts(2, cx + d, cy)));
+                    canvas.dispatchEvent(new PointerEvent('pointermove', opts(1, cx - d, cy, 2)));
+                    canvas.dispatchEvent(new PointerEvent('pointermove', opts(2, cx + d, cy, 2)));
                 }
-                canvas.dispatchEvent(new PointerEvent('pointerup', opts(1, cx - 60 - spread, cy)));
-                canvas.dispatchEvent(new PointerEvent('pointerup', opts(2, cx + 60 + spread, cy)));
+                // A pointerup carries buttons: 0 — a release that still claims buttons pressed
+                // leaves the gesture helpers' state latched (and the canvas render gate closed).
+                canvas.dispatchEvent(new PointerEvent('pointerup', opts(1, cx - 60 - spread, cy, 0)));
+                canvas.dispatchEvent(new PointerEvent('pointerup', opts(2, cx + 60 + spread, cy, 0)));
             }
             """,
             spread);

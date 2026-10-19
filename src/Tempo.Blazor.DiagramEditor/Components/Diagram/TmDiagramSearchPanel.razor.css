@@ -1,8 +1,9 @@
 .tm-diagram-search-panel {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
     background: var(--tm-color-surface-elevated);
     border-bottom: 1px solid var(--tm-color-border);
     box-shadow: var(--tm-shadow-sm);
@@ -11,9 +12,10 @@
 .tm-diagram-search-panel__inputs {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    width: 200px;
-    flex-shrink: 0;
+    gap: var(--tm-space-1);
+    flex: 1 1 12.5rem;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .tm-diagram-search-panel__input-wrap {
@@ -23,6 +25,14 @@
 .tm-diagram-search-panel__error {
     font-size: var(--tm-font-size-xs, 12px);
     color: var(--tm-color-danger);
+}
+
+/* UX review: the options row (all-pages + regex) wraps as one unit. */
+.tm-diagram-search-panel__options {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
 }
 
 .tm-diagram-search-panel__all-pages {
@@ -41,6 +51,14 @@
     cursor: pointer;
 }
 
+/* UX review: on a coarse pointer the checkbox meets the finger (1.25rem square). */
+@media (pointer: coarse) {
+    .tm-diagram-search-panel__all-pages input {
+        inline-size: 1.25rem;
+        block-size: 1.25rem;
+    }
+}
+
 .tm-diagram-search-panel__regex-toggle {
     --tm-toggle-label-text-font-size: var(--tm-font-size-xs, 12px);
     --tm-toggle-label-text-color: var(--tm-color-text-muted);
@@ -49,14 +67,15 @@
 .tm-diagram-search-panel__counter {
     font-size: var(--tm-font-size-xs, 12px);
     color: var(--tm-color-text-muted);
-    min-width: 80px;
+    min-width: 5rem;
     text-align: center;
 }
 
 .tm-diagram-search-panel__actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1-5);
 }
 
 .tm-diagram-search-panel__nav,
@@ -64,8 +83,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: var(--tm-input-height-xs);
+    height: var(--tm-input-height-xs);
     padding: 0;
     color: var(--tm-color-text);
     background: var(--tm-color-surface);
@@ -89,4 +108,17 @@
 .tm-diagram-search-panel__close {
     margin-left: 4px;
     color: var(--tm-color-text-muted);
+}
+
+/* U11: the icon buttons meet the 44px touch target on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-diagram-search-panel__nav,
+    .tm-diagram-search-panel__close {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-search-panel__all-pages {
+        min-height: var(--tm-touch-target);
+    }
 }

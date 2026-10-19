@@ -141,7 +141,9 @@ public sealed class MarkupClassCoverageTests
         "tm-dod-mode-link",
         "tm-dod-new-folder-confirm",
         "tm-dod-rename-confirm",
-        "tm-dropdown-trigger",
+        // DiagramEditor redesign phase 1 (755cd593): the disabled-dropdown rule
+        // (.tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger in _dropdown.css) now
+        // covers the trigger — the entry left the unstyled population, struck off.
         // F4 dashboard reorder: the live region is visually carried by the shared .tm-sr-only,
         // and the compact move buttons reuse .tm-widget-btn (the compound compact-edit rules in
         // _dashboard.css size them); the classes themselves stay intentionally rule-free.
@@ -419,7 +421,10 @@ public sealed class MarkupClassCoverageTests
             // "tm-widget-desc-") — 39 → 45.
             // F4 dashboard reorder: the drag-handle keyboard instructions id
             // ("tm-dashboard-drag-instructions-{Guid…}") joined the scanned population — 45 → 46.
-            ExpectedUnmeasurableStems: 47),
+            // DiagramEditor redesign phase 6 (X2): TmEditorShell's extra sheet tabpanel id prefix
+            // ("tm-editor-shell-extra-panel-{Guid…}") lives in the new TmEditorShell.Extra.razor.cs
+            // partial — 47 → 48.
+            ExpectedUnmeasurableStems: 48),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

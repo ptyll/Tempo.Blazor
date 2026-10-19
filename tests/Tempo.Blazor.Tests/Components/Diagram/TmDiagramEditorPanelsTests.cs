@@ -144,6 +144,33 @@ public class TmDiagramEditorPanelsTests : DiagramTestBase
     }
 
     [Fact]
+    public void TabletMode_Minimap_Is160pxWide()
+    {
+        // U2/X4: the width comes from the resolved layout (parameter, not CSS), so the tap
+        // mapping can never drift from the render.
+        var cut = RenderTabletEditor(CreateDocument());
+
+        cut.Find(".tm-diagram-editor__minimap-overlay .tm-diagram-minimap").GetAttribute("style")
+            .Should().Contain("width:160px");
+    }
+
+    [Fact]
+    public void TabletMode_MinimapOverlayCollapse_ShowsReopenButton()
+    {
+        // X4: the tablet overlay collapses in place and reopens from the floating button.
+        var cut = RenderTabletEditor(CreateDocument());
+
+        cut.Find(".tm-diagram-editor__minimap-overlay-collapse").Click();
+        cut.FindAll(".tm-diagram-editor__minimap-overlay").Should().BeEmpty(
+            "the in-place collapse hides the overlay");
+        cut.Find("[data-testid='diagram-editor-minimap-reopen']").Should().NotBeNull(
+            "the floating reopen button takes over");
+
+        cut.Find("[data-testid='diagram-editor-minimap-reopen']").Click();
+        cut.Find(".tm-diagram-editor__minimap-overlay").Should().NotBeNull();
+    }
+
+    [Fact]
     public void DesktopMode_KeepsMinimapInPanelCard()
     {
         var doc = CreateDocument();

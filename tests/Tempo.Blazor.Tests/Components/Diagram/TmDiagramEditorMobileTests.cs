@@ -11,11 +11,11 @@ namespace Tempo.Blazor.Tests.Components.Diagram;
 /// <summary>
 /// DiagramEditor redesign phase 7 (G2 — mobile viewing and light edits): with a forced
 /// <see cref="TmLayoutMode.Mobile"/> the editor renders through the core shell mobile
-/// presentation — a non-modal bottom sheet (peek/half/full) with the Shapes | Properties |
-/// Layers surfaces, the F5 action bar (Select | Pan | Properties | More), a floating zoom
-/// overlay and the floating minimap, and the long-press context menu as a sheet. The full
-/// editing chrome (resize/rotate handles, connect arrows, layout and import) stays tablet+.
-/// Markup-level contract only: CSS cannot be asserted in bUnit.
+/// presentation — a non-modal bottom sheet (peek/half/full) with the flat Shapes | Properties |
+/// Layers tabs, the F5 action bar (Select | Shapes | Properties, Pan and exports in More), a
+/// floating zoom overlay and the opt-in floating minimap ("⋯"), and the long-press context
+/// menu as a sheet. The full editing chrome (resize/rotate handles, connect arrows, layout and
+/// import) stays tablet+. Markup-level contract only: CSS cannot be asserted in bUnit.
 /// </summary>
 public class TmDiagramEditorMobileTests : DiagramTestBase
 {
@@ -38,45 +38,102 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         });
     }
 
-    // ── The bottom sheet: Shapes | Properties | Layers ──────────────────────
+    // ── X1: the mobile load state — sheet closed, minimap hidden ────────────
+
+    [Fact]
+    public void FirstMobileRender_SheetClosed_MinimapHidden()
+    {
+        // X1 (breaking): the canvas gets the whole stage on load; the sheet and the minimap
+        // are opt-in (the action bar tiles / a selection, and the "⋯" minimap toggle).
+        var cut = RenderMobileEditor();
+
+        cut.FindAll(".tm-editor-shell__sheet").Should().BeEmpty("the panels sheet starts closed");
+        cut.FindAll(".tm-diagram-editor__minimap-overlay").Should().BeEmpty("the minimap starts hidden");
+        cut.Find(".tm-mobile-action-bar__bar").Should().NotBeNull("the action bar still renders");
+    }
+
+    [Fact]
+    public void MobileSheetInitiallyOpen_True_OpensThePeekedSheet()
+    {
+        // The opt-out restores the old open-on-load behaviour.
+        var cut = RenderMobileEditor(extra: p => p.Add(e => e.MobileSheetInitiallyOpen, true));
+
+        cut.Find(".tm-editor-shell__sheet").Should().NotBeNull();
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0",
+            "the initially-open sheet rests at the PEEK snap");
+    }
+
+    // ── The bottom sheet: flat Shapes | Properties | Layers tabs (X2) ───────
 
     [Fact]
     public void BottomSheet_TabSwitch_ShowsShapesPropertiesLayers()
     {
         var cut = RenderMobileEditor();
 
-        // Both panels open: the non-modal sheet renders inline over the canvas stage.
+        // The sheet starts closed (X1) — the action bar opens it.
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='properties']").Click();
+
         var sheet = cut.Find(".tm-editor-shell__sheet");
         sheet.ClassList.Should().Contain("tm-drawer--inline", "the panels sheet is non-modal");
         sheet.ClassList.Should().Contain("tm-drawer--bottom");
 
-        // The sheet header offers the Shapes | Inspector tab strip (scoped to the shell's own
-        // tablist: the inspector inside carries its own Properties | Layers strip).
+        // X2: the sheet offers THREE flat tabs — no nested inspector TmTabs on mobile.
         var tabs = sheet.QuerySelectorAll(".tm-editor-shell__tabs [role='tab']");
-        tabs.Should().HaveCount(2);
-        tabs[0].TextContent.Trim().Should().Be("Shapes");
-        tabs[0].GetAttribute("aria-selected").Should().Be("true", "the palette tab is the default");
-        tabs[1].GetAttribute("aria-selected").Should().Be("false");
+        tabs.Should().HaveCount(3);
+        tabs.Select(t => t.TextContent.Trim()).Should().Equal("Shapes", "Properties", "Layers");
+        tabs[1].GetAttribute("aria-selected").Should().Be("true",
+            "the Properties action opened the sheet on the properties tab");
+        sheet.QuerySelectorAll(".tm-tabs").Should().BeEmpty(
+            "the mobile sheet has flat tabs — no nested inspector tabs");
 
-        // Shapes tab: the stencil palette.
+        // Shapes tab: the stencil palette (the sheet opened on Properties).
+        tabs[0].Click();
         cut.Find("[role='tabpanel'][data-region='left']").HasAttribute("hidden").Should().BeFalse();
         cut.Find(".tm-diagram-toolbox").Should().NotBeNull();
 
-        // Switch to the inspector tab: the properties panel shows.
-        tabs[1].Click();
+        // Properties tab: the properties panel shows.
+        cut.FindAll(".tm-editor-shell__sheet [role='tab']")[1].Click();
         cut.Find("[role='tabpanel'][data-region='left']").HasAttribute("hidden").Should().BeTrue();
-        var inspectorPanel = cut.Find("[role='tabpanel'][data-region='right']");
-        inspectorPanel.HasAttribute("hidden").Should().BeFalse();
-        cut.Find(".tm-diagram-editor__inspector").Should().NotBeNull();
-        cut.Find(".tm-diagram-properties").Should().NotBeNull("the Properties surface is the inspector's first tab");
-        cut.FindAll(".tm-diagram-layers").Should().BeEmpty();
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find(".tm-diagram-properties").Should().NotBeNull();
+        cut.Find("[role='tabpanel'][data-region='extra']").HasAttribute("hidden").Should().BeTrue(
+            "the layers panel stays in the DOM (sheet contract) but hidden");
 
-        // The inspector keeps its Properties | Layers tab strip (DI2): Layers is reachable.
-        var layerTab = cut.FindAll(".tm-diagram-editor__inspector [role='tab']")
-            .Single(t => t.TextContent.Trim() == "Layers");
-        layerTab.Click();
-        cut.Find(".tm-diagram-layers").Should().NotBeNull("the Layers surface is reachable in the sheet");
-        cut.FindAll(".tm-diagram-properties").Should().BeEmpty();
+        // Layers tab (the shell's Extra slot): the layers panel shows.
+        cut.FindAll(".tm-editor-shell__sheet [role='tab']")[2].Click();
+        cut.Find("[role='tabpanel'][data-region='extra']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find(".tm-diagram-layers").Should().NotBeNull("the Layers surface is a flat sheet tab");
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeTrue();
+    }
+
+    [Fact]
+    public void MobileSheet_HasNoDuplicatePropertiesHeading()
+    {
+        // U4: the sheet tab names the panel — the panel renders no own heading.
+        var cut = RenderMobileEditor();
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='properties']").Click();
+
+        cut.FindAll(".tm-diagram-properties__title").Should().BeEmpty();
+        cut.FindAll(".tm-editor-shell__sheet [role='tab']")
+            .Should().ContainSingle(t => t.TextContent.Trim() == "Properties");
+    }
+
+    [Fact]
+    public void MobileLayersTab_HasTheEmbeddedLayersPanel()
+    {
+        // Carry-forward: the layers panel renders embedded (no own collapse toggle), with the
+        // row menu presenting as the sheet on the mobile layout.
+        var doc = new DiagramDocument();
+        doc.Layers.Add(new DiagramLayer { Name = "Base", Order = 0 });
+        var cut = RenderMobileEditor(doc);
+
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='properties']").Click();
+        cut.FindAll(".tm-editor-shell__sheet [role='tab']")
+            .Single(t => t.TextContent.Trim() == "Layers").Click();
+
+        var layers = cut.Find(".tm-editor-shell__sheet .tm-diagram-layers");
+        layers.ClassList.Should().Contain("tm-diagram-layers--embedded");
+        cut.FindAll(".tm-editor-shell__sheet .tm-diagram-layers__toggle").Should().BeEmpty();
     }
 
     [Fact]
@@ -88,7 +145,8 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         doc.Layers.Add(new DiagramLayer { Name = "Base", Order = 0 });
         var cut = RenderMobileEditor(doc);
 
-        cut.FindAll(".tm-diagram-editor__inspector [role='tab']")
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='properties']").Click();
+        cut.FindAll(".tm-editor-shell__sheet [role='tab']")
             .Single(t => t.TextContent.Trim() == "Layers").Click();
         cut.Find(".tm-diagram-layers").Should().NotBeNull();
 
@@ -105,9 +163,8 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
     {
         var cut = RenderMobileEditor();
 
-        // Precondition: the sheet is closed (the user collapsed it through the shell close).
-        cut.Find(".tm-editor-shell__sheet-close").Click();
-        cut.FindAll(".tm-editor-shell__sheet").Should().BeEmpty("precondition: the sheet is closed");
+        // Precondition: the sheet starts closed (X1) — nothing to close.
+        cut.FindAll(".tm-editor-shell__sheet").Should().BeEmpty("precondition: the sheet is closed at load");
 
         // Selecting a node is an editing intent: the sheet re-opens peeked on the properties.
         var canvas = cut.FindComponent<TmDiagramCanvas>();
@@ -127,6 +184,9 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
     {
         var doc = CreateDocument();
         var cut = RenderMobileEditor(doc);
+
+        // The sheet starts closed (X1) — open the Shapes tab from the action bar.
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='shapes']").Click();
 
         var tile = cut.Find(".tm-diagram-toolbox__item[data-stencil-id='general.rectangle']");
         tile.Click();
@@ -148,16 +208,18 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
     public async Task TapStencil_WithSheetOpen_InsertsIntoTheBandAboveTheSheet()
     {
         var doc = CreateDocument();
-        // A fresh mobile editor opens the panels sheet (peek), whose panel covers the
-        // canvas' lower band: JS measures the band that stays visible ABOVE the sheet
-        // panel and reports its centre in doc coordinates — pushed ABOVE the viewport
-        // centre, which the overlap would hide.
+        // The open panels sheet (peek) covers the canvas' lower band: JS measures the band that
+        // stays visible ABOVE the sheet panel and reports its centre in doc coordinates —
+        // pushed ABOVE the viewport centre, which the overlap would hide.
         var page = doc.Pages[doc.ActivePageIndex];
         var bandCentre = (X: page.Width / 2.0, Y: page.Height / 2.0 - 150.0);
         JSInterop.Setup<double[]?>("tmDiagramEditor.visibleBandCentre", _ => true)
             .SetResult([bandCentre.X, bandCentre.Y]);
 
         var cut = RenderMobileEditor(doc);
+
+        // X1: the sheet starts closed — open the Shapes tab from the action bar first.
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='shapes']").Click();
 
         var tile = cut.Find(".tm-diagram-toolbox__item[data-stencil-id='general.rectangle']");
         tile.Click();
@@ -177,10 +239,35 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         centreX.Should().BeApproximately(bandCentre.X, 4.0);
     }
 
-    // ── The action bar: Select | Pan | Properties | More ────────────────────
+    // ── U3: a selection pans the canvas above the peeked sheet ──────────────
 
     [Fact]
-    public void ActionBar_HasSelectPanPropertiesMore()
+    public async Task Selection_Mobile_RevealsTheSelectionAboveTheSheet()
+    {
+        var cut = RenderMobileEditor();
+        JSInterop.Setup<bool>("tmDiagramEditor.revealRectAboveSheet", _ => true).SetResult(true);
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        await cut.InvokeAsync(async () => await canvas.Instance.JsOnSelectionChanged(["n1"]));
+
+        // The selected node's stored box is handed to the JS pan with a 16px margin (the
+        // document grid-snaps coordinates, so read the stored box).
+        var node = cut.Instance;
+        var n = node.Document.Nodes.Single(x => x.Id == "n1");
+        var invocation = JSInterop.Invocations.Single(i => i.Identifier == "tmDiagramEditor.revealRectAboveSheet");
+        var args = invocation.Arguments.ToArray();
+        args.Should().HaveCountGreaterThanOrEqualTo(6);
+        args[1].Should().Be(n.X);
+        args[2].Should().Be(n.Y);
+        args[3].Should().Be(n.W);
+        args[4].Should().Be(n.H);
+        args[5].Should().Be(16);
+    }
+
+    // ── The action bar: Select | Shapes | Properties + More ─────────────────
+
+    [Fact]
+    public void ActionBar_HasSelectShapesPropertiesAndMore()
     {
         var cut = RenderMobileEditor();
 
@@ -188,10 +275,43 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         bar.Should().NotBeNull("the F5 action bar renders on a mobile layout");
 
         var tiles = bar.QuerySelectorAll(".tm-mobile-action-bar__action");
-        tiles.Select(t => t.GetAttribute("data-action-id")).Should().Equal("select", "pan", "properties");
+        tiles.Select(t => t.GetAttribute("data-action-id")).Should().Equal("select", "shapes", "properties");
 
-        // The More trigger closes the bar (the export entries live in its menu).
-        bar.QuerySelectorAll(".tm-mobile-action-bar__more").Should().HaveCount(1);
+        // X1: Pan moved into the overflow ("More") with the export commands (as a checkable
+        // menuitemcheckbox — Checked is set).
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        var labels = cut.FindAll(".tm-overlay-panel-sheet [role='menuitem'], .tm-overlay-panel-sheet [role='menuitemcheckbox']")
+            .Select(i => i.TextContent.Trim()).ToList();
+        labels.Should().Contain("Pan");
+    }
+
+    [Fact]
+    public void ShapesTile_OpensTheSheetOnShapes()
+    {
+        var cut = RenderMobileEditor();
+
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='shapes']").Click();
+
+        cut.Find(".tm-editor-shell__sheet").Should().NotBeNull();
+        cut.Find("[role='tabpanel'][data-region='left']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find(".tm-diagram-toolbox").Should().NotBeNull();
+        cut.FindAll(".tm-diagram-toolbox__title").Should().BeEmpty("the Shapes tab names the palette (U4)");
+    }
+
+    [Fact]
+    public void ViewMenu_MinimapToggle_ShowsOverlay()
+    {
+        // X1: the minimap starts hidden on mobile and the header "⋯" menu toggle is its
+        // switch (under the frozen "panels" group semantics).
+        var cut = RenderMobileEditor();
+
+        cut.Find("[data-testid='diagram-editor-more']").Click();
+        cut.Find(".tm-diagram-editor__view-menu-panel [data-tm-group='panels'] button").Click();
+
+        var overlay = cut.Find(".tm-diagram-editor__minimap-overlay");
+        overlay.Should().NotBeNull();
+        overlay.QuerySelector(".tm-diagram-minimap").GetAttribute("style")
+            .Should().Contain("width:112px", "the mobile minimap is 112px wide (U2/X4)");
     }
 
     [Fact]
@@ -265,6 +385,9 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
         var items = sheet.QuerySelectorAll("[role='menuitem']").Select(i => i.TextContent.Trim()).ToList();
         items.Should().Contain("Delete");
         items.Should().Contain("Duplicate");
+        // U5/X7: no desktop shortcuts in the touch labels.
+        items.Should().Contain("Paste style");
+        items.Should().NotContain(l => l.Contains("Ctrl"));
         // G2: align/distribute are tablet+ commands — not in the mobile sheet menu.
         items.Should().NotContain(l => l.Contains("Align", StringComparison.OrdinalIgnoreCase));
         items.Should().NotContain(l => l.Contains("Distribute", StringComparison.OrdinalIgnoreCase));
@@ -304,8 +427,8 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
             "a Viewer preview offers no panels toggle");
         cut.Find(".tm-diagram-editor__zoom-overlay").Should().NotBeNull(
             "viewing keeps the floating zoom overlay");
-        cut.Find(".tm-diagram-editor__minimap-overlay").Should().NotBeNull(
-            "viewing keeps the floating minimap");
+        cut.FindAll(".tm-diagram-editor__minimap-overlay").Should().BeEmpty(
+            "the minimap is opt-in on mobile — hidden at load even for a viewer");
     }
 
     [Fact]
@@ -433,12 +556,23 @@ public class TmDiagramEditorMobileTests : DiagramTestBase
     }
 
     [Fact]
-    public void MobileChrome_MinimapIsOverlayNotCard()
+    public void MobileChrome_MinimapIsOptIn_OverlayNotCard()
     {
         var cut = RenderMobileEditor();
 
-        cut.Find(".tm-diagram-editor__minimap-overlay").Should().NotBeNull();
+        // X1: hidden at load…
+        cut.FindAll(".tm-diagram-editor__minimap-overlay").Should().BeEmpty(
+            "the minimap is opt-in on mobile");
         cut.FindAll(".tm-diagram-editor__minimap-card").Should().BeEmpty();
+
+        // …enabled through the "⋯" toggle, hidden again on a second press.
+        cut.Find("[data-testid='diagram-editor-more']").Click();
+        cut.Find(".tm-diagram-editor__view-menu-panel [data-tm-group='panels'] button").Click();
+        cut.Find(".tm-diagram-editor__minimap-overlay").Should().NotBeNull();
+
+        cut.Find("[data-testid='diagram-editor-more']").Click();
+        cut.Find(".tm-diagram-editor__view-menu-panel [data-tm-group='panels'] button").Click();
+        cut.FindAll(".tm-diagram-editor__minimap-overlay").Should().BeEmpty();
     }
 
     // ── Performance: the sheet never re-renders the canvas ──────────────────

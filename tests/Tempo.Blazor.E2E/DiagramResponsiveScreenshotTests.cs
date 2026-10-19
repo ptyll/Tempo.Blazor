@@ -257,14 +257,27 @@ public sealed class DiagramResponsiveScreenshotTests : WasmTestBase
         await page.Locator("[data-tm-group='search'] button").First.ClickAsync();
         if (isMobile)
         {
-            // The toggle menu stays open after invoking an entry and its backdrop covers the
-            // trigger; close it through the DOM (same Blazor handler) so it does not overlay
-            // the search panel in the capture.
-            await page.EvaluateAsync(
-                "() => document.querySelector(\"[data-testid='diagram-editor-more']\")?.click()");
+            // UX review: the "⋯" menu closes itself after invoking Search (and returns focus to
+            // the trigger), so nothing overlays the search panel in the capture.
+            await ExpectHiddenAsync(page, ".tm-diagram-editor__view-menu-panel");
         }
         await page.Locator(".tm-diagram-search-panel").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        if (isMobile)
+        {
+            // U11: the panel wraps instead of clipping — every button and label stays inside
+            // the panel's box at 320/390…
+            Assert.IsTrue(await page.EvaluateAsync<bool>(
+                "() => { const p = document.querySelector('.tm-diagram-search-panel').getBoundingClientRect(); return [...document.querySelectorAll('.tm-diagram-search-panel button, .tm-diagram-search-panel label')].every(b => { const r = b.getBoundingClientRect(); return r.left >= p.left - 0.5 && r.right <= p.right + 0.5; }); }"),
+                "the search panel wraps on the narrow editor — nothing is clipped");
+            if (touch)
+            {
+                // …and on a coarse pointer the nav icon button meets the 44px touch target.
+                var navBox = await page.Locator(".tm-diagram-search-panel__nav").First.BoundingBoxAsync();
+                Assert.IsNotNull(navBox);
+                Assert.IsTrue(navBox!.Height >= 44, $"the search nav button is a 44px target on touch (got {navBox.Height})");
+            }
+        }
         await ShotAsync(page, $"{prefix}--search-panel");
         await page.Locator("button[aria-label='Close search']").First.ClickAsync();
         await ExpectHiddenAsync(page, ".tm-diagram-search-panel");

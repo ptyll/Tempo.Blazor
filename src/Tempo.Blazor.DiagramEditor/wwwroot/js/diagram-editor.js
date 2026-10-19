@@ -108,6 +108,10 @@ window.tmDiagramEditor = {
             rubberStartDoc: null,
             rubberEl: null,
 
+            // two-finger pinch/pan (pointer-gesture.js drives it; the flag lets the chrome
+            // defer viewport moves that would fight the gesture)
+            isPinching: false,
+
             // tool mode
             toolMode: 'select',
             spaceHeld: false,
@@ -2238,6 +2242,7 @@ window.tmDiagramEditor = {
 
     touchPinchBegin: function (inst) {
         this._closeMenuIfOpen(inst);
+        inst.isPinching = true;
         return this._getViewBox(inst);
     },
 
@@ -2264,6 +2269,7 @@ window.tmDiagramEditor = {
     },
 
     touchPinchEnd: function (inst, startVb, scale, dx, dy) {
+        inst.isPinching = false;
         const vb = this._getViewBox(inst);
         inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
         inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
@@ -2271,6 +2277,7 @@ window.tmDiagramEditor = {
     },
 
     touchPinchCancel: function (inst, startVb) {
+        inst.isPinching = false;
         if (!startVb) return;
         this._setViewBox(inst, startVb.x, startVb.y, startVb.w, startVb.h);
     },
@@ -4207,28 +4214,127 @@ window.tmDiagramEditor = {
     // ── Mobile sheet-visible band centre (tap-insert above the peek sheet) ────
     // The mobile panels sheet is a non-modal bottom drawer whose PANEL covers the lower
     // band of the canvas, so a tap-insert at the viewport centre can land under it.
-    // Returns the doc point of the centre of the canvas band that stays visible above
-    // the sheet panel, or null when nothing covers the canvas (desktop, closed sheet,
-    // no JS geometry) — the caller keeps its viewport-centre fallback. The sheet ROOT
-    // spans the whole stage (it is click-through), so only the .tm-drawer__panel marks
-    // the covered band.
-    visibleBandCentre: function (root) {
+    // The sheet ROOT spans the whole stage (it is click-through), so only the
+    // .tm-drawer__panel marks the covered band.
+    // The canvas client band not covered by the open mobile sheet panel:
+    // { inst, rect, top, bottom } or null (no instance / zero-size svg / sheet covers everything).
+    _visibleBand: function (root) {
         if (!root) return null;
         const canvasEl = root.querySelector('.tm-diagram-canvas');
         const inst = canvasEl ? this.instances.get(canvasEl.id) : null;
         if (!inst || !inst.svg) return null;
         const rect = inst.svg.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0) return null;
-        let visibleBottom = rect.bottom;
+        let bottom = rect.bottom;
         const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
         if (panel) {
-            const panelRect = panel.getBoundingClientRect();
-            if (panelRect.height > 0 && panelRect.top < visibleBottom && panelRect.top > rect.top) {
-                visibleBottom = panelRect.top;
-            }
+            const pr = panel.getBoundingClientRect();
+            if (pr.height > 0 && pr.top < bottom && pr.top > rect.top) bottom = pr.top;
         }
-        if (visibleBottom <= rect.top) return null;
-        return this._screenToDoc(inst, rect.left + rect.width / 2, (rect.top + visibleBottom) / 2);
+        if (bottom <= rect.top) return null;
+        return { inst, rect, top: rect.top, bottom };
+    },
+
+    // [x, y] in document coordinates — the C# side reads double[] (TryGetVisibleBandCentreAsync).
+    visibleBandCentre: function (root) {
+        const b = this._visibleBand(root);
+        if (!b) return null;
+        const p = this._screenToDoc(b.inst, b.rect.left + b.rect.width / 2, (b.top + b.bottom) / 2);
+        return [p.x, p.y];
+    },
+
+    // UX review (mobile sheet focus): moves focus to the first tile of the host's mobile action
+    // bar — the sheet's close button unmounts with the sheet, and the bar is the one reopen
+    // path (the shell's own panels toggle is hidden while a bar renders). Resolves false when
+    // no bar exists.
+    focusFirstAction: function (root) {
+        if (!root) return false;
+        const el = root.querySelector('.tm-mobile-action-bar__action');
+        if (!el) return false;
+        el.focus({ preventScroll: true });
+        return true;
+    },
+
+    // Pans (never zooms) so the doc-space rect lies inside the band above the mobile sheet with
+    // `margin` screen px of air. UX review: (1) a live gesture owns the viewBox — the pan is
+    // refused while the user drags/pans/rubber-bands/pinches; (2) the sheet panel's snap
+    // animation is AWAITED (getAnimations().finished) so the measured band is the settled one —
+    // when animations cannot be observed, the panel top is computed from the stage bottom minus
+    // the panel's target height instead; (3) a ~500 ms fallback resolves false so the C# await
+    // never hangs on a stalled animation.
+    revealRectAboveSheet: function (root, x, y, w, h, margin) {
+        const self = this;
+        return new Promise(function (resolve) {
+            const early = self._visibleBand(root);
+            if (!early) { resolve(false); return; }
+            if (early.inst.isDragging || early.inst.isPanning || early.inst.isRubberBand || early.inst.isPinching) {
+                resolve(false); return;
+            }
+
+            var settled = false;
+            var timer = null;
+            var finish = function (ok) {
+                if (settled) return;
+                settled = true;
+                if (timer) clearTimeout(timer);
+                resolve(ok);
+            };
+            timer = setTimeout(function () { finish(false); }, 500);
+
+            var pan = function () {
+                requestAnimationFrame(function () { requestAnimationFrame(function () {
+                    // The ~500 ms fallback may have won the race while the animation promise was
+                    // still pending — a late pan must never touch the viewBox after resolving.
+                    if (settled) return;
+                    const b = self._visibleBand(root);
+                    if (!b) { finish(false); return; }
+                    // The wait gave a gesture time to start (a pinch during the snap animation):
+                    // a live gesture owns the viewBox, exactly like the early guard above.
+                    if (b.inst.isDragging || b.inst.isPanning || b.inst.isRubberBand || b.inst.isPinching) {
+                        finish(false); return;
+                    }
+                    const s = b.inst.scale || 1;
+                    const vb = self._getViewBox(b.inst);
+                    const m = (margin ?? 16) / s;
+                    // The settled band: the panel top either measured after the animation ended,
+                    // or computed from the stage bottom and the panel's target height.
+                    let bottom = b.bottom;
+                    const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
+                    if (panel && panel.offsetHeight != null) {
+                        const stage = panel.closest ? panel.closest('.tm-editor-shell__stage') : null;
+                        const sr = stage ? stage.getBoundingClientRect() : null;
+                        if (sr && panel.offsetHeight > 0) {
+                            bottom = Math.min(b.rect.bottom, sr.bottom - panel.offsetHeight);
+                        }
+                    }
+                    if (bottom <= b.rect.top) { finish(false); return; }
+                    const bandTop = vb.y + (b.top - b.rect.top) / s;
+                    const bandBottom = vb.y + (bottom - b.rect.top) / s;
+                    const bandLeft = vb.x, bandRight = vb.x + vb.w;
+                    let dx = 0, dy = 0;
+                    if (h + 2 * m > bandBottom - bandTop || y - m < bandTop) dy = (y - m) - bandTop;
+                    else if (y + h + m > bandBottom) dy = (y + h + m) - bandBottom;
+                    if (w + 2 * m > bandRight - bandLeft || x - m < bandLeft) dx = (x - m) - bandLeft;
+                    else if (x + w + m > bandRight) dx = (x + w + m) - bandRight;
+                    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) { finish(false); return; }
+                    self._setViewBox(b.inst, vb.x + dx, vb.y + dy, vb.w, vb.h);
+                    if (b.inst.dotNetRef)
+                        b.inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x + dx, vb.y + dy, vb.w, vb.h);
+                    finish(true);
+                }); });
+            };
+
+            const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
+            const anims = panel && panel.getAnimations ? panel.getAnimations() : [];
+            if (anims && anims.length) {
+                // The snap transition owns the panel geometry: measure after it settles. A
+                // rejected/aborted animation still proceeds (the fallback timer bounds the wait).
+                Promise.all(anims.map(function (a) { return a.finished; })).then(pan, pan);
+            }
+            else {
+                pan();
+            }
+        });
     },
 
     // ── Table inserter anchor (UX review phase 4) ─────────────────────────────
@@ -4868,5 +4974,25 @@ window.tmDiagramStencilShape = {
 
     getRef: function (nodeId) {
         return this._refs.get(nodeId);
+    }
+};
+
+// ── TmDiagramMinimap pointer capture ────────────────────────────────────────
+//
+// The minimap's viewport drag captures the pointer so the gesture survives a
+// finger/mouse slipping off the svg mid-drag (the old pointerleave bail-out).
+window.tmDiagramMinimap = {
+    capturePointer: function (svgElement, pointerId) {
+        if (!svgElement || typeof svgElement.setPointerCapture !== 'function' || pointerId == null) return;
+        try { svgElement.setPointerCapture(pointerId); } catch { /* capture is an enhancement */ }
+    },
+
+    releasePointer: function (svgElement, pointerId) {
+        if (!svgElement || typeof svgElement.releasePointerCapture !== 'function' || pointerId == null) return;
+        try {
+            if (typeof svgElement.hasPointerCapture !== 'function' || svgElement.hasPointerCapture(pointerId)) {
+                svgElement.releasePointerCapture(pointerId);
+            }
+        } catch { /* already released */ }
     }
 };

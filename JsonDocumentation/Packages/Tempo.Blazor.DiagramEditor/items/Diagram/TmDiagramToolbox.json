@@ -24,6 +24,19 @@
       "description": "When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys (the editor passes its effective read-only state)."
     },
     {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
+    },
+    {
+      "name": "CollapseCategoriesExceptFirst",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
+    },
+    {
       "name": "StencilDragStart",
       "type": "EventCallback<string>",
       "isRequired": false,

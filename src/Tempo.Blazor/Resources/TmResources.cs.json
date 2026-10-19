@@ -2427,6 +2427,7 @@
   "TmEditorShell_Panels": "Panely",
   "TmEditorShell_LeftPanel": "Levý panel",
   "TmEditorShell_RightPanel": "Pravý panel",
+  "TmEditorShell_ExtraPanel": "Další panel",
   "TmEditorShell_ShowLeftPanel": "Zobrazit levý panel",
   "TmEditorShell_ShowRightPanel": "Zobrazit pravý panel",
   "TmEditorShell_CollapseLeftPanel": "Sbalit levý panel",

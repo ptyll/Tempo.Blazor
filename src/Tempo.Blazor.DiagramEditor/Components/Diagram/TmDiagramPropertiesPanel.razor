@@ -11,7 +11,10 @@
     </button>
 
     <div class="tm-diagram-properties__inner">
-        <h3 class="tm-diagram-properties__title">@Loc["TmDiagramProperties_Title"]</h3>
+        @if (ShowTitle)
+        {
+            <h3 class="tm-diagram-properties__title">@Loc["TmDiagramProperties_Title"]</h3>
+        }
 
         @if (IsMixedSelection)
         {

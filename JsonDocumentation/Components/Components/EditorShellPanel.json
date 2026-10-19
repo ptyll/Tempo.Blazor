@@ -19,6 +19,10 @@
     {
       "name": "Right",
       "description": "The right panel (an inspector, properties, event detail)."
+    },
+    {
+      "name": "Extra",
+      "description": "The extra panel (TmEditorShell.Extra): a third tab of the mobile Sheet presentation that opens and closes with the right panel. Never docked; the Tabs presentation and CollapsedPanels ignore it."
     }
   ],
   "usageExample": "<TmEditorShell @bind-CollapsedPanels=\"collapsed\" …>…</TmEditorShell>"

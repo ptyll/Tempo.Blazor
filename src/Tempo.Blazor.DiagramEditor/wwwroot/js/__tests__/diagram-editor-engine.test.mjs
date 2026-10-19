@@ -1533,3 +1533,257 @@ test('Tab closes the context menu and lets the default Tab proceed', () => {
     assert.equal(doc.count('keydown'), 0, 'the key handler is removed with the menu');
     assert.equal(prevented, false, 'default Tab is NOT prevented — focus leaves the closed menu in tab order');
 });
+test('visibleBandCentre returns a [x, y] array (the C# side reads double[])', () => {
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const inst = {
+        id: 'c1',
+        scale: 1,
+        svg: {
+            viewBox: { baseVal: { x: 0, y: 0, width: 400, height: 600 } },
+            getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600 }),
+            createSVGPoint: () => ({ x: 0, y: 0, matrixTransform: () => ({ x: 7, y: 9 }) }),
+            getScreenCTM: () => ({ inverse: () => ({}) }),
+        },
+    };
+    const root = {
+        querySelector: (sel) => sel === '.tm-diagram-canvas' ? { id: 'c1' } : null,
+    };
+    engine.instances.set('c1', inst);
+
+    const result = engine.visibleBandCentre(root);
+
+    assert.ok(Array.isArray(result), 'the helper returns an array, not an object');
+    assert.deepEqual(plain(result), [7, 9], 'the doc point is the array the .NET double[] read expects');
+    assert.equal(engine.visibleBandCentre(null), null);
+});
+
+test('revealRectAboveSheet pans the rect above the sheet panel', async () => {
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    const calls = [];
+    const inst = {
+        id: 'c1',
+        scale: 1,
+        dotNetRef: { invokeMethodAsync: (name, ...args) => { calls.push([name, ...args]); return Promise.resolve(); } },
+        svg: {
+            viewBox: { baseVal: { x: 0, y: 0, width: 400, height: 600 } },
+            getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600 }),
+            setAttribute: (name, value) => sets.push([name, value]),
+        },
+    };
+    const root = {
+        querySelector: (sel) => {
+            if (sel === '.tm-diagram-canvas') return { id: 'c1' };
+            if (sel === '.tm-editor-shell__sheet .tm-drawer__panel')
+                return { getBoundingClientRect: () => ({ top: 400, height: 200 }) };
+            return null;
+        },
+    };
+    engine.instances.set('c1', inst);
+
+    const panned = await engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16);
+
+    assert.equal(panned, true, 'the covered rect panned the canvas');
+    assert.deepEqual(sets, [['viewBox', '0 116 400 600']]);
+    assert.deepEqual(calls[calls.length - 1], ['OnViewportChanged', 0, 116, 400, 600],
+        'the Blazor side learns the new viewBox');
+});
+
+test('revealRectAboveSheet does nothing when the rect is already visible', async () => {
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    const inst = {
+        id: 'c1',
+        scale: 1,
+        svg: {
+            viewBox: { baseVal: { x: 0, y: 0, width: 400, height: 600 } },
+            getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600 }),
+            setAttribute: (name, value) => sets.push([name, value]),
+        },
+    };
+    const root = {
+        querySelector: (sel) => {
+            if (sel === '.tm-diagram-canvas') return { id: 'c1' };
+            if (sel === '.tm-editor-shell__sheet .tm-drawer__panel')
+                return { getBoundingClientRect: () => ({ top: 400, height: 200 }) };
+            return null;
+        },
+    };
+    engine.instances.set('c1', inst);
+
+    const panned = await engine.revealRectAboveSheet(root, 100, 100, 50, 50, 16);
+
+    assert.equal(panned, false, 'an already-visible rect does not pan');
+    assert.deepEqual(sets, [], 'the viewBox stays untouched');
+});
+
+// ── UX review (fze-6): gesture guard, animation wait, timeout fallback ──────
+
+function revealInst(sets, flags = {}) {
+    return Object.assign({
+        id: 'c1',
+        scale: 1,
+        svg: {
+            viewBox: { baseVal: { x: 0, y: 0, width: 400, height: 600 } },
+            getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600 }),
+            setAttribute: (name, value) => sets.push([name, value]),
+        },
+    }, flags);
+}
+
+function revealRoot(panel) {
+    return {
+        querySelector: (sel) => {
+            if (sel === '.tm-diagram-canvas') return { id: 'c1' };
+            if (sel === '.tm-editor-shell__sheet .tm-drawer__panel') return panel;
+            return null;
+        },
+    };
+}
+
+test('revealRectAboveSheet refuses to pan while a gesture owns the viewBox', async () => {
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    const panel = { getBoundingClientRect: () => ({ top: 400, height: 200 }) };
+    const root = revealRoot(panel);
+
+    for (const flag of ['isDragging', 'isPanning', 'isRubberBand', 'isPinching']) {
+        sets.length = 0;
+        engine.instances.set('c1', revealInst(sets, { [flag]: true }));
+        const panned = await engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16);
+        assert.equal(panned, false, `${flag} refuses the pan`);
+        assert.deepEqual(sets, [], `${flag}: the viewBox stays untouched`);
+    }
+});
+
+test('revealRectAboveSheet waits for the sheet panel animations before measuring', async () => {
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    let resolveAnim;
+    const anim = { finished: new Promise(r => { resolveAnim = r; }) };
+    const panel = {
+        getBoundingClientRect: () => ({ top: 400, height: 200 }),
+        getAnimations: () => [anim],
+    };
+    engine.instances.set('c1', revealInst(sets));
+    const root = revealRoot(panel);
+
+    let done = null;
+    const pending = engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16)
+        .then(v => { done = v; });
+    await Promise.resolve();
+
+    assert.equal(done, null, 'the pan waits for the animation to settle');
+    assert.deepEqual(sets, [], 'nothing panned before the animation finished');
+
+    resolveAnim();
+    await pending;
+
+    assert.equal(done, true, 'after the animation the pan runs');
+    assert.deepEqual(sets, [['viewBox', '0 116 400 600']]);
+});
+
+test('revealRectAboveSheet computes the settled band from the stage bottom and the panel target height', async () => {
+    // No animations observable: mid-flight geometry (the panel reporting top 999 while the
+    // stage is 600 tall) must not be trusted — the settled top is stage bottom − target height.
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    const panel = {
+        offsetHeight: 200,
+        getBoundingClientRect: () => ({ top: 999, height: 1 }),
+        closest: (sel) => sel === '.tm-editor-shell__stage'
+            ? { getBoundingClientRect: () => ({ bottom: 590 }) } : null,
+        getAnimations: () => [],
+    };
+    engine.instances.set('c1', revealInst(sets));
+    const root = revealRoot(panel);
+
+    const panned = await engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16);
+
+    assert.equal(panned, true, 'the rect below the settled band pans the canvas');
+    assert.deepEqual(sets, [['viewBox', '0 126 400 600']],
+        'the band top is the stage bottom (590) minus the panel target height (200), plus the margin');
+});
+
+test('revealRectAboveSheet resolves false on the animation timeout fallback', async () => {
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    const panel = {
+        getBoundingClientRect: () => ({ top: 400, height: 200 }),
+        getAnimations: () => [{ finished: new Promise(() => {}) }], // never settles
+    };
+    engine.instances.set('c1', revealInst(sets));
+    const root = revealRoot(panel);
+
+    const start = Date.now();
+    const panned = await engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16);
+
+    assert.equal(panned, false, 'a stalled animation resolves false, never hangs');
+    assert.ok(Date.now() - start >= 400, 'the fallback actually waited (~500 ms)');
+    assert.ok(Date.now() - start < 3000, 'and it is only a fallback');
+    assert.deepEqual(sets, [], 'the viewBox stays untouched');
+});
+
+test('revealRectAboveSheet ignores an animation that resolves after the timeout fallback', async () => {
+    // The fallback resolved the promise false while the animation was still pending; when the
+    // animation finally settles, the late pan must NOT run — the viewBox stays untouched.
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    let resolveAnim;
+    const panel = {
+        getBoundingClientRect: () => ({ top: 400, height: 200 }),
+        getAnimations: () => [{ finished: new Promise(r => { resolveAnim = r; }) }],
+    };
+    engine.instances.set('c1', revealInst(sets));
+    const root = revealRoot(panel);
+
+    const panned = await engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16);
+    assert.equal(panned, false, 'the timeout fallback resolved first');
+    assert.deepEqual(sets, [], 'nothing panned before the animation finished');
+
+    resolveAnim();
+    await Promise.resolve(); // let the animation .then(pan, pan) run its rAF chain
+
+    assert.deepEqual(sets, [], 'the late animation does not pan a settled (timed-out) call');
+});
+
+test('revealRectAboveSheet refuses to pan when a pinch starts during the animation wait', async () => {
+    // The gesture guard at call time saw a free viewBox; a pinch starts while the snap animation
+    // plays — the deferred pan must re-check and stand down.
+    const engine = loadEngine({ extra: { requestAnimationFrame: cb => cb() } });
+    const sets = [];
+    let resolveAnim;
+    const panel = {
+        getBoundingClientRect: () => ({ top: 400, height: 200 }),
+        getAnimations: () => [{ finished: new Promise(r => { resolveAnim = r; }) }],
+    };
+    const inst = revealInst(sets);
+    engine.instances.set('c1', inst);
+    const root = revealRoot(panel);
+
+    let done = null;
+    const pending = engine.revealRectAboveSheet(root, 100, 450, 50, 50, 16)
+        .then(v => { done = v; });
+    await Promise.resolve();
+    assert.equal(done, null, 'the pan waits for the animation to settle');
+
+    inst.isPinching = true; // a second finger lands during the wait
+    resolveAnim();
+    await pending;
+
+    assert.equal(done, false, 'the deferred pan stands down for the live pinch');
+    assert.deepEqual(sets, [], 'the viewBox stays untouched');
+});
+
+test('focusFirstAction focuses the first mobile action bar tile', () => {
+    const engine = loadEngine();
+    const focused = [];
+    const tile = { focus: (opts) => focused.push(opts) };
+    const root = { querySelector: (sel) => sel === '.tm-mobile-action-bar__action' ? tile : null };
+
+    assert.equal(engine.focusFirstAction(root), true);
+    assert.deepEqual(plain(focused), [{ preventScroll: true }], 'the tile is focused without scrolling');
+    assert.equal(engine.focusFirstAction(null), false);
+    assert.equal(engine.focusFirstAction({ querySelector: () => null }), false,
+        'no bar — nothing to focus, no crash');
+});

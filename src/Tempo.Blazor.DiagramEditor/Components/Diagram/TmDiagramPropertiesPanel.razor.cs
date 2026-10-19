@@ -27,6 +27,8 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
     [Parameter] public bool ReadOnly { get; set; }
     /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
+    /// <summary>Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true.</summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
     /// <summary>Raised after an edit mutated the document so the host can persist it.</summary>
     [Parameter] public EventCallback<DiagramDocument> DocumentChanged { get; set; }
     /// <summary>Raised when an edge's routing style changes, with the edge id and the old and new routing values.</summary>

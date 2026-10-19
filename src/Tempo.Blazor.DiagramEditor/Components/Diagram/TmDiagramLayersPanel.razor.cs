@@ -31,6 +31,9 @@ public partial class TmDiagramLayersPanel : TmComponentBase
     /// for hosts (TmDiagramEditor's inspector) that own the collapse. Default true (standalone use).</summary>
     [Parameter] public bool ShowCollapseToggle { get; set; } = true;
 
+    /// <summary>Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true.</summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
+
     /// <summary>Id of the active (radio-selected) layer; two-way bound.</summary>
     [Parameter] public string? ActiveLayerId { get; set; }
 

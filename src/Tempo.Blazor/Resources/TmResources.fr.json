@@ -2421,6 +2421,7 @@
   "TmEditorShell_Panels": "Panneaux",
   "TmEditorShell_LeftPanel": "Panneau gauche",
   "TmEditorShell_RightPanel": "Panneau droit",
+  "TmEditorShell_ExtraPanel": "Panneau supplémentaire",
   "TmEditorShell_ShowLeftPanel": "Afficher le panneau gauche",
   "TmEditorShell_ShowRightPanel": "Afficher le panneau droit",
   "TmEditorShell_CollapseLeftPanel": "Réduire le panneau gauche",

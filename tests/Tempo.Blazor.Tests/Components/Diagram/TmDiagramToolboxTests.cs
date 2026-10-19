@@ -144,4 +144,127 @@ public class TmDiagramToolboxTests : DiagramTestBase
         items.Should().Contain(i => i.GetAttribute("data-stencil-id") == "general.rectangle",
             "the Czech label 'Obdélník' matches the unaccented query");
     }
+
+    [Fact]
+    public void ShowTitle_DefaultsToTrue()
+    {
+        var cut = Render<TmDiagramToolbox>();
+
+        cut.Instance.ShowTitle.Should().BeTrue();
+        cut.Find(".tm-diagram-toolbox__title").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ShowTitle_False_OmitsTheHeading()
+    {
+        // U4: the mobile sheet tab names the palette — no duplicate heading inside.
+        var cut = Render<TmDiagramToolbox>(p => p.Add(x => x.ShowTitle, false));
+
+        cut.FindAll(".tm-diagram-toolbox__title").Should().BeEmpty();
+    }
+
+    // ── UX review: the mobile Shapes sheet starts with only General expanded ──
+
+    [Fact]
+    public void CollapseCategoriesExceptFirst_ExpandsOnlyTheFirstCategory()
+    {
+        var cut = Render<TmDiagramToolbox>(p => p.Add(x => x.CollapseCategoriesExceptFirst, true));
+
+        var headers = cut.FindAll(".tm-diagram-toolbox__category-header");
+        headers.Should().HaveCountGreaterThan(1, "the fixture toolbox has several categories");
+        headers.Count(h => h.GetAttribute("aria-expanded") == "true").Should().Be(1,
+            "only the first (General/basic) category starts expanded");
+        headers[0].GetAttribute("aria-expanded").Should().Be("true");
+
+        // The user's own choice wins afterwards: expanding a collapsed category works.
+        headers[1].Click();
+        cut.FindAll(".tm-diagram-toolbox__category-header")[1]
+            .GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void CollapseCategoriesExceptFirst_False_KeepsEveryCategoryExpanded()
+    {
+        var cut = Render<TmDiagramToolbox>();
+
+        cut.FindAll(".tm-diagram-toolbox__category-header")
+            .Should().OnlyContain(h => h.GetAttribute("aria-expanded") == "true",
+                "the desktop default keeps every category expanded");
+    }
+
+    [Fact]
+    public void MobileEditor_ShapesSheet_StartsWithOnlyTheGeneralCategoryExpanded()
+    {
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, new DiagramDocument())
+            .Add(e => e.LayoutMode, Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile));
+
+        cut.Find(".tm-mobile-action-bar__action[data-action-id='shapes']").Click();
+
+        var headers = cut.FindAll(".tm-editor-shell__sheet .tm-diagram-toolbox__category-header");
+        headers.Should().HaveCountGreaterThan(1);
+        headers.Count(h => h.GetAttribute("aria-expanded") == "true").Should().Be(1);
+    }
+
+    // ── UX review (fze-6): search expands collapsed categories, first-LIBRARY default ──
+
+    [Fact]
+    public void CollapseCategoriesExceptFirst_SearchExpandsACollapsedCategoryWithAMatch()
+    {
+        var cut = Render<TmDiagramToolbox>(p => p.Add(x => x.CollapseCategoriesExceptFirst, true));
+
+        // Precondition: the Cloud stencil's Network category starts collapsed on the mobile sheet.
+        cut.FindAll(".tm-diagram-toolbox__category")
+            .Single(c => c.GetAttribute("data-palette-id") == "Network")
+            .QuerySelector(".tm-diagram-toolbox__category-header")!
+            .GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find(".tm-diagram-toolbox__search input").Input("Cloud");
+
+        cut.FindAll(".tm-diagram-toolbox__item")
+            .Should().ContainSingle(i => i.GetAttribute("data-stencil-id") == "network.cloud",
+                "a live search renders the matching tile even though its category starts collapsed");
+        cut.FindAll(".tm-diagram-toolbox__category").Should().ContainSingle(
+            "only the matching category renders at all");
+    }
+
+    [Fact]
+    public void CollapseCategoriesExceptFirst_KeepsEveryPaletteOfTheFirstLibraryExpanded()
+    {
+        // The default collapses everything OUTSIDE THE FIRST LIBRARY — a second palette of the
+        // General set stays expanded too (the old per-category rule collapsed it).
+        var registry = Services.GetRequiredService<Tempo.Blazor.Components.Diagram.Stencils.DiagramStencilRegistry>();
+        registry.RegisterStencil(new DiagramStencil
+        {
+            Id = "general.extra",
+            Name = "Extra",
+            Category = "General",
+            PaletteId = "general.more",
+            Kind = DiagramStencilKind.Node,
+            Origin = DiagramStencilOrigin.TempoOriginal
+        }, priority: 1);
+
+        var cut = Render<TmDiagramToolbox>(p => p.Add(x => x.CollapseCategoriesExceptFirst, true));
+
+        cut.FindAll(".tm-diagram-toolbox__category")
+            .Where(c => c.GetAttribute("data-palette-id") is "General" or "general.more")
+            .Select(c => c.QuerySelector(".tm-diagram-toolbox__category-header")!.GetAttribute("aria-expanded"))
+            .Should().Equal(["true", "true"], "both palettes of the General library stay expanded");
+    }
+
+    [Fact]
+    public void CollapseCategoriesExceptFirst_TrueThenFalse_ReordersTheLibraries()
+    {
+        var cut = Render<TmDiagramToolbox>(p => p.Add(x => x.CollapseCategoriesExceptFirst, true));
+
+        cut.FindAll(".tm-diagram-toolbox__library").First()
+            .GetAttribute("data-library-id").Should().Be("General",
+                "with the mobile default the General library leads");
+
+        cut.Render(p => p.Add(x => x.CollapseCategoriesExceptFirst, false));
+
+        cut.FindAll(".tm-diagram-toolbox__library").First()
+            .GetAttribute("data-library-id").Should().NotBe("General",
+                "clearing the flag re-sorts the libraries alphabetically without a search keystroke");
+    }
 }

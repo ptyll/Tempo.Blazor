@@ -5089,6 +5089,10 @@
         {
           "name": "Right",
           "description": "The right panel (an inspector, properties, event detail)."
+        },
+        {
+          "name": "Extra",
+          "description": "The extra panel (TmEditorShell.Extra): a third tab of the mobile Sheet presentation that opens and closes with the right panel. Never docked; the Tabs presentation and CollapsedPanels ignore it."
         }
       ],
       "usageExample": "<TmEditorShell @bind-CollapsedPanels=\"collapsed\" …>…</TmEditorShell>"
@@ -19273,6 +19277,18 @@
           "description": "Raised when a panel is collapsed to, or expanded from, its rail."
         },
         {
+          "name": "Extra",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional extra content of the mobile panels sheet: a third tab after Right, so a host can present flat sheet tabs (e.g. Shapes | Properties | Layers) instead of nesting tabs inside the right panel. Opens and closes with the right panel (RightOpen), is selected through ActiveMobilePanel = EditorShellPanel.Extra and renders ONLY in the mobile Sheet presentation — desktop, tablet and the Tabs presentation ignore it. Null (default) keeps the two-panel sheet."
+        },
+        {
+          "name": "ExtraTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The extra panel title — its mobile sheet tab label. Null uses the localized default."
+        },
+        {
           "name": "Header",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -19458,6 +19474,13 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Raised with the new \"NNNpx\" width when the user resizes the right panel, and when a persisted width is restored on load."
+        },
+        {
+          "name": "ShowMobilePanelsToggle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the closed-state mobile panels toggle (the labelled bar naming the hidden panels) renders while the sheet is closed. A host that renders its own mobile action bar (its tiles reopen the panels) sets this to false so the sheet has exactly one reopen path and focus after a close lands on the host's bar."
         },
         {
           "name": "StatusBar",

@@ -389,4 +389,26 @@ public class PropertyPanelTests : LocalizationTestBase
 
         edge.LabelOffsetY.Should().Be(-5);
     }
+
+    [Fact]
+    public void ShowTitle_DefaultsToTrue()
+    {
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, new DiagramDocument()));
+
+        cut.Instance.ShowTitle.Should().BeTrue();
+        cut.Find(".tm-diagram-properties__title").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ShowTitle_False_OmitsTheHeading()
+    {
+        // U4: a host that already labels the panel (a tab, a sheet tab) passes false —
+        // no duplicate heading.
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, new DiagramDocument())
+            .Add(c => c.ShowTitle, false));
+
+        cut.FindAll(".tm-diagram-properties__title").Should().BeEmpty();
+    }
 }

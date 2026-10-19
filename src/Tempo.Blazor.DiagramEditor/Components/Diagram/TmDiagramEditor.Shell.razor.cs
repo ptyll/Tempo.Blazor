@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.Icons;
@@ -70,11 +71,23 @@ public partial class TmDiagramEditor
     /// <summary>Whether the command row (the TmToolbar region) renders at all.</summary>
     private bool HasCommandToolbar => ShowToolbar && (EffectiveToolbarGroups & CommandRowGroups) != 0;
 
+    /// <summary>
+    /// Whether the mobile "⋯" menu carries the minimap toggle: the toolbar renders, the host
+    /// shows the minimap and the menu itself exists (the frozen Panels group — or the View group
+    /// that shares the menu). When it is false (e.g. a <c>ToolbarGroups</c> selection without
+    /// Panels/View) hiding the map on entry would leave no way back — the mobile X1 default-hide
+    /// and this availability check share the one predicate so they can never disagree.
+    /// </summary>
+    private bool MobileMinimapToggleAvailable => ShowToolbar && ShowMinimap
+        && (Shows(DiagramToolbarGroups.Panels) || Shows(DiagramToolbarGroups.View));
+
     /// <summary>Whether the header "⋯" trigger and its panel render: for the view/canvas-size groups,
-    /// and on mobile also whenever it carries the Search or Read-only toggle (no other place there).</summary>
+    /// and on mobile also whenever it carries the Search or Read-only toggle or the minimap toggle
+    /// (no other place there).</summary>
     private bool ShowsViewMenu => ShowToolbar && (
         (EffectiveToolbarGroups & ViewMenuGroups) != 0
-        || (IsMobileLayout && (Shows(DiagramToolbarGroups.Search) || ShowsReadOnlyToggle)));
+        || (IsMobileLayout && (Shows(DiagramToolbarGroups.Search) || ShowsReadOnlyToggle
+            || MobileMinimapToggleAvailable)));
 
     /// <summary>Whether the status bar region renders.</summary>
     private bool ShowsStatusBar => ShowToolbar && ShowStatusBar
@@ -211,6 +224,43 @@ public partial class TmDiagramEditor
     /// <summary>Header toggle and the minimap card header share one minimap flag (mobile has no toggle until phase 6).</summary>
     private void ToggleMinimap() => _minimapCollapsed = !_minimapCollapsed;
 
+    // ── Minimap overlay focus management (UX review) ─────────────────────────
+
+    /// <summary>Per-instance id of the floating minimap overlay — the collapse/reopen buttons' aria-controls target.</summary>
+    private readonly string _minimapOverlayId = $"tm-diagram-editor-minimap-overlay-{Guid.NewGuid():N}";
+
+    private ElementReference _minimapCollapseBtn;
+    private ElementReference _minimapReopenBtn;
+    private ElementReference _viewMenuTrigger;
+
+    /// <summary>The focus target armed by a minimap collapse/expand, consumed in OnAfterRenderAsync.</summary>
+    private enum MinimapFocusTarget { None, CollapseButton, ReopenButton, ViewMenuTrigger }
+
+    private MinimapFocusTarget _minimapFocusTarget;
+
+    /// <summary>Whether the "⋯" trigger should re-take focus after the render (a mobile menu action ran).</summary>
+    private bool _viewMenuTriggerFocusPending;
+
+    /// <summary>
+    /// Collapses the floating minimap overlay. Focus moves to the reopen button (tablet/desktop)
+    /// or — on mobile, where the overlay has no reopen button — back to the "⋯" trigger that owns
+    /// the map.
+    /// </summary>
+    private void CollapseMinimap()
+    {
+        _minimapCollapsed = true;
+        _minimapFocusTarget = IsMobileLayout
+            ? MinimapFocusTarget.ViewMenuTrigger
+            : MinimapFocusTarget.ReopenButton;
+    }
+
+    /// <summary>Expands the floating minimap overlay; focus lands on its collapse button.</summary>
+    private void ExpandMinimap()
+    {
+        _minimapCollapsed = false;
+        _minimapFocusTarget = MinimapFocusTarget.CollapseButton;
+    }
+
     /// <summary>
     /// The right dock holds the inspector (and, from tablet up, the collapsible minimap card).
     /// On a mobile layout the minimap floats as an overlay, so the dock exists for the inspector
@@ -229,7 +279,25 @@ public partial class TmDiagramEditor
     {
         // The shell's slim reopen toggle is the only writer when our header toggle is not used.
         if (ShowToolbox) _toolboxCollapsed = !open;
-        if (IsMobileLayout) _canvas?.BeginChromeOnlyPass();
+        if (IsMobileLayout)
+        {
+            // UX review: when the shell opens the Shapes side by other means (its own toggle,
+            // a host echo), the inspector opens too — the flat sheet only shows a tab strip when
+            // BOTH panels exist, so a lone Shapes tab would silently drop the Properties/Layers
+            // tabs.
+            if (open)
+            {
+                SetInspectorOpen(true);
+            }
+            else
+            {
+                // The shell (or a host) closed a panel: the sheet's close button unmounts with
+                // the sheet, so focus moves to the action bar (the editor hides the shell's own
+                // panels toggle when the bar renders — it is the one reopen path).
+                _mobileActionBarFocusPending = true;
+            }
+            _canvas?.BeginChromeOnlyPass();
+        }
         return ScheduleCanvasRelayoutAsync();
     }
 
@@ -239,8 +307,34 @@ public partial class TmDiagramEditor
         // tab stays in _inspectorTab. The shell's slim close toggle collapses it entirely.
         SetInspectorOpen(open);
 
-        if (IsMobileLayout) _canvas?.BeginChromeOnlyPass();
+        if (IsMobileLayout)
+        {
+            if (!open) _mobileActionBarFocusPending = true;
+            _canvas?.BeginChromeOnlyPass();
+        }
         return ScheduleCanvasRelayoutAsync();
+    }
+
+    /// <summary>Armed when a shell-side close unmounts the mobile sheet: after the render focus
+    /// moves to the action bar (see <see cref="FocusMobileActionBarAsync"/>).</summary>
+    private bool _mobileActionBarFocusPending;
+
+    /// <summary>Moves focus to the first tile of the mobile action bar (the sheet's close button
+    /// unmounted with the sheet; the bar is the one reopen path on this layout).</summary>
+    private async Task FocusMobileActionBarAsync()
+    {
+        try
+        {
+            await JS.InvokeAsync<bool>("tmDiagramEditor.focusFirstAction", _editorRoot);
+        }
+        catch (JSException)
+        {
+            // No bar / no JS: focus stays wherever the browser put it.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Host is going away.
+        }
     }
 
     /// <summary>Accessible name of the right dock: the inspector tab title, or the minimap when it is the only content.</summary>

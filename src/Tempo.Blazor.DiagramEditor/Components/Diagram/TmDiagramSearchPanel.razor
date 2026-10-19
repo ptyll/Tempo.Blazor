@@ -27,17 +27,22 @@
             <span id="@ErrorId" class="tm-diagram-search-panel__error" role="alert">@RegexError</span>
         }
     </div>
-    <label class="tm-diagram-search-panel__all-pages">
-        <input type="checkbox"
-               checked="@SearchAllPages"
-               @onchange="e => OnSearchAllPagesChanged((bool)(e.Value ?? false))" />
-        <span>@Loc["TmDiagram_SearchAllPages"]</span>
-    </label>
-    <TmToggle Value="UseRegex"
-              ValueChanged="OnUseRegexChanged"
-              Label=".*"
-              Class="tm-diagram-search-panel__regex-toggle"
-              title="@Loc["TmDiagram_UseRegex"]" />
+    @* UX review: the options (all-pages checkbox + regex switch) share one flex row so they wrap
+       as a unit on narrow screens. *@
+    <div class="tm-diagram-search-panel__options">
+        <label class="tm-diagram-search-panel__all-pages">
+            <input type="checkbox"
+                   checked="@SearchAllPages"
+                   @onchange="e => OnSearchAllPagesChanged((bool)(e.Value ?? false))" />
+            <span>@Loc["TmDiagram_SearchAllPages"]</span>
+        </label>
+        <TmToggle Value="UseRegex"
+                  ValueChanged="OnUseRegexChanged"
+                  Label=".*"
+                  AriaLabel="@Loc["TmDiagram_UseRegex"]"
+                  Class="tm-diagram-search-panel__regex-toggle"
+                  title="@Loc["TmDiagram_UseRegex"]" />
+    </div>
     @* The result counter is a live region: prev/next navigation announces "n of m" without
        moving focus (review O). *@
     <span class="tm-diagram-search-panel__counter" role="status" aria-live="polite" aria-atomic="true">

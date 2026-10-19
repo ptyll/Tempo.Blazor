@@ -5091,6 +5091,10 @@
             {
               "name": "Right",
               "description": "The right panel (an inspector, properties, event detail)."
+            },
+            {
+              "name": "Extra",
+              "description": "The extra panel (TmEditorShell.Extra): a third tab of the mobile Sheet presentation that opens and closes with the right panel. Never docked; the Tabs presentation and CollapsedPanels ignore it."
             }
           ],
           "usageExample": "<TmEditorShell @bind-CollapsedPanels=\"collapsed\" …>…</TmEditorShell>"
@@ -19275,6 +19279,18 @@
               "description": "Raised when a panel is collapsed to, or expanded from, its rail."
             },
             {
+              "name": "Extra",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional extra content of the mobile panels sheet: a third tab after Right, so a host can present flat sheet tabs (e.g. Shapes | Properties | Layers) instead of nesting tabs inside the right panel. Opens and closes with the right panel (RightOpen), is selected through ActiveMobilePanel = EditorShellPanel.Extra and renders ONLY in the mobile Sheet presentation — desktop, tablet and the Tabs presentation ignore it. Null (default) keeps the two-panel sheet."
+            },
+            {
+              "name": "ExtraTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The extra panel title — its mobile sheet tab label. Null uses the localized default."
+            },
+            {
               "name": "Header",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -19460,6 +19476,13 @@
               "type": "EventCallback<string>",
               "isRequired": false,
               "description": "Raised with the new \"NNNpx\" width when the user resizes the right panel, and when a persisted width is restored on load."
+            },
+            {
+              "name": "ShowMobilePanelsToggle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the closed-state mobile panels toggle (the labelled bar naming the hidden panels) renders while the sheet is closed. A host that renders its own mobile action bar (its tiles reopen the panels) sets this to false so the sheet has exactly one reopen path and focus after a close lands on the host's bar."
             },
             {
               "name": "StatusBar",
@@ -34168,6 +34191,13 @@
               "description": "Where the minimap renders. Auto shows the right-column card on a desktop layout and floats the minimap over the canvas corner from tablet down (DI3); Panel and Overlay force the choice for every layout."
             },
             {
+              "name": "MobileSheetInitiallyOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the mobile panels sheet starts open (peek) on the first mobile render. Defaults to false: the canvas gets the whole stage and the action bar (Shapes / Properties) or a selection opens the sheet (X1). Pass true to restore the pre-2.9.1 open-on-load behaviour.",
+              "default": "false"
+            },
+            {
               "name": "OnSelectedIdsChanged",
               "type": "EventCallback<string[]>",
               "isRequired": false,
@@ -34378,6 +34408,13 @@
               "isRequired": false,
               "default": "true",
               "description": "When false, the panel renders without its own collapse tab and fills its host's width — for hosts (TmDiagramEditor's inspector) that own the collapse. Default true (standalone use)."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
             }
           ]
         },
@@ -34521,6 +34558,13 @@
               "type": "EventCallback<List<(int Row, int Column)>>",
               "isRequired": false,
               "description": "Raised when the table cell selection changes inside the panel."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
             }
           ]
         },
@@ -34995,10 +35039,23 @@
               "description": "Additional CSS class."
             },
             {
+              "name": "CollapseCategoriesExceptFirst",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
+            },
+            {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
               "description": "When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys (the editor passes its effective read-only state)."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
             },
             {
               "name": "StencilDragStart",

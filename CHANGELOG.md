@@ -4,6 +4,55 @@
 
 ### Added
 
+- **TmEditorShell: `ShowMobilePanelsToggle` parameter (default `true`).** The labelled
+  closed-state bar naming the hidden panels renders only while the parameter is true: a host
+  that renders its own mobile action bar (the F5 `TmMobileActionBar`, whose tiles reopen the
+  panels) sets it to `false`, giving the mobile panels sheet exactly ONE reopen path and
+  landing focus on the host's bar after the sheet closes (instead of the hidden shell toggle).
+
+- **TmDiagramToolbox: `CollapseCategoriesExceptFirst` parameter.** The mobile Shapes sheet
+  starts with only the first (General/basic) category expanded; the user's own expand/collapse
+  choices win afterwards.
+
+- **DiagramEditor review fixes (phase 6/7 mobile follow-up, plan cbb1964a fze-6).** Mobile
+  layout state: the editor keeps a per-session mobile snapshot (sheet + minimap collapse)
+  initialised to the X1 defaults, saved on every mobile exit and applied on every mobile entry —
+  mobile → desktop → mobile keeps the state the user left behind, while the desktop state in
+  between is untouched; `ApplyResolvedLayout` runs the exit branches before the entry branches,
+  so desktop → mobile → tablet ends with the palette railed and the inspector expanded.
+  `TmDiagramEditor.Tablet.razor.cs` writes the inspector flags only through
+  `SetInspectorOpen`. Minimap: the mobile default-hide now applies ONLY while the "⋯" toggle
+  exists (`MobileMinimapToggleAvailable = ShowToolbar && ShowMinimap && (Panels || View
+  group)`), so a `ToolbarGroups` selection without Panels/View keeps the overlay visible and a
+  Viewer preset with `ShowMinimap` keeps the map reachable; the viewport drag freezes the
+  pointerdown-time bounds/scale (render + client→svg mapping), captures the pointer
+  (`tmDiagramMinimap.capturePointer`) instead of ending on pointerleave, and clamps to the
+  frozen bounds; hidden layers' nodes/edges are excluded from the map and edge waypoints /
+  free ends / label anchors are included in the framed region; the collapse button moved into
+  a header strip (small title + button) that never covers the map, with state-specific
+  labels (`TmDiagramEditor_HideMinimap` / `ShowMinimap`), `aria-expanded` +
+  `aria-controls` on both collapse and reopen, and focus management (collapse → reopen button
+  on tablet / "⋯" trigger on mobile; reopen → collapse button). The mobile "⋯" menu closes
+  after Search / Minimap and refocuses its trigger; the action bar's first tile mirrors the
+  tool mode (Pan tile while panning, tapping returns to Select; Pan stays in "More" while
+  Select is active); the Shapes / Properties tiles are checked while the sheet is open on
+  their panel and tapping the active tile closes the sheet; the floating zoom pill reads
+  − | % | + | fit; the search panel's options row (all-pages + regex) wraps as one unit, the
+  regex toggle carries the `TmDiagram_UseRegex` accessible name and the checkbox is finger-sized
+  on a coarse pointer; the sticky Delete in the long-press actions sheet never lets items show
+  through below it (the drawer body's bottom padding gives way, the danger item carries the
+  safe-area inset); a selection with the sheet already open on the Layers tab keeps the tab and
+  snap (it switches to Properties only from a closed sheet or the Shapes tab); the shell
+  opening the Shapes side on mobile also opens the inspector, so all three sheet tabs exist;
+  when the shell's own panels toggle is hidden, the sheet's close hands focus to the action
+  bar (`tmDiagramEditor.focusFirstAction`). `TmEditorShell.ExtraOpen` now also requires the
+  resolved Mobile layout (the Extra tab is mobile-only); the closed-state toggle label names
+  the Extra panel too; `revealRectAboveSheet` waits for the sheet panel's snap animations
+  (`getAnimations().finished`, or computes the band top from the stage bottom − panel
+  offsetHeight), refuses to pan during a drag/pan/rubber-band/pinch and resolves false on a
+  ~500 ms timeout instead of hanging. The mobile "⋯" groups, the zoom pill and the minimap
+  overlay markup moved to `TmDiagramEditor.MobileChrome.razor.cs` (`.razor` length budget).
+
 - **DiagramEditor: public `DiagramImportException` / `DiagramImportError` for CSV/SQL import
   failures.** `CsvParser`, the CSV generators and `SqlParser` throw the typed
   `DiagramImportException` (deriving from `InvalidOperationException`, so existing catch blocks
@@ -390,7 +439,32 @@
   two tokens on `:root` (or on a wrapper). The strict CSS token audit no longer counts them as
   undefined.
 
+- **TmEditorShell: optional `Extra` / `ExtraTitle` slot** — a third tab of the mobile panels
+  sheet after `Right` (opens and closes with the right panel, selected through
+  `ActiveMobilePanel = EditorShellPanel.Extra`; Sheet presentation only, ignored on
+  desktop/tablet and by the Tabs presentation). New enum value `EditorShellPanel.Extra`.
+  Backward compatible: without `Extra` the sheet is unchanged. `TmDiagramEditor` uses it for the
+  flat mobile Shapes | Properties | Layers tabs (X2).
+
+- **TmDiagramPropertiesPanel / TmDiagramLayersPanel / TmDiagramToolbox: new `ShowTitle`
+  parameter (default `true`).** The editor passes `false` where a tab or sheet tab already names
+  the panel (no duplicate heading inside the mobile sheet); standalone hosts are unaffected (U4).
+
+- **TmDiagramEditor: new `MobileSheetInitiallyOpen` parameter (default `false`)** — the opt-out
+  that restores the pre-2.9.1 mobile open-on-load sheet (see Breaking / Migration).
+
 ### Breaking / Migration
+
+- **TmDiagramEditor (mobile): the panels sheet starts closed and the minimap starts hidden.** On a
+  mobile layout the canvas gets the whole stage on first render; the action bar's new *Shapes* tile,
+  the *Properties* tile or a node selection opens the sheet, and the minimap is toggled from the
+  header "⋯" menu. The action bar now reads Select | Shapes | Properties; *Pan* moved into *More*.
+  The sheet tabs are flat — Shapes | Properties | Layers (no nested inspector tabs on mobile).
+  Restore the old open-on-load sheet with `MobileSheetInitiallyOpen="true"`:
+  ```razor
+  @* before (2.9.1 preview): sheet peeked on load *@  <TmDiagramEditor Document="doc" />
+  @* after, same look as before *@                    <TmDiagramEditor Document="doc" MobileSheetInitiallyOpen="true" />
+  ```
 
 - **DiagramEditor – `TmDiagramLayersPanel` row menu now uses the core `TmContextMenu`.**
   `.tm-diagram-layers__row-menu` is now the `TmContextMenu` wrapper. The trigger is a
@@ -1032,7 +1106,36 @@
 
 - **`TmDataTable.KeyboardNavigation` becomes `Grid` by default in the next major release.** Keep today's behavior by explicitly setting `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`.
 
+### Changed
+
+- **TmDiagramMinimap frames the diagram content instead of the whole page (X4).** The map's viewBox
+  is now the union of all node boxes and the current viewport, padded by 10 % (never smaller than a
+  fifth of the page), and the viewport rectangle draws as a transparent outline *under* the node
+  boxes — it no longer hides the content it frames in light themes. Taps and drags map through the
+  fitted origin, so navigation always matches what is shown. The width follows the editor layout
+  (112 / 160 / 200 px for mobile / tablet / desktop); the mobile CSS override of
+  `.tm-diagram-minimap__svg` width was removed — hosts must not resize the minimap svg with CSS (the
+  tap mapping is computed from the `Width` parameter). The tablet/mobile overlay collapses in place
+  (`.tm-diagram-editor__minimap-overlay-collapse`) and reopens from the floating
+  `.tm-diagram-editor__minimap-overlay-reopen` button.
+
+- **TmDiagramEditor (mobile): selecting a node pans the canvas so the selection stays visible above
+  the peeked panels sheet (U3).** Tap-insert lands in the band above the sheet again — the JS helper
+  returned an object the .NET side could not read, so the band measurement silently fell back to the
+  viewport centre; `tmDiagramEditor.visibleBandCentre` now returns a `[x, y]` array.
+
+- **TmDiagramEditor (mobile): the floating zoom overlay reads horizontally** (+ | % | − | fit along
+  the bottom edge) instead of the 176 px vertical pill that covered a third of the narrow canvas.
+
 ### Fixed
+
+- **TmDiagramEditor context menu / mobile actions sheet: *Paste style* no longer shows the desktop
+  shortcut in its label; *Delete* stays visible at the bottom of the mobile actions sheet** (sticky
+  last row, U5/X7).
+
+- **TmDiagramSearchPanel wraps on narrow editors (320 px) and its icon buttons meet the 44 px touch
+  target on coarse pointers (U11).** The non-wrapping 200 px input row (~800 px of chrome) clipped
+  "All pages", the regex toggle and the nav buttons at 320 px.
 
 - **Core `pointer-gesture.js`: a failed capture re-assert cancels the pinch instead of committing a
   half-captured gesture.** `capture()` now reports success; when the re-assert after `onStart`

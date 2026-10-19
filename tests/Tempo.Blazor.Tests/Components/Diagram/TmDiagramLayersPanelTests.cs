@@ -713,6 +713,33 @@ public class TmDiagramLayersPanelTests : DiagramTestBase
     }
 
     [Fact]
+    public void ShowTitle_DefaultsToTrue()
+    {
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id));
+
+        cut.Instance.ShowTitle.Should().BeTrue();
+        cut.Find(".tm-diagram-layers__title").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ShowTitle_False_OmitsTheHeading_KeepsTheAddButton()
+    {
+        // U4: inside a sheet tab the tab label names the panel — the heading hides, the
+        // header row's add-layer button stays.
+        var doc = CreateDocument();
+        var cut = Render<TmDiagramLayersPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.ActiveLayerId, doc.Layers[0].Id)
+            .Add(x => x.ShowTitle, false));
+
+        cut.FindAll(".tm-diagram-layers__title").Should().BeEmpty();
+        cut.Find(".tm-diagram-layers__add-btn").Should().NotBeNull("the add button is not part of the heading");
+    }
+
+    [Fact]
     public void LockedLayer_ShowsIndicator_AndMenuOffersUnlock()
     {
         // D17/X5: the lock is a non-interactive indicator; the actual toggle lives in the ⋯ menu.
