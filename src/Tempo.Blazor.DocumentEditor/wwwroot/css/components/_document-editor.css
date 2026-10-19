@@ -4841,3 +4841,32 @@
 .tm-dark .tm-wysiwyg--show-blocks .tm-wysiwyg-block {
     outline-color: var(--tm-color-primary-light, #818cf8);
 }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every Tempo.Blazor.DocumentEditor animated subject (mirrors the core block in
+   animations.css and the DiagramEditor package block, never a universal selector).
+   Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-document-comment-legend__chip,
+  .tm-document-editor__mini-toolbar,
+  .tm-document-editor__mini-toolbar--object-above,
+  .tm-document-editor__ribbon-button,
+  .tm-document-editor__ribbon-tab,
+  .tm-document-editor__track-toggle,
+  .tm-document-editor__track-toggle::after,
+  .tm-document-find-panel__btn,
+  .tm-document-table-grid-picker__cell,
+  .tm-wysiwyg-image__resize-handle,
+  .tm-wysiwyg-object-resize-handle,
+  .tm-wysiwyg-object-rotation-handle,
+  .tm-wysiwyg-page__body,
+  .tm-wysiwyg-page__footer,
+  .tm-wysiwyg-page__header,
+  .tm-wysiwyg-table td,
+  .tm-wysiwyg-table th {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
+}

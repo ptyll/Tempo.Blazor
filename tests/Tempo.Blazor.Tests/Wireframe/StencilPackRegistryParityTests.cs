@@ -23,7 +23,6 @@ public class StencilPackRegistryParityTests
         "TmShareLinkPanel",
         "TmSankeyChart",
         "TmSparkline",
-        "TmDashboard",
         "TmScheduler"
     ];
 
@@ -229,6 +228,19 @@ public class StencilPackRegistryParityTests
             .Should().Contain(["TmCard", "TmSection", "TmModal", "TmDialog", "TmDrawer", "TmFormSection"]);
     }
 
+
+    [Fact]
+    public void DashboardPackEntry_MapsToSameNamedNativeRenderer()
+    {
+        // 2ee91e41: like the diagram editor (U18/X11), the dashboard stencil honors layoutMode,
+        // which needs the native renderer — the pack entry must delegate to it by name.
+        var registry = Registry();
+        var def = registry.GetDef("TmDashboard");
+
+        def.Should().NotBeNull();
+        def!.PackId.Should().Be("tempo");
+        def.NativeType.Should().Be("TmDashboard");
+    }
 
     [Theory]
     [MemberData(nameof(GoldenDeclarativeTypeData))]

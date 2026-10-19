@@ -132,3 +132,18 @@
         transform: translate(2px, -50%);
     }
 }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every Tempo.Blazor.PdfViewer animated subject (mirrors the core block in
+   animations.css and the DiagramEditor package block, never a universal selector).
+   Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-pdf-annotation-layer__area,
+  .tm-pdf-annotation-layer__highlight,
+  .tm-pdf-annotation-layer__marker {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
+}

@@ -19,6 +19,7 @@ internal static class TempoNativeRendererDefinitions
         yield return DefFromSchema("TmGantt", "bar-chart-2", RenderGantt);
         yield return DefFromSchema("TmWorkflowDesignerCanvas", "git-branch", RenderWorkflowDesignerCanvas);
         yield return DefFromSchema("TmDiagramEditor", "git-branch", RenderDiagramEditor);
+        yield return DefFromSchema("TmDashboard", "grid", RenderDashboard);
         yield return DefFromSchema("TmSpreadsheet", "grid", RenderSpreadsheet);
         yield return DefFromSchema("TmDocumentEditor", "file-text", RenderDocumentEditor);
         yield return DefFromSchema("TmNotionEditor", "book-open", RenderNotionEditor);
@@ -51,6 +52,21 @@ internal static class TempoNativeRendererDefinitions
 
     private static void Svg(RenderTreeBuilder builder, string markup)
         => builder.AddMarkupContent(0, markup);
+
+    /// <summary>The same width-based ellipsis the stencil pack renderer applies
+    /// (<see cref="StencilPackRenderer"/> ApplyEllipsis, ~0.55em per glyph): caps a label at the
+    /// pixels a text node actually has, so header titles never paint under the switcher pill.</summary>
+    private static string Ellipsize(string content, double width, double fontSize)
+    {
+        if (string.IsNullOrEmpty(content) || width <= 0 || fontSize <= 0)
+            return content;
+
+        var maxChars = (int)Math.Floor(width / (fontSize * 0.55));
+        if (content.Length <= maxChars)
+            return content;
+
+        return maxChars <= 1 ? "…" : content[..(maxChars - 1)] + "…";
+    }
 
     private static void RenderChart(WireframeElement el, RenderTreeBuilder b)
     {
@@ -863,6 +879,118 @@ internal static class TempoNativeRendererDefinitions
 
             sb.Append("</g>");
         }
+    }
+
+    // 2ee91e41: like the diagram editor (U18/X11), the dashboard stencil honors layoutMode —
+    // "auto" (and any unknown value) renders the desktop variant; tablet reflows the widget grid
+    // to two columns and mobile to a single stacked column with a compact switcher chip. The
+    // stencil communicates the chosen presentation, it does not re-flow the canvas layout.
+    private static void RenderDashboard(WireframeElement el, RenderTreeBuilder b)
+    {
+        var title = el.Props.GetString("title", "Dashboard");
+        var layout = ResolveDiagramLayout(el);
+        var showSwitcher = el.Props.GetBool("showSwitcher", true);
+        var editable = el.Props.GetBool("editable", false);
+        var showAddWidget = el.Props.GetBool("showAddWidget", false);
+
+        var sb = new StringBuilder();
+        sb.Append(Rect(0, 0, el.W, el.H, Fill, Border, 8));
+        sb.Append($"<g data-layout='{layout}'>");
+
+        // Header: the document title plus, on the right, the dashboard switcher pill and — in
+        // edit mode — the Edit affordance, like the real header actions. The pill width follows
+        // the element width in every layout (42% capped at 268) and the pill gives up entirely
+        // below 60px — below that it would crowd out the title it names. The title ellipsizes
+        // to whatever the pill leaves behind.
+        var pillW = Math.Min(268, Math.Max(0, el.W * 0.42));
+        var showPill = showSwitcher && pillW >= 60;
+        var pillX = Math.Max(0, el.W - 18.0 - pillW);
+        var headerRight = el.W - 18.0;
+
+        sb.Append("<g data-region='header'>");
+        var titleMaxW = (showPill ? pillX : headerRight) - 8 - 18;
+        sb.Append(Text(Ellipsize(title, titleMaxW, 14), 18, 22, 14, ColorText, "start", "700"));
+        if (showPill)
+        {
+            sb.Append("<g data-region='switcher'>");
+            sb.Append(Rect(pillX, 8, pillW, 28, Fill, Border, 6));
+            sb.Append(Rect(pillX + 8, 17, 10, 10, FillAccent, "none", 2));
+            sb.Append(Text(Ellipsize(title, pillW - 24 - 14, 9), pillX + 24, 23, 9, ColorText));
+            sb.Append(Text("▾", pillX + pillW - 14, 23, 9, ColorMuted, "middle"));
+            sb.Append("</g>");
+            headerRight = pillX - 8;
+        }
+
+        if (editable)
+            sb.Append(Text("Edit", headerRight, 22, 9, Accent, "end", "600"));
+
+        sb.Append("</g>");
+
+        // Widget grid: the column count comes from the props (default 3), tablet caps it at 2
+        // and mobile stacks a single column; the tile count is columns × rows (rows default 2),
+        // clamped 1..24. The optional Add-widget tile replaces the last cell, mirroring the
+        // edit-mode drop target.
+        var desktopColumns = Math.Max(1, el.Props.GetInt("columns", 3));
+        var columns = layout == "mobile" ? 1 : layout == "tablet" ? Math.Min(desktopColumns, 2) : desktopColumns;
+        var tileCount = Math.Clamp(columns * Math.Max(1, el.Props.GetInt("rows", 2)), 1, 24);
+        var widgetCount = Math.Max(0, tileCount - (showAddWidget ? 1 : 0));
+        var rows = (int)Math.Ceiling(tileCount / (double)columns);
+        const double margin = 18;
+        const double top = 48;
+        const double bottomPad = 14;
+        const double gap = 12;
+        var cellW = (el.W - 2 * margin - (columns - 1) * gap) / columns;
+        var cellH = (el.H - top - bottomPad - (rows - 1) * gap) / rows;
+        var gridFits = cellW > 24 && cellH > 24;
+
+        sb.Append($"<g data-region='widget-grid' data-columns='{columns}'>");
+        if (gridFits)
+        {
+            for (var i = 0; i < widgetCount; i++)
+            {
+                var cx = margin + i % columns * (cellW + gap);
+                var cy = top + i / columns * (cellH + gap);
+                sb.Append("<g data-region='widget'>");
+                sb.Append(Rect(cx, cy, cellW, cellH, "white", Border, 6));
+                if (layout == "mobile")
+                {
+                    sb.Append(Rect(cx + 10, cy + cellH / 2 - 6, 12, 12, FillAccent, "none", 3));
+                    sb.Append(Text($"Widget {i + 1}", cx + 28, cy + cellH / 2, 9, ColorText, "start", "600"));
+                    if (cellH > 52)
+                    {
+                        sb.Append(Rect(cx + 10, cy + cellH - 22, cellW * 0.5, 6, FillAccent, "none", 3));
+                        sb.Append(Rect(cx + 10, cy + cellH - 11, cellW * 0.7, 5, FillDark, "none", 2));
+                    }
+                }
+                else
+                {
+                    sb.Append(Rect(cx + 12, cy + 12, 16, 16, FillAccent, "none", 4));
+                    sb.Append(Text($"Widget {i + 1}", cx + 36, cy + 20, 10, ColorText, "start", "600"));
+                    if (cellH > 88)
+                    {
+                        sb.Append(Rect(cx + 12, cy + 40, cellW * 0.45, 16, FillAccent, "none", 4));
+                        sb.Append(Rect(cx + 12, cy + 68, cellW * 0.62, 8, FillDark, "none", 4));
+                    }
+                }
+
+                sb.Append("</g>");
+            }
+
+            if (showAddWidget)
+            {
+                var last = tileCount - 1;
+                var cx = margin + last % columns * (cellW + gap);
+                var cy = top + last / columns * (cellH + gap);
+                sb.Append("<g data-region='add-widget'>");
+                sb.Append(Rect(cx, cy, cellW, cellH, "none", BorderStrong, 6));
+                sb.Append(Text("+ Add widget", cx + cellW / 2, cy + cellH / 2, 10, ColorMuted, "middle"));
+                sb.Append("</g>");
+            }
+        }
+
+        sb.Append("</g>");
+        sb.Append("</g>");
+        Svg(b, sb.ToString());
     }
 
     private static void RenderDocumentEditor(WireframeElement el, RenderTreeBuilder b)

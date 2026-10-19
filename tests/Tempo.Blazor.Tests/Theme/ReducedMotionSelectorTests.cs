@@ -45,6 +45,18 @@ public sealed class ReducedMotionSelectorTests
         new(@"prefers-reduced-motion\s*:\s*reduce",
             RegexOptions.Compiled, RegexTimeout);
 
+    /// <summary>A selector part inside a package reduced-motion block must be a REAL selector: a
+    /// Tempo class compound (optionally carrying an attribute selector, a pseudo-class such as
+    /// <c>:hover</c>/<c>:not(...)</c>, or a <c>::before/::after</c> pseudo-element), or such a
+    /// compound followed by a descendant/combinator tail (e.g. <c>.tm-diagram-edge-toolbar
+    /// button</c>). The degenerate bare <c>.</c> a zero-subject generator emitted into several
+    /// package blocks (cleanup round f3-review) is exactly what this rejects, along with
+    /// universal (<c>*</c>) and bare-element selectors.</summary>
+    private static readonly Regex ValidReducedMotionSelector =
+        new(@"^\.[a-zA-Z][a-zA-Z0-9_-]*(\[[^\]]*\])?((::|:)[a-zA-Z-]+(\([^()]*\))?)*$" +
+            @"|^\.[a-zA-Z][a-zA-Z0-9_-]*(\[[^\]]*\])?((::|:)[a-zA-Z-]+(\([^()]*\))?)*[ >+~]\s*[^{}*]+$",
+            RegexOptions.Compiled, RegexTimeout);
+
     /// <summary>Build directories that hold shipped/third-party CSS, never library-owned subjects.</summary>
     private static bool IsShippedOrVendorCss(string normalizedPath) =>
         normalizedPath.Contains("/obj/")
@@ -228,21 +240,79 @@ public sealed class ReducedMotionSelectorTests
         return covered;
     }
 
+    /// <summary>
+    /// Every RAW selector part of every rule inside every <c>@media (prefers-reduced-motion:
+    /// reduce)</c> block in the package's stylesheets — before subject reduction. The guard for
+    /// "the block enumerates real selectors": a zero-subject package used to carry a degenerate
+    /// bare-<c>.</c> block that the subject-based coverage sweep could not see (it yields no
+    /// subjects), so coverage alone cannot reject it.
+    /// </summary>
+    private static IEnumerable<string> ReducedMotionSelectorParts(string packageDir)
+    {
+        foreach (var file in Directory.EnumerateFiles(packageDir, "*.css", SearchOption.AllDirectories)
+            .Where(file => !IsShippedOrVendorCss(file.Replace('\\', '/'))))
+        {
+            var text = ThemeCss.StripComments(File.ReadAllText(file));
+            var searchFrom = 0;
+            while (true)
+            {
+                var media = ReducedMotionMedia.Match(text, searchFrom);
+                if (!media.Success)
+                {
+                    break;
+                }
+
+                var open = text.IndexOf('{', media.Index);
+                open.Should().BeGreaterThanOrEqualTo(0, $"{file} must open the media block");
+                var depth = 1;
+                var i = open + 1;
+                for (; i < text.Length && depth > 0; i++)
+                {
+                    if (text[i] == '{') depth++;
+                    else if (text[i] == '}') depth--;
+                }
+                depth.Should().Be(0, $"{file} media block must be balanced");
+                var body = text[(open + 1)..(i - 1)];
+
+                foreach (Match rule in RuleBlock.Matches(body))
+                {
+                    foreach (var part in rule.Groups["selector"].Value.Split(','))
+                    {
+                        var normalised = ThemeCss.Normalise(part);
+                        if (normalised.Length > 0)
+                        {
+                            yield return normalised;
+                        }
+                    }
+                }
+
+                searchFrom = i;
+            }
+        }
+    }
+
     /// <summary>Split packages whose uncovered animated subjects are frozen in the baseline file.</summary>
-    public static TheoryData<string> SplitPackagesEnforced => new() { "Tempo.Blazor.DiagramEditor" };
+    public static TheoryData<string> SplitPackagesEnforced => new()
+    {
+        "Tempo.Blazor.DiagramEditor",
+        "Tempo.Blazor.DocumentEditor",
+        "Tempo.Blazor.EmailTemplates",
+        "Tempo.Blazor.NotionEditor",
+        "Tempo.Blazor.PdfViewer",
+        "Tempo.Blazor.Reporting",
+        "Tempo.Blazor.Spreadsheet",
+        "Tempo.Blazor.Wireframe",
+    };
 
     /// <summary>
     /// Frozen debt (2026-10-18): split packages with tm- motion and no full reduced-motion
     /// coverage. The list may only SHRINK — move a package to <see cref="SplitPackagesEnforced"/>
     /// when it gets its block, and seed its uncovered-subject entry in
     /// <see cref="UncoveredBaselineFile"/> with the then-current debt (which may only shrink).
+    /// Cleanup round (f3fa78d9): every package now carries its own explicit enumeration block,
+    /// so the frozen debt list is empty — it stays as the sentinel a new package must not join.
     /// </summary>
-    private static readonly string[] FrozenReducedMotionDebt =
-    [
-        "Tempo.Blazor.DocumentEditor", "Tempo.Blazor.EmailTemplates", "Tempo.Blazor.NotionEditor",
-        "Tempo.Blazor.PdfViewer", "Tempo.Blazor.Reporting", "Tempo.Blazor.Spreadsheet",
-        "Tempo.Blazor.Wireframe",
-    ];
+    private static readonly string[] FrozenReducedMotionDebt = [];
 
     /// <summary>
     /// Frozen uncovered-subject baseline, per package. Each entry is a subject the package's
@@ -300,6 +370,22 @@ public sealed class ReducedMotionSelectorTests
             .ToList();
         failing.Should().BeEquivalentTo(FrozenReducedMotionDebt,
             "a NEW package with uncovered motion must not appear, and a fixed package must leave the frozen list");
+    }
+
+    [Theory]
+    [MemberData(nameof(SplitPackagesEnforced))]
+    public void SplitPackage_ReducedMotionSelectors_AreValidClassOrAttributeSelectors(string package)
+    {
+        var dir = Path.Combine(ThemeCss.RepositoryRoot().FullName, "src", package);
+        var parts = ReducedMotionSelectorParts(dir).ToList();
+
+        parts.Should().NotBeEmpty($"{package} carries reduced-motion blocks — the sweep must see them");
+        parts.Should().OnlyContain(part => ValidReducedMotionSelector.IsMatch(part),
+            "every selector inside a package reduced-motion block must be a real class/attribute " +
+            "selector — a bare '.', a universal '*' or a bare-element selector reaches markup the " +
+            "library does not own (cleanup round f3-review: three PdfViewer files carried a " +
+            "degenerate bare-'.' block). Neplatné: {0}",
+            string.Join(", ", parts.Where(part => !ValidReducedMotionSelector.IsMatch(part))));
     }
 
     [Fact]

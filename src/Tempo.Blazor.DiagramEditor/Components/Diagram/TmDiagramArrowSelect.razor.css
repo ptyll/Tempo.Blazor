@@ -14,7 +14,3 @@
     border-color: var(--tm-color-primary) !important;
     box-shadow: 0 0 0 2px var(--tm-color-primary-subtle);
 }
-
-.tm-diagram-arrow-select__option:hover {
-    background: var(--tm-color-surface-hover) !important;
-}

@@ -319,3 +319,18 @@
     background: var(--tm-surface-elevated-dark, #111827);
     border-right-color: var(--tm-border-dark, #374151);
 }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every Tempo.Blazor.PdfViewer animated subject (mirrors the core block in
+   animations.css and the DiagramEditor package block, never a universal selector).
+   Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-pdf-thumbnail,
+  .tm-pdf-viewer__btn,
+  .tm-pdf-viewer__link {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
+}

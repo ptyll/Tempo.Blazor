@@ -15,6 +15,7 @@ internal static class TempoNativeRendererProvider
         "TmGantt",
         "TmWorkflowDesignerCanvas",
         "TmDiagramEditor",
+        "TmDashboard",
         "TmSpreadsheet",
         "TmDocumentEditor",
         "TmNotionEditor",

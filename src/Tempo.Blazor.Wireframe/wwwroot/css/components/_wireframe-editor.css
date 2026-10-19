@@ -1486,3 +1486,38 @@
   outline: 2px solid var(--tm-wd-border-focus);
   outline-offset: 1px;
 }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every Tempo.Blazor.Wireframe animated subject (mirrors the core block in
+   animations.css and the DiagramEditor package block, never a universal selector).
+   Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-wd-connector__path,
+  .tm-wd-editor__btn,
+  .tm-wd-editor__context-item,
+  .tm-wd-editor__dropdown-item,
+  .tm-wd-editor__page-tab,
+  .tm-wd-editor__page-tab-add,
+  .tm-wd-editor__page-tab-close,
+  .tm-wd-editor__page-tab-dup,
+  .tm-wd-editor__title,
+  .tm-wd-layers__item,
+  .tm-wd-minimap,
+  .tm-wd-props__input,
+  .tm-wd-props__section-header,
+  .tm-wd-props__section-header::before,
+  .tm-wd-props__select,
+  .tm-wd-props__toggle-track,
+  .tm-wd-props__toggle-track::after,
+  .tm-wd-toolbox__category-header,
+  .tm-wd-toolbox__category-header::before,
+  .tm-wd-toolbox__filter-btn,
+  .tm-wd-toolbox__item,
+  .tm-wd-toolbox__search-clear,
+  .tm-wd-toolbox__search-input {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
+}

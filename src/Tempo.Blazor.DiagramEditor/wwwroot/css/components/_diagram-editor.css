@@ -578,45 +578,6 @@
     padding: var(--tm-space-3, 12px);
 }
 
-.tm-diagram-editor__toolbox-category {
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: var(--tm-color-text-muted);
-    margin: var(--tm-space-3, 12px) 0 var(--tm-space-2, 8px);
-}
-
-.tm-diagram-editor__toolbox-item {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px);
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: grab;
-    user-select: none;
-    transition: background 120ms;
-}
-
-.tm-diagram-editor__toolbox-item:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-diagram-editor__toolbox-icon {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--tm-color-text-muted);
-}
-
-.tm-diagram-editor__toolbox-label {
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text);
-}
-
 /* ── Canvas wrap ──────────────────────────────────────────────────────────── */
 .tm-diagram-editor__canvas-wrap {
     position: relative;
@@ -1753,25 +1714,6 @@ circle.tm-diagram-port-hit {
     padding: var(--tm-space-3, 12px);
 }
 
-.tm-diagram-editor__props-title {
-    font-size: var(--tm-font-size-sm, 14px);
-    font-weight: 600;
-    color: var(--tm-color-text);
-    margin-bottom: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-editor__props-group {
-    margin-bottom: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-editor__props-label {
-    display: block;
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 500;
-    color: var(--tm-color-text-muted);
-    margin-bottom: 4px;
-}
-
 .tm-diagram-editor__props-input {
     width: 100%;
     padding: var(--tm-space-1) var(--tm-space-2);
@@ -1787,11 +1729,6 @@ circle.tm-diagram-port-hit {
     outline: none;
     border-color: var(--tm-color-primary);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 15%, transparent);
-}
-
-.tm-diagram-editor__props-textarea {
-    min-height: 80px;
-    resize: vertical;
 }
 
 /* ── Resize handles ──────────────────────────────────────────────────────── *
@@ -2083,16 +2020,16 @@ circle.tm-diagram-rotate-handle-hit {
     overflow: hidden;
 }
 
-/* TmDiagramLayersPanel styles live ONLY in the component's scoped stylesheet
-   (Components/Diagram/TmDiagramLayersPanel.razor.css) — phase 3 merged the legacy
-   global copy that used to sit here. The dead rules for markup that no longer
-   exists (__selected-section, __select, __actions, __action-btn, __icon-btn,
-   __label) were removed with it; TmDiagramLayersPanelTests.SingleStyleSource
-   pins the single source. The scoped file also owns the panel's reduced-motion
-   rule (P21: a component owns its own motion), so the package intentionally
-   carries TWO prefers-reduced-motion blocks — the shared enumeration at the end
-   of this file plus the layers-panel one; ReducedMotionSelectorTests counts
-   coverage from BOTH. */
+/* Historical note (phase 3): TmDiagramLayersPanel styles moved to the component's
+   scoped stylesheet (Components/Diagram/TmDiagramLayersPanel.razor.css) — the legacy
+   global copy that used to sit here was merged away, together with the dead rules for
+   markup that no longer existed (__selected-section, __select, __actions,
+   __action-btn, __icon-btn, __label). TmDiagramLayersPanelTests.SingleStyleSource
+   pins the single source. The scoped file also owns the panel's reduced-motion rule
+   (P21: a component owns its own motion); at the time of that phase the package
+   carried TWO prefers-reduced-motion blocks — the shared enumeration at the end of
+   this file plus the layers-panel one — and ReducedMotionSelectorTests counted
+   coverage from both. */
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramMinimap internal styles
    ════════════════════════════════════════════════════════════════════════════ */
@@ -2462,31 +2399,6 @@ circle.tm-diagram-rotate-handle-hit {
     gap: 4px;
 }
 
-.tm-diagram-properties__action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 6px;
-    font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted);
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    transition: background 120ms, color 120ms, border-color 120ms;
-}
-
-.tm-diagram-properties__action-btn:hover {
-    background: var(--tm-color-surface-hover);
-    border-color: var(--tm-border-color-strong);
-    color: var(--tm-color-text);
-}
-
-.tm-diagram-properties__action-btn .tm-icon {
-    color: currentColor;
-}
-
 /* ── Context menu ─────────────────────────────────────────────────────────── */
 .tm-diagram-editor__context-menu {
     background: var(--tm-color-surface-elevated);
@@ -2624,12 +2536,6 @@ circle.tm-diagram-rotate-handle-hit {
     pointer-events: none;
 }
 
-.tm-diagram-node__table-cell--context-target {
-    /* Marks the cell that a right-click / context menu will operate on. */
-    box-shadow: inset 0 0 0 2px var(--tm-color-warning);
-    position: relative;
-    z-index: 1;
-}
 /* Append to existing file */
 
 /* ── Rotate handle ─────────────────────────────────────────────────────── *
@@ -2916,10 +2822,6 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 /* ── Property Panel collapsible sections ───────────────────────────────── */
-.tm-diagram-properties__section--collapsible {
-    border-bottom: 1px solid var(--tm-color-border);
-}
-
 .tm-diagram-properties__section-header {
     display: flex;
     align-items: center;
@@ -2938,13 +2840,6 @@ line.tm-diagram-rotate-handle-stem {
     background: var(--tm-color-surface-hover);
 }
 
-.tm-diagram-properties__section-body {
-    padding: 0 12px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
 .tm-diagram-properties__slider {
     width: 100%;
     accent-color: var(--tm-color-primary);
@@ -2957,63 +2852,6 @@ line.tm-diagram-rotate-handle-stem {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.tm-diagram-properties__color {
-    width: 44px;
-    height: 28px;
-    padding: 2px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-surface);
-    cursor: pointer;
-}
-
-.tm-diagram-properties__toggles {
-    display: flex;
-    gap: 6px;
-}
-
-.tm-diagram-properties__toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--tm-input-height-sm);
-    height: var(--tm-input-height-sm);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    cursor: pointer;
-    transition: background 0.12s, border-color 0.12s;
-}
-
-.tm-diagram-properties__toggle-btn:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-diagram-properties__toggle-btn--active {
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
-}
-
-.tm-diagram-properties__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.tm-diagram-properties__align-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-}
-
-.tm-diagram-properties__mixed {
-    font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted);
-    font-style: italic;
 }
 
 .tm-diagram-properties__table-grid {
@@ -3060,11 +2898,11 @@ line.tm-diagram-rotate-handle-stem {
     line-height: 1.4;
 }
 
-/* Dark mode needs no component overrides: every colour above is a semantic token
-   (surface/border/primary-subtle/on-primary) that tokens-dark.css re-points. The
-   former [data-theme="dark"] / .tm-dark blocks for __color, __toggle-btn, the
-   template gallery/card and the table inserter were removed with the phase-3
-   tokenization — the semantic tokens already produce those values. */
+/* Historical note (phase-3 tokenization): the former [data-theme="dark"] /
+   .tm-dark blocks for __color, __toggle-btn, the template gallery/card and the
+   table inserter were removed back then — every colour above is a semantic token
+   (surface/border/primary-subtle/on-primary) that tokens-dark.css re-points, so
+   the values the old overrides hard-coded already come out of the tokens. */
 
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramTemplateGallery & TmDiagramTemplateCard
@@ -3701,21 +3539,6 @@ line.tm-diagram-rotate-handle-stem {
     min-inline-size: var(--tm-touch-target);
 }
 
-/* ── Panels sheet: the palette presents the phase-6 tile grid inside the sheet
-   body (4 tiles per row on a phone), so a tap inserts without the desktop list. ── */
-.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__sheet .tm-diagram-toolbox__category-body {
-    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
-    gap: var(--tm-space-2);
-}
-
-.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__sheet .tm-diagram-toolbox__item {
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--tm-space-1, 4px);
-    padding: var(--tm-space-2);
-    text-align: center;
-}
-
 /* ── Context menu sheet: the desktop menu items become full-height rows so the
    long-press menu is finger-sized. ─────────────────────────────────────────── */
 .tm-overlay-panel-sheet .tm-diagram-editor__context-item {
@@ -3752,7 +3575,6 @@ line.tm-diagram-rotate-handle-stem {
   .tm-diagram-editor__title,
   .tm-diagram-editor__toolbar-group .tm-dropdown-trigger,
   .tm-diagram-editor__toolbar-group .tm-toolbar-btn,
-  .tm-diagram-editor__toolbox-item,
   .tm-diagram-editor__zoom-overlay-btn,
   .tm-diagram-hover-connect,
   .tm-diagram-node__body,
@@ -3761,10 +3583,8 @@ line.tm-diagram-rotate-handle-stem {
   .tm-diagram-properties .tm-section,
   .tm-diagram-properties .tm-section-chevron,
   .tm-diagram-properties .tm-section-header,
-  .tm-diagram-properties__action-btn,
   .tm-diagram-properties__color-swatch,
   .tm-diagram-properties__segmented-btn,
-  .tm-diagram-properties__toggle-btn,
   .tm-diagram-replace-shape__item,
   .tm-diagram-routing-preview,
   .tm-diagram-search-match,
