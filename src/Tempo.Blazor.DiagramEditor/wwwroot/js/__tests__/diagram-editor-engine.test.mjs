@@ -1787,3 +1787,198 @@ test('focusFirstAction focuses the first mobile action bar tile', () => {
     assert.equal(engine.focusFirstAction({ querySelector: () => null }), false,
         'no bar — nothing to focus, no crash');
 });
+
+// ── exportViewportAsSvg: computed paints are inlined on the clone ─────────────
+//
+// The serialized SVG is standalone (no stylesheet): token-driven fills/colors would fall
+// back to black unless the engine copies the computed values from the live canvas onto the
+// matching clone elements. The fake DOM below pairs a live tree with an independently
+// cloned one; getComputedStyle answers what the live theme resolved (including a host
+// override of --tm-diagram-paper), and the assertions read what landed on the clone.
+
+function exportFixture(paint) {
+    const makeEl = (tag, className, attrs = {}) => ({
+        tagName: tag,
+        className,
+        attrs: { ...attrs },
+        style: {
+            props: {},
+            setProperty(k, v) { this.props[k] = v; },
+            getPropertyValue(k) { return this.props[k] || ''; },
+        },
+        getAttribute(n) { return n in this.attrs ? this.attrs[n] : null; },
+        setAttribute(n, v) { this.attrs[n] = v; },
+        remove() {},
+        children: [],
+        querySelectorAll(selector) {
+            const out = [];
+            const cls = selector.replace('.', '');
+            const walk = (el) => {
+                if ((el.className || '').split(' ').includes(cls)) out.push(el);
+                (el.children || []).forEach(walk);
+            };
+            walk(this);
+            return out;
+        },
+        querySelector(selector) {
+            return this.querySelectorAll(selector)[0] ?? null;
+        },
+        cloneNode() {
+            const copy = makeEl(this.tagName, this.className, this.attrs);
+            copy.children = this.children.map(c => c.cloneNode());
+            return copy;
+        },
+    });
+
+    const labelSpan = makeEl('span', 'tm-diagram-edge-label__text');
+    const label = makeEl('div', 'tm-diagram-edge-label', {});
+    label.children = [labelSpan];
+    const page = makeEl('rect', 'tm-diagram-page', { fill: 'white', stroke: '#d1d5db' });
+    const backdrop = makeEl('rect', 'tm-diagram-page-backdrop', { fill: '#f3f4f6' });
+    const svg = makeEl('svg', 'tm-diagram-canvas__svg');
+    svg.children = [page, backdrop, label];
+
+    const styles = new Map([
+        [page, { fill: paint.pageFill, stroke: paint.pageStroke }],
+        [backdrop, { fill: paint.backdropFill }],
+        [labelSpan, { color: paint.labelColor, 'background-color': paint.labelBackground }],
+        [svg, {
+            '--tm-diagram-node-ink': paint.nodeInk,
+            '--tm-diagram-paper': paint.paper,
+        }],
+    ]);
+
+    return {
+        svg,
+        getComputedStyle: (el) => ({
+            getPropertyValue: (prop) => styles.get(el)?.[prop] ?? '',
+        }),
+    };
+}
+
+test('exportViewportAsSvg inlines computed page/backdrop/label paints onto the clone', () => {
+    // A host overrode --tm-diagram-paper to sepia: the live computed values must travel.
+    const fx = exportFixture({
+        pageFill: 'rgb(245, 238, 218)',
+        pageStroke: 'rgb(120, 106, 74)',
+        backdropFill: 'rgb(228, 219, 195)',
+        labelColor: 'rgb(74, 63, 42)',
+        labelBackground: 'rgb(245, 238, 218)',
+        nodeInk: 'rgb(74, 63, 42)',
+        paper: 'rgb(245, 238, 218)',
+    });
+    let serialized = null;
+    const engine = loadEngine({
+        window: { getComputedStyle: fx.getComputedStyle },
+        extra: {
+            XMLSerializer: function () {
+                this.serializeToString = (node) => { serialized = node; return '<svg/>'; };
+            },
+        },
+    });
+    engine.instances.set('c1', { id: 'c1', svg: fx.svg });
+
+    const result = engine.exportViewportAsSvg({ id: 'c1' });
+
+    assert.equal(result, '<svg/>', 'the clone serializes');
+    const clonePage = serialized.querySelectorAll('.tm-diagram-page')[0];
+    const cloneBackdrop = serialized.querySelectorAll('.tm-diagram-page-backdrop')[0];
+    const cloneLabel = serialized.querySelectorAll('.tm-diagram-edge-label__text')[0];
+    assert.equal(clonePage.style.getPropertyValue('fill'), 'rgb(245, 238, 218)',
+        'the page fill on the clone is the computed value, not the literal attribute');
+    assert.equal(clonePage.style.getPropertyValue('stroke'), 'rgb(120, 106, 74)');
+    assert.equal(cloneBackdrop.style.getPropertyValue('fill'), 'rgb(228, 219, 195)');
+    assert.equal(cloneLabel.style.getPropertyValue('color'), 'rgb(74, 63, 42)');
+    assert.equal(cloneLabel.style.getPropertyValue('background-color'), 'rgb(245, 238, 218)');
+    // The markup literals survive as attributes — inline styles win in the exported file.
+    assert.equal(clonePage.getAttribute('fill'), 'white');
+});
+
+test('exportViewportAsSvg skips paint properties the live canvas does not compute', () => {
+    const fx = exportFixture({
+        pageFill: 'rgb(255, 255, 255)',
+        pageStroke: '', // e.g. a theme that dropped the page stroke
+        backdropFill: 'rgb(243, 244, 246)',
+        labelColor: 'rgb(75, 85, 99)',
+        labelBackground: 'rgb(255, 255, 255)',
+        nodeInk: 'rgb(75, 85, 99)',
+        paper: 'rgb(255, 255, 255)',
+    });
+    let serialized = null;
+    const engine = loadEngine({
+        window: { getComputedStyle: fx.getComputedStyle },
+        extra: {
+            XMLSerializer: function () {
+                this.serializeToString = (node) => { serialized = node; return '<svg/>'; };
+            },
+        },
+    });
+    engine.instances.set('c1', { id: 'c1', svg: fx.svg });
+
+    engine.exportViewportAsSvg({ id: 'c1' });
+
+    const clonePage = serialized.querySelectorAll('.tm-diagram-page')[0];
+    assert.equal(clonePage.style.getPropertyValue('stroke'), '',
+        'an uncomputed property must not be written (the presentation attribute stays authoritative)');
+});
+
+test('exportViewportAsSvg sets the computed ink/paper custom properties on the clone root', () => {
+    // Node bodies/table cells/labels inside the serialized tree resolve var(--tm-diagram-node-ink)
+    // and var(--tm-diagram-paper); the standalone export has no stylesheet, so the engine must
+    // copy the LIVE computed values (including a host override) onto the clone root svg style.
+    const fx = exportFixture({
+        pageFill: 'rgb(245, 238, 218)',
+        pageStroke: 'rgb(120, 106, 74)',
+        backdropFill: 'rgb(228, 219, 195)',
+        labelColor: 'rgb(74, 63, 42)',
+        labelBackground: 'rgb(245, 238, 218)',
+        nodeInk: 'rgb(74, 63, 42)',   // host rebrand of the canvas ink
+        paper: 'rgb(245, 238, 218)',  // host sepia paper
+    });
+    let serialized = null;
+    const engine = loadEngine({
+        window: { getComputedStyle: fx.getComputedStyle },
+        extra: {
+            XMLSerializer: function () {
+                this.serializeToString = (node) => { serialized = node; return '<svg/>'; };
+            },
+        },
+    });
+    engine.instances.set('c1', { id: 'c1', svg: fx.svg });
+
+    engine.exportViewportAsSvg({ id: 'c1' });
+
+    assert.equal(serialized.style.getPropertyValue('--tm-diagram-node-ink'), 'rgb(74, 63, 42)',
+        'the clone root carries the computed ink so every var() in the tree resolves');
+    assert.equal(serialized.style.getPropertyValue('--tm-diagram-paper'), 'rgb(245, 238, 218)');
+});
+
+test('exportViewportAsSvg leaves the clone root custom properties unset when the canvas computes none', () => {
+    // A host/theme that never declares the tokens: nothing may be written (an empty inline
+    // custom property would shadow the presentation attributes with an invalid value).
+    const fx = exportFixture({
+        pageFill: 'rgb(255, 255, 255)',
+        pageStroke: 'rgb(209, 213, 219)',
+        backdropFill: 'rgb(243, 244, 246)',
+        labelColor: 'rgb(75, 85, 99)',
+        labelBackground: 'rgb(255, 255, 255)',
+        nodeInk: '',
+        paper: '',
+    });
+    let serialized = null;
+    const engine = loadEngine({
+        window: { getComputedStyle: fx.getComputedStyle },
+        extra: {
+            XMLSerializer: function () {
+                this.serializeToString = (node) => { serialized = node; return '<svg/>'; };
+            },
+        },
+    });
+    engine.instances.set('c1', { id: 'c1', svg: fx.svg });
+
+    engine.exportViewportAsSvg({ id: 'c1' });
+
+    assert.equal(serialized.style.getPropertyValue('--tm-diagram-node-ink'), '',
+        'an uncomputed custom property must not be written on the clone root');
+    assert.equal(serialized.style.getPropertyValue('--tm-diagram-paper'), '');
+});

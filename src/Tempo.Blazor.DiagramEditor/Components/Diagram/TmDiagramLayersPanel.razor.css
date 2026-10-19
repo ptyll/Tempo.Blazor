@@ -20,7 +20,7 @@
 }
 
 .tm-diagram-layers[data-collapsed="True"] {
-    width: 32px;
+    width: var(--tm-space-8);
     overflow: hidden;
 }
 
@@ -29,8 +29,8 @@
     left: 0;
     top: 50%;
     transform: translateY(-50%);
-    width: 20px;
-    height: 40px;
+    width: var(--tm-space-5);
+    height: var(--tm-space-10);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -188,8 +188,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: var(--tm-space-5);
+    height: var(--tm-space-5);
     padding: 0;
     background: transparent;
     border: none;
@@ -325,5 +325,14 @@
     .tm-diagram-layers__add-btn {
         width: var(--tm-touch-target);
         height: var(--tm-touch-target);
+    }
+}
+
+/* Reduced motion: the collapse/expand width transition stops under reduce. The rule lives here
+   (not in the package global sheet) because P21 ownership freezes every .tm-diagram-layers* rule
+   to this single source; ReducedMotionSelectorTests scans scoped stylesheets too. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-diagram-layers {
+        transition-duration: 0.01ms !important;
     }
 }

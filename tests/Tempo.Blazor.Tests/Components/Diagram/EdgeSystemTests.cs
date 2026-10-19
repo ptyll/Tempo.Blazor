@@ -22,6 +22,31 @@ public class EdgeSystemTests : LocalizationTestBase
     }
 
     [Fact]
+    public void EdgeLabel_TextIsWrappedInPaperPill()
+    {
+        var doc = new DiagramDocument();
+        var n1 = new DiagramNode { StencilId = "general.rectangle", X = 0, Y = 0, W = 100, H = 50 };
+        var n2 = new DiagramNode { StencilId = "general.rectangle", X = 200, Y = 0, W = 100, H = 50 };
+        doc.Nodes.Add(n1);
+        doc.Nodes.Add(n2);
+
+        var edge = new DiagramEdge
+        {
+            SourceNodeId = n1.Id,
+            TargetNodeId = n2.Id,
+            Label = "Test"
+        };
+        doc.Edges.Add(edge);
+
+        var cut = Render<TmDiagramCanvas>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.ReadOnly, false));
+
+        cut.Find(".tm-diagram-edge-label .tm-diagram-edge-label__text").TextContent.Trim()
+            .Should().Be("Test");
+    }
+
+    [Fact]
     public void ComputeEdgePath_WithRounded_ContainsQuadraticBezier()
     {
         var doc = new DiagramDocument();

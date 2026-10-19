@@ -16,6 +16,9 @@
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-lg, 8px);
     overflow: hidden;
+    /* The 11px meta text (page-tab close, template category/tags). One package token so the
+       chip scale rebrand moves together. */
+    --tm-diagram-chip-font: 0.6875rem;
 }
 
 /* Mockup: page tabs read as flat labels on the workspace strip; the ACTIVE page is
@@ -35,7 +38,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px;
+    padding: var(--tm-space-2) var(--tm-space-3);
     font-size: var(--tm-font-size-sm, 14px);
     color: var(--tm-color-text-muted);
     background: transparent;
@@ -83,10 +86,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
     padding: 0;
-    font-size: 11px;
+    font-size: var(--tm-diagram-chip-font);
     line-height: 1;
     color: var(--tm-color-text-muted);
     background: transparent;
@@ -103,8 +106,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
     padding: 0;
     line-height: 1;
     color: var(--tm-color-text-muted);
@@ -240,7 +243,7 @@
 
 .tm-diagram-editor__toolbar .tm-toolbar {
     gap: var(--tm-space-1, 4px);
-    min-height: 44px;
+    min-height: var(--tm-touch-target);
     background: transparent;
 }
 
@@ -263,7 +266,7 @@
     display: flex;
     align-items: center;
     gap: var(--tm-space-2, 8px);
-    min-height: 48px;
+    min-height: var(--tm-space-12);
     padding: var(--tm-space-1, 4px) var(--tm-space-3, 12px);
     background: var(--tm-bg-workspace);
     border-bottom: 1px solid var(--tm-color-border);
@@ -300,7 +303,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--tm-space-1, 4px);
-    height: 36px;
+    height: var(--tm-space-9);
     padding: 0 var(--tm-space-2, 8px);
     border: none;
     border-radius: var(--tm-radius-control);
@@ -345,8 +348,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 36px;
+    width: var(--tm-space-8);
+    height: var(--tm-space-9);
     border: none;
     border-radius: var(--tm-radius-control);
     background: transparent;
@@ -368,7 +371,7 @@
 .tm-diagram-editor__view-menu-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 90;
+    z-index: calc(var(--tm-z-popover) - 1);
     background: transparent;
     border: none;
 }
@@ -377,11 +380,11 @@
     position: absolute;
     top: calc(100% + var(--tm-space-1, 4px));
     inset-inline-end: 0;
-    z-index: 100;
+    z-index: var(--tm-z-popover);
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-2, 8px);
-    min-width: 260px;
+    min-width: 16.25rem;
     padding: var(--tm-space-2, 8px);
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
@@ -411,12 +414,12 @@
     border-radius: var(--tm-radius-control);
     overflow: visible;
     flex-shrink: 0;
-    min-height: 40px;
+    min-height: var(--tm-space-10);
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn {
-    height: 40px;
-    min-width: 36px;
+    height: var(--tm-space-10);
+    min-width: var(--tm-space-9);
     padding: 0 var(--tm-space-2, 8px);
     border-radius: var(--tm-radius-control);
     border-right: none;
@@ -432,16 +435,6 @@
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn:hover:not(:disabled) {
     background: var(--tm-color-surface-hover);
     color: var(--tm-color-text);
-}
-
-.tm-diagram-editor__toolbar-group .tm-toolbar-btn--active {
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
-}
-
-.tm-diagram-editor__toolbar-group .tm-toolbar-btn--active:hover:not(:disabled) {
-    background: var(--tm-color-primary-subtle);
-    color: var(--tm-color-primary);
 }
 
 /* Toolbar dropdown inside group */
@@ -478,7 +471,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    height: 40px;
+    height: var(--tm-space-10);
     padding: 0 var(--tm-space-2, 8px);
     border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-sm, 13px);
@@ -498,10 +491,13 @@
 
 /* ── Status bar (phase 4): zoom controls + read-only toggle ─────────────── */
 .tm-diagram-editor__statusbar {
+    /* The zoom / read-only buttons sit at 30px — the same band the swimlane header uses —
+       so a host rebrand of the compact chrome target moves both together. */
+    --tm-diagram-statusbar-btn: 1.875rem;
     display: flex;
     align-items: center;
     gap: var(--tm-space-2, 8px);
-    min-height: 36px;
+    min-height: var(--tm-space-9);
     padding: 0 var(--tm-space-3, 12px);
     background: var(--tm-bg-workspace);
     border-top: 1px solid var(--tm-color-border);
@@ -513,20 +509,12 @@
 }
 
 .tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group {
-    min-height: 36px;
+    min-height: var(--tm-space-9);
 }
 
 .tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group .tm-toolbar-btn {
-    height: 30px;
-    min-width: 30px;
-}
-
-/* ── Body (toolbox + canvas + props) ─────────────────────────────────────── */
-.tm-diagram-editor__body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+    height: var(--tm-diagram-statusbar-btn);
+    min-width: var(--tm-diagram-statusbar-btn);
 }
 
 /* ── Toolbox ──────────────────────────────────────────────────────────────── */
@@ -553,20 +541,20 @@
 }
 
 .tm-diagram-editor__unit-select {
-    height: 32px;
+    height: var(--tm-input-height-sm);
     padding: 0 var(--tm-space-2, 8px);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-control);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     cursor: pointer;
 }
 
 /* Canvas-size editor (W × H): presentational values moved here from inline styles. */
 .tm-diagram-editor__canvas-size-input {
-    width: 60px;
-    padding: 4px 8px;
+    width: 3.75rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
     font-size: var(--tm-font-size-sm, 14px);
     color: var(--tm-color-text);
     background: var(--tm-color-surface);
@@ -575,7 +563,7 @@
 }
 
 .tm-diagram-editor__canvas-size-sep {
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     color: var(--tm-color-text-muted);
     user-select: none;
 }
@@ -641,8 +629,8 @@
 
 /* Rulers take a fixed 24px band on the top/left (moved here from an inline style). */
 .tm-diagram-editor__canvas-wrap--rulers {
-    padding-top: 24px;
-    padding-left: 24px;
+    padding-top: var(--tm-space-6);
+    padding-left: var(--tm-space-6);
 }
 
 .tm-diagram-editor__canvas {
@@ -794,18 +782,8 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    /* Node bodies paint on the DOCUMENT's data-driven fill (default white in both themes),
-       so the default ink must stay dark in both themes. No text token is theme-invariant:
-       every --tm-text-* token (and every gray token) flips between light and dark, so none of
-       them can serve as the node ink directly. --tm-diagram-node-ink is the named override
-       point — a host theme can redefine it for its brand without touching this rule. The value
-       is temporarily --tm-color-secondary-hover because a hex literal here would be flagged as
-       color-literal drift by scripts/audit-css-strict.mjs (the baseline may only shrink) and
-       the token core must not change in this phase. NOTE: never write the comment-end delimiter
-       sequence inside this comment (e.g. between token names) — an early close silently drops
-       the ink declarations below, the labels inherit the shell's theme-flipping text color and
-       turn unreadable in dark. */
-    --tm-diagram-node-ink: var(--tm-color-secondary-hover);
+    /* Node bodies paint on the page paper, which is theme-invariant; so is the ink
+       (--tm-diagram-node-ink, declared on .tm-diagram-canvas). Hosts override that token. */
     color: var(--tm-diagram-node-ink);
     user-select: none;
     pointer-events: auto;
@@ -946,8 +924,8 @@ rect.tm-diagram-selection-outline {
     position: absolute;
     top: 4px;
     right: 4px;
-    width: 16px;
-    height: 16px;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
     color: var(--tm-color-primary);
     background: var(--tm-color-surface);
     border-radius: var(--tm-radius-sm, 4px);
@@ -1057,7 +1035,7 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__swimlane--horizontal .tm-diagram-node__swimlane-header {
-    width: 30px;
+    width: var(--tm-diagram-swimlane-header);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1091,7 +1069,7 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__swimlane--vertical .tm-diagram-node__swimlane-header {
-    height: 30px;
+    height: var(--tm-diagram-swimlane-header);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1123,7 +1101,7 @@ rect.tm-diagram-selection-outline {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     /* Table cells are labels painted on the node's data-driven (white) fill, so they use the
        node ink — --tm-color-text flips light in dark and would vanish on the white fill. */
     color: var(--tm-diagram-node-ink);
@@ -1135,7 +1113,7 @@ rect.tm-diagram-selection-outline {
     height: 100%;
     min-height: unset;
     padding: 2px;
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-diagram-node__shape[data-shape="table"] {
@@ -1216,7 +1194,7 @@ rect.tm-diagram-selection-outline {
     align-items: center;
     justify-content: center;
     padding: 0;
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
     font-weight: 700;
     color: var(--tm-color-text);
@@ -1346,14 +1324,15 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
  * engine.touchPortAt). On a fine pointer they stay inert (pointer-events: none — no dead zone,
  * no shadow over the mid-edge resize handles a mouse still uses); the mouse keeps the small
  * visible ports and the hit-stack corridor lookup (J6) is untouched because elementsFromPoint
- * skips inert elements. Sized by --tm-diagram-handle-hit (24px, 44px on coarse); the variable
+ * skips inert elements. Sized by --tm-diagram-handle-hit (`--tm-space-6` by default, the core
+ * `--tm-touch-target` on a coarse pointer); the variable
  * is redeclared on this group (a SIBLING of the handles groups, not a child). */
 .tm-diagram-port-hits {
-    --tm-diagram-handle-hit: 24px;
+    --tm-diagram-handle-hit: var(--tm-space-6);
 }
 
 circle.tm-diagram-port-hit {
-    r: calc(var(--tm-diagram-handle-hit, 24px) / 2);
+    r: calc(var(--tm-diagram-handle-hit, var(--tm-space-6)) / 2);
     fill: transparent;
     stroke: none;
     pointer-events: none;
@@ -1362,7 +1341,7 @@ circle.tm-diagram-port-hit {
 
 @media (pointer: coarse) {
     .tm-diagram-port-hits {
-        --tm-diagram-handle-hit: 44px;
+        --tm-diagram-handle-hit: var(--tm-touch-target);
     }
 
     circle.tm-diagram-port-hit {
@@ -1453,9 +1432,13 @@ circle.tm-diagram-port-hit {
 }
 
 .tm-diagram-edge-cardinality {
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     font-family: var(--tm-font-sans, sans-serif);
-    fill: var(--tm-color-text);
+    fill: var(--tm-diagram-node-ink);
+    paint-order: stroke;
+    stroke: var(--tm-diagram-paper);
+    stroke-width: 3px;
+    stroke-linejoin: round;
     pointer-events: none;
     user-select: none;
 }
@@ -1519,7 +1502,7 @@ circle.tm-diagram-port-hit {
     border-radius: 4px;
     background: transparent;
     color: var(--tm-color-text);
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -1629,18 +1612,27 @@ circle.tm-diagram-port-hit {
 }
 
 .tm-diagram-edge-label {
-    font-size: 12px;
-    fill: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-diagram-node-ink);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     pointer-events: none;
     user-select: none;
 }
 
+/* A paper-coloured pill so the edge stroke never runs through the text; paper and ink
+   are theme-invariant (the page is white in every theme). */
+.tm-diagram-edge-label__text {
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-diagram-paper);
+    line-height: 1.25;
+}
+
 .tm-diagram-edge-label-input {
     width: 100%;
     height: 100%;
-    font-size: 12px;
-    padding: 2px 6px;
+    font-size: var(--tm-font-size-xs);
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
     border: 1px solid var(--tm-color-primary);
     border-radius: 4px;
     background: var(--tm-color-surface-elevated);
@@ -1741,7 +1733,7 @@ circle.tm-diagram-port-hit {
 
 .tm-diagram-editor__minimap-body {
     padding: 0 var(--tm-space-3, 12px) var(--tm-space-3, 12px);
-    max-height: 200px;
+    max-height: 12.5rem;
     overflow: hidden;
 }
 
@@ -1782,7 +1774,7 @@ circle.tm-diagram-port-hit {
 
 .tm-diagram-editor__props-input {
     width: 100%;
-    padding: 4px 8px;
+    padding: var(--tm-space-1) var(--tm-space-2);
     font-size: var(--tm-font-size-sm, 14px);
     color: var(--tm-color-text);
     background: var(--tm-color-surface);
@@ -1819,11 +1811,11 @@ rect.tm-diagram-resize-handle {
 
 /* Phase 6 (tablet and touch): each visible handle square is covered by a larger INVISIBLE
  * hit rect centred on the same point, and the whole gesture (pointer/pen/mouse) starts on
- * that hit rect. The size is a variable in SVG user units: 24 by default, 44 on a coarse
- * pointer (WCAG 2.5.8 target size). It scales with canvas zoom by nature of the user units —
- * at zoom 1 it is the on-screen pixel size. */
+ * that hit rect. The size is a variable in SVG user units: `--tm-space-6` by default, the core
+ * `--tm-touch-target` on a coarse pointer (WCAG 2.5.8 target size). It scales with canvas zoom
+ * by nature of the user units — at zoom 1 it is the on-screen pixel size. */
 .tm-diagram-node-handles {
-    --tm-diagram-handle-hit: 24px;
+    --tm-diagram-handle-hit: var(--tm-space-6);
 }
 
 rect.tm-diagram-resize-handle-hit,
@@ -1843,7 +1835,7 @@ circle.tm-diagram-rotate-handle-hit {
 
 @media (pointer: coarse) {
     .tm-diagram-node-handles {
-        --tm-diagram-handle-hit: 44px;
+        --tm-diagram-handle-hit: var(--tm-touch-target);
     }
 }
 
@@ -1924,7 +1916,7 @@ circle.tm-diagram-rotate-handle-hit {
 }
 
 .tm-diagram-toolbox__library-header {
-    min-height: 24px;
+    min-height: var(--tm-space-6);
     display: flex;
     align-items: center;
     padding: 0 var(--tm-space-2, 8px);
@@ -2016,8 +2008,8 @@ circle.tm-diagram-rotate-handle-hit {
 }
 
 .tm-diagram-toolbox__preview {
-    width: 32px;
-    height: 32px;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -2026,8 +2018,8 @@ circle.tm-diagram-rotate-handle-hit {
 }
 
 .tm-diagram-toolbox__preview svg {
-    width: 32px;
-    height: 32px;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
     display: block;
 }
 
@@ -2045,7 +2037,7 @@ circle.tm-diagram-rotate-handle-hit {
    (the phase-6 container convention), so a narrow editor inside a wide window keeps the
    desktop presentation and the mode branch never duplicates a breakpoint literal. */
 .tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__toolbox-wrap {
-    max-height: 280px;
+    max-height: 17.5rem;
     overflow-y: auto;
 }
 
@@ -2071,7 +2063,7 @@ circle.tm-diagram-rotate-handle-hit {
 
 .tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__category-body {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
     gap: var(--tm-space-1, 4px);
     padding-left: 0;
 }
@@ -2096,7 +2088,11 @@ circle.tm-diagram-rotate-handle-hit {
    global copy that used to sit here. The dead rules for markup that no longer
    exists (__selected-section, __select, __actions, __action-btn, __icon-btn,
    __label) were removed with it; TmDiagramLayersPanelTests.SingleStyleSource
-   pins the single source. */
+   pins the single source. The scoped file also owns the panel's reduced-motion
+   rule (P21: a component owns its own motion), so the package intentionally
+   carries TWO prefers-reduced-motion blocks — the shared enumeration at the end
+   of this file plus the layers-panel one; ReducedMotionSelectorTests counts
+   coverage from BOTH. */
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramMinimap internal styles
    ════════════════════════════════════════════════════════════════════════════ */
@@ -2229,7 +2225,8 @@ circle.tm-diagram-rotate-handle-hit {
     margin-bottom: var(--tm-space-3, 12px);
 }
 
-.tm-diagram-properties__field label {
+.tm-diagram-properties__field label,
+.tm-diagram-properties__label {
     display: block;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 500;
@@ -2263,6 +2260,12 @@ circle.tm-diagram-rotate-handle-hit {
 .tm-diagram-properties__row {
     display: flex;
     gap: var(--tm-space-2, 8px);
+}
+
+/* Page W×H row only: puts the breathing gap above the Scale field without giving
+   every properties row a double bottom gap (the fields already space themselves). */
+.tm-diagram-properties__row--page-size {
+    margin-bottom: var(--tm-space-3);
 }
 
 .tm-diagram-properties__row > .tm-diagram-properties__field {
@@ -2393,7 +2396,7 @@ circle.tm-diagram-rotate-handle-hit {
     border-radius: var(--tm-radius-sm, 4px);
     cursor: pointer;
     transition: background 120ms, color 120ms;
-    min-width: 32px;
+    min-width: var(--tm-space-8);
 }
 
 .tm-diagram-properties__segmented-btn:hover {
@@ -2411,6 +2414,33 @@ circle.tm-diagram-rotate-handle-hit {
 .tm-diagram-properties__segmented-btn--active:hover {
     background: var(--tm-color-surface);
     color: var(--tm-color-primary);
+}
+
+/* Labelled variant (page orientation): text + icon buttons split the width. The base
+   segmented classes stay untouched so the B/I/U font segments render exactly as before. */
+.tm-diagram-properties__segmented--labelled {
+    display: flex;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+}
+.tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn {
+    flex: 1 1 0;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+}
+/* Visible track + filled active segment: the control reads as one labelled switch. */
+.tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn--active {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    box-shadow: none;
+}
+.tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-properties__segmented-btn { min-height: var(--tm-touch-target); }
 }
 
 /* ── Action Grid (Align, Distribute, Layout) ──────────────────────────────── */
@@ -2560,7 +2590,9 @@ circle.tm-diagram-rotate-handle-hit {
     border: 2px solid var(--tm-color-primary);
     background: color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
     pointer-events: none;
-    z-index: 999;
+    /* Fixed-position finger feedback: it paints above the editor chrome while the menu
+       it announces opens — the popover band, never an ad-hoc literal. */
+    z-index: var(--tm-z-popover);
     transform: scale(0.4);
     opacity: 0.9;
     animation: tm-diagram-press-ring 450ms ease-out forwards;
@@ -2570,14 +2602,6 @@ circle.tm-diagram-rotate-handle-hit {
     to {
         transform: scale(1);
         opacity: 0.35;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .tm-diagram-press-ring {
-        animation: none;
-        transform: scale(1);
-        opacity: 0.5;
     }
 }
 
@@ -2645,7 +2669,7 @@ line.tm-diagram-rotate-handle-stem {
        handles and port-hits groups, not a child) together with the handle-hit
        variable the coarse-pointer offset is computed from. */
     --tm-diagram-connect-hit: 22px;
-    --tm-diagram-handle-hit: 24px;
+    --tm-diagram-handle-hit: var(--tm-space-6);
 }
 
 .tm-diagram-connect-arrow-wrap {
@@ -2686,7 +2710,7 @@ line.tm-diagram-rotate-handle-stem {
     color: var(--tm-color-on-primary);
 }
 .tm-diagram-connect-arrow__icon {
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
     color: var(--tm-color-primary);
     pointer-events: none;
@@ -2701,8 +2725,8 @@ line.tm-diagram-rotate-handle-stem {
  * rotate handle's 44px hit circle parked directly above the top edge. */
 @media (pointer: coarse) {
     .tm-diagram-connect-arrows {
-        --tm-diagram-connect-hit: 44px;
-        --tm-diagram-handle-hit: 44px;
+        --tm-diagram-connect-hit: var(--tm-touch-target);
+        --tm-diagram-handle-hit: var(--tm-touch-target);
         --tm-diagram-connect-offset: calc(var(--tm-diagram-handle-hit) / 2 + var(--tm-space-1));
     }
 
@@ -2951,8 +2975,8 @@ line.tm-diagram-rotate-handle-stem {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: var(--tm-input-height-sm);
+    height: var(--tm-input-height-sm);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     background: var(--tm-color-surface);
@@ -3173,7 +3197,7 @@ line.tm-diagram-rotate-handle-stem {
 
 .tm-diagram-template-card__info {
     min-width: 0;
-    padding: 10px 12px 12px;
+    padding: var(--tm-space-2-5) var(--tm-space-3) var(--tm-space-3);
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -3189,12 +3213,6 @@ line.tm-diagram-rotate-handle-stem {
     overflow-wrap: anywhere;
 }
 
-.tm-diagram-template-card__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
 /* Mockup: the card paints its category and tags on AT MOST two lines — the meta row
    clamps, so a tag-heavy template never stretches the card. */
 .tm-diagram-template-card__meta {
@@ -3202,23 +3220,23 @@ line.tm-diagram-rotate-handle-stem {
     flex-wrap: wrap;
     gap: var(--tm-space-1);
     overflow: hidden;
-    max-height: calc(2 * (var(--tm-font-size-xs, 12px) * 1.4 + 2 * var(--tm-space-1)));
+    max-height: calc(2 * (var(--tm-diagram-chip-font) * 1.4 + 2 * var(--tm-space-1)));
 }
 
 .tm-diagram-template-card__category {
-    font-size: 11px;
+    font-size: var(--tm-diagram-chip-font);
     font-weight: 600;
     color: var(--tm-color-primary);
     background: var(--tm-color-primary-subtle);
-    padding: 2px 6px;
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
     border-radius: var(--tm-radius-sm, 4px);
 }
 
 .tm-diagram-template-card__tag {
-    font-size: 11px;
+    font-size: var(--tm-diagram-chip-font);
     color: var(--tm-color-text-muted);
     background: var(--tm-color-surface-elevated);
-    padding: 2px 6px;
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
     border-radius: var(--tm-radius-sm, 4px);
 }
 
@@ -3232,7 +3250,7 @@ line.tm-diagram-rotate-handle-stem {
    opens and pinned through the inline left/top — the class only paints it. */
 .tm-diagram-table-inserter-popover {
     position: fixed;
-    z-index: 1000;
+    z-index: var(--tm-z-popover);
     background: var(--tm-color-surface-elevated);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 8px);
@@ -3262,8 +3280,8 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 .tm-diagram-table-inserter__cell {
-    width: 16px;
-    height: 16px;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
     padding: 0;
     border: 1px solid var(--tm-color-border);
     border-radius: 2px;
@@ -3279,7 +3297,7 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 .tm-diagram-table-inserter__dims {
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     color: var(--tm-color-text-muted);
     min-height: 18px;
 }
@@ -3309,7 +3327,22 @@ line.tm-diagram-rotate-handle-stem {
    never natively scrolls). */
 .tm-diagram-canvas {
     touch-action: none;
+    /* Paper + ink for everything painted ON the page (node bodies, edge labels,
+       cardinalities). Declared here, not on the node body, so edge labels resolve it. */
+    --tm-diagram-paper: var(--tm-paper);
+    --tm-diagram-node-ink: var(--tm-paper-ink-muted);
+    /* Swimlane header band. Matches DiagramNodeSwimlaneData.HeaderSize = 30 — the data model
+       hit-testing and drop math both measure 30px, so the painted header must not drift
+       (the old --tm-input-height-xs resolves to 28px and clipped the drop detection). */
+    --tm-diagram-swimlane-header: 1.875rem;
 }
+
+/* The page rects keep literal fill/stroke ATTRIBUTES as a fallback for viewers without
+   the stylesheet; CSS beats presentation attributes on screen, so the tokens (and any host
+   override) win in the editor. exportViewportAsSvg additionally copies the computed values
+   onto the serialized clone, so an export always carries the paints the user actually saw. */
+.tm-diagram-page-backdrop { fill: var(--tm-paper-backdrop); }
+.tm-diagram-page { fill: var(--tm-diagram-paper); stroke: var(--tm-paper-border); }
 
 /* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */
 
@@ -3458,7 +3491,7 @@ line.tm-diagram-rotate-handle-stem {
 
 .tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-toolbox__category-body {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
     gap: var(--tm-space-2);
 }
 
@@ -3560,7 +3593,7 @@ line.tm-diagram-rotate-handle-stem {
     flex: 1 1 auto;
     min-width: 0;
     max-width: none;
-    padding: 4px 6px;
+    padding: var(--tm-space-1) var(--tm-space-1-5);
     font-size: var(--tm-font-size-xs, 12px);
 }
 
@@ -3645,7 +3678,7 @@ line.tm-diagram-rotate-handle-stem {
     align-items: center;
     justify-content: center;
     padding: 0 var(--tm-space-1, 4px);
-    min-height: 24px;
+    min-height: var(--tm-space-6);
     font-size: var(--tm-font-size-xs, 12px);
     color: var(--tm-color-text-secondary);
     border-block: 1px solid var(--tm-color-border);
@@ -3668,7 +3701,7 @@ line.tm-diagram-rotate-handle-stem {
 /* ── Panels sheet: the palette presents the phase-6 tile grid inside the sheet
    body (4 tiles per row on a phone), so a tap inserts without the desktop list. ── */
 .tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__sheet .tm-diagram-toolbox__category-body {
-    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
     gap: var(--tm-space-2);
 }
 
@@ -3684,5 +3717,78 @@ line.tm-diagram-rotate-handle-stem {
    long-press menu is finger-sized. ─────────────────────────────────────────── */
 .tm-overlay-panel-sheet .tm-diagram-editor__context-item {
     min-height: var(--tm-touch-target);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every DiagramEditor-owned animated subject (mirrors the
+   core block in animations.css, never a universal selector). Guarded by
+   ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (uncovered subjects are frozen in tests/Theme/ReducedMotionUncoveredBaseline.json).
+   The layers panel owns its reduced-motion rule in its scoped stylesheet — the
+   second, intentional prefers-reduced-motion block; see the note near the minimap
+   section. The search-match outline stays visible (declared statically); only the
+   pulse stops. */
+@media (prefers-reduced-motion: reduce) {
+  .tm-diagram-connect-arrow,
+  .tm-diagram-connect-modal__item,
+  .tm-diagram-connect-modal__search-all,
+  .tm-diagram-connect-modal__show-all,
+  .tm-diagram-connection-point,
+  .tm-diagram-edge-floating-marker,
+  .tm-diagram-edge-path,
+  .tm-diagram-edge-segment-handle,
+  .tm-diagram-edge-toolbar button,
+  .tm-diagram-edge-virtual-bend,
+  .tm-diagram-editor__minimap-overlay-collapse,
+  .tm-diagram-editor__more-btn,
+  .tm-diagram-editor__page-tab,
+  .tm-diagram-editor__page-tab-add,
+  .tm-diagram-editor__page-tab-close,
+  .tm-diagram-editor__page-tab-duplicate,
+  .tm-diagram-editor__panel-toggle,
+  .tm-diagram-editor__title,
+  .tm-diagram-editor__toolbar-group .tm-dropdown-trigger,
+  .tm-diagram-editor__toolbar-group .tm-toolbar-btn,
+  .tm-diagram-editor__toolbox-item,
+  .tm-diagram-editor__zoom-overlay-btn,
+  .tm-diagram-hover-connect,
+  .tm-diagram-node__body,
+  .tm-diagram-node__collapse-btn,
+  .tm-diagram-port,
+  .tm-diagram-properties .tm-section,
+  .tm-diagram-properties .tm-section-chevron,
+  .tm-diagram-properties .tm-section-header,
+  .tm-diagram-properties__action-btn,
+  .tm-diagram-properties__color-swatch,
+  .tm-diagram-properties__segmented-btn,
+  .tm-diagram-properties__toggle-btn,
+  .tm-diagram-replace-shape__item,
+  .tm-diagram-routing-preview,
+  .tm-diagram-search-match,
+  .tm-diagram-search-panel__close,
+  .tm-diagram-search-panel__nav,
+  .tm-diagram-table-inserter__cell,
+  .tm-diagram-template-card,
+  .tm-diagram-template-gallery__filter,
+  .tm-diagram-toolbox__item {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Hover motion that is not a duration problem: no lift/scale at all. */
+  .tm-diagram-template-card:hover,
+  .tm-diagram-connect-arrow:hover,
+  .tm-diagram-hover-connect:hover,
+  .tm-diagram-properties__color-swatch:hover {
+    transform: none;
+  }
+
+  /* Press-ring feedback: no growth animation, show the settled ring. */
+  .tm-diagram-press-ring {
+    animation: none;
+    transform: scale(1);
+    opacity: 0.5;
+  }
 }
 

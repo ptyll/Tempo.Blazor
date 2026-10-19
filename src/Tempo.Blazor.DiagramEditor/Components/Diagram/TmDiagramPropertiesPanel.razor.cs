@@ -53,6 +53,7 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
 
     private bool _collapsed;
     private readonly HashSet<string> _expandedSections = new() { "style", "text", "arrange", "page", "edgeStyle", "actions" };
+    private readonly string _idPrefix = $"tm-dp-{Guid.NewGuid():N}";
 
     private bool IsSingleNode => SelectedNodes.Count == 1 && SelectedEdges.Count == 0;
     private bool IsSingleEdge => SelectedNodes.Count == 0 && SelectedEdges.Count == 1;

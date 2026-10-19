@@ -6,15 +6,56 @@ using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.Diagram.Stencils;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Diagram;
 
 public class TmDiagramCanvasTests : LocalizationTestBase
 {
+    private const string DiagramEditorCssPath =
+        "src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css";
+
     public TmDiagramCanvasTests()
     {
         var registry = Services.GetRequiredService<DiagramStencilRegistry>();
         registry.RegisterProvider(new BuiltInDiagramStencilProvider());
+    }
+
+    [Fact]
+    public void PageRects_CarryPaperClasses_AndKeepExportFallbackAttributes()
+    {
+        var doc = new DiagramDocument();
+        var cut = Render<TmDiagramCanvas>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.ShowPageView, true));
+
+        // The paper colour itself is a token (U14): on screen the CSS class wins, while the
+        // literal presentation attributes stay as the standalone-export fallback.
+        cut.Find("rect.tm-diagram-page").GetAttribute("fill").Should().Be("white");
+        cut.Find("rect.tm-diagram-page").GetAttribute("stroke").Should().Be("#d1d5db");
+        cut.Find("rect.tm-diagram-page-backdrop").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void DiagramCanvas_DeclaresPaperInkFromPaperToken()
+    {
+        var css = ThemeCss.StripComments(File.ReadAllText(
+            Path.Combine(ThemeCss.RepositoryRoot().FullName, DiagramEditorCssPath)));
+
+        // The node ink is declared once, on the canvas, from the theme-invariant paper token —
+        // never again on the node body (that was the --tm-color-secondary-hover hack).
+        var canvas = System.Text.RegularExpressions.Regex.Match(
+            css, @"\.tm-diagram-canvas\s*\{([^}]*)\}");
+        canvas.Success.Should().BeTrue("the package must keep a plain .tm-diagram-canvas rule");
+        var canvasBody = ThemeCss.Normalise(canvas.Groups[1].Value);
+        canvasBody.Should().Contain("--tm-diagram-node-ink: var(--tm-paper-ink-muted)");
+        canvasBody.Should().Contain("--tm-diagram-paper: var(--tm-paper)");
+
+        var nodeBody = System.Text.RegularExpressions.Regex.Match(
+            css, @"\.tm-diagram-node__body\s*\{([^}]*)\}");
+        nodeBody.Success.Should().BeTrue();
+        ThemeCss.Normalise(nodeBody.Groups[1].Value).Should().NotContain("--tm-diagram-node-ink:",
+            "the node body must not redeclare the ink; it inherits the canvas declaration");
     }
 
     [Fact]

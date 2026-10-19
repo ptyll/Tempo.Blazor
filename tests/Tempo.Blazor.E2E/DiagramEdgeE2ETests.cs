@@ -2527,4 +2527,37 @@ public class DiagramEdgeE2ETests : WasmTestBase
 
         await TakeScreenshotAsync(page, "smoke_diagram_load");
     }
+
+    [TestMethod]
+    [Description("U8 — edge label pill: theme-invariant diagram ink on a paper halo in both themes")]
+    public async Task EdgeLabel_PaperHalo_ReadableInLightAndDark()
+    {
+        foreach (var dark in new[] { false, true })
+        {
+            var page = await CreatePageAsync();
+            await OpenDiagramEditorAsync(page);
+            await DiagramEditorE2E.PinEditorFullBleedAsync(page, "desktop");
+            await page.EvaluateAsync(
+                $$"""() => document.documentElement.setAttribute('data-theme', '{{(dark ? "dark" : "light")}}')""");
+            await page.WaitForTimeoutAsync(150);
+
+            var probeJson = await page.EvaluateAsync<string>("""
+                () => {
+                    const t = document.querySelector('.tm-diagram-edge-label__text');
+                    if (!t) return null;
+                    const cs = getComputedStyle(t);
+                    return JSON.stringify({ color: cs.color, bg: cs.backgroundColor });
+                }
+                """);
+            Assert.IsNotNull(probeJson,
+                $"The UML sample's multiplicity label (.tm-diagram-edge-label__text) was not found in the {(dark ? "dark" : "light")} theme.");
+            using var probe = JsonDocument.Parse(probeJson);
+            Assert.AreEqual("rgb(75, 85, 99)", probe.RootElement.GetProperty("color").GetString(),
+                $"label ink must be the theme-invariant diagram ink in the {(dark ? "dark" : "light")} theme");
+            Assert.AreEqual("rgb(255, 255, 255)", probe.RootElement.GetProperty("bg").GetString(),
+                $"label halo must be paper-white in the {(dark ? "dark" : "light")} theme");
+
+            await page.CloseAsync();
+        }
+    }
 }

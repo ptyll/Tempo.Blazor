@@ -750,17 +750,25 @@
                     <TmSelect TValue="string" Value="@GetCurrentPageSizeKey()" ValueChanged="OnPageSizeChangedHandler" Options="@_pageSizeOptions" />
                 </div>
                 <div class="tm-diagram-properties__field">
-                    <label>@Loc["TmDiagramProperties_PageOrientation"]</label>
-                    <div class="tm-diagram-properties__segmented">
-                        <button type="button" class="tm-diagram-properties__segmented-btn @(GetPageOrientation() == "portrait" ? "tm-diagram-properties__segmented-btn--active" : "")" @onclick='() => OnOrientationChanged("portrait")' title="@Loc["TmDiagramProperties_Portrait"]">
+                    <span class="tm-diagram-properties__label" id="@($"{_idPrefix}-orientation")">@Loc["TmDiagramProperties_PageOrientation"]</span>
+                    <div class="tm-diagram-properties__segmented tm-diagram-properties__segmented--labelled" role="group" aria-labelledby="@($"{_idPrefix}-orientation")">
+                        <button type="button"
+                                class="tm-diagram-properties__segmented-btn @(GetPageOrientation() == "portrait" ? "tm-diagram-properties__segmented-btn--active" : "")"
+                                aria-pressed="@((GetPageOrientation() == "portrait").ToString().ToLowerInvariant())"
+                                @onclick='() => OnOrientationChanged("portrait")'>
                             <TmIcon Name="@IconNames.ArrowUp" Size="IconSize.Sm" />
+                            <span>@Loc["TmDiagramProperties_Portrait"]</span>
                         </button>
-                        <button type="button" class="tm-diagram-properties__segmented-btn @(GetPageOrientation() == "landscape" ? "tm-diagram-properties__segmented-btn--active" : "")" @onclick='() => OnOrientationChanged("landscape")' title="@Loc["TmDiagramProperties_Landscape"]">
+                        <button type="button"
+                                class="tm-diagram-properties__segmented-btn @(GetPageOrientation() == "landscape" ? "tm-diagram-properties__segmented-btn--active" : "")"
+                                aria-pressed="@((GetPageOrientation() == "landscape").ToString().ToLowerInvariant())"
+                                @onclick='() => OnOrientationChanged("landscape")'>
                             <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Sm" />
+                            <span>@Loc["TmDiagramProperties_Landscape"]</span>
                         </button>
                     </div>
                 </div>
-                <div class="tm-diagram-properties__row">
+                <div class="tm-diagram-properties__row tm-diagram-properties__row--page-size">
                     <div class="tm-diagram-properties__field">
                         <label>@Loc["TmDiagramProperties_SizeWidth"]</label>
                         <input class="tm-text-input" type="number" step="1" min="100" value="@((int)(Document?.Width ?? 3000))" @onchange="OnPageWidthChanged" />

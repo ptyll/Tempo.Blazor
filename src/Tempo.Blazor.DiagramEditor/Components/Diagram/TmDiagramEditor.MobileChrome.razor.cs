@@ -65,14 +65,19 @@ public partial class TmDiagramEditor
 
         if (ShowsReadOnlyToggle)
         {
+            // The VISIBLE label is the constant "Read-only" (the control's identity); the STATE
+            // travels on aria-pressed, the lock/pencil icon and the tooltip wording. The aria-label
+            // repeats the visible label (WCAG 2.5.3) — TmToolbarButton would otherwise name the
+            // button after the tooltip.
             builder.OpenElement(seq++, "div");
             builder.AddAttribute(seq++, "class", "tm-diagram-editor__toolbar-group");
             builder.AddAttribute(seq++, "data-tm-group", "readonly");
             builder.OpenComponent<TmToolbarButton>(seq++);
-            builder.AddComponentParameter(seq++, nameof(TmToolbarButton.Icon), IsReadOnly ? IconNames.Lock : IconNames.Unlock);
+            builder.AddComponentParameter(seq++, nameof(TmToolbarButton.Icon), IsReadOnly ? IconNames.Lock : IconNames.Pencil);
             builder.AddComponentParameter(seq++, nameof(TmToolbarButton.Text), Loc["TmDiagramEditor_ReadOnly"]);
             builder.AddComponentParameter(seq++, nameof(TmToolbarButton.Tooltip),
-                IsReadOnly ? Loc["TmDiagramEditor_SwitchToEditMode"] : Loc["TmDiagramEditor_SwitchToReadOnlyMode"]);
+                IsReadOnly ? Loc["TmDiagramEditor_ReadOnly"] : Loc["TmDiagramEditor_Editing"]);
+            builder.AddComponentParameter(seq++, "aria-label", Loc["TmDiagramEditor_ReadOnly"]);
             builder.AddComponentParameter(seq++, nameof(TmToolbarButton.Pressed), IsReadOnly);
             builder.AddComponentParameter(seq++, nameof(TmToolbarButton.OnClick),
                 EventCallback.Factory.Create(this, ToggleReadOnly));

@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Core tokens: `--tm-paper`, `--tm-paper-ink`, `--tm-paper-ink-muted`, `--tm-paper-border`,
+  `--tm-paper-backdrop`.** Theme-invariant colours for content that represents a printed page
+  (diagram pages today; document pages and report previews can adopt them). They are LITERAL
+  light values declared only in `tokens.css` — deliberately NOT re-declared in `tokens-dark.css`,
+  because absence under the dark selector is what keeps the paper white in every theme; hosts
+  may rebrand them by targeting `:root`, `[data-theme="dark"]` and `.tm-dark` together.
+
 - **TmEditorShell: `ShowMobilePanelsToggle` parameter (default `true`).** The labelled
   closed-state bar naming the hidden panels renders only while the parameter is true: a host
   that renders its own mobile action bar (the F5 `TmMobileActionBar`, whose tiles reopen the
@@ -1108,6 +1115,45 @@
 
 ### Changed
 
+- **DiagramEditor: inspector page orientation is a labelled Portrait/Landscape segmented control**
+  with `aria-pressed`.
+
+- **DiagramEditor: the status-bar mode control keeps a constant visible label** — *Read-only*
+  (`TmDiagramEditor_ReadOnly`) — in both states; the state travels on `aria-pressed`, the
+  lock/pencil icon and the tooltip wording (`TmDiagramEditor_Editing` / `TmDiagramEditor_ReadOnly`),
+  and the accessible name repeats the visible label (WCAG 2.5.3). The same shape applies to the
+  mobile "⋯" menu toggle.
+
+- **DiagramEditor: UML stencils (`uml.*`) grow to fit their content** (rounded up to the 10-unit
+  grid, never shrunk) when inserted from the palette, through the Connect dialog or when a document
+  is created from a template. The growth is content-driven only: a stencil whose data carries no
+  list section (attributes/methods/values — activity start/end, note, actor, …) keeps its stencil
+  default height, and the content sum has no minimum-height floor beyond that default. Connect
+  placement and swimlane drop detection use the fitted height, so a class-like stencil that grows
+  (e.g. abstract-class 140→150) is centred and dropped into the cell its body actually overlaps.
+  Stencil content taller than its node keeps its first section visible
+  and clips at the bottom (`justify-content: safe center`) instead of being clipped at both edges.
+  The property-edit resize path (editing attributes/methods inline) shares the same content
+  measurement: `DiagramUmlAutoHeight` exposes one `ContentHeight(stencilId, data)` used by both
+  `Fit` and `Compute`, so an inline edit grows the node exactly like insertion — grid-rounded,
+  never below the node's current (default) height, no 140/120/100 stencil floor. Demo UML sample:
+  Customer class height corrected.
+
+- **DiagramEditor: canvas-scoped paper/ink tokens.** `--tm-diagram-paper` and
+  `--tm-diagram-node-ink` are declared on `.tm-diagram-canvas`, so a host rebrand (e.g. sepia
+  paper) targets `.tm-diagram-canvas` or deeper — no `!important`, no shallower ancestor. Edge
+  labels reuse the paper for their halo pill. `exportViewportAsSvg` copies the computed
+  fill/stroke/color/background of the live page, backdrop and edge-label text onto the serialized
+  clone, AND sets the computed `--tm-diagram-node-ink` / `--tm-diagram-paper` values on the clone
+  root, so every `var()` inside the exported tree (node bodies, table cells, labels) resolves to
+  the paints the user actually saw (including host overrides). New package tokens:
+  `--tm-diagram-swimlane-header` (1.875rem = 30px, declared on `.tm-diagram-canvas`) drives the
+  swimlane header band so the painted header stays in step with
+  `DiagramNodeSwimlaneData.HeaderSize = 30`; `--tm-diagram-statusbar-btn` (1.875rem) keeps the
+  status-bar buttons at the same 30px band; `--tm-diagram-chip-font` (0.6875rem = 11px, declared
+  on `.tm-diagram-editor`) is the package chip scale for the page-tab close button and the
+  template-card category/tags.
+
 - **TmDiagramMinimap frames the diagram content instead of the whole page (X4).** The map's viewBox
   is now the union of all node boxes and the current viewport, padded by 10 % (never smaller than a
   fifth of the page), and the viewport rectangle draws as a transparent outline *under* the node
@@ -1128,6 +1174,16 @@
   the bottom edge) instead of the 176 px vertical pill that covered a third of the narrow canvas.
 
 ### Fixed
+
+- **DiagramEditor: edge labels and cardinalities use the theme-invariant diagram ink on a paper
+  halo** (`.tm-diagram-edge-label__text`, painted via the new `--tm-paper*` tokens), so they no
+  longer collide with the edge stroke or disappear on the white page in dark themes. Host CSS on
+  `.tm-diagram-edge-label { color }` keeps working (inherited by the new span).
+
+- **DiagramEditor honours `prefers-reduced-motion`.** The search-match pulse, hover lifts/scales,
+  layers-panel width and chevron transitions are suppressed by an explicit enumeration block in
+  `_diagram-editor.css` (the layers panel owns its rule in its scoped stylesheet), guarded for
+  split packages by `ReducedMotionSelectorTests` against a frozen uncovered-subject baseline.
 
 - **TmDiagramEditor context menu / mobile actions sheet: *Paste style* no longer shows the desktop
   shortcut in its label; *Delete* stays visible at the bottom of the mobile actions sheet** (sticky

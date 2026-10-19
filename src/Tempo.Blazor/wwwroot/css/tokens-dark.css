@@ -157,6 +157,10 @@
      declared, so a dark theme switched on a parent element would otherwise keep the
      light value. Same convention as --tm-text-placeholder above. */
   --tm-bg-workspace:           var(--tm-bg-page);
+  /* The paper tokens (--tm-paper*) are the exception to "re-declare everything here":
+     they are theme-invariant by design and stay literal light values declared ONLY in
+     tokens.css, so a descendant-scoped dark theme keeps the paper white. Do NOT add
+     dark re-declarations for them — that would undo the guarantee. */
   --tm-radius-card:            var(--tm-radius-lg);
   --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);

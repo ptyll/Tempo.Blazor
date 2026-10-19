@@ -4853,6 +4853,39 @@ window.tmDiagramEditor = {
         clone.querySelector('.tm-diagram-overlay-pane')?.remove();
         // Remove any temporary draw path
         clone.querySelectorAll('.tm-diagram-edge-draw-path').forEach(function (el) { el.remove(); });
+
+        // Inline the computed paints of the token-driven surfaces: the serialized SVG is
+        // standalone and no longer sees the theme stylesheet, so var()-driven fills/colors
+        // would fall back to black in the exported file. Copy what the LIVE canvas computes
+        // (including any host override of --tm-diagram-paper / --tm-diagram-node-ink) onto
+        // the matching clone elements as inline styles.
+        const PAINT_SOURCES = [
+            { selector: '.tm-diagram-page', props: ['fill', 'stroke'] },
+            { selector: '.tm-diagram-page-backdrop', props: ['fill'] },
+            { selector: '.tm-diagram-edge-label__text', props: ['color', 'background-color'] }
+        ];
+        PAINT_SOURCES.forEach(function (rule) {
+            const live = inst.svg.querySelectorAll(rule.selector);
+            const clones = clone.querySelectorAll(rule.selector);
+            for (let i = 0; i < live.length && i < clones.length; i++) {
+                const computed = window.getComputedStyle(live[i]);
+                rule.props.forEach(function (prop) {
+                    const value = computed.getPropertyValue(prop);
+                    if (value) clones[i].style.setProperty(prop, value);
+                });
+            }
+        });
+
+        // The canvas-scoped custom properties must travel too: node bodies, table cells and
+        // labels inside the serialized tree reference var(--tm-diagram-node-ink) /
+        // var(--tm-diagram-paper), and the standalone export has no stylesheet to resolve them.
+        // Setting the computed values on the clone ROOT re-points every var() in the tree.
+        const canvasComputed = window.getComputedStyle(inst.svg);
+        ['--tm-diagram-node-ink', '--tm-diagram-paper'].forEach(function (prop) {
+            const value = canvasComputed.getPropertyValue(prop);
+            if (value) clone.style.setProperty(prop, value);
+        });
+
         // Wrap every foreignObject in <switch> with a <rect> fallback so viewers
         // that do not support foreignObject still render a visible placeholder.
         // (draw.io/mxGraph pattern — see planning/DIAGRAM_UNIFIED_SVG_PLAN.md §11.5)

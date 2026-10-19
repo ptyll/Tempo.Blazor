@@ -1091,7 +1091,7 @@
   "TmDiagramEditor_DuplicatePage": "Dupliquer la page",
   "TmDiagramEditor_EdgeTool": "Outil de liaison (L)",
   "TmDiagramEditor_EdgeToolHint": "Outil de liaison (L / C) — cliquez sur un nœud, faites glisser pour une ligne simple, ou cliquez-cliquez-... pour une polyligne (terminez par un double-clic / Entrée)",
-  "TmDiagramEditor_Edit": "Modifier",
+  "TmDiagramEditor_Editing": "Mode édition",
   "TmDiagramEditor_EditLabel": "Modifier l'étiquette",
   "TmDiagramEditor_Elbow": "Coude",
   "TmDiagramEditor_Ellipse": "Ellipse",

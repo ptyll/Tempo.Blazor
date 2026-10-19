@@ -142,6 +142,31 @@ rails the non-expanded side while `LeftOpen`/`RightOpen` keep meaning *shown*. A
 always re-raises the inspector with the **Properties** tab active — even when the user had railed
 it after switching to Layers (the selection pins the tab; the palette returns to its rail).
 
+## Canvas tokens (paper and ink)
+
+Everything painted ON the page (node bodies, edge-label pills, cardinalities) resolves two
+canvas-scoped aliases declared on `.tm-diagram-canvas`:
+
+- `--tm-diagram-paper` — the page fill (alias of the theme-invariant `--tm-paper`, white in
+  every theme). Edge-label pills reuse it so the edge stroke never runs through the text.
+- `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-paper-ink-muted`).
+
+A host that rebrands the diagram surface (e.g. sepia paper) overrides BOTH tokens by targeting
+`.tm-diagram-canvas` or any deeper wrapper around one canvas — the declaration lives on the
+canvas element itself, so an override needs no `!important` and must not be scoped to a
+shallower ancestor than `.tm-diagram-canvas`:
+
+```css
+.my-diagram-host .tm-diagram-canvas {
+    --tm-diagram-paper: #f5eeda;   /* sepia paper */
+    --tm-diagram-node-ink: #4a3f2a;
+}
+```
+
+`exportViewportAsSvg` copies the computed fills/colours of `.tm-diagram-page`,
+`.tm-diagram-page-backdrop` and `.tm-diagram-edge-label__text` onto the serialized clone, so
+an export taken under a host override carries the overridden paints.
+
 ## Touch
 
 Touch interactions run on the shared core helpers — `pointer-drag.js` (single-pointer drags with

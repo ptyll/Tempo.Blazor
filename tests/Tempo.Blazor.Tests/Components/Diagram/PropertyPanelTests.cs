@@ -17,6 +17,32 @@ public class PropertyPanelTests : LocalizationTestBase
     }
 
     [Fact]
+    public void PageOrientation_IsLabelledSegmentedControl()
+    {
+        // U9: orientation is a DESCRIBED segmented control — visible labels, role=group bound to
+        // the label via aria-labelledby, and exactly one aria-pressed button. Default document
+        // is 3000×2000, i.e. landscape.
+        var doc = new DiagramDocument();
+        var cut = Render<TmDiagramPropertiesPanel>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.SelectedIds, [])
+            .Add(c => c.ReadOnly, false));
+
+        var group = cut.Find(".tm-diagram-properties__segmented--labelled[role='group']");
+        var labelledBy = group.GetAttribute("aria-labelledby");
+        labelledBy.Should().NotBeNullOrEmpty();
+        cut.Find($"#{labelledBy}").TextContent.Trim()
+            .Should().Be("Orientation", "the group's accessible name comes from the visible label");
+
+        var buttons = group.QuerySelectorAll("button");
+        buttons.Length.Should().Be(2);
+        buttons[0].TextContent.Trim().Should().Be("Portrait");
+        buttons[1].TextContent.Trim().Should().Be("Landscape");
+        buttons.Count(b => b.GetAttribute("aria-pressed") == "true").Should().Be(1);
+        buttons[1].GetAttribute("aria-pressed").Should().Be("true", "a 3000×2000 document is landscape");
+    }
+
+    [Fact]
     public void NodeFillColorChange_UpdatesNodeStyle()
     {
         var doc = new DiagramDocument();
@@ -321,8 +347,8 @@ public class PropertyPanelTests : LocalizationTestBase
             .Add(c => c.SelectedIds, Array.Empty<string>())
             .Add(c => c.ReadOnly, false));
 
-        var buttons = cut.FindAll(".tm-diagram-properties__segmented-btn");
-        var landscapeBtn = buttons.FirstOrDefault(b => b.GetAttribute("title")?.Contains("Landscape") == true || b.GetAttribute("title")?.Contains("šířku") == true);
+        var buttons = cut.FindAll(".tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn");
+        var landscapeBtn = buttons.FirstOrDefault(b => b.TextContent.Contains("Landscape"));
         landscapeBtn.Should().NotBeNull();
         landscapeBtn!.Click();
 

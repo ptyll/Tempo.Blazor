@@ -943,6 +943,94 @@ public class TmDiagramEditorConnectTests : LocalizationTestBase
                 "the connect dialog uses its own stencil empty-state wording, not the gallery's");
     }
 
+    // ── Review fix: connect/drop positions use the FITTED node height ──────────
+
+    [Fact]
+    public async Task Connect_ClassLikeStencil_PositionsWithFittedHeight()
+    {
+        EnsureBuiltInStencils();
+        var doc = new DiagramDocument();
+        doc.Nodes.Add(new DiagramNode
+        {
+            StencilId = "general.rectangle",
+            X = 96,
+            Y = 128,
+            W = 120,
+            H = 72
+        });
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        await canvas.Instance.SetSelection(doc.Nodes[0].Id);
+        cut.Render();
+        cut.Find(".tm-diagram-connect-arrow--e").Click();
+        cut.Render();
+
+        // uml.abstract-class default height is 140; its default data (2 attributes + 2 methods,
+        // stereotype header) fits to 150. The connect position must use the fitted 150:
+        // east connect → Y = 128 + 72/2 − 150/2 = 89 → grid(8)-rounded 88. The pre-fix code
+        // centred the 140-default node: 128 + 36 − 70 = 94 → grid-rounded 96.
+        cut.Find(".tm-diagram-connect-modal__show-all").Click();
+        cut.Render();
+        cut.Find(".tm-diagram-connect-modal__search").Input("abstract");
+        cut.Render();
+        cut.Find(".tm-diagram-connect-modal__item").Click();
+        cut.Render();
+
+        doc.Nodes.Count.Should().Be(2);
+        var newNode = doc.Nodes[1];
+        newNode.StencilId.Should().Be("uml.abstract-class");
+        newNode.H.Should().Be(150, "Fit grows the abstract-class to its content on insert");
+        newNode.Y.Should().Be(88, "the connect position centres the FITTED height (150): 89 → grid 88, not the 140 default: 94 → grid 96");
+    }
+
+    [Fact]
+    public async Task ToolboxDrop_IntoSwimlane_UsesFittedHeightForCellDetection()
+    {
+        EnsureBuiltInStencils();
+        var doc = new DiagramDocument();
+        doc.Nodes.Add(new DiagramNode
+        {
+            Id = "swim1",
+            StencilId = "swimlane.horizontal",
+            X = 0,
+            Y = 0,
+            W = 400,
+            H = 260,
+            SwimlaneData = new()
+            {
+                IsHorizontal = true,
+                RowCount = 2,
+                ColumnCount = 1,
+                HeaderSize = 30,
+                RowSizes = [105, 115],
+                ColumnSizes = []
+            }
+        });
+
+        var cut = Render<TmDiagramEditor>(p => p
+            .Add(e => e.Document, doc)
+            .Add(e => e.ReadOnly, false));
+
+        var canvas = cut.FindComponent<TmDiagramCanvas>();
+        // Row boundary sits at localY 105. uml.abstract-class fits 140 → 150; the drop point
+        // snaps to the 8-unit grid first (y=32), so the node centre is 32 + 75 = 107 (row 1).
+        // With the pre-fix default height it would be 32 + 70 = 102 (row 0) — the drop cell must
+        // come from the fitted height.
+        await cut.InvokeAsync(() => canvas.Instance.OnDropFromToolbox("uml.abstract-class", 200, 30));
+        cut.Render();
+
+        doc.Nodes.Count.Should().Be(2);
+        var dropped = doc.Nodes[1];
+        dropped.StencilId.Should().Be("uml.abstract-class");
+        dropped.H.Should().Be(150);
+        dropped.ParentNodeId.Should().Be("swim1");
+        dropped.SwimlaneRow.Should().Be(1, "the drop centre (fitted H = 150) lands in the second row");
+    }
+
     // ── Review fix (connect arrows unreachable by finger): decorator pane order ──
 
     [Fact]

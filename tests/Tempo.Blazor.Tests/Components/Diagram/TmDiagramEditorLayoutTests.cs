@@ -19,6 +19,45 @@ public class TmDiagramEditorLayoutTests : LocalizationTestBase
     }
 
     [Fact]
+    public void StatusBar_ReadOnlyToggle_VisibleTextIsContainedInAccessibleName()
+    {
+        // U9 review fix: the VISIBLE label is the constant "Read-only" (the control's identity) and
+        // the accessible name repeats it in BOTH states (WCAG 2.5.3) — the state no longer renames
+        // the control, it travels on aria-pressed and in the tooltip wording.
+        var cut = Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, false));
+
+        var button = () => cut.Find(".tm-diagram-editor__statusbar [data-tm-group='readonly'] button");
+        button().TextContent.Trim().Should().Be("Read-only");
+        button().GetAttribute("aria-label").Should().Be("Read-only",
+            "the name repeats the constant visible label, never the state or the tooltip");
+
+        button().Click();
+        cut.Render();
+
+        button().TextContent.Trim().Should().Be("Read-only", "the visible label never changes");
+        button().GetAttribute("aria-label").Should().Be("Read-only",
+            "the accessible name stays stable when the state flips");
+    }
+
+    [Fact]
+    public void StatusBar_ReadOnlyToggle_AriaPressedReflectsState_TooltipCarriesStateWording()
+    {
+        // The state lives on aria-pressed (a toggle, not two different buttons); the tooltip keeps
+        // the state wording ("Editing" / "Read-only") for mouse users.
+        var cut = Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, false));
+
+        var button = () => cut.Find(".tm-diagram-editor__statusbar [data-tm-group='readonly'] button");
+        button().GetAttribute("aria-pressed").Should().Be("false");
+        button().GetAttribute("title").Should().Be("Editing", "the tooltip carries the current state wording");
+
+        button().Click();
+        cut.Render();
+
+        button().GetAttribute("aria-pressed").Should().Be("true");
+        button().GetAttribute("title").Should().Be("Read-only");
+    }
+
+    [Fact]
     public void LayoutDropdown_ContainsAllLayoutOptions()
     {
         var doc = new DiagramDocument();

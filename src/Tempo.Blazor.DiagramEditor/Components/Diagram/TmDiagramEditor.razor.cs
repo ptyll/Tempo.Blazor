@@ -2039,6 +2039,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             node.Data[kvp.Key] = kvp.Value;
         }
 
+        DiagramUmlAutoHeight.Fit(node);
+
         // Generate ports from stencil
         foreach (var portDef in stencil?.Ports ?? [])
         {
@@ -2053,9 +2055,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             });
         }
 
-        // Swimlane drop detection
-        double cx = x + w / 2;
-        double cy = y + h / 2;
+        // Swimlane drop detection — the centre must come from the FITTED node size
+        // (class-like UML stencils grow in Fit above), otherwise a taller-than-default
+        // node is dropped into the cell its top half overlaps.
+        double cx = node.X + node.W / 2;
+        double cy = node.Y + node.H / 2;
         foreach (var candidate in _document.Nodes
             .Where(n => n.SwimlaneData is not null)
             .OrderByDescending(n => n.ZIndex))
@@ -2451,6 +2455,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         }
 
         doc.Title = template.Name;
+        DiagramUmlAutoHeight.FitAll(doc);
 
         Document = doc;
         _document = doc;
@@ -2479,15 +2484,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
         var w = stencil.DefaultWidth;
         var h = stencil.DefaultHeight;
-        var (x, y) = ComputeConnectPosition(sourceNode, w, h, _connectDirection);
-        x = Math.Round(x / GridSize) * GridSize;
-        y = Math.Round(y / GridSize) * GridSize;
 
         var newNode = new DiagramNode
         {
             StencilId = stencilId,
-            X = x,
-            Y = y,
+            X = 0,
+            Y = 0,
             W = w,
             H = h,
             ZIndex = _document.Nodes.Count > 0 ? _document.Nodes.Max(n => n.ZIndex) + 1 : 0,
@@ -2497,6 +2499,16 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
         foreach (var kvp in stencil.DefaultData)
             newNode.Data[kvp.Key] = kvp.Value;
+
+        DiagramUmlAutoHeight.Fit(newNode);
+
+        // Position AFTER the fit: class-like UML stencils grow (e.g. abstract-class 140→150),
+        // and the new node must be centred/offset by the height the editor actually inserts.
+        var (x, y) = ComputeConnectPosition(sourceNode, w, newNode.H, _connectDirection);
+        x = Math.Round(x / GridSize) * GridSize;
+        y = Math.Round(y / GridSize) * GridSize;
+        newNode.X = x;
+        newNode.Y = y;
 
         foreach (var portDef in stencil.Ports)
         {

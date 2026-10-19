@@ -404,6 +404,18 @@
      theme-indigo.css is what paints the off-white workspace. Re-declared in
      tokens-dark.css because a :root-only alias computes with the light value. */
   --tm-bg-workspace:           var(--tm-bg-page);
+  /* ── Paper surfaces (theme-invariant) ─────────────────────────
+     Content that represents a printed/exported page (diagram pages, document pages,
+     report previews) stays paper-white with dark ink in EVERY theme, so these are
+     LITERAL light values: they are declared ONLY here and deliberately NOT
+     re-declared in tokens-dark.css — a descendant-scoped dark theme then keeps the
+     paper exactly because nothing overrides it. Hosts may rebrand them (e.g. sepia)
+     by targeting :root, [data-theme="dark"] and .tm-dark together. */
+  --tm-paper:                  #ffffff;
+  --tm-paper-ink:              #1f2937;  /* gray-800, 14.7:1 on white */
+  --tm-paper-ink-muted:        #4b5563;  /* gray-600, 7.6:1 on white (today's diagram ink) */
+  --tm-paper-border:           #d1d5db;  /* gray-300, page edge */
+  --tm-paper-backdrop:         #f3f4f6;  /* gray-100, area outside the page */
   /* Equal to the radii components use today, so consuming them changes nothing
      until a theme overrides them. Cards take the lg step, controls the md step. */
   --tm-radius-card:            var(--tm-radius-lg);

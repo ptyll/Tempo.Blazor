@@ -260,12 +260,15 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
             _ => "left",
         };
 
+    // `safe` falls back to start when the content overflows, so the first section (the UML
+    // class name) stays visible and only the tail clips. Engines without `safe` drop the
+    // declaration and use the initial flex-start, which is acceptable too.
     private static string GetVerticalAlignCss(string align)
         => align switch
         {
             "top" => "flex-start",
-            "bottom" => "flex-end",
-            _ => "center",
+            "bottom" => "safe flex-end",
+            _ => "safe center",
         };
 
     private string GetSectionText(DiagramStencilSection section)

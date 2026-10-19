@@ -40,13 +40,20 @@ nowhere, fallback or not, so a new alias fails CI instead of rendering its fallb
 
 ## Tokens added for the redesign
 
-Declared in `tokens.css` and re-declared in `tokens-dark.css`. A token that exists only on
+Declared in `tokens.css` and re-declared in `tokens-dark.css` — EXCEPT the paper tokens
+(`--tm-paper*`), which are theme-invariant literal light values declared only in `tokens.css`
+(no `var()` alias, no dark re-declaration; see the table). A token that exists only on
 `:root` substitutes its `var()` where it is declared, so a dark theme switched on a parent
-element would inherit the light value — which is why every one of these is named again in the
-dark file.
+element would inherit the light value — which is why every alias-valued one of these is named
+again in the dark file.
 
 | Token | Light | Purpose |
 |---|---|---|
+| `--tm-paper` | `#ffffff` (literal) | Theme-invariant paper. A printed/exported page stays white in EVERY theme; declared only in `tokens.css`, never re-declared in `tokens-dark.css` — absence under the dark selector is what guarantees it. |
+| `--tm-paper-ink` | `#1f2937` (literal, gray-800) | Theme-invariant ink on paper. 14.7:1 on white. Same light-only declaration rule as `--tm-paper`. |
+| `--tm-paper-ink-muted` | `#4b5563` (literal, gray-600) | Muted ink on paper (today's diagram node ink). 7.6:1 on white. Same light-only declaration rule. |
+| `--tm-paper-border` | `#d1d5db` (literal, gray-300) | Page edge drawn around the paper. Same light-only declaration rule. |
+| `--tm-paper-backdrop` | `#f3f4f6` (literal, gray-100) | Area outside the page. Same light-only declaration rule. |
 | `--tm-bg-workspace` | alias of `--tm-bg-page` | Canvas behind cards. Only the indigo theme overrides it; `--tm-bg-page` never moves. |
 | `--tm-radius-card` | `--tm-radius-lg` | Cards. Equal to today's card radius, so consuming it changes nothing. |
 | `--tm-radius-control` | `--tm-radius-md` | Buttons, inputs, chips. Equal to today's control radius. |

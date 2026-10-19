@@ -487,7 +487,7 @@
                          data-screen-x="@_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                          data-screen-y="@_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                          data-anchor="@(_contextMenuOrigin == "touch" ? "touch" : null)"
-                         style="@($"position:fixed;left:{_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;top:{_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;z-index:1000;")"
+                         style="@($"position:fixed;left:{_contextMenuScreenX.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;top:{_contextMenuScreenY.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;z-index:var(--tm-z-popover);")"
                          @onclick:stopPropagation
                          @oncontextmenu:preventDefault>
                         @ContextMenuItems
@@ -1093,11 +1093,16 @@
                 <div class="tm-diagram-editor__statusbar-spacer"></div>
                 @if (ShowsReadOnlyToggle)
                 {
-                    @* Read-only toggle: hidden when the host pins ReadOnly (DI1) or the group is off *@
+                    @* Read-only toggle: hidden when the host pins ReadOnly (DI1) or the group is off.
+                       The VISIBLE label is the constant "Read-only" (the control's identity); the STATE
+                       travels on aria-pressed, the lock/pencil icon and the tooltip wording. The
+                       aria-label repeats the visible label (WCAG 2.5.3) — TmToolbarButton would
+                       otherwise name the button after the tooltip. *@
                     <div class="tm-diagram-editor__toolbar-group" data-tm-group="readonly">
-                        <TmToolbarButton Icon="@(IsReadOnly ? IconNames.Lock : IconNames.Unlock)"
+                        <TmToolbarButton Icon="@(IsReadOnly ? IconNames.Lock : IconNames.Pencil)"
                                          Text="@Loc["TmDiagramEditor_ReadOnly"]"
-                                         Tooltip="@(IsReadOnly ? Loc["TmDiagramEditor_SwitchToEditMode"] : Loc["TmDiagramEditor_SwitchToReadOnlyMode"])"
+                                         Tooltip="@(IsReadOnly ? Loc["TmDiagramEditor_ReadOnly"] : Loc["TmDiagramEditor_Editing"])"
+                                         aria-label="@Loc["TmDiagramEditor_ReadOnly"]"
                                          Pressed="IsReadOnly"
                                          OnClick="ToggleReadOnly" />
                     </div>

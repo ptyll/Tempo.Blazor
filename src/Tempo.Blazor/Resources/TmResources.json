@@ -1088,7 +1088,7 @@
   "TmDiagramEditor_DuplicatePage": "Duplicate page",
   "TmDiagramEditor_EdgeTool": "Edge tool (L)",
   "TmDiagramEditor_EdgeToolHint": "Edge tool (L / C) — click a node, drag for a single line, or click-click-... for a polyline (finish with double-click / Enter)",
-  "TmDiagramEditor_Edit": "Edit",
+  "TmDiagramEditor_Editing": "Editing",
   "TmDiagramEditor_EditLabel": "Edit Label",
   "TmDiagramEditor_Elbow": "Elbow",
   "TmDiagramEditor_Ellipse": "Ellipse",

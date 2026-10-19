@@ -1094,7 +1094,7 @@
   "TmDiagramEditor_DuplicatePage": "Duplikovat stránku",
   "TmDiagramEditor_EdgeTool": "Spojnice (L)",
   "TmDiagramEditor_EdgeToolHint": "Spojnice (L / C) — klikněte na uzel, táhněte pro jednoduchou čáru, nebo klikejte po bodech pro polyčáru (ukončete dvojklikem / Enter)",
-  "TmDiagramEditor_Edit": "Upravit",
+  "TmDiagramEditor_Editing": "Úpravy povoleny",
   "TmDiagramEditor_EditLabel": "Upravit popisek",
   "TmDiagramEditor_Elbow": "Lomená",
   "TmDiagramEditor_Ellipse": "Elipsa",

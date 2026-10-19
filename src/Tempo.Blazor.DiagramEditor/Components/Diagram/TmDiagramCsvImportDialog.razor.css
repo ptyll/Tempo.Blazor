@@ -174,6 +174,6 @@
     }
 
     .tm-diagram-csv-import__preview-table-wrap {
-        max-height: 128px;
+        max-height: 8rem;
     }
 }

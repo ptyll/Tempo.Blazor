@@ -109,6 +109,59 @@ public class TmDiagramEditorTemplateTests : LocalizationTestBase
         portIds.Should().Contain(edge.TargetPortId);
     }
 
+    [Fact]
+    public async Task UmlTemplate_NodesAreFittedToContent()
+    {
+        // U7/X9: a template whose UML node is shorter than its content must arrive fitted
+        // (rounded up to the 10-unit grid) — auto-height runs at template creation, not only
+        // during inline editing.
+        var templateRegistry = Services.GetRequiredService<DiagramTemplateRegistry>();
+        templateRegistry.RegisterTemplate(new DiagramTemplate
+        {
+            Id = "tpl-uml",
+            Name = "UML Fit Template",
+            Category = "Test",
+            DocumentJson = BuildUmlTemplateJson()
+        });
+
+        var cut = Render<TmDiagramEditor>(p => p.Add(e => e.ReadOnly, false));
+
+        var templatesButton = cut.FindAll("button").First(b => b.TextContent.Contains("Templates"));
+        templatesButton.Click();
+        cut.Render();
+
+        var card = cut.FindAll(".tm-diagram-template-card")
+            .Single(c => c.TextContent.Contains("UML Fit Template"));
+        card.Click();
+        cut.Render();
+
+        var createButton = cut.FindAll("button").First(b => b.TextContent.Contains("Create"));
+        await cut.InvokeAsync(() => createButton.Click());
+        cut.Render();
+
+        var umlNode = cut.Instance.Document!.Pages[0].Nodes.Single(n => n.StencilId == "uml.class");
+        umlNode.H.Should().BeGreaterThanOrEqualTo(160);
+    }
+
+    private static string BuildUmlTemplateJson()
+    {
+        var doc = new DiagramDocument { Title = "UML Fit Template" };
+        doc.EnsurePages();
+        doc.Pages[0].Nodes.Add(new DiagramNode
+        {
+            StencilId = "uml.class",
+            X = 100,
+            Y = 100,
+            W = 180,
+            H = 100
+        });
+        doc.Pages[0].Nodes[0].Data["name"] = "Customer";
+        doc.Pages[0].Nodes[0].Data["attributes"] = new[] { "- id: Guid", "- name: string", "- email: string" };
+        doc.Pages[0].Nodes[0].Data["methods"] = new[] { "+ Save(): void", "+ Load(): void" };
+
+        return Tempo.Blazor.Components.Diagram.Serialization.DiagramSerializer.Serialize(doc);
+    }
+
     private static string BuildTemplateJson()
     {
         var doc = new DiagramDocument { Title = "Test Template" };
