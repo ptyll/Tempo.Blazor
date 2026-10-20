@@ -85,6 +85,7 @@ async function loadViewer(testContext) {
         abortControllers: [],
         listeners: { added: [], removed: [] },
         resizeObservers: [],
+        intersectionObservers: [],
         loadedPages: [],
         loadErrors: [],
     };
@@ -111,14 +112,30 @@ async function loadViewer(testContext) {
         disconnect() { this.disconnected = true; }
     }
 
+    class SpyIntersectionObserver {
+        constructor(callback, options) {
+            this.callback = callback;
+            this.options = options;
+            this.observations = [];
+            this.disconnected = false;
+            registry.intersectionObservers.push(this);
+        }
+
+        observe(el) { this.observations.push(el); }
+        unobserve() { }
+        disconnect() { this.disconnected = true; }
+    }
+
     const originals = {
         AbortController: globalThis.AbortController,
         ResizeObserver: globalThis.ResizeObserver,
+        IntersectionObserver: globalThis.IntersectionObserver,
         document: globalThis.document,
         window: globalThis.window,
     };
     globalThis.AbortController = SpyAbortController;
     globalThis.ResizeObserver = SpyResizeObserver;
+    globalThis.IntersectionObserver = SpyIntersectionObserver;
     globalThis.window = globalThis;
     globalThis.document = {
         currentScript: { src: '' },
@@ -157,6 +174,7 @@ async function loadViewer(testContext) {
     testContext.after(async () => {
         globalThis.AbortController = originals.AbortController;
         globalThis.ResizeObserver = originals.ResizeObserver;
+        if (originals.IntersectionObserver === undefined) delete globalThis.IntersectionObserver; else globalThis.IntersectionObserver = originals.IntersectionObserver;
         globalThis.document = originals.document;
         if (originals.window === undefined) delete globalThis.window; else globalThis.window = originals.window;
         delete globalThis.__tmPdfViewerTestDocRequest;
@@ -254,4 +272,117 @@ test('destroy() during a pending load aborts the entry and the stale download is
     assert.deepEqual(env.registry.loadedPages, [7], 'the superseded load must not report OnPdfLoaded');
     assert.deepEqual(env.registry.loadErrors, [], 'the superseded load must not report OnPdfLoadError');
     assert.equal(staleDoc.destroyCalls, 1, 'the superseded document is destroyed');
+});
+
+// ── Continuous DOM lifecycle (fake IntersectionObserver + scrollable container) ──
+
+/**
+ * A DOM node shaped like the nodes pdf-viewer.js builds for the continuous mode:
+ * class/attribute plumbing, a page-inner → canvas hierarchy for the lookups and an
+ * innerHTML setter that really clears the children (a rebuild replaces the wraps).
+ */
+function fakeDomEl(tag) {
+    const el = {
+        tagName: tag,
+        className: '',
+        style: {},
+        dataset: {},
+        attrs: {},
+        children: [],
+        isConnected: true,
+        appendChild(child) { this.children.push(child); return child; },
+        setAttribute(name, value) { this.attrs[name] = String(value); },
+        getAttribute(name) { return this.attrs[name] ?? null; },
+        removeAttribute(name) { delete this.attrs[name]; },
+        addEventListener() { },
+        removeEventListener() { },
+        contains() { return false; },
+        getBoundingClientRect() { return { left: 0, top: 0, width: 100, height: 50 }; },
+        scrollIntoView() { },
+        querySelector(selector) {
+            if (typeof selector === 'string' && selector.includes('canvas')) {
+                return this.children.flatMap(c => c.children).find(c => c.tagName === 'canvas') ?? null;
+            }
+            return null;
+        },
+        querySelectorAll() { return []; },
+    };
+    Object.defineProperty(el, 'innerHTML', {
+        get: () => '',
+        set: () => { el.children.length = 0; },
+    });
+    return el;
+}
+
+/** The continuous wrap: a scrollable container the renderer fills with page wraps. */
+function fakeContinuousContainer() {
+    const container = fakeDomEl('container');
+    container.scrollTop = 0;
+    container.clientHeight = 600;
+    container.addEventListener = () => { };
+    container.querySelectorAll = (selector) => (
+        typeof selector === 'string' && selector.includes('.tm-pdf-viewer__page')
+            ? container.children.filter(c => c.className === 'tm-pdf-viewer__page')
+            : []
+    );
+    container.querySelector = (selector) => {
+        const match = typeof selector === 'string' ? selector.match(/\[data-page="(\d+)"\]/) : null;
+        return match ? container.children.find(c => c.dataset?.page === match[1]) ?? null : null;
+    };
+    return container;
+}
+
+async function loadContinuousViewer(testContext) {
+    const env = await loadViewer(testContext);
+    // renderAllPages creates the wraps through document.createElement — swap in the
+    // richer fake (loadViewer's own after-hook restores the original document).
+    const originalCreate = globalThis.document.createElement;
+    globalThis.document.createElement = () => fakeDomEl('div');
+    testContext.after(() => {
+        // loadViewer's after-hook may already have restored the original document
+        // (undefined in the node env) — guard so the restore never throws.
+        if (globalThis.document) globalThis.document.createElement = originalCreate;
+    });
+
+    // A root without a single-page canvas: init() skips the page-1 render, exactly
+    // like a viewer that starts (or switches) directly in continuous mode.
+    const rootEl = fakeElement('root');
+    env.docRequest.resolve(fakePdfDoc(4));
+    await env.viewer.init(rootEl, 'https://example.com/continuous.pdf', env.dotNet);
+    return { ...env, rootEl };
+}
+
+test('renderAllPages twice disconnects the first observer and aborts the first scroll signal', async (t) => {
+    const env = await loadContinuousViewer(t);
+    const container = fakeContinuousContainer();
+
+    await env.viewer.renderAllPages(env.rootEl, container, 1, 0, { textLayer: true });
+    await flush();
+    assert.equal(env.registry.intersectionObservers.length, 1, 'the first rebuild registers one IntersectionObserver');
+    const firstObserver = env.registry.intersectionObservers[0];
+    assert.equal(firstObserver.disconnected, false);
+    assert.equal(firstObserver.observations.length, 4, 'every page wrap is observed');
+    // init state controller (0) + scroll controller #1 (1).
+    assert.equal(env.registry.abortControllers.length, 2);
+
+    await env.viewer.renderAllPages(env.rootEl, container, 1.5, 0, { textLayer: true });
+    await flush();
+    assert.equal(env.registry.intersectionObservers.length, 2, 'the rebuild registers a fresh observer');
+    assert.equal(firstObserver.disconnected, true, 'the first observer is disconnected by the rebuild');
+    assert.equal(env.registry.abortControllers[1].aborted, true, 'the first scroll tracker signal is aborted');
+    assert.ok(!env.registry.abortControllers[2].aborted, 'the fresh scroll tracker is still live');
+});
+
+test('destroy disconnects the page observer and aborts the scroll controller', async (t) => {
+    const env = await loadContinuousViewer(t);
+    const container = fakeContinuousContainer();
+
+    await env.viewer.renderAllPages(env.rootEl, container, 1, 0, {});
+    await flush();
+
+    env.viewer.destroy(env.rootEl);
+    assert.equal(env.registry.intersectionObservers[0].disconnected, true,
+        'destroy disconnects the per-wrap IntersectionObserver');
+    assert.equal(env.registry.abortControllers[1].aborted, true,
+        'destroy aborts the scroll tracker signal');
 });

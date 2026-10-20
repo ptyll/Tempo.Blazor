@@ -33,9 +33,13 @@ function fakeElement(tag) {
         tagName: tag,
         style: {},
         dataset: {},
+        attrs: {},
         children: [],
         innerHTML: '',
         className: '',
+        setAttribute(name, value) { this.attrs[name] = String(value); },
+        getAttribute(name) { return this.attrs[name] ?? null; },
+        removeAttribute(name) { delete this.attrs[name]; },
         classList: {
             add(...names) { names.forEach(name => classes.add(name)); },
             remove(...names) { names.forEach(name => classes.delete(name)); },
@@ -208,12 +212,27 @@ test('continuous pages carry the tm-pdf-viewer__page class and no inline paint',
     await env.viewer.renderAllPages(env.rootEl, container, 1, 0);
 
     assert.equal(container.children.length, 3, 'one page wrap per page');
-    for (const wrap of container.children) {
+    for (const [index, wrap] of container.children.entries()) {
         assert.equal(wrap.className, 'tm-pdf-viewer__page');
         assertNoInlinePaint(wrap, 'continuous page wrap');
+        // A11y: a named page group; the canvas mirrors the label as an image (no
+        // text layer in this render).
+        assert.equal(wrap.getAttribute('role'), 'group');
+        assert.equal(wrap.getAttribute('aria-label'), `Page ${index + 1} of 3`);
+        assert.equal(wrap.getAttribute('aria-current'), null,
+            'aria-current lands on the visible page only (kept in sync by the scroll tracker)');
 
-        const canvas = wrap.children[0];
+        // The inner div is the positioning context for the per-page text/search
+        // layers; the canvas is its first child and stays paint-free.
+        const inner = wrap.children[0];
+        assert.equal(inner.tagName, 'div');
+        assert.equal(inner.className, 'tm-pdf-viewer__page-inner');
+        assertNoInlinePaint(inner, 'continuous page inner');
+
+        const canvas = inner.children[0];
         assert.equal(canvas.tagName, 'canvas');
         assertNoInlinePaint(canvas, 'continuous page canvas');
+        assert.equal(canvas.getAttribute('role'), 'img', 'the canvas is announced as an image of the page');
+        assert.equal(canvas.getAttribute('aria-label'), `Page ${index + 1} of 3`);
     }
 });

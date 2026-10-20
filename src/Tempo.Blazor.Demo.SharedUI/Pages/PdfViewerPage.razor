@@ -126,11 +126,15 @@
 
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Scroll through all pages seamlessly instead of navigating page by page.
+            Scroll through all pages seamlessly instead of navigating page by page. Pages are painted
+            lazily as they enter the viewport, canvases far outside the view are released, scrolling
+            keeps the page indicator (and the two-way <code>Page</code> binding) in sync, and search
+            scrolls to the match's page. This section loads a local 120-page document.
         </p>
         <TmPdfViewer Url="@_demoPdfUrl"
                      ShowToolbar="true"
                      ShowViewModeToggle="true"
+                     ShowSearch="true"
                      ViewMode="PdfViewMode.Continuous"
                      AllowDownload="true"
                      Height="600px" />
@@ -198,6 +202,7 @@
                      ShowTextLayer="true"
                      ShowViewModeToggle="true"
                      EnableAnnotations="true"
+                     AnnotationProvider="_annotationProvider"
                      CurrentUser="_currentUser"
                      AllowRotation="true"
                      AllowDownload="true"
@@ -206,7 +211,13 @@
 </section>
 
 @code {
-    private const string _demoPdfUrl = "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf";
+    /// <summary>
+    /// Local 120-page fixture (Demo.SharedUI static web assets,
+    /// <c>_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf</c>) so the
+    /// demos and the E2E lane never depend on an external URL: 100+ pages keep the
+    /// continuous scroll, lazy rendering and search lanes honest.
+    /// </summary>
+    private const string _demoPdfUrl = "_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf";
 
     /// <summary>Optional PDF URL override for the Basic Usage viewer (e.g. a document-editor export).</summary>
     [Microsoft.AspNetCore.Components.SupplyParameterFromQuery(Name = "url")]
@@ -224,6 +235,31 @@
     private readonly InMemoryPdfAnnotationProvider _annotationProvider = new(
         new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
         {
+            // Seed for the Continuous→SinglePage handoff (PD1): a thread on page 3 lets
+            // the E2E lane select it while the "All Features Combined" viewer is in
+            // continuous mode and assert the switch back to the thread's page.
+            ["demo-full-pdf"] =
+            [
+                new DocumentCommentThread
+                {
+                    Id = "full-seed-thread",
+                    Anchor = DocumentCommentAnchor.TextRange(3,
+                        [DocumentCommentRect.Create(0.20, 0.35, 0.25, 0.015)],
+                        "content point"),
+                    Comments =
+                    [
+                        new DocumentComment
+                        {
+                            Id = "full-seed-comment",
+                            AuthorId = "reviewer",
+                            AuthorName = "Reviewer",
+                            Body = "Selecting this thread returns the viewer to single-page mode on page 3.",
+                            CanEdit = false,
+                            CanDelete = false
+                        }
+                    ]
+                }
+            ],
             ["demo-annotated-pdf"] =
             [
                 new DocumentCommentThread

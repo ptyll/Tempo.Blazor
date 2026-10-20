@@ -278,6 +278,20 @@
     white-space: nowrap;
 }
 
+/* ── PD1: annotations single-page hint (continuous mode) ─────────────────── */
+
+.tm-pdf-viewer__annotations-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-info-text);
+    background: var(--tm-color-info-subtle);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
+}
+
 /* ── Body layout ─────────────────────────────────────────────────────────── */
 
 .tm-pdf-viewer__body {
@@ -297,7 +311,10 @@
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    background: var(--tm-bg-workspace);
+    /* Tinted workspace: the page surfaces (canvas) pop against a muted ground.
+       --tm-bg-subtle does not exist in tokens.css — --tm-bg-muted is the muted
+       ground token (gray-100 light / dark-mode override). */
+    background: var(--tm-bg-muted);
     padding: var(--tm-space-4);
 }
 
@@ -354,23 +371,72 @@
     scrollbar-gutter: stable;
     flex: 1;
     overflow: auto;
-    background: var(--tm-bg-workspace);
+    /* Tinted workspace, matching the single-page canvas wrap (no --tm-bg-subtle
+       token — --tm-bg-muted is the muted ground). The page surfaces pop against it. */
+    background: var(--tm-bg-muted);
     padding: var(--tm-space-4);
 }
 
 /* The continuous pages and the thumbnails are DOM built by pdf-viewer.js — they never
-   carry the scope attribute, so every rule must opt into ::deep. */
+   carry the scope attribute, so every rule must opt into ::deep. The page inner is the
+   positioning context for the per-page text/search layers; it shrink-wraps the canvas. */
 
 .tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page {
+    position: relative;
     margin-bottom: var(--tm-space-4);
     display: flex;
     justify-content: center;
 }
 
-.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page > canvas {
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page-inner {
+    position: relative;
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page canvas {
     display: block;
+    /* The page surface reads as paper on the tinted workspace. */
+    background: var(--tm-bg-surface);
     box-shadow: var(--tm-pdf-page-shadow);
     border-radius: var(--tm-radius-sm);
+}
+
+/* Skeleton shimmer for pages that are not painted yet — the placeholder box shows
+   a quiet animated surface until the canvas backing store arrives. */
+@keyframes tm-pdf-page-shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page canvas:not([data-rendered]) {
+    background: linear-gradient(100deg,
+        var(--tm-bg-surface) 40%,
+        var(--tm-bg-surface-secondary) 50%,
+        var(--tm-bg-surface) 60%);
+    background-size: 200% 100%;
+    animation: tm-pdf-page-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page canvas:not([data-rendered]) {
+        animation: none;
+        background: var(--tm-bg-muted);
+    }
+}
+
+/* Per-page text layer of the continuous renderer — JS sizes it to the canvas box
+   (the shared __text-layer class centers itself in the single-page canvas wrap). */
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: none;
+    z-index: 1;
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__search-layer {
+    width: 100%;
+    height: 100%;
 }
 
 /* ── Thumbnails sidebar ──────────────────────────────────────────────────── */

@@ -250,6 +250,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// only after the switch has been rendered.
     /// </summary>
     private bool _fitPending;
+    /// <summary>
+    /// A Continuous → SinglePage switch was deferred to the next
+    /// <see cref="OnAfterRenderAsync"/> pass: the canvas, text-layer and overlay
+    /// ElementReferences still point at the torn-down continuous DOM until the
+    /// re-render that follows the switch — rendering or attaching selection against
+    /// them would target stale (or missing) nodes. Same pattern as <see cref="_fitPending"/>.
+    /// </summary>
+    private bool _singlePagePending;
 
     // Search state
     private bool _searchVisible;
@@ -319,6 +327,8 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _isLoading = true;
             _loadError = null;
             _totalPages = 0;
+            _singlePagePending = false;
+            _fitPending = false;
             // Render keys are per document: a new Url must re-render thumbnails
             // and continuous pages even if scale/rotation are unchanged.
             _lastContinuousRender = null;
@@ -345,7 +355,11 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
                 _pageInput = _currentPage.ToString(CultureInfo.InvariantCulture);
                 if (_pdfInitialized && !_useFallback)
                 {
-                    _ = RenderCurrentPageAsync();
+                    // In continuous mode a host-driven Page change scrolls the wrap —
+                    // the lazy renderer paints it when it becomes visible.
+                    _ = _viewMode == PdfViewMode.Continuous
+                        ? ScrollToPageInContinuousAsync(Page)
+                        : RenderCurrentPageAsync();
                 }
             }
             if (Math.Abs(Scale - _scale) > 0.001 && Scale is > 0 and <= 5)
@@ -464,12 +478,10 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         if (_totalPages > 0 && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null
             && _lastContinuousRender != (Url, _scale, Rotation))
         {
-            _lastContinuousRender = (Url, _scale, Rotation);
-            try
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
-            }
-            catch { }
+            // The render key is recorded inside RenderContinuousPagesAsync only after
+            // the interop call succeeded — a failed/no-op call stays unrecorded and is
+            // retried by the next OnAfterRender pass.
+            await RenderContinuousPagesAsync();
         }
 
         // A fit recompute deferred by a view-mode switch runs here: the swapped
@@ -489,6 +501,23 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         // runs while the init await is still pending, and must not consume their
         // flags — otherwise the overlay/selection is never synced at all.
         if (_isLoading) return;
+
+        // A deferred Continuous → SinglePage switch (the toggle or the PD1 thread
+        // select): the single-page canvas/text-layer/overlay refs are fresh only
+        // after the swap rendered, so the render + selection/overlay setup runs here.
+        if (_singlePagePending)
+        {
+            if (_canvasRef.Context is not null)
+            {
+                _singlePagePending = false;
+                await RenderCurrentPageAsync();
+                if (!_useFallback && (EnableAnnotations || EnableTextSelectionEvents))
+                {
+                    await SetupSelectionAsync();
+                    await RefreshAnnotationOverlayAsync();
+                }
+            }
+        }
 
         if (EnableAnnotations && !_useFallback && !_annotationsLoaded)
         {
@@ -580,8 +609,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     public async Task OnThumbnailClicked(int pageNum)
     {
         if (pageNum < 1 || pageNum > _totalPages) return;
-        await SetPageAsync(pageNum);
-        await RenderCurrentPageAsync();
+        await NavigateToPageAsync(pageNum);
         try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _rootRef, _currentPage); }
         catch { }
     }
@@ -595,6 +623,30 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>
+    /// Receives the page the user scrolled to in continuous mode (reported by the JS
+    /// scroll tracker): updates the current page, the toolbar input and the two-way
+    /// <see cref="Page"/> binding, and refreshes the active thumbnail. Rendering is
+    /// not needed — the lazy continuous renderer paints what becomes visible.
+    /// </summary>
+    [JSInvokable]
+    public void OnVisiblePageChanged(int pageNumber)
+    {
+        if (pageNumber < 1 || pageNumber > _totalPages || pageNumber == _currentPage)
+        {
+            return;
+        }
+
+        _currentPage = pageNumber;
+        _pageInput = pageNumber.ToString(CultureInfo.InvariantCulture);
+        if (PageChanged.HasDelegate)
+        {
+            _ = InvokeAsync(() => PageChanged.InvokeAsync(_currentPage));
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
     /// <summary>Receives the active search match position (1-based) and its page from JavaScript.</summary>
     [JSInvokable]
     public async Task OnSearchActiveChanged(int activeMatch, int pageNumber)
@@ -603,10 +655,21 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         if (pageNumber >= 1 && pageNumber <= _totalPages && pageNumber != _currentPage)
         {
             await SetPageAsync(pageNumber);
-            // A match on another page must actually show that page: the full render
-            // (canvas + text layer + overlay + search redraw) and, in a fit mode, the
-            // recompute for the new page size.
-            await RenderCurrentPageAsync();
+            if (_viewMode == PdfViewMode.Continuous)
+            {
+                // The JS search already scrolled the wrap to the match's page; the
+                // lazy renderer paints it when it becomes visible. Rendering into the
+                // single-page canvas would target a node that does not exist here.
+                try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _rootRef, _currentPage); }
+                catch { }
+            }
+            else
+            {
+                // A match on another page must actually show that page: the full render
+                // (canvas + text layer + overlay + search redraw) and, in a fit mode, the
+                // recompute for the new page size.
+                await RenderCurrentPageAsync();
+            }
         }
 
         await InvokeAsync(StateHasChanged);
@@ -671,18 +734,42 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         await PageChanged.InvokeAsync(_currentPage);
     }
 
+    /// <summary>
+    /// User-driven navigation shared by the prev/next buttons, the page input,
+    /// thumbnails, search matches and thread anchors. In continuous mode it scrolls
+    /// the wrap to the page — the lazy renderer paints it when it becomes visible —
+    /// instead of rendering into an invisible single-page canvas.
+    /// </summary>
+    private async Task NavigateToPageAsync(int page)
+    {
+        if (page < 1 || page > _totalPages) return;
+        await SetPageAsync(page);
+        if (_viewMode == PdfViewMode.Continuous)
+        {
+            await ScrollToPageInContinuousAsync(page);
+            return;
+        }
+        await RenderCurrentPageAsync();
+    }
+
+    /// <summary>Scrolls the continuous wrap to a page. The lazy renderer paints the
+    /// page when it scrolls into view; nothing is rendered into an invisible canvas.</summary>
+    private async Task ScrollToPageInContinuousAsync(int page)
+    {
+        try { await JS.InvokeVoidAsync("tmPdfViewer.scrollToPage", _rootRef, page); }
+        catch { }
+    }
+
     private async Task GoToPreviousPageAsync()
     {
         if (_currentPage <= 1) return;
-        await SetPageAsync(_currentPage - 1);
-        await RenderCurrentPageAsync();
+        await NavigateToPageAsync(_currentPage - 1);
     }
 
     private async Task GoToNextPageAsync()
     {
         if (_currentPage >= _totalPages) return;
-        await SetPageAsync(_currentPage + 1);
-        await RenderCurrentPageAsync();
+        await NavigateToPageAsync(_currentPage + 1);
     }
 
     /// <summary>Commits the toolbar page input: a valid in-range value navigates, anything
@@ -701,8 +788,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             return;
         }
 
-        await SetPageAsync(page);
-        await RenderCurrentPageAsync();
+        await NavigateToPageAsync(page);
     }
 
     private async Task HandlePageInputKeyDownAsync(KeyboardEventArgs e)
@@ -870,8 +956,20 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         {
             if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
-                MarkContinuousRendered();
+                if (_lastContinuousRender is { } last && last.Url == Url && last.Rotation == Rotation
+                    && _totalPages > 0)
+                {
+                    // Scale-only change: the per-page DOM, its layers and the
+                    // observer/scroll bindings are still valid — update the
+                    // placeholders in place instead of rebuilding the wrap.
+                    await JS.InvokeVoidAsync("tmPdfViewer.updateContinuousScale", _rootRef, _continuousRef, _scale);
+                    MarkContinuousRendered();
+                }
+                else
+                {
+                    // First continuous render for this Url/rotation: full rebuild.
+                    await RenderContinuousPagesAsync();
+                }
             }
             else
             {
@@ -895,12 +993,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         Rotation = (Rotation + 90) % 360;
         if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
         {
-            try
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
-                MarkContinuousRendered();
-            }
-            catch { }
+            await RenderContinuousPagesAsync();
 
             // The rotation changes the page aspect ratio, so an active fit mode must
             // recompute (renderAllPages above synced the JS-side rotation the fit math
@@ -937,17 +1030,45 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
         if (_viewMode == PdfViewMode.Continuous)
         {
-            try
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
-                MarkContinuousRendered();
-            }
-            catch { }
+            _singlePagePending = false;
+            await RenderContinuousPagesAsync();
         }
         else
         {
-            await RenderCurrentPageAsync();
+            // PD1: the annotation overlay and the text-selection setup live in the
+            // canvas-wrap layout only. The canvas/text-layer refs still point at the
+            // torn-down continuous DOM until the swap has been rendered — defer the
+            // render + selection/overlay setup to OnAfterRenderAsync
+            // (_singlePagePending), exactly like the deferred fit recompute.
+            _singlePagePending = true;
+            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    /// <summary>
+    /// Rebuilds the continuous pages at the current scale/rotation. The JS side keeps
+    /// placeholders for every page and paints lazily; the flags decide which per-page
+    /// layers the wraps carry. PD1: annotations never render in continuous mode, so
+    /// the text layer follows only the viewer's own <see cref="ShowTextLayer"/> and the
+    /// search layer follows <see cref="ShowSearch"/> — annotation-driven selection
+    /// (EnableAnnotations / EnableTextSelectionEvents) stays single-page.
+    /// </summary>
+    private async Task RenderContinuousPagesAsync()
+    {
+        var textLayer = ShowTextLayer;
+        var searchLayer = ShowSearch;
+        try
+        {
+            // The label template rides along even without text/search layers — the
+            // per-page aria-labels are always rendered (A11y). currentPage lets the
+            // JS side restore the scroll to this page when no anchor exists (a first
+            // build into an empty container — e.g. a mode switch while page N was
+            // open must not jump back to page 1).
+            await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation,
+                new { textLayer, searchLayer, pageLabelTemplate = Loc["TmPdfViewer_PageOfTotal"], currentPage = _currentPage });
+            MarkContinuousRendered();
+        }
+        catch { }
     }
 
     /// <summary>
@@ -1105,6 +1226,21 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             return;
         }
 
+        // PD1: the selection handler reads the single-page canvas, which does not
+        // exist in continuous mode. Skip without consuming the one-shot flag —
+        // returning to SinglePage re-runs the setup (SwitchViewModeAsync).
+        if (_viewMode == PdfViewMode.Continuous)
+        {
+            return;
+        }
+
+        // The text-layer element must exist in the rendered DOM — during a deferred
+        // (or torn-down) layout the ref is stale and the handler would bind to nothing.
+        if (_textLayerRef.Context is null)
+        {
+            return;
+        }
+
         try
         {
             await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation);
@@ -1244,9 +1380,21 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         _selectedThreadId = threadId;
         // Selecting a thread anchored on another page navigates to that page.
         var page = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal))?.Anchor.PageNumber ?? 0;
-        if (page >= 1 && page != _currentPage)
+        if (page >= 1)
         {
-            await GoToPageAsync(page);
+            // PD1: the annotation overlay only exists in single-page mode, so a thread
+            // picked from the (still readable) panel returns the viewer to SinglePage
+            // on the thread's page — the selection stays functional. The page state is
+            // synced first (no render); the switch below renders it.
+            if (_viewMode == PdfViewMode.Continuous)
+            {
+                await SetPageAsync(page);
+                await SetViewModeAsync(PdfViewMode.SinglePage);
+            }
+            else if (page != _currentPage)
+            {
+                await GoToPageAsync(page);
+            }
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -1276,17 +1424,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Navigates to a specific page. In continuous mode the page wrap is
     /// scrolled into view instead of re-rendering a single canvas. A fit mode recomputes
     /// inside <see cref="RenderCurrentPageAsync"/> for the new page size.</summary>
-    public async Task GoToPageAsync(int page)
-    {
-        if (page < 1 || page > _totalPages) return;
-        await SetPageAsync(page);
-        if (_viewMode == PdfViewMode.Continuous && !_useFallback)
-        {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.scrollToPage", _rootRef, page); }
-            catch { }
-        }
-        await RenderCurrentPageAsync();
-    }
+    public Task GoToPageAsync(int page) => NavigateToPageAsync(page);
 
     /// <summary>Sets the zoom scale directly. Switches an active fit mode back to
     /// <see cref="PdfZoomMode.Custom"/> — an explicit scale is a user decision.</summary>

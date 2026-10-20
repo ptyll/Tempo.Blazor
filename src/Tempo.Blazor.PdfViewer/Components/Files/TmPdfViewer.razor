@@ -275,6 +275,18 @@
             </div>
         }
 
+        @* PD1: annotations (and OverlayContent) render in single-page mode only. In
+           continuous mode the thread panel stays readable, but the viewer shows a hint
+           explaining why the page markers are absent and returns to SinglePage when a
+           thread is selected. *@
+        @if (EnableAnnotations && !_useFallback && _viewMode == PdfViewMode.Continuous)
+        {
+            <div class="tm-pdf-viewer__annotations-hint" role="note" data-testid="@TestId("pdf-annotations-single-page-hint")">
+                <TmIcon Name="info" Size="IconSize.Sm" />
+                <span>@Loc["TmPdfViewer_AnnotationsSinglePageOnly"]</span>
+            </div>
+        }
+
         <div class="tm-pdf-viewer__body" aria-busy="@(_isLoading ? "true" : "false")">
             @if (_isLoading && !_useFallback)
             {
@@ -325,7 +337,13 @@
             {
                 @if (_viewMode == PdfViewMode.Continuous)
                 {
-                    <div class="tm-pdf-viewer__continuous-wrap" @ref="_continuousRef"></div>
+                    @* A11y: the scroll region is keyboard-reachable so keyboard users can
+                       scroll the pages (and reach the per-page groups' labels). *@
+                    <div class="tm-pdf-viewer__continuous-wrap"
+                         role="region"
+                         tabindex="0"
+                         aria-label="@Loc["TmPdfViewer_Pages"]"
+                         @ref="_continuousRef"></div>
                 }
                 else
                 {

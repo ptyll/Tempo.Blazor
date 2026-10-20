@@ -4,6 +4,47 @@
 
 ### Added
 
+- **TmPdfViewer: full continuous mode — lazy rendering, scroll tracking and per-page text/search.**
+  `renderAllPages` now builds one placeholder wrap per page (correct aspect ratio, resolved from
+  the real page boxes), paints pages lazily through an IntersectionObserver and a serial render
+  queue (`pdf-viewer-continuous.mjs`, node-tested) so a 100+ page document never blocks the UI,
+  and releases canvases scrolled far outside the viewport (limit 12 painted pages). Scrolling
+  reports the visible page through the new `[JSInvokable] OnVisiblePageChanged` — updating the
+  two-way `Page` binding, the toolbar input and the active thumbnail — while prev/next, the page
+  input, thumbnails and search matches call `scrollToPage` instead of rendering into an invisible
+  single-page canvas. The text layer and search highlights render per page inside each page wrap,
+  the active match scrolls its page into view, and zoom/rotation/view-mode switches preserve the
+  scroll position through a page-relative anchor. The demo loads a local 120-page fixture
+  (`_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf`, shipped by the
+  shared demo UI package) instead of an external URL.
+  New localization keys: `TmPdfViewer_AnnotationsSinglePageOnly`, `TmPdfViewer_PageOfTotal`
+  (en/cs/sk/fr + mock).
+
+- **TmPdfViewer: continuous mode review pass — switches, release band, scale updates and A11y.**
+  A Continuous → SinglePage switch (toolbar toggle or thread select) now renders and re-arms the
+  selection/overlay setup only after the fresh single-page DOM exists (`_singlePagePending`) —
+  previously the JS ran against the torn-down continuous DOM. Canvas release honors the same
+  margin-extended band as the IntersectionObserver (`±50 %` viewport) and a scroll tick re-queues
+  unpainted visible pages; leaving the band drops a page from the render queue. Released pages
+  also clear their text/search layers, and the active search match scrolls with `nearest` (and
+  not at all when already visible) so the page indicator no longer regresses to N−1. A scale-only
+  change in Continuous mode updates the placeholders in place (placeholders resized, painted
+  canvases dropped and re-queued, scroll anchor re-applied, pageSizes cached per document +
+  rotation) instead of rebuilding the DOM; the fit recompute is debounced ~100 ms in Continuous.
+  A11y: each continuous page wrap is a `role="group"` labelled from the localized
+  `TmPdfViewer_PageOfTotal` template with `aria-current="page"` tracking the visible page, the
+  canvas is `role="img"` (or `aria-hidden` under a text layer), and the wrap itself is a
+  keyboard-reachable `role="region"`. The demo pages use a tinted workspace
+  (`--tm-bg-muted`) with `--tm-bg-surface` page surfaces and a reduced-motion-aware skeleton
+  shimmer for unpainted pages.
+
+- **TmPdfViewer: annotations and `OverlayContent` are single-page only (PD1).** In continuous mode
+  the annotation overlay and `OverlayContent` are not rendered; the thread panel stays readable
+  and shows a localized hint (`TmPdfViewer_AnnotationsSinglePageOnly`), and selecting a thread
+  switches the viewer back to `SinglePage` on the thread's page (`ViewModeChanged` +
+  navigation). `TmRedactionLayer` keeps its viewer pinned to SinglePage (default `ViewMode`) and
+  is unaffected. `TmPdfAnnotator` already pins SinglePage.
+
 - **TmPdfViewer: `PdfZoomMode` (`Custom` | `FitWidth` | `FitPage`) with `ZoomMode`/`ZoomModeChanged`
   (two-way, default `Custom`).** A fit mode lets JavaScript compute the scale from the container
   size (`tmPdfViewer.fitScale`) and a ResizeObserver keeps recomputing it on resize — fit-width
@@ -102,6 +143,39 @@
   `TmPdfAnnotator` stencil schema gains `showThumbnails`, `showSearch`, `showHeader` and `title`.
 
 ### Breaking / Migration
+
+- **TmPdfViewer: annotation overlays in Continuous mode are gone (PD1).** Previously a host that
+  enabled annotations and switched the viewer to `Continuous` rendered the annotation overlay and
+  `OverlayContent` over the (never painted) continuous DOM — markers and custom overlays were
+  misaligned and unusable. Now the overlay and `OverlayContent` render in `SinglePage` only: the
+  comment thread panel stays readable in Continuous (with a localized hint), and selecting a
+  thread returns the viewer to `SinglePage` on the thread's page. **Text-selection annotation
+  creation is disabled in Continuous mode too** — the selection handler reads the single-page
+  canvas and the annotation overlay does not exist there, so there is nothing to attach a draft
+  to; the panel, replies, resolve/delete and the thread list all keep working. Hosts that need
+  overlay- or selection-driven annotation creation should keep `ViewMode="SinglePage"` (as
+  `TmPdfAnnotator` and `TmRedactionLayer` do) or react to `ViewModeChanged`:
+
+  ```razor
+  @* BEFORE — the overlay/selection silently broke in Continuous *@
+  <TmPdfViewer Url="@url"
+               EnableAnnotations="true"
+               ShowViewModeToggle="true"
+               ViewMode="@mode" />
+
+  @* AFTER — keep the annotating viewer pinned to SinglePage … *@
+  <TmPdfViewer Url="@url"
+               EnableAnnotations="true"
+               ViewMode="PdfViewMode.SinglePage" />
+
+  @* AFTER — … or switch back on demand (e.g. a "Review" toggle) *@
+  <TmPdfViewer Url="@url"
+               EnableAnnotations="true"
+               ShowViewModeToggle="true"
+               ViewMode="@_reviewMode"
+               ViewModeChanged="@(m => _reviewMode = m)" />
+  @* The viewer itself already returns to SinglePage when a comment thread is selected. *@
+  ```
 
 - **TmPdfAnnotator: the annotator has ONE toolbar now — its groups are merged into the embedded
   viewer's toolbar, and the export group moved into an optional header row.** Previously the

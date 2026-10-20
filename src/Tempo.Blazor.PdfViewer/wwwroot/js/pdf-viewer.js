@@ -18,9 +18,9 @@ window.tmPdfViewer = (function () {
     })();
 
     // rootEl → per-instance state. Shape:
-    //   pending load: { rootEl, token, pending: true, dotNetRef, renderTasks, overlayObservers, abort, renderGen, thumbGen }
+    //   pending load: { rootEl, token, pending: true, dotNetRef, renderTasks, overlayObservers, abort, buildGen, paintGen, thumbGen }
     //   loaded:       { rootEl, pdfDoc, token, currentPage, scale, rotation, dotNetRef, renderTasks,
-    //                   overlayObservers, abort, renderGen, thumbGen, _selectionHandler,
+    //                   overlayObservers, abort, buildGen, paintGen, thumbGen, _selectionHandler,
     //                   fitMode, fitObserver, fitObserverEl }
     // `token` is a unique marker per init() call: a download that finishes after a
     // newer init()/destroy() detects the stale token and discards itself.
@@ -74,6 +74,21 @@ window.tmPdfViewer = (function () {
         return _fitModulePromise;
     }
 
+    // Pure continuous-mode logic (visible page, lazy queue order, canvas release
+    // limit, zoom scroll anchors) lives in pdf-viewer-continuous.mjs, node-tested
+    // the same way; pdf-viewer.js only collects the DOM boxes around it.
+    let _continuousModule = null;
+    let _continuousModulePromise = null;
+    function _ensureContinuousModule() {
+        if (_continuousModule) return Promise.resolve(_continuousModule);
+        if (!_continuousModulePromise) {
+            _continuousModulePromise = import(_scriptDir + 'pdf-viewer-continuous.mjs')
+                .then(mod => { _continuousModule = mod; return mod; })
+                .catch(e => { _continuousModulePromise = null; throw e; });
+        }
+        return _continuousModulePromise;
+    }
+
     function _isCancelled(err) {
         return _renderModule ? _renderModule.isRenderingCancelled(err) : false;
     }
@@ -88,9 +103,18 @@ window.tmPdfViewer = (function () {
             // overlayEl → ResizeObserver; disconnected in destroy()
             overlayObservers: new Map(),
             abort: new AbortController(),
-            // generation counters guarding renderAllPages/renderThumbnails loops
-            renderGen: 0,
-            thumbGen: 0
+            // Generation counters guarding the continuous loops. buildGen invalidates
+            // the DOM build (renderAllPages, its IntersectionObserver callback and
+            // _resolvePageSizes); paintGen invalidates the paint loop (the pump and
+            // _renderContinuousPage). A rebuild bumps both; a scale-only update bumps
+            // only paintGen so a pending build still finishes instead of leaving an
+            // empty DOM.
+            buildGen: 0,
+            paintGen: 0,
+            thumbGen: 0,
+            // Per-page boxes (page → {width, height} at scale 1) resolved lazily so
+            // continuous placeholders carry the correct aspect ratio.
+            pageSizes: new Map()
         };
     }
 
@@ -204,11 +228,13 @@ window.tmPdfViewer = (function () {
     async function renderPage(rootEl, pageNum, scale, rotation) {
         const state = _docs.get(rootEl);
         if (!state?.pdfDoc) return;
-        state.currentPage = pageNum;
         state.scale = scale;
         if (rotation !== undefined) state.rotation = rotation;
         const canvasEl = _getCanvas(rootEl);
         if (!canvasEl) return; // continuous mode renders all pages instead
+        // Only the single-page canvas owns state.currentPage: in continuous mode the
+        // scroll tracker keeps it in sync and a stale render call must not fight it.
+        state.currentPage = pageNum;
         try {
             const page = await state.pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale, rotation: state.rotation });
@@ -235,18 +261,18 @@ window.tmPdfViewer = (function () {
         await renderPage(rootEl, state.currentPage, state.scale, rotation);
     }
 
-    async function renderTextLayer(rootEl, textLayerEl, pageNum, scale, rotation) {
-        const state = _docs.get(rootEl);
-        if (!state?.pdfDoc || !textLayerEl) return;
+    // Shared text-layer builder: fills `el` with the selectable text divs for one
+    // page. Used by the single-page layer and by the per-page layers of the
+    // continuous renderer.
+    async function _renderTextLayerInto(state, el, page, viewport) {
+        if (!state?.pdfDoc || !el) return;
         try {
             const pdfjs = await _ensureLib();
-            const page = await state.pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale, rotation: rotation ?? state.rotation });
             const textContent = await page.getTextContent();
 
-            textLayerEl.innerHTML = '';
-            textLayerEl.style.width = viewport.width + 'px';
-            textLayerEl.style.height = viewport.height + 'px';
+            el.innerHTML = '';
+            el.style.width = viewport.width + 'px';
+            el.style.height = viewport.height + 'px';
 
             for (const item of textContent.items) {
                 const tx = pdfjs.Util.transform(viewport.transform, item.transform);
@@ -265,11 +291,19 @@ window.tmPdfViewer = (function () {
                 div.style.userSelect = 'text';
                 div.style.cursor = 'text';
                 div.style.opacity = '0.2';
-                textLayerEl.appendChild(div);
+                el.appendChild(div);
             }
         } catch (err) {
             console.error('tmPdfViewer.renderTextLayer', err);
         }
+    }
+
+    async function renderTextLayer(rootEl, textLayerEl, pageNum, scale, rotation) {
+        const state = _docs.get(rootEl);
+        if (!state?.pdfDoc || !textLayerEl) return;
+        const page = await state.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale, rotation: rotation ?? state.rotation });
+        await _renderTextLayerInto(state, textLayerEl, page, viewport);
     }
 
     async function renderThumbnails(rootEl, containerEl, scale, dotNetRef) {
@@ -478,11 +512,49 @@ window.tmPdfViewer = (function () {
         state.searchActive = matches.length ? 0 : -1;
         dotNetRef.invokeMethodAsync('OnSearchResults', matches.length, perPage).catch(() => { });
 
+        // Continuous mode keeps the highlights inside the page wraps — refresh all
+        // of them once the matches are known (the active one is drawn right after).
+        if (_isContinuous(state)) {
+            _drawAllSearchHighlights(state);
+        }
+
         if (matches.length) {
             await _activateMatch(rootEl, searchLayerEl);
         } else {
             _drawSearchHighlights(rootEl, searchLayerEl, state.currentPage);
         }
+    }
+
+    // ── Search highlighting per surface ─────────────────────────────────────
+
+    // The single-page viewer draws highlights into one overlay sized to the canvas;
+    // the continuous renderer keeps a search layer inside every page wrap instead.
+    function _isContinuous(state) {
+        return !!state?._continuousEl?.isConnected;
+    }
+
+    function _drawSearchHighlightsIntoPage(state, wrap, pageNum) {
+        const layer = wrap?.querySelector?.(':scope > .tm-pdf-viewer__page-inner > .tm-pdf-viewer__search-layer');
+        if (!layer) return;
+        layer.innerHTML = '';
+        (state.searchMatches ?? []).forEach((match, i) => {
+            if (match.page !== pageNum) return;
+            const div = document.createElement('div');
+            const isActive = i === state.searchActive;
+            div.className = 'tm-pdf-search-highlight' + (isActive ? ' tm-pdf-search-highlight--active' : '');
+            div.style.left = (match.x * 100) + '%';
+            div.style.top = (match.y * 100) + '%';
+            div.style.width = (match.w * 100) + '%';
+            div.style.height = (match.h * 100) + '%';
+            if (isActive) div.dataset.active = '1';
+            layer.appendChild(div);
+        });
+    }
+
+    function _drawAllSearchHighlights(state) {
+        state?._continuousEl?.querySelectorAll(':scope > .tm-pdf-viewer__page').forEach(wrap => {
+            _drawSearchHighlightsIntoPage(state, wrap, parseInt(wrap.dataset.page, 10));
+        });
     }
 
     async function searchNext(rootEl, searchLayerEl) {
@@ -512,17 +584,33 @@ window.tmPdfViewer = (function () {
             state.searchQuery = null;
         }
         if (searchLayerEl) searchLayerEl.innerHTML = '';
+        // Continuous mode keeps a search layer inside every page wrap.
+        if (state?._continuousEl) {
+            state._continuousEl.querySelectorAll('.tm-pdf-viewer__search-layer').forEach(layer => {
+                layer.innerHTML = '';
+            });
+        }
     }
 
     async function _activateMatch(rootEl, searchLayerEl) {
         const state = _docs.get(rootEl);
         if (!state || !state.searchMatches || state.searchActive < 0) return;
         const match = state.searchMatches[state.searchActive];
-        if (match.page !== state.currentPage) {
-            await renderPage(rootEl, match.page, state.scale, state.rotation);
+        if (_isContinuous(state)) {
+            // The match's page is scrolled into view; the lazy renderer paints it when
+            // it becomes visible. Rendering into the single-page canvas would target a
+            // node that does not exist in this mode.
+            scrollToPage(rootEl, match.page);
+            const wrap = state._continuousEl.querySelector(`:scope > [data-page="${match.page}"]`);
+            _drawSearchHighlightsIntoPage(state, wrap, match.page);
+            _scrollToActive(wrap?.querySelector('.tm-pdf-viewer__search-layer'));
+        } else {
+            if (match.page !== state.currentPage) {
+                await renderPage(rootEl, match.page, state.scale, state.rotation);
+            }
+            _drawSearchHighlights(rootEl, searchLayerEl, match.page);
+            _scrollToActive(searchLayerEl);
         }
-        _drawSearchHighlights(rootEl, searchLayerEl, match.page);
-        _scrollToActive(searchLayerEl);
         if (state.dotNetRef) {
             state.dotNetRef.invokeMethodAsync('OnSearchActiveChanged', state.searchActive + 1, match.page).catch(() => { });
         }
@@ -549,12 +637,38 @@ window.tmPdfViewer = (function () {
         });
     }
 
+    // Scrolls the active highlight into view — but only when it is not already
+    // fully visible inside its scroll container. `block: 'center'` here used to
+    // drag the wrap so far that the viewport's top edge landed on page N−1 and
+    // the page indicator regressed; 'nearest' scrolls the minimum distance, and
+    // an already-visible highlight scrolls nothing at all.
     function _scrollToActive(searchLayerEl) {
         if (!searchLayerEl) return;
         const active = searchLayerEl.querySelector('[data-active="1"]');
-        if (active && typeof active.scrollIntoView === 'function') {
-            active.scrollIntoView({ block: 'center', inline: 'center' });
+        if (!active || typeof active.scrollIntoView !== 'function') return;
+        const scroller = _closestScrollContainer(active);
+        if (scroller) {
+            const activeRect = active.getBoundingClientRect();
+            const scrollerRect = scroller.getBoundingClientRect();
+            if (activeRect.top >= scrollerRect.top && activeRect.bottom <= scrollerRect.bottom) {
+                return; // already visible — keep the scroll position (and page indicator) stable
+            }
         }
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    // Nearest ancestor with a scrollable overflow-y (the continuous wrap or the
+    // single-page canvas wrap). Degrades to null when getComputedStyle is not
+    // available (node tests).
+    function _closestScrollContainer(el) {
+        if (typeof document === 'undefined' || typeof window?.getComputedStyle !== 'function') return null;
+        let node = el?.parentElement;
+        while (node && node !== document.body) {
+            const style = window.getComputedStyle(node);
+            if (style && /(auto|scroll)/.test(style.overflowY || '') && node.clientHeight > 0) return node;
+            node = node.parentElement;
+        }
+        return null;
     }
 
     function _clamp01(value) {
@@ -562,18 +676,361 @@ window.tmPdfViewer = (function () {
         return Math.min(Math.max(value, 0), 1);
     }
 
-    async function renderAllPages(rootEl, containerEl, scale, rotation) {
+    // ── Continuous mode (lazy render) ─────────────────────────────────────────
+
+    // Painted-page limit (pdf-viewer-continuous.mjs DEFAULT_MAX_RENDERED_PAGES): a
+    // painted A4 page at DPR 2 costs tens of MB of backing store, so canvases far
+    // outside the viewport are released and re-rendered on demand.
+    const MAX_RENDERED_PAGES = 12;
+
+    // Page metas for the pure continuous math: offset of each wrap inside the
+    // scrolled content. getBoundingClientRect is used because the wrap's
+    // offsetParent is not necessarily the scroll container.
+    function _collectPageMetas(containerEl) {
+        if (!containerEl?.querySelectorAll) return [];
+        const containerTop = containerEl.getBoundingClientRect().top;
+        const scrollTop = containerEl.scrollTop;
+        return Array.from(containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page'), wrap => ({
+            page: parseInt(wrap.dataset.page, 10),
+            top: wrap.getBoundingClientRect().top - containerTop + scrollTop,
+            height: wrap.getBoundingClientRect().height
+        }));
+    }
+
+    // An odd quarter turn swaps a page box's axes.
+    function _swapsAxes(rotation) {
+        const r = ((rotation % 360) + 360) % 360;
+        return r === 90 || r === 270;
+    }
+
+    // Best-known page box at scale 1: the page's own resolved size, else page 1's
+    // from the current rotation (most documents are uniform), else page 1 from any
+    // cached rotation — re-oriented for a 90/270 turn — else the PDF default Letter
+    // box, also re-oriented. Used until _resolvePageSizes corrects the placeholder.
+    function _pageSizeOrFallback(state, pageNum) {
+        const own = state.pageSizes.get(pageNum);
+        if (own) return own;
+        const first = state.pageSizes.get(1);
+        if (first) return first;
+        for (const [cachedRotation, map] of state.pageSizesByRotation ?? []) {
+            const base = map?.get?.(1);
+            if (!base) continue;
+            const delta = (((state.rotation - cachedRotation) % 360) + 360) % 360;
+            return _swapsAxes(delta) ? { width: base.height, height: base.width } : base;
+        }
+        return _swapsAxes(state.rotation) ? { width: 792, height: 612 } : { width: 612, height: 792 };
+    }
+
+    // Applies the placeholder box to a not-yet-painted canvas. The painted render
+    // produces exactly the same CSS size, so there is no layout shift.
+    function _applyPlaceholderSize(state, wrap, scale) {
+        const canvas = wrap.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
+        if (!canvas || canvas.dataset.rendered) return;
+        const pageNum = parseInt(wrap.dataset.page, 10);
+        const size = _pageSizeOrFallback(state, pageNum);
+        const box = _continuousModule
+            ? _continuousModule.placeholderSize(size.width, size.height, scale)
+            : { width: Math.max(1, Math.round(size.width * scale)), height: Math.max(1, Math.round(size.height * scale)) };
+        canvas.style.width = box.width + 'px';
+        canvas.style.height = box.height + 'px';
+    }
+
+    // Applies a scroll anchor recorded before a rebuild against the current boxes.
+    // Shared by the build-time restore and the re-applies after _resolvePageSizes
+    // corrects the placeholders (the corrections shift the layout).
+    function _applyScrollAnchor(state, containerEl, anchor) {
+        if (!anchor || !containerEl?.isConnected || !_continuousModule) return;
+        const restored = _continuousModule.applyScrollAnchor(
+            _collectPageMetas(containerEl), anchor, containerEl.clientHeight);
+        if (restored !== null) containerEl.scrollTop = restored;
+    }
+
+    // Resolves the real per-page boxes (scale 1 viewport) chunk-wise and corrects
+    // the placeholders — a wrong guessed ratio would shift the layout on paint.
+    // The resolved map is cached per rotation (renderAllPages); the __resolved flag
+    // marks a complete pass so a superseded (partial) resolution re-runs later.
+    // `gen` is the build generation and `anchor` the scroll anchor recorded before
+    // the rebuild: each correction shifts the layout, so the anchor is re-applied
+    // after the first chunk and again when the pass completes.
+    async function _resolvePageSizes(state, containerEl, gen, anchor) {
+        const numPages = state.pdfDoc.numPages;
+        const chunk = 8;
+        let firstChunk = true;
+        for (let start = 1; start <= numPages; start += chunk) {
+            const end = Math.min(start + chunk - 1, numPages);
+            const resolved = await Promise.all(Array.from({ length: end - start + 1 }, async (_, i) => {
+                const pageNum = start + i;
+                const page = await state.pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1, rotation: state.rotation });
+                return [pageNum, { width: viewport.width, height: viewport.height }];
+            }));
+            if (state.buildGen !== gen || !containerEl.isConnected) return;
+            for (const [pageNum, size] of resolved) {
+                state.pageSizes.set(pageNum, size);
+                const wrap = containerEl.querySelector(`:scope > [data-page="${pageNum}"]`);
+                if (wrap) _applyPlaceholderSize(state, wrap, state.scale);
+            }
+            if (firstChunk || start + chunk > numPages) {
+                _applyScrollAnchor(state, containerEl, anchor);
+            }
+            firstChunk = false;
+        }
+        state.pageSizes.__resolved = true;
+    }
+
+    function _cancelRenderTasksInside(state, containerEl) {
+        if (!(state.renderTasks instanceof Map)) return;
+        for (const [canvas, task] of state.renderTasks) {
+            if (containerEl.contains(canvas)) {
+                try { task?.cancel?.(); } catch { /* task already settled */ }
+                state.renderTasks.delete(canvas);
+            }
+        }
+    }
+
+    // Clears the per-page layers inside a wrap: released pages hold stale-scale
+    // text/search geometry that would float over the placeholder box.
+    function _clearPageLayers(wrap) {
+        const inner = wrap?.querySelector?.(':scope > .tm-pdf-viewer__page-inner');
+        const textLayer = inner?.querySelector?.(':scope > .tm-pdf-viewer__text-layer');
+        if (textLayer) textLayer.innerHTML = '';
+        const searchLayer = inner?.querySelector?.(':scope > .tm-pdf-viewer__search-layer');
+        if (searchLayer) searchLayer.innerHTML = '';
+    }
+
+    function _releasePageCanvas(state, containerEl, pageNum) {
+        const wrap = containerEl.querySelector(`:scope > [data-page="${pageNum}"]`);
+        const canvas = wrap?.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
+        if (!canvas || !canvas.dataset.rendered) return;
+        // Cancel an in-flight task first (release wins over the queued render).
+        const pending = state.renderTasks.get(canvas);
+        if (pending) {
+            try { pending?.cancel?.(); } catch { /* task already settled */ }
+            state.renderTasks.delete(canvas);
+        }
+        // Zeroing the backing store is the actual memory release; the placeholder
+        // box keeps the page geometry stable for the next paint.
+        canvas.width = 0;
+        canvas.height = 0;
+        delete canvas.dataset.rendered;
+        _clearPageLayers(wrap);
+        _applyPlaceholderSize(state, wrap, state.scale);
+    }
+
+    // Release sweep with an inline fallback (mirrors selectCanvasesToRelease) for a
+    // failed pdf-viewer-continuous.mjs import: farthest rendered page first, visible
+    // pages never released.
+    function _enforceRenderedLimit(state) {
+        const containerEl = state._continuousEl;
+        if (!containerEl?.isConnected) return;
+        if (_continuousModule) {
+            const metas = _collectPageMetas(containerEl).map(meta => {
+                const canvas = containerEl.querySelector(`:scope > [data-page="${meta.page}"] canvas`);
+                return { ...meta, rendered: !!canvas?.dataset.rendered };
+            });
+            for (const pageNum of _continuousModule.selectCanvasesToRelease(
+                metas, containerEl.scrollTop, containerEl.clientHeight, MAX_RENDERED_PAGES)) {
+                _releasePageCanvas(state, containerEl, pageNum);
+            }
+            return;
+        }
+        let rendered = [];
+        for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+            if (wrap.querySelector('canvas')?.dataset.rendered) {
+                const rect = wrap.getBoundingClientRect();
+                rendered.push({ page: parseInt(wrap.dataset.page, 10), top: rect.top, height: rect.height });
+            }
+        }
+        const viewBottom = containerEl.getBoundingClientRect().bottom;
+        while (rendered.length > MAX_RENDERED_PAGES) {
+            let candidate = null;
+            let distance = -1;
+            for (const meta of rendered) {
+                const d = meta.top >= viewBottom ? meta.top - viewBottom : 0; // visible → 0
+                if (d > distance) { candidate = meta; distance = d; }
+            }
+            if (!candidate) return;
+            _releasePageCanvas(state, containerEl, candidate.page);
+            rendered = rendered.filter(meta => meta !== candidate);
+        }
+    }
+
+    // Visible-page report with an inline fallback (mirrors computeVisiblePage: the
+    // page containing the viewport's top edge) for a failed module import.
+    function _reportVisiblePage(state, containerEl) {
+        let visible;
+        if (_continuousModule) {
+            const metas = _collectPageMetas(containerEl);
+            visible = _continuousModule.computeVisiblePage(metas, containerEl.scrollTop, containerEl.clientHeight);
+        } else {
+            const containerTop = containerEl.getBoundingClientRect().top;
+            const scrollTop = containerEl.scrollTop;
+            visible = 0;
+            for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+                const top = wrap.getBoundingClientRect().top - containerTop + scrollTop;
+                if (top + wrap.getBoundingClientRect().height > scrollTop) {
+                    visible = parseInt(wrap.dataset.page, 10);
+                    break;
+                }
+            }
+        }
+        if (!visible || visible === state.currentPage) return;
+        state.currentPage = visible;
+        state.dotNetRef?.invokeMethodAsync('OnVisiblePageChanged', visible).catch(() => { });
+    }
+
+    // Re-queues unpainted pages that intersect the actual viewport. The
+    // IntersectionObserver is transition-driven: a page released by a sweep that
+    // raced a scroll (or re-observed mid-transition) may sit inside the viewport
+    // with no pending entry and no fresh isIntersecting event — the rAF tick is
+    // the safety net that repaints it.
+    function _requeueVisibleUnpainted(state, containerEl) {
+        if (!state._renderQueue || !_continuousModule) return;
+        const metas = _collectPageMetas(containerEl);
+        for (const meta of metas) {
+            const canvas = containerEl.querySelector(`:scope > [data-page="${meta.page}"] canvas`);
+            if (canvas?.dataset.rendered) continue;
+            if (state._renderQueue.has(meta.page)) continue;
+            if (_continuousModule.pageIntersectsViewport(meta, containerEl.scrollTop, containerEl.clientHeight)) {
+                state._renderQueue.add(meta.page);
+            }
+        }
+    }
+
+    // Keeps aria-current="page" on the wrap the user is viewing.
+    function _syncAriaCurrent(state, containerEl) {
+        if (!containerEl?.querySelectorAll) return;
+        for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+            if (parseInt(wrap.dataset.page, 10) === state.currentPage) {
+                wrap.setAttribute('aria-current', 'page');
+            } else if (wrap.getAttribute('aria-current')) {
+                wrap.removeAttribute('aria-current');
+            }
+        }
+    }
+
+    // Scroll tracker: rAF-throttled visible-page reporting plus the release sweep.
+    // Rebinding per rebuild aborts the previous controller, so repeated view-mode
+    // switches never accumulate listeners.
+    function _bindContinuousScroll(state, containerEl) {
+        state._continuousScrollController?.abort();
+        if (typeof containerEl.addEventListener !== 'function') return;
+        const controller = new AbortController();
+        state._continuousScrollController = controller;
+        let frame = 0;
+        const onScroll = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                if (!containerEl.isConnected) return;
+                _reportVisiblePage(state, containerEl);
+                _enforceRenderedLimit(state);
+                _requeueVisibleUnpainted(state, containerEl);
+                _pumpContinuousQueue(state);
+                _syncAriaCurrent(state, containerEl);
+            });
+        };
+        containerEl.addEventListener('scroll', onScroll, { signal: controller.signal, passive: true });
+    }
+
+    function _nextQueuedPage(state, containerEl) {
+        if (!_continuousModule) {
+            return state._renderQueue.size ? Math.min(...state._renderQueue) : undefined;
+        }
+        const metas = _collectPageMetas(containerEl);
+        const ordered = _continuousModule.orderPagesForRender(
+            [...state._renderQueue], metas, containerEl.scrollTop, containerEl.clientHeight);
+        return ordered[0];
+    }
+
+    // Serial render pump: one page at a time so a 100+ page document never blocks
+    // the UI with a burst of renders. A rebuild or a scale update bumps paintGen;
+    // the pump stops when it notices a new generation.
+    async function _pumpContinuousQueue(state) {
+        if (state._pumping) return;
+        state._pumping = true;
+        try {
+            for (;;) {
+                const containerEl = state._continuousEl;
+                if (!containerEl?.isConnected || !state._renderQueue?.size) return;
+                const gen = state.paintGen;
+                const next = _nextQueuedPage(state, containerEl);
+                if (next === undefined) return;
+                state._renderQueue.delete(next);
+                await _renderContinuousPage(state, next, containerEl);
+                if (state.paintGen !== gen) return; // superseded by a rebuild/scale update
+            }
+        } finally {
+            state._pumping = false;
+            // Pages queued while pumping (scrolled into view mid-render) still get painted.
+            if (state._renderQueue?.size && state._continuousEl?.isConnected) {
+                _pumpContinuousQueue(state);
+            }
+        }
+    }
+
+    async function _renderContinuousPage(state, pageNum, containerEl) {
+        const wrap = containerEl.querySelector(`:scope > [data-page="${pageNum}"]`);
+        const canvas = wrap?.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
+        if (!canvas) return;
+        const gen = state.paintGen;
+        try {
+            const page = await state.pdfDoc.getPage(pageNum);
+            if (state.paintGen !== gen || !wrap.isConnected) return;
+            const viewport = page.getViewport({ scale: state.scale, rotation: state.rotation });
+            await _renderToCanvas(canvas, page, viewport, { tasks: state.renderTasks });
+            if (state.paintGen !== gen || !wrap.isConnected) return;
+            canvas.dataset.rendered = '1';
+            if (state._continuousFlags?.textLayer) {
+                const textLayer = wrap.querySelector('.tm-pdf-viewer__text-layer');
+                if (textLayer) await _renderTextLayerInto(state, textLayer, page, viewport);
+            }
+            if (state.paintGen !== gen) return;
+            _enforceRenderedLimit(state);
+        } catch (err) {
+            if (_isCancelled(err)) return; // superseded by a newer render for this canvas
+            console.error('tmPdfViewer.renderAllPages page', pageNum, err);
+        }
+    }
+
+    async function renderAllPages(rootEl, containerEl, scale, rotation, options) {
         const state = _docs.get(rootEl);
         if (!state?.pdfDoc || !containerEl) return;
         // Keep the state in sync with what this loop renders: a fit recompute after a
         // rotate reads state.rotation to size the page viewport.
         state.scale = scale ?? state.scale;
         if (rotation !== undefined) state.rotation = rotation;
-        // Generation guard: zoom/rotate/re-init bump the counter, so an older
-        // loop stops appending canvases after each awaited page.
-        const gen = ++state.renderGen;
+        const build = ++state.buildGen;
+        const paint = ++state.paintGen;
+        // Warm the pure continuous math (node-tested); a failed load keeps the
+        // inline fallbacks working.
+        await _ensureContinuousModule().catch(() => { });
+        if (state.buildGen !== build) return;
+
+        // Preserve the content point across the rebuild (zoom/rotate/switch keep the
+        // current page and its offset instead of jumping back to the top).
+        const metasBefore = _collectPageMetas(containerEl);
+        const anchor = _continuousModule
+            ? _continuousModule.computeScrollAnchor(metasBefore, containerEl.scrollTop, containerEl.clientHeight)
+            : null;
+
+        // The rebuild replaces every page wrap: the previous observer tracked
+        // detached nodes and the queued renders targeted the old canvases.
+        state._pageObserver?.disconnect();
+        state._pageObserver = null;
+        state._renderQueue = new Set();
+        state._continuousEl = containerEl;
+        state._continuousFlags = {
+            textLayer: options?.textLayer === true,
+            searchLayer: options?.searchLayer === true,
+            pageLabelTemplate: typeof options?.pageLabelTemplate === 'string' ? options.pageLabelTemplate : undefined
+        };
+        _cancelRenderTasksInside(state, containerEl);
+
         containerEl.innerHTML = '';
-        for (let i = 1; i <= state.pdfDoc.numPages; i++) {
+
+        const total = state.pdfDoc.numPages;
+        for (let i = 1; i <= total; i++) {
             // Layout and paint come from .tm-pdf-viewer__page in TmPdfViewer.razor.css (::deep) —
             // the page shadow and radius must follow the theme, not an inline literal.
             const wrap = document.createElement('div');
@@ -582,24 +1039,190 @@ window.tmPdfViewer = (function () {
             // data-page, so continuous-page wraps must be found through their
             // parent container.
             wrap.dataset.page = String(i);
+            // A11y: each page is a named group; the localized "Page {0} of {1}"
+            // template comes from the host (falls back to English in the pure helper).
+            wrap.setAttribute('role', 'group');
+            wrap.setAttribute('aria-label',
+                _continuousModule ? _continuousModule.formatPageLabel(state._continuousFlags.pageLabelTemplate, i, total)
+                    : `Page ${i} of ${total}`);
+
+            const inner = document.createElement('div');
+            inner.className = 'tm-pdf-viewer__page-inner';
 
             const pageCanvas = document.createElement('canvas');
             pageCanvas.dataset.page = String(i);
+            // A11y: the canvas is an image of the page — unless the (selectable) text
+            // layer carries the page's text, then it is presentational.
+            if (state._continuousFlags.textLayer) {
+                pageCanvas.setAttribute('aria-hidden', 'true');
+            } else {
+                pageCanvas.setAttribute('role', 'img');
+                pageCanvas.setAttribute('aria-label', wrap.getAttribute('aria-label'));
+            }
+            inner.appendChild(pageCanvas);
 
-            wrap.appendChild(pageCanvas);
+            if (state._continuousFlags.textLayer) {
+                const textLayer = document.createElement('div');
+                textLayer.className = 'tm-pdf-viewer__text-layer';
+                inner.appendChild(textLayer);
+            }
+            if (state._continuousFlags.searchLayer) {
+                const searchLayer = document.createElement('div');
+                searchLayer.className = 'tm-pdf-viewer__search-layer';
+                searchLayer.setAttribute('aria-hidden', 'true');
+                inner.appendChild(searchLayer);
+            }
+
+            wrap.appendChild(inner);
             containerEl.appendChild(wrap);
+            _applyPlaceholderSize(state, wrap, state.scale);
 
-            try {
-                const page = await state.pdfDoc.getPage(i);
-                if (state.renderGen !== gen) return; // superseded meanwhile
-                const viewport = page.getViewport({ scale: scale ?? 1.0, rotation: rotation ?? 0 });
-                await _renderToCanvas(pageCanvas, page, viewport, { tasks: state.renderTasks });
-                if (state.renderGen !== gen) return; // superseded meanwhile
-            } catch (err) {
-                if (_isCancelled(err)) return;
-                console.error('tmPdfViewer.renderAllPages page', i, err);
+            // Existing matches are drawn into the fresh layer immediately — the
+            // layer overlays the canvas box, so percent coordinates stay aligned.
+            if (state._continuousFlags.searchLayer && state.searchMatches?.length) {
+                _drawSearchHighlightsIntoPage(state, wrap, i);
             }
         }
+
+        // Lazy render: an IntersectionObserver queues the wraps near the viewport;
+        // the serial pump paints them one at a time.
+        if (typeof IntersectionObserver !== 'undefined') {
+            const observer = new IntersectionObserver(entries => {
+                if (state.buildGen !== build) return;
+                for (const entry of entries) {
+                    const pageNum = parseInt(entry.target.dataset?.page, 10);
+                    if (!entry.isIntersecting) {
+                        // A page that left the band is dropped from the queue —
+                        // otherwise the pump would paint pages the user already
+                        // scrolled past.
+                        state._renderQueue?.delete(pageNum);
+                        continue;
+                    }
+                    const canvas = entry.target.querySelector?.(':scope > .tm-pdf-viewer__page-inner > canvas');
+                    if (canvas?.dataset.rendered) continue;
+                    state._renderQueue.add(pageNum);
+                }
+                _pumpContinuousQueue(state);
+                _enforceRenderedLimit(state);
+            }, { root: containerEl, rootMargin: '50% 0px' });
+            containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page').forEach(wrap => observer.observe(wrap));
+            state._pageObserver = observer;
+        } else {
+            // No observer support: queue everything and let the pump chew through it.
+            for (let i = 1; i <= total; i++) state._renderQueue.add(i);
+            _pumpContinuousQueue(state);
+        }
+
+        _bindContinuousScroll(state, containerEl);
+
+        // Correct the guessed placeholder ratios once the real boxes are known. The
+        // resolved sizes are cached per rotation (a page's scale-1 box only depends
+        // on the document and the rotation), so a scale-only change skips the work.
+        // The cache is only used when the previous pass COMPLETED (__resolved): a
+        // resolve interrupted by a newer build left a partial map that must resolve
+        // again — its entries stay as hints until the fresh pass overwrites them.
+        const cached = state.pageSizesByRotation?.get(state.rotation);
+        if (cached?.__resolved) {
+            state.pageSizes = cached;
+        } else {
+            if (!cached) {
+                state.pageSizes = new Map();
+                (state.pageSizesByRotation ??= new Map()).set(state.rotation, state.pageSizes);
+            } else {
+                state.pageSizes = cached;
+            }
+            _resolvePageSizes(state, containerEl, build, anchor).catch(() => { /* doc closed meanwhile */ });
+        }
+
+        // Restore the scroll anchor recorded before the rebuild. With no anchor
+        // (a first build into an empty container — e.g. a mode switch while page N
+        // was open) land on the current page's top instead of jumping to page 1.
+        const restorePage = Number.isFinite(options?.currentPage) && options.currentPage >= 1
+            ? Math.floor(options.currentPage)
+            : state.currentPage;
+        if (anchor) {
+            _applyScrollAnchor(state, containerEl, anchor);
+        } else if (restorePage > 1) {
+            state.currentPage = restorePage; // optimistic, like scrollToPage; the tracker confirms
+            _applyScrollAnchor(state, containerEl, { page: restorePage, offsetRatio: 0 });
+        }
+
+        // Sync the visible page (and aria-current) after the rebuild.
+        _syncAriaCurrent(state, containerEl);
+    }
+
+    /**
+     * Scale-only continuous update: resizes the placeholders, drops the painted
+     * canvases and re-queues the visible band WITHOUT rebuilding the DOM (the
+     * per-page wraps, their layers and the observer/scroll bindings survive).
+     * The content point is restored through a scroll anchor, exactly like a full
+     * rebuild. A rotation or document change still goes through renderAllPages.
+     */
+    async function updateContinuousScale(rootEl, containerEl, scale) {
+        const state = _docs.get(rootEl);
+        if (!state?.pdfDoc || !containerEl || !containerEl.isConnected) return;
+        if (!Number.isFinite(scale) || !(scale > 0)) return;
+        state.scale = scale;
+        // The in-place resize is only valid when the page wraps are actually there
+        // and this container is the one the last build rendered into. Otherwise a
+        // build is still pending (or a fresh container arrived) — a full rebuild
+        // must run or the viewer would be left with an empty DOM. The rebuild also
+        // bumps paintGen, so this older call's work is superseded either way.
+        const wraps = containerEl.querySelectorAll?.(':scope > .tm-pdf-viewer__page');
+        if (!wraps?.length || state._continuousEl !== containerEl) {
+            await renderAllPages(rootEl, containerEl, scale, state.rotation, {
+                ...(state._continuousFlags ?? {}),
+                currentPage: state.currentPage
+            });
+            return;
+        }
+        const paint = ++state.paintGen;
+        await _ensureContinuousModule().catch(() => { });
+        if (state.paintGen !== paint) return;
+
+        // Anchor the content point against the pre-resize boxes.
+        const metasBefore = _collectPageMetas(containerEl);
+        const anchor = _continuousModule
+            ? _continuousModule.computeScrollAnchor(metasBefore, containerEl.scrollTop, containerEl.clientHeight)
+            : null;
+
+        state._renderQueue?.clear();
+        for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+            const canvas = wrap.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
+            if (!canvas) continue;
+            if (canvas.dataset.rendered) {
+                // Cancel an in-flight render and release the stale-scale backing store.
+                const pending = state.renderTasks.get(canvas);
+                if (pending) {
+                    try { pending?.cancel?.(); } catch { /* task already settled */ }
+                    state.renderTasks.delete(canvas);
+                }
+                canvas.width = 0;
+                canvas.height = 0;
+                delete canvas.dataset.rendered;
+                _clearPageLayers(wrap);
+            }
+            _applyPlaceholderSize(state, wrap, scale);
+        }
+
+        // Restore the content point against the resized boxes.
+        if (anchor) {
+            const restored = _continuousModule.applyScrollAnchor(
+                _collectPageMetas(containerEl), anchor, containerEl.clientHeight);
+            if (restored !== null) containerEl.scrollTop = restored;
+        }
+
+        // Re-queue the pages the resized (and re-anchored) layout puts in the
+        // viewport — measured AFTER the resize, the pre-resize boxes are stale —
+        // then let the pump paint them visibility-ordered.
+        _requeueVisibleUnpainted(state, containerEl);
+        _pumpContinuousQueue(state);
+
+        // Search highlights are percent-positioned — redraw them into the cleared layers.
+        if (state._continuousFlags?.searchLayer && state.searchMatches?.length) {
+            _drawAllSearchHighlights(state);
+        }
+        _syncAriaCurrent(state, containerEl);
     }
 
     function scrollToPage(rootEl, page) {
@@ -612,6 +1235,12 @@ window.tmPdfViewer = (function () {
             ?? rootEl.querySelector(`:scope .tm-pdf-viewer__continuous-wrap [data-page="${pageNum}"]`);
         if (wrap && typeof wrap.scrollIntoView === 'function') {
             wrap.scrollIntoView({ block: 'start', behavior: 'auto' });
+            // Optimistic current-page update: the scroll tracker confirms (or refines)
+            // it on the next scroll event, and the fit math reads a fresh page meanwhile.
+            const state = _docs.get(rootEl);
+            if (state?._continuousEl?.isConnected) {
+                state.currentPage = pageNum;
+            }
         }
     }
 
@@ -696,6 +1325,8 @@ window.tmPdfViewer = (function () {
         return scale;
     }
 
+    const FIT_RECOMPUTE_DEBOUNCE_MS = 100;
+
     function _recomputeFit(rootEl, containerEl, dotNetRef) {
         const state = _docs.get(rootEl);
         // Read the mode at CALL time, from the live state: the observer outlives
@@ -704,21 +1335,38 @@ window.tmPdfViewer = (function () {
         // document is gone or clearFit ran — nothing to recompute.
         const mode = _resolveRecomputeFitMode(state);
         if (!mode) return;
-        state.pdfDoc.getPage(state.currentPage).then(page => {
-            // The mode may have switched (or cleared) during the async page lookup.
+        const compute = () => {
+            // The mode may have switched (or cleared) while the debounce waited or
+            // during the async page lookup.
             if (!_isRecomputeValid(state, mode)) return;
-            const viewport = page.getViewport({ scale: 1, rotation: state.rotation });
-            const scale = _computeFitScale(containerEl, viewport, mode);
-            if (scale > 0) {
-                dotNetRef?.invokeMethodAsync('OnFitScaleComputed', scale).catch(() => { });
-            }
-        }).catch(() => { });
+            state.pdfDoc.getPage(state.currentPage).then(page => {
+                if (!_isRecomputeValid(state, mode)) return;
+                const viewport = page.getViewport({ scale: 1, rotation: state.rotation });
+                const scale = _computeFitScale(containerEl, viewport, mode);
+                if (scale > 0) {
+                    dotNetRef?.invokeMethodAsync('OnFitScaleComputed', scale).catch(() => { });
+                }
+            }).catch(() => { });
+        };
+        // Continuous mode: the wrap's box shifts while the lazy renderer paints and
+        // releases pages — debounce the recompute so the fit settles instead of
+        // chasing every intermediate layout.
+        if (state._continuousEl?.isConnected) {
+            clearTimeout(state._fitDebounceTimer);
+            state._fitDebounceTimer = setTimeout(compute, FIT_RECOMPUTE_DEBOUNCE_MS);
+            return;
+        }
+        compute();
     }
 
     function clearFit(rootEl) {
         const state = _docs.get(rootEl);
         if (!state) return;
         state.fitMode = null;
+        if (state._fitDebounceTimer) {
+            clearTimeout(state._fitDebounceTimer);
+            state._fitDebounceTimer = null;
+        }
         if (state.fitObserver) {
             state.fitObserver.disconnect();
             state.fitObserver = null;
@@ -729,6 +1377,10 @@ window.tmPdfViewer = (function () {
     function destroy(rootEl) {
         const state = _docs.get(rootEl);
         if (!state) return;
+        // Invalidate every queued/looping render (the serial pump, a debounce fit
+        // recompute, a pending _resolvePageSizes) at the generation guards.
+        state.buildGen++;
+        state.paintGen++;
         // Tear down everything the entry accumulated. For a loaded state this releases the
         // document and its renders; for a pending state (download still in flight — the
         // init() notices its stale token and discards the result) it makes sure an abort
@@ -741,6 +1393,18 @@ window.tmPdfViewer = (function () {
         // Removes every document listener bound with the instance signal and
         // stops overlay alignment observers.
         state.abort?.abort();
+        // Continuous-mode bindings: the per-wrap IntersectionObserver and the
+        // scroll tracker (rAF + its own AbortController).
+        state._pageObserver?.disconnect();
+        state._pageObserver = null;
+        state._continuousScrollController?.abort();
+        state._continuousScrollController = null;
+        if (state._fitDebounceTimer) {
+            clearTimeout(state._fitDebounceTimer);
+            state._fitDebounceTimer = null;
+        }
+        state._renderQueue = new Set();
+        state._continuousEl = null;
         if (state.fitObserver) {
             state.fitObserver.disconnect();
             state.fitObserver = null;
@@ -780,6 +1444,7 @@ window.tmPdfViewer = (function () {
         redrawSearch,
         clearSearch,
         renderAllPages,
+        updateContinuousScale,
         scrollToPage,
         fitScale,
         clearFit,

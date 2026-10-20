@@ -166,13 +166,14 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
     public async Task PdfViewer_LoadingState_CapturedWhileStatusVisible()
     {
         var context = await CreateContextAsync();
-        var pdfRequestsHeld = 0;
+        // All PDF requests are held until the assertions below completed: the demo page
+        // hosts several viewers fetching the same local fixture, and with the fast
+        // 100 kB file a "delay the first request only" hold could miss the viewer this
+        // test reads (the aria-busy probe targets the first body in DOM order).
+        var releaseDownloads = new TaskCompletionSource();
         await context.RouteAsync("**/*.pdf", async route =>
         {
-            if (Interlocked.Exchange(ref pdfRequestsHeld, 1) == 0)
-            {
-                await Task.Delay(3000);
-            }
+            await releaseDownloads.Task;
             await route.ContinueAsync();
         });
 
@@ -193,7 +194,9 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
 
         await SaveScreenshotAsync(page, "loading");
 
-        // The route delay only holds the request, so the viewer must recover.
+        // Release the downloads; nothing is held anymore, so the viewer must recover
+        // (the follow-up requests are not individually delayed).
+        releaseDownloads.TrySetResult();
         await status.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Hidden,

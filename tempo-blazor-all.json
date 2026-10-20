@@ -29244,7 +29244,7 @@
               "type": "PdfViewMode",
               "isRequired": false,
               "default": "PdfViewMode.SinglePage",
-              "description": "Current view mode. Default is SinglePage."
+              "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) — selecting a thread returns the viewer to SinglePage on the thread's page."
             },
             {
               "name": "ViewModeChanged",
@@ -29366,6 +29366,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-continuous.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-fit.mjs",
           "kind": "JavaScript"
         },
@@ -29391,6 +29395,10 @@
         },
         {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-classes.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-continuous.test.mjs",
           "kind": "JavaScript"
         },
         {
