@@ -145,21 +145,32 @@
         _isOpen = open;
     }
 
-    /// <summary>Called by TmDropdownItem when an item is selected.</summary>
-    public async Task SelectItemAsync(string value)
+    /// <summary>Called by TmDropdownItem when an item is selected. Closes the menu.</summary>
+    public Task SelectItemAsync(string value) => SelectItemAsync(value, keepOpen: false);
+
+    /// <summary>
+    /// Called by TmDropdownItem when an item is selected.
+    /// <paramref name="keepOpen"/> skips the close and the return-focus-to-trigger step, so a radio
+    /// choice can be followed by another item without reopening the menu. Focus stays on the item.
+    /// </summary>
+    public async Task SelectItemAsync(string value, bool keepOpen)
     {
         if (Disabled) return;
-        // N319: close BEFORE invoking the handler. The menu is a top-layer popover — a dialog
-        // the handler opens would render UNDER the still-open menu (and the first Escape would
-        // close the menu, not the dialog). The yield lets the close re-render hide the popover.
-        _isOpen = false;
-        // docs/overlays.md rule 4: a selection close does not route through overlay.js, so the
-        // dropdown restores focus to the trigger itself — otherwise a keyboard selection leaves
-        // focus on <body> (review finding T3). FocusAsync lands in OnAfterRenderAsync, after the
-        // close re-render (the pattern from docs/keyboard-activation-convention.md).
-        _focusTriggerAfterClose = true;
-        StateHasChanged();
-        await Task.Yield();
+        if (!keepOpen)
+        {
+            // N319: close BEFORE invoking the handler. The menu is a top-layer popover — a dialog
+            // the handler opens would render UNDER the still-open menu (and the first Escape would
+            // close the menu, not the dialog). The yield lets the close re-render hide the popover.
+            _isOpen = false;
+            // docs/overlays.md rule 4: a selection close does not route through overlay.js, so the
+            // dropdown restores focus to the trigger itself — otherwise a keyboard selection leaves
+            // focus on <body> (review finding T3). FocusAsync lands in OnAfterRenderAsync, after the
+            // close re-render (the pattern from docs/keyboard-activation-convention.md).
+            _focusTriggerAfterClose = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
         await OnSelect.InvokeAsync(value);
     }
 

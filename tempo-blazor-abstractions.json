@@ -13245,6 +13245,16 @@
       "documentationStatus": "merged"
     },
     {
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "Which rows a data-table export includes.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DataTableExport.cs",
+      "documentationStatus": "generated",
+      "itemName": "DataTableExportScope"
+    },
+    {
       "itemName": "DataTableFilter",
       "kind": "Record",
       "category": "Models",
@@ -37297,11 +37307,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1489,
+    "itemCount": 1490,
     "manualItemCount": 1489,
-    "generatedItemCount": 1472,
-    "generatedOnlyItemCount": 0,
+    "generatedItemCount": 1473,
+    "generatedOnlyItemCount": 1,
     "componentCount": 0,
-    "publicApiTypeCount": 1472
+    "publicApiTypeCount": 1473
   }
 }

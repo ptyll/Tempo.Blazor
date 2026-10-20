@@ -124,7 +124,9 @@ public class TmDataTablePhase3OptInTests : LocalizationTestBase
         cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
 
         cut.Find(".tm-data-table__export .tm-dropdown-trigger").ClassList.Should().Contain("tm-btn-outline");
-        cut.Find(".tm-data-table__export").GetAttribute("data-export-scope").Should().Be("all");
+        // Scope is a menu choice now, not a wrapper attribute, and only when AllowExportSelected is set.
+        cut.Find(".tm-data-table__export").HasAttribute("data-export-scope").Should().BeFalse();
+        cut.FindAll("[data-export-scope]").Should().BeEmpty();
         var item = cut.Find("[data-export-format='csv']");
         item.QuerySelector("svg").Should().NotBeNull();
         item.QuerySelector(".tm-data-table__export-description")!.TextContent.Should().NotBeNullOrWhiteSpace();

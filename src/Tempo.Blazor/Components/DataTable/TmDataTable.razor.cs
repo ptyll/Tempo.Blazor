@@ -350,8 +350,58 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>Edit action presentation. Defaults to Icons.</summary>
     [Parameter] public EditActionsMode EditActionsMode { get; set; } = EditActionsMode.Icons;
 
-    /// <summary>When true, requests selected-only export when supported; currently marks scope in markup because the exporter has no safe item-filter hook.</summary>
-    [Parameter] public bool ExportSelectedOnly { get; set; }
+    /// <summary>
+    /// When true, and the table is <see cref="Selectable"/>, the export menu offers a scope choice:
+    /// every matching row, or only the checked rows. The selected-rows choice is disabled while
+    /// nothing is checked. Default <c>false</c> keeps the format-only menu.
+    /// </summary>
+    [Parameter] public bool AllowExportSelected { get; set; }
+
+    /// <summary>Scope the next menu export uses. The menu resets it to <see cref="DataTableExportScope.All"/> after each export.</summary>
+    private DataTableExportScope _exportScope = DataTableExportScope.All;
+
+    /// <summary>
+    /// Per-instance id of the empty-selection explanation, so two tables on one page do not share an id
+    /// and <c>aria-describedby</c> cannot point at the other table's text.
+    /// </summary>
+    private readonly string _exportScopeEmptyId = "tm-data-table-export-scope-empty-" + Guid.NewGuid().ToString("N");
+
+    /// <summary>True when the export menu offers the all-rows / selected-rows choice.</summary>
+    private bool ShowsExportScope => AllowExportSelected && Selectable;
+
+    private string ExportScopeItemClass(DataTableExportScope scope)
+        => _exportScope == scope
+            ? "tm-data-table__export-item tm-data-table__export-scope tm-data-table__export-scope--selected"
+            : "tm-data-table__export-item tm-data-table__export-scope";
+
+    /// <summary>
+    /// Rows an all-rows export would include, after filtering and before paging.
+    /// The client path sets <c>_totalCount</c> from the filtered list; a provider reports it on the result.
+    /// </summary>
+    private int ExportAllCount => _totalCount;
+
+    private string ExportSelectedLabel()
+        => Tempo.Blazor.Localization.TmLocalizerPluralExtensions
+            .Plural(Loc, "TmDataTable_ExportScopeSelectedCount", _selectedItems.Count);
+
+    private Dictionary<string, object> ExportSelectedAttributes()
+    {
+        var attributes = new Dictionary<string, object> { ["data-export-scope"] = "selected" };
+        if (_selectedItems.Count == 0)
+        {
+            attributes["aria-describedby"] = _exportScopeEmptyId;
+        }
+
+        return attributes;
+    }
+
+    private void ResetExportScopeIfSelectionEmpty()
+    {
+        if (_selectedItems.Count == 0)
+        {
+            _exportScope = DataTableExportScope.All;
+        }
+    }
 
     /// <summary>Include active view name in view toggle. Defaults false.</summary>
     [Parameter] public bool ShowActiveViewName { get; set; }
@@ -598,12 +648,85 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Checked rows for a selected export. Rows still in the current view come first, in that view's
+    /// order; rows a later search or filter hid are appended in the order they were checked. A provider
+    /// is not re-queried: its fresh instances would miss a reference-equality selection, and a checked
+    /// row it no longer returns must still be exported.
+    /// </summary>
+    private Task<IReadOnlyList<TItem>> GatherSelectedRowsAsync()
+    {
+        if (DataProvider is not null)
+        {
+            return Task.FromResult(OrderSelectedByView(_displayedItems));
+        }
+
+        // No sort: the current view is Items itself, so a checked row hidden by a filter still has an
+        // index there and must not be treated as unmatched. A sort reorders only the rows it can see.
+        IReadOnlyList<TItem> view = _sortDescriptors.Count == 0
+            ? (Items ?? []).ToList()
+            : ApplySort(_selectedOrder).ToList();
+        return Task.FromResult(OrderSelectedByView(view));
+    }
+
+    /// <summary>
+    /// Checked rows found in <paramref name="view"/>, in that view's order, then the rest in the order
+    /// they were checked. Matching uses <see cref="EqualityComparer{T}"/> so a provider instance that
+    /// equals a checked value still counts.
+    /// </summary>
+    private IReadOnlyList<TItem> OrderSelectedByView(IReadOnlyList<TItem> view)
+    {
+        var comparer = EqualityComparer<TItem>.Default;
+        var matched = new List<(int Index, TItem Item)>();
+        var unmatched = new List<TItem>();
+        foreach (var item in _selectedOrder)
+        {
+            var index = -1;
+            for (var i = 0; i < view.Count; i++)
+            {
+                if (comparer.Equals(view[i], item))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index >= 0)
+            {
+                matched.Add((index, item));
+            }
+            else
+            {
+                unmatched.Add(item);
+            }
+        }
+
+        matched.Sort((left, right) => left.Index.CompareTo(right.Index));
+        var rows = new List<TItem>(matched.Count + unmatched.Count);
+        rows.AddRange(matched.Select(entry => entry.Item));
+        rows.AddRange(unmatched);
+        return rows;
+    }
+
+    /// <summary>
     /// Materializes the full result set for the current filter/sort (all pages, paging bypassed)
     /// as an export snapshot of the visible columns.
     /// </summary>
-    public async Task<DataTableExportData> BuildExportDataAsync()
+    public Task<DataTableExportData> BuildExportDataAsync()
+        => BuildExportDataAsync(DataTableExportScope.All);
+
+    /// <summary>
+    /// Materializes an export snapshot of the visible columns. <see cref="DataTableExportScope.All"/>
+    /// is the full result set for the current filter/sort (all pages, paging bypassed);
+    /// <see cref="DataTableExportScope.Selected"/> exports the checked rows, sorted like the current
+    /// view, with any row no longer in that view appended in the order it was checked.
+    /// </summary>
+    /// <param name="scope">Which rows to include.</param>
+    public async Task<DataTableExportData> BuildExportDataAsync(DataTableExportScope scope)
     {
-        var rows = await GatherAllRowsAsync();
+        var rows = scope == DataTableExportScope.Selected
+            ? await GatherSelectedRowsAsync()
+            : await GatherAllRowsAsync();
+
         var headers = _visibleColumns.Select(c => c.Title).ToList();
         var values = rows
             .Select(item => (IReadOnlyList<object?>)_visibleColumns
@@ -638,7 +761,20 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// streamed browser download.
     /// </summary>
     /// <param name="format">CSV, or XLSX when an <see cref="IDataTableXlsxExporter"/> is registered.</param>
-    public async Task ExportAsync(DataTableExportFormat format)
+    public Task ExportAsync(DataTableExportFormat format)
+        => ExportAsync(format, DataTableExportScope.All);
+
+    /// <summary>
+    /// Exports rows matching the current filter and sort in a built-in format and triggers a
+    /// streamed browser download.
+    /// </summary>
+    /// <param name="format">CSV, or XLSX when an <see cref="IDataTableXlsxExporter"/> is registered.</param>
+    /// <param name="scope">
+    /// <see cref="DataTableExportScope.All"/> exports every matching row;
+    /// <see cref="DataTableExportScope.Selected"/> exports the checked rows, sorted like the current
+    /// view, with any row no longer in that view appended in the order it was checked.
+    /// </param>
+    public async Task ExportAsync(DataTableExportFormat format, DataTableExportScope scope)
     {
         if (format is not DataTableExportFormat.Csv and not DataTableExportFormat.Xlsx)
         {
@@ -660,7 +796,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         StateHasChanged();
         try
         {
-            var data = await BuildExportDataAsync();
+            var data = await BuildExportDataAsync(scope);
             var bytes = format switch
             {
                 DataTableExportFormat.Csv => new CsvDataTableExporter(CsvDelimiter, writeBom: true).Export(data),
@@ -673,7 +809,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             await using var stream = new MemoryStream(bytes, writable: false);
             using var streamReference = new DotNetStreamReference(stream);
             await JS.InvokeVoidAsync("TempoFileManager.downloadFileFromStream", fileName, streamReference);
-            await OnExportCompleted.InvokeAsync(new DataTableExportResult(format, fileName, data.Rows.Count));
+            await OnExportCompleted.InvokeAsync(new DataTableExportResult(format, fileName, data.Rows.Count, scope));
         }
         finally
         {
@@ -682,12 +818,27 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         }
     }
 
-    private Task HandleExportSelectionAsync(string format) => format switch
+    private Task HandleExportSelectionAsync(string value)
     {
-        "csv" => ExportAsync(DataTableExportFormat.Csv),
-        "xlsx" => ExportAsync(DataTableExportFormat.Xlsx),
-        _ => Task.CompletedTask
-    };
+        switch (value)
+        {
+            case "scope-all":
+                _exportScope = DataTableExportScope.All;
+                return Task.CompletedTask;
+            case "scope-selected":
+                _exportScope = _selectedItems.Count == 0
+                    ? DataTableExportScope.All
+                    : DataTableExportScope.Selected;
+                return Task.CompletedTask;
+            case "csv":
+            case "xlsx":
+                var scope = _exportScope;
+                _exportScope = DataTableExportScope.All;
+                return ExportAsync(value == "csv" ? DataTableExportFormat.Csv : DataTableExportFormat.Xlsx, scope);
+            default:
+                return Task.CompletedTask;
+        }
+    }
     // ── Column registry ──────────────────────────────────────────
     private readonly List<TmDataTableColumn<TItem>> _columns = [];
     private readonly List<TmDataTableColumn<TItem>> _visibleColumns = [];
@@ -758,7 +909,11 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private bool _isLoading;
 
     // ── Selection ────────────────────────────────────────────────
+    // The set answers "is this checked?" (EqualityComparer<TItem>.Default, so a provider that returns
+    // a new instance of the same value still matches). The list remembers the order rows were checked,
+    // which the selected export needs for rows that are no longer in the current view.
     private readonly HashSet<TItem> _selectedItems = new();
+    private readonly List<TItem> _selectedOrder = [];
 
     // ── Filtering / Search ───────────────────────────────────────
     private readonly Dictionary<string, DataTableFilter> _activeFilters = new();
@@ -2268,8 +2423,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private async Task ToggleRowSelectionAsync(TItem item, ChangeEventArgs e)
     {
         var isChecked = e.Value is bool b ? b : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
-        if (isChecked) _selectedItems.Add(item);
-        else _selectedItems.Remove(item);
+        if (isChecked) SelectItem(item);
+        else DeselectItem(item);
+        ResetExportScopeIfSelectionEmpty();
         await OnSelectionChanged.InvokeAsync(_selectedItems.ToList());
     }
 
@@ -2277,16 +2433,53 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         var isChecked = e.Value is bool b ? b : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
         if (isChecked)
-            foreach (var item in _displayedItems) _selectedItems.Add(item);
+        {
+            foreach (var item in _displayedItems) SelectItem(item);
+        }
         else
-            _selectedItems.Clear();
+        {
+            ClearSelection();
+        }
+
+        ResetExportScopeIfSelectionEmpty();
         await OnSelectionChanged.InvokeAsync(_selectedItems.ToList());
     }
 
     private async Task DeselectAllAsync()
     {
-        _selectedItems.Clear();
+        ClearSelection();
+        ResetExportScopeIfSelectionEmpty();
         await OnSelectionChanged.InvokeAsync(_selectedItems.ToList());
+    }
+
+    /// <summary>Checks <paramref name="item"/>, appending it to the selection order only the first time.</summary>
+    private void SelectItem(TItem item)
+    {
+        if (_selectedItems.Add(item))
+        {
+            _selectedOrder.Add(item);
+        }
+    }
+
+    /// <summary>Unchecks <paramref name="item"/> and drops it from the selection order.</summary>
+    private void DeselectItem(TItem item)
+    {
+        if (!_selectedItems.Remove(item))
+        {
+            return;
+        }
+
+        var index = _selectedOrder.FindIndex(selected => EqualityComparer<TItem>.Default.Equals(selected, item));
+        if (index >= 0)
+        {
+            _selectedOrder.RemoveAt(index);
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedItems.Clear();
+        _selectedOrder.Clear();
     }
 
     // ── Column visibility ─────────────────────────────────────────

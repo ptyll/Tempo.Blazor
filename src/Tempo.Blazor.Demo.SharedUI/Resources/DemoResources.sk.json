@@ -119,7 +119,7 @@
   "TmDataTableDemo_Amount": "Suma",
   "TmDataTableDemo_Category": "Kategória",
   "TmDataTableDemo_Date": "Dátum",
-  "TmDataTableDemo_ExportDescription": "Otvorte ponuku Exportovať a stiahnite kompletnú množinu transakcií ako CSV alebo ako typovaný Excelový zošit (XLSX).",
+  "TmDataTableDemo_ExportDescription": "Otvorte ponuku Exportovať a stiahnite všetky zodpovedajúce riadky, alebo len zaškrtnuté, ako CSV alebo ako typovaný Excelový zošit (XLSX).",
   "TmDataTableDemo_ExportTitle": "Export",
   "TmDataTableDemo_InlineEditDescription": "Upravujte sumu, kategóriu a poznámku priamo na mieste. Anotácie DataAnnotations blokujú neplatné hodnoty a úspešné uloženie ohlási spätné volanie OnRowSave uvedené nižšie. Spätné volania zrušenia prijímajú zmenenú položku, takže aplikácie, ktoré potrebujú vrátenie zmien, si musia obnoviť vlastnú snímku stavu.",
   "TmDataTableDemo_InlineEditTitle": "Úprava priamo v riadku — Transakcie",

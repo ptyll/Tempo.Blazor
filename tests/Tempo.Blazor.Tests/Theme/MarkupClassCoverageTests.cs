@@ -121,6 +121,9 @@ public sealed class MarkupClassCoverageTests
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
+        // AllowExportSelected: the scope choice reuses .tm-data-table__export-item; the extra
+        // class only marks the choice, and the selected state has its own rule.
+        "tm-data-table__export-scope",
         "tm-date-today-btn",
         "tm-datetime-range-end",
         "tm-datetime-range-start",
@@ -400,7 +403,11 @@ public sealed class MarkupClassCoverageTests
             // DiagramEditor redesign phase 6 (X2): TmEditorShell's extra sheet tabpanel id prefix
             // ("tm-editor-shell-extra-panel-{Guid…}") lives in the new TmEditorShell.Extra.razor.cs
             // partial — 47 → 48.
-            ExpectedUnmeasurableStems: 48),
+            // AllowExportSelected: the empty-selection explanation id is per table
+            // ("tm-data-table-export-scope-empty-" + Guid), so two tables on one page do not share
+            // an id. The sweep counts the prefix — 48 → 49. (The 50th stem,
+            // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
+            ExpectedUnmeasurableStems: 50),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

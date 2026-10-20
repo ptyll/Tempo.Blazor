@@ -119,7 +119,7 @@
   "TmDataTableDemo_Amount": "Částka",
   "TmDataTableDemo_Category": "Kategorie",
   "TmDataTableDemo_Date": "Datum",
-  "TmDataTableDemo_ExportDescription": "V nabídce Export stáhnete úplnou sadu transakcí jako CSV nebo typovaný sešit Excel (XLSX).",
+  "TmDataTableDemo_ExportDescription": "V nabídce Export stáhnete všechny odpovídající řádky, nebo jen zaškrtnuté, jako CSV nebo typovaný sešit Excel (XLSX).",
   "TmDataTableDemo_ExportTitle": "Export",
   "TmDataTableDemo_InlineEditDescription": "Částku, kategorii a poznámku upravíte přímo v řádku. DataAnnotations zablokují neplatné hodnoty a úspěšné uložení zobrazí níže výsledek callbacku OnRowSave. Callback při zrušení obdrží změněnou položku, takže aplikace vyžadující návrat hodnot musí obnovit vlastní snímek.",
   "TmDataTableDemo_InlineEditTitle": "Inline editace — Transakce",

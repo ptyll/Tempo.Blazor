@@ -37,12 +37,31 @@
       "type": "bool",
       "isRequired": false,
       "description": "Disables the dropdown item."
+    },
+    {
+      "name": "AriaDisabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the item aria-disabled=true and paints the disabled style while leaving it focusable, so a keyboard or screen-reader user can land on it and hear its explanation. A click does nothing. Unlike Disabled, the native disabled attribute is not set."
+    },
+    {
+      "name": "Checked",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "When set, the item is a radio choice (role=menuitemradio) and this is its checked state. Null keeps the plain menuitem. A non-null value also renders a leading check indicator, so the choice is not announced by colour alone."
+    },
+    {
+      "name": "KeepOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, choosing this item does not close the menu and focus stays on the item. Use it for a choice the user makes before picking another item, such as a radio scope."
     }
   ],
   "cssClasses": [
     "tm-dropdown-item",
     "tm-dropdown-item-disabled",
-    "tm-dropdown-item-danger"
+    "tm-dropdown-item-danger",
+    "tm-dropdown-item__check"
   ],
   "examples": [
     {

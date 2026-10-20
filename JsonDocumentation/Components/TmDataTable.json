@@ -454,11 +454,11 @@
       "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
     },
     {
-      "name": "ExportSelectedOnly",
+      "name": "AllowExportSelected",
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in ExportSelectedOnly behavior; defaults preserve the existing presentation."
+      "description": "When true and the table is Selectable, the export menu offers All rows or Selected rows (N). The selected choice is disabled while nothing is checked. Default false keeps the format-only menu."
     },
     {
       "name": "GroupHeaderTemplate",

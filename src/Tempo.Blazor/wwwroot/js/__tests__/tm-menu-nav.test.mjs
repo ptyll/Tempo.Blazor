@@ -120,16 +120,16 @@ test('ArrowDown/ArrowUp rove focus and prevent the page scroll', () => {
     assert.equal(m.activeElement, items[2], 'wraps');
 });
 
-test('arrow keys skip disabled and hidden items', () => {
+test('arrow keys skip natively disabled and hidden items, but land on aria-disabled', () => {
     const items = [item('A'), item('B', { disabled: true }), item('C', { ariaDisabled: true }), item('D', { hidden: true }), item('E')];
     const m = stubMenu(items);
     attach(m);
     m.activeElement = items[0];
 
     m.press('ArrowDown');
-    assert.equal(m.activeElement, items[4], 'B (disabled), C (aria-disabled) and D (hidden) are skipped');
+    assert.equal(m.activeElement, items[2], 'a native disabled and a hidden item are skipped; aria-disabled stays reachable');
     m.press('ArrowDown');
-    assert.equal(m.activeElement, items[0]);
+    assert.equal(m.activeElement, items[4]);
 });
 
 test('Home and End focus the first and the last enabled item', () => {

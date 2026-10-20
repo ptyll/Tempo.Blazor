@@ -10,7 +10,10 @@
 //     (repeating one character cycles the matches), diacritics and case are ignored (cs/fr labels);
 //   - roving tabindex: once focus is inside the menu the focused item is the only tabbable one, so
 //     Tab leaves the menu instead of walking every entry.
-// Disabled (`disabled` / `aria-disabled="true"`) and hidden items are skipped everywhere. A key
+// Natively disabled (`disabled`) and hidden items are skipped everywhere. `aria-disabled="true"`
+// stays in the roving order: the item is still focusable, so a screen reader can land on it and
+// hear the explanation `aria-describedby` points at. Activation stays with the item itself.
+// A key
 // pressed inside a text-entry element (a filter input in the menu) is never intercepted. Nothing
 // here activates an item - Enter/Space stay with the native <button> (one activation per press,
 // docs/keyboard-activation-convention.md) - and Escape stays with overlay.js / the sheet trap.
@@ -66,7 +69,6 @@ export function typeaheadMatch(labels, current, typed) {
 
 function isEnabled(item) {
     if (item.disabled) return false;
-    if (item.getAttribute?.('aria-disabled') === 'true') return false;
     if (item.hidden || item.hasAttribute?.('hidden')) return false;
     return true;
 }

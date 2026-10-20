@@ -61,7 +61,7 @@
                 }
                 @if (ShouldRenderExport())
                 {
-                    <div class="tm-data-table__export" data-export-scope="@(IsRedesigned ? (ExportSelectedOnly ? "selected" : "all") : null)">
+                    <div class="tm-data-table__export">
                         <TmDropdown Text="@(_isExporting ? Loc["TmDataTable_Exporting"] : Loc["TmDataTable_Export"])"
                                     Icon="@IconNames.Download"
                                     OutlineTrigger="@IsRedesigned"
@@ -71,6 +71,29 @@
                                     Offset="4"
                                      MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                     OnSelect="HandleExportSelectionAsync">
+                            @if (ShowsExportScope)
+                            {
+                                <div role="group" aria-label="@Loc["TmDataTable_ExportScope"]">
+                                    <TmDropdownItem Value="scope-all"
+                                                    Checked="@(_exportScope == DataTableExportScope.All)"
+                                                    KeepOpen="true"
+                                                    Class="@ExportScopeItemClass(DataTableExportScope.All)"
+                                                    AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-scope"] = "all" })">
+                                        <span class="tm-data-table__export-label">@Loc.Plural("TmDataTable_ExportScopeAllCount", ExportAllCount)</span>
+                                        <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportScopeAllDescription"]</span>
+                                    </TmDropdownItem>
+                                    <TmDropdownItem Value="scope-selected"
+                                                    Checked="@(_exportScope == DataTableExportScope.Selected)"
+                                                    AriaDisabled="@(_selectedItems.Count == 0)"
+                                                    KeepOpen="true"
+                                                    Class="@ExportScopeItemClass(DataTableExportScope.Selected)"
+                                                    AdditionalAttributes="@ExportSelectedAttributes()">
+                                        <span class="tm-data-table__export-label">@ExportSelectedLabel()</span>
+                                        <span id="@(_selectedItems.Count == 0 ? _exportScopeEmptyId : null)" class="tm-data-table__export-description">@(_selectedItems.Count == 0 ? Loc["TmDataTable_ExportScopeSelectedEmpty"] : Loc["TmDataTable_ExportScopeSelectedDescription"])</span>
+                                    </TmDropdownItem>
+                                </div>
+                                <div class="tm-dropdown-sep" role="separator"></div>
+                            }
                             @if (IsRedesigned)
                             {
                                 <TmDropdownItem Value="csv"

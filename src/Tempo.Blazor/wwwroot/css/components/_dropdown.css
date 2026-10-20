@@ -37,7 +37,19 @@
   text-decoration: none;
 }
 .tm-dropdown-item:hover { background-color: var(--tm-color-gray-50); }
-.tm-dropdown-item:disabled, .tm-dropdown-item[disabled] { opacity: 0.5; cursor: not-allowed; }
+.tm-dropdown-item:disabled, .tm-dropdown-item[disabled],
+.tm-dropdown-item[aria-disabled="true"] { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
+/* Leading check of a menuitemradio. The empty state keeps the same width so labels stay aligned,
+   and the icon (not the tint) is the non-colour cue. */
+.tm-dropdown-item__check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-space-4);
+  height: var(--tm-space-4);
+  color: var(--tm-color-primary);
+}
 .tm-dropdown-item-danger { color: var(--tm-color-danger); }
 .tm-dropdown-item-danger:hover { background-color: var(--tm-color-danger-subtle); }
 .tm-dropdown-sep { height: 1px; background-color: var(--tm-border-color); margin: var(--tm-space-1) 0; }

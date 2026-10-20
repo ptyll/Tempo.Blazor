@@ -29,6 +29,16 @@
 
 ### Added
 
+- **TmDataTable `AllowExportSelected`.** Opt-in export scope. With `Selectable="true"` the export
+  menu offers "All rows" (every row matching the current filter and sort) and "Selected rows (N)"
+  (the checked rows, sorted like the current view, with any row a later filter hid appended in
+  the order it was checked). The selected choice is `aria-disabled` while nothing is checked — still
+  focusable, so its description "Select rows to export them" is announced — and picking a scope
+  leaves the menu open. `ExportAsync(format)` still
+  exports every matching row; `ExportAsync(format, DataTableExportScope.Selected)` exports the
+  selection, and `OnExportCompleted` reports the scope on `DataTableExportResult.Scope` (default
+  `All`). The default menu is unchanged.
+
 - **TmDataTable `ColumnMenuMode.Menu`.** Opt-in kebab menu in each data column header
   (`aria-label` "Column options: {column}", `aria-haspopup="menu"`, `aria-expanded`). Items follow
   the column: Sort ascending / Sort descending and Clear sort (`Sortable`, clear only while the
@@ -253,7 +263,7 @@
   group contract), while the search control received the standard toolbar-group chrome. The
   Modeling preview hides it with `ShowTitle="false"`.
 
-- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `ExportSelectedOnly`, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation; export scope currently marks the requested scope but does not filter exporter rows.
+- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` (renamed from `ExportSelectedOnly`; it filters the exported rows to the checked selection), `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation.
 
 - **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
 
@@ -1097,7 +1107,7 @@
   - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` named "View" (not "Table view") with one roving `tabindex`, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
     Before: `<span class="tm-mvl-status">Active</span>`
     After: `<span class="tm-badge tm-mvl-status">Active</span>`
-  - `ExportSelectedOnly` is now `AllowExportSelected`. Set the new parameter to keep exporting the selection only.
+  - `ExportSelectedOnly` was renamed to `AllowExportSelected`. Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
   - `TmOverlayPanel.RestoreFocusTargetId` was removed. Focus returns to the anchor; do not pass the old parameter.
 
 - **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below

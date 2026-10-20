@@ -376,13 +376,6 @@ window.tmDataTable = (function () {
         var menu = document.getElementById(menuId);
         if (!menu) return;
         var item = menu.querySelector('[role^="menuitem"]:not([disabled])');
-        if (item && item.getAttribute('aria-disabled') === 'true') {
-            var items = menu.querySelectorAll('[role^="menuitem"]:not([disabled])');
-            item = null;
-            for (var i = 0; i < items.length; i++) {
-                if (items[i].getAttribute('aria-disabled') !== 'true') { item = items[i]; break; }
-            }
-        }
         if (item && typeof item.focus === 'function') {
             try { item.focus({ preventScroll: true }); } catch (e) { item.focus(); }
         }

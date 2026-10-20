@@ -86,6 +86,21 @@ The menu offers only what the column can do:
 
 `Appearance="DataTableAppearance.Card"` opts `TmDataTable` into its card surface; Plain remains the default. `TmFilterBuilder.Presentation="FilterBuilderPresentation.Popover"` opts the filter editor into an anchored popover; Inline remains the default.
 
+## Export scope
+
+`AllowExportSelected` defaults to `false`, which keeps the format-only export menu. Set it together with `Selectable="true"` and the menu gains a scope section above the formats:
+
+- **All rows** exports every row matching the current filter and sort, paging bypassed — the same set `ExportAsync(format)` has always exported.
+- **Selected rows (N)** exports the checked rows, sorted like the current view, with any checked row a later filter hid appended in the order it was checked. While nothing is checked the choice is `aria-disabled` (still focusable) and its description reads "Select rows to export them". Picking a scope leaves the menu open.
+
+`ExportAsync(format, DataTableExportScope.Selected)` exports the selection directly, and `OnExportCompleted` reports which scope ran on `DataTableExportResult.Scope` (default `All`, so existing handlers keep compiling). The first overload of `IDataTableExporter` is unchanged.
+
+```razor
+<TmDataTable TItem="Person" Items="people" Selectable="true" ShowExport="true" AllowExportSelected="true">
+    <TmDataTableColumn TItem="Person" Title="Name" Field="p => p.Name" />
+</TmDataTable>
+```
+
 ## Filter summary
 
 `ShowFilterSummary="true"` enables the localized active-filter count and clear control. It is off by default.

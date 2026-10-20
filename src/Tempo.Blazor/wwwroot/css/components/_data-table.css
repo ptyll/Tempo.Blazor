@@ -25,6 +25,9 @@
   color: var(--tm-text-muted);
   font-size: var(--tm-font-size-sm);
 }
+.tm-data-table__export-scope--selected {
+  background: var(--tm-color-primary-subtle);
+}
 .tm-data-table-wrapper--card-surface {
   border-radius: var(--tm-radius-card);
   box-shadow: var(--tm-shadow-card);
