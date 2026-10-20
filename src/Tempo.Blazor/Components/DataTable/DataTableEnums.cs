@@ -109,7 +109,10 @@ public enum ColumnMenuMode
 {
     /// <summary>Render no extra column menu button.</summary>
     None,
-    /// <summary>Render an accessible column menu button.</summary>
+    /// <summary>
+    /// Render a kebab menu in each data column header, offering sort, pin, group, hide and filter
+    /// according to the column's own capabilities. Replaces the standalone pin button.
+    /// </summary>
     Menu
 }
 

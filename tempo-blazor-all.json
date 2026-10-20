@@ -4533,7 +4533,7 @@
             },
             {
               "name": "Menu",
-              "description": "Render an accessible column menu button."
+              "description": "Render a kebab menu in each data column header (sort, pin, group, hide, filter). Replaces the standalone pin button; the toolbar is unchanged."
             }
           ]
         },
@@ -9153,6 +9153,12 @@
               "description": "Control kind. Defaults to text."
             },
             {
+              "name": "InputId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of the filter control, so a column menu can move focus to it. Left unset, the control renders no id and the default markup is unchanged."
+            },
+            {
               "name": "OnFilterChange",
               "type": "EventCallback<DataTableFilter?>",
               "isRequired": false,
@@ -9302,7 +9308,7 @@
               "type": "ColumnMenuMode",
               "isRequired": false,
               "default": "ColumnMenuMode.None",
-              "description": "Opt-in ColumnMenuMode behavior; defaults preserve the existing presentation."
+              "description": "Column-menu affordance. None (default) keeps the pin toggle; Menu renders a kebab in each data column header offering sort, pin, group, hide and filter, and removes the pin button."
             },
             {
               "name": "CsvDelimiter",

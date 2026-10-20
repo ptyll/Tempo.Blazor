@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.Icons;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
@@ -21,13 +22,293 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     private TmColumnPicker? _columnPicker;
 
-    private async Task OpenColumnMenuAsync()
+    // ── Column menu (ColumnMenuMode.Menu) ─────────────────────────
+    // One kebab per data header. The open menu is remembered by column key so exactly one menu is
+    // open, and the trigger refs are stable across renders (a fresh ElementReference per render
+    // would drop the overlay's anchor out from under an open menu).
+
+    private string? _openColumnMenuKey;
+    private string? _columnMenuFocusKey;
+    private string? _columnMenuReturnFocusKey;
+    // Per-instance prefix so two tables with the same column keys never share menu or filter ids.
+    private readonly string _idBase = $"tm-dt-{Guid.NewGuid():N}";
+    private readonly Dictionary<string, ColumnMenuState> _columnMenus = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Per-column menu state. The trigger reference lives in a box the markup binds with
+    /// <c>@ref</c>, so each header keeps its own anchor across renders.
+    /// </summary>
+    private sealed class ColumnMenuState
     {
-        if (_columnPicker is not null)
+        public TriggerRef Trigger { get; } = new();
+        public bool IsOpen { get; set; }
+    }
+
+    /// <summary>A box around an <see cref="ElementReference"/>, so markup can bind <c>@ref</c> to it.</summary>
+    private sealed class TriggerRef
+    {
+        public ElementReference Current { get; set; }
+    }
+
+    private ColumnMenuState ColumnMenuOf(string columnKey)
+    {
+        if (!_columnMenus.TryGetValue(columnKey, out var state))
         {
-            _columnPicker.Open();
-            await InvokeAsync(StateHasChanged);
+            state = new ColumnMenuState();
+            _columnMenus[columnKey] = state;
         }
+
+        state.IsOpen = IsColumnMenuOpen(columnKey);
+        return state;
+    }
+
+    /// <summary>
+    /// The name a column's menu announces: <c>Title</c> wins, then <c>SortLabel</c>, then the key.
+    /// A header may legitimately carry only a <c>HeaderTemplate</c>, and the key always names it.
+    /// </summary>
+    private string ColumnAccessibleName(TmDataTableColumn<TItem> col)
+    {
+        if (!string.IsNullOrWhiteSpace(col.Title))
+            return col.Title;
+        if (!string.IsNullOrWhiteSpace(col.SortLabel))
+            return col.SortLabel!;
+        return col.Key;
+    }
+
+    private bool IsColumnMenuOpen(string columnKey)
+        => string.Equals(_openColumnMenuKey, columnKey, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Turns a column key into a fragment that is legal in an HTML id. Keys may contain spaces
+    /// and other characters; anything outside <c>[A-Za-z0-9_-]</c> becomes an underscore.
+    /// </summary>
+    private static string ColumnIdFragment(string columnKey)
+    {
+        if (string.IsNullOrEmpty(columnKey))
+            return "_";
+
+        var chars = columnKey.ToCharArray();
+        for (var i = 0; i < chars.Length; i++)
+        {
+            var c = chars[i];
+            var legal = (c is >= 'A' and <= 'Z') || (c is >= 'a' and <= 'z')
+                || (c is >= '0' and <= '9') || c is '_' or '-';
+            if (!legal)
+                chars[i] = '_';
+        }
+
+        return new string(chars);
+    }
+
+    private string ColumnMenuId(string columnKey) => $"{_idBase}-col-menu-{ColumnIdFragment(columnKey)}";
+
+    private string ColumnFilterId(string columnKey) => $"{_idBase}-col-filter-{ColumnIdFragment(columnKey)}";
+
+    private Task ToggleColumnMenuAsync(TmDataTableColumn<TItem> col)
+    {
+        _openColumnMenuKey = IsColumnMenuOpen(col.Key) ? null : col.Key;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetColumnMenuOpenAsync(TmDataTableColumn<TItem> col, bool open)
+    {
+        if (open)
+            _openColumnMenuKey = col.Key;
+        else if (IsColumnMenuOpen(col.Key))
+        {
+            _openColumnMenuKey = null;
+            // Overlay.js consumes Escape before this handler's keydown runs, so the return-focus
+            // key has to be stored on the close the overlay actually reports. Filter already named
+            // its own target; an outside click is ignored by focusHeader when focus went elsewhere.
+            if (_columnMenuFocusKey is null)
+                _columnMenuReturnFocusKey ??= col.Key;
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The actions a column's menu offers, in display order. Each item exists only when the column
+    /// can actually perform it, so a non-sortable column never announces a sort it cannot do.
+    /// </summary>
+    private IEnumerable<string> ColumnMenuActions(TmDataTableColumn<TItem> col)
+    {
+        if (col.Sortable)
+        {
+            yield return "sort-asc";
+            yield return "sort-desc";
+            if (ColumnSortDirection(col) is not null)
+                yield return "clear-sort";
+            // The sort group is its own section; the separator only earns its place when something follows it.
+            if (ColumnMenuHasActionsAfterSort(col))
+                yield return "separator";
+        }
+
+        if (ShowColumnMenu)
+        {
+            if (GetPin(col) == ColumnPin.None)
+            {
+                yield return "pin-left";
+                yield return "pin-right";
+            }
+            else
+            {
+                yield return "unpin";
+            }
+        }
+
+        // Grouping is a table feature, not just a column one: the item exists only while the table
+        // shows grouping at all (the same gate the "Add grouping" control uses).
+        if (ShowGrouping && col.Groupable && !_groupByColumns.Contains(col.Key))
+            yield return "group";
+        // Hiding is the column picker's job, so the item exists only while the picker does — and
+        // never for the last visible column, which would leave the table with nothing to show.
+        if (ShouldRenderColumnPicker() && col.Hideable && _visibleColumns.Count(c => c.Hideable) > 1)
+            yield return "hide";
+        if (col.Filterable)
+            yield return "filter";
+    }
+
+    /// <summary>The direction this column is currently sorted in, or null when it is not part of the sort.</summary>
+    private DataTableSortDirection? ColumnSortDirection(TmDataTableColumn<TItem> col)
+    {
+        var descriptor = _sortDescriptors
+            .FirstOrDefault(d => string.Equals(d.Column, col.Key, StringComparison.Ordinal));
+        return descriptor is null
+            ? null
+            : descriptor.Direction == DataTableSortDirection.Descending
+                ? DataTableSortDirection.Descending
+                : DataTableSortDirection.Ascending;
+    }
+
+    /// <summary>Whether the menu has anything to show below the sort group, so the separator is not trailing.</summary>
+    private bool ColumnMenuHasActionsAfterSort(TmDataTableColumn<TItem> col) =>
+        ShowColumnMenu
+        || (ShowGrouping && col.Groupable && !_groupByColumns.Contains(col.Key))
+        || (ShouldRenderColumnPicker() && col.Hideable && _visibleColumns.Count(c => c.Hideable) > 1)
+        || col.Filterable;
+
+    /// <summary>The menu action that states the direction the column is already sorted in, so it can be checked.</summary>
+    private string? ColumnMenuCheckedAction(TmDataTableColumn<TItem> col) => ColumnSortDirection(col) switch
+    {
+        DataTableSortDirection.Ascending => "sort-asc",
+        DataTableSortDirection.Descending => "sort-desc",
+        _ => null
+    };
+
+    private static string ColumnMenuActionKey(string action) => action switch
+    {
+        "sort-asc" => "TmDataTable_ColumnMenu_SortAsc",
+        "sort-desc" => "TmDataTable_ColumnMenu_SortDesc",
+        "clear-sort" => "TmDataTable_ColumnMenu_ClearSort",
+        "pin-left" => "TmDataTable_PinLeft",
+        "pin-right" => "TmDataTable_PinRight",
+        "unpin" => "TmDataTable_ColumnMenu_Unpin",
+        "group" => "TmDataTable_ColumnMenu_GroupBy",
+        "hide" => "TmDataTable_ColumnMenu_Hide",
+        "filter" => "TmDataTable_ColumnMenu_Filter",
+        _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown column menu action.")
+    };
+
+    private async Task RunColumnMenuActionAsync(TmDataTableColumn<TItem> col, string action)
+    {
+        _openColumnMenuKey = null;
+        // Filter moves focus into the filter row. Every other action closes the menu, so focus
+        // must return to this column's header — otherwise it drops to <body> (WCAG 2.4.3).
+        if (action != "filter")
+            _columnMenuReturnFocusKey = col.Key;
+        switch (action)
+        {
+            case "sort-asc":
+                await SortColumnAsync(col, DataTableSortDirection.Ascending);
+                break;
+            case "sort-desc":
+                await SortColumnAsync(col, DataTableSortDirection.Descending);
+                break;
+            case "clear-sort":
+                await ClearColumnSortAsync(col);
+                break;
+            case "pin-left":
+                await SetColumnPinAsync(col.Key, ColumnPin.Left);
+                break;
+            case "pin-right":
+                await SetColumnPinAsync(col.Key, ColumnPin.Right);
+                break;
+            case "unpin":
+                await SetColumnPinAsync(col.Key, ColumnPin.None);
+                break;
+            case "group":
+                AddGroupColumn(col.Key);
+                break;
+            case "hide":
+                await OnToggleColumnAsync(col.Key);
+                break;
+            case "filter":
+                _columnMenuFocusKey = col.Key;
+                break;
+        }
+    }
+
+    private async Task FocusColumnMenuAsync()
+    {
+        if (JS is null || _openColumnMenuKey is null)
+            return;
+        try
+        {
+            await JS.InvokeVoidAsync("tmDataTable.focusColumnMenu", ColumnMenuId(_openColumnMenuKey));
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            // No JS (tests, prerender): the menu stays in the native Tab order.
+        }
+    }
+
+    /// <summary>
+    /// Escape inside an open column menu closes it. The key is answered here, on the menu, so it
+    /// never reaches the header's own handler.
+    /// </summary>
+    private Task OnColumnMenuKeyDownAsync(TmDataTableColumn<TItem> col, KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _openColumnMenuKey = null;
+            _columnMenuReturnFocusKey = col.Key;
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Sets the column's sort to exactly <paramref name="direction"/> (the menu states a direction;
+    /// it does not walk the header's asc → desc → none cycle) and re-queries.
+    /// </summary>
+    private async Task SortColumnAsync(TmDataTableColumn<TItem> col, DataTableSortDirection direction)
+    {
+        if (!col.Sortable)
+            return;
+
+        _sortDescriptors.Clear();
+        _sortDescriptors.Add(new SortDescriptor(col.Key, direction));
+        _currentPage = 1;
+        _groupPageRequests.Clear();
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
+        else
+            RefreshClientItems();
+    }
+
+    /// <summary>Removes every sort descriptor and re-queries, so the table returns to its unsorted order.</summary>
+    private async Task ClearColumnSortAsync(TmDataTableColumn<TItem> col)
+    {
+        if (!_sortDescriptors.Any(d => string.Equals(d.Column, col.Key, StringComparison.Ordinal)))
+            return;
+
+        _sortDescriptors.Clear();
+        _currentPage = 1;
+        _groupPageRequests.Clear();
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
+        else
+            RefreshClientItems();
     }
 
     // ── Column layout state (pin + width; runtime overrides of column defaults) ──
@@ -46,10 +327,21 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>Fires whenever the column layout (widths or pin state) changes.</summary>
     [Parameter] public EventCallback<DataTableLayout> LayoutChanged { get; set; }
 
-    /// <summary>Whether column header controls (pin toggle, resize handle) are shown. Default true.</summary>
+    /// <summary>
+    /// Whether the inline column-header controls are shown: the pin toggle and the resize handle.
+    /// <c>false</c> hides both, and also hides the kebab when <see cref="ColumnMenuMode"/> is
+    /// <see cref="ColumnMenuMode.Menu"/>. Default true.
+    /// </summary>
     [Parameter] public bool ShowColumnMenu { get; set; } = true;
 
-    /// <summary>Optional column menu button mode. Defaults to None; this does not create an app-shell menu.</summary>
+    /// <summary>
+    /// Column-menu affordance. <see cref="ColumnMenuMode.None"/> (the default) keeps the inline pin
+    /// toggle in each header. <see cref="ColumnMenuMode.Menu"/> renders a kebab in each data column
+    /// header instead — sort, clear sort, pin, group, hide and filter, each only when the column
+    /// supports it — and removes the pin button. The menu is header content, so
+    /// <see cref="DataToolbarMode.ContentOnly"/> hides the toolbar but keeps the kebab. The toolbar
+    /// itself is unchanged either way.
+    /// </summary>
     [Parameter] public ColumnMenuMode ColumnMenuMode { get; set; } = ColumnMenuMode.None;
 
     /// <summary>Optional group header content; null preserves the current group label.</summary>
@@ -1252,6 +1544,39 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             {
                 // JS unavailable (e.g. tests, prerender) — the drag is a no-op, the keyboard path
                 // and SetColumnWidthAsync still work.
+            }
+        }
+
+        // "Filter" closes the menu first; the control it names is focused once the menu is gone,
+        // so focus never lands inside a panel that is about to unmount.
+        if (_columnMenuFocusKey is { } focusKey)
+        {
+            _columnMenuFocusKey = null;
+            try
+            {
+                await JS.InvokeVoidAsync("tmDataTable.focusColumnFilter", ColumnFilterId(focusKey));
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                   or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+            {
+                // No JS (tests, prerender): the filter row is already rendered, so the control is
+                // reachable by Tab. The id contract is what the tests assert.
+            }
+        }
+
+        // Escape and every menu action except Filter close the menu. Focus would otherwise drop
+        // to <body> while the trigger is tabindex=-1, so it returns to this column's header.
+        if (_columnMenuReturnFocusKey is { } returnKey)
+        {
+            _columnMenuReturnFocusKey = null;
+            try
+            {
+                await JS.InvokeVoidAsync("tmDataTable.focusHeader", _tableRef, returnKey);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                   or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+            {
+                // No JS (tests, prerender): the header is already in the document.
             }
         }
 
@@ -2707,9 +3032,25 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             _activationKeyShiftArmedAt = Clock.GetTimestamp();
         }
 
+        // P keeps pinning in both modes: Menu mode removes the pin BUTTON, not the shortcut.
         if (ShowColumnMenu && (e.Key is "p" or "P"))
         {
             return CyclePinAsync(col);
+        }
+
+        // M opens this header's column menu. It is answered only while the header itself is the
+        // event target: a consumer's HeaderTemplate stops keydown, so typing into a filter box
+        // inside the header never reaches here (WCAG 2.1.4 — same fence the P shortcut uses).
+        if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu && (e.Key is "m" or "M"))
+        {
+            return ToggleColumnMenuAsync(col);
+        }
+
+        // Alt+ArrowDown is the announced shortcut (aria-keyshortcuts) for the same menu. M stays as
+        // the shorter alternative; both are answered only while the header itself is the target.
+        if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu && e.AltKey && e.Key == "ArrowDown")
+        {
+            return ToggleColumnMenuAsync(col);
         }
 
         return Task.CompletedTask;
@@ -2744,6 +3085,24 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <c>TmDataTableHeaderAccessibilityTests.AHeaderThatOnlyOffersThePin_IsStillAFocusStop</c>.
     /// </summary>
     private bool IsPinOnlyHeader(TmDataTableColumn<TItem> col) => !col.Sortable && ShowColumnMenu;
+
+    /// <summary>
+    /// The shortcuts a header announces. <c>P</c> pins, but only while the standalone pin button
+    /// exists; <c>Alt+ArrowDown</c> opens the column menu. A sortable header announces them on its
+    /// sort button (the real stop); a pin-only header announces them on the <c>&lt;th&gt;</c>.
+    /// </summary>
+    private string? HeaderKeyShortcuts(TmDataTableColumn<TItem> col)
+    {
+        if (!ShowColumnMenu)
+            return null;
+
+        var shortcuts = new List<string>();
+        shortcuts.Add("P");
+        if (ColumnMenuMode == ColumnMenuMode.Menu)
+            shortcuts.Add("Alt+ArrowDown");
+
+        return shortcuts.Count == 0 ? null : string.Join(" ", shortcuts);
+    }
 
     /// <summary>
     /// Does nothing, on purpose. It exists so the barrier around a consumer's <c>HeaderTemplate</c> is a

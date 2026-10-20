@@ -186,7 +186,24 @@ public partial class TmDataTable<TItem>
             return Task.CompletedTask;
         }
 
+        // M opens the active data column's menu without moving the cursor. Utility columns
+        // (expander, checkbox) have no menu, so M there is a no-op.
+        if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu
+            && (e.Key is "m" or "M" || (e.AltKey && e.Key == "ArrowDown")))
+        {
+            var dataColumn = GridHeaderColumn(col);
+            if (dataColumn is not null)
+                return ToggleColumnMenuAsync(dataColumn);
+        }
+
         return Task.CompletedTask;
+    }
+
+    /// <summary>The data column behind a grid header index, or null for a utility column.</summary>
+    private TmDataTableColumn<TItem>? GridHeaderColumn(int col)
+    {
+        var index = col - GridDefaultColumn;
+        return index >= 0 && index < _renderedCellColumns.Count ? _renderedCellColumns[index] : null;
     }
 
     private void MoveGridCursor(KeyboardEventArgs e, int row, int col)

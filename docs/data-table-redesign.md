@@ -59,6 +59,29 @@ The expander and the selection checkbox are columns of the grid (`role="gridcell
 
 An empty grid keeps the single tab stop on the first column header (`role="columnheader"`); arrows move between headers. A grouped table makes each group header a `gridcell` with `aria-colspan` — Enter or Space toggles it, ArrowRight expands it, ArrowLeft collapses it, and ArrowUp/ArrowDown move between group rows. Data cells keep the same roving contract inside an expanded group. Virtualized mode emits `role="gridcell"` on the cells Virtualize has rendered. PageDown or End past the rendered window scrolls the container by `index * VirtualItemSize` so the row renders, then focus moves onto it. Card layout (`MobileLayout="Cards"`) omits columns whose `CardRole` is `Hidden` from `aria-colcount` and from keyboard movement. While a row is being edited the grid handler returns immediately — arrows belong to the input; Escape cancels the edit and returns focus to the cell. F2, or Enter on an editable column, starts the edit.
 
+## Column menu
+
+`ColumnMenuMode` defaults to `None`, which keeps today's header: the pin toggle (reached with `P`) and the resize handle. `ColumnMenuMode.Menu` replaces that pin toggle with one kebab per data column header. The expander, checkbox and edit-action columns never get one, and the toolbar gains no button.
+
+The menu offers only what the column can do:
+
+| Item | Shown when |
+|---|---|
+| Sort ascending / Sort descending | `Sortable` |
+| Clear sort | `Sortable` and the column is currently sorted |
+| Pin left / Pin right, or Unpin | the column is unpinned, or pinned |
+| Group by this column | `ShowGrouping`, `Groupable` and not already grouped |
+| Hide column | the column picker is shown, `Hideable`, and another visible column would remain |
+| Filter | `Filterable` — moves focus to that column's filter control |
+
+`M` and `Alt+ArrowDown` (announced in `aria-keyshortcuts`) open the menu of the header that has focus; `Escape` closes it. The kebab is `tabindex="-1"`, so it is not its own Tab stop. A `HeaderTemplate` stops keydown, so typing into a control inside the header never opens the menu. In grid mode both shortcuts are answered on the active header and do not move the cursor. `ShowColumnMenu="false"` hides the kebab as well as the pin toggle. The menu lives in the header, so `ToolbarMode="ContentOnly"` hides the toolbar but keeps the kebab.
+
+```razor
+<TmDataTable TItem="Person" Items="people" ColumnMenuMode="ColumnMenuMode.Menu">
+    <TmDataTableColumn TItem="Person" Title="Name" Field="p => p.Name" Sortable="true" />
+</TmDataTable>
+```
+
 ## Surface and filter presentation
 
 `Appearance="DataTableAppearance.Card"` opts `TmDataTable` into its card surface; Plain remains the default. `TmFilterBuilder.Presentation="FilterBuilderPresentation.Popover"` opts the filter editor into an anchored popover; Inline remains the default.

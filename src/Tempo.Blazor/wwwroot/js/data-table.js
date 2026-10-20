@@ -365,5 +365,63 @@ window.tmDataTable = (function () {
         }
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent };
+    /**
+     * Hands focus to the first item of the column menu Blazor just opened. The menu lives in the
+     * top layer (TmOverlayPanel), so it is looked up by id on the document, not inside the table.
+     * Arrow / Home / End navigation is owned by tm-menu-nav.js, which TmOverlayPanel attaches to
+     * every role="menu" panel — this only moves the initial focus. Sort items are menuitemradio;
+     * every other item is menuitem, so the selector matches both.
+     */
+    function focusColumnMenu(menuId) {
+        var menu = document.getElementById(menuId);
+        if (!menu) return;
+        var item = menu.querySelector('[role^="menuitem"]:not([disabled])');
+        if (item && item.getAttribute('aria-disabled') === 'true') {
+            var items = menu.querySelectorAll('[role^="menuitem"]:not([disabled])');
+            item = null;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].getAttribute('aria-disabled') !== 'true') { item = items[i]; break; }
+            }
+        }
+        if (item && typeof item.focus === 'function') {
+            try { item.focus({ preventScroll: true }); } catch (e) { item.focus(); }
+        }
+    }
+
+    /**
+     * Returns focus to the header of the column whose menu just closed. The kebab itself is
+     * tabindex=-1 (reached with M), so the stop is the header's sort button, else the header.
+     */
+    function focusHeader(tableEl, key) {
+        if (!tableEl || !tableEl.querySelector || key == null) return;
+        var trigger = tableEl.querySelector('.tm-data-table-col-menu[data-column-key="' + cssEscape(key) + '"]');
+        var header = trigger && trigger.closest ? trigger.closest('th') : null;
+        if (!header) {
+            header = tableEl.querySelector('th[data-column-key="' + cssEscape(key) + '"]');
+        }
+        if (!header) return;
+        var target = header.querySelector('.tm-th-sort') || header;
+        if (typeof target.focus === 'function') {
+            try { target.focus({ preventScroll: true }); } catch (e) { target.focus(); }
+        }
+    }
+
+    function cssEscape(value) {
+        if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value));
+        return String(value).replace(/["\\]/g, '\\$&');
+    }
+
+    /**
+     * Moves focus onto the filter control the column menu's "Filter" item names. The control is
+     * rendered by Blazor before this runs, so a missing element means the column is not filterable.
+     */
+    function focusColumnFilter(inputId) {
+        var input = document.getElementById(inputId);
+        if (input && typeof input.focus === 'function') {
+            try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+            try { input.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* no scroller */ }
+        }
+    }
+
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader };
 })();

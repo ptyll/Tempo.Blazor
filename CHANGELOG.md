@@ -29,6 +29,18 @@
 
 ### Added
 
+- **TmDataTable `ColumnMenuMode.Menu`.** Opt-in kebab menu in each data column header
+  (`aria-label` "Column options: {column}", `aria-haspopup="menu"`, `aria-expanded`). Items follow
+  the column: Sort ascending / Sort descending and Clear sort (`Sortable`, clear only while the
+  column is sorted), Pin left / Pin right or Unpin, Group by this column (`Groupable`), Hide column
+  (`Hideable`, omitted for the last visible column) and Filter (`Filterable`, focuses that
+  column's filter control). `M` and `Alt+ArrowDown` (announced in `aria-keyshortcuts`) open it from
+  the focused header, `Escape` closes it, and the kebab
+  is `tabindex="-1"`. The expander, checkbox and edit-action columns get no menu, and the toolbar
+  gains no button, so `ToolbarMode="ContentOnly"` hides the toolbar but keeps the kebab. `ShowColumnMenu="false"`
+  hides the kebab. `None` (the default) is unchanged — the pin toggle and its `P` shortcut stay. See
+  `docs/data-table-redesign.md`.
+
 - **TmMultiViewList `ItemHref`.** With `CardActivation="StretchedLink"` a non-empty href renders the
   card title as an anchor that covers the card; without one the title is a button that raises
   `OnItemClick`. The card itself is no longer a tab stop. `Button` (the default) is unchanged.

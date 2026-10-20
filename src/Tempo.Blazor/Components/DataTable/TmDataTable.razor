@@ -7,6 +7,7 @@
 @using Tempo.Blazor.Components.Filters
 @using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Services
@@ -34,10 +35,6 @@
 
             @* Right: Actions (column picker, view manager) *@
             <div class="tm-data-table-toolbar-right">
-                @if (ColumnMenuMode == ColumnMenuMode.Menu)
-                {
-                    <button type="button" aria-label="@Loc["TmDataTable_ColumnMenu"]" aria-haspopup="dialog" @onclick="OpenColumnMenuAsync"></button>
-                }
                 @if (ShouldRenderColumnPicker())
                 {
                     <TmColumnPicker @ref="_columnPicker" Columns="@GetColumnVisibilityItems()"
@@ -253,7 +250,7 @@
                                 @onkeydown:stopPropagation="@GridHeaderIsActive"
                                 draggable="@(col.Groupable ? "true" : "false")"
                                 aria-sort="@GetAriaSortValue(col)"
-                                aria-keyshortcuts="@(ShowColumnMenu && !col.Sortable ? "P" : null)"
+                                aria-keyshortcuts="@HeaderKeyShortcuts(col)"
                                 @ondragstart="() => OnColumnDragStart(col.Key)"
                                 @ondragend="OnColumnDragEnd"
                                 @onkeydown="e => GridHeaderIsActive ? HandleGridHeaderKeyDownAsync(e, thisHeaderCol) : HandleHeaderKeyDownAsync(e, col)"
@@ -302,7 +299,7 @@
                                             class="tm-th-sort"
                                             aria-label="@SortButtonAccessibleName(col)"
                                             title="@Loc["TmDataTable_MultiSortHint"]"
-                                            aria-keyshortcuts="@(ShowColumnMenu ? "P" : null)">
+                                            aria-keyshortcuts="@HeaderKeyShortcuts(col)">
                                         @if (col.HeaderTemplate is null)
                                         {
                                             <span>@col.Title</span>
@@ -318,7 +315,66 @@
                                 {
                                     <span>@col.Title</span>
                                 }
-                                @if (ShowColumnMenu)
+                                @if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu)
+                                {
+                                    @* Menu mode replaces the standalone pin button: the same affordances
+                                       live in one menu per data header, reached with M (see
+                                       HandleHeaderKeyDownAsync). The trigger reference is captured into a
+                                       per-column box, so each header anchors its own menu. *@
+                                    var menu = ColumnMenuOf(col.Key);
+                                    <button type="button"
+                                            @ref="menu.Trigger.Current"
+                                            tabindex="-1"
+                                            class="tm-data-table-col-menu tm-data-table-col-menu-btn @(menu.IsOpen ? "tm-data-table-col-menu--open" : null)"
+                                            aria-label="@Loc["TmDataTable_ColumnMenuFor", ColumnAccessibleName(col)]"
+                                            aria-haspopup="menu"
+                                            aria-expanded="@(menu.IsOpen ? "true" : "false")"
+                                            aria-controls="@(menu.IsOpen ? ColumnMenuId(col.Key) : null)"
+                                            data-column-key="@col.Key"
+                                            data-testid="@TestId($"col-menu-{col.Key}")"
+                                            @onclick:stopPropagation="true"
+                                            @onkeydown:stopPropagation="true"
+                                            @onkeyup:stopPropagation="true"
+                                            @onclick="() => ToggleColumnMenuAsync(col)">
+                                        <TmIcon Name="@IconNames.MoreVertical" Size="IconSize.Sm" />
+                                    </button>
+                                    <TmOverlayPanel Anchor="menu.Trigger.Current"
+                                                    IsOpen="menu.IsOpen"
+                                                    IsOpenChanged="open => SetColumnMenuOpenAsync(col, open)"
+                                                    OnOpened="FocusColumnMenuAsync"
+                                                    Placement="OverlayPlacement.Bottom"
+                                                    Align="OverlayAlign.End"
+                                                    Offset="4"
+                                                    Role="menu"
+                                                    Id="@ColumnMenuId(col.Key)"
+                                                    AriaLabel="@Loc["TmDataTable_ColumnMenuFor", ColumnAccessibleName(col)]"
+                                                    Title="@ColumnAccessibleName(col)"
+                                                    MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
+                                                    Class="tm-data-table-col-menu-panel"
+                                                    @onkeydown="e => OnColumnMenuKeyDownAsync(col, e)">
+                                        @foreach (var action in ColumnMenuActions(col))
+                                        {
+                                            if (action == "separator")
+                                            {
+                                                <div class="tm-dropdown-sep" role="separator"></div>
+                                                continue;
+                                            }
+                                            var isSortDirection = action is "sort-asc" or "sort-desc";
+                                            var isCurrentSort = action == ColumnMenuCheckedAction(col);
+                                            <button type="button"
+                                                    class="tm-dropdown-item"
+                                                    role="@(isSortDirection ? "menuitemradio" : "menuitem")"
+                                                    aria-checked="@(isSortDirection ? (isCurrentSort ? "true" : "false") : null)"
+                                                    tabindex="-1"
+                                                    data-action="@action"
+                                                    @onclick="() => RunColumnMenuActionAsync(col, action)"
+                                                    @onclick:stopPropagation="true">
+                                                @Loc[ColumnMenuActionKey(action)]
+                                            </button>
+                                        }
+                                    </TmOverlayPanel>
+                                }
+                                else if (ShowColumnMenu)
                                 {
                                     @* tabindex="-1": the pin is reachable from its header with P, not as a
                                        stop of its own. As a sequential stop it cost one extra Tab per
@@ -383,6 +439,7 @@
                                     @if (col.Filterable)
                                     {
                                         <TmColumnFilter ColumnKey="@col.Key"
+                                                        InputId="@(ColumnMenuMode == ColumnMenuMode.Menu ? ColumnFilterId(col.Key) : null)"
                                                         ColumnTitle="@col.Title"
                                                         FilterType="@col.FilterType"
                                                         FilterOptions="@col.FilterOptions"

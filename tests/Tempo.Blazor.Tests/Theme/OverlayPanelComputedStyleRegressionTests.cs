@@ -122,6 +122,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // no hardcoded fallbacks (CSS-tokens-only audit).
         new("TmMultiViewList.razor", "tm-mvl-group-dropdown",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
+        // ColumnMenuMode.Menu anchors one panel per data column header. The surface rides the
+        // tokens directly, so the zero-specificity overlay reset cannot win it.
+        new("TmDataTable.razor", "tm-data-table-col-menu-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>

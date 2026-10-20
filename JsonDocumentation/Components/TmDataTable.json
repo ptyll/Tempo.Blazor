@@ -444,7 +444,7 @@
       "type": "ColumnMenuMode",
       "isRequired": false,
       "default": "None",
-      "description": "Opt-in ColumnMenuMode behavior; defaults preserve the existing presentation."
+      "description": "Column-menu affordance. None (default) keeps the pin toggle; Menu renders a kebab in each data column header offering sort, pin, group, hide and filter, and removes the pin button."
     },
     {
       "name": "EditActionsMode",

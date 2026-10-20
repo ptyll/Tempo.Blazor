@@ -371,8 +371,98 @@
 }
 .tm-data-table th { position: relative; }
 
+/* Column menu (ColumnMenuMode.Menu)
+   ------------------------------------------------------------------
+   The kebab replaces the pin button, so it follows the same reveal contract: invisible at rest,
+   visible the moment the pointer OR the keyboard is on the header, and visible while its own
+   menu is open. A focus stop that paints nothing is a WCAG 2.4.7 failure, so :focus-within and
+   the trigger's own aria-expanded state are required, not optional. The hit area grows to the
+   touch target on a coarse pointer — the button stays out of the Tab order (tabindex=-1, reached
+   with M), so the larger target is for the finger, not for another Tab stop. */
+.tm-data-table-col-menu,
+.tm-data-table-col-menu-btn {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: var(--tm-space-2);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-space-7);
+  block-size: var(--tm-space-7);
+  min-inline-size: var(--tm-space-7);
+  min-block-size: var(--tm-space-7);
+  padding: 0;
+  border: var(--tm-border-width) solid transparent;
+  border-radius: var(--tm-radius-sm);
+  background: var(--tm-bg-surface-secondary);
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.tm-data-table th:hover .tm-data-table-col-menu,
+.tm-data-table th:focus-within .tm-data-table-col-menu,
+.tm-data-table-col-menu:focus-visible,
+.tm-data-table-col-menu[aria-expanded="true"] { opacity: 1; }
+
+@media (hover: hover) {
+  .tm-data-table-col-menu { opacity: 0; }
+
+  .tm-data-table th:hover .tm-data-table-col-menu,
+  .tm-data-table th:focus-within .tm-data-table-col-menu,
+  .tm-data-table-col-menu:focus-visible,
+  .tm-data-table-col-menu[aria-expanded="true"] { opacity: 1; }
+}
+
+.tm-data-table-col-menu:hover,
+.tm-data-table-col-menu[aria-expanded="true"] {
+  background: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+}
+
+.tm-data-table-col-menu:focus-visible {
+  outline: 2px solid var(--tm-color-primary);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .tm-data-table-col-menu {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+    inset-inline-end: var(--tm-space-1);
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .tm-data-table-col-menu {
+    border-color: ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .tm-data-table-col-menu:focus-visible { outline-color: Highlight; }
+}
+
+/* Chrome only — no position/inset/z-index: the panel is positioned by overlay.js (see the
+   contract in _overlay-panel.css and .tm-view-manager-panel above). */
+.tm-data-table-col-menu-panel {
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-md);
+  min-inline-size: 12rem;
+  padding: var(--tm-space-1);
+}
+
+.tm-data-table-col-menu-panel[role="menu"] .tm-dropdown-item { min-block-size: var(--tm-touch-target); }
+
 @media (prefers-reduced-motion: reduce) {
-  .tm-col-pin-btn { transition: none; }
+  .tm-col-pin-btn,
+  .tm-data-table-col-menu { transition: none; }
 }
 
 /* Master-detail expandable rows */

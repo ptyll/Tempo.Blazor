@@ -7,7 +7,8 @@
         <select class="tm-col-filter-select"
                 value="@_value"
                 aria-label="@AccessibleName"
-                @onchange="OnSelectChange">
+                @onchange="OnSelectChange"
+                @attributes="InputIdAttribute">
             <option value=""></option>
             <option value="true">@Loc["Tm_Yes"]</option>
             <option value="false">@Loc["Tm_No"]</option>
@@ -27,7 +28,8 @@
         <select class="tm-col-filter-select"
                 value="@_value"
                 aria-label="@AccessibleName"
-                @onchange="OnSelectChange">
+                @onchange="OnSelectChange"
+                @attributes="InputIdAttribute">
             <option value=""></option>
             @if (FilterOptions != null)
             {
@@ -55,7 +57,8 @@
                    value="@_value"
                    placeholder="@AccessibleName"
                    aria-label="@AccessibleName"
-                   @oninput="OnInputChange" />
+                   @oninput="OnInputChange"
+                   @attributes="InputIdAttribute" />
             @if (!string.IsNullOrEmpty(_value))
             {
                 <button class="tm-col-filter-clear"
@@ -72,6 +75,15 @@
 @code {
     /// <summary>Column key sent with the emitted filter.</summary>
     [Parameter] public string ColumnKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When set, the filter control gets an id so a column menu can move focus to it. Left unset by
+    /// default, which keeps the pre-menu markup unchanged.
+    /// </summary>
+    [Parameter] public string? InputId { get; set; }
+
+    private IReadOnlyDictionary<string, object>? InputIdAttribute
+        => string.IsNullOrEmpty(InputId) ? null : new Dictionary<string, object> { ["id"] = InputId };
 
     /// <summary>Control kind. Defaults to text.</summary>
     [Parameter] public FilterType FilterType { get; set; } = FilterType.Text;

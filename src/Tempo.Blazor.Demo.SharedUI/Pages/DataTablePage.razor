@@ -637,6 +637,31 @@
     }
 </section>
 
+<!-- Column menu -->
+<section class="demo-section" data-testid="dt-column-menu-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Column menu</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            ColumnMenuMode.Menu puts a kebab in each data column header. M opens it, Escape closes it,
+            and the items follow what the column can do.
+        </p>
+        <TmDataTable TItem="Employee"
+                     Items="_employees"
+                     ColumnMenuMode="ColumnMenuMode.Menu"
+                     ShowGrouping="true"
+                     ViewContext="column-menu-demo"
+                     DefaultPageSize="4">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name"
+                                   Sortable="true" Filterable="true" Groupable="true" />
+                <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+</section>
+
 <!-- Grid keyboard -->
 <section class="demo-section" data-testid="dt-grid-keyboard-section">
     <div class="flex items-center space-x-2 mb-4">
