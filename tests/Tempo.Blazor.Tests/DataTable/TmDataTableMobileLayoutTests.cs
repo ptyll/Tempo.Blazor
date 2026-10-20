@@ -52,7 +52,7 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
     }
 
     [Fact]
-    public void CardMode_WithMobileLayoutUnset_AddsCardsClassAndFieldRole()
+    public void CardMode_KeepsTheCardWrapperWithoutCardCellChrome()
     {
         var cut = Render<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, new List<BasicPerson> { new("Ada", 37, "Engineer") })
@@ -61,16 +61,17 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
                 .Add(x => x.Title, "Name")
                 .Add(x => x.Field, person => person.Name)));
 
-        cut.Find(".tm-data-table-wrapper--cards").Should().NotBeNull();
         cut.Find(".tm-data-table-wrapper--card").Should().NotBeNull();
-        cut.Markup.Should().NotContain("tm-data-table-wrapper--container");
-        cut.Find("td[data-card-role=\"Field\"]").Should().NotBeNull();
+        cut.Markup.Should().NotContain("tm-data-table-wrapper--cards");
+        cut.Markup.Should().NotContain("tm-data-table-cell--card");
+        cut.Markup.Should().NotContain("data-card-role");
         cut.Find("td[data-label=\"Name\"]").Should().NotBeNull();
+        cut.Markup.Should().NotContain("tm-data-table-wrapper--container");
         cut.Markup.Should().NotContain("tm-data-table-wrapper--responsive");
     }
 
     [Fact]
-    public void CardMode_HidesHiddenColumn()
+    public void CardMode_DoesNotHideHiddenColumns()
     {
         var cut = Render<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, new List<BasicPerson> { new("Ada", 37, "Engineer") })
@@ -83,8 +84,8 @@ public class TmDataTableMobileLayoutTests : LocalizationTestBase
                 .Add(x => x.Field, person => person.Name)
                 .Add(x => x.CardRole, DataTableCardRole.Hidden)));
 
-        cut.Markup.Should().NotContain("data-card-role=\"Hidden\"");
-        cut.FindAll("tbody td").Should().HaveCount(1);
+        cut.Markup.Should().NotContain("data-card-role");
+        cut.FindAll("tbody td").Should().HaveCount(2);
     }
 
     [Fact]

@@ -27,12 +27,14 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     private IRenderedComponent<TmDataTable<GroupPerson>> RenderGroupableTable(
         bool showGrouping = true,
         bool groupsCollapsedByDefault = true,
-        EventCallback<IReadOnlyList<string>>? onGroupingChanged = null)
+        EventCallback<IReadOnlyList<string>>? onGroupingChanged = null,
+        DataTableAppearance appearance = DataTableAppearance.Plain)
     {
         return Render<TmDataTable<GroupPerson>>(p =>
         {
             p.Add(c => c.Items, People);
             p.Add(c => c.ShowGrouping, showGrouping);
+            p.Add(c => c.Appearance, appearance);
             p.Add(c => c.GroupsCollapsedByDefault, groupsCollapsedByDefault);
             if (onGroupingChanged.HasValue)
                 p.Add(c => c.OnGroupingChanged, onGroupingChanged.Value);
@@ -72,7 +74,7 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     [Fact]
     public void DataTable_ShowGrouping_RendersLocalizedLabel()
     {
-        var cut = RenderGroupableTable(showGrouping: true);
+        var cut = RenderGroupableTable(showGrouping: true, appearance: DataTableAppearance.Card);
 
         cut.FindAll(".tm-data-table-group-zone").Count.Should().Be(1);
         cut.Find(".tm-data-table-group-label-prefix").TextContent.Should().Be("Group by");
@@ -283,7 +285,7 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     [Fact]
     public async Task DataTable_GroupZone_ShowsChipsForGroupedColumns()
     {
-        var cut = RenderGroupableTable();
+        var cut = RenderGroupableTable(appearance: DataTableAppearance.Card);
 
         await cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Department"));
 

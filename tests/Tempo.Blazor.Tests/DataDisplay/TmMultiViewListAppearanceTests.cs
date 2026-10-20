@@ -23,6 +23,7 @@ public class TmMultiViewListAppearanceTests : LocalizationTestBase
             .Add(c => c.Items, new List<string>())
             .Add(c => c.Appearance, DataTableAppearance.Plain));
 
+        cut.Find(".tm-multi-view-list").ClassList.Should().NotContain("tm-multi-view-list--card");
         cut.Find(".tm-multi-view-list").ClassList.Should().Contain("tm-multi-view-list--plain");
     }
 }

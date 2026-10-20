@@ -223,9 +223,10 @@
 
 - **`TmDataTable.Appearance` and `TmFilterBuilder.Presentation`.** Both default to today's
   look: `Plain` adds no card class, `Inline` keeps the filter editor in the flow (PickersPage
-  included). Opt in with `Card` or `Popover`. Export items now show an icon and a format
-  description. A table without a pager says "Total {0} records" instead of a page range.
-  **Migration:** the no-pager summary text changed. Keep a custom line with
+  included). Opt in with `Card` or `Popover`. `Appearance=Card` is the opt-in for the redesigned
+  export item (icon, short label and format description), the "Add grouping" dropdown, the group
+  bar prefix and the no-pager summary `TmDataTable_TotalItems` (`{0} record` / `{0} records`).
+  The default no-pager summary stays `TmDataTable_ShowingItems`. Keep a custom line with
   `PaginationInfoTemplate`.
 
 - **`TmDataTable.KeyboardNavigation`.** Opt-in `Grid` uses roving tabindex: one cell is
@@ -1032,10 +1033,31 @@
 
 - **`TmDiagramToolbox` keyboard: Space inserts on keyup, Enter ignores auto-repeat; new `ReadOnly` parameter.** Follows docs/keyboard-activation-convention.md: Space now activates on keyup (was keydown) and a held Enter inserts exactly one shape. With `ReadOnly="true"` (the editor passes its effective read-only state) tiles stay visible and focusable but are `aria-disabled`, not draggable and insert nothing. Migration: tests that pressed Space with `KeyDown(" ")` alone must dispatch `KeyDown(" ")` + `KeyUp(" ")`.
 
-- **Data-table defaults did not change.** `TmDataTable.Appearance` remains `Plain`, `TmFilterBuilder.Presentation` remains `Inline`, `MobileLayout` remains `None`, `KeyboardNavigation` remains `Rows`, and `ShowFilterSummary` remains `false`. The multi-view list defaults also remain unchanged.
-- A table without a pager now displays `Total {0} records` rather than the previous page-range summary; provide `PaginationInfoTemplate` to retain custom wording.
-- `CardMode` also emits the cards class when `MobileLayout` is unset (`None`); an explicit `Scroll` or `Cards` layout takes precedence.
-- Export dropdown items now wrap their icon and format description together.
+- **Data-table defaults stay `Plain`.** `TmDataTable.Appearance` remains `Plain`, `TmFilterBuilder.Presentation` remains `Inline`, `MobileLayout` remains `None`, `KeyboardNavigation` remains `Rows`, and `ShowFilterSummary` remains `false`. Grid ARIA (`aria-rowcount`, `aria-colcount`, `role="row"`, `role="gridcell"`) renders only when `KeyboardNavigation=Grid`. The redesigned group bar, export item and no-pager "N records" summary render only when `Appearance=Card`. `CardMode` keeps `tm-data-table-wrapper--card` and `data-label`; it no longer emits `--cards`, `tm-data-table-cell--card` or forces `EditActionsMode.Text`. Those belong to `MobileLayout=Cards`.
+- **Approved accessibility markup, recorded against the pre-redesign snapshots.**
+  - `TmColumnPicker` fills `span.tm-icon-columns` with a `TmIcon` instead of an empty span. <!-- snapshot:dt-basic --> <!-- snapshot:dt-cardmode --> <!-- snapshot:dt-filters --> <!-- snapshot:dt-grouping --> <!-- snapshot:dt-viewmanager --> <!-- snapshot:dt-paged --> <!-- snapshot:dt-selectable --> <!-- snapshot:dt-export --> <!-- snapshot:dt-virtualized -->
+    Before: `<span class="tm-icon-columns"></span>`
+    After: `<span class="tm-icon-columns"><svg class="tm-icon">…</svg></span>`
+  - `TmViewManager` items are buttons inside `.tm-view-item-row`, the panel is a `TmOverlayPanel` (the `.tm-overlay` backdrop is gone) and the toggle is `tm-btn-outline` with `aria-expanded` / `aria-haspopup="dialog"`. <!-- snapshot:dt-viewmanager -->
+    Before: `<button class="tm-btn tm-btn-secondary tm-view-manager-toggle">`
+    After: `<button class="tm-btn tm-btn-outline tm-view-manager-toggle" aria-expanded="true" aria-haspopup="dialog">`
+  - Group toggles and the group-chip remove control use `TmIcon` plus `aria-expanded` / `aria-label` instead of `▼`, `▶` and `×`. <!-- snapshot:dt-grouping --> <!-- snapshot:mvl-grouped -->
+    Before: `<button class="tm-data-table-group-chip-remove">×</button>`
+    After: `<button class="tm-data-table-group-chip-remove" aria-label="Remove grouping by Role"><svg class="tm-icon">…</svg></button>`
+  - `TmPagination` previous and next buttons use `TmIcon` chevrons instead of `‹` / `›`. <!-- snapshot:pagination-default --> <!-- snapshot:dt-paged -->
+    Before: `<button aria-label="Previous">‹</button>`
+    After: `<button aria-label="Previous"><svg class="tm-icon">…</svg></button>`
+  - `TmColumnFilter` names the input with the column title (`Filter: {0}`) when the column has one. <!-- snapshot:dt-filters -->
+    Before: `<input placeholder="Filter" aria-label="Filter" />`
+    After: `<input placeholder="Filter: Name" aria-label="Filter: Name" />`
+  - A void checkbox renders its closing tag. <!-- snapshot:dt-selectable -->
+    Before: `<input type="checkbox" /></th>`
+    After: `<input type="checkbox"></input></th>`
+  - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` of `radio` buttons, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
+    Before: `<span class="tm-mvl-status">Active</span>`
+    After: `<span class="tm-badge tm-mvl-status">Active</span>`
+  - `ExportSelectedOnly` is now `AllowExportSelected`. Set the new parameter to keep exporting the selection only.
+  - `TmOverlayPanel.RestoreFocusTargetId` was removed. Focus returns to the anchor; do not pass the old parameter.
 
 - **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below
   768px now renders the dedicated mobile layout, replacing the old `max-width: 640px` viewport

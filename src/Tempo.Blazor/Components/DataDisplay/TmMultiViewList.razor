@@ -12,7 +12,7 @@
 @inject DragDropService DragDrop
 @inject IJSRuntime JS
 
-<div class="tm-multi-view-list @(Appearance == DataTableAppearance.Plain ? "tm-multi-view-list--plain" : null) @(Responsive ? "tm-multi-view-list--responsive" : null) @Class" @attributes="AdditionalAttributes">
+<div class="@RootCssClass" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -203,7 +203,7 @@
                 }
                 else if (IsVirtualized)
                 {
-                    <div class="tm-mvl-card-grid @(IsVirtualized ? "tm-mvl-card-grid--virtualized" : null)">
+                    <div class="@CardGridClass" style="@CardGridStyle">
                         <Virtualize Items="FilteredItems" Context="item" ItemSize="VirtualCardHeight">
                             @RenderCardItem(item)
                         </Virtualize>
@@ -211,7 +211,7 @@
                 }
                 else
                 {
-                    <div class="tm-mvl-card-grid @(IsVirtualized ? "tm-mvl-card-grid--virtualized" : null)">
+                    <div class="@CardGridClass" style="@CardGridStyle">
                         @foreach (var item in FilteredItems!)
                         {
                             @RenderCardItem(item)
@@ -363,6 +363,33 @@
 
     /// <summary>Estimated card height for card view virtualization.</summary>
     [Parameter] public float VirtualCardHeight { get; set; } = 180f;
+
+    /// <summary>
+    /// Maximum number of card columns. Null (default) keeps auto-fill with the minimum card width.
+    /// Values below 1 are ignored.
+    /// </summary>
+    [Parameter] public int? MaxCardColumns { get; set; }
+
+    private bool HasCardColumnCap => MaxCardColumns is >= 1;
+
+    private string RootCssClass => string.Join(" ", new[]
+    {
+        "tm-multi-view-list",
+        Responsive ? "tm-multi-view-list--responsive" : null,
+        Appearance == DataTableAppearance.Plain ? "tm-multi-view-list--plain" : null,
+        Class,
+    }.Where(part => !string.IsNullOrEmpty(part)));
+
+    private string CardGridClass => string.Join(" ", new[]
+    {
+        "tm-mvl-card-grid",
+        IsVirtualized ? "tm-mvl-card-grid--virtualized" : null,
+        HasCardColumnCap ? "tm-mvl-card-grid--capped" : null,
+    }.Where(part => part is not null));
+
+    private string? CardGridStyle => HasCardColumnCap
+        ? $"--tm-mvl-card-columns-max: {MaxCardColumns!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)};"
+        : null;
 
     /// <summary>Estimated list item height for list view virtualization.</summary>
     [Parameter] public float VirtualListItemHeight { get; set; } = 56f;
@@ -1328,7 +1355,7 @@
                     }
                     else if (viewType == "card")
                     {
-                        <div class="tm-mvl-card-grid @(IsVirtualized ? "tm-mvl-card-grid--virtualized" : null)">
+                        <div class="@CardGridClass" style="@CardGridStyle">
                             @foreach (var item in group.Items)
                             {
                                 @RenderCardItem(item)

@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-column-picker @Class @(Disabled ? "tm-column-picker-disabled" : "")" @attributes="AdditionalAttributes">
-    <button id="@_toggleId" class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
+    <button id="@(_open ? _toggleId : null)" class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
             type="button"
             @ref="_toggleRef"
             aria-haspopup="true"
@@ -10,7 +10,6 @@
             @onclick="ToggleOpen">
         <span class="tm-icon-columns"><TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" /></span>
         @Loc["TmDataTable_ColumnPicker"]
-        <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
     </button>
 
     @* The panel is a TmOverlayPanel: popover="manual" puts it in the browser top layer (no
@@ -26,7 +25,7 @@
                     Title="@Loc["TmDataTable_ColumnPicker"]"
                     AriaLabel="@Loc["TmDataTable_ColumnPicker"]"
                     MobilePresentation="PanelPresentation.Auto"
-                    RestoreFocusTargetId="@_toggleId"
+                    RestoreFocusTargetId="@(_open ? _toggleId : null)"
                     Class="tm-column-picker-panel">
         <div class="tm-column-picker-items">
             @foreach (var col in Columns.Where(c => c.IsHideable))

@@ -16,7 +16,7 @@ public static partial class MarkupSnapshot
     {
         ArgumentNullException.ThrowIfNull(markup);
 
-        var withoutBlazor = BlazorAttribute().Replace(markup, string.Empty);
+        var withoutBlazor = BlazorAttribute().Replace(markup.Replace("\r\n", "\n").Replace('\r', '\n'), string.Empty);
         var withStableIds = ReplaceInstanceIds(withoutBlazor);
         var collapsed = CollapseInterTagWhitespace(withStableIds);
         return ClassAttribute().Replace(collapsed, NormalizeClassAttribute);

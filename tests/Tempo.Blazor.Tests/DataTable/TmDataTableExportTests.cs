@@ -281,6 +281,7 @@ public class TmDataTableExportTests : LocalizationTestBase
             p.Add(c => c.ViewContext, "export-menu");
             p.Add(c => c.Items, new List<Person> { new("Ann", 30) });
             p.Add(c => c.ShowExport, true);
+            p.Add(c => c.Appearance, DataTableAppearance.Card);
             p.AddChildContent(b =>
             {
                 var seq = 0;

@@ -107,10 +107,13 @@
   --tm-mvl-card-min: 16rem;
   display: grid;
   gap: var(--tm-space-4);
-  grid-template-columns: repeat(auto-fill, minmax(max(var(--tm-mvl-card-min), calc((100% - 2 * var(--tm-space-4)) / 3)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--tm-mvl-card-min), 1fr));
 }
 .tm-mvl-card-grid--virtualized {
   grid-template-columns: 1fr;
+}
+.tm-mvl-card-grid--capped {
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--tm-mvl-card-min), calc((100% - (var(--tm-mvl-card-columns-max) - 1) * var(--tm-space-4)) / var(--tm-mvl-card-columns-max))), 1fr));
 }
 
 /* Card */

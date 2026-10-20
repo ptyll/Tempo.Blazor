@@ -4,52 +4,48 @@
 <div class="tm-col-filter">
     @if (FilterType == FilterType.Boolean)
     {
-        <div class="tm-col-filter-input-wrap">
-            <select class="tm-col-filter-select"
-                    value="@_value"
-                    aria-label="@AccessibleName"
-                    @onchange="OnSelectChange">
-                <option value=""></option>
-                <option value="true">@Loc["Tm_Yes"]</option>
-                <option value="false">@Loc["Tm_No"]</option>
-            </select>
-            @if (!string.IsNullOrEmpty(_value))
-            {
-                <button class="tm-col-filter-clear"
-                        type="button"
-                        aria-label="@Loc["Tm_Clear"]"
-                        @onclick="Clear">
-                    &#215;
-                </button>
-            }
-        </div>
+        <select class="tm-col-filter-select"
+                value="@_value"
+                aria-label="@AccessibleName"
+                @onchange="OnSelectChange">
+            <option value=""></option>
+            <option value="true">@Loc["Tm_Yes"]</option>
+            <option value="false">@Loc["Tm_No"]</option>
+        </select>
+        @if (!string.IsNullOrEmpty(_value))
+        {
+            <button class="tm-col-filter-clear"
+                    type="button"
+                    aria-label="@Loc["Tm_Clear"]"
+                    @onclick="Clear">
+                &#215;
+            </button>
+        }
     }
     else if (FilterType == FilterType.Select)
     {
-        <div class="tm-col-filter-input-wrap">
-            <select class="tm-col-filter-select"
-                    value="@_value"
-                    aria-label="@AccessibleName"
-                    @onchange="OnSelectChange">
-                <option value=""></option>
-                @if (FilterOptions != null)
-                {
-                    @foreach (var opt in FilterOptions)
-                    {
-                        <option value="@opt.Value">@opt.Label</option>
-                    }
-                }
-            </select>
-            @if (!string.IsNullOrEmpty(_value))
+        <select class="tm-col-filter-select"
+                value="@_value"
+                aria-label="@AccessibleName"
+                @onchange="OnSelectChange">
+            <option value=""></option>
+            @if (FilterOptions != null)
             {
-                <button class="tm-col-filter-clear"
-                        type="button"
-                        aria-label="@Loc["Tm_Clear"]"
-                        @onclick="Clear">
-                    &#215;
-                </button>
+                @foreach (var opt in FilterOptions)
+                {
+                    <option value="@opt.Value">@opt.Label</option>
+                }
             }
-        </div>
+        </select>
+        @if (!string.IsNullOrEmpty(_value))
+        {
+            <button class="tm-col-filter-clear"
+                    type="button"
+                    aria-label="@Loc["Tm_Clear"]"
+                    @onclick="Clear">
+                &#215;
+            </button>
+        }
     }
     else
     {

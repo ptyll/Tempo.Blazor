@@ -23,9 +23,12 @@
     </div>
 
     @* Add filter button *@
-    <button type="button" @ref="_addButton" class="tm-filter-builder-add" aria-expanded="@(_showFieldPicker || _selectedDefinition is not null ? "true" : "false")" @onclick="OpenFieldPicker">
-        @Loc["TmFilterBuilder_AddFilter"]
-    </button>
+    @if (Presentation == FilterBuilderPresentation.Popover || !_showFieldPicker)
+    {
+        <button type="button" @ref="_addButton" class="tm-filter-builder-add" aria-expanded="@(Presentation == FilterBuilderPresentation.Popover && (_showFieldPicker || _selectedDefinition is not null) ? "true" : null)" @onclick="OpenFieldPicker">
+            @Loc["TmFilterBuilder_AddFilter"]
+        </button>
+    }
 
     @if (ShowResultPreview)
     {

@@ -168,6 +168,12 @@
       "description": "Estimated card height for card view virtualization."
     },
     {
+      "name": "MaxCardColumns",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum number of card columns. Null (default) keeps auto-fill with the minimum card width. Values below 1 are ignored. A value of 1 or more adds tm-mvl-card-grid--capped and sets --tm-mvl-card-columns-max."
+    },
+    {
       "name": "VirtualListItemHeight",
       "type": "float",
       "isRequired": false,

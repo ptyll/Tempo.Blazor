@@ -545,7 +545,22 @@ public partial class TmDataTable<TItem> : IDisposable
     /// when <see cref="CardMode"/> is enabled, so non-card tables render an identical class list.
     /// </summary>
     private string WrapperCssClass =>
-        IsCardLayout ? "tm-data-table-wrapper tm-data-table-wrapper--card" : "tm-data-table-wrapper";
+        UsesCardWrapper ? "tm-data-table-wrapper tm-data-table-wrapper--card" : "tm-data-table-wrapper";
+
+    private string RootCssClass => string.Join(" ", new[]
+    {
+        WrapperCssClass,
+        IsRedesigned ? "tm-data-table-wrapper--card-surface" : null,
+        MobileLayout == DataTableMobileLayout.Scroll ? "tm-data-table-wrapper--responsive" : null,
+        MobileLayout != DataTableMobileLayout.None ? "tm-data-table-wrapper--container" : null,
+        IsMobileCards ? "tm-data-table-wrapper--cards" : null,
+        Class,
+    }.Where(part => !string.IsNullOrEmpty(part)));
+
+    private string PaginationContainerClass =>
+        MobileLayout == DataTableMobileLayout.None
+            ? "tm-pagination-container"
+            : "tm-pagination-container tm-pagination-compact";
 
     /// <summary>
     /// High-level preset that controls which toolbar chrome elements are rendered.
@@ -762,8 +777,13 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <summary>Scroll/pagination mode. Default: Pagination.</summary>
     [Parameter] public DataTableScrollMode ScrollMode { get; set; } = DataTableScrollMode.Pagination;
 
-    /// <summary>Height of a single row in pixels (required for Virtualize). Default: 48.</summary>
+    /// <summary>
+    /// Height of a single row in pixels, used by Virtualize. The default 48 matches the pre-redesign
+    /// row and does not force a CSS row height; set a different value to emit <c>--tm-data-table-row-height</c>.
+    /// </summary>
     [Parameter] public float VirtualItemSize { get; set; } = 48f;
+
+    private bool HasExplicitRowHeight => VirtualItemSize != 48f;
 
     /// <summary>Number of extra items to render above/below viewport. Default: 3.</summary>
     [Parameter] public int VirtualOverscanCount { get; set; } = 3;
@@ -789,8 +809,18 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <summary>Responsive mobile presentation. None (default) preserves today's table markup; Scroll enables horizontal scrolling.</summary>
     [Parameter] public DataTableMobileLayout MobileLayout { get; set; } = DataTableMobileLayout.None;
 
-    private bool IsCardLayout => MobileLayout == DataTableMobileLayout.None ? CardMode : MobileLayout == DataTableMobileLayout.Cards;
-    private EditActionsMode EffectiveEditActionsMode => IsCardLayout ? EditActionsMode.Text : EditActionsMode;
+    /// <summary>True only for an explicit card mobile layout. CardMode keeps the original card class without card cells.</summary>
+    private bool IsMobileCards => MobileLayout == DataTableMobileLayout.Cards;
+
+    /// <summary>The card wrapper class from the pre-redesign CardMode, or the explicit Cards layout.</summary>
+    private bool UsesCardWrapper => MobileLayout == DataTableMobileLayout.None ? CardMode : IsMobileCards;
+
+    /// <summary>Card labels belong to CardMode and the explicit Cards layout. Card cell chrome is Cards only.</summary>
+    private bool IsCardLayout => MobileLayout == DataTableMobileLayout.None ? CardMode : IsMobileCards;
+    private EditActionsMode EffectiveEditActionsMode => IsMobileCards ? EditActionsMode.Text : EditActionsMode;
+
+    /// <summary>The visual redesign. Every new default-markup change is gated on this.</summary>
+    private bool IsRedesigned => Appearance == DataTableAppearance.Card;
     private bool IsResponsiveScroll => MobileLayout == DataTableMobileLayout.Scroll;
     private bool IsMobilePinned(TmDataTableColumn<TItem> col) => IsResponsiveScroll &&
         (col.MobilePinned || (!_visibleColumns.Any(c => c.MobilePinned) && ReferenceEquals(col, _visibleColumns.FirstOrDefault())));
@@ -934,9 +964,9 @@ public partial class TmDataTable<TItem> : IDisposable
         !IsContentToolbarMode &&
         !IsSearchToolbarMode;
 
-    /// <summary>True when the external filter builder should be rendered.</summary>
+    /// <summary>True when the redesigned "Add grouping" dropdown should be rendered. Content-only and search-only toolbars keep the drop zone only.</summary>
     private bool ShouldRenderAddGrouping() =>
-        ShowGrouping && !IsContentToolbarMode && !IsSearchToolbarMode;
+        ShowGrouping && IsRedesigned && !IsContentToolbarMode && !IsSearchToolbarMode;
 
     private bool ShouldRenderExternalFilterBuilder() =>
         IsFullToolbarMode &&
@@ -2295,7 +2325,7 @@ public partial class TmDataTable<TItem> : IDisposable
                             builder.CloseElement(); // td
                         }
 
-                        foreach (var col in _visibleColumns.Where(c => !IsCardLayout || c.CardRole != DataTableCardRole.Hidden))
+                        foreach (var col in _visibleColumns.Where(c => !IsMobileCards || c.CardRole != DataTableCardRole.Hidden))
                         {
                             builder.OpenElement(seq++, "td");
                             builder.AddAttribute(seq++, "class", GetCellClass(col));
@@ -2587,7 +2617,7 @@ public partial class TmDataTable<TItem> : IDisposable
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(col.CssClass)) parts.Add(col.CssClass);
         if (IsMobilePinned(col)) parts.Add("data-mobile-pinned");
-        if (IsCardLayout) parts.Add("tm-data-table-cell--card");
+        if (IsMobileCards) parts.Add("tm-data-table-cell--card");
         if (col.Align == ColumnAlign.Center) parts.Add("tm-text-center");
         if (col.Align == ColumnAlign.Right) parts.Add("tm-text-right");
         var cellPin = GetPinClass(col);
@@ -2711,6 +2741,6 @@ public partial class TmDataTable<TItem> : IDisposable
 
     private string GetScrollContainerStyle() =>
         ScrollMode == DataTableScrollMode.Virtualized
-            ? $"height: {VirtualScrollHeight ?? "600px"}; overflow-y: auto; --tm-data-table-row-height: {VirtualItemSize.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;"
+            ? $"height: {VirtualScrollHeight ?? "600px"}; overflow-y: auto;{(HasExplicitRowHeight ? $" --tm-data-table-row-height: {VirtualItemSize.ToString(System.Globalization.CultureInfo.InvariantCulture)}px;" : string.Empty)}"
             : string.Empty;
 }

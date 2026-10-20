@@ -164,6 +164,7 @@ public class TmDataTableToolbarTests : LocalizationTestBase
     {
         var cut = Render<TmDataTable<ToolbarPerson>>(p => p
             .Add(c => c.Items, People)
+            .Add(c => c.ShowFilterSummary, true)
             .AddChildContent(b =>
             {
                 b.OpenComponent<TmDataTableColumn<ToolbarPerson>>(0);
