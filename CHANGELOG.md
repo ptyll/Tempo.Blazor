@@ -4,6 +4,80 @@
 
 ### Added
 
+- **TmPdfViewer: `PdfZoomMode` (`Custom` | `FitWidth` | `FitPage`) with `ZoomMode`/`ZoomModeChanged`
+  (two-way, default `Custom`).** A fit mode lets JavaScript compute the scale from the container
+  size (`tmPdfViewer.fitScale`) and a ResizeObserver keeps recomputing it on resize — fit-width
+  keeps working after a panel or window resize. A fit scale MAY fall outside the zoom steps
+  (50–200 %) — the exact container ratio beats the steps — it is clamped to the absolute 0.1–5
+  bounds in `pdf-viewer.js` and re-guarded in `OnFitScaleComputed`. The zoom ± buttons and every
+  preset switch the mode back to `Custom`; the `Auto` value arrives with a later phase.
+
+- **TmPdfViewer: zoom presets dropdown.** The zoom label is now a `TmDropdown` with the presets
+  50/75/100/125/150/200 % plus "Fit width" and "Fit page"; the trigger shows the active fit mode
+  or the current percentage and carries `TmPdfViewer_ZoomPresets` as its accessible name.
+
+- **TmPdfViewer: document header (`ShowHeader`, `Title`, `Subtitle`, slots `HeaderStart` and
+  `HeaderActions`, default off).** With the header on, the title renders above a subtitle that
+  defaults to a neutral page count ("Pages: N") once the document is loaded, and the Open and
+  Download links move from the toolbar into the header (host actions slot in after them).
+
+- **TmPdfViewer: `ShowOpenLink` (default `true`).** Hides the "Open in new tab" link without
+  touching `AllowDownload`.
+
+- **TmPdfViewer: collapsible thumbnails.** The sidebar has a "Thumbnails" header with a collapse
+  button; `ThumbnailsCollapsed`/`ThumbnailsCollapsedChanged` is two-way, the toolbar gains a
+  "Pages" toggle, and a collapsed rail keeps one expand affordance. The toolbar also carries
+  `ToolbarStart`/`ToolbarEnd` slots so hosts (the annotator, phase 5) can compose their own
+  groups, and the comments toggle shows the open-thread count ("Comments (N)").
+
+- **TmDropdown: `AriaLabel` parameter.** Names the trigger button for assistive tech when the
+  visible label is only the current value (a zoom level); when null the visible text stays the
+  accessible name.
+
+- **TmPdfViewer: `PdfZoomMode` schema props in the wireframe stencil.** The `TmPdfViewer`
+  stencil schema gains `showThumbnails`, `viewMode` (`single` | `continuous`), `showHeader`,
+  `title` and `zoomMode` (`custom` | `fit-width` | `fit-page`); the `pdf-viewer` role is
+  unchanged.
+
+### Breaking / Migration
+
+- **TmPdfViewer toolbar DOM restructured (desktop reference).** The toolbar root is now
+  `role="toolbar"` with labelled `role="group"` sections (Navigation | Zoom | Rotate | Mode ||
+  Search | Comments) instead of one flat `role="group"` bar:
+
+  ```html
+  <!-- BEFORE -->
+  <div class="tm-pdf-viewer__toolbar" role="group" aria-label="PDF controls">
+      <div class="tm-pdf-viewer__pagination">…<span class="tm-pdf-viewer__page-label">Page 1 of 10</span>…</div>
+      <div class="tm-pdf-viewer__zoom">…<span class="tm-pdf-viewer__zoom-label">100%</span>…</div>
+      <div class="tm-pdf-viewer__view-mode"><button aria-pressed="true">…</button>…</div>
+  </div>
+
+  <!-- AFTER -->
+  <div class="tm-pdf-viewer__toolbar" role="toolbar" aria-label="PDF controls">
+      <div class="tm-pdf-viewer__group" role="group" aria-label="Navigation">
+          …<input class="tm-pdf-viewer__page-input" type="number" min="1" max="10" value="1" />
+            <span class="tm-pdf-viewer__page-count">/ 10</span>…
+      </div>
+      <div class="tm-pdf-viewer__group" role="group" aria-label="Zoom">
+          …<div class="tm-pdf-viewer__zoom"><button class="tm-dropdown-trigger">100%</button>…</div>…
+      </div>
+      <div class="tm-pdf-viewer__view-mode" role="radiogroup" aria-label="View mode">
+          <input type="radio" checked />…  <!-- native radios: arrows are the browser's -->
+      </div>
+  </div>
+  ```
+
+  Style against `.tm-pdf-viewer__page-input`, `.tm-pdf-viewer__page-count`, the
+  `.tm-pdf-viewer__zoom .tm-dropdown-trigger` and the view-mode radiogroup — `.tm-pdf-viewer__page-label`
+  and `.tm-pdf-viewer__zoom-label` are gone. The thumbnails sidebar now renders its own header and
+  list (`__thumbnails-header` / `__thumbnails-list`).
+
+- **TmPdfViewer: "Download" is the primary action, "Open" the secondary one.** Both were equal
+  links; the download link now paints the primary fill (`tm-pdf-viewer__link--primary`) and the
+  open link keeps a bordered secondary look (`tm-pdf-viewer__link--secondary`). With
+  `ShowHeader="true"` both move into the document header and the toolbar renders none.
+
 - **Wireframe:** the `TmDiagramEditor` stencil now mirrors the redesigned editor shell — header,
   command row, shapes palette, Properties|Layers inspector with docked minimap and status bar on
   desktop; collapsed palette rail and inspector drawer on tablet; compact header and

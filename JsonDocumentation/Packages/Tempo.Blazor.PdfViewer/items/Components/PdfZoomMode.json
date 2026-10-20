@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "How the viewer decides the zoom scale. Custom means the scale is controlled by the user (zoom buttons, presets, binding); FitWidth and FitPage let JavaScript compute the scale from the container size and keep recomputing it on resize. The Auto value arrives with a later phase of the PDF redesign and is deliberately not part of the enum yet.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+  "documentationStatus": "generated",
+  "itemName": "PdfZoomMode"
+}

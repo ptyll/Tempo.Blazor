@@ -15,6 +15,12 @@
       "description": "Trigger button label."
     },
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional accessible name for the trigger button. The trigger's visible text is often just the current value (a zoom level, a page number), so hosts can name WHAT the control is here without polluting the visible label. When null the visible text remains the accessible name (since 2.9.1)."
+    },
+    {
       "name": "Icon",
       "type": "string?",
       "isRequired": false,

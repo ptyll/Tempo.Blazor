@@ -20,7 +20,8 @@ window.tmPdfViewer = (function () {
     // rootEl → per-instance state. Shape:
     //   pending load: { rootEl, token, pending: true, dotNetRef, renderTasks, overlayObservers, abort, renderGen, thumbGen }
     //   loaded:       { rootEl, pdfDoc, token, currentPage, scale, rotation, dotNetRef, renderTasks,
-    //                   overlayObservers, abort, renderGen, thumbGen, _selectionHandler }
+    //                   overlayObservers, abort, renderGen, thumbGen, _selectionHandler,
+    //                   fitMode, fitObserver, fitObserverEl }
     // `token` is a unique marker per init() call: a download that finishes after a
     // newer init()/destroy() detects the stale token and discards itself.
     const _docs = new WeakMap();
@@ -57,6 +58,20 @@ window.tmPdfViewer = (function () {
                 .catch(e => { _renderModulePromise = null; throw e; });
         }
         return _renderModulePromise;
+    }
+
+    // Pure fit-mode logic lives in pdf-viewer-fit.mjs (node-tested the same way);
+    // the DOM reads around it stay in this script.
+    let _fitModule = null;
+    let _fitModulePromise = null;
+    function _ensureFitModule() {
+        if (_fitModule) return Promise.resolve(_fitModule);
+        if (!_fitModulePromise) {
+            _fitModulePromise = import(_scriptDir + 'pdf-viewer-fit.mjs')
+                .then(mod => { _fitModule = mod; return mod; })
+                .catch(e => { _fitModulePromise = null; throw e; });
+        }
+        return _fitModulePromise;
     }
 
     function _isCancelled(err) {
@@ -550,6 +565,10 @@ window.tmPdfViewer = (function () {
     async function renderAllPages(rootEl, containerEl, scale, rotation) {
         const state = _docs.get(rootEl);
         if (!state?.pdfDoc || !containerEl) return;
+        // Keep the state in sync with what this loop renders: a fit recompute after a
+        // rotate reads state.rotation to size the page viewport.
+        state.scale = scale ?? state.scale;
+        if (rotation !== undefined) state.rotation = rotation;
         // Generation guard: zoom/rotate/re-init bump the counter, so an older
         // loop stops appending canvases after each awaited page.
         const gen = ++state.renderGen;
@@ -596,6 +615,117 @@ window.tmPdfViewer = (function () {
         }
     }
 
+    // ── Fit modes (PD2) ──────────────────────────────────────────────────────
+
+    // The component's absolute scale bounds (TmPdfViewer.MinScale/MaxScale), kept for
+    // the inline fallback below; the single source of truth is pdf-viewer-fit.mjs. A
+    // fit scale is ALLOWED to fall outside the component's zoom steps (the exact
+    // container ratio beats the steps) — it is clamped only to these absolute bounds
+    // so the canvas can never collapse or explode. Documented on
+    // TmPdfViewer.ApplyZoomModeAsync / OnFitScaleComputed.
+    const FIT_MIN_SCALE = 0.1;
+    const FIT_MAX_SCALE = 5;
+
+    function _wrapPadding(el) {
+        const style = window.getComputedStyle(el);
+        return {
+            x: (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0),
+            y: (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
+        };
+    }
+
+    // DOM adapter around the pure pdf-viewer-fit.mjs math: reads the container box,
+    // then delegates. The inline branch is the fallback for a failed module load and
+    // must stay in sync with computeFitScale.
+    function _computeFitScale(containerEl, viewport, mode) {
+        if (!containerEl) return 0;
+        const pad = _wrapPadding(containerEl);
+        const availableWidth = containerEl.clientWidth - pad.x;
+        const availableHeight = mode === 'fit-page' ? containerEl.clientHeight - pad.y : null;
+        if (_fitModule) {
+            return _fitModule.computeFitScale(viewport, availableWidth, availableHeight, mode);
+        }
+        if (!(availableWidth >= 1)) return 0;
+        let scale;
+        if (mode === 'fit-page') {
+            if (!(availableHeight >= 1)) return 0;
+            scale = Math.min(availableWidth / viewport.width, availableHeight / viewport.height);
+        } else {
+            scale = availableWidth / viewport.width;
+        }
+        return Math.min(FIT_MAX_SCALE, Math.max(FIT_MIN_SCALE, scale));
+    }
+
+    // Call-time mode resolution for the ResizeObserver recompute (see _recomputeFit).
+    function _resolveRecomputeFitMode(state) {
+        if (_fitModule) return _fitModule.resolveRecomputeFitMode(state);
+        return state?.pdfDoc && state.fitMode ? state.fitMode : null;
+    }
+
+    function _isRecomputeValid(state, mode) {
+        if (_fitModule) return _fitModule.isRecomputeValid(state, mode);
+        return !!state && state.fitMode === mode;
+    }
+
+    async function fitScale(rootEl, containerEl, mode, dotNetRef) {
+        // Warm the pure fit math (node-tested); a failed load keeps the inline
+        // fallback working.
+        await _ensureFitModule().catch(() => { });
+        const state = _docs.get(rootEl);
+        if (!state?.pdfDoc) return 0;
+        const page = await state.pdfDoc.getPage(state.currentPage);
+        const viewport = page.getViewport({ scale: 1, rotation: state.rotation });
+        const scale = _computeFitScale(containerEl, viewport, mode);
+        if (scale <= 0) return 0;
+        state.fitMode = mode;
+        // Keep the scale following container resizes (fit-width must survive a panel
+        // resize): the observer re-reports through OnFitScaleComputed, and the component
+        // decides whether the changed scale is worth a re-render. Registered once per
+        // container — a repeated fitScale call for the same container must not stack
+        // observers. The callback takes NO captured mode: a fit-width → fit-page switch
+        // reuses the same container, so the recompute must read state.fitMode at call
+        // time (_recomputeFit does exactly that).
+        if (typeof ResizeObserver !== 'undefined' && containerEl && state.fitObserverEl !== containerEl) {
+            state.fitObserver?.disconnect();
+            const observer = new ResizeObserver(() => _recomputeFit(rootEl, containerEl, dotNetRef));
+            observer.observe(containerEl);
+            state.fitObserver = observer;
+            state.fitObserverEl = containerEl;
+        }
+        dotNetRef?.invokeMethodAsync('OnFitScaleComputed', scale).catch(() => { });
+        return scale;
+    }
+
+    function _recomputeFit(rootEl, containerEl, dotNetRef) {
+        const state = _docs.get(rootEl);
+        // Read the mode at CALL time, from the live state: the observer outlives
+        // fit-mode switches on the same container, and a mode captured at registration
+        // would silently pin the old mode after fit-width → fit-page. Null when the
+        // document is gone or clearFit ran — nothing to recompute.
+        const mode = _resolveRecomputeFitMode(state);
+        if (!mode) return;
+        state.pdfDoc.getPage(state.currentPage).then(page => {
+            // The mode may have switched (or cleared) during the async page lookup.
+            if (!_isRecomputeValid(state, mode)) return;
+            const viewport = page.getViewport({ scale: 1, rotation: state.rotation });
+            const scale = _computeFitScale(containerEl, viewport, mode);
+            if (scale > 0) {
+                dotNetRef?.invokeMethodAsync('OnFitScaleComputed', scale).catch(() => { });
+            }
+        }).catch(() => { });
+    }
+
+    function clearFit(rootEl) {
+        const state = _docs.get(rootEl);
+        if (!state) return;
+        state.fitMode = null;
+        if (state.fitObserver) {
+            state.fitObserver.disconnect();
+            state.fitObserver = null;
+            state.fitObserverEl = null;
+        }
+    }
+
     function destroy(rootEl) {
         const state = _docs.get(rootEl);
         if (!state) return;
@@ -611,6 +741,11 @@ window.tmPdfViewer = (function () {
         // Removes every document listener bound with the instance signal and
         // stops overlay alignment observers.
         state.abort?.abort();
+        if (state.fitObserver) {
+            state.fitObserver.disconnect();
+            state.fitObserver = null;
+            state.fitObserverEl = null;
+        }
         if (state.overlayObservers instanceof Map) {
             for (const observer of state.overlayObservers.values()) {
                 try { observer.disconnect(); } catch { /* already disconnected */ }
@@ -646,6 +781,8 @@ window.tmPdfViewer = (function () {
         clearSearch,
         renderAllPages,
         scrollToPage,
+        fitScale,
+        clearFit,
         destroy
     };
 })();

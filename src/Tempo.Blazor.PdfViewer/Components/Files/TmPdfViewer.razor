@@ -1,6 +1,8 @@
 @namespace Tempo.Blazor.Components.Files
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Inputs
 
 <div class="tm-pdf-viewer @Class" style="height:@(string.IsNullOrEmpty(Height) ? "600px" : Height)" @ref="_rootRef" @attributes="AdditionalAttributes">
 
@@ -13,13 +15,47 @@
     }
     else
     {
+        @* Document header (G9). Default ShowHeader=false keeps the toolbar-only layout; when
+           enabled it hosts the title/subtitle and takes over the Open and Download links. *@
+        @if (ShowHeader)
+        {
+            <div class="tm-pdf-viewer__header" data-testid="@TestId("pdf-viewer-header")">
+                <div class="tm-pdf-viewer__header-start">
+                    @HeaderStart
+                    <div class="tm-pdf-viewer__header-titles">
+                        @if (!string.IsNullOrEmpty(Title))
+                        {
+                            <span class="tm-pdf-viewer__header-title">@Title</span>
+                        }
+                        @if (HeaderSubtitle is not null)
+                        {
+                            <span class="tm-pdf-viewer__header-subtitle">@HeaderSubtitle</span>
+                        }
+                    </div>
+                </div>
+                <div class="tm-pdf-viewer__header-actions">
+                    @if (ShowOpenLink)
+                    {
+                        @OpenLink
+                    }
+                    @if (AllowDownload)
+                    {
+                        @DownloadLink
+                    }
+                    @HeaderActions
+                </div>
+            </div>
+        }
+
         @if (ShowToolbar)
         {
-            <div class="tm-pdf-viewer__toolbar" role="group" aria-label="@Loc["TmPdfViewer_ToolbarLabel"]">
+            <div class="tm-pdf-viewer__toolbar" role="toolbar" aria-label="@Loc["TmPdfViewer_ToolbarLabel"]" data-testid="@TestId("pdf-viewer-toolbar")">
+
+                @ToolbarStart
 
                 @if (!_useFallback && _totalPages > 0)
                 {
-                    <div class="tm-pdf-viewer__pagination">
+                    <div class="tm-pdf-viewer__group" role="group" aria-label="@Loc["TmPdfViewer_NavigationGroup"]">
                         <button class="tm-pdf-viewer__btn"
                                 type="button"
                                 disabled="@(_currentPage <= 1)"
@@ -28,9 +64,19 @@
                                 @onclick="GoToPreviousPageAsync">
                             <TmIcon Name="chevron-left" Size="IconSize.Sm" />
                         </button>
-                        <span class="tm-pdf-viewer__page-label">
-                            @Loc["TmPdfViewer_Page"] @_currentPage @Loc["TmPdfViewer_Of"] @_totalPages
-                        </span>
+                        <input type="number"
+                               inputmode="numeric"
+                               class="tm-pdf-viewer__page-input"
+                               min="1"
+                               max="@_totalPages"
+                               data-testid="@TestId("pdf-page-input")"
+                               aria-label="@Loc["TmPdfViewer_PageInputLabel"]"
+                               title="@Loc["TmPdfViewer_PageInputLabel"]"
+                               @bind="_pageInput"
+                               @bind:event="oninput"
+                               @onkeydown="HandlePageInputKeyDownAsync"
+                               @onblur="CommitPageInputAsync" />
+                        <span class="tm-pdf-viewer__page-count" data-testid="@TestId("pdf-page-count")">/ @_totalPages</span>
                         <button class="tm-pdf-viewer__btn"
                                 type="button"
                                 disabled="@(_currentPage >= _totalPages)"
@@ -43,7 +89,7 @@
 
                     <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
 
-                    <div class="tm-pdf-viewer__zoom">
+                    <div class="tm-pdf-viewer__group" role="group" aria-label="@Loc["TmPdfViewer_ZoomGroup"]">
                         <button class="tm-pdf-viewer__btn"
                                 type="button"
                                 disabled="@(_scale <= 0.5)"
@@ -52,7 +98,22 @@
                                 @onclick="ZoomOutAsync">
                             <TmIcon Name="zoom-out" Size="IconSize.Sm" />
                         </button>
-                        <span class="tm-pdf-viewer__zoom-label">@((int)(_scale * 100))%</span>
+                        @* PD2: presets + fit modes. A preset hands the mode to Custom; the fit
+                           entries let JS compute (and recompute on resize) the scale. *@
+                        <TmDropdown Class="tm-pdf-viewer__zoom"
+                                    Text="@ZoomTriggerText"
+                                    AriaLabel="@($"{Loc["TmPdfViewer_ZoomPresets"]}: {ZoomTriggerText}")"
+                                    OnSelect="HandleZoomSelectAsync">
+                            @foreach (var step in ZoomPresetSteps)
+                            {
+                                <TmDropdownItem Value="@step.Value">@step.Label</TmDropdownItem>
+                            }
+                            <TmDropdownItem Value="fit-width">@Loc["TmPdfViewer_FitWidth"]</TmDropdownItem>
+                            <TmDropdownItem Value="fit-page">
+                                <TmIcon Name="maximize-2" Size="IconSize.Sm" />
+                                @Loc["TmPdfViewer_FitPage"]
+                            </TmDropdownItem>
+                        </TmDropdown>
                         <button class="tm-pdf-viewer__btn"
                                 type="button"
                                 disabled="@(_scale >= 2.0)"
@@ -63,11 +124,15 @@
                         </button>
                     </div>
 
-                    <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
+                    @* Only when a section actually follows — no trailing divider. *@
+                    @if (ToolbarSectionFollowsZoomGroup)
+                    {
+                        <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
+                    }
 
                     @if (AllowRotation)
                     {
-                        <div class="tm-pdf-viewer__rotation">
+                        <div class="tm-pdf-viewer__group" role="group" aria-label="@Loc["TmPdfViewer_Rotate"]">
                             <button class="tm-pdf-viewer__btn"
                                     type="button"
                                     aria-label="@Loc["TmPdfViewer_Rotate"]"
@@ -80,76 +145,84 @@
                         <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
                     }
 
+                    @* Režim: a native-radio segmented control — the browser owns the arrows,
+                       the single activation and aria-checked (keyboard-activation convention). *@
                     @if (ShowViewModeToggle)
                     {
-                        <div class="tm-pdf-viewer__view-mode">
-                            <button class="tm-pdf-viewer__btn @(_viewMode == PdfViewMode.SinglePage ? "tm-pdf-viewer__btn--active" : "")"
-                                    type="button"
-                                    aria-label="@Loc["TmPdfViewer_ViewModeSingle"]"
-                                    title="@Loc["TmPdfViewer_ViewModeSingle"]"
-                                    aria-pressed="@(_viewMode == PdfViewMode.SinglePage ? "true" : "false")"
-                                    @onclick="() => SetViewModeAsync(PdfViewMode.SinglePage)">
-                                <TmIcon Name="sidebar" Size="IconSize.Sm" />
-                            </button>
-                            <button class="tm-pdf-viewer__btn @(_viewMode == PdfViewMode.Continuous ? "tm-pdf-viewer__btn--active" : "")"
-                                    type="button"
-                                    aria-label="@Loc["TmPdfViewer_ViewModeContinuous"]"
-                                    title="@Loc["TmPdfViewer_ViewModeContinuous"]"
-                                    aria-pressed="@(_viewMode == PdfViewMode.Continuous ? "true" : "false")"
-                                    @onclick="() => SetViewModeAsync(PdfViewMode.Continuous)">
-                                <TmIcon Name="list" Size="IconSize.Sm" />
-                            </button>
-                        </div>
+                        <TmRadioGroup T="PdfViewMode"
+                                      Class="tm-pdf-viewer__view-mode"
+                                      Appearance="RadioAppearance.Segmented"
+                                      Layout="RadioLayout.Horizontal"
+                                      Value="_viewMode"
+                                      ValueChanged="HandleViewModeSegmentChangedAsync"
+                                      Options="@ViewModeSegments"
+                                      aria-label="@Loc["TmPdfViewer_ViewModeGroup"]" />
 
                         <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
                     }
                 }
 
+                @if (ShowThumbnails && !_useFallback)
+                {
+                    <button class="tm-pdf-viewer__btn @(!_thumbnailsCollapsed ? "tm-pdf-viewer__btn--active" : "")"
+                            type="button"
+                            data-testid="@TestId("pdf-pages-toggle")"
+                            aria-label="@Loc["TmPdfViewer_Pages"]"
+                            title="@Loc["TmPdfViewer_Pages"]"
+                            aria-pressed="@(!_thumbnailsCollapsed ? "true" : "false")"
+                            @onclick="ToggleThumbnailsCollapsedAsync">
+                        <TmIcon Name="panel-left" Size="IconSize.Sm" />
+                    </button>
+
+                    <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
+                }
+
                 @if (ShowSearch)
                 {
-                    <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
-                    <button class="tm-pdf-viewer__btn @(_searchVisible ? "tm-pdf-viewer__btn--active" : "")"
-                            type="button"
-                            aria-label="@Loc["TmPdfViewer_Search"]"
-                            title="@Loc["TmPdfViewer_Search"]"
-                            @onclick="ToggleSearchAsync">
-                        <TmIcon Name="search" Size="IconSize.Sm" />
-                    </button>
+                    <div class="tm-pdf-viewer__group" role="group" aria-label="@Loc["TmPdfViewer_Search"]">
+                        <button class="tm-pdf-viewer__btn @(_searchVisible ? "tm-pdf-viewer__btn--active" : "")"
+                                type="button"
+                                aria-label="@Loc["TmPdfViewer_Search"]"
+                                title="@Loc["TmPdfViewer_Search"]"
+                                aria-pressed="@(_searchVisible ? "true" : "false")"
+                                @onclick="ToggleSearchAsync">
+                            <TmIcon Name="search" Size="IconSize.Sm" />
+                        </button>
+                    </div>
                 }
 
                 @if (EnableAnnotations)
                 {
-                    <div class="tm-pdf-viewer__separator" aria-hidden="true"></div>
-                    <button class="tm-pdf-viewer__btn @(_annotationsPanelVisible ? "tm-pdf-viewer__btn--active" : "")"
-                            type="button"
-                            aria-label="@Loc["TmPdfViewer_ToggleAnnotations"]"
-                            title="@Loc["TmPdfViewer_ToggleAnnotations"]"
-                            data-testid="@TestId("pdf-annotations-toggle")"
-                            @onclick="ToggleAnnotationsPanelAsync">
-                        <TmIcon Name="message-square" Size="IconSize.Sm" />
-                    </button>
+                    <div class="tm-pdf-viewer__group" role="group" aria-label="@Loc["TmPdfViewer_Annotations"]">
+                        <button class="tm-pdf-viewer__btn tm-pdf-viewer__comments-toggle @(_annotationsPanelVisible ? "tm-pdf-viewer__btn--active" : "")"
+                                type="button"
+                                title="@Loc["TmPdfViewer_ToggleAnnotations"]"
+                                data-testid="@TestId("pdf-annotations-toggle")"
+                                aria-pressed="@(_annotationsPanelVisible ? "true" : "false")"
+                                @onclick="ToggleAnnotationsPanelAsync">
+                            <TmIcon Name="message-square" Size="IconSize.Sm" />
+                            <span class="tm-pdf-viewer__comments-count">@Loc["TmPdfViewer_CommentsCount", OpenThreadCount]</span>
+                        </button>
+                    </div>
                 }
 
-                <div class="tm-pdf-viewer__file-actions">
-                    <a class="tm-pdf-viewer__link"
-                       href="@Url"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       title="@Loc["TmPdfViewer_Open"]">
-                        <TmIcon Name="external-link" Size="IconSize.Sm" />
-                        @Loc["TmPdfViewer_Open"]
-                    </a>
-                    @if (AllowDownload)
-                    {
-                        <a class="tm-pdf-viewer__link"
-                           href="@Url"
-                           download
-                           title="@Loc["TmPdfViewer_Download"]">
-                            <TmIcon Name="download" Size="IconSize.Sm" />
-                            @Loc["TmPdfViewer_Download"]
-                        </a>
-                    }
-                </div>
+                @* Without a header the file links stay in the toolbar; Download is the primary
+                   action, Open the secondary one. *@
+                @if (!ShowHeader && (ShowOpenLink || AllowDownload))
+                {
+                    <div class="tm-pdf-viewer__file-actions">
+                        @if (ShowOpenLink)
+                        {
+                            @OpenLink
+                        }
+                        @if (AllowDownload)
+                        {
+                            @DownloadLink
+                        }
+                    </div>
+                }
+
+                @ToolbarEnd
 
             </div>
         }
@@ -208,9 +281,41 @@
                 </div>
             }
 
-            @if (ShowThumbnails && !_useFallback)
+            @if (ShowThumbnails && !_useFallback && !_thumbnailsCollapsed)
             {
-                <div class="tm-pdf-viewer__thumbnails" role="region" aria-label="@Loc["TmPdfViewer_Thumbnails"]" @ref="_thumbnailsRef"></div>
+                <div class="tm-pdf-viewer__thumbnails" role="region" aria-label="@Loc["TmPdfViewer_Thumbnails"]" data-testid="@TestId("pdf-thumbnails-panel")">
+                    <div class="tm-pdf-viewer__thumbnails-header">
+                        <span class="tm-pdf-viewer__thumbnails-title">@Loc["TmPdfViewer_Thumbnails"]</span>
+                        <button class="tm-pdf-viewer__btn"
+                                type="button"
+                                data-testid="@TestId("pdf-thumbnails-collapse")"
+                                aria-label="@Loc["TmPdfViewer_CollapseThumbnails"]"
+                                title="@Loc["TmPdfViewer_CollapseThumbnails"]"
+                                aria-controls="@ThumbnailListId"
+                                @onclick="CollapseThumbnailsAsync">
+                            <TmIcon Name="panel-left-close" Size="IconSize.Sm" />
+                        </button>
+                    </div>
+                    <div id="@ThumbnailListId" class="tm-pdf-viewer__thumbnails-list" @ref="_thumbnailsRef"></div>
+                </div>
+            }
+
+            @if (ShowThumbnails && !_useFallback && _thumbnailsCollapsed)
+            {
+                @* Collapsed rail: a single expand affordance that survives the hidden panel,
+                   aria-controls pointing at the (re-created) list id. *@
+                <div class="tm-pdf-viewer__thumbnails-rail">
+                    <button class="tm-pdf-viewer__btn"
+                            type="button"
+                            data-testid="@TestId("pdf-thumbnails-expand")"
+                            aria-label="@Loc["TmPdfViewer_ExpandThumbnails"]"
+                            title="@Loc["TmPdfViewer_ExpandThumbnails"]"
+                            aria-expanded="false"
+                            aria-controls="@ThumbnailListId"
+                            @onclick="ToggleThumbnailsCollapsedAsync">
+                        <TmIcon Name="panel-left" Size="IconSize.Sm" />
+                    </button>
+                </div>
             }
 
             @if (!_useFallback)
@@ -221,7 +326,7 @@
                 }
                 else
                 {
-                    <div class="tm-pdf-viewer__canvas-wrap">
+                    <div class="tm-pdf-viewer__canvas-wrap" @ref="_canvasWrapRef">
                         <canvas @ref="_canvasRef" class="tm-pdf-viewer__canvas"></canvas>
 
                         @if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
@@ -292,3 +397,63 @@
     }
 
 </div>
+
+@code {
+    /// <summary>Stable DOM id of the thumbnails list, referenced by the collapse button's aria-controls.</summary>
+    private readonly string _thumbnailListId = $"tm-pdf-thumbnails-{Guid.NewGuid():N}";
+
+    private string ThumbnailListId => _thumbnailListId;
+
+    /// <summary>Zoom presets (PD2): fixed steps 50–200 %.</summary>
+    private static readonly (string Value, string Label)[] ZoomPresetSteps =
+    [
+        ("0.5", "50%"), ("0.75", "75%"), ("1", "100%"),
+        ("1.25", "125%"), ("1.5", "150%"), ("2", "200%")
+    ];
+
+    /// <summary>
+    /// The header subtitle: an explicit <see cref="TmPdfViewer.Subtitle"/> when given, otherwise
+    /// a neutral page count ("Pages: N") once the document is loaded — never a file name or size.
+    /// </summary>
+    private string? HeaderSubtitle
+        => Subtitle ?? (_totalPages > 0 ? Loc["TmPdfViewer_PageCount", _totalPages] : null);
+
+    /// <summary>"Open in a new tab" secondary link, shared by the toolbar and the header.</summary>
+    private RenderFragment OpenLink => @<a class="tm-pdf-viewer__link tm-pdf-viewer__link--secondary"
+                                           href="@Url"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           title="@Loc["TmPdfViewer_Open"]"
+                                           data-testid="@TestId("pdf-open-link")">
+        <TmIcon Name="external-link" Size="IconSize.Sm" />
+        <span class="tm-pdf-viewer__link-text">@Loc["TmPdfViewer_Open"]</span>
+    </a>;
+
+    /// <summary>"Download" primary link, shared by the toolbar and the header.</summary>
+    private RenderFragment DownloadLink => @<a class="tm-pdf-viewer__link tm-pdf-viewer__link--primary"
+                                               href="@Url"
+                                               download
+                                               title="@Loc["TmPdfViewer_Download"]"
+                                               data-testid="@TestId("pdf-download-link")">
+        <TmIcon Name="file-down" Size="IconSize.Sm" />
+        <span class="tm-pdf-viewer__link-text">@Loc["TmPdfViewer_Download"]</span>
+    </a>;
+
+    private List<RadioOption<PdfViewMode>> ViewModeSegments =>
+    [
+        new(Loc["TmPdfViewer_ViewModeSingle"], PdfViewMode.SinglePage),
+        new(Loc["TmPdfViewer_ViewModeContinuous"], PdfViewMode.Continuous)
+    ];
+
+    /// <summary>Whether any section follows the zoom group — the divider after it is
+    /// rendered only then, so the toolbar never ends with a dangling separator.</summary>
+    private bool ToolbarSectionFollowsZoomGroup
+        => AllowRotation
+           || ShowViewModeToggle
+           || (ShowThumbnails && !_useFallback)
+           || ShowSearch
+           || EnableAnnotations;
+
+    private async Task HandleViewModeSegmentChangedAsync(PdfViewMode mode)
+        => await SetViewModeAsync(mode);
+}

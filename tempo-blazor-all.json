@@ -10622,6 +10622,12 @@
               "description": "Cross-axis alignment of the menu against the trigger. Default Start."
             },
             {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional accessible name for the trigger button. The trigger's visible text is often just the current value (a zoom level, a page number), so hosts can name WHAT the control is here without polluting the visible label. When null the visible text remains the accessible name (since 2.9.1)."
+            },
+            {
               "name": "ChildContent",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -27958,6 +27964,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "PdfZoomMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Files",
+          "description": "How the viewer decides the zoom scale. Custom means the scale is controlled by the user (zoom buttons, presets, binding); FitWidth and FitPage let JavaScript compute the scale from the container size and keep recomputing it on resize. The Auto value arrives with a later phase of the PDF redesign and is deliberately not part of the enum yet.",
+          "packageId": "Tempo.Blazor.PdfViewer",
+          "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "PdfViewerServiceCollectionExtensions",
           "kind": "Class",
           "category": "Configuration",
@@ -28333,7 +28349,7 @@
               "type": "string",
               "isRequired": false,
               "default": "PdfAnnotationColorHelper.DefaultColor",
-              "description": "Color used for the draft and the active stroke."
+              "description": "Color used for the draft and the active stroke. Defaults to DefaultColor."
             },
             {
               "name": "OnThreadSelected",
@@ -28405,7 +28421,7 @@
               "type": "string",
               "isRequired": false,
               "default": "PdfAnnotationColorHelper.DefaultColor",
-              "description": "Color used for the draft indicator."
+              "description": "Color used for the draft indicator. Defaults to DefaultColor."
             },
             {
               "name": "OnCreateRequested",
@@ -28481,7 +28497,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "A reusable PDF viewer component powered by PDF.js v5. Supports page navigation, zoom, rotation, text layer, thumbnails, search, and continuous scroll.",
+          "description": "A reusable PDF viewer component powered by PDF.js v5. Supports page navigation with an editable page input, zoom presets with fit modes, rotation, text layer, collapsible thumbnails, search, an optional document header, and continuous scroll.",
           "packageId": "Tempo.Blazor.PdfViewer",
           "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor",
           "documentationStatus": "merged",
@@ -28494,13 +28510,13 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Whether to show the toolbar. Default is true."
+              "description": "Whether to allow downloading the PDF. Default is true."
             },
             {
               "name": "AllowRotation",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether to allow downloading the PDF. Default is true."
+              "description": "Whether to allow rotation. Default is false."
             },
             {
               "name": "AnnotationProvider",
@@ -28524,7 +28540,7 @@
               "name": "Class",
               "type": "string?",
               "isRequired": false,
-              "description": "Callback when the view mode changes."
+              "description": "Additional CSS classes for the root element."
             },
             {
               "name": "CurrentUser",
@@ -28551,10 +28567,22 @@
               "description": "Enables text selection events (OnTextSelected) without turning on the built-in annotation layer and panel. Default is false."
             },
             {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content rendered at the end of the document header, after the Open/Download links. Used only when ShowHeader is true (since 2.9.1)."
+            },
+            {
+              "name": "HeaderStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content rendered at the start of the document header. Used only when ShowHeader is true (since 2.9.1)."
+            },
+            {
               "name": "Height",
               "type": "string?",
               "isRequired": false,
-              "description": "Additional CSS classes for the root element."
+              "description": "Height of the viewer (CSS value). Default is \"600px\"."
             },
             {
               "name": "OnDocumentLoaded",
@@ -28579,26 +28607,39 @@
               "type": "int",
               "isRequired": false,
               "default": "1",
-              "description": "URL of the PDF document to display."
+              "description": "Current page number (1-based). Supports two-way binding."
             },
             {
               "name": "PageChanged",
               "type": "EventCallback<int>",
               "isRequired": false,
-              "description": "Current page number (1-based). Supports two-way binding."
+              "description": "Callback when the page changes."
             },
             {
               "name": "Scale",
               "type": "double",
               "isRequired": false,
               "default": "1.0",
-              "description": "Callback when the page changes."
+              "description": "Current zoom scale. Supports two-way binding."
             },
             {
               "name": "ScaleChanged",
               "type": "EventCallback<double>",
               "isRequired": false,
-              "description": "Current zoom scale. Supports two-way binding."
+              "description": "Callback when the scale changes."
+            },
+            {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether to show a document header above the toolbar. Default is false, which keeps the toolbar-only layout. When true, the Open and Download links move from the toolbar into the header (since 2.9.1)."
+            },
+            {
+              "name": "ShowOpenLink",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether to show an \"Open in new tab\" link. Default is true (since 2.9.1)."
             },
             {
               "name": "ShowResolvedAnnotations",
@@ -28610,32 +28651,68 @@
               "name": "ShowSearch",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether to show a thumbnails sidebar. Default is false."
+              "description": "Whether to show a search input. Default is false."
             },
             {
               "name": "ShowTextLayer",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether to allow rotation. Default is false."
+              "description": "Whether to render a selectable text layer over the canvas. Default is false."
             },
             {
               "name": "ShowThumbnails",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether to render a selectable text layer over the canvas. Default is false."
+              "description": "Whether to show a thumbnails sidebar. Default is false."
             },
             {
               "name": "ShowToolbar",
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Callback when the scale changes."
+              "description": "Whether to show the toolbar. Default is true."
             },
             {
               "name": "ShowViewModeToggle",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether to show a search input. Default is false."
+              "description": "Whether to show a view mode toggle (single/continuous). Default is false."
+            },
+            {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Document subtitle rendered in the header. Used only when ShowHeader is true. When omitted, a neutral page count (\"Pages: N\") is rendered once the document is loaded (since 2.9.1)."
+            },
+            {
+              "name": "ThumbnailsCollapsed",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the thumbnails sidebar is collapsed. Supports two-way binding; the collapse button in the sidebar header and the toolbar \"Pages\" toggle both drive it. Default is false (since 2.9.1)."
+            },
+            {
+              "name": "ThumbnailsCollapsedChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Callback when the thumbnails collapse state changes (since 2.9.1)."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Document title rendered in the header. Used only when ShowHeader is true (since 2.9.1)."
+            },
+            {
+              "name": "ToolbarEnd",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content rendered at the very end of the toolbar (after the built-in groups), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
+            },
+            {
+              "name": "ToolbarStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content rendered at the very start of the toolbar (before the navigation group), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
             },
             {
               "name": "Url",
@@ -28648,13 +28725,26 @@
               "type": "PdfViewMode",
               "isRequired": false,
               "default": "PdfViewMode.SinglePage",
-              "description": "Whether to show a view mode toggle (single/continuous). Default is false."
+              "description": "Current view mode. Default is SinglePage."
             },
             {
               "name": "ViewModeChanged",
               "type": "EventCallback<PdfViewMode>",
               "isRequired": false,
-              "description": "Current view mode. Default is SinglePage."
+              "description": "Callback when the view mode changes."
+            },
+            {
+              "name": "ZoomMode",
+              "type": "PdfZoomMode",
+              "isRequired": false,
+              "default": "PdfZoomMode.Custom",
+              "description": "How the zoom scale is decided. FitWidth and FitPage let JavaScript compute the scale from the container size (and keep recomputing it on resize); any zoom button or preset switches the mode back to Custom. Supports two-way binding. Default is Custom (since 2.9.1)."
+            },
+            {
+              "name": "ZoomModeChanged",
+              "type": "EventCallback<PdfZoomMode>",
+              "isRequired": false,
+              "description": "Callback when the zoom mode changes (since 2.9.1)."
             }
           ]
         },
@@ -28794,12 +28884,12 @@
         }
       ],
       "summary": {
-        "itemCount": 12,
-        "manualItemCount": 12,
-        "generatedItemCount": 12,
+        "itemCount": 13,
+        "manualItemCount": 13,
+        "generatedItemCount": 13,
         "generatedOnlyItemCount": 0,
         "componentCount": 7,
-        "publicApiTypeCount": 5
+        "publicApiTypeCount": 6
       }
     },
     {
@@ -116480,10 +116570,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3231,
-    "manualItemCount": 3231,
+    "itemCount": 3232,
+    "manualItemCount": 3232,
     "generatedOnlyItemCount": 0,
     "componentCount": 475,
-    "publicApiTypeCount": 2703
+    "publicApiTypeCount": 2704
   }
 }

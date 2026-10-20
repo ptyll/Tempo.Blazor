@@ -2201,6 +2201,15 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showToolbar",       "Show Toolbar",       PropType.Bool,   true,           cat: "Appearance"),
                 P("showSearch",        "Show Search",        PropType.Bool,   false,          cat: "Appearance"),
                 P("enableAnnotations", "Enable Annotations", PropType.Bool,   false,          cat: "Appearance"),
+                // Mirrors the redesigned viewer chrome (TmPdfViewer.ShowThumbnails, ViewMode,
+                // ShowHeader, Title, ZoomMode); the static stencil keeps the pdf-viewer role.
+                P("showThumbnails",    "Show Thumbnails",    PropType.Bool,   false,          cat: "Appearance"),
+                P("viewMode",          "View Mode",          PropType.Enum,   "single",       cat: "State",
+                    opts: ["single", "continuous"]),
+                P("showHeader",        "Show Header",        PropType.Bool,   false,          cat: "Appearance"),
+                P("title",             "Title",              PropType.String, cat: "Content"),
+                P("zoomMode",          "Zoom Mode",          PropType.Enum,   "custom",       cat: "State",
+                    opts: ["custom", "fit-width", "fit-page"]),
             ]
         };
 

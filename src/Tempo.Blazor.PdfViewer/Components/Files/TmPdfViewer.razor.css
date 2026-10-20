@@ -30,24 +30,172 @@
     flex-wrap: wrap;
 }
 
-.tm-pdf-viewer__pagination,
-.tm-pdf-viewer__zoom,
-.tm-pdf-viewer__rotation,
-.tm-pdf-viewer__view-mode,
-.tm-pdf-viewer__file-actions {
+/* A toolbar section (Navigation | Zoom | Rotate | Mode || Search | Comments):
+   the group owns the flex alignment, its aria-label names it for AT. */
+.tm-pdf-viewer__group {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1);
 }
 
-.tm-pdf-viewer__page-label,
-.tm-pdf-viewer__zoom-label {
+.tm-pdf-viewer__file-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-left: auto;
+}
+
+/* ── Page input ──────────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__page-input {
+    width: 3.5rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.tm-pdf-viewer__page-input::-webkit-outer-spin-button,
+.tm-pdf-viewer__page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.tm-pdf-viewer__page-input:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+    outline: none;
+}
+
+.tm-pdf-viewer__page-count {
     font-size: var(--tm-font-size-sm);
     font-variant-numeric: tabular-nums;
     color: var(--tm-text-secondary);
-    min-width: 80px;
-    text-align: center;
     user-select: none;
+}
+
+/* ── Zoom dropdown (PD2) ─────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__zoom {
+    min-width: 5.5rem;
+}
+
+.tm-pdf-viewer__zoom .tm-dropdown-trigger {
+    font-size: var(--tm-font-size-sm);
+    font-variant-numeric: tabular-nums;
+    padding: var(--tm-space-1) var(--tm-space-2);
+}
+
+/* ── View mode segment: inherit the core segmented radio, tightened for the toolbar ── */
+
+.tm-pdf-viewer__view-mode {
+    gap: var(--tm-space-0-5);
+}
+
+/* ── Comments toggle ─────────────────────────────────────────────────────── */
+
+/* Compound selector: it must beat `.tm-pdf-viewer__btn { width: 28px; padding: 0 }`
+   which appears later in this sheet at the same specificity. The toggle carries the
+   open-thread count, so it sizes to its content instead of the 28px icon button. */
+.tm-pdf-viewer__btn.tm-pdf-viewer__comments-toggle {
+    width: auto;
+    min-width: 28px;
+    white-space: nowrap;
+    padding: 0 var(--tm-space-2);
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-pdf-viewer__comments-count {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Header (G9) ─────────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-wrap: wrap;
+}
+
+.tm-pdf-viewer__header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-pdf-viewer__header-titles {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tm-pdf-viewer__header-title {
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-pdf-viewer__header-subtitle {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-pdf-viewer__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-left: auto;
+}
+
+/* ── File links ──────────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
+    text-decoration: none;
+    color: var(--tm-text-primary);
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.tm-pdf-viewer__link:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* Download is the primary action of the viewer chrome; Open the secondary one. */
+.tm-pdf-viewer__link--primary {
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-pdf-viewer__link--primary:hover {
+    background: var(--tm-color-primary-hover);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-pdf-viewer__link--secondary {
+    border: 1px solid var(--tm-border-color);
 }
 
 .tm-pdf-viewer__separator {
@@ -84,22 +232,6 @@
 .tm-pdf-viewer__btn--active {
     background: var(--tm-color-primary-subtle);
     color: var(--tm-color-primary);
-}
-
-.tm-pdf-viewer__link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    padding: 2px 8px;
-    border-radius: var(--tm-radius-control);
-    font-size: var(--tm-font-size-sm);
-    text-decoration: none;
-    color: var(--tm-text-primary);
-    transition: background 0.15s;
-}
-
-.tm-pdf-viewer__link:hover {
-    background: var(--tm-color-surface-hover);
 }
 
 /* ── Search bar ──────────────────────────────────────────────────────────── */
@@ -148,6 +280,7 @@
 /* ── Canvas wrap ─────────────────────────────────────────────────────────── */
 
 .tm-pdf-viewer__canvas-wrap {
+    scrollbar-gutter: stable;
     position: relative;
     flex: 1;
     overflow: auto;
@@ -208,6 +341,7 @@
 /* ── Continuous scroll wrap ──────────────────────────────────────────────── */
 
 .tm-pdf-viewer__continuous-wrap {
+    scrollbar-gutter: stable;
     flex: 1;
     overflow: auto;
     background: var(--tm-bg-workspace);
@@ -234,10 +368,44 @@
 .tm-pdf-viewer__thumbnails {
     width: var(--tm-pdf-panel-width);
     flex-shrink: 0;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     background: var(--tm-color-surface-elevated);
     border-right: 1px solid var(--tm-border-color);
+}
+
+/* Header owns the title + collapse button; the list below scrolls. */
+.tm-pdf-viewer__thumbnails-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-pdf-viewer__thumbnails-title {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+    user-select: none;
+}
+
+.tm-pdf-viewer__thumbnails-list {
+    flex: 1;
+    overflow-y: auto;
     padding: var(--tm-space-2);
+}
+
+/* Collapsed rail: keeps one finger-reachable reopen affordance at the left edge. */
+.tm-pdf-viewer__thumbnails-rail {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: var(--tm-space-1);
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail {
@@ -264,8 +432,8 @@
 
 .tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail__label {
     text-align: center;
-    margin-top: 2px;
-    font-size: 11px;
+    margin-top: var(--tm-space-0-5);
+    font-size: var(--tm-font-size-xs);
     color: var(--tm-text-secondary);
 }
 

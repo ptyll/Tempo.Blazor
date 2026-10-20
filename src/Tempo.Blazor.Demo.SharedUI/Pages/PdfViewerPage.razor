@@ -156,6 +156,29 @@
     </div>
 </section>
 
+<!-- Document Header -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Document Header</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">Chrome</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-header-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Optional document header (<code>ShowHeader</code>) with a title and the Open/Download
+            actions moved out of the toolbar. The subtitle defaults to a neutral page count once
+            the document is loaded; <code>HeaderStart</code> / <code>HeaderActions</code> slots
+            let hosts compose their own chrome.
+        </p>
+        <TmPdfViewer Url="@_demoPdfUrl"
+                     ShowToolbar="true"
+                     ShowHeader="true"
+                     Title="Quarterly Report 2026"
+                     AllowDownload="true"
+                     Height="500px" />
+    </div>
+</section>
+
 <!-- All Features Combined -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">

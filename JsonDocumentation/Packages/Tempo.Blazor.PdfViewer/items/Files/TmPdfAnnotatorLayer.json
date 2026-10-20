@@ -59,8 +59,8 @@
       "name": "DraftColor",
       "type": "string",
       "isRequired": false,
-      "default": "\"#2563eb\"",
-      "description": "Color used for the draft and the active stroke."
+      "default": "PdfAnnotationColorHelper.DefaultColor",
+      "description": "Color used for the draft and the active stroke. Defaults to DefaultColor."
     },
     {
       "name": "Disabled",

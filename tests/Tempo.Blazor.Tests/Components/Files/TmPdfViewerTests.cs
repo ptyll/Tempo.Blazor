@@ -14,7 +14,6 @@ public class TmPdfViewerTests : LocalizationTestBase
         // Ensure PDF.js isAvailable returns true in tests
         JSInterop.Setup<bool>("tmPdfViewer.isAvailable").SetResult(true);
     }
-
     // ── PDF-9: render s Url zobrazí .tm-pdf-viewer kontejner ───────────────
 
     [Fact]
@@ -49,7 +48,7 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.Find(".tm-pdf-viewer__toolbar").Should().NotBeNull();
     }
 
-    // ── PDF-12: toolbar obsahuje page label po načtení ─────────────────────
+    // ── PDF-12: toolbar obsahuje page input po načtení ─────────────────────
 
     [Fact]
     public void Render_AfterLoad_ToolbarContainsPageLabel()
@@ -61,8 +60,9 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
         cut.Render();
 
-        var label = cut.Find(".tm-pdf-viewer__page-label");
-        label.TextContent.Should().Contain("Page");
+        var input = cut.Find(".tm-pdf-viewer__page-input");
+        input.GetAttribute("value").Should().Be("1");
+        cut.Find(".tm-pdf-viewer__page-count").TextContent.Should().Contain("10");
     }
 
     // ── PDF-13: Previous page disabled na první stránce ────────────────────
@@ -186,7 +186,7 @@ public class TmPdfViewerTests : LocalizationTestBase
         capturedScale.Should().Be(1.0);
     }
 
-    // ── PDF-19: zoom label zobrazí procenta ────────────────────────────────
+    // ── PDF-19: zoom trigger zobrazí procenta ──────────────────────────────
 
     [Fact]
     public void Render_ZoomLabelShowsPercentage()
@@ -199,8 +199,8 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
         cut.Render();
 
-        var label = cut.Find(".tm-pdf-viewer__zoom-label");
-        label.TextContent.Should().Be("150%");
+        var trigger = cut.Find(".tm-pdf-viewer__zoom .tm-dropdown-trigger");
+        trigger.TextContent.Should().Contain("150%");
     }
 
     // ── PDF-20: AllowDownload=true zobrazí download link ───────────────────
@@ -328,7 +328,7 @@ public class TmPdfViewerTests : LocalizationTestBase
         root.GetAttribute("style").Should().Contain("height:400px");
     }
 
-    // ── Additional: Scale binding changes zoom label ───────────────────────
+    // ── Additional: Scale binding changes zoom trigger ─────────────────────
 
     [Fact]
     public void Render_ScaleBinding_UpdatesZoomLabel()
@@ -341,11 +341,11 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
         cut.Render();
 
-        var label = cut.Find(".tm-pdf-viewer__zoom-label");
-        label.TextContent.Should().Be("75%");
+        var trigger = cut.Find(".tm-pdf-viewer__zoom .tm-dropdown-trigger");
+        trigger.TextContent.Should().Contain("75%");
     }
 
-    // ── Additional: Page binding changes page label ────────────────────────
+    // ── Additional: Page binding changes page input ────────────────────────
 
     [Fact]
     public void Render_PageBinding_UpdatesPageLabel()
@@ -358,8 +358,7 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
         cut.Render();
 
-        var label = cut.Find(".tm-pdf-viewer__page-label");
-        label.TextContent.Should().Contain("3");
+        cut.Find(".tm-pdf-viewer__page-input").GetAttribute("value").Should().Be("3");
     }
 
     // ── Additional: ShowTextLayer renders text layer div ───────────────────
@@ -504,7 +503,7 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.Find(".tm-pdf-viewer__canvas-wrap").Should().NotBeNull();
     }
 
-    // ── PDF-51: klik na view mode toggle změní ViewMode ─────────────────────
+    // ── PDF-51: klik na view mode segment změní ViewMode ───────────────────
 
     [Fact]
     public void ClickViewModeToggle_ChangesViewMode()
@@ -520,10 +519,9 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
         cut.Render();
 
-        var continuousBtn = cut.FindAll(".tm-pdf-viewer__btn")
-                               .FirstOrDefault(b => b.GetAttribute("aria-label")?.Contains("Continuous") == true);
-        continuousBtn.Should().NotBeNull();
-        continuousBtn!.Click();
+        var continuousInput = cut.FindAll(".tm-pdf-viewer__view-mode input[type='radio']")
+            .Last();
+        continuousInput.Change(true);
 
         capturedMode.Should().Be(PdfViewMode.Continuous);
     }
@@ -738,10 +736,10 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.Find(".tm-pdf-viewer__fallback .tm-pdf-viewer__embed").Should().NotBeNull();
     }
 
-    // ── W0: view-mode tlačítka mají aria-pressed ────────────────────────────
+    // ── W0: view-mode segment má nativní radio sémantiku (šipky, aria-checked) ──
 
     [Fact]
-    public void Render_ViewModeButtons_HaveAriaPressed()
+    public void Render_ViewModeButtons_HaveRadioSemantics()
     {
         var cut = Render<TmPdfViewer>(parameters =>
             parameters.Add(p => p.Url, "https://example.com/test.pdf")
@@ -751,13 +749,13 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
         cut.Render();
 
-        var single = cut.FindAll(".tm-pdf-viewer__view-mode button")
-            .First(b => b.GetAttribute("aria-label")?.Contains("Single") == true);
-        var continuous = cut.FindAll(".tm-pdf-viewer__view-mode button")
-            .First(b => b.GetAttribute("aria-label")?.Contains("Continuous") == true);
+        var group = cut.Find(".tm-pdf-viewer__view-mode");
+        group.GetAttribute("role").Should().Be("radiogroup");
 
-        single.GetAttribute("aria-pressed").Should().Be("true");
-        continuous.GetAttribute("aria-pressed").Should().Be("false");
+        var inputs = cut.FindAll(".tm-pdf-viewer__view-mode input[type='radio']");
+        inputs.Should().HaveCount(2);
+        inputs[0].HasAttribute("checked").Should().BeTrue("Single page is the default view mode");
+        inputs[1].HasAttribute("checked").Should().BeFalse();
     }
 
     // ── W0: ikonová tlačítka mají title (tooltip) ───────────────────────────
@@ -886,5 +884,485 @@ public class TmPdfViewerTests : LocalizationTestBase
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(7));
 
         total.Should().Be(7);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Phase FZE-3 — toolbar, header, thumbnails (desktop reference)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── Page input: Enter navigates ─────────────────────────────────────────
+
+    [Fact]
+    public void PageInput_Enter_NavigatesToPage()
+    {
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.PageChanged, EventCallback.Factory.Create<int>(this, p => capturedPage = p)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        var input = cut.Find(".tm-pdf-viewer__page-input");
+        input.Input("5");
+        input.KeyDown("Enter");
+
+        capturedPage.Should().Be(5);
+    }
+
+    // ── Page input: out-of-range value reverts to the current page ──────────
+
+    [Fact]
+    public void PageInput_OutOfRange_RevertsToCurrentPage()
+    {
+        int capturedPage = 0;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.Page, 2)
+                      .Add(p => p.PageChanged, EventCallback.Factory.Create<int>(this, p => capturedPage = p)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        var input = cut.Find(".tm-pdf-viewer__page-input");
+        input.Input("99");
+        input.KeyDown("Enter");
+        cut.Render();
+
+        capturedPage.Should().Be(0, "no navigation may be raised for an out-of-range page");
+        input.GetAttribute("value").Should().Be("2", "an invalid entry must revert to the current page");
+    }
+
+    // ── Zoom preset sets the scale and switches the mode to Custom ──────────
+
+    [Fact]
+    public async Task ZoomPreset_Select_SetsScaleAndZoomModeCustom()
+    {
+        double capturedScale = 1.0;
+        PdfZoomMode capturedMode = PdfZoomMode.FitWidth;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth)
+                      .Add(p => p.ScaleChanged, EventCallback.Factory.Create<double>(this, s => capturedScale = s))
+                      .Add(p => p.ZoomModeChanged, EventCallback.Factory.Create<PdfZoomMode>(this, m => capturedMode = m)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        // The dropdown closes and yields before invoking OnSelect, so the handler
+        // completes a few dispatcher hops after the click.
+        await cut.InvokeAsync(async () =>
+        {
+            cut.Find(".tm-pdf-viewer__zoom .tm-dropdown-trigger").Click();
+            var item = cut.FindAll(".tm-pdf-viewer__zoom .tm-dropdown-item")
+                          .First(i => i.TextContent.Contains("125%"));
+            item.Click();
+        });
+
+        cut.WaitForAssertion(() => capturedScale.Should().Be(1.25));
+        capturedMode.Should().Be(PdfZoomMode.Custom);
+    }
+
+    // ── ZoomMode=FitWidth invokes the JS fit and raises ScaleChanged ────────
+
+    [Fact]
+    public void ZoomMode_FitWidth_InvokesJsFitAndRaisesScaleChanged()
+    {
+        JSInterop.Setup<double>("tmPdfViewer.fitScale", _ => true).SetResult(1.5);
+        double capturedScale = 1.0;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ScaleChanged, EventCallback.Factory.Create<double>(this, s => capturedScale = s)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+        cut.Render(parameters => parameters.Add(p => p.ZoomMode, PdfZoomMode.FitWidth));
+
+        JSInterop.Invocations["tmPdfViewer.fitScale"].Should().NotBeEmpty();
+        // The JS fit answer arrives asynchronously and must raise ScaleChanged.
+        cut.WaitForAssertion(() => capturedScale.Should().Be(1.5));
+    }
+
+    // ── ZoomMode=FitPage invokes the JS fit ─────────────────────────────────
+
+    [Fact]
+    public void ZoomMode_FitPage_InvokesJsFit()
+    {
+        JSInterop.Setup<double>("tmPdfViewer.fitScale", _ => true).SetResult(0.8);
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+        cut.Render(parameters => parameters.Add(p => p.ZoomMode, PdfZoomMode.FitPage));
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().NotBeEmpty());
+        var invocation = JSInterop.Invocations["tmPdfViewer.fitScale"].Single();
+        invocation.Arguments.Should().Contain("fit-page");
+    }
+
+    // ── ± zoom buttons switch a fit mode back to Custom ─────────────────────
+
+    [Fact]
+    public void ZoomIn_FromFitMode_SwitchesToCustom()
+    {
+        PdfZoomMode capturedMode = PdfZoomMode.FitWidth;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth)
+                      .Add(p => p.ZoomModeChanged, EventCallback.Factory.Create<PdfZoomMode>(this, m => capturedMode = m)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        var zoomInBtn = cut.FindAll(".tm-pdf-viewer__btn")
+                           .First(b => b.GetAttribute("aria-label")?.Contains("Zoom in") == true);
+        zoomInBtn.Click();
+
+        capturedMode.Should().Be(PdfZoomMode.Custom);
+    }
+
+    // ── Fit mode: a view-mode switch refits on the fresh continuous container ──
+
+    [Fact]
+    public void ZoomMode_FitWidth_ViewModeSwitch_RefitsOnContinuousContainer()
+    {
+        JSInterop.Setup<double>("tmPdfViewer.fitScale", _ => true).SetResult(1.5);
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowViewModeToggle, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        // The initial fit observed the single-page canvas wrap.
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().HaveCount(1));
+        var beforeSwitch = JSInterop.Invocations["tmPdfViewer.fitScale"].Single();
+
+        var continuousInput = cut.FindAll(".tm-pdf-viewer__view-mode input[type='radio']").Last();
+        continuousInput.Change(true);
+
+        // The continuous wrap is a different element that exists only after the switch
+        // rendered — the recompute must run from OnAfterRenderAsync (_fitPending) with
+        // the fresh container.
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().HaveCount(2,
+                "the fit mode must recompute once the continuous container exists"));
+        var afterSwitch = JSInterop.Invocations["tmPdfViewer.fitScale"].Last();
+        afterSwitch.Arguments.Should().Contain("fit-width");
+        afterSwitch.Arguments[1].Should().NotBe(beforeSwitch.Arguments[1],
+            "the recompute must observe the swapped (continuous) container");
+    }
+
+    // ── Fit mode: rotating recomputes (the page aspect ratio changed) ────────
+
+    [Fact]
+    public async Task Rotate_InFitMode_Refits()
+    {
+        JSInterop.Setup<double>("tmPdfViewer.fitScale", _ => true).SetResult(1.5);
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.AllowRotation, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth));
+
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().HaveCount(1));
+
+        await cut.Instance.RotateAsync();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().HaveCount(2,
+                "the rotation changes the page aspect ratio, so the fit must recompute"));
+        JSInterop.Invocations["tmPdfViewer.fitScale"].Last().Arguments.Should().Contain("fit-width");
+    }
+
+    // ── Fit mode: page changes recompute (prev/next, page input, thumbnails) ──
+
+    [Fact]
+    public async Task PageChange_InFitMode_Refits()
+    {
+        JSInterop.Setup<double>("tmPdfViewer.fitScale", _ => true).SetResult(1.5);
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth));
+
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().HaveCount(1));
+
+        await cut.Instance.GoToPageAsync(3);
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.fitScale"].Should().HaveCount(2,
+                "a different page size changes the container ratio"));
+    }
+
+    // ── Host-driven ZoomMode=Custom detaches the JS fit observer ─────────────
+
+    [Fact]
+    public void ZoomMode_HostSetsCustom_DetachesJsFitObserver()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        cut.Render(parameters => parameters.Add(p => p.ZoomMode, PdfZoomMode.Custom));
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.clearFit"].Should().NotBeEmpty(
+                "a host-driven switch to Custom must detach the JS ResizeObserver like the user-driven path"));
+    }
+
+    // ── OnFitScaleComputed rejects scales outside the documented clamp range ──
+
+    [Fact]
+    public async Task OnFitScaleComputed_RejectsScaleBelowMinScale()
+    {
+        double? capturedScale = null;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ZoomMode, PdfZoomMode.FitWidth)
+                      .Add(p => p.ScaleChanged, EventCallback.Factory.Create<double>(this, s => capturedScale = s)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+
+        await cut.Instance.OnFitScaleComputed(0.05);
+        capturedScale.Should().BeNull("a scale below MinScale is outside the documented clamp range");
+
+        await cut.Instance.OnFitScaleComputed(1.5);
+        capturedScale.Should().Be(1.5);
+    }
+
+    // ── ThumbnailsCollapsed toggled purely via parameters re-renders thumbnails ──
+
+    [Fact]
+    public void ThumbnailsCollapsed_ParamToggle_ReRendersThumbnails()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowThumbnails, true));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.renderThumbnails"].Should().HaveCount(1));
+
+        cut.Render(parameters => parameters.Add(p => p.ThumbnailsCollapsed, true));
+        cut.Render(parameters => parameters.Add(p => p.ThumbnailsCollapsed, false));
+
+        // The JS-rendered thumbnails died with the hidden panel: the expanding
+        // parameter change must rebuild them in the fresh container.
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.renderThumbnails"].Should().HaveCount(2,
+                "expanding via parameters must re-render the thumbnails"));
+    }
+
+    // ── View mode segment: radiogroup semantics with native radios ──────────
+
+    [Fact]
+    public void ViewModeSegment_HasRadioGroupSemantics_AndArrowKeys()
+    {
+        PdfViewMode capturedMode = PdfViewMode.SinglePage;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowViewModeToggle, true)
+                      .Add(p => p.ViewModeChanged, EventCallback.Factory.Create<PdfViewMode>(this, m => capturedMode = m)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        var group = cut.Find(".tm-pdf-viewer__view-mode");
+        group.GetAttribute("role").Should().Be("radiogroup");
+        group.GetAttribute("aria-label").Should().NotBeNullOrEmpty();
+
+        // Native radio inputs deliver arrow-key selection per the HTML spec (the
+        // keyboard-activation convention: never emulate what the browser owns).
+        var inputs = cut.FindAll(".tm-pdf-viewer__view-mode input[type='radio']");
+        inputs.Should().HaveCount(2);
+        inputs[1].Change(true);
+
+        capturedMode.Should().Be(PdfViewMode.Continuous);
+    }
+
+    // ── Comments toggle shows the open-thread count ─────────────────────────
+
+    [Fact]
+    public void CommentsToggle_ShowsOpenThreadCount()
+    {
+        var provider = new InMemoryPdfAnnotationProvider(new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
+        {
+            ["doc"] = new List<DocumentCommentThread>
+            {
+                TextRangeThread("t-open-1", page: 1),
+                TextRangeThread("t-open-2", page: 2),
+                ResolvedThread("t-resolved", page: 3),
+            }
+        });
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(x => x.Url, "https://example.com/test.pdf")
+            .Add(x => x.ShowToolbar, true)
+            .Add(x => x.DocumentId, "doc")
+            .Add(x => x.EnableAnnotations, true)
+            .Add(x => x.AnnotationProvider, provider));
+
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-pdf-viewer__comments-toggle").TextContent.Should().Contain("(2)"));
+    }
+
+    // ── ShowHeader=false (default) renders no header markup ─────────────────
+
+    [Fact]
+    public void Header_ShowHeaderFalse_IsMarkupIdenticalToToday()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true));
+
+        cut.FindAll(".tm-pdf-viewer__header").Should().BeEmpty();
+    }
+
+    // ── Header renders title/subtitle/actions and takes Open + Download ─────
+
+    [Fact]
+    public void Header_WithTitle_RendersTitleSubtitleAndActions_AndMovesOpenDownload()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowHeader, true)
+                      .Add(p => p.Title, "Quarterly report")
+                      .Add(p => p.Subtitle, "Prepared by finance"));
+
+        var header = cut.Find(".tm-pdf-viewer__header");
+        header.TextContent.Should().Contain("Quarterly report");
+        header.TextContent.Should().Contain("Prepared by finance");
+        header.QuerySelector("a[download]").Should().NotBeNull("Download moves into the header");
+        header.QuerySelector("a[target='_blank']").Should().NotBeNull("Open moves into the header");
+
+        // The toolbar keeps no file links once the header owns them.
+        cut.Find(".tm-pdf-viewer__toolbar").QuerySelectorAll("a[download]").Should().BeEmpty();
+        cut.Find(".tm-pdf-viewer__toolbar").QuerySelectorAll("a[target='_blank']").Should().BeEmpty();
+    }
+
+    // ── Header subtitle defaults to a neutral page count ────────────────────
+
+    [Fact]
+    public void Header_DefaultSubtitle_ShowsNeutralPageCount()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowHeader, true)
+                      .Add(p => p.Title, "Quarterly report"));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(4));
+        cut.Render();
+
+        cut.Find(".tm-pdf-viewer__header").TextContent.Should().Contain("Pages: 4");
+    }
+
+    // ── Thumbnails collapse toggle raises ThumbnailsCollapsedChanged ────────
+
+    [Fact]
+    public void Thumbnails_Collapse_TogglesAndRaisesThumbnailsCollapsedChanged()
+    {
+        bool? collapsed = null;
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowThumbnails, true)
+                      .Add(p => p.ThumbnailsCollapsedChanged, EventCallback.Factory.Create<bool>(this, c => collapsed = c)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        cut.Find(".tm-pdf-viewer__thumbnails").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-thumbnails-collapse']").Click();
+
+        collapsed.Should().BeTrue();
+
+        // The host rebinds the parameter (what @bind- does); like Page/ViewMode the
+        // parameter is authoritative on the next render.
+        cut.Render(parameters => parameters.Add(p => p.ThumbnailsCollapsed, true));
+        cut.FindAll(".tm-pdf-viewer__thumbnails").Should().BeEmpty("the collapsed sidebar is hidden");
+        cut.Find("[data-testid='pdf-thumbnails-expand']").Should().NotBeNull("the collapsed rail keeps one reopen affordance");
+
+        // The rail's expand button (and the toolbar Pages toggle) raise the change again.
+        collapsed = null;
+        cut.Find("[data-testid='pdf-thumbnails-expand']").Click();
+        collapsed.Should().BeFalse();
+        cut.Render(parameters => parameters.Add(p => p.ThumbnailsCollapsed, false));
+        cut.Find(".tm-pdf-viewer__thumbnails").Should().NotBeNull();
+    }
+
+    // ── ToolbarStart / ToolbarEnd slots render inside the toolbar ───────────
+
+    [Fact]
+    public void ToolbarStartEndSlots_RenderInsideToolbar()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ToolbarStart, builder =>
+                          builder.AddMarkupContent(0, "<span data-testid='slot-start'>S</span>"))
+                      .Add(p => p.ToolbarEnd, builder =>
+                          builder.AddMarkupContent(0, "<span data-testid='slot-end'>E</span>")));
+
+        var toolbar = cut.Find(".tm-pdf-viewer__toolbar");
+        toolbar.QuerySelector("[data-testid='slot-start']").Should().NotBeNull();
+        toolbar.QuerySelector("[data-testid='slot-end']").Should().NotBeNull();
+    }
+
+    // ── AllowDownload=false hides Download, Open stays ──────────────────────
+
+    [Fact]
+    public void AllowDownloadFalse_HidesDownload_OpenStays()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.AllowDownload, false));
+
+        cut.FindAll("a[download]").Should().BeEmpty();
+        cut.Find("a[target='_blank']").Should().NotBeNull();
+    }
+
+    // ── ShowOpenLink=false hides Open ───────────────────────────────────────
+
+    [Fact]
+    public void ShowOpenLinkFalse_HidesOpen()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowOpenLink, false));
+
+        cut.FindAll("a[target='_blank']").Should().BeEmpty();
+        cut.Find("a[download]").Should().NotBeNull("Download is unaffected by ShowOpenLink");
+    }
+
+    private static DocumentCommentThread ResolvedThread(string id, int page)
+    {
+        var thread = TextRangeThread(id, page);
+        thread.Status = DocumentCommentThreadStatus.Resolved;
+        return thread;
     }
 }
