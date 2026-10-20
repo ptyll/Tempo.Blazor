@@ -72,6 +72,8 @@
                             class="tm-pdf-annotator-panel__thread-head"
                             data-thread-id="@thread.Id"
                             data-testid="@TestId("pdf-annotator-thread")"
+                            aria-expanded="@(IsSelected(thread) ? "true" : "false")"
+                            aria-controls="@(IsSelected(thread) ? DetailId(thread) : null)"
                             @onclick="() => SelectAsync(thread.Id)">
                         <span class="tm-pdf-annotator-panel__badge" style="background:@Color(thread)">@ThreadNumber(thread)</span>
                         <span class="tm-pdf-annotator-panel__kind">@KindLabel(thread)</span>
@@ -82,9 +84,9 @@
                         }
                     </button>
 
-                    @if (string.Equals(thread.Id, SelectedThreadId, StringComparison.Ordinal))
+                    @if (IsSelected(thread))
                     {
-                        <div class="tm-pdf-annotator-panel__detail" data-testid="@TestId("pdf-annotator-detail")">
+                        <div class="tm-pdf-annotator-panel__detail" id="@DetailId(thread)" data-testid="@TestId("pdf-annotator-detail")">
                             @if (!string.IsNullOrWhiteSpace(thread.Anchor.HighlightedText))
                             {
                                 <div class="tm-pdf-annotator-panel__quote">@Truncate(thread.Anchor.HighlightedText!)</div>
@@ -160,6 +162,10 @@
     private string? _newBody;
     private string? _replyBody;
 
+    // Per-instance id prefix: two annotators on one page each render this panel,
+    // and identical detail ids would break aria-controls/aria-labelledby.
+    private string _uid = "tm-pdf-an-" + Guid.NewGuid().ToString("N")[..8];
+
     /// <summary>Annotation threads to render.</summary>
     [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
 
@@ -207,6 +213,27 @@
 
     private IEnumerable<DocumentCommentThread> VisibleThreads => Threads
         .Where(thread => ShowResolved || thread.Status == DocumentCommentThreadStatus.Open);
+
+    private bool IsSelected(DocumentCommentThread thread)
+        => string.Equals(thread.Id, SelectedThreadId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// DOM id of the thread's expandable detail region, referenced by the header's
+    /// aria-controls. Unique per panel instance (Guid prefix) and per thread
+    /// (list index), so two panels on one page never collide.
+    /// </summary>
+    private string DetailId(DocumentCommentThread thread)
+    {
+        for (var i = 0; i < Threads.Count; i++)
+        {
+            if (ReferenceEquals(Threads[i], thread) || string.Equals(Threads[i].Id, thread.Id, StringComparison.Ordinal))
+            {
+                return $"{_uid}-{i}";
+            }
+        }
+
+        return $"{_uid}-x";
+    }
 
     // A plain comment needs text; highlights and drawings carry their own visual content.
     private bool CanSubmitDraft

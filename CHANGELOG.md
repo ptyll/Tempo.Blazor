@@ -2955,6 +2955,23 @@
 
 ### Fixed
 
+- **TmPdfViewer: starting directly in `ViewMode=Continuous` no longer renders an empty area.** The
+  PDF.js document state in `pdf-viewer.js` was keyed by the single-page canvas `WeakMap` entry —
+  an element that is never rendered in continuous mode — so `init` bailed out before the document
+  loaded and `OnPdfLoaded` never fired. All interop functions are now keyed by the viewer's root
+  element, and the loading (`role="status"`, `TmPdfViewer_Loading`) and load-error (`TmAlert`
+  above the `<embed>` fallback) states that were computed but never rendered are visible. Page
+  canvases (single page, continuous pages and thumbnails) render at the device pixel ratio
+  (backing store × DPR, capped at 2; CSS size stays the viewport size) — overlays, search
+  highlights and annotations work in normalized 0..1 coordinates and stay aligned. Thumbnails
+  reuse the already-open PDF.js document instead of a second `getDocument(url)`, the text
+  selection `mouseup` listener is per instance and unregistered in `destroy` (no more leaks with
+  multiple viewers on one page), icon buttons carry `title` tooltips, view-mode buttons expose
+  `aria-pressed`, the thumbnails sidebar is a labelled region, thread headers in both comment
+  panels expose `aria-expanded` + `aria-controls` with a stable detail id, the annotator color
+  indicator is announced instead of `aria-hidden`, and selecting a thread anchored on another
+  page navigates the viewer (and the annotator) to that page.
+
 - **`TmOverlayPanel` dismissal focus restore no longer runs through `eval`.** The restore rides the
   overlay.js module export `focusById(id, { preventScroll: true })` — the id travels as a typed JS
   argument instead of an executed script string — with `preventScroll` still guaranteeing that

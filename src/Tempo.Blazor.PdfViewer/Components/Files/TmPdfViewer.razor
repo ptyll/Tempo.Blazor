@@ -1,7 +1,8 @@
 @namespace Tempo.Blazor.Components.Files
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Feedback
 
-<div class="tm-pdf-viewer @Class" style="height:@(string.IsNullOrEmpty(Height) ? "600px" : Height)" @attributes="AdditionalAttributes">
+<div class="tm-pdf-viewer @Class" style="height:@(string.IsNullOrEmpty(Height) ? "600px" : Height)" @ref="_rootRef" @attributes="AdditionalAttributes">
 
     @if (string.IsNullOrEmpty(Url))
     {
@@ -23,6 +24,7 @@
                                 type="button"
                                 disabled="@(_currentPage <= 1)"
                                 aria-label="@Loc["TmPdfViewer_PreviousPage"]"
+                                title="@Loc["TmPdfViewer_PreviousPage"]"
                                 @onclick="GoToPreviousPageAsync">
                             <TmIcon Name="chevron-left" Size="IconSize.Sm" />
                         </button>
@@ -33,6 +35,7 @@
                                 type="button"
                                 disabled="@(_currentPage >= _totalPages)"
                                 aria-label="@Loc["TmPdfViewer_NextPage"]"
+                                title="@Loc["TmPdfViewer_NextPage"]"
                                 @onclick="GoToNextPageAsync">
                             <TmIcon Name="chevron-right" Size="IconSize.Sm" />
                         </button>
@@ -45,6 +48,7 @@
                                 type="button"
                                 disabled="@(_scale <= 0.5)"
                                 aria-label="@Loc["TmPdfViewer_ZoomOut"]"
+                                title="@Loc["TmPdfViewer_ZoomOut"]"
                                 @onclick="ZoomOutAsync">
                             <TmIcon Name="zoom-out" Size="IconSize.Sm" />
                         </button>
@@ -53,6 +57,7 @@
                                 type="button"
                                 disabled="@(_scale >= 2.0)"
                                 aria-label="@Loc["TmPdfViewer_ZoomIn"]"
+                                title="@Loc["TmPdfViewer_ZoomIn"]"
                                 @onclick="ZoomInAsync">
                             <TmIcon Name="zoom-in" Size="IconSize.Sm" />
                         </button>
@@ -66,6 +71,7 @@
                             <button class="tm-pdf-viewer__btn"
                                     type="button"
                                     aria-label="@Loc["TmPdfViewer_Rotate"]"
+                                    title="@Loc["TmPdfViewer_Rotate"]"
                                     @onclick="RotateAsync">
                                 <TmIcon Name="rotate-cw" Size="IconSize.Sm" />
                             </button>
@@ -80,12 +86,16 @@
                             <button class="tm-pdf-viewer__btn @(_viewMode == PdfViewMode.SinglePage ? "tm-pdf-viewer__btn--active" : "")"
                                     type="button"
                                     aria-label="@Loc["TmPdfViewer_ViewModeSingle"]"
+                                    title="@Loc["TmPdfViewer_ViewModeSingle"]"
+                                    aria-pressed="@(_viewMode == PdfViewMode.SinglePage ? "true" : "false")"
                                     @onclick="() => SetViewModeAsync(PdfViewMode.SinglePage)">
                                 <TmIcon Name="sidebar" Size="IconSize.Sm" />
                             </button>
                             <button class="tm-pdf-viewer__btn @(_viewMode == PdfViewMode.Continuous ? "tm-pdf-viewer__btn--active" : "")"
                                     type="button"
                                     aria-label="@Loc["TmPdfViewer_ViewModeContinuous"]"
+                                    title="@Loc["TmPdfViewer_ViewModeContinuous"]"
+                                    aria-pressed="@(_viewMode == PdfViewMode.Continuous ? "true" : "false")"
                                     @onclick="() => SetViewModeAsync(PdfViewMode.Continuous)">
                                 <TmIcon Name="list" Size="IconSize.Sm" />
                             </button>
@@ -101,6 +111,7 @@
                     <button class="tm-pdf-viewer__btn @(_searchVisible ? "tm-pdf-viewer__btn--active" : "")"
                             type="button"
                             aria-label="@Loc["TmPdfViewer_Search"]"
+                            title="@Loc["TmPdfViewer_Search"]"
                             @onclick="ToggleSearchAsync">
                         <TmIcon Name="search" Size="IconSize.Sm" />
                     </button>
@@ -112,6 +123,7 @@
                     <button class="tm-pdf-viewer__btn @(_annotationsPanelVisible ? "tm-pdf-viewer__btn--active" : "")"
                             type="button"
                             aria-label="@Loc["TmPdfViewer_ToggleAnnotations"]"
+                            title="@Loc["TmPdfViewer_ToggleAnnotations"]"
                             data-testid="@TestId("pdf-annotations-toggle")"
                             @onclick="ToggleAnnotationsPanelAsync">
                         <TmIcon Name="message-square" Size="IconSize.Sm" />
@@ -159,6 +171,7 @@
                     <button class="tm-pdf-viewer__btn"
                             type="button"
                             aria-label="@Loc["TmPdfViewer_PreviousMatch"]"
+                            title="@Loc["TmPdfViewer_PreviousMatch"]"
                             data-testid="@TestId("pdf-search-prev")"
                             @onclick="PreviousMatchAsync">
                         <TmIcon Name="chevron-up" Size="IconSize.Sm" />
@@ -166,6 +179,7 @@
                     <button class="tm-pdf-viewer__btn"
                             type="button"
                             aria-label="@Loc["TmPdfViewer_NextMatch"]"
+                            title="@Loc["TmPdfViewer_NextMatch"]"
                             data-testid="@TestId("pdf-search-next")"
                             @onclick="NextMatchAsync">
                         <TmIcon Name="chevron-down" Size="IconSize.Sm" />
@@ -176,6 +190,7 @@
                     <button class="tm-pdf-viewer__btn"
                             type="button"
                             aria-label="@Loc["Tm_Clear"]"
+                            title="@Loc["Tm_Clear"]"
                             data-testid="@TestId("pdf-search-clear")"
                             @onclick="ClearSearchAsync">
                         <TmIcon Name="x" Size="IconSize.Sm" />
@@ -184,10 +199,18 @@
             </div>
         }
 
-        <div class="tm-pdf-viewer__body">
+        <div class="tm-pdf-viewer__body" aria-busy="@(_isLoading ? "true" : "false")">
+            @if (_isLoading && !_useFallback)
+            {
+                <div class="tm-pdf-viewer__loading" role="status" aria-live="polite">
+                    <TmSpinner Size="SpinnerSize.Md" Color="SpinnerColor.Primary" />
+                    <span class="tm-pdf-viewer__loading-text">@Loc["TmPdfViewer_Loading"]</span>
+                </div>
+            }
+
             @if (ShowThumbnails && !_useFallback)
             {
-                <div class="tm-pdf-viewer__thumbnails" @ref="_thumbnailsRef"></div>
+                <div class="tm-pdf-viewer__thumbnails" role="region" aria-label="@Loc["TmPdfViewer_Thumbnails"]" @ref="_thumbnailsRef"></div>
             }
 
             @if (!_useFallback)
@@ -235,10 +258,18 @@
             }
             else
             {
-                <embed src="@Url"
-                       type="application/pdf"
-                       class="tm-pdf-viewer__embed"
-                       title="@Loc["TmPdfViewer_Open"]" />
+                <div class="tm-pdf-viewer__fallback">
+                    @if (_loadError is not null)
+                    {
+                        <TmAlert Severity="AlertSeverity.Error" Class="tm-pdf-viewer__load-error">
+                            @_loadError
+                        </TmAlert>
+                    }
+                    <embed src="@Url"
+                           type="application/pdf"
+                           class="tm-pdf-viewer__embed"
+                           title="@Loc["TmPdfViewer_Open"]" />
+                </div>
             }
 
             @if (EnableAnnotations && !_useFallback && _annotationsPanelVisible)

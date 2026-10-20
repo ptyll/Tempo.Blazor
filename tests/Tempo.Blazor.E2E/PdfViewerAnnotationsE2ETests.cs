@@ -54,6 +54,71 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         await SaveScreenshotAsync(page, "annotations-detail");
     }
 
+    // ── Continuous mode (wave 0) ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Reproduces the wave-0 bug: starting directly in <c>ViewMode=Continuous</c> rendered an
+    /// empty area because the JS document state was keyed by the single-page canvas, which is
+    /// never rendered in continuous mode. After the fix the section starts with at least one
+    /// rendered page canvas.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_ContinuousMode_StartsWithRenderedPages()
+    {
+        var page = await OpenPdfPageAsync();
+
+        var section = page.Locator("section:has(h2:has-text('Continuous Scroll'))");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+
+        var wrap = section.Locator(".tm-pdf-viewer__continuous-wrap").First;
+        await wrap.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        // At least one page canvas must exist once the document has loaded.
+        var firstCanvas = wrap.Locator("canvas").First;
+        await firstCanvas.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+        var canvasCount = await wrap.Locator("canvas").CountAsync();
+        Assert.IsTrue(canvasCount > 0,
+            $"Continuous mode should start with rendered pages, found {canvasCount} canvas(es).");
+        Assert.IsTrue(await firstCanvas.IsVisibleAsync(), "The first continuous page canvas should be visible.");
+        await SaveScreenshotAsync(page, "continuous-start");
+
+        // Sharpness probe: at deviceScaleFactor=2 the backing store must be larger than the CSS size.
+        var dprContext = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 1000 },
+            DeviceScaleFactor = 2,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true
+        });
+        try
+        {
+            var dprPage = await dprContext.NewPageAsync();
+            await dprPage.SetViewportSizeAsync(1440, 1000);
+            await dprPage.GotoAsync($"{BaseUrl}{PdfPage}",
+                new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+            await WaitForAppReadyAsync(dprPage);
+            var dprSection = dprPage.Locator("section:has(h2:has-text('Continuous Scroll'))");
+            await dprSection.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+            var dprWrap = dprSection.Locator(".tm-pdf-viewer__continuous-wrap").First;
+            await dprWrap.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+            var dprCanvas = dprWrap.Locator("canvas").First;
+            await dprCanvas.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+            var sharpness = await dprCanvas.EvaluateAsync<string>(
+                "el => JSON.stringify({ backing: el.width, css: Math.round(el.getBoundingClientRect().width) })");
+            var probe = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(sharpness);
+            Assert.IsNotNull(probe);
+            Assert.IsTrue(probe["backing"] >= probe["css"] * 2 - 2,
+                $"At deviceScaleFactor=2 the backing store ({probe["backing"]}px) should be ~2x the CSS size ({probe["css"]}px).");
+            await SaveScreenshotAsync(dprPage, "continuous-start-dpr2");
+        }
+        finally
+        {
+            await dprContext.DisposeAsync();
+        }
+    }
+
     [TestMethod]
     [TestCategory("WASM")]
     public async Task PdfViewer_Search_HighlightsMatchesAndNavigates()
@@ -85,6 +150,57 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         // to the next match must change its text (searching "the" yields many matches).
         await Assertions.Expect(count).Not.ToHaveTextAsync(firstCount, new LocatorAssertionsToHaveTextOptions { Timeout = 15000 });
         await SaveScreenshotAsync(page, "search-next-match");
+    }
+
+    // ── Loading state (review fix 13) ────────────────────────────────────────
+
+    /// <summary>
+    /// Delays the first PDF request so the viewer's loading overlay stays visible,
+    /// captures <c>__screenshots__/pdf-viewer/loading.png</c> while the
+    /// <c>[role=status]</c> overlay is on screen, and then verifies the document
+    /// still renders once the delay is released. Only the first request is held —
+    /// PDF.js follows up with several range requests that must not each be delayed.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_LoadingState_CapturedWhileStatusVisible()
+    {
+        var context = await CreateContextAsync();
+        var pdfRequestsHeld = 0;
+        await context.RouteAsync("**/*.pdf", async route =>
+        {
+            if (Interlocked.Exchange(ref pdfRequestsHeld, 1) == 0)
+            {
+                await Task.Delay(3000);
+            }
+            await route.ContinueAsync();
+        });
+
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 1000);
+        await page.GotoAsync($"{BaseUrl}{PdfPage}",
+            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var status = page.Locator(".tm-pdf-viewer__body [role='status']").First;
+        await status.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        Assert.IsTrue(await status.IsVisibleAsync(),
+            "The loading overlay must be visible while the PDF download is delayed.");
+
+        var body = page.Locator(".tm-pdf-viewer__body").First;
+        Assert.AreEqual("true", await body.GetAttributeAsync("aria-busy"),
+            "The viewer body should expose aria-busy while loading.");
+
+        await SaveScreenshotAsync(page, "loading");
+
+        // The route delay only holds the request, so the viewer must recover.
+        await status.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Hidden,
+            Timeout = 60000
+        });
+        Assert.AreEqual("false", await body.GetAttributeAsync("aria-busy"),
+            "aria-busy must clear once the document has loaded.");
     }
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)

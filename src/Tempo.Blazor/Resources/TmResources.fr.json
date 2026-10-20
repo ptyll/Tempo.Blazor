@@ -4130,6 +4130,7 @@
   "TmPdfViewer_Comment": "Commenter",
   "TmPdfViewer_Delete": "Supprimer",
   "TmPdfViewer_Download": "Télécharger",
+  "TmPdfViewer_Loading": "Chargement du PDF…",
   "TmPdfViewer_LoadError": "Impossible de charger le PDF.",
   "TmPdfViewer_MarkerAriaLabel": "Commentaire {0} à la page {1} ({2})",
   "TmPdfViewer_NewCommentPlaceholder": "Ajouter un commentaire…",

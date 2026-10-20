@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Files;
@@ -306,6 +307,96 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
             threads[0].InkStrokes[0].Points.Should().HaveCountGreaterThanOrEqualTo(3);
             threads[0].InkStrokes[0].Points[0].X.Should().BeApproximately(0.1, 0.01);
         });
+    }
+
+    // ── Wave 0 — a11y and cross-page thread selection ────────────────────────
+
+    [Fact]
+    public void ThreadHeader_HasAriaExpandedAndControls()
+    {
+        var cut = Render<TmPdfAnnotatorPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { Highlight("h1") })
+            .Add(x => x.SelectedThreadId, "h1"));
+
+        var header = cut.Find("[data-testid='pdf-annotator-thread']");
+        header.GetAttribute("aria-expanded").Should().Be("true");
+        var controls = header.GetAttribute("aria-controls");
+        controls.Should().NotBeNullOrEmpty("an expanded thread header must reference its detail via aria-controls");
+        cut.Find($"#{controls}").Should().NotBeNull();
+
+        var collapsed = Render<TmPdfAnnotatorPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { Highlight("h1") })
+            .Add(x => x.SelectedThreadId, (string?)null));
+        collapsed.Find("[data-testid='pdf-annotator-thread']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+        // aria-controls only makes sense while the region is expanded.
+        collapsed.Find("[data-testid='pdf-annotator-thread']")
+            .GetAttribute("aria-controls").Should().BeNull("a collapsed thread header must not reference a detail region");
+    }
+
+    // ── Review fix 9: per-instance detail ids ─────────────────────────────────
+
+    [Fact]
+    public void AnnotatorPanels_TwoInstancesOnOnePage_GetDistinctDetailIds()
+    {
+        var cut = Render<TwoAnnotatorPanelsHost>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { Highlight("h1") }));
+
+        var headers = cut.FindAll("[data-testid='pdf-annotator-thread']");
+        headers.Should().HaveCount(2);
+        var details = cut.FindAll("[data-testid='pdf-annotator-detail']");
+        details.Should().HaveCount(2);
+
+        var ids = details.Select(d => d.Id).ToList();
+        ids[0].Should().NotBeNullOrWhiteSpace();
+        ids[1].Should().NotBeNullOrWhiteSpace();
+        ids[0].Should().NotBe(ids[1], "two annotator panels on one page must not share detail ids");
+
+        for (var i = 0; i < headers.Count; i++)
+        {
+            headers[i].GetAttribute("aria-controls").Should().Be(ids[i],
+                "each expanded header's aria-controls points at its own detail region");
+        }
+    }
+
+    /// <summary>Host rendering two annotator panels side by side (two viewers on one page).</summary>
+    private sealed class TwoAnnotatorPanelsHost : ComponentBase
+    {
+        [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            for (var i = 0; i < 2; i++)
+            {
+                builder.OpenComponent<TmPdfAnnotatorPanel>(i * 10);
+                builder.AddAttribute(i * 10 + 1, nameof(TmPdfAnnotatorPanel.Threads), Threads);
+                builder.AddAttribute(i * 10 + 2, nameof(TmPdfAnnotatorPanel.SelectedThreadId), "h1");
+                builder.CloseComponent();
+            }
+        }
+    }
+
+    [Fact]
+    public void SelectThreadOnOtherPage_ChangesPage()
+    {
+        var cut = Render(Seeded(Highlight("h1", page: 1), Highlight("h3", page: 3)));
+
+        cut.WaitForElement("[data-testid='pdf-annotator-thread'][data-thread-id='h3']").Click();
+
+        // The annotator navigates to the thread's page: its layer now renders that thread's marker.
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-pdf-annotator-layer [data-thread-id='h3']")
+                .Should().NotBeEmpty("selecting a thread anchored on page 3 must navigate there and render its marker"));
+    }
+
+    [Fact]
+    public void ColorIndicator_HasAccessibleLabel()
+    {
+        var cut = Render();
+
+        var chip = cut.Find(".tm-pdf-annotator__color-chip");
+        chip.GetAttribute("aria-label").Should().NotBeNullOrEmpty();
+        chip.HasAttribute("aria-hidden").Should().BeFalse("the color indicator must be announced to screen readers");
     }
 
     // ── Panel: resolve / reopen / reply / delete ─────────────────────────────

@@ -36,7 +36,7 @@
 
 .tm-pdf-viewer__page-label,
 .tm-pdf-viewer__zoom-label {
-    font-size: 13px;
+    font-size: var(--tm-font-size-sm);
     font-variant-numeric: tabular-nums;
     color: var(--tm-text-muted, #6b7280);
     min-width: 80px;
@@ -86,7 +86,7 @@
     gap: var(--tm-space-1, 4px);
     padding: 2px 8px;
     border-radius: var(--tm-radius, 6px);
-    font-size: 13px;
+    font-size: var(--tm-font-size-sm);
     text-decoration: none;
     color: var(--tm-text, #111827);
     transition: background 0.15s;
@@ -112,7 +112,7 @@
     border: 1px solid var(--tm-border, #e5e7eb);
     border-radius: var(--tm-radius, 6px);
     padding: 4px 8px;
-    font-size: 13px;
+    font-size: var(--tm-font-size-sm);
     background: var(--tm-surface, #ffffff);
     color: var(--tm-text, #111827);
     outline: none;
@@ -133,6 +133,7 @@
 /* ── Body layout ─────────────────────────────────────────────────────────── */
 
 .tm-pdf-viewer__body {
+    position: relative;
     display: flex;
     flex: 1;
     overflow: hidden;
@@ -236,6 +237,18 @@
 
 /* ── Fallback embed ──────────────────────────────────────────────────────── */
 
+.tm-pdf-viewer__fallback {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.tm-pdf-viewer__fallback ::deep .tm-pdf-viewer__load-error {
+    flex: 0 0 auto;
+    margin: var(--tm-space-3, 12px);
+}
+
 .tm-pdf-viewer__embed {
     flex: 1;
     width: 100%;
@@ -318,6 +331,31 @@
 .tm-dark .tm-pdf-viewer__thumbnails {
     background: var(--tm-surface-elevated-dark, #111827);
     border-right-color: var(--tm-border-dark, #374151);
+}
+
+[data-theme="dark"] .tm-pdf-viewer__loading,
+.tm-dark .tm-pdf-viewer__loading {
+    background: color-mix(in srgb, var(--tm-bg-subtle-dark, #111827) 85%, transparent);
+}
+
+/* ── Loading status (absolute overlay above the body content) ────────────── */
+
+.tm-pdf-viewer__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2, 8px);
+    color: var(--tm-text-muted, #6b7280);
+    background: color-mix(in srgb, var(--tm-bg-subtle, #f3f4f6) 85%, transparent);
+}
+
+.tm-pdf-viewer__loading-text {
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    user-select: none;
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────

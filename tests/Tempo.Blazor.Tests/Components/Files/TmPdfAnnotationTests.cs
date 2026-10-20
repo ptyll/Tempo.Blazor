@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Files;
 using Tempo.Blazor.Tests.Localization;
@@ -164,6 +165,74 @@ public class TmPdfAnnotationTests : LocalizationTestBase
         cut.Find("[data-testid='pdf-annotation-resolve']").Click();
 
         resolvedId.Should().Be("t1");
+    }
+
+    // ── Wave 0 — a11y ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ThreadHeader_HasAriaExpandedAndControls()
+    {
+        var thread = TextRangeThread("t1");
+        var cut = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { thread })
+            .Add(x => x.SelectedThreadId, "t1"));
+
+        var header = cut.Find("[data-testid='pdf-annotation-thread']");
+        header.GetAttribute("aria-expanded").Should().Be("true");
+        var controls = header.GetAttribute("aria-controls");
+        controls.Should().NotBeNullOrEmpty("an expanded thread header must reference its detail via aria-controls");
+        cut.Find($"#{controls}").Should().NotBeNull();
+
+        var collapsed = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { thread })
+            .Add(x => x.SelectedThreadId, (string?)null));
+        collapsed.Find("[data-testid='pdf-annotation-thread']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+        // aria-controls only makes sense while the region is expanded.
+        collapsed.Find("[data-testid='pdf-annotation-thread']")
+            .GetAttribute("aria-controls").Should().BeNull("a collapsed thread header must not reference a detail region");
+    }
+
+    // ── Review fix 9: per-instance detail ids ─────────────────────────────────
+
+    [Fact]
+    public void ThreadPanels_TwoInstancesOnOnePage_GetDistinctDetailIds()
+    {
+        var cut = Render<TwoThreadPanelsHost>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { TextRangeThread("t1") }));
+
+        var headers = cut.FindAll("[data-testid='pdf-annotation-thread']");
+        headers.Should().HaveCount(2);
+        var details = cut.FindAll("[data-testid='pdf-annotation-detail']");
+        details.Should().HaveCount(2);
+
+        var ids = details.Select(d => d.Id).ToList();
+        ids[0].Should().NotBeNullOrWhiteSpace();
+        ids[1].Should().NotBeNullOrWhiteSpace();
+        ids[0].Should().NotBe(ids[1], "two panels on one page must not share detail ids");
+
+        for (var i = 0; i < headers.Count; i++)
+        {
+            headers[i].GetAttribute("aria-controls").Should().Be(ids[i],
+                "each expanded header's aria-controls points at its own detail region");
+        }
+    }
+
+    /// <summary>Host rendering two thread panels side by side (two viewers on one page).</summary>
+    private sealed class TwoThreadPanelsHost : ComponentBase
+    {
+        [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            for (var i = 0; i < 2; i++)
+            {
+                builder.OpenComponent<TmPdfAnnotationThreadPanel>(i * 10);
+                builder.AddAttribute(i * 10 + 1, nameof(TmPdfAnnotationThreadPanel.Threads), Threads);
+                builder.AddAttribute(i * 10 + 2, nameof(TmPdfAnnotationThreadPanel.SelectedThreadId), "t1");
+                builder.CloseComponent();
+            }
+        }
     }
 
     // ── Viewer integration ────────────────────────────────────────────────────

@@ -4119,6 +4119,7 @@
   "TmPdfViewer_Comment": "Comment",
   "TmPdfViewer_Delete": "Delete",
   "TmPdfViewer_Download": "Download",
+  "TmPdfViewer_Loading": "Loading PDF…",
   "TmPdfViewer_LoadError": "Could not load the PDF.",
   "TmPdfViewer_MarkerAriaLabel": "Comment {0} on page {1} ({2})",
   "TmPdfViewer_NewCommentPlaceholder": "Add a comment…",

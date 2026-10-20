@@ -106,6 +106,7 @@ npm run test:document-editor
 npm run test:reporting-modules
 npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
+npm run test:pdf-viewer        # PdfViewer: pdf-viewer-size.mjs + pdf-viewer-render.mjs (RenderTask bookkeeping)
 ```
 
 ### Package Creation

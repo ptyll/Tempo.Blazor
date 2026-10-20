@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Files;
 using Tempo.Blazor.Tests.Localization;
 
@@ -630,6 +631,232 @@ public class TmPdfViewerTests : LocalizationTestBase
         // After toggle click, search bar should be hidden
         cut.FindAll(".tm-pdf-viewer__search-bar").Should().BeEmpty();
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Wave 0 — bugs and a11y independent of the redesign
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── W0: loading stav se renderuje s role="status" ───────────────────────
+
+    [Fact]
+    public void Render_WhileLoading_ShowsLoadingStatus()
+    {
+        // Hold the JS init promise open so the component stays in its loading state.
+        JSInterop.SetupVoid("tmPdfViewer.init", _ => true);
+
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf"));
+
+        cut.WaitForAssertion(() =>
+        {
+            var status = cut.Find(".tm-pdf-viewer__loading");
+            status.GetAttribute("role").Should().Be("status");
+            status.TextContent.Should().Contain("Loading");
+            cut.Find(".tm-pdf-viewer__body").GetAttribute("aria-busy").Should().Be("true");
+        });
+    }
+
+    [Fact]
+    public void Render_AfterLoad_HidesLoadingStatus()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf"));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        cut.FindAll(".tm-pdf-viewer__loading").Should().BeEmpty();
+        cut.Find(".tm-pdf-viewer__body").GetAttribute("aria-busy").Should().Be("false");
+    }
+
+    // ── W0: změna Url během načítání nenechá staré načtení vypnout loading ──
+
+    [Fact]
+    public async Task Render_UrlChangedMidLoad_OlderLoadDoesNotEndLoadingState()
+    {
+        const string firstUrl = "https://example.com/first.pdf";
+        const string secondUrl = "https://example.com/second.pdf";
+
+        // Each load generation gets its own pending handler, matched by the Url argument,
+        // so the test controls which load finishes and when.
+        var firstInit = JSInterop.SetupVoid("tmPdfViewer.init",
+            inv => inv.Arguments.Count > 1 && Equals(inv.Arguments[1], firstUrl));
+        var secondInit = JSInterop.SetupVoid("tmPdfViewer.init",
+            inv => inv.Arguments.Count > 1 && Equals(inv.Arguments[1], secondUrl));
+
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, firstUrl));
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.init"].Should().HaveCount(1));
+
+        // Change the Url while the first download is still in flight: a new load
+        // generation starts and init is invoked a second time, still pending.
+        cut.Render(parameters => parameters.Add(p => p.Url, secondUrl));
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations["tmPdfViewer.init"].Should().HaveCount(2));
+
+        // Let the STALE load finish while the newer one is still downloading, then drain
+        // the dispatcher so the stale finally has definitely run.
+        firstInit.SetVoidResult();
+        await cut.InvokeAsync(() => { });
+
+        cut.FindAll(".tm-pdf-viewer__loading").Should().ContainSingle(
+            "the loading state belongs to the newer generation and must survive the stale load");
+        cut.Find(".tm-pdf-viewer__body").GetAttribute("aria-busy").Should().Be("true");
+
+        // The newer generation finishing is what ends the loading state.
+        secondInit.SetVoidResult();
+        await cut.InvokeAsync(() => { });
+
+        cut.FindAll(".tm-pdf-viewer__loading").Should().BeEmpty();
+        cut.Find(".tm-pdf-viewer__body").GetAttribute("aria-busy").Should().Be("false");
+    }
+
+    // ── W0: chyba načtení se renderuje jako TmAlert nad fallback <embed> ───
+
+    [Fact]
+    public void Render_OnLoadError_ShowsErrorAlertAboveFallback()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf"));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoadError("test error"));
+        cut.Render();
+
+        cut.Find(".tm-alert").TextContent.Should().Contain("Could not load the PDF.");
+        // The alert and the embed must both live inside the flex fallback wrapper,
+        // with the alert rendered first (above the embed).
+        var fallback = cut.Find(".tm-pdf-viewer__fallback");
+        var markup = fallback.InnerHtml;
+        markup.IndexOf("tm-alert", StringComparison.Ordinal)
+            .Should().BeGreaterThan(-1, "the error alert renders inside the fallback wrapper");
+        markup.IndexOf("tm-alert", StringComparison.Ordinal)
+            .Should().BeLessThan(markup.IndexOf("<embed", StringComparison.Ordinal),
+                "the error alert must render above the fallback embed");
+        cut.Find(".tm-pdf-viewer__fallback .tm-pdf-viewer__embed").Should().NotBeNull();
+    }
+
+    // ── W0: view-mode tlačítka mají aria-pressed ────────────────────────────
+
+    [Fact]
+    public void Render_ViewModeButtons_HaveAriaPressed()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowViewModeToggle, true));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        var single = cut.FindAll(".tm-pdf-viewer__view-mode button")
+            .First(b => b.GetAttribute("aria-label")?.Contains("Single") == true);
+        var continuous = cut.FindAll(".tm-pdf-viewer__view-mode button")
+            .First(b => b.GetAttribute("aria-label")?.Contains("Continuous") == true);
+
+        single.GetAttribute("aria-pressed").Should().Be("true");
+        continuous.GetAttribute("aria-pressed").Should().Be("false");
+    }
+
+    // ── W0: ikonová tlačítka mají title (tooltip) ───────────────────────────
+
+    [Fact]
+    public void Render_IconButtons_HaveTitleOrTooltip()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.AllowRotation, true)
+                      .Add(p => p.ShowViewModeToggle, true)
+                      .Add(p => p.ShowSearch, true));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
+        cut.Render();
+
+        var buttons = cut.FindAll(".tm-pdf-viewer__btn");
+        buttons.Should().NotBeEmpty();
+        foreach (var button in buttons)
+        {
+            button.GetAttribute("title")
+                .Should().NotBeNullOrEmpty($"every icon button needs a tooltip title, found: {button.GetAttribute("aria-label")}");
+        }
+    }
+
+    // ── W0: miniatury mají aria-label regionu (TmPdfViewer_Thumbnails) ─────
+
+    [Fact]
+    public void Thumbnails_HaveRegionLabel()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf")
+                      .Add(p => p.ShowThumbnails, true));
+
+        var thumbnails = cut.Find(".tm-pdf-viewer__thumbnails");
+        thumbnails.GetAttribute("aria-label").Should().Be("Thumbnails");
+    }
+
+    // ── W0: výběr vlákna na jiné stránce naviguje na tu stránku ────────────
+
+    [Fact]
+    public async Task Viewer_SelectThreadOnOtherPage_NavigatesToPage()
+    {
+        var provider = new InMemoryPdfAnnotationProvider(new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
+        {
+            ["doc"] = new List<DocumentCommentThread>
+            {
+                TextRangeThread("t1", page: 1),
+                TextRangeThread("t3", page: 3),
+            }
+        });
+        int capturedPage = 1;
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(x => x.Url, "https://example.com/test.pdf")
+            .Add(x => x.DocumentId, "doc")
+            .Add(x => x.EnableAnnotations, true)
+            .Add(x => x.AnnotationProvider, provider)
+            .Add(x => x.PageChanged, EventCallback.Factory.Create<int>(this, page => capturedPage = page)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.FindAll("[data-testid='pdf-annotation-thread']")
+            .First(b => b.GetAttribute("data-thread-id") == "t3")
+            .Click();
+
+        capturedPage.Should().Be(3, "selecting a thread anchored on another page must navigate to that page");
+    }
+
+    // ── W0: dispose volá JS destroy pro instanci ────────────────────────────
+
+    [Fact]
+    public async Task Dispose_InvokesJsDestroy_ForInstance()
+    {
+        var cut = Render<TmPdfViewer>(parameters =>
+            parameters.Add(p => p.Url, "https://example.com/test.pdf"));
+
+        await cut.Instance.DisposeAsync();
+
+        // destroy must receive the same ElementReference init received, so the
+        // per-instance JS state (keyed by the root element) is the one destroyed.
+        var init = JSInterop.Invocations["tmPdfViewer.init"].Single();
+        var destroy = JSInterop.VerifyInvoke("tmPdfViewer.destroy", 1).Single();
+
+        var initArg = Assert.IsType<ElementReference>(init.Arguments[0]);
+        var destroyArg = Assert.IsType<ElementReference>(destroy.Arguments[0]);
+        destroyArg.Id.Should().NotBeNullOrEmpty();
+        destroyArg.Id.Should().Be(initArg.Id,
+            "destroy must target the exact root element init was called with");
+    }
+
+    private static DocumentCommentThread TextRangeThread(string id, int page)
+        => new()
+        {
+            Id = id,
+            Anchor = DocumentCommentAnchor.TextRange(page, [DocumentCommentRect.Create(0.1, 0.2, 0.3, 0.02)], "quoted"),
+            Comments = [new DocumentComment { Id = id + "-c", AuthorId = "u1", AuthorName = "U1", Body = "note" }]
+        };
 
     // ── N1: additive extension points used by TmPdfAnnotator ────────────────
 

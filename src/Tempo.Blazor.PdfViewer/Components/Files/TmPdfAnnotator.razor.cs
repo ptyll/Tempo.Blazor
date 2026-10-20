@@ -508,6 +508,14 @@ public partial class TmPdfAnnotator : TmComponentBase
     private async Task SelectThreadAsync(string? threadId)
     {
         _selectedThreadId = threadId;
+        // Selecting a thread anchored on another page navigates there: the current page
+        // is handed to the embedded viewer through its Page parameter.
+        var page = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal))?.Anchor.PageNumber ?? 0;
+        if (page >= 1 && page != _currentPage)
+        {
+            _currentPage = page;
+            ResetPageState();
+        }
         await InvokeAsync(StateHasChanged);
     }
 
@@ -532,9 +540,20 @@ public partial class TmPdfAnnotator : TmComponentBase
     private async Task HandlePageChangedAsync(int page)
     {
         _currentPage = page;
+        ResetPageState();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Drops page-scoped interaction state (an in-progress ink stroke and the cached
+    /// surface size); used whenever the visible page changes, from page navigation
+    /// (<see cref="HandlePageChangedAsync"/>) and thread selection
+    /// (<see cref="SelectThreadAsync"/>) alike.
+    /// </summary>
+    private void ResetPageState()
+    {
         _activeStroke = null;
         _surfaceSize = null;
-        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleDocumentLoaded(int totalPages)

@@ -4141,6 +4141,7 @@
   "TmPdfViewer_Comment": "Komentár",
   "TmPdfViewer_Delete": "Odstrániť",
   "TmPdfViewer_Download": "Stiahnuť",
+  "TmPdfViewer_Loading": "Načítanie PDF…",
   "TmPdfViewer_LoadError": "Nepodarilo sa načítať PDF.",
   "TmPdfViewer_MarkerAriaLabel": "Komentár {0} na strane {1} ({2})",
   "TmPdfViewer_NewCommentPlaceholder": "Pridať komentár…",

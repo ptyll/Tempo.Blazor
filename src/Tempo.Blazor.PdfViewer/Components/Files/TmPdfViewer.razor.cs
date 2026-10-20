@@ -124,6 +124,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     // ── State ────────────────────────────────────────────────────────────────
 
+    private ElementReference _rootRef;
     private ElementReference _canvasRef;
     private ElementReference _textLayerRef;
     private ElementReference _thumbnailsRef;
@@ -144,6 +145,20 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private PdfViewMode _viewMode = PdfViewMode.SinglePage;
     private string? _loadError;
     private string? _lastUrl;
+    /// <summary>
+    /// Incremented on every <see cref="Url"/> change. The OnAfterRenderAsync pass that starts
+    /// <c>tmPdfViewer.init</c> captures the current generation and only ends the loading state
+    /// if it still owns it — otherwise an older load finishing after a mid-download Url change
+    /// would clear the spinner and consume the one-shot flags of the newer load.
+    /// </summary>
+    private int _loadGeneration;
+    /// <summary>The (Url, Scale, Rotation) tuple the continuous scroll was last rendered with,
+    /// so OnAfterRenderAsync re-renders only when one of them changed.</summary>
+    private (string? Url, double Scale, int Rotation)? _lastContinuousRender;
+    /// <summary>The Url the thumbnails sidebar was last rendered with.</summary>
+    private string? _lastThumbnailUrl;
+    /// <summary>The page the thumbnails sidebar last highlighted.</summary>
+    private int _lastHighlightedThumbnailPage;
 
     // Search state
     private bool _searchVisible;
@@ -198,14 +213,23 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         if (Url != _lastUrl)
         {
             _lastUrl = Url;
+            // A newer generation owns the loading state from here on; the finally of an
+            // older init() in flight must not end it.
+            _loadGeneration++;
             _pdfInitialized = false;
             _currentPage = Math.Max(1, Page);
             _scale = Scale is > 0 and <= 5 ? Scale : 1.0;
             Rotation = 0;
             _viewMode = ViewMode;
             _useFallback = false;
+            _isLoading = true;
             _loadError = null;
             _totalPages = 0;
+            // Render keys are per document: a new Url must re-render thumbnails
+            // and continuous pages even if scale/rotation are unchanged.
+            _lastContinuousRender = null;
+            _lastThumbnailUrl = null;
+            _customOverlaySynced = false;
             _searchVisible = ShowSearch;
             _searchQuery = null;
             _lastSearchedQuery = null;
@@ -260,12 +284,13 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             StateHasChanged();
             _dotNetRef?.Dispose();
             _dotNetRef = DotNetObjectReference.Create(this);
+            var loadGeneration = _loadGeneration;
             try
             {
                 var available = await JS.InvokeAsync<bool>("tmPdfViewer.isAvailable");
                 if (available)
                 {
-                    await JS.InvokeVoidAsync("tmPdfViewer.init", _canvasRef, Url, _dotNetRef);
+                    await JS.InvokeVoidAsync("tmPdfViewer.init", _rootRef, Url, _dotNetRef);
                 }
                 else
                 {
@@ -278,29 +303,57 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             }
             finally
             {
-                _isLoading = false;
+                // A Url change mid-load started a newer generation; only the generation that
+                // owns the current load may end its loading state.
+                if (_loadGeneration == loadGeneration)
+                {
+                    _isLoading = false;
+                }
                 StateHasChanged();
             }
         }
 
-        if (_totalPages > 0 && ShowThumbnails && _thumbnailsRef.Context is not null)
+        // Thumbnails are re-rendered only when the document changed; the active-page
+        // highlight is refreshed separately whenever the page changes.
+        if (_totalPages > 0 && ShowThumbnails && !_useFallback && _thumbnailsRef.Context is not null)
         {
+            if (_lastThumbnailUrl != Url)
+            {
+                _lastThumbnailUrl = Url;
+                _lastHighlightedThumbnailPage = 0; // a re-render wipes the highlight
+                try
+                {
+                    await JS.InvokeVoidAsync("tmPdfViewer.renderThumbnails", _rootRef, _thumbnailsRef, 0.3, _dotNetRef);
+                }
+                catch { }
+            }
+
+            if (_lastHighlightedThumbnailPage != _currentPage)
+            {
+                _lastHighlightedThumbnailPage = _currentPage;
+                try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _rootRef, _currentPage); }
+                catch { }
+            }
+        }
+
+        // Continuous pages are re-rendered only when the render key changed; explicit
+        // zoom/rotate/view-mode calls update the key themselves.
+        if (_totalPages > 0 && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null
+            && _lastContinuousRender != (Url, _scale, Rotation))
+        {
+            _lastContinuousRender = (Url, _scale, Rotation);
             try
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderThumbnails", _thumbnailsRef, Url, 0.3, _dotNetRef);
-                await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _thumbnailsRef, _currentPage);
+                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
             }
             catch { }
         }
 
-        if (_totalPages > 0 && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation);
-            }
-            catch { }
-        }
+        // The one-shot blocks below need the JS instance state that init() creates.
+        // A re-entrant OnAfterRenderAsync pass (fired by the StateHasChanged() above)
+        // runs while the init await is still pending, and must not consume their
+        // flags — otherwise the overlay/selection is never synced at all.
+        if (_isLoading) return;
 
         if (EnableAnnotations && !_useFallback && !_annotationsLoaded)
         {
@@ -360,7 +413,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         _currentPage = pageNum;
         await PageChanged.InvokeAsync(_currentPage);
         await RenderCurrentPageAsync();
-        try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _thumbnailsRef, _currentPage); }
+        try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _rootRef, _currentPage); }
         catch { }
     }
 
@@ -384,7 +437,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             await PageChanged.InvokeAsync(_currentPage);
             if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
             {
-                try { await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation); }
+                try { await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation); }
                 catch { }
             }
             await RefreshAnnotationOverlayAsync();
@@ -460,10 +513,10 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     {
         try
         {
-            await JS.InvokeVoidAsync("tmPdfViewer.renderPage", _canvasRef, _currentPage, _scale, Rotation);
+            await JS.InvokeVoidAsync("tmPdfViewer.renderPage", _rootRef, _currentPage, _scale, Rotation);
             if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation);
+                await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation);
             }
             await RefreshAnnotationOverlayAsync();
             await RedrawSearchHighlightsAsync();
@@ -497,14 +550,15 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         {
             if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation);
+                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
+                MarkContinuousRendered();
             }
             else
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.setScale", _canvasRef, _scale);
+                await JS.InvokeVoidAsync("tmPdfViewer.setScale", _rootRef, _scale);
                 if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
                 {
-                    await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation);
+                    await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation);
                 }
                 await RefreshAnnotationOverlayAsync();
                 await RedrawSearchHighlightsAsync();
@@ -521,7 +575,11 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         Rotation = (Rotation + 90) % 360;
         if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
         {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation); }
+            try
+            {
+                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
+                MarkContinuousRendered();
+            }
             catch { }
         }
         else
@@ -543,12 +601,30 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     {
         if (_viewMode == PdfViewMode.Continuous)
         {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation); }
+            try
+            {
+                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _rootRef, _continuousRef, _scale, Rotation);
+                MarkContinuousRendered();
+            }
             catch { }
         }
         else
         {
             await RenderCurrentPageAsync();
+        }
+    }
+
+    /// <summary>
+    /// Records the render key after an explicit continuous render (view-mode switch,
+    /// zoom, rotate) so <see cref="OnAfterRenderAsync"/> does not repeat the work.
+    /// A call before the document is loaded is a JS no-op and must not be recorded —
+    /// the post-load <see cref="OnAfterRenderAsync"/> pass still has to render.
+    /// </summary>
+    private void MarkContinuousRendered()
+    {
+        if (_totalPages > 0)
+        {
+            _lastContinuousRender = (Url, _scale, Rotation);
         }
     }
 
@@ -593,7 +669,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         _lastSearchedQuery = _searchQuery;
         try
         {
-            await JS.InvokeVoidAsync("tmPdfViewer.search", _canvasRef, _searchLayerRef, _searchQuery, _dotNetRef);
+            await JS.InvokeVoidAsync("tmPdfViewer.search", _rootRef, _searchLayerRef, _searchQuery, _dotNetRef);
         }
         catch { }
     }
@@ -602,7 +678,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     public async Task NextMatchAsync()
     {
         if (_searchTotalMatches == 0) return;
-        try { await JS.InvokeVoidAsync("tmPdfViewer.searchNext", _canvasRef, _searchLayerRef); }
+        try { await JS.InvokeVoidAsync("tmPdfViewer.searchNext", _rootRef, _searchLayerRef); }
         catch { }
     }
 
@@ -610,7 +686,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     public async Task PreviousMatchAsync()
     {
         if (_searchTotalMatches == 0) return;
-        try { await JS.InvokeVoidAsync("tmPdfViewer.searchPrev", _canvasRef, _searchLayerRef); }
+        try { await JS.InvokeVoidAsync("tmPdfViewer.searchPrev", _rootRef, _searchLayerRef); }
         catch { }
     }
 
@@ -621,7 +697,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             return;
         }
 
-        try { await JS.InvokeVoidAsync("tmPdfViewer.redrawSearch", _canvasRef, _searchLayerRef, _currentPage); }
+        try { await JS.InvokeVoidAsync("tmPdfViewer.redrawSearch", _rootRef, _searchLayerRef, _currentPage); }
         catch { }
     }
 
@@ -631,7 +707,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         _lastSearchedQuery = null;
         _searchTotalMatches = 0;
         _searchCurrentMatch = 0;
-        try { await JS.InvokeVoidAsync("tmPdfViewer.clearSearch", _canvasRef, _searchLayerRef); }
+        try { await JS.InvokeVoidAsync("tmPdfViewer.clearSearch", _rootRef, _searchLayerRef); }
         catch { }
         await InvokeAsync(StateHasChanged);
     }
@@ -662,8 +738,8 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
         try
         {
-            await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation);
-            await JS.InvokeVoidAsync("tmPdfViewer.enableSelection", _canvasRef, _textLayerRef, _dotNetRef);
+            await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation);
+            await JS.InvokeVoidAsync("tmPdfViewer.enableSelection", _rootRef, _textLayerRef, _dotNetRef);
             _selectionEnabled = true;
         }
         catch { }
@@ -680,12 +756,12 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         {
             if (EnableAnnotations && _annotationOverlayRef.Context is not null)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _canvasRef, _annotationOverlayRef);
+                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _rootRef, _annotationOverlayRef);
             }
 
             if (OverlayContent is not null && _customOverlayRef.Context is not null)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _canvasRef, _customOverlayRef);
+                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _rootRef, _customOverlayRef);
             }
         }
         catch { }
@@ -779,6 +855,12 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private async Task SelectThreadAsync(string? threadId)
     {
         _selectedThreadId = threadId;
+        // Selecting a thread anchored on another page navigates to that page.
+        var page = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal))?.Anchor.PageNumber ?? 0;
+        if (page >= 1 && page != _currentPage)
+        {
+            await GoToPageAsync(page);
+        }
         await InvokeAsync(StateHasChanged);
     }
 
@@ -804,12 +886,18 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /// <summary>Navigates to a specific page.</summary>
+    /// <summary>Navigates to a specific page. In continuous mode the page wrap is
+    /// scrolled into view instead of re-rendering a single canvas.</summary>
     public async Task GoToPageAsync(int page)
     {
         if (page < 1 || page > _totalPages) return;
         _currentPage = page;
         await PageChanged.InvokeAsync(_currentPage);
+        if (_viewMode == PdfViewMode.Continuous && !_useFallback)
+        {
+            try { await JS.InvokeVoidAsync("tmPdfViewer.scrollToPage", _rootRef, page); }
+            catch { }
+        }
         await RenderCurrentPageAsync();
     }
 
@@ -829,7 +917,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     {
         if (_pdfInitialized && !_useFallback)
         {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.destroy", _canvasRef); }
+            try { await JS.InvokeVoidAsync("tmPdfViewer.destroy", _rootRef); }
             catch { }
         }
         _dotNetRef?.Dispose();
