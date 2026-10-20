@@ -416,5 +416,63 @@ window.tmDataTable = (function () {
         }
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader };
+    // wrapper element -> { observer, timer }. A WeakMap so a removed table is collectable.
+    var pinObservers = new WeakMap();
+
+    /**
+     * Recomputes every pinned column's sticky offset from the first header row only, and writes it
+     * once onto the wrapper as `--tm-pin-left-<index>` / `--tm-pin-right-<index>`. Body cells used
+     * to share the running total, so each row landed at the sum of every pinned header; writing the
+     * property on the cell itself was also thrown away by the next Blazor render, which rebuilds
+     * the inline style. The component reads the wrapper property back (`var(--tm-pin-left-N, …)`),
+     * so a re-render keeps the measured value and the C# offset stays the fallback. Debounced so a
+     * resize storm measures once.
+     */
+    function recomputePinnedOffsets(wrapper) {
+        if (!wrapper || !wrapper.querySelectorAll || !wrapper.style) return;
+        var headerRow = wrapper.querySelector('thead tr');
+        if (!headerRow) return;
+        var headers = Array.from(headerRow.children || []).filter(function (cell) {
+            return cell && (cell.tagName === 'TH' || cell.tagName === 'th');
+        });
+        var left = 0;
+        headers.forEach(function (header, index) {
+            if (!header.classList || !header.classList.contains('tm-col-pinned-left')) return;
+            wrapper.style.setProperty('--tm-pin-left-' + index, left + 'px');
+            left += Math.round(header.getBoundingClientRect().width);
+        });
+        var right = 0;
+        for (var i = headers.length - 1; i >= 0; i--) {
+            var header = headers[i];
+            if (!header.classList || !header.classList.contains('tm-col-pinned-right')) continue;
+            wrapper.style.setProperty('--tm-pin-right-' + i, right + 'px');
+            right += Math.round(header.getBoundingClientRect().width);
+        }
+    }
+
+    /**
+     * Watches the table wrapper and recomputes the pinned offsets 100ms after the last resize.
+     * Observing twice is a no-op; dispose detaches the observer.
+     */
+    function observePinnedOffsets(wrapper) {
+        if (!wrapper || pinObservers.has(wrapper) || typeof ResizeObserver !== 'function') return;
+        var state = { timer: 0 };
+        state.observer = new ResizeObserver(function () {
+            clearTimeout(state.timer);
+            state.timer = setTimeout(function () { recomputePinnedOffsets(wrapper); }, 100);
+        });
+        state.observer.observe(wrapper);
+        pinObservers.set(wrapper, state);
+    }
+
+    /** Detaches the pinned-offset observer. Called from the component's dispose. */
+    function disposePinnedOffsets(wrapper) {
+        var state = pinObservers.get(wrapper);
+        if (!state) return;
+        clearTimeout(state.timer);
+        state.observer.disconnect();
+        pinObservers.delete(wrapper);
+    }
+
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader, observePinnedOffsets, disposePinnedOffsets };
 })();

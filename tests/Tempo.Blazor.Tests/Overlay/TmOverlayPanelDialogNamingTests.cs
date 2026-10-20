@@ -37,6 +37,8 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
 {
     private sealed record Product(int Id, string Name, string Category);
 
+    private sealed record DialogPerson(string Name);
+
     public TmOverlayPanelDialogNamingTests()
     {
         Services.AddSingleton<ITmNotificationService>(new InMemoryNotificationStore());
@@ -179,6 +181,20 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
     private Dictionary<string, Func<IElement>> PanelRenderers() =>
         new(StringComparer.Ordinal)
         {
+            ["TmDataTable"] = () =>
+            {
+                var cut = Render<TmDataTable<DialogPerson>>(p => p
+                    .Add(c => c.Items, [new DialogPerson("Ada")])
+                    .Add(c => c.MobileLayout, DataTableMobileLayout.Cards)
+                    .Add(c => c.ColumnMenuMode, ColumnMenuMode.Menu)
+                    .AddChildContent<TmDataTableColumn<DialogPerson>>(col => col
+                        .Add(x => x.Title, "Name")
+                        .Add(x => x.PropertyName, "Name")
+                        .Add(x => x.Sortable, true)
+                        .Add(x => x.Filterable, true)));
+                cut.Find(".tm-data-table-cards-toolbar__filter").Click();
+                return cut.Find("[role='dialog']");
+            },
             ["TmColumnPicker"] = () =>
             {
                 var cut = Render<TmColumnPicker>(p => p.Add(c => c.Columns,

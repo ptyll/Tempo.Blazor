@@ -37,8 +37,11 @@
 .tm-data-table-wrapper--container {
   container-type: inline-size;
   container-name: tm-data-table;
+  /* inline-size keeps a shrink-to-fit parent from collapsing the container to nothing. */
+  inline-size: 100%;
 }
 .tm-data-table-wrapper {
+  --tm-data-table-mobile-checkbox-width: var(--tm-touch-target);
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-4);
@@ -1053,14 +1056,21 @@
 .tm-col-filter-select:focus { outline: none; border-color: var(--tm-color-primary); }
 
 /* ═══════════════════════════════════════════════════════════════
-   Responsive
+   Responsive — two scopes, because a container query cannot see a table
+   that never became a container.
+   A default table (MobileLayout=None) has no --container class, so its
+   narrow padding and stacking stay on the viewport, at the 768px the
+   library always used. Cards and Scroll opt into the named container and
+   adapt to their OWN width at the mobile breakpoint.
+   The container query never targets the container element itself: a
+   container cannot match itself, so every rule below styles a descendant.
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
+@media (width < 768px) {
   .tm-data-table-wrapper {
     padding: var(--tm-space-2);
     gap: var(--tm-space-3);
   }
-  
+
   .tm-data-table-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -1094,6 +1104,41 @@
   
   .tm-view-columns-list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Cards and Scroll only: the opt-in wrapper is the container, so the same
+   stacking follows the table's own width instead of the viewport. */
+@container tm-data-table (width < 640px) {
+  .tm-data-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-3);
+  }
+
+  .tm-data-table-toolbar-left,
+  .tm-data-table-toolbar-center,
+  .tm-data-table-toolbar-right {
+    width: 100%;
+    max-width: none;
+  }
+
+  .tm-data-table-toolbar-center {
+    order: -1;
+  }
+
+  .tm-pagination-container {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-3);
+    text-align: center;
+  }
+
+  .tm-pagination-info,
+  .tm-pagination-center,
+  .tm-pagination-right {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -1300,15 +1345,18 @@
 
 /* ═══════════════════════════════════════════════════════════════
    Opt-in card mode (CardMode="true")
-   On narrow viewports each row collapses into a labeled card. Scoped
-   entirely under .tm-data-table-wrapper--card, so tables without the
-   opt-in class are byte-identical to before. Each data cell shows its
-   column label via `data-label` (emitted only when CardMode is on).
+   Below the mobile breakpoint each row collapses into a labeled card. The
+   breakpoint is the table's own width, not the viewport, and the rules are
+   scoped under the card wrappers, so a table without the opt-in class is
+   byte-identical to before. Each data cell shows its column label via
+   `data-label` (emitted only when CardMode is on).
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 640px) {
-  /* Visually hide the header row; labels move into each cell. */
-  .tm-data-table-wrapper--card .tm-data-table thead,
-  .tm-data-table-wrapper--cards .tm-data-table thead {
+@container tm-data-table (width < 640px) {
+  /* Visually hide the header row; labels move into each cell. Cards drop the
+     header from the tab order entirely — a 1px clip kept every header control
+     reachable while nothing on screen showed it. The CardMode alias keeps the
+     clip, because its header is still the sort surface. */
+  .tm-data-table-wrapper--card .tm-data-table thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1318,6 +1366,10 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  .tm-data-table-wrapper--cards .tm-data-table thead {
+    display: none;
   }
 
   .tm-data-table-wrapper--card .tm-data-table,
@@ -1354,7 +1406,7 @@
   .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-data-table-cell--card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    text-align: left;
+    text-align: start;
   }
 
   .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Title"] {
@@ -1379,7 +1431,7 @@
     content: attr(data-label);
     font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-secondary);
-    text-align: left;
+    text-align: start;
   }
 
   .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before {
@@ -1398,27 +1450,112 @@
 .tm-data-table-wrapper--responsive th.data-mobile-pinned,
 .tm-data-table-wrapper--responsive td.data-mobile-pinned {
   position: sticky;
-  left: 0;
+  inset-inline-start: 0;
   z-index: 2;
   background: var(--tm-bg-surface);
 }
 .tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) th.data-mobile-pinned,
-.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) td.data-mobile-pinned {
-  left: var(--tm-touch-target);
+.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) td.data-mobile-pinned,
+.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) .tm-col-pinned-left {
+  inset-inline-start: calc(var(--tm-pin-left, 0px) + var(--tm-data-table-mobile-checkbox-width));
 }
 .tm-data-table-wrapper--responsive .tm-col-check--mobile-pinned {
   position: sticky;
-  left: 0;
+  inset-inline-start: 0;
   z-index: 3;
 }
 
-.tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table th:nth-child(2),
-.tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table td:nth-child(2) {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--tm-bg-surface);
+/* A pinned column's offset is a custom property the component sets, so the same rule sticks the
+   column to the correct edge in both writing directions. The fallback keeps a column stuck before
+   its offset has been measured. */
+.tm-col-pinned { position: sticky; }
+.tm-col-pinned-left { inset-inline-start: var(--tm-pin-left, 0); }
+.tm-col-pinned-right { inset-inline-end: var(--tm-pin-right, 0); }
+
+/* Text cells clip instead of wrapping, but only inside an opt-in responsive
+   wrapper and only while that wrapper is narrow. A default table, a card cell
+   and a cell being edited keep the wrapping they always had. */
+@container tm-data-table (width < 640px) {
+  .tm-data-table-wrapper--responsive .tm-data-table td:not(.tm-data-table-cell--card):not(.tm-data-table-cell--editing):not(.tm-col-wrap):not(:has(input, button, select, textarea)) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
+
+/* The mobile sort and filter buttons exist in the markup whenever Cards is on,
+   and only a narrow container reveals them. A wide container keeps the header. */
+.tm-data-table-mobile-only { display: none; }
+@container tm-data-table (width < 640px) {
+  .tm-data-table-mobile-only { display: inline-flex; }
+}
+
+/* "Page X of Y" is revealed by the container, never by a parameter. Below the
+   breakpoint the page numbers and the range text go, leaving previous/next and
+   the label — and those two buttons grow to the touch target. */
+.tm-data-table-page-label { display: none; }
+@container tm-data-table (width < 640px) {
+  .tm-data-table-pager--responsive > .tm-data-table-page-label { display: inline; }
+  .tm-data-table-pager--responsive .tm-page-btn,
+  .tm-data-table-pager--responsive .tm-pagination-ellipsis,
+  .tm-data-table-pager--responsive .tm-pagination-info {
+    display: none;
+  }
+  .tm-data-table-pager--responsive .tm-pagination-prev,
+  .tm-data-table-pager--responsive .tm-pagination-next {
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
+/* Cards sort/filter toolbar — the header is clipped, so these are the only way in. */
+.tm-data-table-cards-toolbar {
+  display: flex;
+  gap: var(--tm-space-2);
+}
+.tm-data-table-cards-toolbar__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+  cursor: pointer;
+}
+.tm-data-table-cards-toolbar__sort:focus-visible,
+.tm-data-table-cards-toolbar__filter:focus-visible,
+.tm-data-table-cards-toolbar__sort .tm-dropdown-trigger:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+.tm-data-table-cards-sheet__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+  margin-top: var(--tm-space-3);
+}
+
+/* A coarse pointer needs a 44px target; the visual size stays as it is. */
+@media (pointer: coarse) {
+  .tm-data-table-group-chip-remove,
+  .tm-filter-builder-add,
+  .tm-col-pin-btn,
+  .tm-data-table-col-menu-btn,
+  .tm-pagination-btn,
+  .tm-page-btn,
+  .tm-data-table-cards-toolbar__sort,
+  .tm-data-table-cards-toolbar__filter,
+  .tm-data-table-cards-toolbar__sort .tm-dropdown-trigger,
+  .tm-mvl-cards-toolbar__sort,
+  .tm-mvl-cards-toolbar__filter {
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
 .tm-multi-view-list--responsive .tm-mvl-toolbar-left--responsive {
   flex: 1 1 100%;
   width: 100%;

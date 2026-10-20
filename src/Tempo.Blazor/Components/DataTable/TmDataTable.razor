@@ -5,6 +5,7 @@
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Components.Forms
 @using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Overlay
@@ -17,7 +18,7 @@
     <span style="display:none" aria-hidden="true">@ChildContent</span>
 </CascadingValue>
 
-<div class="@RootCssClass" @attributes="AdditionalAttributes">
+<div class="@RootCssClass" @ref="_wrapperRef" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -58,6 +59,34 @@
                                    CanCreateTenantViews="ViewCanCreateTenantViews"
                                    CurrentUserId="CurrentUserId"
                                    CurrentTenantId="CurrentTenantId" />
+                }
+                @if (ShouldRenderMobileSort())
+                {
+                    @* Hidden until the container is narrow (tm-data-table-mobile-only). The header is
+                       display:none there, so this dropdown is the only sort surface. *@
+                    <TmDropdown Text="@Loc["TmDataTable_MobileSort"]"
+                                Class="tm-data-table-cards-toolbar__sort tm-data-table-mobile-only"
+                                MobilePresentation="PanelPresentation.Auto"
+                                OnSelect="OnCardSortSelectedAsync">
+                        @foreach (var col in CardsSortableColumns)
+                        {
+                            <TmDropdownItem Value="@($"{col.Key}|asc")" Checked="@IsCardSortChecked(col, descending: false)">
+                                @Loc["TmDataTable_SortBy", col.Title, Loc["TmDataTable_SortAscending"]]
+                            </TmDropdownItem>
+                            <TmDropdownItem Value="@($"{col.Key}|desc")" Checked="@IsCardSortChecked(col, descending: true)">
+                                @Loc["TmDataTable_SortBy", col.Title, Loc["TmDataTable_SortDescending"]]
+                            </TmDropdownItem>
+                        }
+                        <TmDropdownItem Value="@("clear")">@Loc["TmDataTable_ColumnMenu_ClearSort"]</TmDropdownItem>
+                    </TmDropdown>
+                }
+                @if (ShouldRenderMobileFilters())
+                {
+                    <button type="button" @ref="_cardsFilterTrigger" class="tm-data-table-cards-toolbar__filter tm-data-table-mobile-only"
+                            aria-haspopup="dialog" aria-expanded="@_cardsFilterOpen"
+                            @onclick="OpenCardsFilterAsync">
+                        @Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)
+                    </button>
                 }
                 @if (ShouldRenderExport())
                 {
@@ -226,6 +255,42 @@
                 </div>
             }
         </div>
+    }
+
+    @* ── Cards filter sheet ───────────────────────────────────── *@
+    @* The sort control is a TmDropdown inside the toolbar. The filter sheet stays here because it
+       carries its own fields; the toolbar button opens it, and so does the column menu's Filter item. *@
+    @if (ShouldRenderMobileFilters())
+    {
+        <TmOverlayPanel Anchor="_cardsFilterTrigger" IsOpen="_cardsFilterOpen" IsOpenChanged="SetCardsFilterOpenAsync"
+                        Placement="OverlayPlacement.Bottom" Align="OverlayAlign.Start" Offset="4"
+                        MobilePresentation="PanelPresentation.Auto" Role="dialog"
+                        AriaLabel="@Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)"
+                        Title="@Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)"
+                        Class="tm-data-table-cards-sheet">
+            @foreach (var col in CardsFilterableColumns)
+            {
+                <TmFormField Label="@col.Title" For="@ColumnFilterId(col.Key)">
+                    <TmColumnFilter ColumnKey="@col.Key"
+                                    InputId="@ColumnFilterId(col.Key)"
+                                    ColumnTitle="@col.Title"
+                                    FilterType="@col.FilterType"
+                                    FilterOptions="@col.FilterOptions"
+                                    FilterOperator="@col.FilterOperator"
+                                    Value="@ColumnFilterValue(col.Key)"
+                                    ValueChanged="v => OnColumnFilterValueChanged(col.Key, v)"
+                                    OnFilterChange="f => ApplyFilterAsync(col.Key, f)" />
+                </TmFormField>
+            }
+            <div class="tm-data-table-cards-sheet__footer">
+                <button type="button" class="tm-btn tm-btn-outline" @onclick="ClearAllFiltersAsync">
+                    @Loc["TmDataTable_ClearAll"]
+                </button>
+                <button type="button" class="tm-btn tm-btn-primary" @onclick="() => SetCardsFilterOpenAsync(false)">
+                    @Loc["Tm_Done"]
+                </button>
+            </div>
+        </TmOverlayPanel>
     }
 
     @* ── Table ────────────────────────────────────────────────── *@
@@ -784,13 +849,16 @@
             }
 
             @* Center: Page controls + Page size (vše v jednom) *@
-            <div class="tm-pagination-center">
-                <TmPagination Compact="@(MobileLayout != DataTableMobileLayout.None)" CurrentPage="@_currentPage"
+            <div class="tm-pagination-center @(MobileLayout != DataTableMobileLayout.None ? "tm-data-table-pager--responsive" : null)">
+                @* "Page X of Y" is a width decision, not a parameter: the label is in the markup always
+                   and the container query reveals it below 640px, hiding the page numbers beside it. *@
+                <span class="tm-data-table-page-label">@Loc["TmDataTable_CompactPage", _currentPage, _totalPages]</span>
+                <TmPagination CurrentPage="@_currentPage"
                               TotalPages="@_totalPages"
                               TotalCount="@_totalCount"
                               PageSize="@_pageSize"
                               PageSizeOptions="PageSizeOptions"
-                              ShowInfo="@(MobileLayout == DataTableMobileLayout.None && PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
+                              ShowInfo="@(PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
                               TestIdPrefix="@TestIdPrefix"
                               AdditionalAttributes="PaginationAttributes"
                               OnPageChange="GoToPageAsync"

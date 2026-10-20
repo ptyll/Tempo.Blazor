@@ -8,6 +8,13 @@
   border-radius: var(--tm-radius-lg);
   padding: var(--tm-space-4);
 }
+/* The responsive opt-in is its own container, so the list adapts to its width, not the viewport. */
+.tm-multi-view-list--container {
+  container-type: inline-size;
+  container-name: tm-multi-view-list;
+  /* inline-size keeps a shrink-to-fit parent from collapsing the container to nothing. */
+  inline-size: 100%;
+}
 .tm-multi-view-list--plain {
   background: transparent;
   border: 0;
@@ -392,7 +399,7 @@
   gap: var(--tm-space-2);
   width: 100%;
   height: auto;
-  text-align: left;
+  text-align: start;
   font: inherit;
 }
 
@@ -451,9 +458,59 @@
 /* ── Multi-select ───────────────────────────────────────────── */
 
 /* Checkbox cell in table */
+/* The title column sticks while the row scrolls. The offset is a custom property, so RTL flips it. */
+.tm-mvl-title-column {
+  position: sticky;
+  inset-inline-start: var(--tm-pin-left, 0);
+  z-index: 1;
+  background: var(--tm-bg-surface);
+}
+
+/* Cards & list sort/filter toolbar — these views have no header to sort from. */
+.tm-mvl-cards-toolbar {
+  display: flex;
+  gap: var(--tm-space-2);
+}
+.tm-mvl-cards-toolbar__sort,
+.tm-mvl-cards-toolbar__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+  cursor: pointer;
+}
+.tm-mvl-cards-toolbar__sort:focus-visible,
+.tm-mvl-cards-toolbar__filter:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+@media (pointer: coarse) {
+  .tm-mvl-cards-toolbar__sort,
+  .tm-mvl-cards-toolbar__filter {
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
+@container tm-multi-view-list (width < 640px) {
+  .tm-mvl-toolbar { flex-direction: column; align-items: stretch; }
+}
+
 .tm-mvl-col-select {
   width: 2.5rem;
   padding-left: var(--tm-space-3) !important;
+}
+/* One width for the selection column and the title offset, so the two neither gap nor overlap. */
+.tm-multi-view-list--responsive {
+  --tm-mvl-select-column: var(--tm-touch-target);
+}
+.tm-multi-view-list--responsive .tm-mvl-col-select {
+  width: var(--tm-mvl-select-column);
 }
 
 /* Generic checkbox style used across all views */

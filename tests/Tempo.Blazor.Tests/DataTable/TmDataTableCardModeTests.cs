@@ -79,8 +79,8 @@ public class TmDataTableCardModeTests : LocalizationTestBase
         var css = File.ReadAllText(Path.Combine(
             RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_data-table.css"));
 
-        css.Should().MatchRegex(@"@media[^{]*max-width:\s*640px",
-            "card transform must be scoped to a narrow-viewport breakpoint");
+        css.Should().MatchRegex(@"@container tm-data-table \(width < 640px\)",
+            "card transform must be scoped to the table's own width, not the viewport");
         css.Should().Contain("tm-data-table-wrapper--card",
             "card CSS must be scoped to the opt-in wrapper class so the 9 consumers are unaffected");
         css.Should().Contain("attr(data-label)",

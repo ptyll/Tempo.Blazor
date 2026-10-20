@@ -294,7 +294,7 @@
 
 - **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
 
-- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
+- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset. `MobileLayout=Cards` adds a sort dropdown and a filter sheet to the toolbar (`tm-data-table-mobile-only`, hidden until the table's own container is below 640px): the sort lists each sortable column ascending and descending with the active choice checked, and the filter sheet labels every filterable column. `TmMultiViewList` grows the same toolbar (`tm-mvl-cards-toolbar`) for its card and list views when `Responsive` is set.
 
 - **`TmMultiViewList.ViewSwitcherLabels`.** Default `IconsOnly` keeps today's icon buttons.
   `IconsAndText` adds the localized Table, Card and List names. The radiogroup contract is unchanged.
@@ -1025,6 +1025,13 @@
 
 ### Breaking / Migration
 
+- **`TmPagination.Compact` no longer hides the page buttons.** It used to replace the page numbers
+  with "Page X of Y". It now only adds that label and keeps previous, next and the page buttons.
+  Before: `Compact="true"` rendered the label and no `.tm-page-btn`.
+  After: `Compact="true"` renders the label and the page buttons. A narrow data table hides its
+  page numbers through `.tm-data-table-pager--responsive` (set when `MobileLayout` is not `None`),
+  not through `Compact`.
+
 - **The default-view marker in `TmViewManager` is now named.** The decorative `★` stays, with
   `aria-hidden="true"`, and a visually hidden "Default view" (`TmViewManager_DefaultView`) names it
   for assistive technology. A custom `ITmLocalizer` must supply that key. <!-- snapshot:dt-viewmanager -->
@@ -1140,6 +1147,7 @@
   - Group toggles and the group-chip remove control use `TmIcon` plus `aria-expanded` / `aria-label` instead of `▼`, `▶` and `×`. <!-- snapshot:dt-grouping --> <!-- snapshot:mvl-grouped -->
     Before: `<button class="tm-data-table-group-chip-remove">×</button>`
     After: `<button class="tm-data-table-group-chip-remove" aria-label="Remove grouping by Role"><svg class="tm-icon">…</svg></button>`
+  - A paged `TmDataTable` states "Page X of Y" in a `span.tm-data-table-page-label` inside `.tm-pagination-center`. The label is hidden above the mobile breakpoint and revealed by the table's own container query, so the page buttons are never removed. <!-- snapshot:dt-paged -->
   - `TmPagination` previous and next buttons use `TmIcon` chevrons instead of `‹` / `›`. <!-- snapshot:pagination-default --> <!-- snapshot:dt-paged -->
     Before: `<button aria-label="Previous">‹</button>`
     After: `<button aria-label="Previous"><svg class="tm-icon">…</svg></button>`
