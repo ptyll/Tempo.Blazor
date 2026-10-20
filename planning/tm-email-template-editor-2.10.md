@@ -1,0 +1,1065 @@
+# Tempo.Blazor 2.10.0 — produkční e-mailový editor a engine: inventura mezer a kontrakt hostitele
+
+Dokument fáze 1 plánu **`da0a2531-780c-4588-8c31-08df2362aa32`** („Tempo.Blazor 2.10.0 — produkční e-mailový
+editor a engine pro PostrionCore“), slug fáze `fze-1-vchoz-stav-verze-a-kontrakt-hostitele`, GUID
+`a15f88f6-77bb-4e39-7ebd-08df235dd165`.
+
+| | |
+|---|---|
+| Větev / HEAD | `redesign2` / `11ae3552` (`Merge remote-tracking branch 'origin/main' into redesign2`) |
+| Výchozí tag | `v2.9.0` → commit `05fcb4f9` (annotated tag object `8b2427c4`), `HEAD` = `v2.9.0-567-g11ae3552` |
+| Balíčky | `Tempo.Blazor.EmailTemplates` (verze v csproj `2.9.1`), `Tempo.Blazor.EmailTemplates.Abstractions` (verze `2.9.1`), oba `net10.0` |
+| Rozsah fáze | **jen dokumentace** — žádná změna produkčního kódu, žádné nové testy |
+| Podklady | `output/imagegen/tempo-reimagined/analysis/emailtemplates.md`, `…/DECISIONS.md`, `…/_email-plan-da0a2531-current.md`, `planning/tm-email-template-editor-todo-2026-06-11.md` (E0–E11 hotové, E12.1/2/4/5/6 otevřené) |
+
+> **Závaznost:** sekce [3 — Kontrakt pro hostitele](#3-kontrakt-pro-hostitele) je kontrakt, proti kterému plánuje
+> PostrionCore P06. Jakákoli pozdější odchylka v názvech/typech veřejného API se **konzultuje s uživatelem**
+> a zapisuje jako decision — nikdy tichá změna.
+
+> **Číslování fází** odpovídá MCP plánu (15 fází, včetně `Fáze 7A` a `Fáze 9A`). Původní „Fáze 10: Import a
+> export dialogy“ je v plánu `Skipped` a nahradila ji „Fáze 10: Import, export a validační dialog“ — odkazy
+> „Fáze 10“ v tomto dokumentu míří na novou (přejmenovanou) fázi.
+
+> **Stav kontraktu: POTVRZEN uživatelem 2026-10-20** (rozhodnutí D1–D20, viz [5](#5-stav-potvrzení)).
+> Review 2026-10-20 doplnil do kontraktu nový balíček `Tempo.Blazor.EmailTemplates.Engine`, kontrolu URL
+> schémat, audit `BlockedUrlScheme`, single-flight ukládání a další — vše zapracováno v [3](#3-kontrakt-pro-hostitele).
+
+---
+
+## 1. Baseline (Fáze 1)
+
+Spuštěno po projektech (nikdy celá solution paralelně — OOM), `net10.0`, Debug, pracovní strom na `11ae3552`.
+
+| Projekt | Výsledek | Trvání |
+|---|---|---|
+| `dotnet test tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests` | **Failed: 0, Passed: 192, Skipped: 0, Total: 192** | 1 s |
+| `dotnet test tests/Tempo.Blazor.EmailTemplates.Tests` | **Failed: 0, Passed: 103, Skipped: 0, Total: 103** | 2 s |
+
+`git tag --sort=-v:refname | head -3` → `v2.9.0`, `v2.8.26`, `v2.8.25`.
+
+Poznámky k baseline:
+
+- Počty jsou měřené na **pracovním stromě HEAD**, ne na tagu `v2.9.0`; větev `redesign2` je 567 commitů před tagem.
+- Verze v obou `.csproj` je `2.9.1` (ne `2.9.0`) — sjednocení na cílovou verzi je úkol Fáze 12.
+- Oba balíčky cílí **jen `net10.0`** (jeden `TargetFramework`, žádný multitarget) — konzument (PostrionCore) musí být na `net10.0`.
+- Untracked v stromu (`output/`, `eng/release-evidence/full-run-20261012/`) jsou nesouvisející uživatelské změny — tento plán na ně nesahá a necommituje je.
+- Fáze 1 nemění žádný soubor v `src/`, `tests/` ani CSS/JSON; jediným výstupem je tento dokument.
+
+---
+
+## 2. Inventura mezer, které tento plán zavírá
+
+Odkazy na řádky jsou **ověřené proti pracovnímu stromu na `11ae3552`** (plán mohl být psán proti starší verzi).
+Čísla jsou 1-based, `soubor:od-do`.
+
+### 2.1 Ukládání, stav a autorizace editoru
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.1.1 | `OnSave` je `EventCallback` **bez výsledku** — host nemůže vrátit selhání/konflikt a editor se to nedozví | `TmEmailTemplateEditor.razor:88` (`[Parameter] public EventCallback<EmailTemplateDocument> OnSave`), `:149` (`private Task SaveAsync() => OnSave.InvokeAsync(_document)`) | Fáze 7 |
+| 2.1.2 | Autosave hlásí **„Uloženo“ vždy**, když host nevyhodí výjimku — i když zápis neproběhl | `TmEmailTemplateEditor.razor:356-370`, konkrétně `:362-363` (`await OnAutoSave.InvokeAsync(_document); _autoSaveStatus = Loc["EmailEditor_AutoSave_Saved"];`); chybová větev jen `catch` `:365-368` | Fáze 7 |
+| 2.1.3 | Stav uložení je holý `<span>` bez `aria-live`, bez ikony/odznaku, bez relativního času | `TmEmailTemplateEditor.razor:31` | Fáze 7 |
+| 2.1.4 | Editor **nemá `ReadOnly`, `IsDirty`, `IsSaving`** ani `SaveAsync()` pro hostitele | celý `@code` blok `TmEmailTemplateEditor.razor:80-374` — grep na `ReadOnly`/`IsDirty`/`IsSaving` v souboru nic nenajde (jediný výskyt „ReadOnly“ je `IReadOnlyList` na `:100`) | Fáze 7 |
+| 2.1.5 | **Žádné `Ctrl+S`/`Cmd+S`** — obsluha kláves zná jen Z/Y/Shift+Z/C/X/V | `TmEmailTemplateEditor.razor:287-299` (`HandleEditorKeyDownAsync`, `switch` na `"z"/"y"/"c"/"x"/"v"`, žádné `"s"`) | Fáze 7 |
+| 2.1.6 | Žádné sloty pro akce hostitele (`ToolbarStart`/`ToolbarEnd`), žádné `ShowSaveButton`/`ShowSaveStatus` | `TmEmailTemplateEditor.razor:6-32` (pevná sestava tlačítek) | Fáze 7 |
+| 2.1.7 | Upload obrázku bez limitů (`Accept`/`MaxBytes`): hostitelský `OnImageUpload` dostane soubor bez validace | `TmEmailTemplateEditor.razor:103`, `TmEmailPropertyPanel.razor:146`, volání `:168-173` | Fáze 7 |
+| 2.1.8 | Náhled/validace/export se počítají při každém renderu rodiče | `TmEmailExportDialog.razor:38-43`, `TmEmailValidationPanel.razor:35-49` | Fáze 10 |
+
+### 2.2 Náhled a render
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.2.1 | `TmEmailTemplatePreview` renderuje **výhradně lokálně** přes `IEmailTemplateRenderer` (Mjml.Net v prohlížeči) | `TmEmailTemplatePreview.razor:3` (`@inject IEmailTemplateRenderer Renderer`), `:99-105` (`RenderPreviewAsync`), `:107-121` (`BuildModel`) | Fáze 6 |
+| 2.2.2 | Žádný vyměnitelný renderer → serverový render (decision 3 zadavatele) nejde | v `src/` neexistuje `IEmailPreviewRenderer` ani `EmailPreviewRequest/Result` (grep = 0) | Fáze 6 |
+| 2.2.3 | Zařízení náhledu je `bool _mobile` (jen Desktop/Mobile), přepínač nemá ikony ani `aria-pressed` | `TmEmailTemplatePreview.razor:8-11`, `:73` (`private bool _mobile`), `:153-157` | Fáze 6 |
+| 2.2.4 | Ukázková data v holé `<textarea>` uvnitř `<details>`; žádný `VariablesJsonChanged` pro hostitele | `TmEmailTemplatePreview.razor:33-39` (`:37` textarea) | Fáze 6 |
+| 2.2.5 | Bez stavů loading/unavailable/retry, bez rušení předchozího renderu (CancellationToken) | `TmEmailTemplatePreview.razor:77-97`, `:142-148` (debounce 750 ms `:64`) | Fáze 6 |
+| 2.2.6 | Chybí slot patičky náhledu („Obnovit náhled“, hostitelské „Odeslat test“) a `ShowViewToggle` | `TmEmailTemplatePreview.razor:6-19` (dvě řady `TmButton`) | Fáze 6 |
+
+### 2.3 Responzivita a rozvržení
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.3.1 | Editor **nemá žádné layoutové `@media`/`@container` pravidlo** — jediný výskyt `@media` v celém balíčku je `prefers-reduced-motion` (korekce původního znění „žádné `@media`“) | grep `@media\|@container` v `Components/*.css`: `TmEmailTemplateCanvas.razor.css:203` (`prefers-reduced-motion`), editor a toolbox 0. Layoutové pravidlo = 0 výskytů | Fáze 8 |
+| 2.3.2 | Rozvržení je jen `TmSplitter` 20/60/20 % s `MinSize` 160/320/200 px → na 390 px se tři panely (min. 680 px) nevejdou | `TmEmailTemplateEditor.razor:34-64` (`:35` 20 %/160 px, `:44` 60 %/320 px, `:54` 20 %/200 px) | Fáze 8 |
+| 2.3.3 | Žádný parametr rozvržení (`TmLayoutMode`), žádná mobilní prezentace panelů | `TmEmailTemplateEditor.razor:82-103` (jediné parametry dokumentu/hostitele) | Fáze 8 |
+| 2.3.4 | Akce sekce/bloku na plátně jsou **jen hover/`is-selected`** → na dotyku nedosažitelné | `TmEmailTemplateCanvas.razor.css:133-138` (`:hover` + `.is-selected`), skrytí `display: none` `:119-131` | Fáze 8 |
+| 2.3.5 | Panel vlastností nemá sbalitelný levý panel ani stav sbalení | `TmEmailTemplateEditor.razor:35-43` (toolbox bez `ToolboxCollapsed`) | Fáze 7A/8 |
+
+### 2.4 Import a export
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.4.1 | Export je jen MJML/JSON v holé `<textarea readonly>` — **bez kopírování a stažení**, bez patičky | `TmEmailExportDialog.razor:11-18` (`:13` JSON, `:17` MJML), `:3` (modal bez `Footer`) | Fáze 10 |
+| 2.4.2 | MJML se generuje při **každém** `OnParametersSet` rodiče, ne při otevření/změně záložky | `TmEmailExportDialog.razor:38-43` (`:41`) | Fáze 10 |
+| 2.4.3 | ~~MJML generuje `new MjmlGenerator()` místo `ForExport`~~ — **korekce původního znění plánu: tvrzení je nepřesné**, `new MjmlGenerator()` je jen instance generátoru, options jsou správně `MjmlGeneratorOptions.ForExport` | `TmEmailExportDialog.razor:32` (`static readonly MjmlGenerator Generator = new()`), `:41` (`Generator.Generate(Document, MjmlGeneratorOptions.ForExport)`), `MjmlGeneratorOptions.cs:17` | — (oprava inventury) |
+| 2.4.4 | Import má **natvrdo 5 MB** limit, žádné `EmailImportOptions` | `TmEmailImportDialog.razor:63` (`file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024)`) | Fáze 10 |
+| 2.4.5 | Import bez patičky (chybí „Zrušit“), varování jen jako počet (nevypíšou se), JSON chyba syrové `ex.Message` | `TmEmailImportDialog.razor:32-33` (potvrzovací tlačítko v těle), `:25-30` (souhrn `:27-29`), `:82-92` (`:90` `_errors.Add(ex.Message)`) | Fáze 10 |
+| 2.4.6 | Režimy MJML/JSON jako dvě `TmButton` bez `aria-pressed`, popisky „MJML“/„JSON“ natvrdo (technické zkratky — analýza je akceptuje) | `TmEmailImportDialog.razor:5-10`, `TmEmailExportDialog.razor:5-10` | Fáze 10 |
+
+### 2.5 Editace položek bloků a model buňky tabulky
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.5.1 | Položky bloků (social/navbar/carousel/accordion) a tabulka se editují **jen inline**, žádný dialogový režim | `TmEmailPropertyPanel.razor:51-72` (`:54-55` social, `:57-59` navbar, `:61-63` carousel, `:65-67` accordion, `:69-71` tabulka přes `TmEmailTableEditor`) | Fáze 9 |
+| 2.5.2 | `EmailTableCell` **nemá odkaz ani pozadí** (jen `Text`/`Align`/`ColSpan`/`RowSpan`) | `src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailTableCell.cs:4-17` (`:7`, `:10`, `:13`, `:16`) | Fáze 9 |
+| 2.5.3 | Chybí `EmailItemEditingMode` (host nemůže zvolit dialogovou editaci) | `TmEmailTemplateEditor.razor:82-103` — žádný takový parametr | Fáze 9 |
+
+### 2.6 Lokalizace
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.6.1 | Texty jsou v **`.resx`** (en/cs/fr), ne v embedded JSON jako jádro — hostitel, který vymění `IStringLocalizerFactory` (PostrionCore), uvidí klíče | `Resources/TmEmailResources.resx`, `TmEmailResources.cs.resx`, `TmEmailResources.fr.resx` — každý **103** klíčů; `Localization/DefaultTmEmailLocalizer.cs`, `ITmEmailLocalizer.cs:7-14` | Fáze 5 |
+| 2.6.2 | `AddTempoEmailTemplates` volá `services.AddLocalization()` — registrace závisí na hostitelské lokalizaci | `ServiceCollectionExtensions.cs:20` (metoda `:17-24`) | Fáze 5 |
+| 2.6.3 | Popisky polí panelu vlastností jsou **odvozené z názvu vlastnosti** (`Humanize`) → nelokalizované anglické texty (porušení konvence „no hardcoded text“) | `TmEmailObjectFields.razor:50` (použití), `:94-104` (`Humanize`) | Fáze 7A |
+| 2.6.4 | Typy polí jen Text/MultilineText/Bool/Number (žádná barva/zarovnání/enum/délka) | `PropertyReflection.cs:89-96` (`switch` na `underlying`) | Fáze 7A |
+
+### 2.7 Bezpečnost sandboxu
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.7.1 | Sandbox **nemá `MemberFilter`** (reflexe `GetType`/`Assembly` není blokovaná), žádný zákaz jmenných prostorů, žádné odstranění `object.eval`/`eval_template` | `ScribanTemplateEngine.cs:61-72` (`CreateContext`, `:63-70` jen `LoopLimit`/`RecursiveLimit`/`StrictVariables`/`EnableRelaxedMemberAccess`), `:22-42` (`Render`) | Fáze 2 |
+| 2.7.2 | Chybí **audit** (`ITemplateSecurityAuditSink`) — v `src/` neexistuje | grep `ITemplateSecurityAuditSink` = 0 | Fáze 2 |
+| 2.7.3 | Limity jsou jen 4+1 (`TemplateSecurityOptions.cs:7-26`: `LoopLimit`, `RecursiveLimit`, `MaxOutputLength`, `Timeout`, `StrictVariables`) — chybí `RegexTimeOut`, `ObjectRecursionLimit`, `LimitToString` | `TemplateSecurityOptions.cs:7-26` | Fáze 2 |
+| 2.7.4 | **Žádné escapování hodnot proměnných** — `EmailTemplateRenderer` substítuuje do MJML až po sanitizaci šablony, takže `{{ name }}` s `<script>` projde | `EmailTemplateRenderer.cs:32-47` (pipeline `:36-44`), `:49-55` (`Substitute` bez režimu escapování) | Fáze 3 |
+| 2.7.5 | Žádná kontrola URL schémat po substituci (`href`/`src`/`background-url`) | `EmailTemplateRenderer.cs:32-47` — po `_compiler.Compile` už jen `errors.AddRange` | Fáze 3 |
+| 2.7.6 | Chybí kultura renderu, registr aplikačních funkcí a `SchemaVersion` | `Templating/` — grep `TemplateRenderOptions`, `ITemplateFunctionProvider`, `SchemaVersion` = 0 | Fáze 4 |
+
+### 2.8 JSON dokumentace balíčků
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.8.1 | **Popisy parametrů jsou posunuté o jeden** — párování proběhlo v pořadí deklarace, ale parametry jsou v bundlu řazené abecedně | `tempo-blazor-emailtemplates.json`, `items[6]` (`TmEmailImportDialog`): `OnClose` = „Raised with the imported document when the user confirms.“ (patří `OnImport`), `OnImport` = „Whether the dialog is shown.“ (patří `Show`); `TmEmailExportDialog`: `Document` = „Whether the dialog is shown.“, `OnClose` = „The document to export.“; `TmEmailTemplateEditor`: `OnAutoSave` nese popis `AutoSave`, `TimeProvider` popis `OnAutoSave`, `Variables` popis `OnImageUpload`, `OnSave` popis `DocumentChanged`; `TmEmailTemplatePreview`: `TimeProvider` nese popis `VariablesJson` | Fáze 5 |
+
+### 2.9 Mezery vizuálního redesignu (A/B/C/D z analýzy)
+
+| # | Mezera | Dnes v kódu | Zavírá |
+|---|---|---|---|
+| 2.9.1 | Hardcoded barevné fallbacky ve `var(--tm-*, #…)` | `TmEmailTemplateCanvas.razor.css` 25×, `TmEmailTemplateEditor.razor.css` 9×, `TmEmailTemplateToolbox.razor.css` 8× (grep `#hex`) | Fáze 7A |
+| 2.9.2 | Hlavičky panelů uppercase xs (ne běžná typografie), panely nejsou karty | `TmEmailTemplateEditor.razor.css:49-57` | Fáze 7A |
+| 2.9.3 | Validace: `<li @onclick>` není fokusovatelné/klávesnicově ovladatelné (WCAG 2.1.1), nálezy bez titulku/popisu/ikony, žádná úroveň „doporučení“ (`LayoutSeverity` má jen `Warning`/`Error`) | `TmEmailValidationPanel.razor:11-20`, `Abstractions/Layout/LayoutSeverity.cs:4-11` | Fáze 10 |
+| 2.9.4 | Plátno je strukturální seznam („typ + 80 znaků“), ne WYSIWYG | `TmEmailTemplateCanvas.razor` (`RenderPreview`; text se krátí na 80 znaků `:368`), celý blok kreslí jen název typu a text | Fáze 9A |
+| 2.9.5 | Toolbox bez vyhledávání, dlaždice 2 sloupce s oříznutými popisky | `TmEmailTemplateToolbox.razor`, `.razor.css:17-18` | Fáze 7A |
+| 2.9.6 | Proměnné jen ve `<details>` pickeru bez popisu/ukázkové hodnoty; `TemplateVariableInfo` nemá `Description` | `TmEmailPropertyPanel.razor:22-26`, `:105-109`; `Templating/TemplateVariableInfo.cs:6` | Fáze 7A |
+| 2.9.7 | Žádné bottom-sheet/`MobilePresentation` chování dialogů editoru | `TmEmailTemplateEditor.razor:69-76` (`TmModal` bez `MobilePresentation`) | Fáze 8/10 |
+| 2.9.8 | Demo stránky mají hardcoded anglické texty (`Back`, `Saving…`, `Template not found`) | `EmailTemplateEditorPage.razor:9` („Back“), `:22` („Template not found“), `:54` („Saving…“), `EmailTemplateSendPage.razor:10,20` | Fáze 11 (demo, ne balíček) |
+
+> **Co se NEMĚNÍ (mimo rozsah):** MJML parita (`docs/email-templates/MJML_ATTRIBUTE_PARITY.md`),
+> `MjmlImporter` round-trip, DTO/validátory požadavků, `TemplateStyles`, `TextVersionGenerator`,
+> `BlockRegistry` (14 typů). Žádná z mezer výše nevyžaduje změnu v jádrovém `Tempo.Blazor` — jádro
+> potřebné primitivy už dodalo (viz 3.1).
+
+---
+
+## 3. Kontrakt pro hostitele
+
+Cílová veřejná plocha **2.10.0**, proti které plánuje PostrionCore P06. Každá položka má označení
+**Breaking** (ano/ne) vůči stavu `v2.9.0`/`2.9.1`. Sloupec „Fáze“ říká, kde položka vznikne.
+**Stav: kontrakt POTVRZEN uživatelem 2026-10-20** (viz [5](#5-stav-potvrzení)).
+
+> **Notace:** bloky `csharp` níže jsou **kontraktní signatury**, ne kompilovatelné soubory — u metod
+> popisujících chování nejsou vypsaná těla a každý `namespace` je samostatný budoucí soubor.
+> Defaulty `[Parameter]` vlastností odpovídají skutečné deklaraci v komponentě.
+
+### 3.0 Balíčky a závislosti (NOVÉ — rozhodnutí 2026-10-20)
+
+Uživatel rozhodl **oddělit engine do nového balíčku** `Tempo.Blazor.EmailTemplates.Engine`, aby editor
+fungoval ve WASM bez Scribanu, Mjml.Net a AngleSharpu. Rozdělení bylo ověřeno **podle skutečných
+závislostí v kódu** (`grep using` + `PackageReference`), ne podle názvů souborů.
+
+**Dnešní stav (ověřeno):** `Tempo.Blazor.EmailTemplates.Abstractions.csproj` referencuje
+`AngleSharp 1.5.2`, `Mjml.Net 4.11.0`, `Scriban 7.2.4`, `FluentValidation 12.1.1` a
+`Microsoft.Extensions.*` 10.0.0. UI balíček `Tempo.Blazor.EmailTemplates` nemá žádnou vlastní
+`PackageReference` (jen projektové reference), takže do WASM dnes tahá Scriban/Mjml.Net/AngleSharp
+tranzitivně přes Abstractions.
+
+**Skuteční konzumenti externích závislostí (soubor → závislost):**
+
+| Soubor | Závislost |
+|---|---|
+| `Templating/ScribanTemplateEngine.cs` | Scriban |
+| `Templating/ObjectToScriptObjectConverter.cs` | Scriban |
+| `Templating/SandboxedScriptOutput.cs` | Scriban |
+| `Templating/TemplateVariableExtractor.cs` | Scriban (AST visitor) |
+| `Rendering/MjmlNetCompiler.cs` | Mjml.Net |
+| `Rendering/HtmlContentSanitizer.cs` | AngleSharp |
+| `ServiceCollectionExtensions.cs` (Abstractions) | Scriban i Mjml.Net — dnes `new ScribanTemplateEngine(options)` na `:26` a registrace `MjmlNetCompiler` na `:28`; po rozdělení se celá tahle registrace přesune do Engine |
+
+Nic jiného v Abstractions externí závislost nepotřebuje — `Rendering/MjmlGenerator.cs` **Mjml.Net
+nepoužívá** (staví string; `Generate` na `:15`), `Import/MjmlImporter.cs` je čistě `System.Xml` +
+`Regex` (Mjml.Net nepotřebuje), `Rendering/TextVersionGenerator.cs` je čistě BCL.
+
+> **Korekce zadání review:** `MjmlImporter` **nepatří** do Engine — je bez externích závislostí, takže
+> import dialog funguje ve WASM i bez Engine a **žádný `IEmailImportService` není potřeba**. Do Engine
+> jde jen `IMjmlCompiler` implementace (`MjmlNetCompiler`).
+
+**Nová struktura balíčků:**
+
+| Balíček | Závislosti | Co obsahuje |
+|---|---|---|
+| `Tempo.Blazor.EmailTemplates.Abstractions` | BCL, `System.Text.Json`, `FluentValidation`, `Microsoft.Extensions.*` | model dokumentu, bloky, `EmailTemplateSerializer`, `MjmlGenerator` (+ options, `MjmlEscape`, `MjmlAttributeBuffer`), `TextVersionGenerator`, `MjmlImporter`, registry, layout validátory, DTO/Contracts, **všechna rozhraní** (`ITemplateEngine`, `ITemplateValidator`, `ITemplateVariableExtractor`, `ITemplateFunctionProvider`, `ITemplateSecurityAuditSink`, `IEmailTemplateRenderer`, `IMjmlCompiler`, `IEmailPreviewRenderer`, `IHtmlContentSanitizer`), `Editing/**` (ukládací kontrakt), `HtmlSanitizerPolicy` + `ConservativeHtmlContentSanitizer`, registrace modelu (`AddTempoEmailTemplateModel`) |
+| `Tempo.Blazor.EmailTemplates.Engine` (**nový**) | Abstractions + `Scriban`, `Mjml.Net`, `AngleSharp` | `ScribanTemplateEngine`, `ObjectToScriptObjectConverter`, `SandboxedScriptOutput`, `ScribanTemplateVariableExtractor`, `ScribanTemplateValidator`, `MjmlNetCompiler`, `AngleSharpHtmlContentSanitizer`, `EmailTemplateRenderer`, `LocalEmailPreviewRenderer`, `AddTempoEmailTemplateEngine` |
+| `Tempo.Blazor.EmailTemplates` (UI) | Abstractions + `Tempo.Blazor` + `FluentValidation` — **bez Engine** | komponenty, lokalizace, `AutoSaveOptions`, `EmailPreviewDevice`, `EmailItemEditingMode`, `ImageUploadOptions`, `EmailTemplateEditorOptions`, `AddTempoEmailTemplateEditor` / `AddTempoEmailTemplates` |
+
+**Typ → balíček (rozhodující řádky):**
+
+| Typ / složka | Balíček | Poznámka |
+|---|---|---|
+| `Model/**`, `Serialization/**`, `Registry/**`, `Layout/**`, `Validation/**`, `Dtos/**`, `Contracts/**` | Abstractions | beze změny |
+| `Import/**` (`MjmlImporter`, `ImportResult`, `ImportMessage`, `ImportKeys`, `IMjmlIncludeResolver`) | Abstractions | `System.Xml`/`Regex`, **ne** Mjml.Net |
+| `Rendering/MjmlGenerator`, `MjmlGeneratorOptions`, `MjmlEscape`, `MjmlAttributeBuffer`, `TextVersionGenerator`, `EmailDocumentValidator`, `DocumentValidation*`, `RenderResult`, `RenderError`, `IMjmlCompiler`, `MjmlCompileResult`, `IEmailTemplateRenderer`, `IEmailPreviewRenderer` | Abstractions | rozhraní + čisté generátory |
+| `Templating/ITemplateEngine`, `ITemplateValidator`, `ITemplateVariableExtractor`, `TemplateSecurityOptions`, `TemplateValidationResult`, `TemplateError`, `Result`, `VariableKind`, `TemplateVariableInfo`, `TemplateFunctionInfo`, `SampleDataGenerator`, `EmailDocumentVariableExtractor` | Abstractions | kontrakty a čisté pomocníky |
+| `Templating/ScribanTemplateEngine`, `ObjectToScriptObjectConverter`, `SandboxedScriptOutput`, `TemplateVariableExtractor` → `ScribanTemplateVariableExtractor`, `ScribanTemplateValidator` | **Engine** | Scriban |
+| `Rendering/MjmlNetCompiler`, `AngleSharpHtmlContentSanitizer` | **Engine** | přímá závislost (Mjml.Net / AngleSharp) |
+| `Rendering/EmailTemplateRenderer`, `LocalEmailPreviewRenderer` | **Engine** | **kvůli výchozí kompozici, bez přímé externí závislosti** — skládají Scriban engine + `MjmlNetCompiler` + `MjmlGenerator` a v Abstractions by nemohly mít funkční výchozí pipeline |
+| `Rendering/HtmlSanitizerPolicy`, `ConservativeHtmlContentSanitizer`, `IHtmlContentSanitizer` | Abstractions | viz rozhodnutí D12 níže |
+| `Editing/EmailSaveRequest`, `EmailSaveResult`, `EmailSaveStatus`, `EmailSaveTrigger` | Abstractions | nové (D1) |
+
+**Dvě vazby, které rozhodnutí o rozdělení neřešilo, a jejich řešení:**
+
+1. **`MjmlGenerator` → `HtmlContentSanitizer` (AngleSharp).** `MjmlGenerator.cs:205` a `:415` volají
+   `HtmlContentSanitizer.Sanitize` na obsah textových bloků. Sanitizer tedy nemůže zůstat
+   v Abstractions, ale `MjmlGenerator` tam zůstat má.
+   *Zvažované varianty:* (a) přesunout i `MjmlGenerator` do Engine — to by ale rozbilo MJML export
+   ve WASM (a ten dnes funguje a je to jádro editoru), (b) nechat `AngleSharp` v Abstractions —
+   v rozporu s rozhodnutím, (c) **zvoleno (D12, D22)**: politika sanitizace (`HtmlSanitizerPolicy`, jediný zdroj
+   allow-listů) zůstává v Abstractions, `IHtmlContentSanitizer` je rozhraní, `AngleSharpHtmlContentSanitizer`
+   je v Engine (autoritativní, robustní parser) a `ConservativeHtmlContentSanitizer` (čistě BCL,
+   striktnější, fail-closed) je v Abstractions jako výchozí, dokud Engine není zaregistrovaný.
+   Konstruktory `MjmlGenerator` (B15): **bezparametrický `MjmlGenerator()` zůstává** (použije
+   `ConservativeHtmlContentSanitizer.Instance`) a přidává se `MjmlGenerator(IHtmlContentSanitizer sanitizer)`;
+   `EmailTemplateRenderer` ho bere z DI.
+   **`ConservativeHtmlContentSanitizer` je tokenizer s HTML-encode, NE regex-based strip/replace.**
+   Výchozí akce je zakódovat každý `<`, `>`, `&`, `"` a `'`. Znovu se vyemitují jen tagy z allow-listu
+   `HtmlSanitizerPolicy` **bez atributů**; jedinou výjimkou je `a[href]` po kontrole schémat z §3.7a.
+   Nikdy se nepropustí `style` ani `on*`. Neuzavřené tagy se doplní a osiřelé zavírací tagy se zakódují;
+   tím je vyloučeno mimo jiné vložení `</mj-text>`, `<mj-raw>` nebo `<!--` z obsahu. Entity se dekódují
+   a znovu zakódují. Neznámé nebo nevalidní vstupy degradují na escapovaný text, **nikdy na průchod**.
+   Rozdíl výstupu proti AngleSharpu je povolen **jen směrem k přísnějšímu**. Paritní XSS sada obsahuje
+   i mutation-XSS vektory (`<svg>`, `<math>`, `<noscript>`, `<!--`, `<![CDATA[`, nevalidní vnoření)
+   a fuzz test „výstup ⊆ policy“.
+   **UX poznámka:** WASM export (bez Engine) může ztratit formátování, které AngleSharp povolí — textové
+   bloky se sanitizují konzervativněji; v náhledu je to vidět jako plain text, ne jako bezpečnostní chyba.
+2. **Editor → extrakce proměnných (Scriban).** `TmEmailPropertyPanel.razor:150` a
+   `TmEmailTemplatePreview.razor:120,125` volají `EmailDocumentVariableExtractor.Extract`, který jde
+   přes `TemplateVariableExtractor` (`Templating/TemplateVariableExtractor.cs`, Scriban AST).
+   *Zvoleno:* `ITemplateVariableExtractor` (Abstractions) + `RegexTemplateVariableExtractor`
+   (Abstractions, čistě BCL: tokeny `{{ path }}` a `for … in <path>` jako baseline) +
+   `ScribanTemplateVariableExtractor` (Engine, autoritativní — filtry, lokální proměnné smyček).
+   `EmailDocumentVariableExtractor.Extract(document)` **zůstává** (baseline `RegexTemplateVariableExtractor`)
+   a přidává se přetížení `Extract(document, ITemplateVariableExtractor extractor)` — skutečné overloady,
+   takže stávající volání zůstávají kompilovatelná. Rozdíl mezi implementacemi se týká jen detekce
+   kolekcí/filtrů v pickeru, ne bezpečnosti.
+
+**Co ve WASM (editor bez Engine) nahradí engine funkce + čitelná degradace:**
+
+| Funkce editoru | Zdroj bez Engine | Chování |
+|---|---|---|
+| MJML a JSON export | `MjmlGenerator` + `EmailTemplateSerializer` (Abstractions) | **funguje** (sanitizace přes konzervativní implementaci) |
+| Import MJML i JSON | `MjmlImporter` + `EmailTemplateSerializer` (Abstractions) | **funguje** |
+| Strukturální validace | `EmailDocumentValidator`, `LayoutValidator` (Abstractions) | **funguje** |
+| Syntaxe šablony | `ITemplateValidator` — chybí | `TmEmailValidationPanel` zobrazí **lokalizovanou informaci** „Kontrola syntaxe vyžaduje `Tempo.Blazor.EmailTemplates.Engine` nebo hostitelskou implementaci `ITemplateValidator`“; strukturální nálezy se zobrazí dál. Žádný no-op, žádný prázdný panel. |
+| Náhled / HTML export | `IEmailPreviewRenderer` — hostitel (server) | stavy `Unavailable` + retry, lokalizovaná zpráva; chybějící registrace = vysvětlující chyba, ne tichý prázdný iframe |
+| Extrakce proměnných | baseline `RegexTemplateVariableExtractor` | picker a ukázková data fungují; detekce kolekcí jen z `for … in` (Engine verze je přesnější) |
+
+**Registrace (nové rozdělení):**
+
+```csharp
+// Tempo.Blazor.EmailTemplates.Abstractions — model, registry, validátory, MjmlGenerator (BEZ enginu)
+public static IServiceCollection AddTempoEmailTemplateModel(
+    this IServiceCollection services, Action<TemplateSecurityOptions>? configure = null);
+
+// Tempo.Blazor.EmailTemplates.Engine — Scriban + Mjml.Net + AngleSharp, volá AddTempoEmailTemplateModel
+public static IServiceCollection AddTempoEmailTemplateEngine(
+    this IServiceCollection services, Action<TemplateSecurityOptions>? configure = null);
+
+// Tempo.Blazor.EmailTemplates (UI) — UI + model, BEZ enginu
+public static IServiceCollection AddTempoEmailTemplateEditor(
+    this IServiceCollection services, Action<EmailTemplateEditorOptions>? configure = null);
+
+// AddTempoEmailTemplates — [Obsolete] kompatibilní zkratka, deklarace níže
+```
+
+`AddTempoEmailTemplates` zůstává jako **`[Obsolete]`** kompatibilní zkratka:
+
+```csharp
+[Obsolete("Use AddTempoEmailTemplateEditor() and, for local rendering, AddTempoEmailTemplateEngine() " +
+          "from Tempo.Blazor.EmailTemplates.Engine")]
+public static IServiceCollection AddTempoEmailTemplates(
+    this IServiceCollection services, Action<TemplateSecurityOptions>? configure = null)
+    => services.AddTempoEmailTemplateEditor(o => configure?.Invoke(o.Security));
+```
+
+Kompozice: server/plný engine `AddTempoEmailTemplateEditor().AddTempoEmailTemplateEngine()` (nebo oba
+`AddTempoEmailTemplateModel()` + `AddTempoEmailTemplateEngine()`); WASM editor
+`AddTempoEmailTemplateEditor()` + hostitelský `IEmailPreviewRenderer` (+ volitelně serverový
+`ITemplateValidator`). `AddTempoEmailTemplates` engine **neregistruje** (UI balíček Engine nezná) a jen
+deleguje na `AddTempoEmailTemplateEditor`.
+
+**Sémantika registrací:**
+
+- `AddTempoEmailTemplateModel` je **idempotentní** a registruje baseline přes `TryAdd*`:
+  `IHtmlContentSanitizer` = `ConservativeHtmlContentSanitizer`, `ITemplateVariableExtractor` =
+  `RegexTemplateVariableExtractor`, a **jednu instanci** `TemplateSecurityOptions` (`TryAddSingleton`;
+  `configure` se aplikuje vždy na tuto jednu instanci).
+- `AddTempoEmailTemplateEngine` baseline **přepíše přes `Replace`** (`AngleSharpHtmlContentSanitizer`,
+  `ScribanTemplateVariableExtractor`, `ScribanTemplateValidator`, `MjmlNetCompiler`, `EmailTemplateRenderer`,
+  `LocalEmailPreviewRenderer`) → **výsledek nezávisí na pořadí volání** a `configure` se vždy aplikuje
+  na tu jednu instanci `TemplateSecurityOptions`.
+- `EmailTemplateRenderer` bere `MjmlGenerator` **z DI**, nikdy `new MjmlGenerator(...)`.
+- Test (Fáze 6): obě pořadí (`Model`→`Engine` i `Engine`→`Model`) dají v `IHtmlContentSanitizer`
+  **`AngleSharpHtmlContentSanitizer`** a stejnou instanci `TemplateSecurityOptions`.
+
+**Rozhodnutí o namespacech:** přesouvané typy **zůstávají ve svých namespacech**
+(`…Abstractions.Templating`, `…Abstractions.Rendering`, `…Abstractions`), mění se jen assembly/balíček.
+Důvod: migrace hostitele je pak pouze „přidat `PackageReference Tempo.Blazor.EmailTemplates.Engine` +
+zavolat `AddTempoEmailTemplateEngine()`“, žádný `using` (rozhodnutí **D21** v 5.2, včetně pravidla, že
+v Engine nesmí vzniknout typ se stejným FQN jako typ zůstávající v Abstractions).
+
+**Kde se rozdělení provede:** **Fáze 6** („Vyměnitelný renderer náhledu (serverový náhled) a rozdělení
+registrace“) — tam už je registrace rozdělována, takže nový balíček vzniká tam (poznámka je i v §6).
+Fáze 2–4 pracují ještě v Abstractions a nesmí přidat novou závislost; při přesunu ve Fázi 6 se soubory
+jen přesunou do nového projektu **bez změny logiky**. Testy se rozdělí: čisté typy zůstanou
+v `tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests`, testy Scriban/Mjml.Net/AngleSharp typů
+přejdou do nového `tests/Tempo.Blazor.EmailTemplates.Engine.Tests` (viz §6).
+
+### 3.1 Jádrové API, na kterém kontrakt stojí (ověřeno ve stromu, dodal základový plán `faf503eb`)
+
+Tato fáze jádro **nemění** — jen na něj mapuje e-mailový kontrakt. Ověřené typy a jejich skutečné názvy:
+
+| Jádrový typ | Namespace | Ověřená veřejná plocha (relevantní pro editor) |
+|---|---|---|
+| `TmLayoutMode` | `Tempo.Blazor.Abstractions.Layout` | `Auto = 0`, `Desktop = 1`, `Tablet = 2`, `Mobile = 3` (`TmLayoutMode.cs:7-20`) |
+| `TmLayoutBreakpoints` | `Tempo.Blazor.Abstractions.Layout` | `public sealed record TmLayoutBreakpoints` s explicitním ctor `(int sm, int lg)` a **vlastnostmi** `public int Sm { get; }`, `public int Lg { get; }`; `static Default` = 640/1024; `TmLayoutMode Classify(double widthPx)`; ctor validuje `0 < sm < lg` |
+| `TmBreakpoints` | `Tempo.Blazor.Abstractions.Layout` | `const int Sm = 640, Md = 768, Lg = 1024, Xl = 1280` |
+| `TmEditorShell` | `Tempo.Blazor.Components.Layout` | sloty `Header`, `Toolbar`, `Left`, `Canvas`, `Right`, `StatusBar`, `Extra`, `LeftRail`, `RightRail`; `LayoutMode`, `InitialMode`, `ResolvedLayoutChanged`, `Breakpoints`; `MobilePanelPresentation`, `ActiveMobilePanel(+Changed)`, `MobileSheetSnapIndex(+Changed)`, `MobileSheetSnapPoints`, `ShowMobilePanelsToggle`, `CanvasTitle`; `LeftOpen/RightOpen(+Changed)`, `CollapsedPanels(+Changed)`, `LeftTitle`/`RightTitle`/`ExtraTitle`, `LeftWidth`/`RightWidth`(+Changed), `MinLeftWidth`/`MaxLeftWidth`/`MinRightWidth`/`MaxRightWidth`, `MinCanvasWidth`, `PersistWidthsKey`, `MobileActions`, `Class` |
+| `MobilePanelPresentation` | `Tempo.Blazor.Components.Layout` | `Sheet` (0, default — plátno zůstává viditelné, dolů inline ne-modální `TmDrawer` sheet; při dvou otevřených panelech tab strip uvnitř sheetu), `Tabs` (1 — full-region `role="tablist"` Left \| Canvas \| Right, bez sheetu) — viz `TmEditorShell.razor:44-70` (Tabs), `:105-125` (`TmDrawer` bottom sheet + tab strip uvnitř), `:551` (`SheetShown`) |
+| `EditorShellPanel` | `Tempo.Blazor.Components.Layout` | `[Flags] None = 0, Left = 1, Right = 2, Extra = 4` |
+| `MobilePresentation` | `Tempo.Blazor.Components.Feedback` | `Dialog`, `Sheet`, `Fullscreen`, `Auto` — parametr `TmModal.MobilePresentation` (default `Auto`) |
+| `DrawerPosition` | `Tempo.Blazor.Components.Layout` | `Right`, `Left`, **`Bottom`** (sheet s úchytem a snapy) |
+| `TmKeyboardShortcutsHelp` | `Tempo.Blazor.Components.Layout` | `Categories`, `IsVisible`, `OnClose`, `Title`, **`Description`** (podtitulek) |
+| `TmNavigationGuard` | `Tempo.Blazor.Components.Navigation` | `IsDirty`, `IsDirtyCallback`, `OnSaveAndLeave` = `Func<Task<bool>>?`, `ShouldGuard`, `BeforeUnloadPrompt` |
+| `TmSidePanel` / `SidePanelPresentation` | `Tempo.Blazor.Components.Layout` | `Auto`/`Docked`/`Sheet` (F6; editor ho nepoužívá, staví na `TmEditorShell`) |
+
+> ⚠️ **Pozor na kolizi názvů:** e-mailový balíček má vlastní namespace
+> `Tempo.Blazor.EmailTemplates.Abstractions.Layout` (obsahuje `LayoutSeverity`), zatímco `TmLayoutMode`
+> bydlí v `Tempo.Blazor.Abstractions.Layout`. Hostitel, který importuje oba, musí `TmLayoutMode`
+> kvalifikovat nebo použít alias.
+
+> ⚠️ **Nesoulad v jádru (mimo rozsah této fáze, ale kontrakt se ho musí držet):** XML doc hodnoty
+> `MobilePanelPresentation.Tabs` v `MobilePanelPresentation.cs` tvrdí „tab strip uvnitř sheetu“, ale
+> implementace `TmEditorShell` (`TmEditorShell.razor:44-70`) i XML doc parametru (`:328`) dělají z `Tabs`
+> **full-region tablist bez sheetu**. Kontrakt výše se drží implementace; sjednocení XML doc je úkol
+> základového plánu, ne tohoto.
+
+### 3.2 Ukládací kontrakt (`Tempo.Blazor.EmailTemplates.Abstractions.Editing` — nový namespace)
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Editing;
+
+/// <summary>Why a save was requested.</summary>
+public enum EmailSaveTrigger
+{
+    Manual,        // tlačítko Uložit
+    Shortcut,      // Ctrl+S / Cmd+S
+    AutoSave,      // debounce z AutoSaveOptions
+    Programmatic   // host přes SaveAsync()
+}
+
+/// <summary>
+/// One save request. Document is a deep copy (snapshot) taken at request time; Revision is the
+/// editor's monotonic document revision the snapshot was taken at.
+/// </summary>
+public sealed record EmailSaveRequest(
+    EmailTemplateDocument Document,
+    EmailSaveTrigger Trigger,
+    long Revision,
+    CancellationToken CancellationToken);
+
+/// <summary>Outcome reported by the host.</summary>
+public enum EmailSaveStatus { Saved, Failed, Conflict }
+
+/// <summary>The host's answer to one save request.</summary>
+public sealed class EmailSaveResult
+{
+    public EmailSaveStatus Status { get; }
+    public string? Message { get; }                        // volitelný důvod (Failed/Conflict), lokalizuje hostitel
+    public bool IsSaved => Status == EmailSaveStatus.Saved;
+
+    public static EmailSaveResult Saved();
+    public static EmailSaveResult Failed(string? message = null);
+    public static EmailSaveResult Conflict(string? message = null);
+}
+```
+
+Veřejná plocha `TmEmailTemplateEditor` (namespace `Tempo.Blazor.EmailTemplates.Components`):
+
+```csharp
+// Ukládání (Fáze 7) — [Parameter] vlastnosti
+[Parameter] public Func<EmailSaveRequest, Task<EmailSaveResult>>? OnSave { get; set; }
+[Parameter] public AutoSaveOptions? AutoSave { get; set; }           // zůstává; Interval = debounce
+[Parameter] public EventCallback<bool> IsDirtyChanged { get; set; }  // volá se jen při změně hodnoty
+[Parameter] public bool ReadOnly { get; set; }                       // default false
+[Parameter] public RenderFragment? ToolbarStart { get; set; }
+[Parameter] public RenderFragment? ToolbarEnd { get; set; }
+[Parameter] public bool ShowSaveButton { get; set; } = true;
+[Parameter] public bool ShowSaveStatus { get; set; } = true;
+[Parameter] public ImageUploadOptions? ImageUpload { get; set; }     // namespace Tempo.Blazor.EmailTemplates
+
+// Veřejný STAV (vlastní ho editor, není to [Parameter])
+public bool IsDirty { get; private set; }
+public bool IsSaving { get; private set; }
+
+// Veřejná metoda
+public Task<EmailSaveResult> SaveAsync();
+
+// Beze změny zůstává (defaulty ve skutečné deklaraci)
+[Parameter] public EmailTemplateDocument? Document { get; set; }
+[Parameter] public EventCallback<EmailTemplateDocument> DocumentChanged { get; set; }
+[Parameter] public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+[Parameter] public IReadOnlyList<TemplateVariableInfo> Variables { get; set; } = Array.Empty<TemplateVariableInfo>();
+[Parameter] public Func<IBrowserFile, Task<string>>? OnImageUpload { get; set; }
+```
+
+**Sémantika ukládání (závazná pro Fázi 7):**
+
+- **Single-flight:** v jednom okamžiku běží nejvýš jedno volání `OnSave`.
+- Trigger (Uložit / Ctrl+S / autosave) přijatý **během** ukládání se sloučí do **jednoho** následného
+  uložení, je-li dokument stále dirty; `SaveAsync()` z takového volání vrátí výsledek toho sloučeného uložení.
+- `IsDirty = false` se nastaví **jen** po `Saved` a **jen** když `Revision` dokumentu stále odpovídá
+  revizi snapshotu (editace během ukládání zůstává dirty).
+- Výjimka z `OnSave` = `Failed` + záznam do logu; text „Uloženo“ se nikdy nezobrazí bez potvrzení hostitele.
+- `OnSave == null` nebo `ReadOnly` → `SaveAsync()` vrátí `Failed` **bez** volání hostitele (žádný no-op).
+- Autosave s `IsDirty == false` se **nevolá**.
+- `CancellationToken` v requestu se zruší při `Dispose` editoru; host ho má předat do svého I/O.
+- Po `Conflict` se autosave **pozastaví** do úspěšného `Manual`/`Programmatic` uložení nebo do předání
+  nové reference `Document`.
+- Nová reference `Document` (jiná instance) resetuje baseline (snapshot), `IsDirty = false` a undo historii.
+- Verzování/ETag drží **hostitel** (editor posílá jen `Revision` svého lokálního stavu).
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `EmailSaveTrigger` | **ne** (nový enum) | 7 | Čtyři hodnoty výše. |
+| `EmailSaveRequest` (vč. `Revision` + `CancellationToken`) | **ne** (nový záznam) | 7 | `Document` = hluboká kopie; `Revision` = revize snapshotu. |
+| `EmailSaveStatus` | **ne** (nový enum) | 7 | `Saved`/`Failed`/`Conflict` (potvrzeno D1). |
+| `EmailSaveResult` (+ `IsSaved`) | **ne** (nový typ) | 7 | `IsSaved` je pojmenovaná vlastnost, ne `bool IsSaved` v ctoru. |
+| `OnSave` = `Func<EmailSaveRequest, Task<EmailSaveResult>>?` | **ANO** | 7 | Nahrazuje `EventCallback<EmailTemplateDocument> OnSave` (`TmEmailTemplateEditor.razor:88`). |
+| `OnAutoSave` **zrušen** | **ANO** | 7 | Autosave volá `OnSave` s `Trigger = AutoSave`. |
+| `AutoSave` (`AutoSaveOptions`) | ne | — | `Enabled` + `Interval` zůstávají (`AutoSaveOptions.cs:4-11`); ruší se jen callback. |
+| `IsDirty` (+ `IsDirtyChanged`), `IsSaving` | ne (aditivní) | 7 | Stav vlastní editor, není `[Parameter]` → `@bind-IsDirty` nefunguje (potvrzeno D2). |
+| `ReadOnly` | ne (aditivní, default `false`) | 7 | Zakáže editaci, ponechá náhled/validaci/export. |
+| `SaveAsync()` | ne (aditivní) | 7 | Nahrazuje privátní `SaveAsync` (`TmEmailTemplateEditor.razor:149`) — ta se přejmenuje (např. `RequestSaveAsync`). |
+| `ToolbarStart` / `ToolbarEnd` | ne (aditivní) | 7 | `RenderFragment?`; na mobilu v `Header` shellu (viz 3.3). |
+| `ShowSaveButton` / `ShowSaveStatus` | ne (aditivní, default `true`) | 7 | `ShowSaveStatus` = odznak stavu uložení. |
+| `ImageUploadOptions { Accept, MaxBytes }` | ne (aditivní) | 7 | Namespace `Tempo.Blazor.EmailTemplates`; validace **před** `OnImageUpload`, porušení = lokalizovaná chyba a `Src` se nezmění. |
+
+Napojení dirty guardu (ověřená signatura `TmNavigationGuard.OnSaveAndLeave` = `Func<Task<bool>>?`):
+
+```razor
+<TmNavigationGuard IsDirty="_editor.IsDirty"
+                   OnSaveAndLeave="@(async () => (await _editor.SaveAsync()).IsSaved)" />
+```
+
+### 3.3 Rozvržení a responzivita (`TmEditorShell` ze základu F6, rozhodnutí EM2(a)/EM3)
+
+```csharp
+// Typy z JÁDRA — editor je jen vystavuje, neobaluje:
+using Tempo.Blazor.Abstractions.Layout;    // TmLayoutMode, TmLayoutBreakpoints
+using Tempo.Blazor.Components.Layout;      // MobilePanelPresentation, EditorShellPanel
+
+[Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+[Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+[Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+[Parameter] public TmLayoutBreakpoints? Breakpoints { get; set; }     // null = 768/1200
+[Parameter] public MobilePanelPresentation MobilePanelPresentation { get; set; } = MobilePanelPresentation.Sheet;
+[Parameter] public EditorShellPanel ActiveMobilePanel { get; set; }
+[Parameter] public EventCallback<EditorShellPanel> ActiveMobilePanelChanged { get; set; }
+[Parameter] public bool ToolboxCollapsed { get; set; }
+[Parameter] public EventCallback<bool> ToolboxCollapsedChanged { get; set; }
+```
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `LayoutMode` (`TmLayoutMode`) | ne (aditivní) | 8 | **Nahrazuje dřívější návrh `EmailEditorLayout`** (EM2(a); nikdy nevydáno). `Auto` měří kontejner editoru (ne viewport). |
+| `InitialMode` (`TmLayoutMode`) | ne (aditivní) | 8 | První frame před měřením, default `Desktop`. |
+| `ResolvedLayoutChanged` (`EventCallback<TmLayoutMode>`) | ne (aditivní) | 8 | Editor ho přeposílá ze shellu (hostitel podle něj ladí chrome). |
+| `Breakpoints` (`TmLayoutBreakpoints?`) | ne (aditivní) | 8 | `null` = `new TmLayoutBreakpoints(TmBreakpoints.Md, 1200)` = 768/1200 (shodné s DiagramEditorem, potvrzeno D7). |
+| `MobilePanelPresentation` | ne (aditivní, default `Sheet`) | 8 | `Sheet` = plátno + spodní sheet se záložkami Bloky / Vlastnosti (EM3 default; sheet je inline `TmDrawer` a při obou otevřených panelech má uvnitř tab strip), `Tabs` = full-region `role="tablist"` Left \| Canvas \| Right bez sheetu. |
+| `ActiveMobilePanel` / `ActiveMobilePanelChanged` (`EditorShellPanel`) | ne (aditivní) | 8 | Editor na mobilu přepne na `Right` po výběru bloku; hostitel může řídit. |
+| `ToolboxCollapsed` / `ToolboxCollapsedChanged` | ne (aditivní) | 8 | Ponecháno jako vlastní parametr (potvrzeno D10). Mapuje se na `TmEditorShell.CollapsedPanels`; když shell na tabletu sám zařídí auto-rail, `CollapsedPanelsChanged` → editor vyvolá `ToolboxCollapsedChanged`. **Na mobilu se ignoruje** (tam panely řeší sheet). |
+
+**Mapování editoru na `TmEditorShell` (1:1, žádný lokální layout wrapper):**
+
+| Shell slot / parametr | Obsah v editoru |
+|---|---|
+| `Header` | **na mobilu** kompaktní hlavička: primární Uložit + `ToolbarStart`; `ToolbarEnd` jde do overflow `⋮` (shell na mobilu `Toolbar` vůbec nerenderuje, když jsou `MobileActions` — `TmEditorShell.razor:30`) |
+| `Toolbar` | na desktopu/tabletu příkazová řada: `ToolbarStart` \| Historie (Zpět/Znovu) \| Kontrola (Náhled/Validovat) \| Soubor (Import/Export) \| Nápověda \| `ToolbarEnd` \| Uložit |
+| `Left` (+ `LeftRail`) | `TmEmailTemplateToolbox` (rail = ikonová lišta při `ToolboxCollapsed`) |
+| `Canvas` | `TmEmailTemplateCanvas` (od Fáze 9A WYSIWYG) |
+| `Right` | `TmEmailPropertyPanel` (inspektor) |
+| `StatusBar` | odznak stavu uložení (`ShowSaveStatus`) + stavové informace |
+| `MobileActions` | **jen** Zpět / Znovu / Náhled / Validovat (Uložit je v `Header`, ne tady) |
+| `Extra` | **nevyužito** (e-mail má právě dva panely: Bloky a Vlastnosti) |
+| `Breakpoints` | `Breakpoints ?? new TmLayoutBreakpoints(TmBreakpoints.Md, 1200)` |
+| `PersistWidthsKey` | volitelné, na rozhodnutí hostitele (ne v kontraktu 2.10.0) |
+
+### 3.4 Náhled na serveru — `IEmailPreviewRenderer` (Fáze 6)
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
+
+/// <summary>Where the rendered preview came from.</summary>
+public enum EmailPreviewStatus { Rendered, RenderFailed, Unavailable }
+
+/// <summary>One preview request. SubstituteVariables=false keeps {{ }} tokens (HTML export).</summary>
+public sealed record EmailPreviewRequest
+{
+    public required EmailTemplateDocument Document { get; init; }
+    public string? VariablesJson { get; init; }
+    public bool SubstituteVariables { get; init; } = true;
+    /// <summary>Culture name (e.g. "cs-CZ"); null = renderer default (document language / invariant).</summary>
+    public string? CultureName { get; init; }
+}
+
+/// <summary>The rendered preview, or the reason it is missing. Html/Text/Subject are never null.</summary>
+public sealed record EmailPreviewResult(
+    string Html,               // Failed/Unavailable => ""
+    string Text,               // Failed/Unavailable => ""
+    string Subject,            // Failed/Unavailable => ""
+    string? Preheader,
+    IReadOnlyList<RenderError> Errors,
+    EmailPreviewStatus Status);
+
+/// <summary>Replaceable preview renderer — the host may render on the server.</summary>
+public interface IEmailPreviewRenderer
+{
+    Task<EmailPreviewResult> RenderAsync(EmailPreviewRequest request, CancellationToken cancellationToken = default);
+}
+```
+
+`LocalEmailPreviewRenderer` (implementace v balíčku **Engine**, obaluje `EmailTemplateRenderer`) je
+výchozí, když je Engine zaregistrovaný.
+
+`TmEmailTemplatePreview` (namespace `Tempo.Blazor.EmailTemplates.Components`):
+
+```csharp
+[Parameter, EditorRequired] public EmailTemplateDocument Document { get; set; } = new();
+[Parameter] public string? VariablesJson { get; set; }
+[Parameter] public EventCallback<string> VariablesJsonChanged { get; set; }   // host si ukládá sample data
+[Parameter] public EmailPreviewDevice InitialDevice { get; set; } = EmailPreviewDevice.Desktop;
+[Parameter] public bool ShowSampleDataEditor { get; set; } = true;
+[Parameter] public bool ShowViewToggle { get; set; } = true;                  // HTML / Text
+[Parameter] public RenderFragment? FooterActions { get; set; }                // host: "Odeslat testovací e-mail"
+[Parameter] public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+```
+
+```csharp
+// namespace Tempo.Blazor.EmailTemplates.Components
+public enum EmailPreviewDevice { Desktop, Tablet, Mobile }
+```
+
+**Bezpečnost přenosu a chování náhledu:**
+
+- Náhled zůstává **`<iframe sandbox="" srcdoc="…">`** i pro HTML ze serverového rendereru — **žádné
+  `allow-scripts`**, žádné `allow-same-origin`. HTML z `IEmailPreviewRenderer` je **nedůvěryhodné**
+  (i když ho vyrobil vlastní server) a do dokumentu se vkládá jen jako `srcdoc` sandboxovaného iframe.
+- Přenos request/result mimo proces (PostrionCore HTTP endpoint): `Document` se serializuje
+  **`EmailTemplateSerializer`** (kanonický JSON, polymorfní bloky řeší on, ne `System.Text.Json`),
+  `VariablesJson`/`CultureName` jsou prosté stringy. Výsledek se mapuje na `RenderPreviewRequest/Response`
+  (Abstractions) nebo na vlastní DTO hostitele.
+- `Failed`/`Unavailable` → `Html`/`Text`/`Subject` jsou **`""`, nikdy `null`** (view nemusí nil-checkovat).
+- Každé nové vykreslení **zruší `CancellationToken` předchozího**; starší odpověď nikdy nepřepíše novější.
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `IEmailPreviewRenderer` + `EmailPreviewRequest`/`EmailPreviewResult`/`EmailPreviewStatus` | ne (nové typy) | 6 | `Unavailable` odlišuje síť/server od chyby šablony. |
+| `EmailPreviewRequest.CultureName` | ne (aditivní) | 6 | Kultura renderu na serveru. |
+| `LocalEmailPreviewRenderer` | ne (nový typ) | 6 | V balíčku **Engine**; registruje ho `AddTempoEmailTemplateEngine()`. |
+| `TmEmailTemplatePreview` injektuje `IEmailPreviewRenderer` místo `IEmailTemplateRenderer` | **ANO** | 6 | Migrace: host, který si přepsal `IEmailTemplateRenderer`, registruje `IEmailPreviewRenderer`. |
+| `VariablesJsonChanged` | ne (aditivní) | 6 | |
+| `InitialDevice` (`EmailPreviewDevice`) | ne (aditivní; dřívější plán měl `bool`, nikdy nevydáno) | 6 | **Nahrazuje** `bool _mobile` (`TmEmailTemplatePreview.razor:73`). |
+| `EmailPreviewDevice` | ne (nový enum) | 6 | Desktop / Tablet / Mobile; Tablet = 768 px, Mobile = 390 px (konstanty na jednom místě). |
+| `ShowSampleDataEditor` | ne (aditivní, default `true`) | 6 | Demo/send page používá `false`. |
+| `ShowViewToggle` | ne (aditivní, default `true`) | 6 | Stránka odeslání přepínač HTML/Text skryje. |
+| `FooterActions` | ne (aditivní) | 6 | `RenderFragment?` — editor sám nic neodesílá. |
+
+### 3.5 Registrace DI (Fáze 6)
+
+Viz kód v [3.0](#30-balíčky-a-závislosti-nové-rozhodnutí-2026-10-20). Options:
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates;
+
+/// <summary>Options of the editor-only registration.</summary>
+public sealed class EmailTemplateEditorOptions
+{
+    /// <summary>Sandbox limity sdílené s validací a extrakcí proměnných.</summary>
+    public TemplateSecurityOptions Security { get; } = new();
+}
+```
+
+`FunctionNamespaces` **není** v `EmailTemplateEditorOptions` — je v `TemplateSecurityOptions`
+(`ISet<string>`, viz 3.6) a registrace ho automaticky naplní z
+`IEnumerable<ITemplateFunctionProvider>.Namespace`, takže ho hostitel nevyplňuje ručně a engine
+i editor-only registrace se chovají stejně.
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `AddTempoEmailTemplateModel(...)` (nová, Abstractions) | ne (nová metoda) | 6 | Model + registry + validátory + `MjmlGenerator` + baseline extractor. |
+| `AddTempoEmailTemplateEngine(...)` (přesun do Engine) | **ANO** | 6 | Vyžaduje `PackageReference Tempo.Blazor.EmailTemplates.Engine`. |
+| `AddTempoEmailTemplateEditor(...)` | ne (nová metoda) | 6 | UI + model, **bez** enginu; chybějící `IEmailPreviewRenderer` = vysvětlující chyba v náhledu. |
+| `AddTempoEmailTemplates(...)` | **ANO** (chování), ale `[Obsolete]` | 6 | Deleguje na `AddTempoEmailTemplateEditor(o => configure?.Invoke(o.Security))` a engine neregistruje; náhled bez `IEmailPreviewRenderer` = `Unavailable` s textem jmenujícím chybějící registraci. |
+| `EmailTemplateEditorOptions` (`Security`) | ne (nový typ) | 6 | `FunctionNamespaces` je v `TemplateSecurityOptions` (D6) a plní se z providerů automaticky. |
+
+`TmEmailTemplatePreview` bez registrovaného `IEmailPreviewRenderer` zobrazí stav **`Unavailable`**
+s textem, který **jmenuje chybějící registraci** (např. „Náhled vyžaduje registraci
+`IEmailPreviewRenderer` (server) nebo balíček `Tempo.Blazor.EmailTemplates.Engine`“) — nikdy prázdný
+iframe ani tichý no-op.
+
+**Přepnutí volajících už ve Fázi 6** (ověřené adresy; počet testovacích volání opraven proti review —
+grep najde **15**, ne 4):
+
+| Volající | Dnes | Po Fázi 6 |
+|---|---|---|
+| `src/Tempo.Blazor.Demo/Program.cs:125` (WASM) | `AddTempoEmailTemplates()` | `AddTempoEmailTemplateEditor()` + HTTP `IEmailPreviewRenderer` (Engine ve WASM zůstává vypnutý) |
+| `tests/Tempo.Blazor.EmailTemplates.Tests/Components/*.cs` (14×) + `tests/Tempo.Blazor.Tests/EmailTemplates/EmailTemplatePagesTests.cs:28` — **celkem 15×** `Services.AddTempoEmailTemplates()` | `AddTempoEmailTemplates()` | `AddTempoEmailTemplateEditor()` + `AddTempoEmailTemplateEngine()` (testy potřebují lokální render i syntax validaci) |
+| `src/Tempo.Blazor.Demo.Api/Program.cs:164` | `AddTempoEmailTemplateEngine()` | stejné volání + **nová `PackageReference Tempo.Blazor.EmailTemplates.Engine`** (Demo.Api dnes referencuje jen Abstractions) |
+
+> **Nález k B4 (migrace pozičního argumentu):** `src/Tempo.Blazor.Demo.Api/Endpoints/EmailTemplateEndpoints.cs:58`
+> a `:93` volají `renderer.RenderAsync(parsed.Document!, model, ct)` **pozičně** — třetí argument je dnes
+> `CancellationToken`. Po B4 (`…, TemplateRenderOptions? options = null, CancellationToken … = default`)
+> se to nepřeloží; obě volání (a každé hostitelské poziční `ct`) musí použít `cancellationToken: ct`.
+
+### 3.6 Bezpečnost sandboxu — MemberFilter, audit a limity (Fáze 2)
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
+
+public enum TemplateSecurityEventKind
+{
+    BlockedMember,
+    BlockedNamespace,
+    BlockedFunction,
+    BlockedUrlScheme,
+    LimitExceeded,
+    Timeout
+}
+
+/// <summary>
+/// One audit event. TemplateHash = lowercase hex SHA-256 of the template; TemplateExcerpt = first
+/// 200 chars of the template (MAY CONTAIN PII authored in the template — document retention);
+/// Detail never contains variable VALUES, only member/namespace/scheme names.
+/// </summary>
+public sealed record TemplateSecurityEvent(
+    TemplateSecurityEventKind Kind,
+    string Detail,
+    string TemplateHash,
+    string TemplateExcerpt,
+    DateTimeOffset Timestamp);
+
+/// <summary>Optional audit sink. Registered zero-to-many; never required.</summary>
+public interface ITemplateSecurityAuditSink
+{
+    void OnEvent(TemplateSecurityEvent securityEvent);
+}
+```
+
+`ScribanTemplateEngine` (v balíčku **Engine**) — konstruktor:
+
+```csharp
+public ScribanTemplateEngine(
+    TemplateSecurityOptions? options = null,
+    IEnumerable<ITemplateSecurityAuditSink>? auditSinks = null,
+    IEnumerable<ITemplateFunctionProvider>? functionProviders = null)
+```
+
+**Závazná pravidla sandboxu:**
+
+- **MemberFilter není konfigurovatelný hostitelem** (žádný `AllowReflection` přepínač). Blokuje členy
+  deklarované na `System.Type`, `MemberInfo`, `Assembly`, `Module`, typy z namespace
+  `System.Reflection`, `System.IO`, `System.Diagnostics`, `System.Runtime*`, `System.Threading` a jména
+  členů `GetType`, `GetMethods`, `GetMembers`, `Assembly`, `TypeHandle`, … na jakémkoli typu.
+- `object.eval` / `object.eval_template` odstraněny; `include` bez `TemplateLoader` (fail).
+- Sinky: `IEnumerable<ITemplateSecurityAuditSink>`; **výjimka sinku se spolkne a zaloguje** (nikdy
+  neshodí render); volání jsou **synchronní a neblokující** (žádné I/O v renderu).
+- Render je **fail-closed**: `javascript:`/`data:`/`vbscript:`/`file:` URL se nahradí `#` a emituje
+  `BlockedUrlScheme`; zablokovaný člen/funkce = chyba renderu, ne prázdný výstup.
+- `Timestamp` plní `TimeProvider` (testovatelné; default `TimeProvider.System`).
+- `TemplateSecurityOptions` rozšíření: `RegexTimeOut`, `ObjectRecursionLimit`, `LimitToString`
+  (bezpečné defaulty; záporné/nulové = `ArgumentOutOfRangeException` při registraci) a
+  **`ISet<string> FunctionNamespaces`** — plněné registrací z `IEnumerable<ITemplateFunctionProvider>.Namespace`;
+  validace toleruje neznámé členy jen v těchto namespacech (D6).
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `ITemplateSecurityAuditSink` + `TemplateSecurityEvent`/`…Kind` (6 hodnot) | ne (nové typy) | 2 | Volitelná závislost; bez registrace se nic neděje. |
+| `TemplateSecurityOptions` rozšíření | ne (aditivní vlastnosti) | 2 | |
+
+**Security scénáře jako testy (povinné v Fázi 2):** reflexe (`GetType`/`Assembly`), zakázané
+namespace, `object.eval`, `include`, limity (loop/recursion/output/timeout/regex), sink (každý `Kind`
+se spy sinkem), spolknutá výjimka sinku, `BlockedUrlScheme` pro `javascript:`/`data:`, parita obou
+sanitizerů (viz 3.0). Každý scénář musí **před opravou prokazatelně selhat**.
+
+### 3.7 Funkce, kultura a escapování (Fáze 3 + 4)
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
+
+/// <summary>A function a provider exposes, for validation and docs.</summary>
+public sealed record TemplateFunctionInfo(string Name, string? Description);
+
+/// <summary>Host-supplied template functions under one namespace (never overrides a builtin).</summary>
+public interface ITemplateFunctionProvider
+{
+    /// <summary>Namespace the functions are imported under, e.g. "app" (^[a-z][a-z0-9_]*$).</summary>
+    string Namespace { get; }
+
+    /// <summary>
+    /// Function name → delegate. Delegates are SYNCHRONOUS; names match ^[a-z][a-z0-9_]*$; parameters
+    /// and return types are string/bool/numeric/decimal/DateTime/DateTimeOffset/IEnumerable of those.
+    /// Results run inside the same MemberFilter and limits as everything else.
+    /// </summary>
+    IReadOnlyDictionary<string, Delegate> GetFunctions();
+
+    /// <summary>Optional documentation of the exposed functions (name + description).</summary>
+    IReadOnlyList<TemplateFunctionInfo> Describe();
+}
+```
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
+
+/// <summary>Per-render options: culture of formatters.</summary>
+public sealed class TemplateRenderOptions
+{
+    /// <summary>
+    /// Culture of formatters. null = (UseDocumentLanguageCulture ? culture from
+    /// EmailTemplateDocument.Language : CultureInfo.InvariantCulture).
+    /// </summary>
+    public CultureInfo? Culture { get; init; }
+
+    /// <summary>When true and Culture is null, the document language decides the culture.</summary>
+    public bool UseDocumentLanguageCulture { get; init; }
+}
+```
+
+**Escapování (BREAKING, rozhodnutí zadavatele č. 2):** režim escapování určuje **výhradně renderer
+podle průchodu** — MJML/HTML tělo = `Html`, subject/preheader/textová verze = `None`.
+`TemplateEscapeMode` je **`internal`** a **není** součástí veřejného `TemplateRenderOptions` (žádný
+hostitelský přepínač, který by šel omylem vypnout). Jediný opt-out je filtr
+**`{{ value | html.trusted }}`**, jehož výstup **VŽDY** projde `IHtmlContentSanitizer.Sanitize`
+(allow-list tagů se tím neruší). Zdokumentováno v `docs/email-templates/TEMPLATE_SYNTAX.md`.
+Escapuje se **výstup výrazu** (ne literální text šablony a ne model předem — jinak se rozbíjí filtry).
+
+**Jedna signatura s volitelnými parametry (BREAKING B4, bez DIM):**
+
+```csharp
+// Abstractions (rozhraní)
+public interface ITemplateEngine
+{
+    Result<string> Render(string template, object? model, TemplateRenderOptions? options = null);
+    TemplateValidationResult Validate(string template);
+    IReadOnlyList<string> ExtractVariables(string template);
+}
+
+public interface IEmailTemplateRenderer
+{
+    Task<RenderResult> RenderAsync(
+        EmailTemplateDocument document,
+        object? model = null,
+        TemplateRenderOptions? options = null,
+        CancellationToken cancellationToken = default);
+}
+
+// Nová rozhraní (implementace v Engine) pro editor bez enginu:
+public interface ITemplateValidator               // nahrazuje přímé injectování ITemplateEngine v UI
+{
+    TemplateValidationResult Validate(string template);
+}
+
+public interface ITemplateVariableExtractor
+{
+    IReadOnlyList<TemplateVariableInfo> ExtractInfos(string template);
+    IReadOnlyList<string> Extract(string template);
+}
+```
+
+`ITemplateEngine.Render(template, model)` zůstává volatelné díky volitelnému parametru **jen na
+zdrojové úrovni** pro nové kompilace; binárně jde o **jinou signaturu** → breaking B4 (žádná default
+interface metoda, rozhodnuto).
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `ITemplateFunctionProvider` (+ `Describe()`, `TemplateFunctionInfo`) | ne (nový typ) | 4 | **Žádné Scriban typy v kontraktu** (delegáty, ne `ScriptObject`); resolvuje se jako `IEnumerable<ITemplateFunctionProvider>`. |
+| `TemplateRenderOptions` (jen `Culture` + `UseDocumentLanguageCulture`) | ne (nový typ) | 3/4 | `Culture = null` má definovanou sémantiku výše. |
+| `TemplateEscapeMode` | **internal** | 3 | Není veřejné — viz odstavec výše. |
+| `ITemplateValidator`, `ITemplateVariableExtractor` | ne (nová rozhraní) | 6 | Abstrakce pro editor bez Engine. |
+| Nahrazení `ITemplateEngine.Render`/`IEmailTemplateRenderer.RenderAsync` jednou signaturou s volitelnými parametry | **ANO** (B4) | 3 | Bez DIM; v repu implementují jen Tempo typy. |
+| Výchozí HTML escapování těla + filtr `{{ value \| html.trusted }}` | **ANO** (B3) | 3 | CHANGELOG „Breaking / Migration“ + `TEMPLATE_SYNTAX.md`. |
+
+### 3.7a Kontrola URL schémat a barev (Fáze 3 + 9)
+
+**Allow-list schémat (hostitel ho NESMÍ rozšířit):** `http`, `https`, `mailto`, `tel`, relativní cesty
+(`/path`, `path`, `./path`, `../path`) a `#` (fragment).
+
+- Kontroluje se **po substituci** v kompilovaném HTML: `href`, `src`, `background`, `background-url`
+  (a `poster`, pokud se objeví), a dále **modelové odkazy**, které se do HTML dostanou:
+  `EmailTableCell.Href`, `EmailButtonBlock.Href`, `EmailImageBlock.Src`/`Href`,
+  `EmailNavbarLink.Href`, `EmailSocialElement.Href`, `EmailCarouselImage.Src`/`Href`,
+  `EmailHeroBlock.BackgroundUrl`, `EmailWrapperBlock.BackgroundUrl`.
+- Jiné schéma (`javascript:`, `data:`, `vbscript:`, `file:`, `blob:`, neznámé) → hodnota se nahradí
+  **`#`**, přidá se `RenderError` s lokalizačním klíčem (warning) a zapíše se audit
+  `TemplateSecurityEventKind.BlockedUrlScheme`.
+- Testy: `{{ url }}` = `javascript:alert(1)` v tlačítku, obrázku, navbar odkazu, social prvku,
+  hero/wrapper pozadí a v buňce tabulky; whitelist povolí `mailto:`, `tel:`, relativní i `#`.
+- **`EmailTableCell.BackgroundColor`** se validuje regexem barvy (`#rgb`, `#rrggbb`, pojmenovaná barva
+  z bezpečné sady); neplatná hodnota se **zahodí** (atribut se nevygeneruje, `RenderError` warning) —
+  nikdy se nepropíše do `bgcolor`/`style`.
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| Allow-list URL schémat + `BlockedUrlScheme` audit + `#` fallback | **ANO** (chování; součást B3) | 3 | Bezpečnostní pravidlo, ne konfigurace. |
+| `EmailTableCell.BackgroundColor` validace | ne (součást nového pole, Fáze 9) | 9 | Neplatná barva = atribut se nevygeneruje. |
+
+### 3.8 Model a limity (Fáze 4 + 9 + 10)
+
+Následující bloky jsou tři samostatné soubory (`Model/EmailTemplateDocument.cs`,
+`Serialization/EmailTemplateSerializer.cs`, `Import/EmailImportOptions.cs`):
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Model;
+
+public sealed class EmailTemplateDocument
+{
+    /// <summary>Schema version written by the serializer and required by migrations.</summary>
+    public static int CurrentSchemaVersion => 1;      // vlastnost, NE const
+
+    /// <summary>Schema version of the document; missing on read = 1.</summary>
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
+}
+
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Serialization;
+
+public static class EmailTemplateSerializer
+{
+    // Čtení verze bez plné deserializace (pro rozhodnutí o migraci / chybovou zprávu).
+    public static int ReadSchemaVersion(string json);
+
+    public static EmailTemplateDocument Deserialize(string json);   // migruje v -> CurrentSchemaVersion
+    // Nové přetížení: limity včetně MaxNestingDepth (per-call kopie Options s MaxDepth)
+    public static EmailTemplateDocument Deserialize(string json, EmailImportOptions? options);
+    public static string Serialize(EmailTemplateDocument document); // vždy zapisuje CurrentSchemaVersion
+    // … stávající členy beze změny
+}
+
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Import;
+
+public sealed class EmailImportOptions
+{
+    // 5 MB = DNEŠNÍ chování, aditivní. Měří se jako UTF-8 byte count vstupu (ne počet znaků).
+    public long MaxInputBytes { get; set; } = 5 * 1024 * 1024;
+    public int MaxSections { get; set; } = 200;
+    public int MaxBlocks { get; set; } = 2000;
+    public int MaxNestingDepth { get; set; } = 8;
+}
+
+// Import s explicitními limity (stávající volání zůstávají funkční)
+public sealed class MjmlImporter
+{
+    // Stávající člen (includeResolver) zůstává; limity jsou nový volitelný parametr.
+    public ImportResult Import(string mjml, IMjmlIncludeResolver? includeResolver = null, EmailImportOptions? options = null);
+}
+```
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Abstractions.Model.Blocks;
+
+public sealed class EmailTableCell
+{
+    public string Text { get; set; } = string.Empty;
+    public string? Align { get; set; }
+    public int? ColSpan { get; set; }
+    public int? RowSpan { get; set; }
+    public string? Href { get; set; }               // NOVÉ (Fáze 9) — kontrolováno allow-listem 3.7a
+    public string? BackgroundColor { get; set; }    // NOVÉ (Fáze 9) — validováno regexem 3.7a
+}
+```
+
+Předávání limitů do UI: **`[Parameter] public EmailImportOptions? ImportOptions { get; set; }`** na
+`TmEmailTemplateEditor` **i** `TmEmailImportDialog` (`null` = výchozí `new EmailImportOptions()`);
+editor ji předá dialogu. JSON deserializace použije per-call kopii `EmailTemplateSerializer.Options`
+s `MaxDepth = MaxNestingDepth` (statická `Options` zůstává beze změny).
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `EmailTemplateDocument.SchemaVersion` (+ `static CurrentSchemaVersion`) | ne (aditivní pole) | 4 | Mění výstup `Serialize` (nová vlastnost); migrace `v → Current`; **vyšší než podporovaná = `EmailTemplateSerializationException`**. |
+| `EmailTemplateSerializer.ReadSchemaVersion(string json)` | ne (aditivní) | 4 | Pro čitelnou chybu a rozhodnutí o migraci. |
+| `EmailImportOptions` (`MaxInputBytes` = **5 MB**) | **ne** (aditivní, zachovává dnešní chování) | 4 | Dnešní natvrdo 5 MB (`TmEmailImportDialog.razor:63`) zůstává výchozím; hostitel může jen zvýšit/snížit. **Nezpřísňovat.** |
+| `ImportOptions` parametr (editor + import dialog) | ne (aditivní) | 10 | `null` = default; `MaxInputBytes` se měří jako **UTF-8 byte count** vstupu. |
+| `EmailTemplateSerializer.Deserialize(json, EmailImportOptions?)` | ne (nové přetížení) | 4 | `MaxNestingDepth` jde tudy (per-call kopie `Options` s `MaxDepth`); stávající `Deserialize(json)` zůstává. |
+| `EmailTableCell.Href` / `BackgroundColor` | ne (aditivní pole) | 9 | Round-trip `MjmlGenerator`↔`MjmlImporter`; `TextVersionGenerator` vypíše „text (url)“; `SchemaVersion` zůstává 1. |
+
+### 3.9 Editace položek bloků (Fáze 9)
+
+```csharp
+namespace Tempo.Blazor.EmailTemplates.Components;
+
+public enum EmailItemEditingMode { Inline, Dialog }
+
+// na TmEmailTemplateEditor i na TmEmailPropertyPanel:
+[Parameter] public EmailItemEditingMode ItemEditingMode { get; set; } = EmailItemEditingMode.Inline;
+```
+
+| Položka | Breaking | Fáze | Poznámka |
+|---|---|---|---|
+| `EmailItemEditingMode` + `ItemEditingMode` | ne (aditivní, default `Inline` = dnešní chování) | 9 | `Dialog` = modální editor nad KOPIÍ položky s Uložit/Zrušit, jeden krok undo, fokus zpět na spouštěcí tlačítko. |
+
+### 3.10 Veřejná plocha z vizuálního redesignu (Fáze 6/7/7A/8/10)
+
+| Položka | Typ / signatura | Breaking | Fáze |
+|---|---|---|---|
+| `EmailPreviewDevice` | `enum { Desktop, Tablet, Mobile }` — nahrazuje `bool _mobile` v `InitialDevice` | ne (nikdy nevydaný `bool`) | 6 |
+| `ShowViewToggle` | `[Parameter] public bool ShowViewToggle { get; set; } = true;` | ne | 6 |
+| `FooterActions` | `[Parameter] public RenderFragment? FooterActions { get; set; }` | ne | 6 |
+| `TemplateVariableInfo.Description` + `Group` | `public sealed record TemplateVariableInfo(string Path, VariableKind Kind) { public string? Description { get; init; } public string? Group { get; init; } }` (bez `SampleValue`) | ne (aditivní `init` vlastnosti; **mění rovnost záznamu** — `Equals`/`GetHashCode` je zahrnují) | 7A |
+| `LayoutSeverity.Info` | `enum LayoutSeverity { Warning = 0, Error = 1, Info = 2 }` — nová hodnota `Info = 2`, existující `Warning = 0` a `Error = 1` **explicitně zafixované beze změny číselných hodnot**; řazení přes `LayoutSeverityRank.Of(severity)` (`Error` → 0, `Warning` → 1, `Info` → 2), nikdy podle číselné hodnoty | **částečně ANO** (breaking jen pro exhaustivní `switch` bez `default`) | 10 |
+| `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` / `Breakpoints` / `MobilePanelPresentation` | viz [3.3](#33-rozvržení-a-responzivita-tmeditorshell-ze-základu-f6-rozhodnutí-em2aem3) — mapované 1:1 na `TmEditorShell` | ne | 8 |
+| `ToolboxCollapsed` / `ToolboxCollapsedChanged` | `bool` + `EventCallback<bool>` | ne | 8 |
+| `ShowSaveStatus` | `[Parameter] public bool ShowSaveStatus { get; set; } = true;` | ne | 7 |
+| `ImportOptions` | `[Parameter] public EmailImportOptions? ImportOptions { get; set; }` (editor + import dialog) | ne | 10 |
+| První doporučující pravidlo | `LayoutSeverity.Info` = preheader delší než 100 znaků (jedno pravidlo, `DocumentValidationKeys`) | ne (nové pravidlo) | 10 |
+
+### 3.11 Souhrn breaking changes (pro CHANGELOG „Breaking / Migration“ 2.10.0)
+
+| # | Breaking | Před → Po | Fáze |
+|---|---|---|---|
+| B1 | **ANO** | `EventCallback<EmailTemplateDocument> OnSave` → `Func<EmailSaveRequest, Task<EmailSaveResult>>? OnSave` (request nese `Trigger`, `Revision`, `CancellationToken`); `OnAutoSave` zrušen (`Trigger = AutoSave`); `SaveAsync()` veřejné | 7 |
+| B2 | **ANO** | `TmEmailTemplatePreview` injektuje `IEmailPreviewRenderer` místo `IEmailTemplateRenderer` | 6 |
+| B3 | **ANO** | Hodnoty proměnných v HTML/MJML těle se ve výchozím stavu escapují (subject/preheader/text ne); jediný opt-out je filtr `{{ value \| html.trusted }}` (výstup vždy přes sanitizer); allow-list URL schémat + `#` fallback a audit `BlockedUrlScheme` | 3 |
+| B4 | **ANO** | `ITemplateEngine.Render` / `IEmailTemplateRenderer.RenderAsync` mají **jednu signaturu s volitelnými parametry** (`TemplateRenderOptions?`, `CancellationToken`) — binárně jiná signatura, **bez default interface metody** | 3 |
+| B5 | **ANO** (částečně) | `LayoutSeverity`: nová hodnota `Info = 2`, existující `Warning = 0` a `Error = 1` explicitně zafixované **beze změny číselných hodnot**; breaking jen pro exhaustivní `switch` bez `default` | 10 |
+| B6 | **ANO** (částečně) | Lokalizace: `.resx` → embedded JSON, `AddTempoEmailTemplates` už nevolá `AddLocalization()` | 5 |
+| B7 | **ANO** | **Nový balíček `Tempo.Blazor.EmailTemplates.Engine`**: `AddTempoEmailTemplateEngine` se přesunul do něj (namespace `Tempo.Blazor.EmailTemplates.Abstractions` — D21), `AddTempoEmailTemplates` je `[Obsolete]` a jen deleguje na `AddTempoEmailTemplateEditor(o => configure?.Invoke(o.Security))` (engine neregistruje; náhled bez rendereru = `Unavailable` s textem o chybějící registraci), `HtmlContentSanitizer.Sanitize` (static) → `IHtmlContentSanitizer` (`AngleSharpHtmlContentSanitizer` v Engine, konzervativní fallback v Abstractions), `TemplateVariableExtractor` → `ITemplateVariableExtractor`/`ScribanTemplateVariableExtractor`, `ITemplateEngine` v UI nahrazen `ITemplateValidator`. **Migrace:** přidat `PackageReference Tempo.Blazor.EmailTemplates.Engine` a volat `AddTempoEmailTemplateEngine()`; WASM editor místo toho dodá `IEmailPreviewRenderer` (+ volitelně serverový `ITemplateValidator`) | 6 |
+| B8 | ne, ale mění výstup | `EmailTemplateDocument.SchemaVersion` v serializovaném JSON (`static CurrentSchemaVersion => 1`) | 4 |
+| B9 | ne, ale mění rovnost | `TemplateVariableInfo.Description`/`Group` v `Equals`/`GetHashCode` | 7A |
+| B10 | ne (chování) | Tlačítko „MJML“ → „Export“ (viditelný text; `data-tm-mjml-btn` zůstává kvůli E2E) | 7/10 |
+| B11 | ne (chování) | Popisky polí panelu vlastností jsou nově lokalizované (dřív `Humanize` z názvu vlastnosti) — hostitelské testy na anglické texty musí upravit selektory | 7A |
+| B12 | ne (a11y/UX) | Import/export: `TmModal.Footer` (Zrušit/Importovat, Zavřít/Stáhnout), `TmCodeEditor` místo `<textarea>`, limity z `EmailImportOptions` (výchozí 5 MB = dnešní chování) | 10 |
+| B13 | ne | Validace: nálezy jako `<button>`, souhrn počtů, titulek+popis, `LayoutSeverity.Info` + pravidlo preheaderu | 10 |
+| B14 | **ne** (explicitně) | `EmailImportOptions.MaxInputBytes` = **5 MB** (dnešní hodnota) — zpřísnění by bylo breaking, proto se nedělá | 4 |
+| B15 | ne (aditivní) | **Skutečné overloady, stávající signatury zůstávají:** `MjmlGenerator()` (bezparametrický ctor) + nový `MjmlGenerator(IHtmlContentSanitizer sanitizer)`; `EmailDocumentVariableExtractor.Extract(document)` + nový `Extract(document, ITemplateVariableExtractor extractor)`; `MjmlImporter.Import(mjml, IMjmlIncludeResolver? includeResolver = null)` + nový `Import(mjml, IMjmlIncludeResolver? includeResolver, EmailImportOptions? options)`; `EmailTemplateSerializer.Deserialize(json)` + nový `Deserialize(json, EmailImportOptions? options)` | 3/4/6 |
+
+**Pravidlo:** každá položka B1–B7 musí mít v `CHANGELOG.md` (sekce `## 2.10.0` → „Breaking / Migration“)
+popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking change = vadná implementace.
+
+---
+
+## 4. Politika breaking changes
+
+1. **Balíčky `Tempo.Blazor.EmailTemplates`, `Tempo.Blazor.EmailTemplates.Abstractions` a nový
+   `Tempo.Blazor.EmailTemplates.Engine`: breaking changes jsou POVOLENÉ.** Rozhodnutí zadavatele
+   (bod 5 původních rozhodnutí): komponentu zatím žádná aplikace nepoužívá (PostrionCore P06 je gate
+   `after-external-pipeline` a čeká na 2.10.0). Každá breaking change ale **musí** mít položku
+   v `CHANGELOG.md`, sekce `## 2.10.0` → „Breaking / Migration“, s popisem dopadu a ukázkou před/po.
+2. **Jádro `Tempo.Blazor` a ostatní balíčky tento plán NEMĚNÍ.** Potřebné jádrové primitivy
+   (`TmEditorShell`, `TmLayoutMode`, `TmLayoutBreakpoints`, `MobilePanelPresentation`, `EditorShellPanel`,
+   mobilní prezentace `TmModal.MobilePresentation` / `TmDrawer` (`DrawerPosition.Bottom`) / `TmSidePanel`,
+   `TmKeyboardShortcutsHelp.Description`) **dodává základový plán `faf503eb-bf08-4f5f-8c33-08df2362aa32`** —
+   ve stromu už jsou (viz [3.1](#31-jádrové-api-na-kterém-kontrakt-stojí-ověřeno-ve-stromu-dodal-základový-plán-faf503eb)).
+   Pokud by Fáze 8/10 potřebovala jádrovou změnu, platí app-level pravidlo **G5**: breaking změny jsou povolené
+   v celé aplikaci, ale vždy s CHANGELOG „Breaking / Migration“ a ukázkou před/po; preferuj aditivní řešení.
+3. **Preferuj aditivní řešení.** Kde aditivní varianta neztrácí kvalitu (nový parametr s bezpečným defaultem,
+   nová hodnota vedle stávající), použij ji místo změny stávajícího členu (příklady: `EmailItemEditingMode.Inline`
+   zůstává default, `ReadOnly` default `false`, `EmailImportOptions.MaxInputBytes` zůstává 5 MB,
+   `MjmlImporter.Import(mjml, options = null)`).
+4. **Balíčková hranice je součást kontraktu.** Nový balíček `Tempo.Blazor.EmailTemplates.Engine` nesmí
+   z Abstractions udělat závislost na Scriban/Mjml.Net/AngleSharp: `grep PackageReference` v Abstractions
+   = jen BCL/`System.Text.Json`/`FluentValidation`/`Microsoft.Extensions.*`. UI balíček nesmí referencovat
+   Engine (jinak se Mjml.Net vrátí do WASM). Hlídá test/CI kontrola (Fáze 6 a 12).
+5. **Kontrakt z Fáze 1 je závazný pro PostrionCore P06** a je **potvrzen uživatelem 2026-10-20** (viz 5).
+   Odchylka v názvech/typech veřejného API = konzultace s uživatelem + zápis decision (`upsert_decision`),
+   nikdy tichá změna. To platí i pro typy, které v tomto dokumentu nejsou (např. `EmailDocumentLimitsValidator`).
+6. **Release gate:** tag `v2.10.0` ani publikace na NuGet se neprovádí bez výslovného potvrzení uživatele
+   (hard blocker, Fáze 12). Před releasem ověřit `git tag --sort=-v:refname`.
+
+---
+
+## 5. Stav potvrzení
+
+> **KONTRAKT JE POTVRZEN UŽIVATELEM — 2026-10-20.** Deset otázek z první verze dokumentu je
+> převedeno na rozhodnutí (5.1) a review přidal nová rozhodnutí o rozdělení balíčků (5.2).
+> Fáze 2–12 se proti nim implementují; odchylka = konzultace s uživatelem + decision, nikdy tichá změna.
+
+### 5.1 Rozhodnutí k původním otázkám (potvrzeno 2026-10-20)
+
+| # | Otázka | Rozhodnutí |
+|---|---|---|
+| D1 | `EmailSaveStatus` | `Saved` / `Failed` / `Conflict` + `public bool IsSaved => Status == EmailSaveStatus.Saved;` (žádná alternativa bez enumu). |
+| D2 | `IsDirty` | `public bool IsDirty { get; private set; }` **vlastněný editorem** + `[Parameter] EventCallback<bool> IsDirtyChanged`; není to `[Parameter]`, `@bind-IsDirty` se nepoužívá. |
+| D3 | Namespace nových typů | `Tempo.Blazor.EmailTemplates.Abstractions.Editing`. |
+| D4 | `ITemplateFunctionProvider` | `IReadOnlyDictionary<string, Delegate> GetFunctions()` + `IReadOnlyList<TemplateFunctionInfo> Describe()`; `TemplateFunctionInfo(string Name, string? Description)`; **žádné Scriban typy**; delegáty jen synchronní, parametry/návrat `string`/`bool`/číselné/`decimal`/`DateTime`/`DateTimeOffset`/`IEnumerable` těch; jména `^[a-z][a-z0-9_]*$`; resoluce `IEnumerable<ITemplateFunctionProvider>`; výsledky jdou přes stejný `MemberFilter`. |
+| D5 | Overloady vs DIM | Jedna signatura s volitelnými parametry (`TemplateRenderOptions? options = null`, `CancellationToken cancellationToken = default`) — **breaking B4, bez default interface metody**. |
+| D6 | `EmailTemplateEditorOptions` | `Security` (`TemplateSecurityOptions`) + `ISet<string> FunctionNamespaces`; validace toleruje neznámé členy registrovaných namespace. |
+| D7 | `Breakpoints` editoru | Veřejný `[Parameter] public TmLayoutBreakpoints? Breakpoints`; `null` = 768/1200. |
+| D8 | `TemplateVariableInfo` | `Description` **+ `Group`**, **bez** `SampleValue` (ukázkové hodnoty nejsou v kontraktu). |
+| D9 | `LayoutSeverity.Info` | Nová hodnota **+ jedno pravidlo** (preheader delší než 100 znaků). |
+| D10 | `ToolboxCollapsed` | Ponechat vlastní parametr na editoru (mapuje se na shell `CollapsedPanels`). |
+
+### 5.2 Nová rozhodnutí z review (2026-10-20)
+
+| # | Rozhodnutí |
+|---|---|
+| D11 | **Nový balíček `Tempo.Blazor.EmailTemplates.Engine`** (Scriban, Mjml.Net, AngleSharp); Abstractions bez těchto závislostí; UI referencuje jen Abstractions. Rozdělení typů a registrací v [3.0](#30-balíčky-a-závislosti-nové-rozhodnutí-2026-10-20) — breaking B7, provedeno ve **Fázi 6**. |
+| D12 | **Sanitizace bez AngleSharpu v Abstractions:** `HtmlSanitizerPolicy` (jediný zdroj allow-listů) + `IHtmlContentSanitizer` v Abstractions; `AngleSharpHtmlContentSanitizer` v Engine (autoritativní); `ConservativeHtmlContentSanitizer` (BCL, **tokenizer s HTML-encode, NIKDY regex-based strip/replace**; emituje jen allow-list tagy bez atributů, výjimka `a[href]` po kontrole schémat z §3.7a; nikdy `style`/`on*`; neznámý/nevalidní vstup = escapovaný text, nikdy průchod; rozdíl proti AngleSharpu jen k přísnějšímu) jako výchozí pro editor bez Engine; obě musí projít stejnou XSS sadou včetně mutation-XSS vektorů a fuzz „výstup ⊆ policy“ — **plná omezení viz D22**. |
+| D13 | **Limity importu aditivně:** `MaxInputBytes` = **5 MB** (dnešní chování, ne breaking) + `ImportOptions` na editoru i import dialogu + overloady `Import`/`Deserialize` s `EmailImportOptions?`. |
+| D14 | **Escapování:** `TemplateEscapeMode` je `internal`; veřejný `TemplateRenderOptions` má jen `Culture`/`UseDocumentLanguageCulture`; jediný opt-out je `{{ value \| html.trusted }}` s výstupem vždy přes sanitizer. |
+| D15 | **URL bezpečnost:** allow-list `http`/`https`/`mailto`/`tel` + relativní + `#`; jiné schéma → `#` + `RenderError` + audit `BlockedUrlScheme`; hostitel allow-list nerozšiřuje; `EmailTableCell.BackgroundColor` validovat regexem barvy. |
+| D16 | **Ukládání single-flight** se `Revision` + `CancellationToken` a `IsSaving`; `IsDirty = false` jen po `Saved` a shodné revizi; `OnSave == null`/`ReadOnly` → `Failed` bez volání hostitele; po `Conflict` autosave pozastaven; ETag drží hostitel (sémantika v [3.2](#32-ukládací-kontrakt-tempoblazoremailtemplatesabstractionsediting--nový-namespace)). |
+| D17 | **Náhled:** `Failed`/`Unavailable` vrací `Html`/`Text`/`Subject` = `""` (nikdy `null`); `EmailPreviewRequest.CultureName`; iframe zůstává `sandbox="" srcdoc` **i pro serverové HTML** (žádné `allow-scripts`); nový náhled ruší předchozí `CancellationToken`. |
+| D18 | **`SchemaVersion`:** `public static int CurrentSchemaVersion => 1;` (vlastnost, ne `const`); `Deserialize` migruje `v → Current`; `Serialize` zapisuje `Current`; vyšší verze = `EmailTemplateSerializationException`; `EmailTemplateSerializer.ReadSchemaVersion(string json)`. |
+| D19 | **`LayoutSeverity`:** nová hodnota `Info = 2`, existující `Warning = 0` a `Error = 1` explicitně zafixované beze změny číselných hodnot; explicitní rank `LayoutSeverityRank.Of(severity)` pro řazení zobrazení; breaking jen pro exhaustivní `switch`. |
+| D20 | **Mobilní chrome:** Uložit + `ToolbarStart` v `Header`, `ToolbarEnd` v overflow `⋮`; `MobileActions` jen Zpět/Znovu/Náhled/Validovat; `ResolvedLayoutChanged` vystavený; `ToolboxCollapsed` z `CollapsedPanelsChanged` (na mobilu ignorováno). |
+| D21 | **Namespace přesouvaných typů se NEMĚNÍ:** `…Abstractions.Templating`, `…Abstractions.Rendering` a `…Abstractions` zůstávají i po přesunu do balíčku Engine. Výslovně: `AddTempoEmailTemplateEngine` má namespace **`Tempo.Blazor.EmailTemplates.Abstractions`**, i když žije v assembly/balíčku Engine. **V Engine nesmí vzniknout typ se stejným FQN jako typ, který zůstává v Abstractions** (jinak CS0433); přesouvané typy z Abstractions mizí, nikdy se neduplikují. |
+| D22 | **`ConservativeHtmlContentSanitizer` v Abstractions přijat s omezeními:** tokenizer s HTML-encode, nikdy regex strip/replace; default akce = zakódovat `<`, `>`, `&`, `"`, `'`; znovu se emitují jen allow-list tagy bez atributů, výjimka `a[href]` po kontrole schémat z §3.7a; nikdy `style` ani `on*`; neuzavřené tagy se doplní, osiřelé zavírací se zakódují (vylučuje vložení `</mj-text>`, `<mj-raw>`, `<!--`); entity se dekódují a znovu zakódují; neznámý/nevalidní vstup degraduje na escapovaný text, nikdy na průchod; rozdíl proti AngleSharpu jen k přísnějšímu; paritní XSS sada včetně mutation-XSS (`<svg>`, `<math>`, `<noscript>`, `<!--`, `<![CDATA[`, nevalidní vnoření) + fuzz „výstup ⊆ policy“. UX: WASM export může ztratit formátování, které AngleSharp povolí. |
+
+### 5.3 Dříve otevřené volby (uzavřeno rozhodnutími D21/D22)
+
+Obě implementační volby z prvního kola review jsou **potvrzené jako rozhodnutí** — namespace
+přesouvaných typů (D21) a konzervativní sanitizer v Abstractions s omezeními N8 (D22). Tato sekce už
+neobsahuje žádné otevřené otázky.
+
+---
+
+## 6. Poznámky pro následující fáze
+
+- **Fáze 2–4** pracují ještě v Abstractions: **nesmí** přidat novou `PackageReference` (Scriban/Mjml.Net/
+  AngleSharp už tam jsou jen do Fáze 6). Sandbox, escapování a kultura se implementují tam, přesun do
+  Engine je mechanický (Fáze 6).
+- **Fáze 5** musí opravit posunuté popisy JSON dokumentace (2.8.1) — ověřeno, že příčinou je párování popisů
+  v pořadí deklarace proti abecedně řazeným parametrům; po opravě regenerovat bundle a `validate --fail-on-drift`.
+- **Fáze 6** (rozdělení registrace) je fáze, kde vzniká balíček `Tempo.Blazor.EmailTemplates.Engine`
+  (D11): přesun typů bez změny logiky, nové soubory `tests/Tempo.Blazor.EmailTemplates.Engine.Tests`
+  pro Scriban/Mjml.Net/AngleSharp typy, `AddTempoEmailTemplateModel/Engine/Editor` (3.0), `ITemplateValidator`
+  a `ITemplateVariableExtractor` + `RegexTemplateVariableExtractor`, `IHtmlContentSanitizer` +
+  `ConservativeHtmlContentSanitizer`/`AngleSharpHtmlContentSanitizer` (D12), `LocalEmailPreviewRenderer`.
+  CI/test musí ověřit, že Abstractions nemá Scriban/Mjml.Net/AngleSharp a UI nemá Engine.
+  **Přepnutí volajících už tady:** WASM demo `src/Tempo.Blazor.Demo/Program.cs:125` →
+  `AddTempoEmailTemplateEditor()` + HTTP `IEmailPreviewRenderer` (důkaz, že Engine ve WASM není potřeba);
+  15 volání `Services.AddTempoEmailTemplates()` v testech → `AddTempoEmailTemplateEditor()` +
+  `AddTempoEmailTemplateEngine()`; `Demo.Api/Program.cs:164` dostane `PackageReference` na Engine
+  a jeho poziční `RenderAsync(document, model, ct)` (`EmailTemplateEndpoints.cs:58,93`) se přepíše na
+  `cancellationToken: ct`.
+- **Fáze 7A/10** musí použít `ITemplateValidator` (ne `ITemplateEngine`) a čitelně degradovat, když
+  chybí (3.0) — `TmEmailValidationPanel` dnes injektuje `ITemplateEngine` (`TmEmailValidationPanel.razor:2`).
+  Import dialog může zůstat na `new MjmlImporter()` (pure BCL), ale limity bere z `ImportOptions`
+  (D13) — dnes natvrdo 5 MB (`TmEmailImportDialog.razor:63`).
+- **Fáze 8** staví přímo na `TmEditorShell` (rozhodnutí EM2(a)) — žádný lokální `EmailEditorLayout` ani mezikrok
+  s migrací; `data-tm-*` selektory musí zůstat, jinak spadnou E2E — v `TmEmailTemplateEditor.razor` je jich 13:
+  `data-tm-email-editor`, `data-tm-toolbox`, `data-tm-canvas`, `data-tm-properties`, `data-tm-status`,
+  `data-tm-undo`, `data-tm-redo`, `data-tm-preview-btn`, `data-tm-validate-btn`, `data-tm-import-btn`,
+  `data-tm-mjml-btn`, `data-tm-help-btn`, `data-tm-save`.
+- **Fáze 11** musí parametrizovat E2E viewport (dnes pevně 1440×900 v `EmailTemplateE2ETestBase.cs:37`) a přidat
+  1024/390/320 px + screenshoty podle referenčních `screen-id`. (Přepnutí WASM dema na
+  `AddTempoEmailTemplateEditor()` + HTTP `IEmailPreviewRenderer` patří už do Fáze 6 — viz výše.)
+- **Fáze 12**: release gate = základový plán `faf503eb` má Completed F0/F1/F2/F6; bez toho 2.10.0 nevychází.
+  Do CHANGELOG patří i B7 s receptem na migraci balíčku.
