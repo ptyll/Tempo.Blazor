@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Scriban;
@@ -21,10 +22,11 @@ public sealed class ScribanTemplateEngine : IEscapingTemplateEngine
 {
     private readonly TemplateSecurityOptions _options;
     private readonly IReadOnlyList<ITemplateSecurityAuditSink> _auditSinks;
+    private readonly TemplateFunctionRegistry _functions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ScribanTemplateEngine>? _logger;
 
-    /// <summary>Initializes the engine with the given sandbox options and audit sinks.</summary>
+    /// <summary>Initializes the engine with the given sandbox options, audit sinks and host functions.</summary>
     /// <param name="options">
     /// Sandbox limits; validated defaults are used when omitted. The engine keeps its own copy, so a
     /// later mutation of the passed instance cannot weaken a render.
@@ -32,11 +34,20 @@ public sealed class ScribanTemplateEngine : IEscapingTemplateEngine
     /// <param name="auditSinks">
     /// Optional audit sinks. A sink that throws is logged and swallowed; it never changes the render.
     /// </param>
+    /// <param name="functionProviders">
+    /// Optional host function providers (<see cref="ITemplateFunctionProvider"/>). Every provider is
+    /// validated when the engine is constructed — an invalid namespace or function name, a namespace
+    /// colliding with a Scriban builtin or another provider, an async delegate or an unsupported
+    /// delegate signature throws <see cref="ArgumentException"/> — and its namespaces are added to
+    /// <see cref="TemplateSecurityOptions.FunctionNamespaces"/>.
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException">A limit is zero or negative.</exception>
+    /// <exception cref="ArgumentException">A function provider cannot be exposed to templates.</exception>
     public ScribanTemplateEngine(
         TemplateSecurityOptions? options = null,
-        IEnumerable<ITemplateSecurityAuditSink>? auditSinks = null)
-        : this(options, auditSinks, TimeProvider.System, null)
+        IEnumerable<ITemplateSecurityAuditSink>? auditSinks = null,
+        IEnumerable<ITemplateFunctionProvider>? functionProviders = null)
+        : this(options, auditSinks, TimeProvider.System, TemplateFunctionRegistry.Create(functionProviders))
     {
     }
 
@@ -44,10 +55,17 @@ public sealed class ScribanTemplateEngine : IEscapingTemplateEngine
         TemplateSecurityOptions? options,
         IEnumerable<ITemplateSecurityAuditSink>? auditSinks,
         TimeProvider? timeProvider,
+        TemplateFunctionRegistry? functions = null,
         ILogger<ScribanTemplateEngine>? logger = null)
     {
         _options = (options ?? new TemplateSecurityOptions()).Clone();
         _options.Validate();
+        _functions = functions ?? TemplateFunctionRegistry.Empty;
+        foreach (var @namespace in _functions.NamespaceNames)
+        {
+            _options.FunctionNamespaces.Add(@namespace);
+        }
+
         _auditSinks = auditSinks?.Where(sink => sink is not null).ToArray() ?? [];
         _timeProvider = timeProvider ?? TimeProvider.System;
         _logger = logger;
@@ -76,7 +94,10 @@ public sealed class ScribanTemplateEngine : IEscapingTemplateEngine
         TemplateRenderOptions? options,
         TemplateEscapeMode escapeMode)
     {
-        _ = options; // per-render options (formatter culture) are applied by the culture phase
+        // The formatter culture is per render: an explicit Culture wins, otherwise the invariant
+        // culture (deterministic output — the document language is resolved by the renderer, which is
+        // the only layer that has the document).
+        var culture = options?.Culture ?? CultureInfo.InvariantCulture;
         var auditor = new TemplateSecurityAuditor(template, _auditSinks, _timeProvider, _logger);
 
         // Fail-closed gate: refused constructs abort the render before anything is evaluated.
@@ -98,7 +119,7 @@ public sealed class ScribanTemplateEngine : IEscapingTemplateEngine
 
         try
         {
-            using var context = new SandboxedTemplateContext(_options, escapeMode);
+            using var context = new SandboxedTemplateContext(_options, escapeMode, _functions, culture);
             context.PushGlobal(ObjectToScriptObjectConverter.ToScriptObject(model));
             var output = new SandboxedScriptOutput(_options.MaxOutputLength, _options.Timeout);
             context.PushOutput(output);

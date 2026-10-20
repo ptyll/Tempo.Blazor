@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
 using Tempo.Blazor.EmailTemplates.Abstractions.Templating;
@@ -75,6 +76,11 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
         ArgumentNullException.ThrowIfNull(document);
         cancellationToken.ThrowIfCancellationRequested();
 
+        // The formatter culture is resolved once for every pass of this render: an explicit Culture
+        // wins, otherwise UseDocumentLanguageCulture takes it from the document language, otherwise the
+        // engine's invariant default applies.
+        options = ResolveRenderOptions(document, options);
+
         var errors = new List<RenderError>();
         var reportedSchemes = new HashSet<string>(StringComparer.Ordinal);
         var reportedHandlers = new HashSet<string>(StringComparer.Ordinal);
@@ -109,6 +115,50 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
             : htmlGuard.Output;
 
         return Task.FromResult(new RenderResult(html, subject, preheader, textVersion, errors));
+    }
+
+    /// <summary>
+    /// Resolves the formatter culture of this render (§3.7): <see cref="TemplateRenderOptions.Culture"/>
+    /// wins, then <see cref="TemplateRenderOptions.UseDocumentLanguageCulture"/> takes it from the
+    /// document language, and a document without a usable language falls back to the invariant culture.
+    /// </summary>
+    private static TemplateRenderOptions? ResolveRenderOptions(
+        EmailTemplateDocument document,
+        TemplateRenderOptions? options)
+    {
+        if (options is null || options.Culture is not null || !options.UseDocumentLanguageCulture)
+        {
+            return options;
+        }
+
+        return new TemplateRenderOptions
+        {
+            Culture = ResolveDocumentCulture(document.Language),
+            UseDocumentLanguageCulture = options.UseDocumentLanguageCulture,
+        };
+    }
+
+    /// <summary>
+    /// Maps a document language (<c>cs</c>, <c>en-US</c>, …) to a culture, falling back to the
+    /// invariant culture for an empty or unknown code instead of failing the render.
+    /// </summary>
+    private static CultureInfo ResolveDocumentCulture(string? language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            return CultureInfo.InvariantCulture;
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(language);
+        }
+        catch (ArgumentException)
+        {
+            // CultureNotFoundException derives from ArgumentException: an unknown or malformed language
+            // is not a render error, it simply means "no culture preference".
+            return CultureInfo.InvariantCulture;
+        }
     }
 
     private string Substitute(

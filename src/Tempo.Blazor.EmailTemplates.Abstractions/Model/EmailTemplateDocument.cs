@@ -7,6 +7,19 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Model;
 /// </summary>
 public sealed class EmailTemplateDocument
 {
+    /// <summary>
+    /// The schema version the serializer writes and the version a migration upgrades to. It is a
+    /// property (not a <c>const</c>) so a future version can change it without recompiling consumers.
+    /// </summary>
+    public static int CurrentSchemaVersion => 1;
+
+    /// <summary>
+    /// Gets or sets the schema version of this document. The serializer always writes
+    /// <see cref="CurrentSchemaVersion"/>; a document read without the property is version 1 and
+    /// <see cref="Serialization.EmailTemplateSerializer.Deserialize(string)"/> migrates it upward.
+    /// </summary>
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
+
     /// <summary>Gets or sets the unique identifier of this document.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 

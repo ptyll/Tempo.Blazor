@@ -7,7 +7,7 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 /// is never scanned, so an e-mail body that merely mentions "Assembly" keeps rendering, while a
 /// template that references reflection, an environment/file root, an evaluating builtin or the
 /// <c>include</c> statement is refused before anything is evaluated. The scan is the loud half of the
-/// sandbox: <see cref="SandboxMemberPolicy"/> already makes the same accesses impossible, the scan
+/// sandbox: <c>SandboxMemberPolicy</c> already makes the same accesses impossible, the scan
 /// turns them into a render error instead of an empty string.
 /// </summary>
 internal static partial class SandboxTemplateScanner

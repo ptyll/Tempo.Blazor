@@ -23,4 +23,7 @@ public static class ImportKeys
 
     /// <summary>An <c>mj-include</c> could not be resolved.</summary>
     public const string IncludeUnresolved = "import.include_unresolved";
+
+    /// <summary>The input is larger than <see cref="EmailImportOptions.MaxInputBytes"/> (UTF-8 bytes).</summary>
+    public const string InputTooLarge = "import.input_too_large";
 }

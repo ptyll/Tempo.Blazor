@@ -983,6 +983,14 @@ public sealed class EmailTableCell
 }
 ```
 
+> **Rozhodnutí `EMAIL-IMPORT-JSON-DEPTH`** (Fáze 4, 2026-10-20): `MaxNestingDepth` počítá vnoření
+> **modelu**, `JsonSerializerOptions.MaxDepth` počítá úrovně JSON. Doslovné `MaxDepth = MaxNestingDepth`
+> by odmítlo každý dokument s tabulkou, proto `Deserialize(json, options)` používá per-call kopii
+> `Options` s `MaxDepth = clamp(14 + 6·MaxNestingDepth, 14, 10 000)` (6 = nejdražší kontejner, wrapper)
+> a prosté `Deserialize(json)` zůstává na `max(64, odvozená výchozí)`. Invarianta hlídaná testem:
+> dokument, který projde `EmailDocumentLimitsValidator`, se vždy deserializuje. Budoucí migrační kroky
+> schématu poběží nad `JsonNode` před typovou deserializací.
+
 Předávání limitů do UI: **`[Parameter] public EmailImportOptions? ImportOptions { get; set; }`** na
 `TmEmailTemplateEditor` **i** `TmEmailImportDialog` (`null` = výchozí `new EmailImportOptions()`);
 editor ji předá dialogu. JSON deserializace použije per-call kopii `EmailTemplateSerializer.Options`

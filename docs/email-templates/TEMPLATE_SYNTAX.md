@@ -127,6 +127,109 @@ never in inline script.
 
 ---
 
+## Culture of formatters
+
+Numbers and dates are formatted with an explicit culture, never with the server's thread culture:
+
+```csharp
+// per render (service / preview)
+await renderer.RenderAsync(document, model, new TemplateRenderOptions { Culture = new CultureInfo("cs-CZ") });
+
+// or let the document language decide
+await renderer.RenderAsync(document, model, new TemplateRenderOptions { UseDocumentLanguageCulture = true });
+```
+
+| `TemplateRenderOptions` | Result |
+|---|---|
+| `Culture = cs-CZ` | `{{ price | math.format "N2" }}` → `1 234,50`, `{{ created | date.to_string "%d. %B %Y" }}` → `20. říjen 2026` |
+| `Culture = null`, `UseDocumentLanguageCulture = true` | the culture of `document.Language` (`cs`, `en-US`, …) |
+| `Culture = null`, `UseDocumentLanguageCulture = false` (default) | `CultureInfo.InvariantCulture` → `1,234.50`, `20. October 2026` |
+
+Rules:
+
+- An explicit `Culture` always wins over `UseDocumentLanguageCulture`.
+- A document language that is empty or not a known culture falls back to the invariant culture — a
+  render never fails because of it.
+- The renderer resolves the culture **once** and applies it to every pass (subject, preheader, body,
+  text version), so `{{ price }}` in the subject and in the body are formatted identically.
+- `ITemplateEngine.Render` has no document, so `UseDocumentLanguageCulture` alone falls back to the
+  invariant culture there; the document language is resolved by `IEmailTemplateRenderer`.
+
+The invariant default is what keeps tests and previews deterministic: a Czech server and an English
+server produce the same bytes unless the host asks for a culture.
+
+> `date.to_string` / `math.format` take their format argument in **double quotes**
+> (`{{ price | math.format "N2" }}`), and comparisons work as usual (`{{ if price > 100 }}`). The
+> generator masks each Scriban code span before it sanitizes authored block content and restores it
+> afterwards, so literals, `>` and `&&` inside `mj-text`/`mj-accordion-text` reach the engine intact.
+
+---
+
+## Application functions (host registry)
+
+An application can expose its own filters without forking the engine by implementing
+`ITemplateFunctionProvider` and registering it as a service:
+
+```csharp
+using Tempo.Blazor.EmailTemplates.Abstractions.Templating;
+
+public sealed class CurrencyFunctions : ITemplateFunctionProvider
+{
+    public string Namespace => "app";
+
+    public IReadOnlyDictionary<string, Delegate> GetFunctions() => new Dictionary<string, Delegate>
+    {
+        ["format_currency"] = new Func<decimal, string>(
+            value => value.ToString("N2", CultureInfo.InvariantCulture) + " Kč"),
+    };
+
+    public IReadOnlyList<TemplateFunctionInfo> Describe() =>
+        [new TemplateFunctionInfo("format_currency", "Formats an amount as Czech crowns.")];
+}
+
+services.AddSingleton<ITemplateFunctionProvider, CurrencyFunctions>();
+services.AddTempoEmailTemplateEngine();
+```
+
+```
+{{ total | app.format_currency }}
+{{ app.format_currency total }}
+```
+
+Rules enforced when the engine is constructed (i.e. when `ITemplateEngine` is resolved, so a
+misconfiguration fails at startup, never in the middle of a render):
+
+| Rule | Detail |
+|---|---|
+| Namespace | `^[a-z][a-z0-9_]*$` (for example `app`, `money`, `app_v2`). |
+| Builtins are off limits | `string`, `array`, `object`, `math`, `date`, `html`, `regex`, `timespan` (and every other Scriban namespace) cannot be used or shadowed. |
+| One namespace, one provider | Two providers must not share a namespace. |
+| Function name | `^[a-z][a-z0-9_]*$`. |
+| Synchronous delegates only | A delegate returning `Task`/`ValueTask` is refused. |
+| Contract types only | Parameters and the return value are `string`, `bool`, a numeric type, `decimal`, `DateTime`, `DateTimeOffset` or an `IEnumerable<T>` of those. `object`, `Type`, delegates, `char`, `Guid` and arbitrary host types are refused. |
+| `Describe()` | Must describe functions `GetFunctions()` actually exposes (documentation of a missing function is a registration error). Empty list is fine. |
+| Registration lifetime | **Singleton only** (`services.AddSingleton<ITemplateFunctionProvider, MyProvider>()`); a scoped or transient registration makes resolving `ITemplateEngine` fail with `InvalidOperationException`, because the engine snapshots the functions once. |
+| Keyword namespace | A Scriban keyword (`for`, `this`, `if`, `end`, `func`, `null`, `true`, `false`, `in`, `while`, `case`, `when`, `else`, `ret`, `break`, `continue`, `capture`, `readonly`, `import`, `with`, `wrap`, `tablerow`, `empty`) could never be called and is refused. |
+
+What a provider **cannot** do:
+
+- escape the sandbox — its results pass the same member filter and the same limits (`LoopLimit`,
+  `MaxOutputLength`, `Timeout`, …), and its arguments are template values the member filter already
+  vetted;
+- hand out a `Type`, a `MemberInfo`, a delegate, a value of a forbidden namespace or an internal
+  escaping marker (`TrustedHtml`/`EscapedHtml`) — the signature is validated at registration and the
+  result is re-checked on every call (fail closed: the render fails and the refusal is audited);
+- leak a host object graph through an enumerable result: the value is materialized into a script array of
+  scalars (an enumeration is bounded by `LoopLimit`), so `class Leaky : IEnumerable<string> { public string
+  Password }` exposes no `password` member to the template;
+- leak an exception message: a delegate that throws is logged and the render error only says
+  `Template function 'app.x' failed.`;
+- skip HTML escaping — the result of a provider function is escaped exactly like any other
+  expression result, so `{{ app.tag }}` returning `<b>x</b>` renders `&lt;b&gt;x&lt;/b&gt;`.
+  `html.trusted` stays the only opt-out and always runs the sanitizer.
+
+---
+
 ## Filters
 
 Filters transform values with the pipe `|` operator:

@@ -153,6 +153,106 @@
   sink, so `BlockedUrlScheme` events need no extra wiring. The audit detail is the scheme name only —
   never the URL.
 
+- **Formatter culture per render (`TemplateRenderOptions.Culture`).** `TemplateRenderOptions` gained
+  `CultureInfo? Culture` and `bool UseDocumentLanguageCulture`. A render now always uses an explicit
+  culture: the one the host passes, else the culture of `EmailTemplateDocument.Language` when
+  `UseDocumentLanguageCulture` is set, else `CultureInfo.InvariantCulture`. The renderer resolves it
+  **once** and applies it to every pass (subject, preheader, body, text version), so
+  `{{ price | math.format "N2" }}` renders `1 234,50` for `cs-CZ` and `{{ price }}` follows the same
+  rule. An explicit `Culture` wins over the document language; an unknown document language falls back
+  to the invariant culture instead of failing the render. The invariant default keeps output
+  deterministic — a Czech server and an English server produce the same bytes unless the host asks
+  otherwise.
+
+  ```csharp
+  await renderer.RenderAsync(document, model, new TemplateRenderOptions { Culture = new CultureInfo("cs-CZ") });
+  // or: new TemplateRenderOptions { UseDocumentLanguageCulture = true }   → document.Language decides
+  ```
+
+- **Host function registry (`ITemplateFunctionProvider`).** An application can add its own template
+  filters — a currency formatter, a product-name helper — without forking the engine. A provider
+  exposes one namespace plus a dictionary of synchronous delegates, and the engine registers them as
+  `{{ value | app.format_currency }}`. Registration is validated when `ITemplateEngine` is resolved:
+  namespace `^[a-z][a-z0-9_]*$`, never a Scriban builtin namespace (`string`, `array`, `object`,
+  `math`, `date`, `html`, `regex`, `timespan`, …), never a namespace another provider already owns,
+  function names `^[a-z][a-z0-9_]*$`, synchronous delegates only and contract-typed parameters/return
+  values (`string`, `bool`, numeric, `decimal`, `DateTime`, `DateTimeOffset`,
+  `IEnumerable<T>` of those) — everything else throws `ArgumentException` at startup. A function's
+  arguments run under the same member filter and limits as any other expression, its result is
+  re-checked on every call (`Type`, delegates, forbidden namespaces and the internal
+  `TrustedHtml`/`EscapedHtml` markers fail the render closed) and it is HTML-escaped exactly like any
+  other expression output. Provider namespaces are also added to
+  `TemplateSecurityOptions.FunctionNamespaces` (deep-copied by `Clone`), so a host-side template
+  validator can tell a host function namespace from a data path.
+
+  ```csharp
+  services.AddSingleton<ITemplateFunctionProvider, CurrencyFunctions>();   // Namespace = "app"
+  services.AddTempoEmailTemplateEngine();                                  // → {{ total | app.format_currency }}
+  ```
+
+  A provider must be a **singleton** (the registry snapshots it once; a scoped/transient registration is
+  refused with `InvalidOperationException`), its namespace must not be a Scriban keyword (`for`, `this`,
+  `if`, `end`, `null`, `…`), an enumerable result is materialized into a script array of scalars (so a host
+  type that happens to be enumerable cannot be read through the template, and the enumeration is bounded by
+  `LoopLimit`), and an exception thrown by a delegate is logged and surfaced as
+  `Template function 'app.x' failed.` — never with the host exception's message (it could carry a path, a
+  connection string or a value).
+
+- **`EmailTemplateDocument.SchemaVersion` + `EmailTemplateSerializer.ReadSchemaVersion`.** The persisted
+  document carries a schema version (`public static int CurrentSchemaVersion => 1`, a property, not a
+  `const`). `Serialize` always stamps the current version, `Deserialize` migrates an older document to
+  it (a document without the property is version 1) and a document written by a **newer** schema
+  throws `EmailTemplateSerializationException` with `Key = SerializationKeys.UnsupportedSchemaVersion`
+  instead of being silently mis-read. `ReadSchemaVersion(json)` reads just the header, which is what a
+  host needs to decide about a migration or to show a friendly error. A non-numeric version is
+  `SerializationKeys.InvalidSchemaVersion`.
+
+- **Import limits (`EmailImportOptions`) and the reusable `EmailDocumentLimitsValidator`.** The MJML
+  importer and the JSON deserializer now bound their input: `MaxInputBytes` (default **5 MB**, measured
+  as a UTF-8 byte count — today's hard-coded behaviour, so this is additive, B14),
+  `MaxSections` (200), `MaxBlocks` (2000) and `MaxNestingDepth` (8). Exceeding a limit is a **fatal**
+  `ImportMessage` with a localization key (`import.input_too_large`,
+  `validation.limits.sections|blocks|nesting`) and `ImportResult.Document` is `null` — never an
+  exception. `Deserialize(json, EmailImportOptions)` applies `MaxNestingDepth` as a JSON-parser depth
+  bound (a per-call copy of `Options`, the static instance stays untouched); the bound is derived from
+  the model nesting depth (a block nesting level costs several JSON levels), so a document within the
+  model limit always parses and a hostile payload still cannot nest without bound. The same limits are
+  available server-side through `EmailDocumentLimitsValidator` before a document is saved.
+
+  ```csharp
+  var options = new EmailImportOptions { MaxInputBytes = 10 * 1024 * 1024 };
+  var result = new MjmlImporter().Import(mjml, includeResolver: null, options: options);
+  var violations = new EmailDocumentLimitsValidator(options).Validate(document);   // [] when it fits
+  ```
+
+### Fixed
+
+- **Scriban code inside block content renders again (regression from 2.9.0).** `MjmlGenerator` sanitized
+  the authored content of `mj-text`/`mj-accordion-text` *before* substitution, and the sanitizer's
+  quote-safe formatter entity-encoded the code itself, so `{{ price | math.format "N2" }}`,
+  `{{ text | string.truncate 5 "..." }}`, `{{ if price > 100 }}` and any `&&` produced
+  `Invalid token found &` and an empty `RenderResult.Html`. Code spans (`{{ … }}`, and `{% … %}` when it
+  carries no markup) are now masked, the rest of the content is sanitized, and the spans are restored
+  verbatim (`HtmlContentSanitizer.SanitizeTemplateContent`); everything inside a span is still escaped by
+  the render pipeline and the whole substituted MJML/HTML is still checked by `MarkupGuard`, so a value in
+  an attribute cannot break out and markup cannot be smuggled through a span.
+
+  ```text
+  before  {{ price | math.format "N2" }}   → RenderResult.Html == "" (error: Invalid token found `&`)
+  after   {{ price | math.format "N2" }}   → 1,234.50   (cs-CZ: 1 234,50)
+  ```
+
+- **A deeply nested document can no longer crash the process.** The MJML importer measures the element
+  depth iteratively right after parsing (a 20 000× nested `mj-hero`/`mj-group` payload used to overflow the
+  mapping recursion), threads the model depth through the mapping as a second guard, refuses
+  self-/mutually-recursive `mj-include` references (a path stack plus an include depth limit of 8) and the
+  JSON reader/writer bounds depth from the document's own nesting. `EmailDocumentLimitsValidator` and the
+  schema-version code walk the block tree iteratively too, and `Deserialize(json, options)` also enforces
+  `MaxInputBytes` and the section/block limits (throwing `EmailTemplateSerializationException` with the
+  localization key, never a silent accept). The JSON depth bound is derived from the model nesting limit
+  (`14 + 6 × MaxNestingDepth`, decision `EMAIL-IMPORT-JSON-DEPTH`); a plain `Deserialize(json)` without
+  options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
+
 ### Breaking / Migration
 
 - **Variable values are HTML-escaped in the body (B3).** The body used to substitute model values into
@@ -298,6 +398,25 @@
   readable fields and properties only (and runs the same member policy), so a template cannot call a
   static helper on the model type. Migration: hand the value in explicitly if a template really needs
   it.
+
+- **The serialized document now carries `schemaVersion` (B8 — output change, not an API break).** The
+  JSON written by `EmailTemplateSerializer` / `EmailTemplateMapper.ToContentJson` has one extra
+  property and the version is always the current one, whatever the instance says.
+
+  ```text
+  before: {"id":"…","name":"…","subject":"…","sections":[…]}
+  after:  {"schemaVersion":1,"id":"…","name":"…","subject":"…","sections":[…]}
+  ```
+
+  Nothing needs to be migrated: a stored document without the property is read as version 1 and
+  migrated on the next load, and unknown properties were already ignored. A payload from a **newer**
+  schema is refused (`EmailTemplateSerializationException` with `SerializationKeys.UnsupportedSchemaVersion`)
+  rather than parsed on a guess.
+
+- **`EmailImportOptions.MaxInputBytes` stays at 5 MB on purpose (B14 — explicitly *not* a breaking
+  change).** The import dialog's historical 5 MB limit is now the default of a configurable option, so
+  existing imports keep working; raise or lower it per call. The limit is measured in **UTF-8 bytes**,
+  so multi-byte content is judged by its transported size.
 
 ## 2.9.1 (unreleased)
 
@@ -1321,6 +1440,34 @@
   `docs/localization-plurals.md`, README and AGENTS.md document the fourth language, and the
   `ITmLocalizer` JSON documentation now shows the decorator pattern for rewording shipped
   translations in an application (registered after `AddTempoBlazor()`).
+
+### Fixed
+
+- **Scriban code inside block content renders again (regression from 2.9.0).** `MjmlGenerator` sanitized
+  the authored content of `mj-text`/`mj-accordion-text` *before* substitution, and the sanitizer's
+  quote-safe formatter entity-encoded the code itself, so `{{ price | math.format "N2" }}`,
+  `{{ text | string.truncate 5 "..." }}`, `{{ if price > 100 }}` and any `&&` produced
+  `Invalid token found &` and an empty `RenderResult.Html`. Code spans (`{{ … }}`, and `{% … %}` when it
+  carries no markup) are now masked, the rest of the content is sanitized, and the spans are restored
+  verbatim (`HtmlContentSanitizer.SanitizeTemplateContent`); everything inside a span is still escaped by
+  the render pipeline and the whole substituted MJML/HTML is still checked by `MarkupGuard`, so a value in
+  an attribute cannot break out and markup cannot be smuggled through a span.
+
+  ```text
+  before  {{ price | math.format "N2" }}   → RenderResult.Html == "" (error: Invalid token found `&`)
+  after   {{ price | math.format "N2" }}   → 1,234.50   (cs-CZ: 1 234,50)
+  ```
+
+- **A deeply nested document can no longer crash the process.** The MJML importer measures the element
+  depth iteratively right after parsing (a 20 000× nested `mj-hero`/`mj-group` payload used to overflow the
+  mapping recursion), threads the model depth through the mapping as a second guard, refuses
+  self-/mutually-recursive `mj-include` references (a path stack plus an include depth limit of 8) and the
+  JSON reader/writer bounds depth from the document's own nesting. `EmailDocumentLimitsValidator` and the
+  schema-version code walk the block tree iteratively too, and `Deserialize(json, options)` also enforces
+  `MaxInputBytes` and the section/block limits (throwing `EmailTemplateSerializationException` with the
+  localization key, never a silent accept). The JSON depth bound is derived from the model nesting limit
+  (`14 + 6 × MaxNestingDepth`, decision `EMAIL-IMPORT-JSON-DEPTH`); a plain `Deserialize(json)` without
+  options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
 
 ### Breaking / Migration
 
@@ -4597,6 +4744,34 @@ unchanged. The number had to open anyway: `v2.8.26` is a spent tag naming `ae72f
 announce commit is conventionally the first commit after the tag — these four landed without it,
 which is exactly the red
 `AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` is written to refuse.
+
+### Fixed
+
+- **Scriban code inside block content renders again (regression from 2.9.0).** `MjmlGenerator` sanitized
+  the authored content of `mj-text`/`mj-accordion-text` *before* substitution, and the sanitizer's
+  quote-safe formatter entity-encoded the code itself, so `{{ price | math.format "N2" }}`,
+  `{{ text | string.truncate 5 "..." }}`, `{{ if price > 100 }}` and any `&&` produced
+  `Invalid token found &` and an empty `RenderResult.Html`. Code spans (`{{ … }}`, and `{% … %}` when it
+  carries no markup) are now masked, the rest of the content is sanitized, and the spans are restored
+  verbatim (`HtmlContentSanitizer.SanitizeTemplateContent`); everything inside a span is still escaped by
+  the render pipeline and the whole substituted MJML/HTML is still checked by `MarkupGuard`, so a value in
+  an attribute cannot break out and markup cannot be smuggled through a span.
+
+  ```text
+  before  {{ price | math.format "N2" }}   → RenderResult.Html == "" (error: Invalid token found `&`)
+  after   {{ price | math.format "N2" }}   → 1,234.50   (cs-CZ: 1 234,50)
+  ```
+
+- **A deeply nested document can no longer crash the process.** The MJML importer measures the element
+  depth iteratively right after parsing (a 20 000× nested `mj-hero`/`mj-group` payload used to overflow the
+  mapping recursion), threads the model depth through the mapping as a second guard, refuses
+  self-/mutually-recursive `mj-include` references (a path stack plus an include depth limit of 8) and the
+  JSON reader/writer bounds depth from the document's own nesting. `EmailDocumentLimitsValidator` and the
+  schema-version code walk the block tree iteratively too, and `Deserialize(json, options)` also enforces
+  `MaxInputBytes` and the section/block limits (throwing `EmailTemplateSerializationException` with the
+  localization key, never a silent accept). The JSON depth bound is derived from the model nesting limit
+  (`14 + 6 × MaxNestingDepth`, decision `EMAIL-IMPORT-JSON-DEPTH`); a plain `Deserialize(json)` without
+  options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
 
 ### Breaking / Migration
 

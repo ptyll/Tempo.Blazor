@@ -1,8 +1,11 @@
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model.Blocks;
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 
 namespace Tempo.Blazor.EmailTemplates.Abstractions.Import;
 
@@ -10,28 +13,65 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Import;
 /// Imports MJML markup into an <see cref="EmailTemplateDocument"/>. Parsing is XML-based with an
 /// <c>mj-raw</c> shim (raw content may be non-well-formed HTML), tolerates comments, preserves unknown
 /// elements as raw blocks and unknown attributes in <see cref="EmailBlockBase.ExtraAttributes"/>, and
-/// never throws — failures are returned as <see cref="ImportMessage"/>s.
+/// never throws — failures (including a breach of the <see cref="EmailImportOptions"/> limits) are
+/// returned as <see cref="ImportMessage"/>s.
 /// </summary>
 public sealed partial class MjmlImporter
 {
     private const string RawTokenPrefix = "MJRAWPLACEHOLDER_";
     private const string RawTokenSuffix = "_END";
 
+    /// <summary>Maximum include nesting; a self- or mutually-referencing include stops here.</summary>
+    private const int MaxIncludeDepth = 8;
+
     private readonly List<ImportMessage> _warnings = new();
     private readonly List<ImportMessage> _errors = new();
+    private readonly HashSet<string> _includeStack = new(StringComparer.Ordinal);
     private List<string> _rawStore = new();
     private IMjmlIncludeResolver? _includes;
+    private EmailImportOptions _limits = new();
+    private int _includeDepth;
+    private bool _depthExceeded;
 
     /// <summary>Imports the given MJML markup, optionally resolving <c>mj-include</c> references.</summary>
+    /// <param name="mjml">The MJML markup to import.</param>
+    /// <param name="includeResolver">Optional resolver for <c>mj-include</c> references.</param>
     public ImportResult Import(string mjml, IMjmlIncludeResolver? includeResolver = null)
+        => Import(mjml, includeResolver, null);
+
+    /// <summary>
+    /// Imports the given MJML markup with explicit <paramref name="options"/> limits (input size in UTF-8
+    /// bytes, sections, blocks, nesting depth). Exceeding a limit is a fatal
+    /// <see cref="ImportResult.Errors"/> entry with a localization key — never an exception — and the
+    /// document is not produced.
+    /// </summary>
+    /// <param name="mjml">The MJML markup to import.</param>
+    /// <param name="includeResolver">Optional resolver for <c>mj-include</c> references.</param>
+    /// <param name="options">The limits to apply; <see langword="null"/> means <see cref="EmailImportOptions"/> defaults.</param>
+    public ImportResult Import(string mjml, IMjmlIncludeResolver? includeResolver, EmailImportOptions? options = null)
     {
         _warnings.Clear();
         _errors.Clear();
+        _includeStack.Clear();
+        _includeDepth = 0;
+        _depthExceeded = false;
         _rawStore = new List<string>();
         _includes = includeResolver;
+        var limits = options ?? new EmailImportOptions();
+        _limits = limits;
 
         if (string.IsNullOrWhiteSpace(mjml))
             return Fail(new ImportMessage(ImportKeys.Empty));
+
+        // The size limit is measured in UTF-8 bytes, not characters: a multi-byte payload must not slip
+        // through a character-count check (the input is transported and compiled as UTF-8).
+        var inputBytes = Encoding.UTF8.GetByteCount(mjml);
+        if (inputBytes > limits.MaxInputBytes)
+        {
+            return Fail(new ImportMessage(
+                ImportKeys.InputTooLarge,
+                inputBytes.ToString(CultureInfo.InvariantCulture)));
+        }
 
         XElement root;
         try
@@ -46,6 +86,13 @@ public sealed partial class MjmlImporter
         if (!NameIs(root, "mjml"))
             return Fail(new ImportMessage(ImportKeys.NotMjml, root.Name.LocalName));
 
+        // A hostile attribute tree must be refused before the mapping recursion touches it: 20 000 nested
+        // mj-hero/mj-group elements used to overflow the stack inside MapBlock. The element depth of a
+        // legal document is 4 (mjml/body/section/column) + 3 per model nesting level (a wrapper adds
+        // wrapper+section+column) plus a little room for inline markup inside a text block.
+        if (MaxElementDepth(root) > ElementDepthLimit(limits))
+            return Fail(new ImportMessage(DocumentValidationKeys.TooDeeplyNested, "mjml"));
+
         var document = new EmailTemplateDocument();
         var lang = root.Attribute("lang")?.Value;
         if (!string.IsNullOrEmpty(lang)) document.Language = lang;
@@ -55,6 +102,14 @@ public sealed partial class MjmlImporter
 
         var body = root.Elements().FirstOrDefault(e => NameIs(e, "mj-body"));
         if (body is not null) ImportBody(body, document);
+
+        // Limits are checked before any content finding: a document over the limits is refused outright,
+        // so its validation warnings would only be noise.
+        foreach (var finding in new Rendering.EmailDocumentLimitsValidator(limits).Validate(document))
+            _errors.Add(new ImportMessage(finding.Key, finding.Path));
+
+        if (_errors.Count > 0)
+            return new ImportResult { Document = null, Warnings = _warnings.ToList(), Errors = _errors.ToList() };
 
         // EI.16: surface content/layout issues found in the imported document as warnings
         // (e.g. foreign templates with images missing alt text).
@@ -68,6 +123,52 @@ public sealed partial class MjmlImporter
     {
         _errors.Add(error);
         return new ImportResult { Document = null, Warnings = _warnings.ToList(), Errors = _errors.ToList() };
+    }
+
+    /// <summary>
+    /// The deepest element nesting a legal document can have: the MJML envelope (4) and the most
+    /// expensive container per model nesting level (wrapper → section → column = 3), plus room for the
+    /// inline markup a text block may carry.
+    /// </summary>
+    private static int ElementDepthLimit(EmailImportOptions limits)
+    {
+        var derived = 8L + 3L * limits.MaxNestingDepth;
+        return derived >= int.MaxValue ? int.MaxValue : (int)derived;
+    }
+
+    /// <summary>Measures the element depth iteratively (no recursion: the input is untrusted).</summary>
+    private static int MaxElementDepth(XElement root)
+    {
+        var max = 0;
+        var stack = new Stack<(XElement Element, int Depth)>();
+        stack.Push((root, 1));
+        while (stack.Count > 0)
+        {
+            var (element, depth) = stack.Pop();
+            if (depth > max)
+            {
+                max = depth;
+            }
+
+            foreach (var child in element.Elements())
+            {
+                stack.Push((child, depth + 1));
+            }
+        }
+
+        return max;
+    }
+
+    /// <summary>Records the nesting violation once; the import then fails without producing a document.</summary>
+    private void RecordDepthExceeded()
+    {
+        if (_depthExceeded)
+        {
+            return;
+        }
+
+        _depthExceeded = true;
+        _errors.Add(new ImportMessage(DocumentValidationKeys.TooDeeplyNested, "mjml"));
     }
 
     // ── Raw shim ──────────────────────────────────────────────────────────────────────────────
@@ -170,38 +271,44 @@ public sealed partial class MjmlImporter
         if (!string.IsNullOrEmpty(bg)) document.Styles.BackgroundColor = bg;
 
         foreach (var e in body.Elements())
-            ImportBodyChild(e, document);
+            ImportBodyChild(e, document, depth: 1);
     }
 
-    private void ImportBodyChild(XElement e, EmailTemplateDocument document)
+    private void ImportBodyChild(XElement e, EmailTemplateDocument document, int depth)
     {
         switch (e.Name.LocalName)
         {
             case "mj-section":
-                document.Sections.Add(MapSection(e));
+                document.Sections.Add(MapSection(e, depth));
                 break;
             case "mj-wrapper":
                 // Body-level wrapper: hoist its inner sections (the model has no body-level wrapper).
                 _warnings.Add(new ImportMessage(ImportKeys.WrapperFlattened));
+                if (depth > _limits.MaxNestingDepth)
+                {
+                    RecordDepthExceeded();
+                    break;
+                }
+
                 foreach (var inner in e.Elements().Where(c => NameIs(c, "mj-section")))
-                    document.Sections.Add(MapSection(inner));
+                    document.Sections.Add(MapSection(inner, depth + 1));
                 break;
             case "mj-include":
                 ResolveInclude(e, resolved =>
                 {
                     foreach (var child in resolved.Elements())
-                        ImportBodyChild(child, document);
+                        ImportBodyChild(child, document, depth);
                 });
                 break;
             default:
                 // hero / raw / unknown at body level → wrap into a section+column to fit the model.
                 _warnings.Add(new ImportMessage(ImportKeys.ElementWrapped, e.Name.LocalName));
-                document.Sections.Add(WrapInSection(MapBlock(e)));
+                document.Sections.Add(WrapInSection(MapBlock(e, depth)));
                 break;
         }
     }
 
-    private EmailSection MapSection(XElement e)
+    private EmailSection MapSection(XElement e, int depth)
     {
         var section = new EmailSection();
         var a = new AttrBag(e);
@@ -221,26 +328,26 @@ public sealed partial class MjmlImporter
         foreach (var child in e.Elements())
         {
             if (NameIs(child, "mj-column"))
-                section.Columns.Add(MapColumn(child));
+                section.Columns.Add(MapColumn(child, depth));
             else if (NameIs(child, "mj-group"))
             {
                 _warnings.Add(new ImportMessage(ImportKeys.ElementWrapped, "mj-group"));
                 var col = new EmailColumn();
-                col.Blocks.Add(MapGroup(child));
+                col.Blocks.Add(MapGroup(child, depth));
                 section.Columns.Add(col);
             }
             else if (!IsComment(child))
             {
                 _warnings.Add(new ImportMessage(ImportKeys.ElementWrapped, child.Name.LocalName));
                 var col = new EmailColumn();
-                col.Blocks.Add(MapBlock(child));
+                col.Blocks.Add(MapBlock(child, depth));
                 section.Columns.Add(col);
             }
         }
         return section;
     }
 
-    private EmailColumn MapColumn(XElement e)
+    private EmailColumn MapColumn(XElement e, int depth)
     {
         var col = new EmailColumn();
         var a = new AttrBag(e);
@@ -252,7 +359,7 @@ public sealed partial class MjmlImporter
         col.Padding = a.Take("padding");
         ApplyCommon(a, v => col.CssClass = v, col.MjClasses, col.ExtraAttributes);
 
-        ImportBlocks(e, col.Blocks);
+        ImportBlocks(e, col.Blocks, depth);
         return col;
     }
 
@@ -260,7 +367,7 @@ public sealed partial class MjmlImporter
     /// Imports the block children of a container, reattaching any <c>{{ if expr }}…{{ end }}</c>
     /// Scriban wrapper emitted around a block as that block's <see cref="EmailBlockBase.VisibleWhen"/>.
     /// </summary>
-    private void ImportBlocks(XElement parent, IList<EmailBlockBase> target)
+    private void ImportBlocks(XElement parent, IList<EmailBlockBase> target, int depth)
     {
         string? pendingCondition = null;
         foreach (var node in parent.Nodes())
@@ -273,7 +380,7 @@ public sealed partial class MjmlImporter
             }
             if (node is XElement element)
             {
-                var block = MapBlock(element);
+                var block = MapBlock(element, depth);
                 if (pendingCondition is not null)
                 {
                     block.VisibleWhen = pendingCondition;
@@ -295,8 +402,16 @@ public sealed partial class MjmlImporter
 
     // ── Blocks ──────────────────────────────────────────────────────────────────────────────────
 
-    private EmailBlockBase MapBlock(XElement e)
+    private EmailBlockBase MapBlock(XElement e, int depth)
     {
+        // Second line of defence behind the element-depth guard: the documented model limit is applied
+        // while mapping, so a mapping regression cannot walk deeper than the limit.
+        if (depth > _limits.MaxNestingDepth)
+        {
+            RecordDepthExceeded();
+            return new EmailTextBlock();
+        }
+
         return e.Name.LocalName switch
         {
             "mj-text" => MapText(e),
@@ -310,9 +425,9 @@ public sealed partial class MjmlImporter
             "mj-navbar" => MapNavbar(e),
             "mj-carousel" => MapCarousel(e),
             "mj-accordion" => MapAccordion(e),
-            "mj-hero" => MapHero(e),
-            "mj-wrapper" => MapWrapper(e),
-            "mj-group" => MapGroup(e),
+            "mj-hero" => MapHero(e, depth),
+            "mj-wrapper" => MapWrapper(e, depth),
+            "mj-group" => MapGroup(e, depth),
             _ => MapUnknown(e),
         };
     }
@@ -573,7 +688,7 @@ public sealed partial class MjmlImporter
         return b;
     }
 
-    private EmailHeroBlock MapHero(XElement e)
+    private EmailHeroBlock MapHero(XElement e, int depth)
     {
         var b = new EmailHeroBlock();
         var a = new AttrBag(e);
@@ -587,11 +702,11 @@ public sealed partial class MjmlImporter
         b.VerticalAlign = a.Take("vertical-align") ?? b.VerticalAlign;
         ApplyBlockCommon(a, b);
 
-        ImportBlocks(e, b.Blocks);
+        ImportBlocks(e, b.Blocks, depth + 1);
         return b;
     }
 
-    private EmailWrapperBlock MapWrapper(XElement e)
+    private EmailWrapperBlock MapWrapper(XElement e, int depth)
     {
         var b = new EmailWrapperBlock();
         var a = new AttrBag(e);
@@ -604,11 +719,11 @@ public sealed partial class MjmlImporter
         ApplyBlockCommon(a, b);
 
         foreach (var child in e.Elements().Where(c => NameIs(c, "mj-section")))
-            b.Sections.Add(MapSection(child));
+            b.Sections.Add(MapSection(child, depth + 1));
         return b;
     }
 
-    private EmailGroupBlock MapGroup(XElement e)
+    private EmailGroupBlock MapGroup(XElement e, int depth)
     {
         var b = new EmailGroupBlock();
         var a = new AttrBag(e);
@@ -619,30 +734,50 @@ public sealed partial class MjmlImporter
         ApplyBlockCommon(a, b);
 
         foreach (var child in e.Elements().Where(c => NameIs(c, "mj-column")))
-            b.Columns.Add(MapColumn(child));
+            b.Columns.Add(MapColumn(child, depth + 1));
         return b;
     }
 
     private void ResolveInclude(XElement e, Action<XElement> onResolved)
     {
         var path = e.Attribute("path")?.Value ?? e.Attribute("src")?.Value;
-        var content = path is null ? null : _includes?.Resolve(path);
-        if (content is null)
+        if (path is null || _includeDepth >= MaxIncludeDepth || !_includeStack.Add(path))
         {
+            // Unresolvable, too deeply nested or already being expanded (a self/mutually recursive
+            // include): warn instead of looping.
             _warnings.Add(new ImportMessage(ImportKeys.IncludeUnresolved, path));
             return;
         }
 
         try
         {
-            // Wrap the fragment so multiple top-level elements parse under a single root.
-            var fragment = XElement.Parse("<mj-include-fragment>" + ShimRaw(content) + "</mj-include-fragment>",
-                LoadOptions.PreserveWhitespace);
-            onResolved(fragment);
+            var content = _includes?.Resolve(path);
+            if (content is null)
+            {
+                _warnings.Add(new ImportMessage(ImportKeys.IncludeUnresolved, path));
+                return;
+            }
+
+            _includeDepth++;
+            try
+            {
+                // Wrap the fragment so multiple top-level elements parse under a single root.
+                var fragment = XElement.Parse("<mj-include-fragment>" + ShimRaw(content) + "</mj-include-fragment>",
+                    LoadOptions.PreserveWhitespace);
+                onResolved(fragment);
+            }
+            finally
+            {
+                _includeDepth--;
+            }
         }
         catch (XmlException)
         {
             _warnings.Add(new ImportMessage(ImportKeys.IncludeUnresolved, path));
+        }
+        finally
+        {
+            _includeStack.Remove(path);
         }
     }
 

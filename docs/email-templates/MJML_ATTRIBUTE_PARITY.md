@@ -8,7 +8,8 @@ the generator can omit default-valued attributes for clean output.
 Legend: **bold** = required for valid output / a11y. `default` shown after the attribute.
 Common positional/colour values use MJML formats (`px`, `%`, hex/rgb/named colours, CSS shorthand).
 
-> Engine note (see E0.9 findings): the default renderer is **Mjml.Net 4.11.0**. It supports every
+> Engine note (see E0.9 findings): the default renderer is **Mjml.Net 4.15.0** (attribute parity
+> re-verified after the phase-2 bump from 4.11.0 — no change). It supports every
 > component below **except `mj-html-attributes`**, which the model still carries for lossless
 > round-trip (held, not rendered). The generator must emit `mj-attributes` children with **explicit
 > close tags** (self-closing breaks Mjml.Net's head parser).

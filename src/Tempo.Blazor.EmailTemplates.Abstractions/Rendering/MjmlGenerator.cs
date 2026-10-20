@@ -202,7 +202,7 @@ public sealed class MjmlGenerator
             .Optional("text-transform", t.TextTransform)
             .Defaulted("align", t.Align, "left")
             .BlockCommon(t, "10px 25px");
-        sb.Append("<mj-text").Append(a).Append('>').Append(HtmlContentSanitizer.Sanitize(t.Content)).Append("</mj-text>\n");
+        sb.Append("<mj-text").Append(a).Append('>').Append(HtmlContentSanitizer.SanitizeTemplateContent(t.Content)).Append("</mj-text>\n");
     }
 
     private static void WriteButton(StringBuilder sb, EmailButtonBlock b)
@@ -412,7 +412,7 @@ public sealed class MjmlGenerator
             var ta = new MjmlAttributeBuffer().Optional("color", item.TitleColor);
             sb.Append("<mj-accordion-title").Append(ta).Append('>')
               .Append(MjmlEscape.Text(item.Title)).Append("</mj-accordion-title>\n");
-            sb.Append("<mj-accordion-text>").Append(HtmlContentSanitizer.Sanitize(item.Content)).Append("</mj-accordion-text>\n");
+            sb.Append("<mj-accordion-text>").Append(HtmlContentSanitizer.SanitizeTemplateContent(item.Content)).Append("</mj-accordion-text>\n");
             sb.Append("</mj-accordion-element>\n");
         }
         sb.Append("</mj-accordion>\n");

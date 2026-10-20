@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using Scriban;
 using Scriban.Parsing;
@@ -38,7 +39,9 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
 
     public SandboxedTemplateContext(
         TemplateSecurityOptions options,
-        TemplateEscapeMode escapeMode = TemplateEscapeMode.Html)
+        TemplateEscapeMode escapeMode = TemplateEscapeMode.Html,
+        TemplateFunctionRegistry? functions = null,
+        CultureInfo? culture = null)
         : base(StringComparer.Ordinal)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -46,6 +49,13 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
         _escapeMode = escapeMode;
         _cts = new CancellationTokenSource(options.Timeout);
         CancellationToken = _cts.Token;
+
+        // Formatters must be deterministic: the engine always pushes an explicit culture (invariant
+        // when the render did not ask for one), so the server's thread culture never leaks into output.
+        if (culture is not null)
+        {
+            PushCulture(culture);
+        }
 
         LoopLimit = options.LoopLimit;
         RecursiveLimit = options.RecursiveLimit;
@@ -71,6 +81,7 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
 
         RemoveUnsafeBuiltins();
         RegisterHtmlFunctions();
+        RegisterFunctionNamespaces(functions);
         // No TemplateLoader is set on purpose: `include` fails instead of reading files.
     }
 
@@ -222,5 +233,30 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
         functions = new ScriptObject();
         HtmlTemplateFunctions.Register(functions);
         BuiltinObject.SetValue(HtmlTemplateFunctions.Namespace, functions, readOnly: true);
+    }
+
+    /// <summary>
+    /// Adds the host function namespaces (<see cref="ITemplateFunctionProvider"/>). The registry was
+    /// validated when the engine was constructed, so a namespace can neither shadow a builtin nor
+    /// another provider; the guard here is the last line of defence (fail closed rather than override).
+    /// </summary>
+    private void RegisterFunctionNamespaces(TemplateFunctionRegistry? functions)
+    {
+        if (functions is null || functions.IsEmpty)
+        {
+            return;
+        }
+
+        foreach (var @namespace in functions.NamespaceNames)
+        {
+            if (BuiltinObject.ContainsKey(@namespace))
+            {
+                throw new ArgumentException(
+                    $"Template function namespace '{@namespace}' collides with a builtin namespace of the sandbox.",
+                    nameof(functions));
+            }
+
+            BuiltinObject.SetValue(@namespace, functions.CreateScope(@namespace), readOnly: true);
+        }
     }
 }

@@ -930,7 +930,7 @@ public sealed class ReportEmailDeliveryService : IReportScheduledDeliveryService
             AttachmentFileName = export.FileName,
             SentAt = _clock.UtcNow,
         };
-        var rendered = await _renderer.RenderAsync(document, model, cancellationToken).ConfigureAwait(false);
+        var rendered = await _renderer.RenderAsync(document, model, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!rendered.Success)
         {
             throw new InvalidOperationException(string.Join("; ", rendered.Errors.Select(error => error.Message)));

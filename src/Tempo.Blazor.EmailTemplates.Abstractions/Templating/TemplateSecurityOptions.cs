@@ -48,12 +48,27 @@ public sealed class TemplateSecurityOptions
     public bool StrictVariables { get; set; }
 
     /// <summary>
-    /// Creates the engine's private snapshot of the options, so mutating the instance a host passed to
-    /// the constructor can never weaken a later render. Every member is currently a value type or an
-    /// immutable scalar; a reference-typed member added later (for example the phase-4
-    /// <c>FunctionNamespaces</c> set) MUST be copied deeply here, not shared.
+    /// Namespaces of the registered <see cref="ITemplateFunctionProvider"/>s (D6). The engine adds every
+    /// provider namespace to its own copy, so a host-side template validator can tell a host function
+    /// namespace (<c>app.format_currency</c>) from a data path and tolerate the unknown members of
+    /// exactly these namespaces. It never widens the sandbox: the namespaces are validated when the
+    /// engine is constructed and the member filter, the limits and the escaping keep applying.
     /// </summary>
-    internal TemplateSecurityOptions Clone() => (TemplateSecurityOptions)MemberwiseClone();
+    public ISet<string> FunctionNamespaces { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Creates the engine's private snapshot of the options, so mutating the instance a host passed to
+    /// the constructor can never weaken a later render. Reference-typed members (for example
+    /// <see cref="FunctionNamespaces"/>) are copied deeply, never shared.
+    /// </summary>
+    internal TemplateSecurityOptions Clone()
+    {
+        var clone = (TemplateSecurityOptions)MemberwiseClone();
+        clone.FunctionNamespaces = FunctionNamespaces is null
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : new HashSet<string>(FunctionNamespaces, StringComparer.Ordinal);
+        return clone;
+    }
 
     /// <summary>
     /// Rejects every non-positive limit and every <see cref="TimeSpan"/> that is not strictly
