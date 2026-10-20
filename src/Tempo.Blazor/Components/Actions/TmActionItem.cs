@@ -30,8 +30,54 @@ public sealed class TmActionItem
     /// </summary>
     public int Priority { get; set; }
 
+    /// <summary>
+    /// Pins the item to the surface or to the overflow menu, independently of
+    /// <see cref="Priority"/>: <see cref="ActionOverflow.Never"/> keeps it on the surface,
+    /// <see cref="ActionOverflow.Always"/> puts it in the "More" menu even when the budget would
+    /// show it, <see cref="ActionOverflow.Auto"/> (default) lets the budget and the priority rank
+    /// decide. Never-pinned items count against the visible budget; always-pinned items do not.
+    /// </summary>
+    public ActionOverflow Overflow { get; set; }
+
+    /// <summary>
+    /// Marks a destructive action. The overflow menu tints the entry with the danger colour so a
+    /// destructive item keeps its meaning when it leaves the surface.
+    /// </summary>
+    public bool Danger { get; set; }
+
+    /// <summary>
+    /// The action's on/off state when it is a toggle. <see langword="null"/> (default) is a plain
+    /// action — a <c>menuitem</c> in the "More" menu. <see langword="true"/>/<see langword="false"/>
+    /// make it a <c>menuitemcheckbox</c> with <c>aria-checked</c> and a check mark in the menu, and
+    /// add <c>aria-pressed</c> to its tile on the mobile action bar. Activating it still runs
+    /// <see cref="OnClick"/> (and closes the menu like every entry — the close-before-invoke
+    /// contract); the host flips the state in the callback.
+    /// </summary>
+    public bool? Checked { get; set; }
+
+    /// <summary>
+    /// Renders a toggle whose <see cref="Checked"/> is <see langword="false"/> as partially on
+    /// (<c>aria-checked</c> / <c>aria-pressed</c> = <c>mixed</c>). Ignored when
+    /// <see cref="Checked"/> is <see langword="null"/> or <see langword="true"/>.
+    /// </summary>
+    public bool CheckedMixed { get; set; }
+
     /// <summary>Disables the action. Disabled items render as disabled buttons/menuitems.</summary>
     public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Stable key of the group the action belongs to in the "More" menu. Consecutive items (in
+    /// <c>Items</c> order — grouping never reorders) with the same non-empty key render as one
+    /// <c>role="group"</c> section named by <see cref="GroupLabel"/>, and adjacent runs are divided by
+    /// a <c>role="separator"</c>. Null or empty means ungrouped. No effect on the surface itself.
+    /// </summary>
+    public string? Group { get; set; }
+
+    /// <summary>
+    /// Accessible name and visible header of the item's group in the "More" menu, read from the FIRST
+    /// item of a run. Empty renders the run without a group wrapper (separators only).
+    /// </summary>
+    public string? GroupLabel { get; set; }
 
     /// <summary>
     /// The action itself. Invoked exactly once per user activation. Create the callback with

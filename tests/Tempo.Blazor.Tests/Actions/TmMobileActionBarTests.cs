@@ -21,6 +21,7 @@ public class TmMobileActionBarTests : LocalizationTestBase
         string? icon = null,
         bool disabled = false,
         bool keepMenuOpen = false,
+        ActionOverflow overflow = ActionOverflow.Auto,
         EventCallback? onClick = null)
         => new()
         {
@@ -30,6 +31,7 @@ public class TmMobileActionBarTests : LocalizationTestBase
             Priority = priority,
             Disabled = disabled,
             KeepMenuOpen = keepMenuOpen,
+            Overflow = overflow,
             OnClick = onClick ?? default,
         };
 
@@ -60,6 +62,42 @@ public class TmMobileActionBarTests : LocalizationTestBase
         menuItems.Select(i => i.TextContent.Trim()).Should().Equal("Four", "Five");
     }
 
+    [Fact]
+    public void AlwaysPinnedItem_IsInTheMoreMenu_EvenWithinTheBudget()
+    {
+        // F4: the pin is shared with the toolbar overflow — a bar honours it too.
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                Action("One"),
+                Action("Hidden", overflow: ActionOverflow.Always),
+                Action("Two"),
+            }));
+
+        cut.FindAll(".tm-mobile-action-bar__action").Select(b => b.GetAttribute("data-action-id"))
+            .Should().Equal("One", "Two");
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.FindAll("[role='menuitem']").Select(i => i.GetAttribute("data-action-id"))
+            .Should().Equal("Hidden");
+    }
+
+    [Fact]
+    public void NeverPinnedItem_StaysOnTheBar_WhateverItsPriority()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.MaxVisible, 2)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                Action("Low", priority: 0, overflow: ActionOverflow.Never),
+                Action("Mid", priority: 5),
+                Action("High", priority: 9),
+            }));
+
+        cut.FindAll(".tm-mobile-action-bar__action").Select(b => b.GetAttribute("data-action-id"))
+            .Should().Equal("Low", "High");
+    }
     [Fact]
     public void NoOverflow_RendersNoMoreButton()
     {
@@ -551,12 +589,16 @@ public class TmMobileActionBarTests : LocalizationTestBase
         var more = cut.Find(".tm-mobile-action-bar__more");
         more.GetAttribute("aria-haspopup").Should().Be("menu");
         more.GetAttribute("aria-expanded").Should().Be("false");
-        var controls = more.GetAttribute("aria-controls");
-        controls.Should().NotBeNullOrEmpty();
+        // F6 r2 G15: the controlled menu panel is not rendered while closed, so the trigger names no
+        // target (aria-controls must reference an element that exists).
+        more.HasAttribute("aria-controls").Should().BeFalse("the menu panel is absent while the menu is closed");
 
         more.Click();
 
-        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+        var open = cut.Find(".tm-mobile-action-bar__more");
+        open.GetAttribute("aria-expanded").Should().Be("true");
+        var controls = open.GetAttribute("aria-controls");
+        controls.Should().NotBeNullOrEmpty();
         cut.Find(".tm-mobile-action-bar__menu-panel").Id.Should().Be(controls);
     }
 
@@ -805,12 +847,12 @@ public class TmMobileActionBarTests : LocalizationTestBase
         // element". bUnit cannot drive this (ElementReference.FocusAsync has no JSRuntime
         // attached in bUnit and throws InvalidOperationException instead — the live-browser
         // proof is the round-3 flip E2E), so this is a source guard: every FocusAsync site in
-        // the bar must catch JSException alongside InvalidOperationException (the TmDropdown
-        // pattern). Pre-fix the catch was InvalidOperationException-only, so ~half the
+        // the shared overflow menu (ActionOverflowMenu, which owns the bar's More menu since F4)
+        // must catch JSException alongside InvalidOperationException (the TmDropdown pattern). Pre-fix the catch was InvalidOperationException-only, so ~half the
         // 390→1100→390 flips ended in an unhandled exception and #blazor-error-ui (which kills
         // a Server circuit).
         var razor = File.ReadAllText(RepoPath(
-            "src", "Tempo.Blazor", "Components", "Actions", "TmMobileActionBar.razor"));
+            "src", "Tempo.Blazor", "Components", "Actions", "ActionOverflowMenu.cs"));
 
         var focusSites = System.Text.RegularExpressions.Regex.Matches(razor, @"FocusAsync\(");
         focusSites.Count.Should().BeGreaterThanOrEqualTo(2,
@@ -839,6 +881,33 @@ public class TmMobileActionBarTests : LocalizationTestBase
         var act = () => cut.Find(".tm-mobile-action-bar__more").Click();
         act.Should().NotThrow();
         cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    // ── C2: a checkable item's tile carries aria-pressed ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(true, false, "true")]
+    [InlineData(false, true, "mixed")]
+    [InlineData(false, false, "false")]
+    public void CheckedItem_TileCarriesAriaPressed(bool state, bool mixed, string expected)
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.MaxVisible, 3)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                new() { Id = "tool", Label = "Tool", Checked = state, CheckedMixed = mixed },
+                Action("Plain"),
+                Action("Another"),
+            }));
+
+        var tile = cut.FindAll(".tm-mobile-action-bar__action")
+            .Single(b => b.GetAttribute("data-action-id") == "tool");
+        tile.GetAttribute("aria-pressed").Should().Be(expected);
+        // and a plain action still carries no pressed state at all.
+        cut.FindAll(".tm-mobile-action-bar__action")
+            .Single(b => b.GetAttribute("data-action-id") == "Plain")
+            .HasAttribute("aria-pressed").Should().BeFalse();
     }
 
     private static string BarCss(bool stripComments = false)

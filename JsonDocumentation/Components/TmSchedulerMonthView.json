@@ -14,6 +14,13 @@
       "description": "Currently displayed date (determines which month to show)."
     },
     {
+      "name": "Today",
+      "type": "DateTime",
+      "isRequired": false,
+      "default": "DateTime.Today",
+      "description": "Today's date in the display zone (highlights the today cell). Defaults to DateTime.Today."
+    },
+    {
       "name": "Events",
       "type": "IReadOnlyList<TmScheduleEvent>?",
       "isRequired": false,

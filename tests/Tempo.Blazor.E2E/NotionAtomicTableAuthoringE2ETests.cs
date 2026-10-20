@@ -97,12 +97,7 @@ public sealed class NotionAtomicTableAuthoringE2ETests : NotionE2ETestBase
 
     private static async Task AdvanceServerTokenAsync()
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var client = new HttpClient(handler);
+        using var client = DemoApiTestHttp.CreateClient();
         var response = await client.PostAsync(
             $"https://localhost:5100/api/notion/aggregate/e2e/advance-token/{PageId:D}",
             null);

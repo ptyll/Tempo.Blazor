@@ -172,6 +172,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional mention provider reused by comment composers."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmCommentDraftState>",
+      "isRequired": false,
+      "description": "Notifies the parent that the rail's aggregate comment draft state changed. The new-comment composer and every thread's reply/edit composers hold their text in private fields, so the rail host cannot observe them. The rail MERGES its own new-comment composer with the states all rendered TmDocumentCommentThreads report and fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. IsEditorOpen is true while the new-comment composer is mounted (not loading, ComposerOpen with a DraftAnchor) or any thread shows a composer; EditingCommentId carries the first thread's editing id; HasUnsavedContent is true when the composer OR any thread holds unsaved text. Threads the host removes are pruned and loading clears them all, and DiscardDraftAsync reaches the composer and every thread."
     }
   ]
 }

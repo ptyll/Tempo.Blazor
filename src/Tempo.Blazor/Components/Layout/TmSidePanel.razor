@@ -1,0 +1,248 @@
+@namespace Tempo.Blazor.Components.Layout
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+
+@* The standalone responsive inspector (F6). It never copies sheet or focus logic: the sheet
+   presentation composes TmDrawer (modal, so the drawer root promotes itself to the browser top
+   layer), the docked presentation renders in-flow exactly where the host places it. *@
+
+@if (EffectivePresentation == SidePanelPresentation.Docked)
+{
+    @if (Open)
+    {
+        <aside class="tm-side-panel tm-side-panel--docked @Class"
+               style="--tm-side-panel-width: @Width"
+               data-layout="@Context.CssModifier"
+               data-side="@SideName"
+               aria-labelledby="@(HasTitle ? _titleId : null)"
+               aria-label="@(HasTitle ? null : DefaultName)"
+               data-testid="@RootTestId("tm-side-panel")"
+               @attributes="AdditionalAttributes">
+            <header class="tm-side-panel__header">
+                @if (!string.IsNullOrEmpty(Title))
+                {
+                    <h2 class="tm-side-panel__title" id="@_titleId">@Title</h2>
+                }
+                @if (HeaderActions is not null)
+                {
+                    <div class="tm-side-panel__header-actions">@HeaderActions</div>
+                }
+                <button type="button"
+                        class="tm-side-panel__close tm-touch-target"
+                        aria-label="@Loc["TmSidePanel_Close"]"
+                        @onclick="CloseAsync">
+                    <TmIcon Name="x" Size="IconSize.Sm" />
+                </button>
+            </header>
+            <div class="tm-side-panel__body">
+                @ChildContent
+            </div>
+            @if (FooterContent is not null)
+            {
+                <footer class="tm-side-panel__footer">@FooterContent</footer>
+            }
+        </aside>
+    }
+}
+else if (Open)
+{
+    <TmDrawer IsOpen="true"
+              IsOpenChanged="OnOpenChanged"
+              Position="@SheetPosition"
+              Modal="true"
+              Width="@Width"
+              Class="@($"tm-side-panel-sheet {Class}")"
+              Title="@Title"
+              AriaLabel="@(HasTitle ? Title : DefaultName)"
+              LayoutMode="@(LayoutMode)"
+              InitialMode="@SheetInitialMode"
+              ResolvedLayoutChanged="OnSheetLayoutResolved"
+              ShowOverlay="true"
+              CloseOnOverlayClick="true"
+              CloseOnEscape="true"
+              RestoreFocusTargetId="@RestoreFocusTargetId"
+              FooterContent="FooterContent"
+              AdditionalAttributes="SheetAttributes">
+        <HeaderContent>
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <h2 class="tm-drawer__title" id="@_titleId">@Title</h2>
+            }
+            @if (HeaderActions is not null)
+            {
+                <div class="tm-side-panel__header-actions">@HeaderActions</div>
+            }
+        </HeaderContent>
+        <ChildContent>@ChildContent</ChildContent>
+    </TmDrawer>
+}
+
+@code {
+    private readonly string _titleId = $"tm-side-panel-title-{Guid.NewGuid():N}";
+    private TmLayoutMode _reported;
+    private bool _reportedInitialised;
+
+    /// <summary>
+    /// How the panel presents itself. <see cref="SidePanelPresentation.Auto"/> docks when its
+    /// CONTAINER resolves Desktop and composes a modal sheet otherwise — a side sheet, or a bottom
+    /// sheet when the VIEWPORT resolves Mobile;
+    /// <see cref="SidePanelPresentation.Docked"/> and <see cref="SidePanelPresentation.Sheet"/> pin
+    /// the choice at every width.
+    /// </summary>
+    [Parameter] public SidePanelPresentation Presentation { get; set; } = SidePanelPresentation.Auto;
+
+    /// <summary>Whether the panel is open. Two-way with <see cref="OpenChanged"/>.</summary>
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>Raised when the panel should open or close (every close path funnels through here).</summary>
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    /// <summary>Title shown in the panel header; also the accessible name of the sheet.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// The id of the host element (typically the button that opened the panel) focus returns to
+    /// when the SHEET presentation closes — whichever way it closes (Escape, header close, the
+    /// backdrop, a swipe, or the host setting <see cref="Open"/> to false). Null keeps the focus
+    /// scope default (the element that was focused when the sheet opened). The docked panel is
+    /// in-flow and leaves focus management to the host.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>Optional actions rendered in the header, next to the close button.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>Main body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional footer rendered below the body (apply / cancel actions of an inspector). Sticky at the bottom of the docked panel and of the sheet.</summary>
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    /// <summary>The edge the panel belongs to: <see cref="SidePanelSide.Right"/> (default, an inspector) or <see cref="SidePanelSide.Left"/> (a navigation or task panel). Decides the edge the side sheet slides in from.</summary>
+    [Parameter] public SidePanelSide Side { get; set; } = SidePanelSide.Right;
+
+    /// <summary>
+    /// Width of the docked panel and of the side sheet. Ignored by the bottom sheet, which sizes
+    /// from its snap point.
+    /// </summary>
+    [Parameter] public string Width { get; set; } = "360px";
+
+    /// <summary>
+    /// The layout the presentation resolves from. <see cref="TmLayoutMode.Auto"/> follows the
+    /// nearest unnamed layout context (the panel is positioned against its container); a forced
+    /// value never measures, so a test can render a mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the resolved layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
+    /// would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+
+    /// <summary>Extra CSS classes for the docked root (the sheet root carries them through <see cref="TmDrawer.Class"/>).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the docked root.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The container's layout — a side panel is positioned against its container (F1 contract).</summary>
+    [CascadingParameter] public TmLayoutContext? Container { get; set; }
+
+    /// <summary>The viewport's layout. The sheet presentation is positioned against the viewport (side sheet vs bottom sheet), so it reads this scope; without one the sheet's own drawer probe measures the viewport and the container is only the first-frame guess.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
+    private TmLayoutContext Context => new(LayoutMode, TmLayout.Resolve(LayoutMode, Container, null, InitialMode));
+
+    /// <summary>
+    /// The layout the SHEET geometry follows (side vs bottom): the forced mode, else the viewport
+    /// scope, else — with no scope — the drawer's own probe measurement, once it reports; until
+    /// then the guess the sheet OPENED with (the container is only the first-frame guess). While
+    /// the sheet is open a scope-less Auto panel freezes that open guess: a container cascade that
+    /// changes mid-open must not move an open sheet. Docked-vs-sheet stays on the container:
+    /// whether the panel has room in its host is a container question, where a modal surface sits
+    /// is a viewport one.
+    /// </summary>
+    private TmLayoutMode SheetMode => LayoutMode != TmLayoutMode.Auto
+        ? LayoutMode
+        : Viewport?.Resolved ?? _probedViewport ?? (Open ? _openGuess : null) ?? Context.Resolved;
+
+    /// <summary>
+    /// The drawer's first-frame layout: the viewport scope or the probe when there is one, else
+    /// the frozen open guess, else the container — the same chain <see cref="SheetMode"/> freezes
+    /// while open, so the drawer never starts a frame at a cascade that changed mid-open.
+    /// </summary>
+    private TmLayoutMode SheetInitialMode => LayoutMode != TmLayoutMode.Auto
+        ? LayoutMode
+        : Viewport?.Resolved ?? _probedViewport ?? _openGuess ?? Context.Resolved;
+
+    // C7: the viewport mode measured by the sheet's own drawer probe when no viewport scope exists.
+    private TmLayoutMode? _probedViewport;
+    // C7 follow-up: the sheet-mode guess in effect when the panel last OPENED (false -> true).
+    private TmLayoutMode? _openGuess;
+    private bool _wasOpen;
+
+    /// <summary>
+    /// The drawer reports a probe measurement that CHANGED its resolved layout. Only the scope-less
+    /// Auto case reads it; a scope or a forced mode already decided.
+    /// </summary>
+    private Task OnSheetLayoutResolved(TmLayoutMode mode)
+    {
+        if (LayoutMode != TmLayoutMode.Auto || Viewport is not null || _probedViewport == mode)
+            return Task.CompletedTask;
+        _probedViewport = mode;
+        return Task.CompletedTask; // EventCallback on this component re-renders it
+    }
+
+    private DrawerPosition SheetPosition => SheetMode == TmLayoutMode.Mobile
+        ? DrawerPosition.Bottom
+        : Side == SidePanelSide.Left ? DrawerPosition.Left : DrawerPosition.Right;
+
+    private bool HasTitle => !string.IsNullOrEmpty(Title);
+    private string DefaultName => Loc["TmSidePanel_DefaultTitle"];
+    private string SideName => Side == SidePanelSide.Left ? "left" : "right";
+
+    /// <summary>The unmatched attributes ride the sheet root exactly like the docked root, so a
+    /// host's data-testid and ARIA wiring survive the presentation switch.</summary>
+    private Dictionary<string, object>? SheetAttributes =>
+        AdditionalAttributes is null && string.IsNullOrEmpty(DataTestId) ? null
+        : AdditionalAttributes is null ? new Dictionary<string, object> { ["data-testid"] = DataTestId! }
+        : DataTestId is null ? AdditionalAttributes
+        : new Dictionary<string, object>(AdditionalAttributes) { ["data-testid"] = DataTestId };
+
+    private SidePanelPresentation EffectivePresentation =>
+        Presentation == SidePanelPresentation.Auto
+            ? (Context.IsDesktop ? SidePanelPresentation.Docked : SidePanelPresentation.Sheet)
+            : Presentation;
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        // The sheet-mode guess freezes at the moment the panel opens: snapshot it BEFORE anything
+        // else (a scope-less Auto sheet keeps this position while open — only the probe may move it).
+        if (Open && !_wasOpen) _openGuess = Viewport?.Resolved ?? _probedViewport ?? Context.Resolved;
+        _wasOpen = Open;
+
+        var resolved = Context.Resolved;
+        if (!_reportedInitialised)
+        {
+            _reported = resolved;
+            _reportedInitialised = true;
+            return;
+        }
+
+        if (resolved == _reported) return;
+        _reported = resolved;
+        await ResolvedLayoutChanged.InvokeAsync(resolved);
+    }
+
+    private async Task CloseAsync() => await OpenChanged.InvokeAsync(false);
+
+    private async Task OnOpenChanged(bool open) => await OpenChanged.InvokeAsync(open);
+}

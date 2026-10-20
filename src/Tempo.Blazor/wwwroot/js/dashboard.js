@@ -1,338 +1,417 @@
-// Tempo Dashboard - Drag & Drop and Resize functionality
-window.tempoDashboard = {
-    dashboards: new Map(),
+// ═══════════════════════════════════════════════════════════════
+// Tempo.Blazor Dashboard JS interop — widget move & resize.
+//
+// The gesture — Pointer Events, pointer capture by pointerId, threshold, Escape /
+// pointercancel cancel — is the shared core helper pointer-drag.js (Fáze 5 of the dashboard
+// redesign): HTML5 drag-and-drop and mouse events are gone, so a mouse, a finger and a pen
+// all work. touch-action: none lives on the handles in _dashboard.css, so the page keeps
+// scrolling everywhere else. This classic script only owns the grid maths: the pointer-to-cell
+// snap, the resize clamp (from the widget's data-min-*/data-max-* attributes the component
+// renders out of the WidgetDefinition; the authoritative clamp stays in C#), the drop preview
+// and the two commits through the unchanged JSInvokable contract
+// (OnGridPositionChanged / OnWidgetResized). The keyboard alternative remains the grab mode
+// on the drag-handle button (Blazor side, Fáze 4).
+// ═══════════════════════════════════════════════════════════════
 
-    init: function (element, dotNetRef) {
-        const id = element.id || Math.random().toString(36).substr(2, 9);
-        element.id = id;
+(function () {
+    'use strict';
 
-        const dashboard = {
-            element: element,
-            dotNetRef: dotNetRef,
-            isDragging: false,
-            isResizing: false,
-            dragStartX: 0,
-            dragStartY: 0,
-            initialX: 0,
-            initialY: 0,
-            draggedWidget: null,
-            resizeWidget: null,
-            resizeDirection: null,
-            initialWidth: 0,
-            initialHeight: 0,
-            gridColumns: 12,
-            rowHeight: 60,
-            gap: 16
+    // Resolved NOW: document.currentScript is only set while the classic script runs synchronously.
+    var helperUrl = (function () {
+        try {
+            var script = document.currentScript;
+            if (script && script.src) return new URL('pointer-drag.js', script.src).href;
+        } catch (e) { /* fall through to the conventional core location */ }
+        return '_content/Tempo.Blazor/js/pointer-drag.js';
+    })();
+
+    var DRAG_HANDLE_SELECTOR = '.tm-widget-drag-handle';
+    var RESIZE_HANDLE_SELECTOR = '.tm-widget-resize-handle';
+    var PREVIEW_SELECTOR = '.tm-widget-drop-preview';
+    var MOVE_THRESHOLD_PX = 4; // a tap on the handle stays the keyboard-grab toggle click
+
+    /** Cell width in px for the current metrics (columns of `col` px separated by `gap`). */
+    function columnStep(rect, m) {
+        return (rect.width - (m.columns - 1) * m.gap) / m.columns + m.gap;
+    }
+
+    /**
+     * Snaps a pointer position to the hovered grid cell (0-based, clamped into the grid).
+     * Exported on window.tempoDashboard for the Node unit tests.
+     */
+    function cellFromPointer(rect, pointerX, pointerY, m) {
+        var stepX = columnStep(rect, m);
+        var stepY = m.rowHeight + m.gap;
+        var col = Math.round((pointerX - rect.left) / stepX);
+        var row = Math.round((pointerY - rect.top) / stepY);
+        return {
+            col: Math.max(0, Math.min(m.columns - 1, col)),
+            row: Math.max(0, row),
         };
+    }
 
-        this.dashboards.set(id, dashboard);
-        this.attachEvents(dashboard);
+    /**
+     * Converts a dragged pixel size into a cell count, clamped by the widget's data-* min/max
+     * (grid cells, rendered from the WidgetDefinition; max 0 = unlimited). `ceiling` is the hard
+     * axis bound — the column count for widths, 0 (unlimited) for heights, which may exceed the
+     * column count. Exported for the Node unit tests.
+     */
+    function cellsFromSize(sizePx, stepPx, min, max, ceiling) {
+        var cells = Math.max(1, Math.round(sizePx / stepPx));
+        cells = Math.max(min, cells);
+        if (max > 0) cells = Math.min(max, cells);
+        return ceiling > 0 ? Math.min(ceiling, cells) : cells;
+    }
 
-        return id;
-    },
+    function num(value, fallback) {
+        var parsed = parseInt(value, 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    }
 
-    attachEvents: function (dashboard) {
-        const grid = dashboard.element.querySelector('.tm-dashboard-grid');
-        if (!grid) return;
+    // CSS.escape is missing in the stub DOM the node tests run against. Attribute values only need
+    // the quote and the backslash escaped to stay inside the selector (the tm-focus-trap pattern).
+    function escapeAttr(value) {
+        if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(value);
+        return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
 
-        dashboard._grid = grid;
+    /** The metrics object the pure maths helpers expect (columns/rowHeight/gap). */
+    function metricsOf(dashboard) {
+        return { columns: dashboard.gridColumns, rowHeight: dashboard.rowHeight, gap: dashboard.gap };
+    }
 
-        this.readGridMetrics(dashboard);
+    window.tempoDashboard = {
+        dashboards: new Map(),
 
-        // Store bound handlers for cleanup
-        dashboard._onDragStart = (e) => this.onDragStart(e, dashboard);
-        dashboard._onDragOver = (e) => this.onDragOver(e, dashboard);
-        dashboard._onDrop = (e) => this.onDrop(e, dashboard);
-        dashboard._onDragEnd = (e) => this.onDragEnd(e, dashboard);
-        dashboard._onMouseDown = (e) => this.onMouseDown(e, dashboard);
-        dashboard._onMouseMove = (e) => this.onMouseMove(e, dashboard);
-        dashboard._onMouseUp = (e) => this.onMouseUp(e, dashboard);
-        dashboard._onDragEnter = (e) => e.preventDefault();
-        dashboard._onDragLeave = (e) => e.preventDefault();
+        /** Grid metrics in px cells — replaced by readGridMetrics from the CSS custom properties. */
+        cellFromPointer: cellFromPointer,
+        cellsFromSize: cellsFromSize,
 
-        // Drag events
-        grid.addEventListener('dragstart', dashboard._onDragStart);
-        grid.addEventListener('dragover', dashboard._onDragOver);
-        grid.addEventListener('drop', dashboard._onDrop);
-        grid.addEventListener('dragend', dashboard._onDragEnd);
+        init: function (element, dotNetRef) {
+            var id = element.id || Math.random().toString(36).slice(2, 11);
+            element.id = id;
 
-        // Mouse events for resize
-        grid.addEventListener('mousedown', dashboard._onMouseDown);
-        document.addEventListener('mousemove', dashboard._onMouseMove);
-        document.addEventListener('mouseup', dashboard._onMouseUp);
+            var dashboard = {
+                element: element,
+                dotNetRef: dotNetRef,
+                gridColumns: 12,
+                rowHeight: 60,
+                gap: 16,
+                _grid: null,
+                _drags: [],
+                _session: null,
+                destroyed: false,
+                ready: null,
+            };
 
-        // Prevent default drag behaviors
-        grid.addEventListener('dragenter', dashboard._onDragEnter);
-        grid.addEventListener('dragleave', dashboard._onDragLeave);
-    },
+            this.dashboards.set(id, dashboard);
+            this._attach(dashboard);
 
-    // The grid publishes its own metrics as custom properties. Reading them at the start of a drag
-    // or resize keeps the math on the columns, row height and gap the stylesheet renders now.
-    readGridMetrics: function (dashboard) {
-        const grid = dashboard._grid || dashboard.element.querySelector('.tm-dashboard-grid');
-        if (!grid) return;
-        const gridStyle = getComputedStyle(grid);
-        const columns = parseFloat(gridStyle.getPropertyValue('--grid-columns'));
-        const rowHeight = parseFloat(gridStyle.getPropertyValue('--row-height'));
-        const gap = parseFloat(gridStyle.getPropertyValue('--grid-gap'));
-        if (Number.isFinite(columns) && columns > 0) dashboard.gridColumns = columns;
-        if (Number.isFinite(rowHeight) && rowHeight > 0) dashboard.rowHeight = rowHeight;
-        if (Number.isFinite(gap) && gap >= 0) dashboard.gap = gap;
-    },
+            return id;
+        },
 
-    onDragStart: function (e, dashboard) {
-        const widget = e.target.closest('.tm-widget');
-        if (!widget) return;
+        /** Resolves when the pointer helper is attached (or failed to load). */
+        _attach: function (dashboard) {
+            var grid = dashboard.element.querySelector('.tm-dashboard-grid');
+            if (!grid) return;
 
-        const handle = e.target.closest('.tm-widget-drag-handle, .tm-widget-header');
-        if (!handle) {
-            e.preventDefault();
-            return;
-        }
+            dashboard._grid = grid;
+            this.readGridMetrics(dashboard);
 
-        this.readGridMetrics(dashboard);
-        dashboard.isDragging = true;
-        dashboard.draggedWidget = widget;
-        dashboard.dragStartX = e.clientX;
-        dashboard.dragStartY = e.clientY;
+            var self = this;
+            dashboard.ready = import(helperUrl).then(function (helper) {
+                // destroy() won the race against the module load.
+                if (dashboard.destroyed) return;
 
-        // Get initial grid position
-        const rect = widget.getBoundingClientRect();
-        const gridRect = dashboard.element.querySelector('.tm-dashboard-grid').getBoundingClientRect();
+                // Move: from the drag handle, after a 4px threshold so a tap keeps its click
+                // (the keyboard grab toggle). touch-action is left to the CSS on the handle.
+                dashboard._drags.push(helper.attach(grid, {
+                    selector: DRAG_HANDLE_SELECTOR,
+                    threshold: MOVE_THRESHOLD_PX,
+                    dragClass: null,
+                    onPress: function (info) { return self._pressMove(dashboard, info); },
+                    onStart: function (info) { self._startMove(dashboard, info); },
+                    onMove: function (info) { self._previewMove(dashboard, info); },
+                    onEnd: function (info) { self._endMove(dashboard, info); },
+                    onCancel: function () { /* nothing committed */ },
+                    onRelease: function () { self._releaseMove(dashboard); },
+                }));
 
-        dashboard.initialX = rect.left - gridRect.left;
-        dashboard.initialY = rect.top - gridRect.top;
+                // Resize: every press on a resize handle is a resize (threshold 0).
+                dashboard._drags.push(helper.attach(grid, {
+                    selector: RESIZE_HANDLE_SELECTOR,
+                    threshold: 0,
+                    dragClass: null,
+                    onPress: function (info) { return self._pressResize(dashboard, info); },
+                    onMove: function (info) { self._previewResize(dashboard, info); },
+                    onEnd: function () { self._endResize(dashboard); },
+                    onCancel: function () { /* nothing committed */ },
+                    onRelease: function () { self._releaseResize(dashboard); },
+                }));
+            }).catch(function (err) {
+                console.warn('Dashboard: pointer-drag.js could not be loaded; widget drag/resize is unavailable', err);
+            });
+        },
 
-        widget.classList.add('tm-widget--dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', widget.dataset.instanceId);
-    },
+        /**
+         * The grid publishes its own metrics as custom properties. Reading them at init and at
+         * the start of a gesture keeps the math on the columns, row height and gap the
+         * stylesheet renders now.
+         */
+        readGridMetrics: function (dashboard) {
+            var grid = dashboard._grid || dashboard.element.querySelector('.tm-dashboard-grid');
+            if (!grid) return;
+            var gridStyle = getComputedStyle(grid);
+            var columns = parseFloat(gridStyle.getPropertyValue('--grid-columns'));
+            var rowHeight = parseFloat(gridStyle.getPropertyValue('--row-height'));
+            var gap = parseFloat(gridStyle.getPropertyValue('--grid-gap'));
+            if (Number.isFinite(columns) && columns > 0) dashboard.gridColumns = columns;
+            if (Number.isFinite(rowHeight) && rowHeight > 0) dashboard.rowHeight = rowHeight;
+            if (Number.isFinite(gap) && gap >= 0) dashboard.gap = gap;
+        },
 
-    onDragOver: function (e, dashboard) {
-        if (!dashboard.isDragging) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
+        // ── move ─────────────────────────────────────────────────────────────────────────────
 
-        // Calculate drop position
-        const grid = dashboard.element.querySelector('.tm-dashboard-grid');
-        const gridRect = grid.getBoundingClientRect();
+        _pressMove: function (dashboard, info) {
+            var widget = info.target && info.target.closest('.tm-widget');
+            if (!widget || !widget.dataset.instanceId) return false;
 
-        const x = e.clientX - gridRect.left;
-        const y = e.clientY - gridRect.top;
+            this.readGridMetrics(dashboard);
+            dashboard._session = {
+                mode: 'move',
+                widget: widget,
+                instanceId: widget.dataset.instanceId,
+            };
+            return true;
+        },
 
-        // Snap to grid
-        const colWidth = (gridRect.width - (dashboard.gridColumns - 1) * dashboard.gap) / dashboard.gridColumns;
-        const targetCol = Math.max(0, Math.min(dashboard.gridColumns - 1, Math.round(x / (colWidth + dashboard.gap))));
-        const targetRow = Math.max(0, Math.round(y / (dashboard.rowHeight + dashboard.gap)));
+        _startMove: function (dashboard, info) {
+            var s = dashboard._session;
+            if (!s) return;
+            s.widget.classList.add('tm-widget--dragging');
+            this._previewAt(dashboard, info.x, info.y);
+        },
 
-        // Update preview
-        this.updateDropPreview(dashboard, targetCol, targetRow);
-    },
+        _previewMove: function (dashboard, info) {
+            if (!dashboard._session) return;
+            this._previewAt(dashboard, info.x, info.y);
+        },
 
-    onDrop: function (e, dashboard) {
-        if (!dashboard.isDragging) return;
-        e.preventDefault();
+        _previewAt: function (dashboard, pointerX, pointerY) {
+            var s = dashboard._session;
+            var grid = dashboard._grid;
+            if (!s || !grid) return;
+            var cell = cellFromPointer(grid.getBoundingClientRect(), pointerX, pointerY, metricsOf(dashboard));
+            this.updateDropPreview(dashboard, cell.col, cell.row);
+        },
 
-        const grid = dashboard.element.querySelector('.tm-dashboard-grid');
-        const gridRect = grid.getBoundingClientRect();
+        _endMove: function (dashboard, info) {
+            var s = dashboard._session;
+            var grid = dashboard._grid;
+            if (!s || !grid) return;
 
-        const x = e.clientX - gridRect.left;
-        const y = e.clientY - gridRect.top;
-
-        // Snap to grid
-        const colWidth = (gridRect.width - (dashboard.gridColumns - 1) * dashboard.gap) / dashboard.gridColumns;
-        const targetCol = Math.max(0, Math.min(dashboard.gridColumns - 1, Math.round(x / (colWidth + dashboard.gap))));
-        const targetRow = Math.max(0, Math.round(y / (dashboard.rowHeight + dashboard.gap)));
-
-        // Notify Blazor
-        if (dashboard.dotNetRef && dashboard.draggedWidget) {
-            const instanceId = dashboard.draggedWidget.dataset.instanceId;
-            dashboard.dotNetRef.invokeMethodAsync('OnGridPositionChanged', instanceId, targetCol, targetRow);
-        }
-
-        this.clearDropPreview(dashboard);
-    },
-
-    onDragEnd: function (e, dashboard) {
-        if (dashboard.draggedWidget) {
-            dashboard.draggedWidget.classList.remove('tm-widget--dragging');
-        }
-        dashboard.isDragging = false;
-        dashboard.draggedWidget = null;
-        this.clearDropPreview(dashboard);
-    },
-
-    onMouseDown: function (e, dashboard) {
-        const handle = e.target.closest('.tm-widget-resize-handle');
-        if (!handle) return;
-
-        const widget = handle.closest('.tm-widget');
-        if (!widget) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        this.readGridMetrics(dashboard);
-        dashboard.isResizing = true;
-        dashboard.resizeWidget = widget;
-        dashboard.resizeDirection = this.getResizeDirection(handle);
-        dashboard.dragStartX = e.clientX;
-        dashboard.dragStartY = e.clientY;
-
-        // Get initial size
-        const rect = widget.getBoundingClientRect();
-        const gridRect = dashboard.element.querySelector('.tm-dashboard-grid').getBoundingClientRect();
-
-        dashboard.initialWidth = rect.width;
-        dashboard.initialHeight = rect.height;
-        dashboard.initialX = rect.left - gridRect.left;
-        dashboard.initialY = rect.top - gridRect.top;
-
-        widget.classList.add('tm-widget--resizing');
-    },
-
-    onMouseMove: function (e, dashboard) {
-        if (!dashboard.isResizing || !dashboard.resizeWidget) return;
-
-        const deltaX = e.clientX - dashboard.dragStartX;
-        const deltaY = e.clientY - dashboard.dragStartY;
-
-        let newWidth = dashboard.initialWidth;
-        let newHeight = dashboard.initialHeight;
-        let newX = dashboard.initialX;
-        let newY = dashboard.initialY;
-
-        // Calculate new dimensions based on resize direction
-        switch (dashboard.resizeDirection) {
-            case 'e':
-                newWidth = dashboard.initialWidth + deltaX;
-                break;
-            case 'w':
-                newWidth = dashboard.initialWidth - deltaX;
-                newX = dashboard.initialX + deltaX;
-                break;
-            case 's':
-                newHeight = dashboard.initialHeight + deltaY;
-                break;
-            case 'n':
-                newHeight = dashboard.initialHeight - deltaY;
-                newY = dashboard.initialY + deltaY;
-                break;
-            case 'se':
-                newWidth = dashboard.initialWidth + deltaX;
-                newHeight = dashboard.initialHeight + deltaY;
-                break;
-            case 'sw':
-                newWidth = dashboard.initialWidth - deltaX;
-                newX = dashboard.initialX + deltaX;
-                newHeight = dashboard.initialHeight + deltaY;
-                break;
-            case 'ne':
-                newWidth = dashboard.initialWidth + deltaX;
-                newHeight = dashboard.initialHeight - deltaY;
-                newY = dashboard.initialY + deltaY;
-                break;
-            case 'nw':
-                newWidth = dashboard.initialWidth - deltaX;
-                newX = dashboard.initialX + deltaX;
-                newHeight = dashboard.initialHeight - deltaY;
-                newY = dashboard.initialY + deltaY;
-                break;
-        }
-
-        // Apply constraints
-        newWidth = Math.max(120, newWidth); // Min width
-        newHeight = Math.max(80, newHeight); // Min height
-
-        // Update widget visual
-        dashboard.resizeWidget.style.width = newWidth + 'px';
-        dashboard.resizeWidget.style.height = newHeight + 'px';
-    },
-
-    onMouseUp: function (e, dashboard) {
-        if (!dashboard.isResizing || !dashboard.resizeWidget) return;
-
-        const widget = dashboard.resizeWidget;
-        const rect = widget.getBoundingClientRect();
-        const gridRect = dashboard.element.querySelector('.tm-dashboard-grid').getBoundingClientRect();
-
-        // Calculate grid units
-        const colWidth = (gridRect.width - (dashboard.gridColumns - 1) * dashboard.gap) / dashboard.gridColumns;
-        const widthInCols = Math.round(rect.width / (colWidth + dashboard.gap));
-        const heightInRows = Math.round(rect.height / (dashboard.rowHeight + dashboard.gap));
-
-        // Notify Blazor
-        if (dashboard.dotNetRef) {
-            const instanceId = widget.dataset.instanceId;
-            dashboard.dotNetRef.invokeMethodAsync('OnWidgetResized', instanceId,
-                Math.max(2, Math.min(dashboard.gridColumns, widthInCols)),
-                Math.max(2, heightInRows));
-        }
-
-        // Reset styles
-        widget.style.width = '';
-        widget.style.height = '';
-        widget.classList.remove('tm-widget--resizing');
-
-        dashboard.isResizing = false;
-        dashboard.resizeWidget = null;
-        dashboard.resizeDirection = null;
-    },
-
-    getResizeDirection: function (handle) {
-        if (handle.classList.contains('tm-widget-resize-n')) return 'n';
-        if (handle.classList.contains('tm-widget-resize-s')) return 's';
-        if (handle.classList.contains('tm-widget-resize-e')) return 'e';
-        if (handle.classList.contains('tm-widget-resize-w')) return 'w';
-        if (handle.classList.contains('tm-widget-resize-ne')) return 'ne';
-        if (handle.classList.contains('tm-widget-resize-nw')) return 'nw';
-        if (handle.classList.contains('tm-widget-resize-se')) return 'se';
-        if (handle.classList.contains('tm-widget-resize-sw')) return 'sw';
-        return 'se';
-    },
-
-    updateDropPreview: function (dashboard, col, row) {
-        let preview = dashboard.element.querySelector('.tm-widget-drop-preview');
-        if (!preview) {
-            preview = document.createElement('div');
-            preview.className = 'tm-widget-drop-preview';
-            dashboard.element.querySelector('.tm-dashboard-grid').appendChild(preview);
-        }
-
-        if (dashboard.draggedWidget) {
-            const width = parseInt(dashboard.draggedWidget.style.getPropertyValue('--tm-w-span')) || 4;
-            const height = parseInt(dashboard.draggedWidget.style.getPropertyValue('--tm-w-rows')) || 4;
-
-            preview.style.gridColumn = `${col + 1} / span ${width}`;
-            preview.style.gridRow = `${row + 1} / span ${height}`;
-        }
-    },
-
-    clearDropPreview: function (dashboard) {
-        const preview = dashboard.element.querySelector('.tm-widget-drop-preview');
-        if (preview) {
-            preview.remove();
-        }
-    },
-
-    destroy: function (element) {
-        const id = element.id;
-        const dashboard = this.dashboards.get(id);
-        if (dashboard) {
-            // Remove all event listeners
-            if (dashboard._grid) {
-                dashboard._grid.removeEventListener('dragstart', dashboard._onDragStart);
-                dashboard._grid.removeEventListener('dragover', dashboard._onDragOver);
-                dashboard._grid.removeEventListener('drop', dashboard._onDrop);
-                dashboard._grid.removeEventListener('dragend', dashboard._onDragEnd);
-                dashboard._grid.removeEventListener('mousedown', dashboard._onMouseDown);
-                dashboard._grid.removeEventListener('dragenter', dashboard._onDragEnter);
-                dashboard._grid.removeEventListener('dragleave', dashboard._onDragLeave);
+            var cell = cellFromPointer(grid.getBoundingClientRect(), info.x, info.y, metricsOf(dashboard));
+            if (dashboard.dotNetRef) {
+                dashboard.dotNetRef.invokeMethodAsync('OnGridPositionChanged', s.instanceId, cell.col, cell.row)
+                    .catch(function (err) {
+                        console.warn('Dashboard: failed to notify Blazor about the drop', err);
+                    });
             }
-            document.removeEventListener('mousemove', dashboard._onMouseMove);
-            document.removeEventListener('mouseup', dashboard._onMouseUp);
+        },
 
+        _releaseMove: function (dashboard) {
+            var s = dashboard._session;
+            if (!s || s.mode !== 'move') return;
+            s.widget.classList.remove('tm-widget--dragging');
+            this.clearDropPreview(dashboard);
+            dashboard._session = null;
+        },
+
+        // ── resize ───────────────────────────────────────────────────────────────────────────
+
+        _pressResize: function (dashboard, info) {
+            var handle = info.target;
+            var widget = handle && handle.closest('.tm-widget');
+            if (!widget || !widget.dataset.instanceId) return false;
+
+            var grid = dashboard._grid;
+            if (!grid) return false;
+
+            this.readGridMetrics(dashboard);
+            var rect = widget.getBoundingClientRect();
+            var gridRect = grid.getBoundingClientRect();
+            var stepX = columnStep(gridRect, metricsOf(dashboard));
+            var stepY = dashboard.rowHeight + dashboard.gap;
+
+            dashboard._session = {
+                mode: 'resize',
+                widget: widget,
+                instanceId: widget.dataset.instanceId,
+                direction: this.getResizeDirection(handle),
+                gridRect: gridRect,
+                stepX: stepX,
+                stepY: stepY,
+                startWidth: rect.width,
+                startHeight: rect.height,
+                minWidth: num(widget.dataset.minW, 1),
+                maxWidth: num(widget.dataset.maxW, 0), // 0 = unlimited: the grid is the ceiling
+                minHeight: num(widget.dataset.minH, 1),
+                maxHeight: num(widget.dataset.maxH, 0),
+                // The rendered cell values: the untouched axis of a direction-only resize commits
+                // exactly what Blazor rendered, never a pixel-recomputed approximation of it.
+                startColumns: parseInt(widget.style.getPropertyValue('--tm-w-span'), 10) ||
+                    Math.max(1, Math.round(rect.width / stepX)),
+                startRows: parseInt(widget.style.getPropertyValue('--tm-w-rows'), 10) ||
+                    Math.max(1, Math.round(rect.height / stepY)),
+            };
+            widget.classList.add('tm-widget--resizing');
+            return true;
+        },
+
+        /** Live size of the widget while the pointer moves, painted in whole cells. */
+        _previewResize: function (dashboard, info) {
+            var s = dashboard._session;
+            if (!s || s.mode !== 'resize') return;
+
+            var widthPx = s.startWidth;
+            var heightPx = s.startHeight;
+            if (s.direction.indexOf('e') !== -1) widthPx = s.startWidth + (info.x - info.startX);
+            if (s.direction.indexOf('w') !== -1) widthPx = s.startWidth - (info.x - info.startX);
+            if (s.direction.indexOf('s') !== -1) heightPx = s.startHeight + (info.y - info.startY);
+            if (s.direction.indexOf('n') !== -1) heightPx = s.startHeight - (info.y - info.startY);
+
+            // Paint whole cells so the live size matches what the commit will ask Blazor for.
+            // Each axis only follows the pointer when a handle on that axis is dragged; the other
+            // keeps its rendered value, so an e/w resize never changes the row count (and an
+            // unlimited maxH is not capped at the column count — ceiling 0 for rows).
+            var touchesX = s.direction.indexOf('e') !== -1 || s.direction.indexOf('w') !== -1;
+            var touchesY = s.direction.indexOf('n') !== -1 || s.direction.indexOf('s') !== -1;
+            var columns = touchesX
+                ? cellsFromSize(widthPx, s.stepX, s.minWidth, s.maxWidth, metricsOf(dashboard).columns)
+                : s.startColumns;
+            var rows = touchesY
+                ? cellsFromSize(heightPx, s.stepY, s.minHeight, s.maxHeight, 0)
+                : s.startRows;
+            s.columns = columns;
+            s.rows = rows;
+
+            var style = s.widget.style;
+            style.width = (columns * (s.stepX - dashboard.gap) + (columns - 1) * dashboard.gap) + 'px';
+            style.height = (rows * s.stepY - dashboard.gap) + 'px';
+        },
+
+        _endResize: function (dashboard) {
+            var s = dashboard._session;
+            if (!s || s.mode !== 'resize') return;
+
+            // Restore the Blazor-rendered geometry FIRST: under Blazor WebAssembly the render
+            // that applies the committed size runs inside invokeMethodAsync.
+            if (s.columns !== undefined && dashboard.dotNetRef) {
+                var width = s.columns;
+                var height = s.rows;
+                dashboard.dotNetRef.invokeMethodAsync('OnWidgetResized', s.instanceId, width, height)
+                    .catch(function (err) {
+                        console.warn('Dashboard: failed to notify Blazor about the resize', err);
+                    });
+            }
+        },
+
+        _releaseResize: function (dashboard) {
+            var s = dashboard._session;
+            if (!s || s.mode !== 'resize') return;
+            s.widget.classList.remove('tm-widget--resizing');
+            s.widget.style.width = '';
+            s.widget.style.height = '';
+            dashboard._session = null;
+        },
+
+        getResizeDirection: function (handle) {
+            if (handle.classList.contains('tm-widget-resize-n')) return 'n';
+            if (handle.classList.contains('tm-widget-resize-s')) return 's';
+            if (handle.classList.contains('tm-widget-resize-e')) return 'e';
+            if (handle.classList.contains('tm-widget-resize-w')) return 'w';
+            if (handle.classList.contains('tm-widget-resize-ne')) return 'ne';
+            if (handle.classList.contains('tm-widget-resize-nw')) return 'nw';
+            if (handle.classList.contains('tm-widget-resize-se')) return 'se';
+            if (handle.classList.contains('tm-widget-resize-sw')) return 'sw';
+            return 'se';
+        },
+
+        updateDropPreview: function (dashboard, col, row) {
+            // Why the preview is a JS-appended node and NOT a Blazor-rendered element (hardening
+            // review, decided): the preview follows every pointermove (~60 Hz), so a Blazor-owned
+            // node would need a JS→.NET call and a component re-render per move — a round-trip
+            // lag the gesture would feel, and a re-render under an active pointer, which the
+            // component's render contract explicitly avoids ("no DOM node ever moves under an
+            // active pointer", see WidgetLayout in TmDashboard.razor.cs). The preview is also a
+            // pure transient affordance: Blazor never reads it back, and this file removes it on
+            // every exit path (release, Escape/pointercancel via the helper's cancel, destroy).
+            // The C# side mirrors the same clamp on the committed drop (OnGridPositionChanged).
+            var grid = dashboard._grid;
+            if (!grid) return;
+            var preview = grid.querySelector(PREVIEW_SELECTOR);
+            if (!preview) {
+                preview = document.createElement('div');
+                preview.className = 'tm-widget-drop-preview';
+                grid.appendChild(preview);
+            }
+
+            if (dashboard._session) {
+                var width = parseInt(dashboard._session.widget.style.getPropertyValue('--tm-w-span')) || 4;
+                var height = parseInt(dashboard._session.widget.style.getPropertyValue('--tm-w-rows')) || 4;
+                // A wide widget dropped near the right edge must not overflow the grid
+                // (the C# side clamps the commit the same way in OnGridPositionChanged).
+                col = Math.max(0, Math.min(col, metricsOf(dashboard).columns - width));
+
+                preview.style.setProperty('grid-column', (col + 1) + ' / span ' + width);
+                preview.style.setProperty('grid-row', (row + 1) + ' / span ' + height);
+            }
+        },
+
+        clearDropPreview: function (dashboard) {
+            var grid = dashboard._grid;
+            if (!grid) return;
+            var preview = grid.querySelector(PREVIEW_SELECTOR);
+            if (preview) {
+                preview.remove();
+            }
+        },
+
+        // F4: a freshly added widget may land below the fold (mobile 390 px) — bring it into view
+        // so the brief highlight is actually seen. Respects prefers-reduced-motion.
+        // The instance id is host/shaped data (a Guid today), so it is escaped before it joins
+        // the attribute selector — an id carrying a quote would otherwise break the query.
+        scrollWidgetIntoView: function (element, instanceId) {
+            var widget = element.querySelector('[data-instance-id="' + escapeAttr(instanceId) + '"]');
+            if (!widget) {
+                return;
+            }
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            widget.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+        },
+
+        destroy: function (element) {
+            var id = element.id;
+            var dashboard = this.dashboards.get(id);
+            if (!dashboard) return;
+
+            dashboard.destroyed = true;
+            for (var i = 0; i < dashboard._drags.length; i++) {
+                dashboard._drags[i].detach();
+            }
+            dashboard._drags = [];
+            if (dashboard._session) {
+                if (dashboard._session.mode === 'move') {
+                    dashboard._session.widget.classList.remove('tm-widget--dragging');
+                    this.clearDropPreview(dashboard);
+                } else {
+                    dashboard._session.widget.classList.remove('tm-widget--resizing');
+                    dashboard._session.widget.style.width = '';
+                    dashboard._session.widget.style.height = '';
+                }
+                dashboard._session = null;
+            }
             this.dashboards.delete(id);
         }
-    }
-};
+    };
+})();

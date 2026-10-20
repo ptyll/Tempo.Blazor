@@ -130,18 +130,17 @@ public class DiagramExtendedStencilPhase8E2ETests : PlaywrightTestBase
 
     private static async Task HideRightPanelsAsync(IPage page)
     {
-        await TogglePanelIfVisibleAsync(page, ".tm-diagram-properties", "Toggle properties panel");
-        await TogglePanelIfVisibleAsync(page, ".tm-diagram-layers", "Toggle layers");
-        await TogglePanelIfVisibleAsync(page, ".tm-diagram-minimap", "Toggle minimap");
+        await TogglePanelIfVisibleAsync(page, ".tm-diagram-editor__inspector", "[data-testid='diagram-editor-toggle-inspector']");
+        await TogglePanelIfVisibleAsync(page, ".tm-diagram-minimap", "[data-testid='diagram-editor-toggle-minimap']");
         await page.WaitForTimeoutAsync(300);
     }
 
-    private static async Task TogglePanelIfVisibleAsync(IPage page, string panelSelector, string toggleName)
+    private static async Task TogglePanelIfVisibleAsync(IPage page, string panelSelector, string toggleSelector)
     {
         if (await CountAsync(page, panelSelector) == 0)
             return;
 
-        var toggle = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = toggleName });
+        var toggle = page.Locator(toggleSelector);
         if (await toggle.CountAsync() == 0)
             return;
 

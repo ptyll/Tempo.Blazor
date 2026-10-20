@@ -218,10 +218,10 @@ function floatOpts(over = {}) {
         anchor: stubAnchor({ top: 100, left: 100, right: 220, bottom: 140, width: 120, height: 40 }),
         placement: 'bottom',
         align: 'start',
-        anchorGap: 4,
+        offset: 4,
         margin: 8,
         flip: true,
-        clamp: true,
+        shift: true,
         matchAnchorWidth: false,
         ...over,
     };
@@ -299,4 +299,45 @@ test('positionFloating: subtracts a fallback containing-block origin (no Popover
     assert.equal(panel.style.left, `${100 - 50}px`);
     assert.equal(panel.style.top, `${144 - 30}px`);
     assert.equal(result.side, 'bottom');
+});
+
+// cluster-B 9: offset/margin/flip/shift is the SINGLE vocabulary (the TmOverlayPanel parameter
+// names). The retired anchorGap/clamp aliases never shipped — positionFloating must ignore them,
+// so a stray alias cannot silently change a panel's position.
+test('positionFloating ignores the retired anchorGap/clamp aliases', () => {
+    const panel = stubPanel();
+    // offset 10 puts the panel 10px below the anchor bottom (140 → 150); the alias value 99 would
+    // place it at 239 — it must not win.
+    positionFloating(panel, floatOpts({ offset: 10, anchorGap: 99 }), stubWindow());
+    assert.equal(panel.style.top, '150px', 'the real `offset` decides, the retired `anchorGap` does not');
+});
+
+// A modal popup (a date picker sets TrapFocus, so its calendar is a dialog) reaches the top layer
+// through overlay.js, not TopLayerInterop. A raw showPopover() leaves a toast that was already
+// pinned on top BEHIND that popup until it closes. Promoting must re-raise pinned toasts.
+test('promoteOpenPanel re-raises a pinned toast above the panel it just promoted', async () => {
+    const { promoteOpenPanel } = await import('../overlay.js');
+    assert.equal(typeof promoteOpenPanel, 'function',
+        'overlay.js must promote an open panel through the shared top layer, so pinned toasts are re-raised');
+
+    const { pinRoot, unpinRoot } = await import('../tm-top-layer.js');
+    const log = [];
+    const popover = (name, open) => ({
+        isConnected: true,
+        open,
+        matches(selector) { return selector === ':popover-open' && this.open; },
+        showPopover() { log.push(`${name}:show`); this.open = true; },
+        hidePopover() { log.push(`${name}:hide`); this.open = false; },
+    });
+
+    const toast = popover('toast', true);
+    pinRoot(toast);
+    try {
+        promoteOpenPanel(popover('panel', false));
+    }
+    finally {
+        unpinRoot(toast);
+    }
+
+    assert.deepEqual(log, ['panel:show', 'toast:hide', 'toast:show']);
 });

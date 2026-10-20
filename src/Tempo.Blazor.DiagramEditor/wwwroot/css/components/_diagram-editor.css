@@ -3,26 +3,33 @@
    ════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Root editor shell ────────────────────────────────────────────────────── */
+/* The editor chrome (everything around the white page) sits on the themed workspace
+   tone — --tm-bg-workspace (F0) follows the page background in both themes and the
+   indigo theme, so no component-level dark override is needed. */
 .tm-diagram-editor {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
     min-height: 0;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-bg-workspace);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-lg, 8px);
     overflow: hidden;
+    /* The 11px meta text (page-tab close, template category/tags). One package token so the
+       chip scale rebrand moves together. */
+    --tm-diagram-chip-font: 0.6875rem;
 }
 
-/* ── Page tabs ────────────────────────────────────────────────────────────── */
+/* Mockup: page tabs read as flat labels on the workspace strip; the ACTIVE page is
+   marked by a primary underline instead of a raised boxed tab. */
 .tm-diagram-editor__page-tabs {
     display: flex;
     align-items: flex-end;
     gap: 2px;
     padding: 2px 8px 0;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-bg-workspace);
+    border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
     overflow-x: auto;
 }
@@ -31,37 +38,34 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
+    padding: var(--tm-space-2) var(--tm-space-3);
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text-muted, #6b7280);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid transparent;
-    border-bottom: none;
-    border-radius: var(--tm-radius-md, 6px) var(--tm-radius-md, 6px) 0 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     cursor: pointer;
     user-select: none;
-    transition: background 120ms, color 120ms;
+    transition: background 120ms, color 120ms, border-color 120ms;
     min-width: 80px;
     max-width: 180px;
 }
 
 .tm-diagram-editor__page-tab:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-editor__page-tab--drag-over {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: inset 0 0 0 1px var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    border-bottom-color: var(--tm-color-primary);
 }
 
 .tm-diagram-editor__page-tab--active {
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
-    border-color: var(--tm-color-border, #e5e7eb);
-    margin-bottom: -1px;
-    padding-bottom: 7px;
+    background: transparent;
+    color: var(--tm-color-text);
+    border-bottom-color: var(--tm-color-primary);
 }
 
 .tm-diagram-editor__page-tab-name {
@@ -73,7 +77,7 @@
 .tm-diagram-editor__page-tab-dot {
     width: 6px;
     height: 6px;
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -82,12 +86,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
     padding: 0;
-    font-size: 11px;
+    font-size: var(--tm-diagram-chip-font);
     line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     background: transparent;
     border: none;
     border-radius: var(--tm-radius-sm, 4px);
@@ -97,14 +101,51 @@
     transition: opacity 120ms, background 120ms;
 }
 
+/* Duplicate-page action — same footprint as the close button, neutral hover (no danger red) */
+.tm-diagram-editor__page-tab-duplicate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
+    padding: 0;
+    line-height: 1;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 120ms, background 120ms;
+}
+
+.tm-diagram-editor__page-tab:hover .tm-diagram-editor__page-tab-duplicate,
+.tm-diagram-editor__page-tab--active .tm-diagram-editor__page-tab-duplicate {
+    opacity: 1;
+}
+
+.tm-diagram-editor__page-tab-duplicate:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+/* Full-width error banner (import/export) rendered through TmAlert */
+.tm-diagram-editor__banner {
+    margin: 0;
+    border-radius: 0;
+    border-inline: none;
+    border-top: none;
+}
+
 .tm-diagram-editor__page-tab:hover .tm-diagram-editor__page-tab-close,
 .tm-diagram-editor__page-tab--active .tm-diagram-editor__page-tab-close {
     opacity: 1;
 }
 
 .tm-diagram-editor__page-tab-close:hover {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--tm-color-danger, #ef4444);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
 }
 
 .tm-diagram-editor__page-tab-input {
@@ -112,9 +153,9 @@
     min-width: 60px;
     padding: 2px 4px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-primary);
     border-radius: var(--tm-radius-sm, 4px);
     outline: none;
 }
@@ -128,7 +169,7 @@
     padding: 0;
     font-size: 18px;
     line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--tm-radius-md, 6px);
@@ -138,35 +179,112 @@
 }
 
 .tm-diagram-editor__page-tab-add:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+/* ── Editor shell integration (phase 4) ──────────────────────────────────── */
+/* The core shell paints generic chrome (padded surface bands); the diagram editor owns the
+   workspace tone and its own header/toolbar/status paint, so the shell regions go flat.
+
+   UX review phase 4 (blocker): the editor root is a bounded box (demo height 600px,
+   overflow hidden), so the whole chain down to the status bar must be an explicit flex
+   column — the shell fills the root, __main takes the leftover and clips its own overflow
+   (the inspector dock scrolls INSIDE), and the status bar keeps its intrinsic height so the
+   zoom controls stay visible instead of being pushed out of the box. */
+.tm-diagram-editor .tm-editor-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+}
+
+.tm-diagram-editor .tm-editor-shell__main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.tm-diagram-editor .tm-editor-shell__header,
+.tm-diagram-editor .tm-editor-shell__toolbar {
+    padding: 0;
+    background: transparent;
+    border-block-end: none;
+}
+
+.tm-diagram-editor .tm-editor-shell__canvas {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* The status bar is the shell's LAST row (sibling of __main): flex-shrink 0 keeps it inside
+   the editor box — the zoom controls (− % +) must survive a short host container. */
+.tm-diagram-editor .tm-editor-shell__status {
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    border-block-start: none;
+    font-size: inherit;
+    color: inherit;
 }
 
 /* ── Toolbar ──────────────────────────────────────────────────────────────── */
+/* Phase 4: the command row is ONE core TmToolbar (no flex-wrap fallback). The editor only
+   paints the flat strip; overflow/collapse (Priority + "More") comes from tm-toolbar.js. */
 .tm-diagram-editor__toolbar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-bg-workspace);
+    border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
+    padding: 0 var(--tm-space-2, 8px);
 }
 
-.tm-diagram-editor__toolbar-row {
+.tm-diagram-editor__toolbar .tm-toolbar {
+    gap: var(--tm-space-1, 4px);
+    min-height: var(--tm-touch-target);
+    background: transparent;
+}
+
+/* The editor command row collapses ~19 commands into the toolbar's "More" menu; without a cap
+   the panel grows past short viewports and its last entries (e.g. Templates) become unclickable.
+   Package-level mitigation — the panel keeps the core paint, it just scrolls. */
+.tm-diagram-editor .tm-toolbar-more__panel {
+    max-height: min(60vh, 26rem);
+    overflow-y: auto;
+}
+
+/* G9 host slots: the wrappers must not break the flex layout of their region. */
+.tm-diagram-editor__header-start,
+.tm-diagram-editor__header-actions {
+    display: contents;
+}
+
+/* ── Header bar (phase 4): title + named panel toggles + "⋯" view settings ── */
+.tm-diagram-editor__header-bar {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2, 8px);
-    min-height: 28px;
+    min-height: var(--tm-space-12);
+    padding: var(--tm-space-1, 4px) var(--tm-space-3, 12px);
+    background: var(--tm-bg-workspace);
+    border-bottom: 1px solid var(--tm-color-border);
+    flex-shrink: 0;
+}
+
+.tm-diagram-editor__header-spacer {
+    flex: 1;
+    min-width: var(--tm-space-2, 8px);
 }
 
 .tm-diagram-editor__title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 500;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
     padding: 4px 10px;
     min-width: 120px;
     max-width: 200px;
@@ -175,32 +293,138 @@
 
 .tm-diagram-editor__title:hover,
 .tm-diagram-editor__title:focus {
-    border-color: var(--tm-color-primary, #3b82f6);
+    border-color: var(--tm-color-primary);
     outline: none;
-    box-shadow: 0 0 0 3px var(--tm-color-primary-subtle, #dbeafe);
+    box-shadow: 0 0 0 3px var(--tm-color-primary-subtle);
 }
 
-.tm-diagram-insert-dropdown-wrapper {
+/* Named panel toggles (mockup): icon + visible label, active panel highlighted. */
+.tm-diagram-editor__panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1, 4px);
+    height: var(--tm-space-9);
+    padding: 0 var(--tm-space-2, 8px);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm, 13px);
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms, color 120ms;
+}
+
+.tm-diagram-editor__panel-toggle:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-editor__panel-toggle--active,
+.tm-diagram-editor__panel-toggle[aria-pressed="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+/* X3 / WCAG 2.5.3: below the desktop band the header toggles collapse to icon-only —
+   the visible name stays as aria-label, the tooltip in title. The branch runs on the
+   editor's own NAMED container (tm-diagram-editor) so a narrow editor inside a wide
+   window hides the labels too (the data-editor-layout attribute only follows the shell's
+   resolved mode, which a host-overridable breakpoint pair may keep "tablet" past 1024). */
+@container tm-diagram-editor (width < 1024px) {
+    .tm-diagram-editor__header-bar .tm-diagram-editor__panel-toggle-label {
+        display: none;
+    }
+}
+
+/* "⋯" view settings menu */
+.tm-diagram-editor__view-menu {
     position: relative;
     display: inline-flex;
 }
 
+.tm-diagram-editor__more-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-8);
+    height: var(--tm-space-9);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+
+.tm-diagram-editor__more-btn:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-editor__more-btn[aria-expanded="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-diagram-editor__view-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--tm-z-popover) - 1);
+    background: transparent;
+    border: none;
+}
+
+.tm-diagram-editor__view-menu-panel {
+    position: absolute;
+    top: calc(100% + var(--tm-space-1, 4px));
+    inset-inline-end: 0;
+    z-index: var(--tm-z-popover);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2, 8px);
+    min-width: 16.25rem;
+    padding: var(--tm-space-2, 8px);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg, 8px);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-diagram-editor__view-menu-panel[hidden] {
+    display: none;
+}
+
+.tm-diagram-editor__view-menu-panel .tm-diagram-editor__toolbar-group {
+    flex-wrap: wrap;
+    gap: var(--tm-space-1, 4px);
+    min-height: 0;
+}
+
 /* ── Toolbar Button Groups ───────────────────────────────────────────────── */
+/* Flat groups (mockup): no group box, no per-button inner separators. Each button is
+   its own rounded control; the `--active` tool gets the subtle primary fill + primary
+   ink, matching the core aria-pressed convention of .tm-toolbar-btn. */
 .tm-diagram-editor__toolbar-group {
     display: inline-flex;
     align-items: center;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    overflow: hidden;
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    overflow: visible;
     flex-shrink: 0;
+    min-height: var(--tm-space-10);
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn {
-    border-radius: 0;
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    height: var(--tm-space-10);
+    min-width: var(--tm-space-9);
+    padding: 0 var(--tm-space-2, 8px);
+    border-radius: var(--tm-radius-control);
+    border-right: none;
     background: transparent;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-secondary);
     transition: background 120ms, color 120ms;
 }
 
@@ -209,37 +433,50 @@
 }
 
 .tm-diagram-editor__toolbar-group .tm-toolbar-btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
-}
-
-.tm-diagram-editor__toolbar-group .tm-toolbar-btn--active {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    color: var(--tm-color-primary, #3b82f6);
-}
-
-.tm-diagram-editor__toolbar-group .tm-toolbar-btn--active:hover:not(:disabled) {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    color: var(--tm-color-primary, #2563eb);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 /* Toolbar dropdown inside group */
 .tm-diagram-editor__toolbar-group .tm-dropdown-wrapper {
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    border-right: none;
 }
 
 .tm-diagram-editor__toolbar-group .tm-dropdown-wrapper:last-child {
     border-right: none;
 }
 
+/* Pressed toggles inside the editor groups (mockup: subtle primary fill + primary ink, no ring).
+   UX review phase 4 (major): the core paints pressed with an inset ring at a specificity that
+   beats the former group-scoped rule, so the active tool lost its fill — the editor-scoped
+   selector out-ranks it (and its own hover rule below), clears the ring, and keeps the label
+   ink primary with the icon. */
+.tm-diagram-editor .tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    box-shadow: none;
+}
+
+.tm-diagram-editor .tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"] .tm-toolbar-btn-text {
+    color: var(--tm-color-primary);
+}
+
+.tm-diagram-editor .tm-diagram-editor__toolbar-group .tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    box-shadow: none;
+}
+
 .tm-diagram-editor__toolbar-group .tm-dropdown-trigger {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: var(--tm-space-1) var(--tm-space-2);
+    height: var(--tm-space-10);
+    padding: 0 var(--tm-space-2, 8px);
+    border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-sm, 13px);
     line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-secondary);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -248,20 +485,47 @@
 }
 
 .tm-diagram-editor__toolbar-group .tm-dropdown-trigger:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
-.tm-diagram-editor__toolbar-sep {
-    width: 1px;
-    height: 20px;
-    background: var(--tm-color-border, #e5e7eb);
-    margin: 0 2px;
+/* ── Status bar (phase 4): zoom controls + read-only toggle ─────────────── */
+.tm-diagram-editor__statusbar {
+    /* The zoom / read-only buttons sit at 30px — the same band the swimlane header uses —
+       so a host rebrand of the compact chrome target moves both together. */
+    --tm-diagram-statusbar-btn: 1.875rem;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 8px);
+    min-height: var(--tm-space-9);
+    padding: 0 var(--tm-space-3, 12px);
+    background: var(--tm-bg-workspace);
+    border-top: 1px solid var(--tm-color-border);
     flex-shrink: 0;
 }
 
-.tm-diagram-editor__toolbar-spacer {
+.tm-diagram-editor__statusbar-spacer {
     flex: 1;
+}
+
+.tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group {
+    min-height: var(--tm-space-9);
+}
+
+.tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group .tm-toolbar-btn {
+    height: var(--tm-diagram-statusbar-btn);
+    min-width: var(--tm-diagram-statusbar-btn);
+}
+
+/* ── Toolbox ──────────────────────────────────────────────────────────────── */
+/* Inside the editor shell the dock owns the width; the wrap fills it. */
+.tm-diagram-editor__toolbox-wrap {
+    width: 100%;
+    flex-shrink: 0;
+    border-right: none;
+    background: var(--tm-color-surface-elevated);
+    overflow-y: auto;
+    height: 100%;
 }
 
 .tm-diagram-editor__zoom-label {
@@ -271,80 +535,47 @@
     padding: 0 6px;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     min-width: 44px;
     user-select: none;
 }
 
 .tm-diagram-editor__unit-select {
-    height: 28px;
+    height: var(--tm-input-height-sm);
     padding: 0 var(--tm-space-2, 8px);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius, 6px);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
-    font-size: 12px;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
     cursor: pointer;
 }
 
-/* ── Body (toolbox + canvas + props) ─────────────────────────────────────── */
-.tm-diagram-editor__body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+/* Canvas-size editor (W × H): presentational values moved here from inline styles. */
+.tm-diagram-editor__canvas-size-input {
+    width: 3.75rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    font-size: var(--tm-font-size-sm, 14px);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
 }
 
-/* ── Toolbox ──────────────────────────────────────────────────────────────── */
-.tm-diagram-editor__toolbox-wrap {
-    width: 220px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    overflow-y: auto;
+.tm-diagram-editor__canvas-size-sep {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-muted);
+    user-select: none;
+}
+
+/* The file-picker label inside the Import dropdown renders as a menu item. */
+.tm-diagram-editor__import-file-label {
+    cursor: pointer;
+    margin: 0;
 }
 
 .tm-diagram-editor__toolbox {
     padding: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-editor__toolbox-category {
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: var(--tm-color-text-muted, #6b7280);
-    margin: var(--tm-space-3, 12px) 0 var(--tm-space-2, 8px);
-}
-
-.tm-diagram-editor__toolbox-item {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px);
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: grab;
-    user-select: none;
-    transition: background 120ms;
-}
-
-.tm-diagram-editor__toolbox-item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-}
-
-.tm-diagram-editor__toolbox-icon {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--tm-color-text-muted, #6b7280);
-}
-
-.tm-diagram-editor__toolbox-label {
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
 }
 
 /* ── Canvas wrap ──────────────────────────────────────────────────────────── */
@@ -353,8 +584,14 @@
     flex: 1;
     min-width: 0;
     min-height: 0;
-    background: var(--tm-color-surface, #ffffff);
+    background: var(--tm-color-surface);
     overflow: hidden;
+}
+
+/* Rulers take a fixed 24px band on the top/left (moved here from an inline style). */
+.tm-diagram-editor__canvas-wrap--rulers {
+    padding-top: var(--tm-space-6);
+    padding-left: var(--tm-space-6);
 }
 
 .tm-diagram-editor__canvas {
@@ -369,9 +606,9 @@
     left: 0;
     width: 24px;
     height: 24px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-color-border);
     z-index: 5;
 }
 
@@ -381,8 +618,8 @@
     left: 24px;
     right: 0;
     height: 24px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-color-border);
     z-index: 5;
 }
 
@@ -392,8 +629,8 @@
     left: 0;
     bottom: 0;
     width: 24px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-color-border);
     z-index: 5;
 }
 
@@ -405,29 +642,29 @@
 }
 
 .tm-diagram-ruler__tick {
-    stroke: var(--tm-color-text-muted, #6b7280);
+    stroke: var(--tm-color-text-muted);
     stroke-width: 1;
 }
 
 .tm-diagram-ruler__tick--major {
-    stroke: var(--tm-color-text, #111827);
+    stroke: var(--tm-color-text);
     stroke-width: 1.5;
 }
 
 .tm-diagram-ruler__tick--half {
-    stroke: var(--tm-color-text-muted, #6b7280);
+    stroke: var(--tm-color-text-muted);
     stroke-width: 1.2;
 }
 
 .tm-diagram-ruler__tick--sub {
-    stroke: var(--tm-color-text-muted, #6b7280);
+    stroke: var(--tm-color-text-muted);
     stroke-width: 0.75;
     opacity: 0.7;
 }
 
 .tm-diagram-ruler__text {
     font-size: 9px;
-    fill: var(--tm-color-text-muted, #6b7280);
+    fill: var(--tm-color-text-muted);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     user-select: none;
 }
@@ -438,7 +675,7 @@
 }
 
 .tm-diagram-ruler__crosshair {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1;
     pointer-events: none;
 }
@@ -473,7 +710,7 @@
  * nodes underneath. */
 .tm-diagram-group-bounds {
     fill: none;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1;
     stroke-dasharray: 4 4;
     opacity: 0.4;
@@ -506,7 +743,9 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    color: var(--tm-diagram-node-text, #111827);
+    /* Node bodies paint on the page paper, which is theme-invariant; so is the ink
+       (--tm-diagram-node-ink, declared on .tm-diagram-canvas). Hosts override that token. */
+    color: var(--tm-diagram-node-ink);
     user-select: none;
     pointer-events: auto;
 }
@@ -558,19 +797,19 @@
  * box-shadow. */
 rect.tm-diagram-selection-outline {
     fill: none;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 2;
     rx: 4;
     ry: 4;
     pointer-events: none;
-    filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.45));
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--tm-color-primary) 45%, transparent));
 }
 
 /* ── Rubber band ─────────────────────────────────────────────────────────── */
 .tm-diagram-rubber {
     position: absolute;
-    background: rgba(59, 130, 246, 0.08);
-    border: 1px dashed var(--tm-color-primary, #3b82f6);
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
+    border: 1px dashed var(--tm-color-primary);
     pointer-events: none;
 }
 
@@ -600,7 +839,7 @@ rect.tm-diagram-selection-outline {
  * group so they can tell the endpoint is not attached to anything. */
 .tm-diagram-edge-floating-marker {
     fill: transparent;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     stroke-dasharray: 2 2;
     opacity: 0;
@@ -625,13 +864,13 @@ rect.tm-diagram-selection-outline {
  * `classList.add/remove` can keep targeting the node itself — `outline` on
  * SVG elements is patchy across browsers, so the body <div> does the paint. */
 .tm-diagram-node--drop-target .tm-diagram-node__body {
-    outline: 2px solid var(--tm-color-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
     border-radius: var(--tm-radius-sm, 4px);
 }
 
 .tm-diagram-node--outline-connect .tm-diagram-node__body {
-    outline: 2px dashed var(--tm-color-success, #10b981);
+    outline: 2px dashed var(--tm-color-success);
     outline-offset: 3px;
     border-radius: var(--tm-radius-sm, 4px);
 }
@@ -646,12 +885,12 @@ rect.tm-diagram-selection-outline {
     position: absolute;
     top: 4px;
     right: 4px;
-    width: 16px;
-    height: 16px;
-    color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-surface, #ffffff);
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
+    color: var(--tm-color-primary);
+    background: var(--tm-color-surface);
     border-radius: var(--tm-radius-sm, 4px);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    box-shadow: var(--tm-shadow-sm);
     pointer-events: none;
     z-index: 2;
     display: flex;
@@ -683,7 +922,7 @@ rect.tm-diagram-selection-outline {
 
 .tm-diagram-node__divider {
     height: 1px;
-    background: var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-border);
     flex-shrink: 0;
     width: 100%;
 }
@@ -720,7 +959,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--tm-color-surface-subtle);
     flex-shrink: 0;
 }
 
@@ -749,7 +988,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: row;
     min-height: 0;
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    border-bottom: 1px solid var(--tm-color-border);
 }
 
 .tm-diagram-node__swimlane--horizontal .tm-diagram-node__swimlane-row:last-child {
@@ -757,12 +996,12 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__swimlane--horizontal .tm-diagram-node__swimlane-header {
-    width: 30px;
+    width: var(--tm-diagram-swimlane-header);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.03);
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-subtle);
+    border-right: 1px solid var(--tm-color-border);
     flex-shrink: 0;
     writing-mode: vertical-rl;
     text-orientation: mixed;
@@ -783,7 +1022,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    border-right: 1px solid var(--tm-color-border, #e5e7eb);
+    border-right: 1px solid var(--tm-color-border);
 }
 
 .tm-diagram-node__swimlane--vertical .tm-diagram-node__swimlane-col:last-child {
@@ -791,12 +1030,12 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__swimlane--vertical .tm-diagram-node__swimlane-header {
-    height: 30px;
+    height: var(--tm-diagram-swimlane-header);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.03);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-subtle);
+    border-bottom: 1px solid var(--tm-color-border);
     flex-shrink: 0;
     padding: 0 4px;
 }
@@ -823,8 +1062,10 @@ rect.tm-diagram-selection-outline {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 12px;
-    color: var(--tm-color-text, #111827);
+    font-size: var(--tm-font-size-xs);
+    /* Table cells are labels painted on the node's data-driven (white) fill, so they use the
+       node ink — --tm-color-text flips light in dark and would vanish on the white fill. */
+    color: var(--tm-diagram-node-ink);
     box-sizing: border-box;
 }
 
@@ -833,12 +1074,12 @@ rect.tm-diagram-selection-outline {
     height: 100%;
     min-height: unset;
     padding: 2px;
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-diagram-node__shape[data-shape="table"] {
-    background: var(--stencil-fill, #ffffff);
-    border: 1px solid var(--stencil-stroke, #111827);
+    background: var(--stencil-fill);
+    border: 1px solid var(--stencil-stroke);
 }
 
 .tm-diagram-node__section--icon {
@@ -887,10 +1128,10 @@ rect.tm-diagram-selection-outline {
 
 .tm-diagram-node__inline-input,
 .tm-diagram-node__inline-textarea {
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    border: 1px solid var(--tm-color-primary);
     border-radius: 2px;
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     font: inherit;
     outline: none;
     padding: 0 2px;
@@ -900,7 +1141,7 @@ rect.tm-diagram-selection-outline {
 
 .tm-diagram-node__inline-input:focus,
 .tm-diagram-node__inline-textarea:focus {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 /* ── Collapse button ─────────────────────────────────────────────────────── */
@@ -914,12 +1155,12 @@ rect.tm-diagram-selection-outline {
     align-items: center;
     justify-content: center;
     padding: 0;
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
     font-weight: 700;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm, 4px);
     cursor: pointer;
     z-index: 20;
@@ -927,8 +1168,8 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__collapse-btn:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-border-strong, #d1d5db);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-diagram-editor--readonly .tm-diagram-node__collapse-btn {
@@ -937,25 +1178,25 @@ rect.tm-diagram-selection-outline {
 
 /* ── Search highlight ────────────────────────────────────────────────────── */
 .tm-diagram-node.tm-diagram-search-match .tm-diagram-node__body {
-    outline: 2px solid var(--tm-color-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
     animation: tm-diagram-search-pulse 1.5s ease-in-out infinite;
 }
 
 path.tm-diagram-edge-path.tm-diagram-search-match {
-    stroke: var(--tm-color-primary, #3b82f6);    
+    stroke: var(--tm-color-primary);    
     animation: tm-diagram-search-pulse-svg 1.5s ease-in-out infinite;
-    filter: drop-shadow(0 0 4px var(--tm-color-primary, #3b82f6));
+    filter: drop-shadow(0 0 4px var(--tm-color-primary));
 }
 
 @keyframes tm-diagram-search-pulse {
-    0%, 100% { outline-color: var(--tm-color-primary, #3b82f6); outline-offset: 2px; }
-    50% { outline-color: var(--tm-color-success, #10b981); outline-offset: 4px; }
+    0%, 100% { outline-color: var(--tm-color-primary); outline-offset: 2px; }
+    50% { outline-color: var(--tm-color-success); outline-offset: 4px; }
 }
 
 @keyframes tm-diagram-search-pulse-svg {
-    0%, 100% { stroke: var(--tm-color-primary, #3b82f6); filter: drop-shadow(0 0 2px var(--tm-color-primary, #3b82f6)); }
-    50% { stroke: var(--tm-color-success, #10b981); filter: drop-shadow(0 0 6px var(--tm-color-success, #10b981)); }
+    0%, 100% { stroke: var(--tm-color-primary); filter: drop-shadow(0 0 2px var(--tm-color-primary)); }
+    50% { stroke: var(--tm-color-success); filter: drop-shadow(0 0 6px var(--tm-color-success)); }
 }
 
 /* ── Port styling ─────────────────────────────────────────────────────────── */
@@ -966,8 +1207,8 @@ path.tm-diagram-edge-path.tm-diagram-search-match {
  * foreignObject. Styling therefore uses SVG presentation attributes
  * (fill/stroke) instead of CSS background/border. */
 circle.tm-diagram-port {
-    fill: var(--tm-color-surface, #ffffff);
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     cursor: crosshair;
     opacity: 0;
@@ -985,34 +1226,34 @@ circle.tm-diagram-port {
 }
 
 circle.tm-diagram-port:hover {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 6;
 }
 
 /* ── Edge drawing ─────────────────────────────────────────────────────────── */
 .tm-diagram-edge-draw-path {
     fill: none;
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 2;
     pointer-events: none;
 }
 
 circle.tm-diagram-port.tm-diagram-port--active {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 6.5;
 }
 
 circle.tm-diagram-port.tm-diagram-port--target {
-    fill: var(--tm-color-success, #10b981);
-    stroke: var(--tm-color-success, #10b981);
+    fill: var(--tm-color-success);
+    stroke: var(--tm-color-success);
     r: 7.5;
 }
 
 /* ── Connection points (draw.io style fixed constraint points) ──────────────
  * Also SVG <circle> post-F3 for the same hit-testing reason as ports. */
 circle.tm-diagram-connection-point {
-    fill: var(--tm-color-surface, #ffffff);
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     cursor: crosshair;
     opacity: 0;
@@ -1026,14 +1267,91 @@ circle.tm-diagram-connection-point {
 }
 
 circle.tm-diagram-connection-point:hover {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 5;
 }
 
 circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     r: 5.5;
-    filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5));
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--tm-color-primary) 50%, transparent));
+}
+
+/* ── Finger-sized port hit circles (review fix: finger edge-drawing discoverability) ──────────
+ * Invisible circles over the SELECTED node's ports, rendered AFTER the transform-handles
+ * groups. They are pointer-active ONLY on a coarse pointer: a finger cannot hit the small
+ * visible port circles, and the n/e/s/w mid-edge resize hits are dropped there, so the port
+ * drag claims the press where they paint (the resize/rotate sessions veto through
+ * engine.touchPortAt). On a fine pointer they stay inert (pointer-events: none — no dead zone,
+ * no shadow over the mid-edge resize handles a mouse still uses); the mouse keeps the small
+ * visible ports and the hit-stack corridor lookup (J6) is untouched because elementsFromPoint
+ * skips inert elements. Sized by --tm-diagram-handle-hit (`--tm-space-6` by default, the core
+ * `--tm-touch-target` on a coarse pointer); the variable
+ * is redeclared on this group (a SIBLING of the handles groups, not a child). */
+.tm-diagram-port-hits {
+    --tm-diagram-handle-hit: var(--tm-space-6);
+}
+
+circle.tm-diagram-port-hit {
+    r: calc(var(--tm-diagram-handle-hit, var(--tm-space-6)) / 2);
+    fill: transparent;
+    stroke: none;
+    pointer-events: none;
+    cursor: crosshair;
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-port-hits {
+        --tm-diagram-handle-hit: var(--tm-touch-target);
+    }
+
+    circle.tm-diagram-port-hit {
+        pointer-events: all;
+    }
+
+    .tm-diagram-node--selected circle.tm-diagram-port,
+    .tm-diagram-node--selected circle.tm-diagram-connection-point {
+        opacity: 1;
+    }
+
+    /* The mid-edge resize handles would sit exactly on the port hit circles — drop them on a
+     * coarse pointer, but only on nodes that render port hits (`data-has-ports="true"`); a
+     * port-less node keeps the full handle set. The four corners always keep the resize
+     * affordance. */
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="n"],
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="e"],
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="s"],
+    .tm-diagram-node-handles[data-has-ports="true"] .tm-diagram-resize-handle-hit[data-resize-handle="w"] {
+        display: none;
+    }
+}
+
+/* A finger has no hover at all: the sticky :hover after a tap must not reveal the ports of an
+ * unselected node — only the SELECTED node's ports show (opacity 1). Keyed off `(hover: none)`
+ * rather than `(pointer: coarse)`: a coarse PRIMARY pointer paired with a hover-capable
+ * secondary (hybrid laptop) must not suppress real hover. */
+@media (hover: none) {
+    .tm-diagram-node:hover circle.tm-diagram-port,
+    .tm-diagram-node:hover circle.tm-diagram-connection-point {
+        opacity: 0;
+    }
+}
+
+/* During edge drawing the ports must show even on devices without hover. Specificity matches
+ * the `(hover: none)` :hover suppression above (three in the class column — the canvas class,
+ * the node class, the port class — plus the circle element) and this comes later in source
+ * order, so it wins while drawing. */
+.tm-diagram-canvas--edge-drawing .tm-diagram-node circle.tm-diagram-port {
+    opacity: 1;
+}
+
+/* A live resize rebuilds the node geometry in C# while the finger-sized port hit circles and
+ * the quick-connect arrows keep their last-rendered positions — they would cover the growing
+ * edge with a stale hit area. The JS engine adds `tm-diagram-canvas--resizing` for the
+ * gesture's duration. */
+.tm-diagram-canvas--resizing .tm-diagram-port-hits,
+.tm-diagram-canvas--resizing .tm-diagram-connect-arrows {
+    display: none;
 }
 
 /* ── Edge path ────────────────────────────────────────────────────────────── */
@@ -1062,11 +1380,11 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 }
 
 .tm-diagram-edge-path--selected {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
 }
 
 .tm-diagram-edge-path--selected-outline {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 4px;
     stroke-dasharray: 4, 4;
     stroke-linecap: round;
@@ -1075,16 +1393,20 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 }
 
 .tm-diagram-edge-cardinality {
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     font-family: var(--tm-font-sans, sans-serif);
-    fill: var(--tm-color-text, #111827);
+    fill: var(--tm-diagram-node-ink);
+    paint-order: stroke;
+    stroke: var(--tm-diagram-paper);
+    stroke-width: 3px;
+    stroke-linejoin: round;
     pointer-events: none;
     user-select: none;
 }
 
 .tm-diagram-edge-handle {
-    fill: var(--tm-color-primary, #3b82f6);
-    stroke: #ffffff;
+    fill: var(--tm-color-primary);
+    stroke: var(--tm-color-surface);
     stroke-width: 2;
     cursor: crosshair;
     pointer-events: all;
@@ -1093,31 +1415,31 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 .tm-diagram-edge-handle--jetty {
     pointer-events: all;
     cursor: move;
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
 }
 
 .tm-diagram-edge-handle--dangling {
     pointer-events: all;
     cursor: move;
-    fill: var(--tm-color-primary, #3b82f6);
-    stroke: #ffffff;
+    fill: var(--tm-color-primary);
+    stroke: var(--tm-color-surface);
     stroke-width: 2;
 }
 
 .tm-diagram-edge--target .tm-diagram-edge-path {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 3;
-    filter: drop-shadow(0 0 4px var(--tm-color-primary, #3b82f6));
+    filter: drop-shadow(0 0 4px var(--tm-color-primary));
 }
 
 .tm-diagram-edge-toolbar {
     display: flex;
     gap: 2px;
-    background: var(--tm-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     padding: 3px;
-    box-shadow: var(--tm-shadow-md, 0 4px 6px -1px rgba(0,0,0,0.1));
+    box-shadow: var(--tm-shadow-md);
     pointer-events: none;
 }
 
@@ -1140,8 +1462,8 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-primary, #374151);
-    font-size: 12px;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -1151,11 +1473,11 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 }
 
 .tm-diagram-edge-toolbar button:hover {
-    background: var(--tm-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-edge-toolbar button:active {
-    background: var(--tm-surface-active, #e5e7eb);
+    background: var(--tm-surface-200);
 }
 
 .tm-diagram-edge-routing-picker {
@@ -1176,23 +1498,23 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     border-radius: 4px;
     cursor: pointer;
     background: transparent;
-    color: var(--tm-text-primary, #374151);
+    color: var(--tm-color-text);
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .tm-diagram-routing-preview:hover {
-    background: var(--tm-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-routing-preview--selected {
-    border-color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-primary-subtle, #eff6ff);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-diagram-edge-virtual-bend {
     pointer-events: all;
     cursor: crosshair;
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     opacity: 0.2;
     transition: opacity 0.15s ease;
 }
@@ -1203,7 +1525,7 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 
 .tm-diagram-edge-segment-handle {
     pointer-events: all;
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     opacity: 0.25;
     transition: opacity 0.15s ease;
 }
@@ -1216,11 +1538,11 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     transition: transform 0.12s, background 0.12s;
 }
 .tm-diagram-hover-connect:hover {
-    background: var(--tm-color-primary, #3b82f6) !important;
+    background: var(--tm-color-primary) !important;
     transform: scale(1.15);
 }
 .tm-diagram-hover-connect:hover span {
-    color: #fff !important;
+    color: var(--tm-color-on-primary) !important;
 }
 
 .tm-diagram-math {
@@ -1236,10 +1558,9 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
     max-width: 100%;
     max-height: 100%;
 }
-}
 
 .tm-diagram-distance-label {
-    fill: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-primary);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     font-weight: 500;
     pointer-events: none;
@@ -1252,34 +1573,75 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 }
 
 .tm-diagram-edge-label {
-    font-size: 12px;
-    fill: var(--tm-color-text, #111827);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-diagram-node-ink);
     font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
     pointer-events: none;
     user-select: none;
 }
 
+/* A paper-coloured pill so the edge stroke never runs through the text; paper and ink
+   are theme-invariant (the page is white in every theme). */
+.tm-diagram-edge-label__text {
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-diagram-paper);
+    line-height: 1.25;
+}
+
 .tm-diagram-edge-label-input {
     width: 100%;
     height: 100%;
-    font-size: 12px;
-    padding: 2px 6px;
-    border: 1px solid var(--tm-color-primary, #3b82f6);
+    font-size: var(--tm-font-size-xs);
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
+    border: 1px solid var(--tm-color-primary);
     border-radius: 4px;
-    background: var(--tm-color-surface-elevated, #ffffff);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-elevated);
+    color: var(--tm-color-text);
     outline: none;
     text-align: center;
 }
 
-/* ── Right column (properties + layers + minimap) ───────────────────────── */
+/* ── Right column (inspector + minimap, phase 4) ────────────────────────── */
+/* Inside the editor shell the dock owns the width; the stack fills it. */
 .tm-diagram-editor__right-stack {
     display: flex;
     flex-direction: column;
-    width: 280px;
+    width: 100%;
     flex-shrink: 0;
-    border-left: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    border-left: none;
+    background: var(--tm-color-surface-elevated);
+    height: 100%;
+}
+
+.tm-diagram-editor__inspector {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.tm-diagram-editor__inspector .tm-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tm-diagram-editor__inspector .tm-tabs__header {
+    flex-shrink: 0;
+    padding: 0 var(--tm-space-2, 8px);
+    border-bottom: 1px solid var(--tm-color-border);
+}
+
+.tm-diagram-editor__inspector .tm-tabs__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    overflow-y: auto;
 }
 
 .tm-diagram-editor__right-wrap {
@@ -1297,64 +1659,76 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
 .tm-diagram-editor__layers-wrap {
     flex: 1;
     min-height: 0;
-    border-top: 1px solid var(--tm-color-border, #e5e7eb);
+    border-top: 1px solid var(--tm-color-border);
 }
 
-.tm-diagram-editor__minimap-wrap {
+/* Collapsible minimap card (mockup): a header with a chevron above the preview. */
+.tm-diagram-editor__minimap-card {
     flex-shrink: 0;
-    border-top: 1px solid var(--tm-color-border, #e5e7eb);
-    max-height: 200px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    border-top: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface-elevated);
+}
+
+.tm-diagram-editor__minimap-card-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 8px);
+    width: 100%;
+    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
+    border: none;
+    background: transparent;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm, 14px);
+    font-weight: 500;
+    cursor: pointer;
+    text-align: start;
+}
+
+.tm-diagram-editor__minimap-card-toggle:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-editor__minimap-card-toggle > :last-child {
+    margin-inline-start: auto;
+}
+
+.tm-diagram-editor__minimap-body {
+    padding: 0 var(--tm-space-3, 12px) var(--tm-space-3, 12px);
+    max-height: 12.5rem;
+    overflow: hidden;
+}
+
+/* UX review phase 4 (minor): the card header already reads "Minimap" — the standalone
+   TmDiagramMinimap title would label the card twice. The markup keeps the title (the
+   minimap is also used on its own, where it needs it), the embedded card just hides it. */
+.tm-diagram-editor__minimap-card .tm-diagram-minimap__title {
+    display: none;
 }
 
 /* ── Properties panel ────────────────────────────────────────────────────── */
 .tm-diagram-editor__props-wrap {
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    background: var(--tm-color-surface-elevated);
 }
 
 .tm-diagram-editor__props {
     padding: var(--tm-space-3, 12px);
 }
 
-.tm-diagram-editor__props-title {
-    font-size: var(--tm-font-size-sm, 14px);
-    font-weight: 600;
-    color: var(--tm-color-text, #111827);
-    margin-bottom: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-editor__props-group {
-    margin-bottom: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-editor__props-label {
-    display: block;
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 500;
-    color: var(--tm-color-text-muted, #6b7280);
-    margin-bottom: 4px;
-}
-
 .tm-diagram-editor__props-input {
     width: 100%;
-    padding: 4px 8px;
+    padding: var(--tm-space-1) var(--tm-space-2);
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     box-sizing: border-box;
 }
 
 .tm-diagram-editor__props-input:focus {
     outline: none;
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.tm-diagram-editor__props-textarea {
-    min-height: 80px;
-    resize: vertical;
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 15%, transparent);
 }
 
 /* ── Resize handles ──────────────────────────────────────────────────────── *
@@ -1364,12 +1738,42 @@ circle.tm-diagram-connection-point.tm-diagram-connection-point--active {
  * background/border. Cursor hint is applied inline per handle (direction
  * depends on the handle role). */
 rect.tm-diagram-resize-handle {
-    fill: var(--tm-color-surface, #ffffff);
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     rx: 2;
     ry: 2;
-    pointer-events: auto;
+    pointer-events: none;
+}
+
+/* Phase 6 (tablet and touch): each visible handle square is covered by a larger INVISIBLE
+ * hit rect centred on the same point, and the whole gesture (pointer/pen/mouse) starts on
+ * that hit rect. The size is a variable in SVG user units: `--tm-space-6` by default, the core
+ * `--tm-touch-target` on a coarse pointer (WCAG 2.5.8 target size). It scales with canvas zoom
+ * by nature of the user units — at zoom 1 it is the on-screen pixel size. */
+.tm-diagram-node-handles {
+    --tm-diagram-handle-hit: var(--tm-space-6);
+}
+
+rect.tm-diagram-resize-handle-hit,
+circle.tm-diagram-rotate-handle-hit {
+    /* SVG2 geometry properties: the rect/circle is positioned by its centre (the x/y / cx/cy
+     * attributes carry the handle point) and grows symmetrically around it. transform-box is
+     * required so the percentage translate resolves against the element, not the view-box. */
+    width: var(--tm-diagram-handle-hit);
+    height: var(--tm-diagram-handle-hit);
+    r: calc(var(--tm-diagram-handle-hit) / 2);
+    transform-box: fill-box;
+    transform: translate(-50%, -50%);
+    fill: none;
+    stroke: none;
+    pointer-events: all;
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-node-handles {
+        --tm-diagram-handle-hit: var(--tm-touch-target);
+    }
 }
 
 /* ── Read-only mode ──────────────────────────────────────────────────────── */
@@ -1403,7 +1807,7 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-toolbox__title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     margin: 0 0 var(--tm-space-3, 12px);
 }
 
@@ -1416,7 +1820,7 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-toolbox__search input:focus-visible {
-    outline: 2px solid var(--tm-color-primary, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
 
@@ -1424,7 +1828,21 @@ rect.tm-diagram-resize-handle {
     padding: var(--tm-space-4, 16px);
     text-align: center;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
+}
+
+/* Read-only hint (D9/R1 review): one visually-hidden span referenced by aria-describedby from
+   every inert tile — present for assistive tech, invisible in the layout. */
+.tm-diagram-toolbox__sr-hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
 }
 
 .tm-diagram-toolbox__library {
@@ -1435,96 +1853,110 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-toolbox__library-header {
-    min-height: 24px;
+    min-height: var(--tm-space-6);
     display: flex;
     align-items: center;
     padding: 0 var(--tm-space-2, 8px);
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 700;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-toolbox__category {
     margin-bottom: var(--tm-space-2, 8px);
 }
 
+/* Mockup: palette headers are sentence-case section titles with the chevron on the
+   right; the stencils are card-like rows inside the panel. */
 .tm-diagram-toolbox__category-header {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1, 4px);
     width: 100%;
-    padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
-    font-size: var(--tm-font-size-xs, 12px);
+    padding: var(--tm-space-2, 8px) var(--tm-space-2, 8px);
+    font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text);
     background: transparent;
     border: none;
-    border-radius: var(--tm-radius-md, 6px);
+    border-radius: var(--tm-radius-control);
     cursor: pointer;
     text-align: left;
 }
 
+/* Chevron sits on the RIGHT of the header (mockup) — the markup puts the span first. */
+.tm-diagram-toolbox__category-header svg {
+    margin-left: auto;
+    color: var(--tm-color-text-muted);
+    flex-shrink: 0;
+}
+
 .tm-diagram-toolbox__category-header:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-toolbox__category-header:focus-visible {
-    outline: 2px solid var(--tm-color-primary, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-toolbox__category-body {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding-left: var(--tm-space-1, 4px);
+    gap: var(--tm-space-1, 4px);
+    padding-left: 0;
 }
 
 .tm-diagram-toolbox__item {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px);
-    border-radius: var(--tm-radius-md, 6px);
+    padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
     cursor: grab;
     user-select: none;
-    transition: background 120ms;
+    transition: background 120ms, border-color 120ms;
 }
 
 .tm-diagram-toolbox__item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-diagram-toolbox__item:focus-visible {
-    outline: 2px solid var(--tm-color-primary, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-toolbox__item:active {
     cursor: grabbing;
 }
 
+.tm-diagram-toolbox__item[aria-disabled="true"] { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
+.tm-diagram-toolbox__item[aria-disabled="true"]:hover,
+.tm-diagram-toolbox__item[aria-disabled="true"]:active { background: var(--tm-color-surface); border-color: var(--tm-color-border); cursor: not-allowed; }
+
 .tm-diagram-toolbox__item--edge .tm-diagram-toolbox__label {
     color: var(--tm-color-text);
 }
 
 .tm-diagram-toolbox__preview {
-    width: 32px;
-    height: 32px;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-toolbox__preview svg {
-    width: 32px;
-    height: 32px;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
     display: block;
 }
 
@@ -1534,270 +1966,70 @@ rect.tm-diagram-resize-handle {
 
 .tm-diagram-toolbox__label {
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
 }
 
-@media (max-width: 640px) {
-    .tm-diagram-editor__body {
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .tm-diagram-editor__toolbox-wrap {
-        width: 100%;
-        max-height: 280px;
-        border-right: none;
-        border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
-        overflow-y: auto;
-    }
-
-    .tm-diagram-editor__right-stack {
-        display: none;
-    }
-
-    .tm-diagram-editor__canvas-wrap {
-        flex: 1 1 auto;
-        min-height: 320px;
-    }
-
-    .tm-diagram-toolbox__inner {
-        padding: var(--tm-space-2, 8px);
-    }
-
-    .tm-diagram-toolbox__title {
-        margin-bottom: var(--tm-space-2, 8px);
-    }
-
-    .tm-diagram-toolbox__search {
-        margin-bottom: var(--tm-space-2, 8px);
-    }
-
-    .tm-diagram-toolbox__library {
-        margin-bottom: var(--tm-space-2, 8px);
-    }
-
-    .tm-diagram-toolbox__library-header {
-        padding: 0;
-    }
-
-    .tm-diagram-toolbox__category-body {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
-        gap: var(--tm-space-1, 4px);
-        padding-left: 0;
-    }
-
-    .tm-diagram-toolbox__item {
-        min-width: 0;
-    }
-
-    .tm-diagram-toolbox__label {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   TmDiagramLayersPanel internal styles
-   ════════════════════════════════════════════════════════════════════════════ */
-.tm-diagram-layers {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-}
-
-.tm-diagram-layers__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--tm-space-3, 12px);
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
-}
-
-.tm-diagram-layers__title {
-    margin: 0;
-    font-size: var(--tm-font-size-sm, 14px);
-    font-weight: 600;
-}
-
-.tm-diagram-layers__icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    font-size: 16px;
-    line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-}
-
-.tm-diagram-layers__icon-btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    color: var(--tm-color-text, #111827);
-}
-
-.tm-diagram-layers__list {
-    flex: 1;
-    min-height: 0;
+/* Phase 7 (G2): the old viewport @media (max-width: 640px) block is gone — the editor's
+   presentation travels on the data-editor-layout attribute the shell resolution mirrors
+   (the phase-6 container convention), so a narrow editor inside a wide window keeps the
+   desktop presentation and the mode branch never duplicates a breakpoint literal. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__toolbox-wrap {
+    max-height: 17.5rem;
     overflow-y: auto;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__inner {
     padding: var(--tm-space-2, 8px);
 }
 
-.tm-diagram-layers__item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    user-select: none;
-    transition: background 120ms;
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__title {
+    margin-bottom: var(--tm-space-2, 8px);
 }
 
-.tm-diagram-layers__item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__search {
+    margin-bottom: var(--tm-space-2, 8px);
 }
 
-.tm-diagram-layers__item--active {
-    background: var(--tm-color-primary-subtle, #dbeafe);
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__library {
+    margin-bottom: var(--tm-space-2, 8px);
 }
 
-.tm-diagram-layers__item--active:hover {
-    background: var(--tm-color-primary-subtle, #dbeafe);
-}
-
-.tm-diagram-layers__visibility,
-.tm-diagram-layers__lock,
-.tm-diagram-layers__delete {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__library-header {
     padding: 0;
-    font-size: 12px;
-    line-height: 1;
-    color: var(--tm-color-text-muted, #6b7280);
-    background: transparent;
-    border: none;
-    border-radius: var(--tm-radius-sm, 4px);
-    cursor: pointer;
-    flex-shrink: 0;
 }
 
-.tm-diagram-layers__visibility:hover:not(:disabled),
-.tm-diagram-layers__lock:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.05);
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__category-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: var(--tm-space-1, 4px);
+    padding-left: 0;
 }
 
-.tm-diagram-layers__delete {
-    margin-left: auto;
-    opacity: 0;
-    transition: opacity 120ms;
-}
-
-.tm-diagram-layers__item:hover .tm-diagram-layers__delete {
-    opacity: 1;
-}
-
-.tm-diagram-layers__delete:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--tm-color-danger, #ef4444);
-}
-
-.tm-diagram-layers__name {
-    flex: 1;
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__item {
     min-width: 0;
+}
+
+/* UX review: the tile labels wrap to at most two lines (a nowrap ellipsis truncates the
+   stencil names too aggressively in the sheet's tile grid) — the full name stays available
+   through the tile's aria-label. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-toolbox__label {
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 2px 4px;
-    border-radius: var(--tm-radius-sm, 4px);
 }
 
-.tm-diagram-layers__name-input {
-    flex: 1;
-    min-width: 0;
-    padding: 2px 4px;
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-primary, #3b82f6);
-    border-radius: var(--tm-radius-sm, 4px);
-    outline: none;
-}
-
-.tm-diagram-layers__selected-section {
-    padding: var(--tm-space-3, 12px);
-    border-top: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface, #ffffff);
-}
-
-.tm-diagram-layers__label {
-    display: block;
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 500;
-    color: var(--tm-color-text-muted, #6b7280);
-    margin-bottom: 4px;
-}
-
-.tm-diagram-layers__select {
-    width: 100%;
-    padding: 4px 8px;
-    font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    box-sizing: border-box;
-    margin-bottom: var(--tm-space-3, 12px);
-}
-
-.tm-diagram-layers__select:focus {
-    outline: none;
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.tm-diagram-layers__actions {
-    display: flex;
-    gap: var(--tm-space-2, 8px);
-}
-
-.tm-diagram-layers__action-btn {
-    flex: 1;
-    padding: 4px 8px;
-    font-size: var(--tm-font-size-xs, 12px);
-    font-weight: 500;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    transition: background 120ms, border-color 120ms;
-}
-
-.tm-diagram-layers__action-btn:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-border-strong, #d1d5db);
-}
-
-.tm-diagram-layers__action-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
+/* Historical note (phase 3): TmDiagramLayersPanel styles moved to the component's
+   scoped stylesheet (Components/Diagram/TmDiagramLayersPanel.razor.css) — the legacy
+   global copy that used to sit here was merged away, together with the dead rules for
+   markup that no longer existed (__selected-section, __select, __actions,
+   __action-btn, __icon-btn, __label). TmDiagramLayersPanelTests.SingleStyleSource
+   pins the single source. The scoped file also owns the panel's reduced-motion rule
+   (P21: a component owns its own motion); at the time of that phase the package
+   carried TWO prefers-reduced-motion blocks — the shared enumeration at the end of
+   this file plus the layers-panel one — and ReducedMotionSelectorTests counted
+   coverage from both. */
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramMinimap internal styles
    ════════════════════════════════════════════════════════════════════════════ */
@@ -1806,13 +2038,13 @@ rect.tm-diagram-resize-handle {
     flex-direction: column;
     align-items: center;
     padding: var(--tm-space-2, 8px);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    background: var(--tm-color-surface-elevated);
 }
 
 .tm-diagram-minimap__title {
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-bottom: var(--tm-space-1, 4px);
     text-transform: uppercase;
     letter-spacing: 0.025em;
@@ -1821,8 +2053,8 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-minimap__svg {
     display: block;
     border-radius: var(--tm-radius-sm, 4px);
-    background: var(--tm-color-surface, #ffffff);
-    box-shadow: inset 0 0 0 1px var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface);
+    box-shadow: inset 0 0 0 1px var(--tm-color-border);
 }
 
 .tm-diagram-minimap__viewport {
@@ -1831,7 +2063,7 @@ rect.tm-diagram-resize-handle {
 
 .tm-diagram-minimap__empty {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     padding: var(--tm-space-2, 8px);
     text-align: center;
 }
@@ -1858,30 +2090,31 @@ rect.tm-diagram-resize-handle {
 .tm-diagram-properties__title {
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     margin: 0 0 var(--tm-space-3, 12px);
 }
 
 /* ── Property Cards (using TmSection) ─────────────────────────────────────── */
+/* Mockup: inspector sections are cards with the card radius (F0 token). */
 .tm-diagram-properties .tm-section {
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 8px);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
     margin-bottom: var(--tm-space-3, 12px);
     overflow: hidden;
     transition: box-shadow 150ms ease;
 }
 
 .tm-diagram-properties .tm-section:hover {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: var(--tm-shadow-sm);
 }
 
 .tm-diagram-properties .tm-section-header {
     padding: 10px 12px;
     font-size: var(--tm-font-size-sm, 13px);
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
     border-bottom: 1px solid transparent;
     transition: background 120ms, border-color 120ms;
     cursor: pointer;
@@ -1889,7 +2122,7 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties .tm-section--collapsible .tm-section-header {
-    border-bottom-color: var(--tm-color-border, #e5e7eb);
+    border-bottom-color: var(--tm-color-border);
 }
 
 .tm-diagram-properties .tm-section--collapsed .tm-section-header {
@@ -1897,11 +2130,11 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties .tm-section-header:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties .tm-section-header-icon {
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-right: 6px;
 }
 
@@ -1911,7 +2144,7 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-properties .tm-section-chevron {
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-left: auto;
     transition: transform 0.2s ease;
 }
@@ -1929,21 +2162,47 @@ rect.tm-diagram-resize-handle {
     margin-bottom: var(--tm-space-3, 12px);
 }
 
-.tm-diagram-properties__field label {
+.tm-diagram-properties__field label,
+.tm-diagram-properties__label {
     display: block;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 500;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-bottom: 4px;
 }
 
 .tm-diagram-properties__field .tm-text-input {
     width: 100%;
+    /* The class has no core or demo styling, so without these declarations the browser's
+       UA default (white box) leaks through and reads as broken in dark theme — the page
+       W/H/Scale and node X/Y/W/H fields sat white on the dark panel (UX review, phase 8).
+       Tokenized control look, same contract as the core .tm-input. */
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-2);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+    background-color: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-diagram-properties__field textarea.tm-text-input {
+    height: auto;
+    min-height: 5rem;
+    padding: var(--tm-space-2);
+    line-height: var(--tm-line-height-normal);
 }
 
 .tm-diagram-properties__row {
     display: flex;
     gap: var(--tm-space-2, 8px);
+}
+
+/* Page W×H row only: puts the breathing gap above the Scale field without giving
+   every properties row a double bottom gap (the fields already space themselves). */
+.tm-diagram-properties__row--page-size {
+    margin-bottom: var(--tm-space-3);
 }
 
 .tm-diagram-properties__row > .tm-diagram-properties__field {
@@ -1962,27 +2221,83 @@ rect.tm-diagram-resize-handle {
 
 .tm-diagram-properties__empty {
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin: 0;
 }
 
+/* ── Read-only summary (review L) ─────────────────────────────────────────── */
+/* The R1 inspection selection renders as a plain fact list — the read-only
+   counterpart of the editing widgets above. */
+.tm-diagram-properties__readonly-summary {
+    margin: var(--tm-space-2, 8px) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1, 4px);
+    font-size: var(--tm-font-size-sm, 14px);
+}
+
+.tm-diagram-properties__readonly-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tm-space-2, 8px);
+}
+
+.tm-diagram-properties__readonly-row dt {
+    flex: 0 0 auto;
+    min-width: 5.5em;
+    color: var(--tm-color-text-muted);
+}
+
+.tm-diagram-properties__readonly-row dd {
+    margin: 0;
+    color: var(--tm-color-text);
+    overflow-wrap: anywhere;
+}
+
+.tm-diagram-properties__readonly-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm, 4px);
+    margin-inline-end: var(--tm-space-2, 8px);
+    vertical-align: middle;
+}
+
 /* ── Color Swatches ───────────────────────────────────────────────────────── */
+/* Mockup (Vzhled): swatch + the current hex value as readable text next to it. */
+.tm-diagram-properties__color-value {
+    font-size: var(--tm-font-size-xs, 12px);
+    font-family: var(--tm-font-mono, monospace);
+    color: var(--tm-color-text-secondary);
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
 .tm-diagram-properties__color-swatch {
     position: relative;
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid var(--tm-color-border, #e5e7eb);
+    border: 2px solid var(--tm-color-border);
     overflow: hidden;
     cursor: pointer;
     flex-shrink: 0;
     transition: transform 120ms, border-color 120ms;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tm-text-inverse) 8%, transparent);
 }
 
 .tm-diagram-properties__color-swatch:hover {
     transform: scale(1.1);
-    border-color: var(--tm-color-primary, #3b82f6);
+    border-color: var(--tm-color-primary);
+}
+
+/* Mixed multi-selection: a neutral hatch instead of a misleading fallback colour. */
+.tm-diagram-properties__color-swatch--mixed {
+    background: repeating-linear-gradient(45deg,
+        var(--tm-color-surface) 0 var(--tm-space-1),
+        var(--tm-color-border) var(--tm-space-1) var(--tm-space-2));
 }
 
 .tm-diagram-properties__color-swatch input[type="color"] {
@@ -2000,7 +2315,7 @@ rect.tm-diagram-resize-handle {
 /* ── Segmented Button Group ───────────────────────────────────────────────── */
 .tm-diagram-properties__segmented {
     display: inline-flex;
-    background: var(--tm-color-surface-elevated, #f3f4f6);
+    background: var(--tm-color-surface-elevated);
     border-radius: var(--tm-radius-md, 6px);
     padding: 2px;
     gap: 2px;
@@ -2012,30 +2327,57 @@ rect.tm-diagram-resize-handle {
     justify-content: center;
     padding: 4px 10px;
     font-size: var(--tm-font-size-sm, 13px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     background: transparent;
     border: none;
     border-radius: var(--tm-radius-sm, 4px);
     cursor: pointer;
     transition: background 120ms, color 120ms;
-    min-width: 32px;
+    min-width: var(--tm-space-8);
 }
 
 .tm-diagram-properties__segmented-btn:hover {
-    background: rgba(255,255,255,0.6);
-    color: var(--tm-color-text, #111827);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-diagram-properties__segmented-btn--active {
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-sm);
     font-weight: 600;
 }
 
 .tm-diagram-properties__segmented-btn--active:hover {
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-primary, #2563eb);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-primary);
+}
+
+/* Labelled variant (page orientation): text + icon buttons split the width. The base
+   segmented classes stay untouched so the B/I/U font segments render exactly as before. */
+.tm-diagram-properties__segmented--labelled {
+    display: flex;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+}
+.tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn {
+    flex: 1 1 0;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+}
+/* Visible track + filled active segment: the control reads as one labelled switch. */
+.tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn--active {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    box-shadow: none;
+}
+.tm-diagram-properties__segmented--labelled .tm-diagram-properties__segmented-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-properties__segmented-btn { min-height: var(--tm-touch-target); }
 }
 
 /* ── Action Grid (Align, Distribute, Layout) ──────────────────────────────── */
@@ -2057,37 +2399,12 @@ rect.tm-diagram-resize-handle {
     gap: 4px;
 }
 
-.tm-diagram-properties__action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 6px;
-    font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    cursor: pointer;
-    transition: background 120ms, color 120ms, border-color 120ms;
-}
-
-.tm-diagram-properties__action-btn:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-    border-color: var(--tm-color-border-strong, #d1d5db);
-    color: var(--tm-color-text, #111827);
-}
-
-.tm-diagram-properties__action-btn .tm-icon {
-    color: currentColor;
-}
-
 /* ── Context menu ─────────────────────────────────────────────────────────── */
 .tm-diagram-editor__context-menu {
-    background: var(--tm-color-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-md);
     min-width: 140px;
     max-height: calc(100vh - 40px);
     overflow-y: auto;
@@ -2100,7 +2417,7 @@ rect.tm-diagram-resize-handle {
     width: 100%;
     padding: 6px 12px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     background: transparent;
     border: none;
     text-align: left;
@@ -2108,21 +2425,43 @@ rect.tm-diagram-resize-handle {
 }
 
 .tm-diagram-editor__context-item:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-editor__context-item--danger {
-    color: var(--tm-color-danger, #ef4444);
+    color: var(--tm-color-danger);
 }
 
 .tm-diagram-editor__context-item--danger:hover {
-    background: rgba(239, 68, 68, 0.08);
+    background: var(--tm-color-danger-subtle);
+}
+
+/* X7: on the mobile actions sheet the destructive action stays reachable without scrolling —
+   it sticks to the bottom of the sheet body's scroll port (it is the fragment's last item). */
+.tm-overlay-panel-sheet .tm-diagram-editor__context-item--danger {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 1;
+    background: var(--tm-color-surface-elevated);
+    border-block-start: 1px solid var(--tm-color-border);
+}
+
+/* UX review: the sticky Delete must never have scrollable content showing through below it —
+   the drawer's body padding would leave a strip the items scroll into view under the sticky
+   row. The body gives its bottom padding up; the danger item itself carries the inset (the
+   safe-area padding rides on the last visible row). */
+.tm-overlay-panel-sheet .tm-drawer__body:has(.tm-diagram-editor__context-item--danger) {
+    padding-block-end: 0;
+}
+
+.tm-overlay-panel-sheet .tm-diagram-editor__context-item--danger {
+    padding-block-end: max(var(--tm-space-3), env(safe-area-inset-bottom));
 }
 
 .tm-diagram-editor__context-sep {
     height: 1px;
     margin: 4px 8px;
-    background: var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-border);
 }
 
 .tm-diagram-editor__context-heading {
@@ -2130,7 +2469,7 @@ rect.tm-diagram-resize-handle {
     padding: 4px 12px 2px;
     font-size: var(--tm-font-size-xs, 12px);
     font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
@@ -2144,10 +2483,44 @@ rect.tm-diagram-resize-handle {
     background: transparent;
 }
 
+/* Tablet (coarse pointer): finger-sized menu items (WCAG 2.5.8) — the shared touch-target token. */
+@media (pointer: coarse) {
+    .tm-diagram-editor__context-item {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Long-press feedback (review fix) ─────────────────────────────────────────
+ * A ring grows under the finger for the remaining hold time before the context menu opens.
+ * Purely decorative: it never intercepts events. */
+.tm-diagram-press-ring {
+    position: fixed;
+    width: 56px;
+    height: 56px;
+    margin: -28px 0 0 -28px;
+    border-radius: 50%;
+    border: 2px solid var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
+    pointer-events: none;
+    /* Fixed-position finger feedback: it paints above the editor chrome while the menu
+       it announces opens — the popover band, never an ad-hoc literal. */
+    z-index: var(--tm-z-popover);
+    transform: scale(0.4);
+    opacity: 0.9;
+    animation: tm-diagram-press-ring 450ms ease-out forwards;
+}
+
+@keyframes tm-diagram-press-ring {
+    to {
+        transform: scale(1);
+        opacity: 0.35;
+    }
+}
+
 .tm-diagram-node__table-cell--selected {
     /* Inset ring is clipped-safe (overflow:hidden on td and parents won't cut it).
        Box-shadow wins over inline border/background-color because it layers on top. */
-    box-shadow: inset 0 0 0 2px var(--tm-color-primary, #3b82f6);
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
     position: relative;
     z-index: 1;
 }
@@ -2158,17 +2531,11 @@ rect.tm-diagram-resize-handle {
     content: "";
     position: absolute;
     inset: 0;
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     opacity: 0.12;
     pointer-events: none;
 }
 
-.tm-diagram-node__table-cell--context-target {
-    /* Marks the cell that a right-click / context menu will operate on. */
-    box-shadow: inset 0 0 0 2px var(--tm-color-warning, #f59e0b);
-    position: relative;
-    z-index: 1;
-}
 /* Append to existing file */
 
 /* ── Rotate handle ─────────────────────────────────────────────────────── *
@@ -2177,18 +2544,18 @@ rect.tm-diagram-resize-handle {
  * edge. Both are native SVG in the decorator-pane's per-node <g>, so they
  * inherit the node's rotation automatically. */
 circle.tm-diagram-rotate-handle {
-    fill: #fff;
-    stroke: var(--tm-color-primary, #3b82f6);
+    fill: var(--tm-color-surface);
+    stroke: var(--tm-color-primary);
     stroke-width: 1.5;
     cursor: grab;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--tm-text-inverse) 15%, transparent));
     pointer-events: auto;
 }
 circle.tm-diagram-rotate-handle:active {
     cursor: grabbing;
 }
 line.tm-diagram-rotate-handle-stem {
-    stroke: var(--tm-color-primary, #3b82f6);
+    stroke: var(--tm-color-primary);
     stroke-width: 1;
     pointer-events: none;
 }
@@ -2198,11 +2565,25 @@ line.tm-diagram-rotate-handle-stem {
  * connect-arrow-wrap"> via SVG x/y/width/height attributes (so it rotates with
  * the node). The HTML <button> inside just fills the foreignObject; we keep
  * it as HTML for a11y (real button semantics, keyboard focus, screen readers)
- * — same approach as draw.io's mxConnectionHandler. */
+ * — same approach as draw.io's mxConnectionHandler. The buttons render in
+ * their own per-node <g class="tm-diagram-connect-arrows"> AFTER the port
+ * hits (buttons > gesture hit areas > visual handles), so the arrows stay the
+ * topmost hit target at their position and a finger can reach them. */
+.tm-diagram-connect-arrows {
+    /* The arrow's press target: the button is 22px and the ::before grows it
+       symmetrically to this size. Redeclared on this group (a SIBLING of the
+       handles and port-hits groups, not a child) together with the handle-hit
+       variable the coarse-pointer offset is computed from. */
+    --tm-diagram-connect-hit: 22px;
+    --tm-diagram-handle-hit: var(--tm-space-6);
+}
+
 .tm-diagram-connect-arrow-wrap {
     overflow: visible;
 }
+
 .tm-diagram-connect-arrow {
+    position: relative;
     width: 100%;
     height: 100%;
     padding: 0;
@@ -2210,25 +2591,66 @@ line.tm-diagram-rotate-handle-stem {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
-    border: 1.5px solid var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-surface);
+    border: 1.5px solid var(--tm-color-primary);
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-sm);
     transition: transform 0.12s, background 0.12s;
 }
+
+/* Invisible hit area centred on the button: total press target =
+   var(--tm-diagram-connect-hit). No background — it only extends the button's
+   own hit area outward. */
+.tm-diagram-connect-arrow::before {
+    content: '';
+    position: absolute;
+    inset: calc((var(--tm-diagram-connect-hit) - 100%) / -2);
+    border-radius: 50%;
+}
 .tm-diagram-connect-arrow:hover {
-    background: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
     transform: scale(1.15);
 }
 .tm-diagram-connect-arrow:hover .tm-diagram-connect-arrow__icon {
-    color: #fff;
+    color: var(--tm-color-on-primary);
 }
 .tm-diagram-connect-arrow__icon {
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
     pointer-events: none;
+}
+
+/* Coarse pointer (review fix — the connect arrows must be finger-reachable):
+ * the press target grows to 44px and every wrap offsets outward by
+ * handle-hit/2 + a gap so the expanded hit clears the 44px port hit discs (a
+ * finger still draws edges from the ports). The N arrow keeps its horizontal
+ * centre (an off-centre top arrow reads as misplaced) and shifts straight UP
+ * by the offset PLUS the rotate-hit size: its 44px press circle then clears the
+ * rotate handle's 44px hit circle parked directly above the top edge. */
+@media (pointer: coarse) {
+    .tm-diagram-connect-arrows {
+        --tm-diagram-connect-hit: var(--tm-touch-target);
+        --tm-diagram-handle-hit: var(--tm-touch-target);
+        --tm-diagram-connect-offset: calc(var(--tm-diagram-handle-hit) / 2 + var(--tm-space-1));
+    }
+
+    .tm-diagram-connect-arrow-wrap--n {
+        transform: translate(0, calc(-1 * (var(--tm-diagram-connect-offset) + var(--tm-diagram-handle-hit))));
+    }
+
+    .tm-diagram-connect-arrow-wrap--e {
+        transform: translate(var(--tm-diagram-connect-offset), 0);
+    }
+
+    .tm-diagram-connect-arrow-wrap--s {
+        transform: translate(0, var(--tm-diagram-connect-offset));
+    }
+
+    .tm-diagram-connect-arrow-wrap--w {
+        transform: translate(calc(-1 * var(--tm-diagram-connect-offset)), 0);
+    }
 }
 
 /* Rotate the "+" glyph to suggest the direction. Actual button placement is
@@ -2239,18 +2661,60 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-connect-arrow--w .tm-diagram-connect-arrow__icon { transform: rotate(180deg); }
 
 /* ── Connect modal stencil grid ────────────────────────────────────────── */
+.tm-diagram-connect-modal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+}
+
+/* Mockup (DI4): the search field and the "Show all" toggle share one toolbar row. */
+.tm-diagram-connect-modal__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-diagram-connect-modal__search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-diagram-connect-modal__show-all {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+}
+
+.tm-diagram-connect-modal__show-all:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-connect-modal__show-all[aria-pressed="true"] {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+/* No fixed pixel cap here: the palette keeps whole tile rows visible on desktop
+   and a tall offer (Show all) scrolls the modal body instead of slicing the
+   last row in half. The column count comes from the component
+   (--tm-connect-cols = the Columns property) — the SAME source the arrow-key
+   navigation uses, so CSS and keys can never disagree. */
 .tm-diagram-connect-modal__grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    max-height: 320px;
-    overflow-y: auto;
-    padding: 4px;
-}
-@media (max-width: 480px) {
-    .tm-diagram-connect-modal__grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+    grid-template-columns: repeat(var(--tm-connect-cols, 3), 1fr);
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-1);
 }
 
 .tm-diagram-connect-modal__item {
@@ -2258,31 +2722,47 @@ line.tm-diagram-rotate-handle-stem {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 10px 8px;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-2);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     cursor: pointer;
     transition: border-color 0.12s, background 0.12s;
 }
 .tm-diagram-connect-modal__item:hover {
-    border-color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
+}
+
+/* Roving focus (DI4): the tab stop carries the visible focus ring, arrows move it. */
+.tm-diagram-connect-modal__item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-diagram-connect-modal__icon {
-    width: 32px;
-    height: 32px;
-    color: var(--tm-color-text-muted, #6b7280);
+    width: var(--tm-space-10);
+    height: var(--tm-space-10);
+    color: var(--tm-color-text-muted);
 }
+
+/* The stencil preview svg fills its wrapper (moved here from inline styles). Long-text
+   previews are stripped in markup (DiagramStencilIconMarkup); the clip is the backstop. */
+.tm-diagram-connect-modal__icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.tm-diagram-connect-modal__icon svg,
+.tm-diagram-toolbox__preview svg { overflow: hidden; }
 .tm-diagram-connect-modal__item:hover .tm-diagram-connect-modal__icon {
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
 }
 
 .tm-diagram-connect-modal__label {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
@@ -2290,11 +2770,58 @@ line.tm-diagram-rotate-handle-stem {
     max-width: 100%;
 }
 
-/* ── Property Panel collapsible sections ───────────────────────────────── */
-.tm-diagram-properties__section--collapsible {
-    border-bottom: 1px solid var(--tm-color-border, #e5e7eb);
+/* Mobile sheet (DI4): plain rows. Keyed off the resolved layout (modifier set by the
+   component), so the CSS column count and the arrow-key column count share one source
+   (--tm-connect-cols; the modifier keeps the row layout). */
+.tm-diagram-connect-modal__grid--list { max-height: none; }
+.tm-diagram-connect-modal__grid--list .tm-diagram-connect-modal__item { flex-direction: row; justify-content: flex-start; gap: var(--tm-space-3); padding: var(--tm-space-3); }
+.tm-diagram-connect-modal__grid--list .tm-diagram-connect-modal__icon { flex: 0 0 auto; }
+.tm-diagram-connect-modal__grid--list .tm-diagram-connect-modal__label { text-align: start; white-space: normal; }
+
+/* No-result escape hatch (rendered OUTSIDE the live region): widen the scope to the whole
+   stencil library with one tap when the narrowed palette has no match. */
+.tm-diagram-connect-modal__empty-actions {
+    display: flex;
+    justify-content: center;
 }
 
+.tm-diagram-connect-modal__search-all {
+    padding: var(--tm-space-2) var(--tm-space-4);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+}
+
+.tm-diagram-connect-modal__search-all:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
+}
+
+/* Desktop dialog: the header close ✕ is the close affordance, so the sheet's sticky
+   footer collapses. The bar owns no class of its own, so the rule keys on the button
+   this dialog renders inside it. */
+@media (width >= 640px) {
+    .tm-modal-footer:has(.tm-diagram-connect-modal__close) {
+        display: none;
+    }
+}
+
+.tm-diagram-connect-modal__close {
+    flex: 1 1 auto;
+}
+
+.tm-diagram-connect-modal__empty {
+    margin: 0;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
+}
+
+/* ── Property Panel collapsible sections ───────────────────────────────── */
 .tm-diagram-properties__section-header {
     display: flex;
     align-items: center;
@@ -2305,87 +2832,26 @@ line.tm-diagram-rotate-handle-stem {
     border: none;
     font-size: var(--tm-font-size-sm, 14px);
     font-weight: 500;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     cursor: pointer;
 }
 
 .tm-diagram-properties__section-header:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-}
-
-.tm-diagram-properties__section-body {
-    padding: 0 12px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties__slider {
     width: 100%;
-    accent-color: var(--tm-color-primary, #3b82f6);
+    accent-color: var(--tm-color-primary);
+    /* A range input paints its own track — an inherited/UA background would leak a
+       white box into dark mode (the theme-matrix white-island guard caught it). */
+    background-color: transparent;
 }
 
 .tm-diagram-properties__color-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.tm-diagram-properties__color {
-    width: 44px;
-    height: 28px;
-    padding: 2px;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-surface, #ffffff);
-    cursor: pointer;
-}
-
-.tm-diagram-properties__toggles {
-    display: flex;
-    gap: 6px;
-}
-
-.tm-diagram-properties__toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
-    cursor: pointer;
-    transition: background 0.12s, border-color 0.12s;
-}
-
-.tm-diagram-properties__toggle-btn:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
-}
-
-.tm-diagram-properties__toggle-btn--active {
-    border-color: var(--tm-color-primary, #3b82f6);
-    background: var(--tm-color-primary-subtle, #dbeafe);
-    color: var(--tm-color-primary, #3b82f6);
-}
-
-.tm-diagram-properties__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.tm-diagram-properties__align-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-}
-
-.tm-diagram-properties__mixed {
-    font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
-    font-style: italic;
 }
 
 .tm-diagram-properties__table-grid {
@@ -2405,9 +2871,9 @@ line.tm-diagram-rotate-handle-stem {
     min-width: 0;
     padding: 4px 2px;
     font-size: 10px;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #111827);
+    border: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
     cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2416,41 +2882,27 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 .tm-diagram-properties__table-grid-cell:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-properties__table-grid-cell--selected {
-    background: var(--tm-color-primary, #3b82f6);
-    color: #ffffff;
-    border-color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-diagram-properties__hint {
     font-size: var(--tm-font-size-xs, 12px);
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     margin-top: 4px;
     line-height: 1.4;
 }
 
-/* Dark mode adjustments */
-[data-theme="dark"] .tm-diagram-properties__color,
-.tm-dark .tm-diagram-properties__color {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-}
-
-[data-theme="dark"] .tm-diagram-properties__toggle-btn,
-.tm-dark .tm-diagram-properties__toggle-btn {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-properties__toggle-btn--active,
-.tm-dark .tm-diagram-properties__toggle-btn--active {
-    background: rgba(59, 130, 246, 0.2);
-    border-color: var(--tm-color-primary, #3b82f6);
-}
+/* Historical note (phase-3 tokenization): the former [data-theme="dark"] /
+   .tm-dark blocks for __color, __toggle-btn, the template gallery/card and the
+   table inserter were removed back then — every colour above is a semantic token
+   (surface/border/primary-subtle/on-primary) that tokens-dark.css re-points, so
+   the values the old overrides hard-coded already come out of the tokens. */
 
 /* ════════════════════════════════════════════════════════════════════════════
    TmDiagramTemplateGallery & TmDiagramTemplateCard
@@ -2463,41 +2915,45 @@ line.tm-diagram-rotate-handle-stem {
     max-height: 70vh;
 }
 
-.tm-diagram-template-gallery__header {
+/* Mockup: the search field and the category chips share ONE toolbar row; on narrow
+   viewports the chips wrap under the field inside the same row container. */
+.tm-diagram-template-gallery__toolbar {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-3);
 }
 
 .tm-diagram-template-gallery__search {
-    width: 100%;
+    flex: 1 1 16rem;
+    min-width: 0;
 }
 
 .tm-diagram-template-gallery__filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--tm-space-2);
 }
 
 .tm-diagram-template-gallery__filter {
     padding: 4px 12px;
     font-size: var(--tm-font-size-sm, 14px);
-    color: var(--tm-color-text, #111827);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 6px);
     cursor: pointer;
     transition: background 120ms, border-color 120ms;
 }
 
 .tm-diagram-template-gallery__filter:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-diagram-template-gallery__filter--active {
-    background: var(--tm-color-primary, #3b82f6);
-    border-color: var(--tm-color-primary, #3b82f6);
-    color: #ffffff;
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-diagram-template-gallery__body {
@@ -2507,56 +2963,56 @@ line.tm-diagram-rotate-handle-stem {
     gap: 20px;
 }
 
-.tm-diagram-template-gallery__section-title {
-    margin: 0 0 8px;
-    font-size: var(--tm-font-size-sm, 14px);
-    font-weight: 600;
-    color: var(--tm-color-text-muted, #6b7280);
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
 .tm-diagram-template-gallery__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
+}
+
+/* Mobile sheet: the grid becomes a single-column card list (the mobile mockup lists
+   the templates one per row). */
+@media (width < 640px) {
+    .tm-diagram-template-gallery__grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .tm-diagram-template-gallery__empty {
     padding: 24px;
     text-align: center;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-sm, 14px);
 }
 
 /* ── Template card ────────────────────────────────────────────────────────── */
+/* Mockup: a VERTICAL gallery card — 16:10 preview on top, name + tags below. */
 .tm-diagram-template-card {
     display: flex;
-    flex-direction: row;
-    min-height: 96px;
-    background: var(--tm-color-surface, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
-    border-radius: var(--tm-radius-md, 6px);
+    flex-direction: column;
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
     overflow: hidden;
     cursor: pointer;
     transition: box-shadow 120ms, border-color 120ms, transform 120ms;
 }
 
 .tm-diagram-template-card:hover {
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-md);
     transform: translateY(-2px);
 }
 
 .tm-diagram-template-card--selected {
-    border-color: var(--tm-color-primary, #3b82f6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 .tm-diagram-template-card__thumb {
-    width: 112px;
-    min-width: 112px;
-    background: var(--tm-color-surface-elevated, #f9fafb);
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 16 / 10;
+    background: var(--tm-color-surface-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2566,28 +3022,26 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-template-card__thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .tm-diagram-template-card__placeholder {
     width: 48px;
     height: 48px;
     border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-border);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-diagram-template-card__info {
     min-width: 0;
-    padding: 10px 12px;
+    padding: var(--tm-space-2-5) var(--tm-space-3) var(--tm-space-3);
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
 }
 
@@ -2595,77 +3049,53 @@ line.tm-diagram-rotate-handle-stem {
     font-size: var(--tm-font-size-sm, 14px);
     line-height: 1.3;
     font-weight: 600;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-color-text);
     white-space: normal;
     overflow-wrap: anywhere;
 }
 
-.tm-diagram-template-card__tags {
+/* Mockup: the card paints its category and tags on AT MOST two lines — the meta row
+   clamps, so a tag-heavy template never stretches the card. */
+.tm-diagram-template-card__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--tm-space-1);
+    overflow: hidden;
+    max-height: calc(2 * (var(--tm-diagram-chip-font) * 1.4 + 2 * var(--tm-space-1)));
 }
 
-.tm-diagram-template-card__tag {
-    font-size: 11px;
-    color: var(--tm-color-text-muted, #6b7280);
-    background: var(--tm-color-surface-elevated, #f9fafb);
-    padding: 2px 6px;
+.tm-diagram-template-card__category {
+    font-size: var(--tm-diagram-chip-font);
+    font-weight: 600;
+    color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
     border-radius: var(--tm-radius-sm, 4px);
 }
 
-/* Dark mode adjustments */
-[data-theme="dark"] .tm-diagram-template-card,
-.tm-dark .tm-diagram-template-card {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
+.tm-diagram-template-card__tag {
+    font-size: var(--tm-diagram-chip-font);
+    color: var(--tm-color-text-muted);
+    background: var(--tm-color-surface-elevated);
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
+    border-radius: var(--tm-radius-sm, 4px);
 }
 
-[data-theme="dark"] .tm-diagram-template-card__thumb,
-.tm-dark .tm-diagram-template-card__thumb {
-    background: var(--tm-color-surface, #111827);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__placeholder,
-.tm-dark .tm-diagram-template-card__placeholder {
-    background: var(--tm-color-border-strong, #374151);
-    color: var(--tm-color-text-muted, #9ca3af);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__name,
-.tm-dark .tm-diagram-template-card__name {
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-template-card__tag,
-.tm-dark .tm-diagram-template-card__tag {
-    background: var(--tm-color-surface, #111827);
-    color: var(--tm-color-text-muted, #9ca3af);
-}
-
-[data-theme="dark"] .tm-diagram-template-gallery__filter,
-.tm-dark .tm-diagram-template-gallery__filter {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
-    color: var(--tm-color-text, #f3f4f6);
-}
-
-[data-theme="dark"] .tm-diagram-template-gallery__filter:hover,
-.tm-dark .tm-diagram-template-gallery__filter:hover {
-    background: var(--tm-color-surface-hover, #374151);
-}
+/* No dark overrides for the gallery/card: card, thumb, placeholder, tag and filter
+   all paint through semantic tokens that tokens-dark.css re-points (the removed
+   block re-declared exactly those tokens with stale hex fallbacks). */
 
 /* ── Table Inserter ─────────────────────────────────────────────────────── */
-
+/* UX review phase 4: the popover renders at the editor root (never inside a toolbar item that
+   may collapse into "More") as a fixed surface; its viewport point is measured in JS when it
+   opens and pinned through the inline left/top — the class only paints it. */
 .tm-diagram-table-inserter-popover {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 1000;
-    background: var(--tm-color-surface-elevated, #ffffff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    position: fixed;
+    z-index: var(--tm-z-popover);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md, 8px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--tm-shadow-lg);
     padding: 12px;
 }
 
@@ -2679,7 +3109,7 @@ line.tm-diagram-rotate-handle-stem {
 .tm-diagram-table-inserter__title {
     font-size: 13px;
     font-weight: 600;
-    color: var(--tm-color-text, #1f2937);
+    color: var(--tm-color-text);
     margin: 0;
 }
 
@@ -2691,55 +3121,497 @@ line.tm-diagram-rotate-handle-stem {
 }
 
 .tm-diagram-table-inserter__cell {
-    width: 16px;
-    height: 16px;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
     padding: 0;
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    border: 1px solid var(--tm-color-border);
     border-radius: 2px;
-    background: var(--tm-color-surface, #ffffff);
+    background: var(--tm-color-surface);
     cursor: pointer;
     transition: background 0.1s ease, border-color 0.1s ease;
 }
 
 .tm-diagram-table-inserter__cell:hover,
 .tm-diagram-table-inserter__cell--highlighted {
-    background: var(--tm-color-primary, #3b82f6);
-    border-color: var(--tm-color-primary, #3b82f6);
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-diagram-table-inserter__dims {
-    font-size: 12px;
-    color: var(--tm-color-text-muted, #6b7280);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-muted);
     min-height: 18px;
 }
 
-/* Dark mode */
-[data-theme="dark"] .tm-diagram-table-inserter-popover,
-.tm-dark .tm-diagram-table-inserter-popover {
-    background: var(--tm-color-surface-elevated, #1f2937);
-    border-color: var(--tm-color-border-strong, #374151);
+/* No [data-theme="dark"] overrides: the table inserter paints through semantic
+   tokens only (surface / border / primary / text-muted), which tokens-dark.css
+   re-points. In dark the primary step already resolves to the lighter tone the
+   removed override used to hard-code. */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phase 6 — tablet and touch (DI3): the container convention, coarse-pointer
+   targets, the minimap overlay and the palette rail. The editor root is a
+   NAMED inline-size container (tm-diagram-editor) so hosts and future rules can
+   branch on the editor's own width; the stylesheet literals stay the shared
+   TmBreakpoints set, so the mode branch itself travels on the data-editor-layout
+   attribute the editor mirrors from the resolved shell layout (the F1
+   convention: a per-instance pair moves the markup branch, never a literal).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.tm-diagram-editor {
+    container-type: inline-size;
+    container-name: tm-diagram-editor;
 }
 
-[data-theme="dark"] .tm-diagram-table-inserter__title,
-.tm-dark .tm-diagram-table-inserter__title {
-    color: var(--tm-color-text, #f3f4f6);
+/* The canvas owns its surface for the pointer-drag/pointer-gesture sessions: a
+   finger drag or pinch must never scroll or zoom the page (the canvas itself
+   never natively scrolls). */
+.tm-diagram-canvas {
+    touch-action: none;
+    /* Paper + ink for everything painted ON the page (node bodies, edge labels,
+       cardinalities). Declared here, not on the node body, so edge labels resolve it. */
+    --tm-diagram-paper: var(--tm-paper);
+    --tm-diagram-node-ink: var(--tm-paper-ink-muted);
+    /* Swimlane header band. Matches DiagramNodeSwimlaneData.HeaderSize = 30 — the data model
+       hit-testing and drop math both measure 30px, so the painted header must not drift
+       (the old --tm-input-height-xs resolves to 28px and clipped the drop detection). */
+    --tm-diagram-swimlane-header: 1.875rem;
 }
 
-[data-theme="dark"] .tm-diagram-table-inserter__cell,
-.tm-dark .tm-diagram-table-inserter__cell {
-    background: var(--tm-color-surface, #111827);
-    border-color: var(--tm-color-border-strong, #374151);
+/* The page rects keep literal fill/stroke ATTRIBUTES as a fallback for viewers without
+   the stylesheet; CSS beats presentation attributes on screen, so the tokens (and any host
+   override) win in the editor. exportViewportAsSvg additionally copies the computed values
+   onto the serialized clone, so an export always carries the paints the user actually saw. */
+.tm-diagram-page-backdrop { fill: var(--tm-paper-backdrop); }
+.tm-diagram-page { fill: var(--tm-diagram-paper); stroke: var(--tm-paper-border); }
+
+/* ── Minimap overlay (DI3) ─────────────────────────────────────────────────── */
+
+/* UX review phase 6: the floating overlay tucks into the canvas bottom-right
+   corner with a token inset on both axes, so by default it never rides the
+   canvas centre over nodes. The shell status bar (zoom controls) renders below
+   the canvas region, so the corner inset keeps the map clear of it too. The
+   mobile layout overrides this to the top-right corner (phase 7, below). */
+.tm-diagram-editor__minimap-overlay {
+    position: absolute;
+    inset-inline-end: var(--tm-space-3);
+    inset-block-end: var(--tm-space-3);
+    z-index: 5;
+    max-width: calc(100% - var(--tm-space-6));
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md, 8px);
+    box-shadow: var(--tm-shadow-lg);
+    padding: var(--tm-space-2);
 }
 
-[data-theme="dark"] .tm-diagram-table-inserter__cell:hover,
-[data-theme="dark"] .tm-diagram-table-inserter__cell--highlighted,
-.tm-dark .tm-diagram-table-inserter__cell:hover,
-.tm-dark .tm-diagram-table-inserter__cell--highlighted {
-    background: var(--tm-color-primary, #60a5fa);
-    border-color: var(--tm-color-primary, #60a5fa);
+.tm-diagram-editor__minimap-overlay .tm-diagram-minimap {
+    background: transparent;
+    border: none;
+    width: auto;
 }
 
-[data-theme="dark"] .tm-diagram-table-inserter__dims,
-.tm-dark .tm-diagram-table-inserter__dims {
-    color: var(--tm-color-text-muted, #9ca3af);
+/* UX review phase 7 (mobile): the phone layout moves the floating minimap to the
+   canvas TOP-right corner with the same token inset on both axes, mirroring the
+   mockup. With the panels sheet open the bottom corner would put the map over the
+   fitted diagram once only a strip of canvas stays visible above the sheet. The
+   sheet-open lift below is superseded on this layout, because a top-anchored map
+   needs no lift; tablet keeps the phase-6 bottom-right corner inset. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__minimap-overlay {
+    inset-block-start: var(--tm-space-3);
+    inset-block-end: auto;
 }
+
+/* U2/X4: the map width now travels as the component Width parameter per layout
+   (112/160/200px) — the tap mapping is computed from it, so CSS must never resize
+   the svg (a CSS resize would break tap navigation without any build error). */
+.tm-diagram-editor__minimap-overlay {
+    overflow: hidden;
+}
+
+/* UX review: the collapse affordance lives in a header strip (small title + button) so it
+   never covers the map's corner; the strip is part of the overlay frame, the svg below it. */
+.tm-diagram-editor__minimap-overlay-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-block-end: var(--tm-space-1);
+}
+
+.tm-diagram-editor__minimap-overlay-title {
+    font-size: var(--tm-font-size-xs, 12px);
+    font-weight: 600;
+    color: var(--tm-color-text-muted);
+    white-space: nowrap;
+}
+
+.tm-diagram-editor__minimap-overlay-collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-input-height-xs);
+    block-size: var(--tm-input-height-xs);
+    padding: 0;
+    margin-inline-start: auto;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+}
+
+.tm-diagram-editor__minimap-overlay-collapse:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-diagram-editor__minimap-overlay-reopen {
+    position: absolute;
+    inset-inline-end: var(--tm-space-3);
+    inset-block-end: var(--tm-space-3);
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+    cursor: pointer;
+}
+
+@media (pointer: coarse) {
+    .tm-diagram-editor__minimap-overlay-collapse {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+}
+
+/* UX review phase 7 (minor): the standalone title reads as a big caption floating
+   over the canvas and pushes the preview over the nodes. The phase-4 card rule
+   already hides it inside the docked card, and the overlay hides it too (the
+   markup keeps the title for the standalone minimap, which still needs it). */
+.tm-diagram-editor__minimap-overlay .tm-diagram-minimap__title {
+    display: none;
+}
+
+/* The minimap is navigated with a finger or a mouse drag: the surface belongs
+   to the gesture, never to page scrolling. */
+.tm-diagram-minimap__svg {
+    touch-action: none;
+}
+
+/* ── Palette rail button (the labelled affordance beside the shell chevron) ── */
+
+.tm-diagram-editor__rail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+}
+
+.tm-diagram-editor__rail-btn:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+/* ── Tablet layout (the resolved shell mode): the palette renders as a grid
+   of tiles; the minimap overlay keeps the shared corner inset, which already
+   sits above the status bar. Desktop chrome is untouched. ─────────────────── */
+
+.tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-toolbox__category-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-diagram-editor[data-editor-layout='tablet'] .tm-diagram-toolbox__item {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    text-align: center;
+}
+
+/* ── Coarse pointer (finger / pen): every small chrome target grows to the
+   44px touch target. The canvas handles use --tm-diagram-handle-hit above. ── */
+
+@media (pointer: coarse) {
+    /* Page tabs: the tab row grows, and the 16px duplicate/close buttons keep
+       their footprint while their hit area expands through the pseudo-element
+       (a 44px button would blow up the tab strip). */
+    .tm-diagram-editor__page-tab {
+        min-height: var(--tm-touch-target);
+        padding-block: var(--tm-space-2);
+    }
+
+    .tm-diagram-editor__page-tab-close,
+    .tm-diagram-editor__page-tab-duplicate {
+        position: relative;
+    }
+
+    .tm-diagram-editor__page-tab-close::before,
+    .tm-diagram-editor__page-tab-duplicate::before {
+        content: '';
+        position: absolute;
+        inset: calc((var(--tm-touch-target) - 100%) / -2);
+    }
+
+    .tm-diagram-editor__panel-toggle,
+    .tm-diagram-editor__more-btn,
+    .tm-diagram-editor__page-tab-add {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-editor__statusbar .tm-diagram-editor__toolbar-group .tm-toolbar-btn,
+    .tm-diagram-editor__toolbar-group .tm-dropdown-trigger {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-editor__rail-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-toolbox__item {
+        min-height: var(--tm-touch-target);
+    }
+
+    /* Dialog chrome (review fix): the gallery filter chips, the connect "Show all" toggle and
+       the "Search all shapes" escape hatch grow to the finger target; both dialog search
+       fields carry their class directly on the input (TmTextInput puts Class on the element),
+       so the input itself takes the min-height. */
+    .tm-diagram-template-gallery__filter,
+    .tm-diagram-connect-modal__show-all,
+    .tm-diagram-connect-modal__search-all {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-diagram-template-gallery__search,
+    .tm-diagram-connect-modal__search {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Phase 7 — mobile (G2): compact header, floating zoom, panels sheet content.
+   The mode branch travels on the data-editor-layout attribute (the phase-6
+   convention): no new viewport/container width literals, and the sheet reserve
+   above the canvas is the core shell's (--tm-editor-shell-sheet-reserve).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Compact header: title takes the free width (ellipsis), the icon-only
+   Undo/Redo/⋯ buttons keep the touch target. The panel toggles never render
+   in the markup on this layout — nothing to hide here. ───────────────────── */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__header-bar {
+    min-height: var(--tm-touch-target);
+    gap: var(--tm-space-1, 4px);
+    padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
+}
+
+/* The document title must survive 320 whole ("UML Class Diagram"): it keeps the free
+   width (flex 1, min-width 0), and the bar drops the desktop spacer — its min-width
+   steals exactly the pixels the full title needs — while the input tightens to the xs
+   step. The Undo/Redo/⋯ buttons KEEP the 44px touch target (WCAG 2.5.5): the text
+   yields first, never the targets. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__header-spacer {
+    display: none;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    padding: var(--tm-space-1) var(--tm-space-1-5);
+    font-size: var(--tm-font-size-xs, 12px);
+}
+
+/* ── Action bar (F5): whole words at 320. The core bar hands every tile an equal width
+   (flex-basis 0), so a ten-letter label like "Properties" loses the coin flip at 320
+   and hyphenates mid-word ("Propertie|s"). The editor's bar labels are known short
+   words: they never wrap, each tile sizes from its label first (grow still splits the
+   free space, so tiles stay even whenever room allows), and the bar's inter-tile gap
+   tightens a step so the four tiles clear a 320 viewport even with a scrollbar. ── */
+.tm-diagram-editor .tm-mobile-action-bar__bar {
+    gap: var(--tm-space-1);
+}
+
+.tm-diagram-editor .tm-mobile-action-bar__bar .tm-mobile-action-bar__action,
+.tm-diagram-editor .tm-mobile-action-bar__bar .tm-mobile-action-bar__more {
+    flex-basis: auto;
+}
+
+.tm-diagram-editor .tm-mobile-action-bar__label-text {
+    white-space: nowrap;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__more-btn {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+}
+
+/* ── Page tabs: the strip scrolls horizontally; the tabs keep their footprint
+   so the active page stays comfortably tappable. ──────────────────────────── */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__page-tab {
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 50vw;
+}
+
+/* ── Floating zoom overlay (phase 7): the vertical + / % / − / fit pill pinned to
+   the canvas LEFT edge with a token inset on both axes (the mockup's left-side
+   pill, clear of the node area). While the panels sheet is open the pill rides up
+   by the same reserve formula the core shell pads the canvas with, so it never
+   hides under the peeked sheet. ── */
+.tm-diagram-editor__zoom-overlay {
+    position: absolute;
+    inset-inline-start: var(--tm-space-3);
+    inset-block-end: var(--tm-space-3);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md, 8px);
+    box-shadow: var(--tm-shadow-lg);
+    overflow: hidden;
+}
+
+/* While the panels sheet is open, ride above the peeked sheet: the same reserve
+   formula the core shell pads the canvas region with (stage is a size container,
+   so 100cqh resolves against it). The minimap needs no ride anymore — the mobile
+   layout anchors it to the top-right corner above. */
+.tm-editor-shell__stage--sheet-open .tm-diagram-editor__zoom-overlay {
+    inset-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-3));
+}
+
+.tm-diagram-editor__zoom-overlay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    border: none;
+    background: transparent;
+    color: var(--tm-color-text);
+    cursor: pointer;
+    transition: background 120ms;
+}
+
+.tm-diagram-editor__zoom-overlay-btn:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-diagram-editor__zoom-overlay .tm-diagram-editor__zoom-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--tm-space-1, 4px);
+    min-height: var(--tm-space-6);
+    font-size: var(--tm-font-size-xs, 12px);
+    color: var(--tm-color-text-secondary);
+    border-block: 1px solid var(--tm-color-border);
+    white-space: nowrap;
+}
+
+/* U2/X4: on the phone layout the vertical pill would cover a third of the narrow
+   canvas, so the zoom overlay reads horizontally (+ | % | − | fit) along the bottom
+   edge — the label's separators move from block to inline borders. */
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__zoom-overlay {
+    flex-direction: row;
+}
+
+.tm-diagram-editor[data-editor-layout='mobile'] .tm-diagram-editor__zoom-overlay .tm-diagram-editor__zoom-label {
+    border-block: none;
+    border-inline: 1px solid var(--tm-color-border);
+    min-inline-size: var(--tm-touch-target);
+}
+
+/* ── Context menu sheet: the desktop menu items become full-height rows so the
+   long-press menu is finger-sized. ─────────────────────────────────────────── */
+.tm-overlay-panel-sheet .tm-diagram-editor__context-item {
+    min-height: var(--tm-touch-target);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every DiagramEditor-owned animated subject (mirrors the
+   core block in animations.css, never a universal selector). Guarded by
+   ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (uncovered subjects are frozen in tests/Theme/ReducedMotionUncoveredBaseline.json).
+   The layers panel owns its reduced-motion rule in its scoped stylesheet — the
+   second, intentional prefers-reduced-motion block; see the note near the minimap
+   section. The search-match outline stays visible (declared statically); only the
+   pulse stops. */
+@media (prefers-reduced-motion: reduce) {
+  .tm-diagram-connect-arrow,
+  .tm-diagram-connect-modal__item,
+  .tm-diagram-connect-modal__search-all,
+  .tm-diagram-connect-modal__show-all,
+  .tm-diagram-connection-point,
+  .tm-diagram-edge-floating-marker,
+  .tm-diagram-edge-path,
+  .tm-diagram-edge-segment-handle,
+  .tm-diagram-edge-toolbar button,
+  .tm-diagram-edge-virtual-bend,
+  .tm-diagram-editor__minimap-overlay-collapse,
+  .tm-diagram-editor__more-btn,
+  .tm-diagram-editor__page-tab,
+  .tm-diagram-editor__page-tab-add,
+  .tm-diagram-editor__page-tab-close,
+  .tm-diagram-editor__page-tab-duplicate,
+  .tm-diagram-editor__panel-toggle,
+  .tm-diagram-editor__title,
+  .tm-diagram-editor__toolbar-group .tm-dropdown-trigger,
+  .tm-diagram-editor__toolbar-group .tm-toolbar-btn,
+  .tm-diagram-editor__zoom-overlay-btn,
+  .tm-diagram-hover-connect,
+  .tm-diagram-node__body,
+  .tm-diagram-node__collapse-btn,
+  .tm-diagram-port,
+  .tm-diagram-properties .tm-section,
+  .tm-diagram-properties .tm-section-chevron,
+  .tm-diagram-properties .tm-section-header,
+  .tm-diagram-properties__color-swatch,
+  .tm-diagram-properties__segmented-btn,
+  .tm-diagram-replace-shape__item,
+  .tm-diagram-routing-preview,
+  .tm-diagram-search-match,
+  .tm-diagram-search-panel__close,
+  .tm-diagram-search-panel__nav,
+  .tm-diagram-table-inserter__cell,
+  .tm-diagram-template-card,
+  .tm-diagram-template-gallery__filter,
+  .tm-diagram-toolbox__item {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Hover motion that is not a duration problem: no lift/scale at all. */
+  .tm-diagram-template-card:hover,
+  .tm-diagram-connect-arrow:hover,
+  .tm-diagram-hover-connect:hover,
+  .tm-diagram-properties__color-swatch:hover {
+    transform: none;
+  }
+
+  /* Press-ring feedback: no growth animation, show the settled ring. */
+  .tm-diagram-press-ring {
+    animation: none;
+    transform: scale(1);
+    opacity: 0.5;
+  }
+}
+

@@ -178,9 +178,8 @@
 }
 
 .tm-calendar-heatmap__day:focus-visible {
-  outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+  outline: 2px solid var(--tm-border-color-focus);
   outline-offset: var(--tm-border-width);
-  box-shadow: var(--tm-shadow-focus);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -61,6 +61,9 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await Assertions.Expect(exportSection.Locator("[data-export-format='xlsx']")).ToBeVisibleAsync();
         await SaveElementScreenshotAsync(exportSection, "xlsx-export-menu-light");
         await ToggleDarkModeAsync(page);
+        // The theme switch re-renders the page and closes the menu, so reopen it for the dark shot.
+        await exportTrigger.ClickAsync();
+        await Assertions.Expect(exportSection.Locator("[data-export-format='csv']")).ToBeVisibleAsync();
         await SaveElementScreenshotAsync(exportSection, "xlsx-export-menu-dark");
 
         // Close and reopen the menu to exercise the keyboard edge case before downloading.
@@ -98,6 +101,57 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         Assert.AreEqual(CellValues.Number,
             xlsxRows[1].Elements<Cell>().ElementAt(1).DataType?.Value,
             "The decimal Amount column should remain numeric in XLSX.");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task DataTable_ExportSelected_DownloadsOnlyTheCheckedRows()
+    {
+        var page = await OpenPageAsync();
+
+        var exportSection = page.Locator("[data-testid='dt-export-section']");
+        await exportSection.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await exportSection.ScrollIntoViewIfNeededAsync();
+
+        var exportTrigger = exportSection.Locator(".tm-data-table__export .tm-dropdown-trigger");
+        await exportTrigger.ClickAsync();
+        var selectedScope = exportSection.Locator("[data-export-scope='selected']");
+        await Assertions.Expect(selectedScope).ToHaveAttributeAsync("aria-disabled", "true");
+        Assert.IsNull(await selectedScope.GetAttributeAsync("disabled"),
+            "aria-disabled stays focusable; a native disabled attribute would not");
+        await Assertions.Expect(selectedScope).ToContainTextAsync("Select rows to export them");
+        // Opening moves focus to the first item. ArrowDown must still reach the empty choice:
+        // a native disabled button is skipped, an aria-disabled one stays in the roving order.
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.getAttribute('data-export-scope') === 'all'",
+            null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.Keyboard.PressAsync("ArrowDown");
+        await Assertions.Expect(selectedScope).ToBeFocusedAsync();
+        await page.Keyboard.PressAsync("Escape");
+
+        var rowChecks = exportSection.Locator("tbody tr td input[type='checkbox']");
+        await rowChecks.Nth(0).CheckAsync();
+        await rowChecks.Nth(2).CheckAsync();
+
+        await exportTrigger.ClickAsync();
+        await Assertions.Expect(selectedScope).Not.ToHaveAttributeAsync("aria-disabled", "true");
+        await Assertions.Expect(selectedScope).ToContainTextAsync("Selected rows (2)");
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.getAttribute('data-export-scope') === 'all'",
+            null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.Keyboard.PressAsync("ArrowDown");
+        await Assertions.Expect(selectedScope).ToBeFocusedAsync();
+        await page.Keyboard.PressAsync(" ");
+        await Assertions.Expect(exportSection.Locator("[data-export-format='csv']")).ToBeVisibleAsync();
+
+        var download = await page.RunAndWaitForDownloadAsync(async () =>
+        {
+            await exportSection.Locator("[data-export-format='csv']").PressAsync("Enter");
+        });
+        var path = await download.PathAsync();
+        Assert.IsNotNull(path);
+        Assert.AreEqual(3, File.ReadAllLines(path).Length,
+            "CSV should contain the header and the two checked transactions, not the unchecked one.");
     }
 
     [TestMethod]

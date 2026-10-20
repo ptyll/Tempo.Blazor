@@ -270,6 +270,15 @@ public sealed class TmTabsKeyboardFocusE2ETests : WasmTestBase
         await AssertSelectionAsync(page, First, "Home jumps back to the first tab");
         await AssertFocusAsync(page, First, "Home");
 
+        // The demo host styles <html> with `scroll-behavior: smooth` (docs/e2e-test-lanes.md,
+        // "Timing-masked races"), so the Home/End default scrolls AND the focus call's
+        // scroll-into-view are ANIMATIONS. scrollY and the tab's rect read a frame later are
+        // mid-flight samples (observed red: settled read at scrollY 647 with the focused tab
+        // 1895 px below the viewport top, still flying). The invariant this method pins is about
+        // the SETTLED page — the wait's frame signature includes window.scrollY, so an in-flight
+        // smooth scroll can never settle it early.
+        await WaitForLayoutToSettleAsync(page, $"{LineTabs} #{First}");
+
         var settled = await ScrollYAsync(page);
         var box = await BoxAsync(page.Locator($"{LineTabs} #{First}"));
         var viewport = page.ViewportSize!;

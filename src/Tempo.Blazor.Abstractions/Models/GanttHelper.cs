@@ -322,7 +322,15 @@ public static class GanttHelper
     /// Negative when today is before <paramref name="timelineStart"/>.
     /// </summary>
     public static double GetTodayOffset(DateTime timelineStart, double pixelPerDay)
-        => (DateTime.Today - timelineStart.Date).TotalDays * pixelPerDay;
+        => GetTodayOffset(timelineStart, pixelPerDay, DateTime.Today);
+
+    /// <summary>
+    /// Returns the horizontal pixel offset of <paramref name="today"/> within the timeline.
+    /// Negative when the date is before <paramref name="timelineStart"/>. Overload for callers that
+    /// judge "today" in a zone of their own (the Gantt passes the user's zone).
+    /// </summary>
+    public static double GetTodayOffset(DateTime timelineStart, double pixelPerDay, DateTime today)
+        => (today.Date - timelineStart.Date).TotalDays * pixelPerDay;
 
     /// <summary>
     /// Returns offset+width pairs for non-working day columns within a date range.

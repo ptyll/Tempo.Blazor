@@ -10,8 +10,8 @@
         // Show a 4-week window starting from the earliest date that has data, capped at today
         var windowStart = allEntries.Any()
             ? allEntries.Min(e => e.Date)
-            : DateTime.Today;
-        if (windowStart < DateTime.Today.AddDays(-7)) windowStart = DateTime.Today.AddDays(-7);
+            : Today;
+        if (windowStart < Today.AddDays(-7)) windowStart = Today.AddDays(-7);
         var windowEnd = windowStart.AddDays(27);
         var dates = allEntries.Select(e => e.Date)
             .Where(d => d >= windowStart && d <= windowEnd)

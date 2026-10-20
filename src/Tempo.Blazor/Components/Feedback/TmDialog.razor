@@ -26,8 +26,12 @@
          @attributes="AdditionalAttributes"
          @onclick="HandleOverlayClick">
         <div @ref="_panel" class="tm-modal-container tm-modal--center" @onclick:stopPropagation="true">
+            @* Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
+               interop completed — an unpromoted popover root can be display:none and the
+               initial-focus move would land on <body>. *@
             <TmFocusScope @ref="_scope"
-                          Active="true"
+                          Active="@(_gate?.ScopeActive == true)"
+                          NoteOpenerOnMount="true"
                           DialogRole="@(IsDangerous ? "alertdialog" : "dialog")"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
@@ -192,10 +196,19 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    /// <summary>The element focus returns to when the dialog closes.</summary>
+    /// <summary>
+    /// The element focus returns to when the dialog closes. A target that is disconnected or inside
+    /// this dialog is skipped (it would die with the overlay): the restore then falls back to the
+    /// opener. A focus the app placed on a live element outside the dialog before the close render
+    /// is never stolen.
+    /// </summary>
     [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
-    /// <summary>The id of the restore target, for a target rendered outside this dialog.</summary>
+    /// <summary>
+    /// The id of the restore target, for a target rendered outside this dialog. Same skip rules as
+    /// <see cref="RestoreFocusTarget"/>: a disconnected or inside-the-dialog target falls back to
+    /// the opener.
+    /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>The viewport's layout. A dialog is positioned against the viewport, not its container.</summary>
@@ -240,10 +253,10 @@
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _regionAttached;
-    private bool _promoted;
+    private string? _regionLabel;
     private bool _disposed;
     private SheetInterop? _sheet;
-    private TopLayerInterop? _topLayer;
+    private PromotedScopeGate? _gate;
     private ScrollRegionInterop? _scrollRegion;
     private DotNetObjectReference<TmDialog>? _dotNetRef;
     private TmFocusScope? _scope;
@@ -253,7 +266,7 @@
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -330,6 +343,15 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, while still closed, so the FIRST open of the session restores its
+            // opener — a module that loaded with the first activation opened with no opener
+            // record, and that close fell to <body>.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         var sheet = Show && ResolvedPresentation == MobilePresentation.Sheet;
         if (sheet && !_gestureAttached)
         {
@@ -343,32 +365,41 @@
         }
 
         // The scroller is a keyboard-reachable region only while it overflows. The module owns the
-        // attributes; Blazor's markup carries none, so a short dialog grows no extra tab stop.
+        // attributes; Blazor's markup carries none, so a short dialog grows no extra tab stop. A
+        // title that renders or changes after the attach re-points the region's name (cluster-B 8.3).
         if (Show && !_regionAttached)
         {
             _regionAttached = true;
+            _regionLabel = ContentLabelledBy;
             _scrollRegion ??= new ScrollRegionInterop(JS);
-            await _scrollRegion.AttachAsync(_content, ContentLabelledBy);
+            await _scrollRegion.AttachAsync(_content, _regionLabel);
         }
         else if (!Show && _regionAttached)
         {
             _regionAttached = false;
+            _regionLabel = null;
             await _scrollRegion!.DetachAsync();
+        }
+        else if (_regionAttached)
+        {
+            var labelledBy = ContentLabelledBy;
+            if (labelledBy != _regionLabel)
+            {
+                _regionLabel = labelledBy;
+                await _scrollRegion!.UpdateLabelAsync(labelledBy, null);
+            }
         }
 
         // U1: the dialog overlay root is a modal viewport-anchored surface — promote it to the
         // browser top layer right after the render that inserted it, so a promoted sheet the
         // dialog opened from cannot cover it. Closing unmounts the subtree; a detached top-layer
-        // element hides itself — no demote call is needed.
-        if (Show && !_promoted)
+        // element hides itself — no demote call is needed. The gate also holds the trap back
+        // until the promote completed (c51ddf81 #1) and drops a promote that finished after the
+        // close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(Show, () => Show, _overlayElement))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_overlayElement);
-        }
-        else if (!Show && _promoted)
-        {
-            _promoted = false;
+            StateHasChanged();
         }
     }
 
@@ -405,7 +436,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
         if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
@@ -514,9 +545,12 @@
     //     change: the second invocation landed on the re-focused trigger and re-opened the panel.
     // Arming on the input's own keydown keeps both out: the opener's trailing keyup arrives
     // unarmed, and a press that submits consumes itself entirely before the dialog closes.
+    // cluster-B 8.1: an IME's commit-Enter is text input, not an activation — a composing Enter
+    // neither arms the submit nor fires it (KeyboardEventArgs.IsComposing exists from .NET 9; on
+    // net8 the guard is a no-op, accepted).
     private Task HandlePromptKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !e.IsImeComposing())
         {
             _promptEnterArmed = true;
         }
@@ -526,7 +560,7 @@
 
     private async Task HandlePromptKeyUp(KeyboardEventArgs e)
     {
-        if (e.Key != "Enter" || !_promptEnterArmed)
+        if (e.Key != "Enter" || !_promptEnterArmed || e.IsImeComposing())
         {
             return;
         }

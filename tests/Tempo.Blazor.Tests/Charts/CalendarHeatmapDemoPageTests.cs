@@ -4,7 +4,7 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Charts;
 
-public class CalendarHeatmapDemoPageTests : LocalizationTestBase
+public class CalendarHeatmapDemoPageTests : DemoPageLocalizationTestBase
 {
     [Fact]
     public void ChartsPage_RendersCalendarHeatmapVariantsAndClickOutput()

@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════
+   TmSidePanel — the docked-or-sheet responsive inspector
+   ═══════════════════════════════════════════════════════ */
+
+/* The shared root class of both presentations (the docked root; the sheet root carries it as an extra class). */
+.tm-side-panel {
+    box-sizing: border-box;
+    min-inline-size: 0;
+}
+
+/* Docked: an in-flow panel the host places (a grid column, a flex child). It docks when the
+   panel's CONTAINER resolves Desktop; below that it presents as a sheet (below). */
+.tm-side-panel--docked {
+    display: flex;
+    flex-direction: column;
+    inline-size: var(--tm-side-panel-width, 360px);
+    max-inline-size: 100%;
+    min-block-size: 0;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    overflow: hidden;
+}
+
+.tm-side-panel__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-side-panel__title {
+    flex: 1;
+    min-inline-size: 0;
+    margin: 0;
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-color-text);
+    overflow-wrap: break-word;
+}
+
+.tm-side-panel__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex-shrink: 0;
+}
+
+.tm-side-panel__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-8);
+    block-size: var(--tm-space-8);
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-side-panel__close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-side-panel__close:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-side-panel__body {
+    flex: 1;
+    min-block-size: 0;
+    overflow: auto;
+    padding: var(--tm-space-3);
+}
+
+.tm-side-panel__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+/* The sheet presentation rides on the TmDrawer root via TmSidePanel's Class. The drawer already
+   owns the panel geometry; this only keeps a phone-width sheet from exceeding the viewport, and
+   gives the title and the header actions a gap (the drawer header is space-between). */
+.tm-side-panel-sheet .tm-drawer__panel {
+    max-inline-size: 100vw;
+}
+
+.tm-side-panel-sheet .tm-drawer__header {
+    gap: var(--tm-space-2);
+}
+
+.tm-side-panel-sheet .tm-drawer__title {
+    flex: 1;
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+}
+
+@media (pointer: coarse) {
+    .tm-side-panel__close {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+}

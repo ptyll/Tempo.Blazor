@@ -2,11 +2,12 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Abstractions.Shared;
 
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Displays a normalized signing document page and optional overlays.</summary>
-public partial class TmDocumentPageViewer
+public partial class TmDocumentPageViewer : ITmDraftGuard
 {
     private static readonly double[] ZoomSteps = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
     private double _scale = 1.0;
@@ -17,6 +18,22 @@ public partial class TmDocumentPageViewer
     private double _commentStartX;
     private double _commentStartY;
     private ElementReference _pageElement;
+
+    /// <summary>Text of the new-thread draft composer (bound internally — the host cannot see it otherwise).</summary>
+    private string _draftText = string.Empty;
+
+    /// <summary>Embedded thread panel (reply/edit composers) — its drafts are discarded through this ref.</summary>
+    private TmDocumentCommentThreadPanel? _threadPanel;
+
+    /// <summary>
+    /// Latest draft state the embedded thread panel reported through its OnDraftChanged callback.
+    /// Stored from the callback (not read off the ref) so the aggregate never reads a stale or
+    /// unmounted panel instance.
+    /// </summary>
+    private TmCommentDraftState _panelDraftState = new(false, null, false);
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmCommentDraftState _lastDraftState = new(false, null, false);
 
     /// <summary>Optional id assigned to the rendered page element.</summary>
     [Parameter] public string? Id { get; set; }
@@ -175,10 +192,145 @@ public partial class TmDocumentPageViewer
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    protected override void OnParametersSet()
+    /// <summary>
+    /// Notifies the parent that the viewer's comment draft state changed. Neither the new-thread
+    /// draft composer nor the embedded thread panel's reply/edit composers expose their text
+    /// through a parameter — this callback (together with <see cref="HasUnsavedDraft"/> and
+    /// <see cref="DiscardDraftAsync"/>) is the aggregate draft-guard surface. It MERGES the
+    /// viewer's own new-thread draft with the last state the embedded
+    /// <see cref="TmDocumentCommentThreadPanel"/> reported through its own OnDraftChanged
+    /// callback, and fires ONLY when the <see cref="TmCommentDraftState"/> value actually changes
+    /// (value-equality dedup), never on every keystroke.
+    /// <see cref="TmCommentDraftState.IsEditorOpen"/> is <see langword="true"/> while the
+    /// new-thread draft panel is open or the thread panel shows a composer;
+    /// <see cref="TmCommentDraftState.EditingCommentId"/> carries the id of the comment under
+    /// edit in the thread panel (<see langword="null"/> for the viewer's own new-thread draft);
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> aggregates both — an open edit that
+    /// still matches its original body is not an unsaved draft. Both contributions are gated by
+    /// <see cref="OwnsCommentSurfaces"/> — comments enabled, no host panel template, and a
+    /// rendered page (not loading, no error, page present): whenever the host owns the draft
+    /// surface or the surfaces are unmounted, the viewer reports the closed, empty state.
+    /// </summary>
+    [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
+
+    /// <summary>
+    /// Whether the viewer currently holds an unsaved comment draft anywhere — the new-thread
+    /// composer text or any draft inside the embedded thread panel. The SAME value carried by
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> that <see cref="OnDraftChanged"/>
+    /// reports; read live from the current state, so it can be polled at any time (for example
+    /// before closing a signing session that would silently discard the draft).
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Discards every comment draft in the viewer: closes the new-thread draft panel (anchor,
+    /// text and mention selection) and discards the embedded thread panel's drafts (reply text,
+    /// open edit) — the panel reports its post-discard state through its own OnDraftChanged
+    /// callback, which stays the single source of truth for the aggregated state (an empty
+    /// discard with a still-mounted reply composer must keep reporting the open editor).
+    /// Intended for the consumer AFTER the user confirmed the discard in the consumer's OWN
+    /// confirmation dialog — the component never shows a confirmation itself; that is
+    /// deliberately the consumer's responsibility.
+    /// <para>
+    /// A no-op (no notification) when no editor is open and no draft exists. Safe to call from
+    /// outside the render cycle; the work is dispatched through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            _draftAnchor = null;
+            _draftText = string.Empty;
+            _draftMentions = [];
+            StateHasChanged();
+            if (_threadPanel is not null)
+            {
+                await _threadPanel.DiscardDraftAsync();
+            }
+
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>
+    /// Whether the viewer owns the comment draft surfaces: the embedded thread panel and the
+    /// new-thread draft panel render only when comments are enabled, the host did not replace
+    /// the panel with <see cref="CommentThreadPanelTemplate"/>, and an actual page is on screen
+    /// (not loading, no error, page present) — in every other state the surfaces are unmounted.
+    /// A template host owns its own draft surface, so neither contribution may reach the
+    /// viewer's state.
+    /// </summary>
+    private bool OwnsCommentSurfaces => CommentsEnabled
+        && CommentThreadPanelTemplate is null
+        && !IsLoading
+        && string.IsNullOrWhiteSpace(Error)
+        && Page is not null;
+
+    /// <summary>
+    /// Builds the viewer's aggregate draft snapshot: the viewer's own new-thread draft panel
+    /// (open anchor + composer text) merged with the embedded thread panel's last reported state
+    /// — the panel wins for <see cref="TmCommentDraftState.EditingCommentId"/> because the
+    /// viewer's own draft always creates a NEW thread. Both contributions are gated by
+    /// <see cref="OwnsCommentSurfaces"/>, so an unmounted panel or a template takeover reports
+    /// the post-transition state instead of a stale one.
+    /// </summary>
+    private TmCommentDraftState BuildDraftState()
+    {
+        var panelState = OwnsCommentSurfaces
+            ? _panelDraftState
+            : new TmCommentDraftState(false, null, false);
+        var hasOwnDraft = OwnsCommentSurfaces
+            && _draftAnchor is not null
+            && !string.IsNullOrWhiteSpace(_draftText);
+
+        return new TmCommentDraftState(
+            OwnsCommentSurfaces && ((_draftAnchor is not null) || panelState.IsEditorOpen),
+            panelState.EditingCommentId,
+            hasOwnDraft || panelState.HasUnsavedContent);
+    }
+
+    /// <summary>Stores the embedded panel's reported state and re-reports the aggregate.</summary>
+    private async Task HandlePanelDraftChangedAsync(TmCommentDraftState state)
+    {
+        _panelDraftState = state;
+        await NotifyDraftChangedAsync();
+    }
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed — the
+    /// composers report every keystroke into this path and the value-equality check keeps the
+    /// parent from re-rendering without a real transition.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
+    }
+
+    protected override async Task OnParametersSetAsync()
     {
         _scale = ClampScale(Scale);
         _zoomMode = ZoomMode;
+        // Comments disabled, a host panel template takeover, a loading/error/empty page — all
+        // unmount the draft surfaces. Drop the stale panel state (and the dangling ref) so it
+        // cannot leak back once the surfaces remount, then report the transition; the dedup
+        // keeps repeated parameter sets silent.
+        if (!OwnsCommentSurfaces)
+        {
+            _panelDraftState = new(false, null, false);
+            _threadPanel = null;
+        }
+
+        await NotifyDraftChangedAsync();
     }
 
     private string RootClass => string.Join(" ", new[]
@@ -315,7 +467,9 @@ public partial class TmDocumentPageViewer
         if (next == DocumentCommentMode.Browse)
         {
             _draftAnchor = null;
+            _draftText = string.Empty;
             _draftMentions = [];
+            await NotifyDraftChangedAsync();
         }
 
         await CommentModeChanged.InvokeAsync(next);
@@ -324,7 +478,13 @@ public partial class TmDocumentPageViewer
     private async Task SelectCommentThreadAsync(string? threadId)
     {
         SelectedCommentThreadId = threadId;
-        _draftAnchor = null;
+        if (_draftAnchor is not null)
+        {
+            _draftAnchor = null;
+            _draftText = string.Empty;
+            await NotifyDraftChangedAsync();
+        }
+
         await SelectedCommentThreadIdChanged.InvokeAsync(threadId);
     }
 
@@ -348,13 +508,17 @@ public partial class TmDocumentPageViewer
             Mentions = args.Mentions.Count > 0 ? args.Mentions.ToList() : _draftMentions.ToList()
         });
         _draftAnchor = null;
+        _draftText = string.Empty;
         _draftMentions = [];
+        await NotifyDraftChangedAsync();
     }
 
     private async Task CancelDraftAsync()
     {
         _draftAnchor = null;
+        _draftText = string.Empty;
         _draftMentions = [];
+        await NotifyDraftChangedAsync();
         await _pageElement.FocusAsync();
     }
 
@@ -368,18 +532,20 @@ public partial class TmDocumentPageViewer
         return Task.CompletedTask;
     }
 
-    private Task HandleCommentPointerDownAsync(MouseEventArgs args)
+    private async Task HandleCommentPointerDownAsync(MouseEventArgs args)
     {
         if (!CanCreateCommentDraft(args))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         _isCommentPointerDown = true;
         _commentStartX = NormalizeOffsetX(args);
         _commentStartY = NormalizeOffsetY(args);
         _draftAnchor = DocumentCommentAnchor.Point(CurrentPageNumber, _commentStartX, _commentStartY);
-        return Task.CompletedTask;
+        // The anchor opens the draft panel — a transition the consumer must see even if the
+        // gesture never completes with a pointer-up.
+        await NotifyDraftChangedAsync();
     }
 
     private Task HandleCommentPointerMoveAsync(MouseEventArgs args)
@@ -406,19 +572,19 @@ public partial class TmDocumentPageViewer
         return Task.CompletedTask;
     }
 
-    private Task HandleCommentPointerUpAsync(MouseEventArgs args)
+    private async Task HandleCommentPointerUpAsync(MouseEventArgs args)
     {
         if (!_isCommentPointerDown || !CanCreateCommentDraft(args))
         {
             _isCommentPointerDown = false;
-            return Task.CompletedTask;
+            return;
         }
 
         var currentX = NormalizeOffsetX(args);
         var currentY = NormalizeOffsetY(args);
         var width = Math.Abs(currentX - _commentStartX);
         var height = Math.Abs(currentY - _commentStartY);
-        _draftAnchor = width > 0.01 || height > 0.01
+        var anchor = width > 0.01 || height > 0.01
             ? DocumentCommentAnchor.Area(
                 CurrentPageNumber,
                 Math.Min(_commentStartX, currentX),
@@ -427,8 +593,10 @@ public partial class TmDocumentPageViewer
                 height)
             : DocumentCommentAnchor.Point(CurrentPageNumber, currentX, currentY);
 
+        _draftAnchor = anchor;
         _isCommentPointerDown = false;
-        return Task.CompletedTask;
+        // An area gesture can change the anchor's shape (point → area) — report the final one.
+        await NotifyDraftChangedAsync();
     }
 
     private bool CanCreateCommentDraft(MouseEventArgs args)

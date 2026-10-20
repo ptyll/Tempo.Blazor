@@ -83,4 +83,16 @@ public class ColorHelperTests
         g.Should().Be(200);
         b.Should().Be(77);
     }
+
+    [Fact]
+    public void HsvToRgb_Rounds_DoesNot_Truncate()
+    {
+        // Truncation rebuilt #3B82F6 as #3A82F6: every channel a unit low, so the round trip
+        // could not return to its input and a keyboard-stepped colour drifted.
+        var (h, s, v) = ColorHelper.RgbToHsv(59, 130, 246);
+        var (r, g, b) = ColorHelper.HsvToRgb(h, s, v);
+        r.Should().Be(59);
+        g.Should().Be(130);
+        b.Should().Be(246);
+    }
 }

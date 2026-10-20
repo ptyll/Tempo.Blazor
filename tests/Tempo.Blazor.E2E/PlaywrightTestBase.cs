@@ -330,10 +330,85 @@ public abstract class PlaywrightTestBase
         // which prerendering never calls — so the attribute lands exactly when an interactive
         // runtime has rendered (WASM boot finished / server circuit up). A host whose runtime
         // never comes up now fails this wait instead of silently passing under the sleep.
+        // The budget is generous on purpose: this is the authoritative gate, and a cold WASM boot
+        // in Firefox under full-suite CPU load can exceed 15 s without anything being broken —
+        // the wait is on a state attribute, so a longer cap only extends the wait, never sleeps.
+        // TM_E2E_READY_TIMEOUT_MS overrides the cap for slow hosts; boots past 15 s are logged so
+        // a creeping regression is visible in the test output instead of only in the duration.
+        var readyTimeoutMs = 60_000;
+        if (int.TryParse(Environment.GetEnvironmentVariable("TM_E2E_READY_TIMEOUT_MS"), out var envTimeout) && envTimeout > 0)
+        {
+            readyTimeoutMs = envTimeout;
+        }
+
+        var bootWatch = System.Diagnostics.Stopwatch.StartNew();
         await page.WaitForFunctionAsync(
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null,
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+            new PageWaitForFunctionOptions { Timeout = readyTimeoutMs });
+        bootWatch.Stop();
+        if (bootWatch.Elapsed > TimeSpan.FromSeconds(15))
+        {
+            TestContext.WriteLine($"[e2e] slow boot: data-blazor-ready after {bootWatch.Elapsed.TotalSeconds:F1}s (timeout {readyTimeoutMs}ms)");
+        }
+    }
+
+    /// <summary>
+    /// Waits until fonts are loaded, no CSS transition runs, no smooth scroll is in flight and the boxes of
+    /// <paramref name="selector"/> are identical across 3 consecutive frames (15 s budget).
+    /// </summary>
+    /// <remarks>
+    /// The page is still MOVING when the app reports ready: the demo's Tailwind Play CDN generates CSS for
+    /// freshly rendered classes after the interactive render, and <c>html { scroll-behavior: smooth }</c> turns
+    /// every programmatic/focus scroll into an animation (docs/e2e-test-lanes.md "Timing-masked races").
+    /// Geometry assertions must wait for this settled state, not for a fixed delay. <paramref name="selector"/>
+    /// should list every element whose box the following assertions read; the window scroll position is part of
+    /// the signature, so an in-flight smooth scroll counts as "moving" even when the elements' boxes are stable.
+    /// A selector that matches no element never settles — the wait times out instead of passing on an empty page.
+    /// </remarks>
+    protected static async Task WaitForLayoutToSettleAsync(IPage page, string selector)
+    {
+        var settled = await page.EvaluateAsync<bool>(
+            """
+            async (selector) => {
+                const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
+                const transitionRunning = () => document.getAnimations()
+                    .some(animation => animation instanceof CSSTransition && animation.playState === 'running');
+                const deadline = performance.now() + 15000;
+                let previous = null;
+                let stableFrames = 0;
+                while (performance.now() < deadline) {
+                    await document.fonts.ready;
+                    await frame();
+                    const nodes = document.querySelectorAll(selector);
+                    if (nodes.length === 0) {
+                        // A selector that matches nothing must NOT settle on the empty signature:
+                        // reset and keep polling so the wait times out instead of passing.
+                        previous = null;
+                        stableFrames = 0;
+                        continue;
+                    }
+                    const current = [...nodes]
+                        .map(node => {
+                            const r = node.getBoundingClientRect();
+                            return `${r.left},${r.top + window.scrollY},${r.width},${r.height}`;
+                        })
+                        .concat([`${window.scrollX},${window.scrollY}`])
+                        .join('|');
+                    const quiet = document.fonts.status === 'loaded' && !transitionRunning();
+                    stableFrames = quiet && current === previous ? stableFrames + 1 : 0;
+                    if (stableFrames >= 3) {
+                        return true;
+                    }
+
+                    previous = current;
+                }
+
+                return false;
+            }
+            """, selector);
+        Assert.IsTrue(settled,
+            $"the layout never settled within 15s (fonts loading, a CSS transition running, the '{selector}' boxes/scroll still moving, or the selector matched no element) — geometry read now would be mid-reflow");
     }
 
     /// <summary>
@@ -620,14 +695,10 @@ public abstract class PlaywrightTestBase
     /// <summary>
     /// One pooled probe client for the whole class (N193): the previous per-call
     /// <c>new HttpClient(handler)</c> churned a socket per 500 ms readiness poll across eight
-    /// shards. The handler keeps the dangerous cert callback because every demo host is a
-    /// self-signed localhost dev cert.
+    /// shards. The handler accepts untrusted certificates on loopback addresses only — every demo
+    /// host is a self-signed localhost dev cert (see <see cref="DemoApiTestHttp"/>).
     /// </summary>
-    private static readonly HttpClient ProbeClient = new(
-        new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        })
+    private static readonly HttpClient ProbeClient = new(DemoApiTestHttp.CreateHandler())
     { Timeout = TimeSpan.FromSeconds(2) };
 
     /// <summary>

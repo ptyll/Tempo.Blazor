@@ -25,6 +25,28 @@ innermost active scope handles Tab, and only the topmost one handles Escape.
 the scope does not land focus back on the trigger that opened it. Leave it unset and the scope
 restores whatever was focused when it opened, which is what an overlay wants.
 
+**The opener capture and the close, precisely:** the opener is resolved from four
+candidates, first survivor outside the surface wins: the owner's note (`noteReturnTarget`, sent
+from the scope's FIRST parameter-set phase — the mount render, before any content child can
+autofocus — when the owner wires the scope's `NoteOpenerOnMount`, which every gated owner
+(TmModal, TmDialog, TmDrawer, TmLightbox, TmCommandPalette, TmKeyboardShortcutsHelp,
+TmGanttImportDialog) does), the activation-time `document.activeElement`, the most recent focus
+history entry outside the surface (which rescues a KEYBOARD-opened surface — nothing was ever
+pressed), and the last document-level pointerdown — the element the user actually engaged, still
+counted only within ~2 s and cleared by any non-modifier keydown, which rescues the
+pointer-opened case where an app autofocus inside the overlay poisoned both earlier candidates.
+A capture that lies inside the surface is never used, and at close the restore skips any
+candidate that is disconnected, `<body>`, or inside the closing surface. Owners pre-import the
+module with the scope's `ensureLoaded` path on their first render while still closed, so the
+FIRST open of a browser session opens with the same opener evidence every later one has. The
+remaining `<body>` fallback is the honest one: no candidate outside the surface existed (for
+example the opener was removed from the DOM while the surface was open). Deactivation restores
+only while the surface still holds the focus (or the focus fell to `<body>`): a focus the app
+placed on a live element outside is never stolen — and because the open modal holds the page
+`inert`, an app focus issued BEFORE the close render is dropped by the browser itself; settle the
+post-close focus AFTER the overlay is gone (the page's `OnAfterRenderAsync`, not a
+`requestAnimationFrame`).
+
 A backdrop belongs inside the scope root, and it carries `data-tm-backdrop`. The module inerts every
 sibling it walks, so a backdrop left outside the root is inert and swallows the click that should
 close the overlay. The attribute is the only contract; a class name is not recognised.
@@ -43,8 +65,9 @@ the labelled-by wiring — is markup the scope renders.
 
 ## Initial focus in TmDialog
 
-Every `TmDialog` names an explicit initial-focus target on its scope (`InitialFocusTargetId`), so the
-trap never falls back to "first focusable". The target is per dialog type, chosen as the least
+Every built-in `TmDialog` type except `Custom` names an explicit initial-focus target on its scope
+(`InitialFocusTargetId`). A `Custom` dialog falls back to the first focusable of its content — never
+to the overflowing scroll region (it is skipped). The target is per dialog type, chosen as the least
 destructive action the dialog offers:
 
 | Type | Initial focus |
@@ -58,14 +81,23 @@ The scroller `div.tm-dialog-content` is deliberately NOT a hardcoded tab stop. B
 `tabindex="0"` in the markup, which made it the first tabbable element of every dialog: the trap
 focused the whole title+message block, a prompt never reached its input, and a keyboard-opened
 dialog outlined the content region. The module (`syncScrollRegion` in `tm-focus-trap.js`) adds
-`tabindex="0"` plus `role="region"`/`aria-labelledby` only while the content actually overflows
-(`scrollHeight > clientHeight`, kept current by a `ResizeObserver`), and removes them when it does
-not — a short dialog grows no extra tab stop. Even when the region exists, it never takes initial
-focus; a keyboard user reaches it with Tab and scrolls it with the arrow keys.
+`tabindex="0"` plus `role="region"`/`aria-labelledby` and a `data-tm-scroll-region` marker only
+while the content actually overflows (`scrollHeight > clientHeight`, kept current by a
+`ResizeObserver`), and removes them when it does not — a short dialog grows no extra tab stop.
+
+The marker is the contract both focus recoveries consult: the initial-focus fallback and the toast
+focus recovery skip a marked region while a real control can take the focus. When the first
+focusable sits INSIDE the region but below the fold — its rect lies outside the region's rect — the
+initial-focus fallback focuses the region itself instead: focusing the control would scroll the
+dialog start out of view, while the named region keeps the title visible (WAI-ARIA APG). A control
+already visible inside the region, or one outside any region, keeps the focus, and a region that is
+the only focusable in the overlay still takes it. A keyboard user reaches a visible control with
+Tab and scrolls the region with the arrow keys.
 
 ## Who already uses it
 
-`TmModal`, `TmDialog`, `TmDrawer`, `TmCommandPalette` and `TmGanttImportDialog` render a `TmFocusScope`.
+`TmModal`, `TmDialog`, `TmDrawer`, `TmCommandPalette`, `TmGanttImportDialog`, `TmLightbox` and
+`TmKeyboardShortcutsHelp` render a `TmFocusScope`.
 A host of those components changes nothing: Escape, the focus restore and the inert background behave
 as before. The scope root is a `div.tm-focus-scope` with `tabindex="-1"` while active, so a test that
 looked for `role="dialog"` on the old element finds it on this root.

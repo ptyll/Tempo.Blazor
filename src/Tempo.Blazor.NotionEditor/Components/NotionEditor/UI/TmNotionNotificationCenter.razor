@@ -140,7 +140,7 @@
     private int BadgeCount => _unreadCount;
 
     private string AriaLabelText => BadgeCount > 0
-        ? Loc["TmNotificationBell_NewCount", BadgeCount]
+        ? Loc.Plural("TmNotificationBell_NewCount", BadgeCount)
         : Loc["Notion_Notifications_Title"];
 
     private IEnumerable<TmNotification> VisibleNotifications =>

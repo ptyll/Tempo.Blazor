@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Feedback
+@using System.ComponentModel
 @using System.Collections.Generic
 @using Tempo.Blazor.Helpers
 @inherits Tempo.Blazor.Components.TmComponentBase
@@ -45,13 +46,16 @@
     /// <summary>
     /// The element focus returns to on deactivation. A canvas editor passes its canvas here so focus
     /// does not land back on the trigger that opened the scope. Null restores the previously focused
-    /// element, which is what an overlay wants.
+    /// element, which is what an overlay wants. A target that is disconnected or inside this scope is
+    /// skipped (it would die with the surface), and a focus the app placed on a live element outside
+    /// the scope is never stolen.
     /// </summary>
     [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
     /// <summary>
     /// The id of the restore target, recorded on the root so a test and the module can both find it.
-    /// Set it when the target is rendered outside this scope.
+    /// Set it when the target is rendered outside this scope. Same skip rules as
+    /// <see cref="RestoreFocusTarget"/>.
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
@@ -80,6 +84,15 @@
 
     /// <summary>Whether deactivation restores focus. False leaves focus where the close action put it.</summary>
     [Parameter] public bool RestoreFocus { get; set; } = true;
+
+    /// <summary>
+    /// Advanced: set when the scope's <see cref="Active"/> flips true only after its content has
+    /// mounted (e.g. behind a promote/gate), so the opener is noted before content autofocus.
+    /// The note is sent once per open — the module keeps the first note of an open.
+    /// </summary>
+    [Parameter]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public bool NoteOpenerOnMount { get; set; }
 
     /// <summary>Raised after the trap deactivates and focus has been restored.</summary>
     [Parameter] public EventCallback OnDeactivated { get; set; }
@@ -113,6 +126,7 @@
     private DotNetObjectReference<TmFocusScope>? _dotNetRef;
     private bool _wasActive;
     private bool _shouldActivate;
+    private bool _openNoted;
     private int _activeDescendants;
 
     /// <summary>True when an active scope is nested inside this one.</summary>
@@ -131,17 +145,63 @@
     {
         if (_disposed) return;
 
+        if (NoteOpenerOnMount && !_openNoted)
+        {
+            // The MOUNT note (gated owners): this is the scope's first parameter-set phase — the
+            // same batch that first renders the content, BEFORE any child OnAfterRender can
+            // autofocus a field inside the surface — so the note still names the trigger even
+            // though Active is still false (the promote gate has not released yet). Fire-and-
+            // forget — the render never waits on it. This is an INDEPENDENT decision from the
+            // activation below: chaining them with else-if left an inline scope (Active already
+            // true on this first pass — a Modal=false TmDrawer, a plain scope) noted but never
+            // activated, so its trap never engaged at all.
+            _openNoted = true;
+            _ = NoteOpenerAsync();
+        }
+
         if (Active && !_wasActive)
         {
             _wasActive = true;
             _shouldActivate = true;
             Parent?.RegisterDescendant();
+            // The Active-flip note (scopes that did not note on mount): sent before this render is
+            // applied, so an app that autofocuses a field inside the overlay cannot poison the
+            // capture. A scope that already noted on mount does not note again — the module keeps
+            // the first note of an open, and this one would read the already-moved focus.
+            if (!_openNoted)
+            {
+                _openNoted = true;
+                _ = NoteOpenerAsync();
+            }
         }
         else if (!Active && _wasActive)
         {
             _wasActive = false;
+            _openNoted = false;
             Parent?.UnregisterDescendant();
             await DeactivateAsync();
+        }
+    }
+
+    /// <summary>
+    /// Records the currently focused element (the opener) with the focus-trap module. Best-effort
+    /// by contract and NEVER throws: every failure — a missing JS runtime, a torn-down circuit, a
+    /// disposed owner, any unexpected error — is swallowed, because the note is only an
+    /// optimization over the module's own activation-time capture, never a contract the render
+    /// depends on.
+    /// </summary>
+    private async Task NoteOpenerAsync()
+    {
+        try
+        {
+            if (_disposed) return;
+            _trap ??= new FocusTrap(JS);
+            await _trap.NoteReturnTargetAsync();
+        }
+        catch (Exception)
+        {
+            // The note must never break a render: any failure degrades to the module's own
+            // capture (and its pointerdown/focus-history rescue).
         }
     }
 

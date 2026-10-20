@@ -143,7 +143,7 @@
     
     <div class="showcase-card">
         <div class="flex items-center gap-4">
-            <TmButton Variant="ButtonVariant.Primary" OnClick="() => _commandPaletteOpen = true">
+            <TmButton Variant="ButtonVariant.Primary" OnClick="() => _commandPaletteOpen = true" data-testid="open-command-palette">
                 <TmIcon Name="search" class="mr-2" />
                 Open Command Palette
             </TmButton>
@@ -176,6 +176,18 @@
     
     <TmCommandPalette @bind-IsOpen="_commandPaletteOpen"
                       Actions="_availableActions" />
+
+    @* Opt-in F8 surfaces: categories with a separator between them, one kbd per key. *@
+    <div class="showcase-card mt-4" data-testid="command-palette-grouped-demo">
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _groupedPaletteOpen = true"
+                  data-testid="command-palette-grouped-open">
+            Open grouped palette
+        </TmButton>
+        <TmCommandPalette @bind-IsOpen="_groupedPaletteOpen"
+                          Actions="_groupedActions"
+                          GroupByCategory="true"
+                          SplitShortcuts="true" />
+    </div>
 </section>
 
 <!-- Combined Layout Demo -->
@@ -322,6 +334,18 @@
         IsVisible="_shortcutsVisible"
         OnClose="() => _shortcutsVisible = false"
         Categories="_shortcutCategories" />
+
+    @* Opt-in F8 surface: a subtitle and a key pair that is not a chord. *@
+    <div class="showcase-card mt-4" data-testid="shortcuts-described-demo">
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _describedShortcutsVisible = true"
+                  data-testid="shortcuts-described-open">
+            Open described shortcuts
+        </TmButton>
+        <TmKeyboardShortcutsHelp IsVisible="_describedShortcutsVisible"
+                                 OnClose="() => _describedShortcutsVisible = false"
+                                 Description="Shortcuts work with an external keyboard"
+                                 Categories="_describedShortcutCategories" />
+    </div>
 </section>
 
 @code {
@@ -330,6 +354,24 @@
     private string? _lastCommand;
     private bool _sectionCollapsed = false;
     private bool _shortcutsVisible = false;
+    private bool _groupedPaletteOpen = false;
+    private bool _describedShortcutsVisible = false;
+
+    private List<TmShortcutCategory> _describedShortcutCategories = new()
+    {
+        new("Navigation", new[]
+        {
+            new TmKeyboardShortcut("Arrow Up / Arrow Down", "Move between items", " / "),
+            new TmKeyboardShortcut("Esc", "Close"),
+        }),
+    };
+
+    private List<ICommandPaletteAction> _groupedActions = new()
+    {
+        new GroupedCommandAction("new-file", "New File", "File", "Ctrl+N"),
+        new GroupedCommandAction("open-file", "Open File", "File", "Ctrl+O"),
+        new GroupedCommandAction("undo", "Undo", "Edit", "Ctrl+Z"),
+    };
 
     private List<TmShortcutCategory> _shortcutCategories = new()
     {
@@ -439,6 +481,17 @@
 
     private void OnEditClick() => Toast.ShowInfo("Edit clicked");
     private void OnDeleteClick() => Toast.ShowWarning("Delete clicked");
+
+    private sealed class GroupedCommandAction(string id, string title, string category, string shortcut) : ICommandPaletteAction
+    {
+        public string Id => id;
+        public string Title => title;
+        public string? Description => null;
+        public string? Icon => null;
+        public string? Shortcut => shortcut;
+        public string? Category => category;
+        public Func<Task> Execute { get; } = () => Task.CompletedTask;
+    }
 
     // Simple implementation of ICommandPaletteAction
     private class CommandPaletteAction : ICommandPaletteAction

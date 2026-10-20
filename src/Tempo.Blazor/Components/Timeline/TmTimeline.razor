@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Timeline
 @inherits Tempo.Blazor.Components.TmComponentBase
+@implements IDisposable
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Avatars
 
@@ -46,7 +47,7 @@
                         <TmAvatar Src="@entry.AuthorAvatarUrl" Size="AvatarSize.Sm" />
                     }
                     <span class="tm-timeline-author">@entry.AuthorName</span>
-                    <span class="tm-timeline-timestamp">@FormatTime(entry.CreatedAt)</span>
+                    <time class="tm-timeline-timestamp" datetime="@entry.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(entry.CreatedAt)">@FormatTime(entry.CreatedAt)</time>
                     @if (entry.IsInternal)
                     {
                         <span class="tm-timeline-internal-badge">@Loc["TmTimeline_Internal"]</span>
@@ -193,12 +194,35 @@
 
     private Task OnLoadMoreAsync() => _pager.LoadMoreAsync();
 
-    private string FormatTime(DateTimeOffset dt)
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>Re-renders the stamps once the user zone arrives (the default registration via AddTempoBlazor()).</summary>
+    private TmUserZoneObserver? _userZoneObserver;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var diff = DateTimeOffset.Now - dt;
-        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
-        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
-        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
-        return dt.ToString(Loc["TmTimeline_DateFormat"]);
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // After the first INTERACTIVE render: prerender has no JS interop, and the probe runs once
+        // per circuit. No-op unless the host registered ITmUserTimeZone (AddTempoBlazor does).
+        _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, () => InvokeAsync(StateHasChanged));
+        if (_userZoneObserver is not null)
+        {
+            await _userZoneObserver.ProbeAsync();
+        }
     }
+
+    public void Dispose() => _userZoneObserver?.Dispose();
+
+    /// <summary>The shared relative-time formatter ("just now", "5 min ago", "yesterday at 4:20 PM", a date after a week).</summary>
+    private string FormatTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
+
+    private string AbsoluteTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(dt);
 }

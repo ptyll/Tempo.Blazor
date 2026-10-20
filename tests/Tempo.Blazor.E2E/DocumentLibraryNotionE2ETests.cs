@@ -123,10 +123,7 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
         // Simulate an edit from elsewhere: PUT a new preview via the API. The store publishes a
         // change → hub broadcasts → the subscribed block refreshes live.
         const string marker = "LIVEv2-marker";
-        using var http = new HttpClient(new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        using var http = new HttpClient(DemoApiTestHttp.CreateHandler());
         var payload = await http.GetStringAsync($"https://localhost:5100/api/document-library/wireframe/documents/{docId}/payload");
         var saveBody = System.Text.Json.JsonSerializer.Serialize(new
         {
@@ -173,10 +170,7 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
         await SaveScreenshotAsync(page, "05-mcp-before.png", "phase4");
 
         // Connect an MCP client (acting as the LLM tooling) and add an element to the linked doc.
-        var http = new HttpClient(new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        var http = new HttpClient(DemoApiTestHttp.CreateHandler());
         var mcp = new McpJsonRpcClient(http, new Uri("https://localhost:5100/mcp"));
         await mcp.InitializeAsync();
 

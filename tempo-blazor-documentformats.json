@@ -604,12 +604,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "CreatedEngineCount",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total Jint engines created so far — diagnostics for pooling behavior."
-        },
-        {
           "name": "Dispose",
           "kind": "Method",
           "type": "void"
@@ -624,6 +618,12 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "CreatedEngineCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total Jint engines created so far — diagnostics for pooling behavior."
         }
       ]
     },

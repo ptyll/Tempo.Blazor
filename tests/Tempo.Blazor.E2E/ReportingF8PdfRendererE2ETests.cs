@@ -193,9 +193,13 @@ public sealed class ReportingF8PdfRendererE2ETests
 
     private static async Task RasterizePdfPageAsync(string pdfPath, int pageNumber, string outputPath)
     {
-        if (!File.Exists("/usr/bin/pdftoppm"))
+        var pdftoppm = FindPdftoppm();
+        if (pdftoppm is null)
         {
-            throw new AssertInconclusiveException("pdftoppm is required for the F8 PDF raster golden gate.");
+            throw new AssertInconclusiveException(
+                "pdftoppm (poppler-utils) is required for the F8 PDF raster golden gate. The Linux "
+                + "test image ships /usr/bin/pdftoppm; on other OSes install poppler and make sure "
+                + "pdftoppm is on PATH (Windows) or in /usr/local/bin | /opt/homebrew/bin.");
         }
 
         var outputBase = Path.Combine(Path.GetDirectoryName(outputPath)!, Path.GetFileNameWithoutExtension(outputPath));
@@ -203,7 +207,7 @@ public sealed class ReportingF8PdfRendererE2ETests
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = "/usr/bin/pdftoppm",
+                FileName = pdftoppm,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
@@ -272,11 +276,83 @@ public sealed class ReportingF8PdfRendererE2ETests
 
     private static PdfFontBytes LoadPdfFonts()
     {
-        var regularPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-        var boldPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
-        File.Exists(regularPath).Should().BeTrue($"{regularPath} is available in the Linux test image");
-        File.Exists(boldPath).Should().BeTrue($"{boldPath} is available in the Linux test image");
-        return new PdfFontBytes(File.ReadAllBytes(regularPath), File.ReadAllBytes(boldPath));
+        // The gate embeds ONE sans-serif TTF pair (regular + bold) into the PDF AND registers the
+        // same bytes as the browser font faces (CreateBrowserFontFaces), so the canvas-vs-PDF
+        // comparison is self-consistent whatever pair is used. Which pair exists is a per-OS fact:
+        // the Linux test image ships DejaVu, Windows ships Segoe UI / Arial under %WINDIR%\Fonts,
+        // macOS ships Supplemental Arial. Asserting the Linux path on every OS turned the whole
+        // gate red on Windows before it could render anything. The product (ReportPdfRenderer) is
+        // platform-neutral — it only renders the bytes handed to it via PdfFontFace.
+        var tried = new List<string>();
+        foreach (var (regularPath, boldPath) in EnumerateFontCandidates())
+        {
+            tried.Add($"{regularPath} + {boldPath}");
+            if (File.Exists(regularPath) && File.Exists(boldPath))
+            {
+                return new PdfFontBytes(File.ReadAllBytes(regularPath), File.ReadAllBytes(boldPath));
+            }
+        }
+
+        throw new AssertFailedException(
+            "A regular+bold sans-serif TTF pair is required to embed fonts into the F8 PDFs; "
+            + "none of the per-OS candidate pairs exists on this machine: " + string.Join("; ", tried));
+    }
+
+    private static IEnumerable<(string RegularPath, string BoldPath)> EnumerateFontCandidates()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var fonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+            yield return (Path.Combine(fonts, "segoeui.ttf"), Path.Combine(fonts, "segoeuib.ttf"));
+            yield return (Path.Combine(fonts, "arial.ttf"), Path.Combine(fonts, "arialbd.ttf"));
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            yield return ("/System/Library/Fonts/Supplemental/Arial.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf");
+        }
+        else
+        {
+            yield return ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf");
+        }
+    }
+
+    /// <summary>
+    /// Locates the poppler <c>pdftoppm</c> rasterizer per OS: a fixed absolute path on Linux,
+    /// PATH resolution on Windows (poppler has no fixed install root there), the common
+    /// Homebrew/brew-from-source locations on macOS. <c>null</c> when not installed — the caller
+    /// reports the gate as inconclusive rather than red.
+    /// </summary>
+    private static string? FindPdftoppm()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE")
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? "")
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                foreach (var extension in extensions)
+                {
+                    var candidate = Path.Combine(directory, $"pdftoppm{extension.ToLowerInvariant()}");
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        foreach (var candidate in new[] { "/usr/bin/pdftoppm", "/usr/local/bin/pdftoppm", "/opt/homebrew/bin/pdftoppm" })
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private static ReportPdfRendererOptions CreatePdfOptions(PdfFontBytes fonts)

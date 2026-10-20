@@ -87,6 +87,12 @@
       "isRequired": false,
       "default": "\"document-comment-composer\"",
       "description": "Initial text used when the composer edits an existing entry."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmCommentDraftState>",
+      "isRequired": false,
+      "description": "Notifies the parent that the composer's draft state changed. The composer holds its text in a private field - no host can observe it through a parameter - so this callback is the only push channel. Fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. The state always reports IsEditorOpen=true and EditingCommentId=null; HasUnsavedContent is true once the text differs from the seeded InitialText and is not empty - a freshly seeded edit composer does not report an unsaved draft until the user actually types. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
     }
   ]
 }

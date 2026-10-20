@@ -1,0 +1,17 @@
+{
+  "itemName": "ToolbarOverflow",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Toolbar",
+  "description": "What TmToolbar does when its buttons do not fit.",
+  "values": [
+    {
+      "name": "None",
+      "description": "The default: nothing collapses; the buttons render as written."
+    },
+    {
+      "name": "Menu",
+      "description": "Buttons that do not fit move into a More menu, lowest priority first; OverflowOnly buttons always live there. The menu is a dropdown that presents as a bottom sheet on a phone-sized viewport."
+    }
+  ]
+}

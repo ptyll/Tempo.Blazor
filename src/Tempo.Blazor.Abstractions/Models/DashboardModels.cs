@@ -130,7 +130,14 @@ public class WidgetDefinition
     
     /// <summary>Whether widget can be moved.</summary>
     public bool IsDraggable { get; set; } = true;
-    
+
+    /// <summary>
+    /// Whether instances of this widget offer the collapse chevron in the dashboard header.
+    /// Defaults to <c>true</c>; a widget that must stay expanded (e.g. a live status tile)
+    /// opts out and <c>TmDashboard</c> renders no collapse control for it.
+    /// </summary>
+    public bool IsCollapsible { get; set; } = true;
+
     /// <summary>Whether multiple instances are allowed.</summary>
     public bool AllowMultiple { get; set; } = true;
     

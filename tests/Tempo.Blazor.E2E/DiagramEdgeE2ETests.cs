@@ -1167,6 +1167,142 @@ public class DiagramEdgeE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("J6 — a press on a connection point UNDER an edge corridor starts an edge draw, not a whole-edge drag (the port/cp wins over the corridor)")]
+    public async Task Desktop_ConnectionPointUnderEdgeCorridor_DrawsEdge()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+            AcceptDownloads = true
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await OpenDiagramEditorAsync(page);
+
+        // Find a connection point whose centre an edge hit path covers (edges paint over nodes,
+        // so the corridor is the raw target at that point). If the default view has none, draw
+        // one edge first — its corridor then crosses a connection point.
+        var findCoveredCp = """
+            () => {
+                for (const node of document.querySelectorAll('.tm-diagram-node')) {
+                    for (const cp of node.querySelectorAll('.tm-diagram-connection-point')) {
+                        const r = cp.getBoundingClientRect();
+                        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                        const el = document.elementFromPoint(cx, cy);
+                        if (el && el.classList && el.classList.contains('tm-diagram-edge-hit-path')
+                            && node.getAttribute('data-locked') !== 'true') {
+                            return { x: cx, y: cy, coveredBy: el.getAttribute('data-edge-id') };
+                        }
+                    }
+                }
+                return null;
+            }
+            """;
+        var covered = await page.EvaluateAsync<System.Text.Json.JsonElement?>(findCoveredCp);
+        if (covered is null)
+        {
+            // Draw a fresh edge between the two sample nodes; re-scan for a covered cp.
+            var port1 = page.Locator($".tm-diagram-node[data-node-id='{Node1Id}'] .tm-diagram-port").First;
+            var port2 = page.Locator($".tm-diagram-node[data-node-id='{Node2Id}'] .tm-diagram-port").First;
+            var (p1x, p1y) = await GetCenterAsync(port1);
+            var (p2x, p2y) = await GetCenterAsync(port2);
+            await page.Mouse.MoveAsync((float)p1x, (float)p1y);
+            await page.Mouse.DownAsync();
+            await page.Mouse.MoveAsync((float)p2x, (float)p2y, new MouseMoveOptions { Steps = 8 });
+            await page.Mouse.UpAsync();
+            await page.WaitForTimeoutAsync(400);
+            covered = await page.EvaluateAsync<System.Text.Json.JsonElement?>(findCoveredCp);
+        }
+        if (covered is null)
+        {
+            Assert.Inconclusive("no connection point under an edge corridor found to exercise J6");
+            return;
+        }
+
+        var cpx = covered.Value.GetProperty("x").GetDouble();
+        var cpy = covered.Value.GetProperty("y").GetDouble();
+        var edgesBefore = await page.Locator(".tm-diagram-edge-hit-path").CountAsync();
+
+        await page.Mouse.MoveAsync((float)cpx, (float)cpy);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(cpx + 80), (float)cpy, new MouseMoveOptions { Steps = 6 });
+        await page.Mouse.UpAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        Assert.IsTrue(await page.Locator(".tm-diagram-edge-hit-path").CountAsync() > edgesBefore,
+            "a press on a connection point under an edge corridor must start an edge draw (J6), not a whole-edge drag");
+        await TakeScreenshotAsync(page, "phase3_connection_point_under_corridor");
+    }
+
+    [TestMethod]
+    [Description("Desktop: mouse-dragging the e resize handle of a selected node with a right-side port resizes it — no edge is created")]
+    public async Task Desktop_ResizeHandleE_OnNodeWithRightPort_ResizesWithoutEdge()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+            AcceptDownloads = true
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await OpenDiagramEditorAsync(page);
+        // The docked toolbox renders only in the DESKTOP band — the demo gutters would keep a
+        // 1440 viewport in the tablet band (phase 6), so pin the editor like a full-bleed host.
+        await DiagramEditorE2E.PinDesktopAsync(page);
+
+        // Insert a fresh rectangle (the stencil carries four cardinal ports, one on the right
+        // edge exactly where the e resize handle paints). It lands selected at the canvas centre.
+        var toolbox = page.Locator(".tm-diagram-toolbox");
+        await toolbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
+        var beforeNodes = await page.Locator(".tm-diagram-node").CountAsync();
+        var paletteTile = page.Locator(".tm-diagram-toolbox__item[data-stencil-id='general.rectangle']").First;
+        await paletteTile.ScrollIntoViewIfNeededAsync();
+        await paletteTile.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "(n) => document.querySelectorAll('.tm-diagram-node').length > n",
+            beforeNodes, new PageWaitForFunctionOptions { Timeout = 15_000 });
+
+        var node = await page.EvaluateAsync<string?>("""
+            () => {
+                const n = document.querySelector('.tm-diagram-node--selected[data-node-id]');
+                if (!n) return null;
+                return JSON.stringify({ id: n.getAttribute('data-node-id'), w: parseFloat(n.getAttribute('data-w') || '0') });
+            }
+            """);
+        Assert.IsNotNull(node, "the inserted rectangle lands selected");
+        using var nodeDoc = JsonDocument.Parse(node);
+        var nodeId = nodeDoc.RootElement.GetProperty("id").GetString();
+        var widthBefore = nodeDoc.RootElement.GetProperty("w").GetDouble();
+
+        // The e handle hit rect shares its spot with the right-side port: on a fine pointer the
+        // port hit circles are inert (pointer-events: none), so the resize session must claim it.
+        var handle = page.Locator($".tm-diagram-node-handles[data-node-id='{nodeId}'] .tm-diagram-resize-handle-hit[data-resize-handle='e']");
+        await handle.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
+        var box = await handle.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the e resize handle hit must have a bounding box");
+        var hx = box.X + box.Width / 2;
+        var hy = box.Y + box.Height / 2;
+        var edgesBefore = await page.Locator(".tm-diagram-edge-hit-path").CountAsync();
+
+        await page.Mouse.MoveAsync((float)hx, (float)hy);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(hx + 60), (float)hy, new MouseMoveOptions { Steps = 6 });
+        await page.Mouse.UpAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        var widthAfter = await page.EvaluateAsync<double>(
+            "(id) => parseFloat((document.querySelector(`.tm-diagram-node[data-node-id='${id}']`)?.getAttribute('data-w')) || '0')",
+            nodeId);
+        Assert.AreNotEqual(widthBefore, widthAfter, "the e handle drag must change the node's width");
+        Assert.AreEqual(edgesBefore, await page.Locator(".tm-diagram-edge-hit-path").CountAsync(),
+            "a press on the e handle must never start an edge draw from the right-side port");
+    }
+
+    [TestMethod]
     [Description("3.6 — Edge-to-edge hover highlight while drawing")]
     public async Task Phase3_EdgeToEdge_HoverShowsHighlight()
     {
@@ -1857,11 +1993,49 @@ public class DiagramEdgeE2ETests : WasmTestBase
         var page = await CreatePageAsync();
         await OpenDiagramEditorAsync(page);
 
+        // The viewport context menu is the DESKTOP presentation; in the tablet band the
+        // context menu renders as a bottom sheet (phase 6). Pin the desktop band.
+        await DiagramEditorE2E.PinDesktopAsync(page);
+
         await SelectEdgeAsync(page);
         await OpenEdgeContextMenuAsync(page);
 
         var picker = page.Locator(".tm-diagram-edge-routing-picker");
         await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Phase 8 regression pin: the menu paints inside the editor box, so its HORIZONTAL
+        // extent must stay within it (a viewport-clamped menu used to stick out past a hosted
+        // narrow editor and clip the routing previews). Vertically the menu may exceed the
+        // editor box: it is taller than most editors and scrolls internally.
+        var menuBox = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const menu = document.querySelector('.tm-diagram-editor__context-menu');
+                if (!menu) return JSON.stringify({ found: false });
+                const m = menu.getBoundingClientRect();
+                return JSON.stringify({
+                    menuLeft: Math.round(m.left), menuRight: Math.round(m.right),
+                    menuTop: Math.round(m.top), menuBottom: Math.round(m.bottom),
+                    viewportW: window.innerWidth, viewportH: window.innerHeight,
+                });
+            }
+            """);
+        Console.WriteLine($"PROBE[context-menu box]: {menuBox}");
+        // Phase 8 regression pin: the context menu must end up FULLY ON SCREEN wherever the
+        // editor is hosted (the fixed menu used to be clamped against the viewport while its
+        // containing block semantics differed, leaving a tall menu parked off-screen and the
+        // edge routing previews unreachable).
+        var menuOnScreen = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const menu = document.querySelector('.tm-diagram-editor__context-menu');
+                if (!menu) return false;
+                const m = menu.getBoundingClientRect();
+                return m.left >= 0 && m.top >= 0
+                    && m.right <= window.innerWidth + 1 && m.bottom <= window.innerHeight + 1;
+            }
+            """);
+        Assert.IsTrue(menuOnScreen, $"the context menu must be fully on screen: {menuBox}");
 
         var previews = picker.Locator(".tm-diagram-routing-preview");
         var count = await previews.CountAsync();
@@ -1893,6 +2067,10 @@ public class DiagramEdgeE2ETests : WasmTestBase
         var page = await CreatePageAsync();
         await OpenDiagramEditorAsync(page);
 
+        // The viewport context menu is the DESKTOP presentation; in the tablet band the
+        // context menu renders as a bottom sheet (phase 6). Pin the desktop band.
+        await DiagramEditorE2E.PinDesktopAsync(page);
+
         await SelectEdgeAsync(page);
         await SetEdgeRoutingAsync(page, "elbow");
         await page.WaitForTimeoutAsync(300);
@@ -1920,6 +2098,10 @@ public class DiagramEdgeE2ETests : WasmTestBase
     {
         var page = await CreatePageAsync();
         await OpenDiagramEditorAsync(page);
+
+        // The viewport context menu is the DESKTOP presentation; in the tablet band the
+        // context menu renders as a bottom sheet (phase 6). Pin the desktop band.
+        await DiagramEditorE2E.PinDesktopAsync(page);
 
         await SelectEdgeAsync(page);
         await SetEdgeRoutingAsync(page, "orthogonal");
@@ -2344,5 +2526,38 @@ public class DiagramEdgeE2ETests : WasmTestBase
         Assert.IsTrue(await edges.CountAsync() > 0, "Expected at least one edge");
 
         await TakeScreenshotAsync(page, "smoke_diagram_load");
+    }
+
+    [TestMethod]
+    [Description("U8 — edge label pill: theme-invariant diagram ink on a paper halo in both themes")]
+    public async Task EdgeLabel_PaperHalo_ReadableInLightAndDark()
+    {
+        foreach (var dark in new[] { false, true })
+        {
+            var page = await CreatePageAsync();
+            await OpenDiagramEditorAsync(page);
+            await DiagramEditorE2E.PinEditorFullBleedAsync(page, "desktop");
+            await page.EvaluateAsync(
+                $$"""() => document.documentElement.setAttribute('data-theme', '{{(dark ? "dark" : "light")}}')""");
+            await page.WaitForTimeoutAsync(150);
+
+            var probeJson = await page.EvaluateAsync<string>("""
+                () => {
+                    const t = document.querySelector('.tm-diagram-edge-label__text');
+                    if (!t) return null;
+                    const cs = getComputedStyle(t);
+                    return JSON.stringify({ color: cs.color, bg: cs.backgroundColor });
+                }
+                """);
+            Assert.IsNotNull(probeJson,
+                $"The UML sample's multiplicity label (.tm-diagram-edge-label__text) was not found in the {(dark ? "dark" : "light")} theme.");
+            using var probe = JsonDocument.Parse(probeJson);
+            Assert.AreEqual("rgb(75, 85, 99)", probe.RootElement.GetProperty("color").GetString(),
+                $"label ink must be the theme-invariant diagram ink in the {(dark ? "dark" : "light")} theme");
+            Assert.AreEqual("rgb(255, 255, 255)", probe.RootElement.GetProperty("bg").GetString(),
+                $"label halo must be paper-white in the {(dark ? "dark" : "light")} theme");
+
+            await page.CloseAsync();
+        }
     }
 }

@@ -40,6 +40,7 @@
 .tm-input::-webkit-search-results-button,
 .tm-input::-webkit-search-results-decoration { display: none; }
 .tm-input:focus {
+  outline: 2px solid transparent;
   border-color: var(--tm-border-color-focus);
   box-shadow: var(--tm-focus-ring);
 }
@@ -173,7 +174,7 @@
   background-color: var(--tm-bg-surface-secondary);
 }
 .tm-search-clear:focus-visible {
-  outline: none;
+  outline: 2px solid transparent;
   box-shadow: var(--tm-focus-ring);
 }
 
@@ -207,7 +208,7 @@
   cursor: pointer;
   transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
-.tm-select:focus   { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-focus-ring); }
+.tm-select:focus   { outline: 2px solid transparent; border-color: var(--tm-border-color-focus); box-shadow: var(--tm-focus-ring); }
 .tm-select-error   { border-color: var(--tm-color-danger) !important; }
 .tm-select-error:focus { box-shadow: var(--tm-focus-ring-danger); }
 .tm-select-disabled, .tm-select[disabled] { background-color: var(--tm-color-gray-50); cursor: not-allowed; }

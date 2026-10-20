@@ -16,7 +16,9 @@
     }
 
     <div class="tm-form-field-control">
-        @ChildContent
+        <CascadingValue Value="@CascadedErrorId" Name="@ErrorIdCascadingName" IsFixed="false">
+            @ChildContent
+        </CascadingValue>
     </div>
 
     @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(EffectiveErrorMessage))
@@ -26,7 +28,7 @@
 
     @if (!string.IsNullOrEmpty(EffectiveErrorMessage))
     {
-        <p class="tm-form-field-error" role="alert">@EffectiveErrorMessage</p>
+        <p id="@ErrorId" class="tm-form-field-error" role="@(AnnounceError ? "alert" : null)">@EffectiveErrorMessage</p>
     }
 </div>
 
@@ -34,8 +36,23 @@
     /// <summary>Cascading EditContext from the parent EditForm.</summary>
     [CascadingParameter] private EditContext? EditContext { get; set; }
 
+    /// <summary>
+    /// Cascading-value name under which <see cref="TmFormField"/> publishes the id of its rendered
+    /// error message to the controls inside <see cref="ChildContent"/> (null while no error shows).
+    /// Wrapped Tm inputs add it to their <c>aria-describedby</c>.
+    /// </summary>
+    public const string ErrorIdCascadingName = "TmFormFieldErrorId";
+
     /// <summary>Label text displayed above the field.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Base DOM id used to derive the stable <see cref="ErrorId"/> ("<c>{Id}-field-error</c>").
+    /// The suffix deliberately differs from the inputs' <c>{Id}-error</c> so the two never collide
+    /// when a field and its wrapped input share the same <c>Id</c>. Defaults to a per-instance
+    /// generated id.
+    /// </summary>
+    [Parameter] public string? Id { get; set; }
 
     /// <summary>When true, a required asterisk is appended to the label.</summary>
     [Parameter] public bool Required { get; set; }
@@ -43,8 +60,33 @@
     /// <summary>Helper text shown below the field when there is no error.</summary>
     [Parameter] public string? HelpText { get; set; }
 
-    /// <summary>Explicit validation error message shown below the field in red. Takes precedence over EditContext validation.</summary>
+    /// <summary>
+    /// Explicit validation error message shown below the field in red. Takes precedence over EditContext validation.
+    /// <para>
+    /// The message keeps <c>role="alert"</c> by default; the input-level <c>AnnounceError="false"</c>
+    /// opt-out (e.g. <c>TmTextInput.AnnounceError</c>) mutes only the wrapped control's own error
+    /// message, never this wrapper's error display. This field has its own
+    /// <see cref="AnnounceError"/> opt-out with the same semantics.
+    /// </para>
+    /// </summary>
     [Parameter] public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// When <c>true</c> (default), the rendered error message carries <c>role="alert"</c> so screen
+    /// readers announce it assertively the moment it appears. Set <c>false</c> when the host moves
+    /// focus to the invalid control itself (typically a modal submit that focuses the first invalid
+    /// field): the error is then read through <c>aria-describedby</c> on the wrapped control, and
+    /// the live region would announce the same text a second time. With <c>false</c> the message
+    /// still renders, keeps its error styling, keeps its stable <see cref="ErrorId"/> and stays
+    /// cascaded to the wrapped inputs; only the <c>role</c> attribute is dropped.
+    /// <para>
+    /// Scope: the opt-out covers only this field's error paragraph — the wrapped control's own
+    /// <c>AnnounceError</c> is independent, and <c>TmFormValidationMessage</c> keeps its
+    /// <c>role="alert"</c>. The same "only safe when the same render moves focus to the invalid
+    /// control" caveat as the inputs applies.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool AnnounceError { get; set; } = true;
 
     /// <summary>Expression identifying the model field to track for EditContext validation errors.</summary>
     [Parameter] public Expression<Func<object>>? ValidationFor { get; set; }
@@ -66,6 +108,26 @@
 
     private FieldIdentifier _fieldIdentifier;
     private string? _validationError;
+
+    // Stable for the instance (the same convention as the inputs' generated Id) so the error
+    // paragraph keeps its id and every aria-describedby that references it survives re-renders.
+    private readonly string _generatedId = Guid.NewGuid().ToString("n")[..8];
+
+    private string EffectiveId => !string.IsNullOrEmpty(Id) ? Id : _generatedId;
+
+    /// <summary>
+    /// Stable DOM id of the field's error message ("<c>{Id}-field-error</c>" — the suffix differs
+    /// from the inputs' <c>{Id}-error</c> so the ids of a field and its wrapped input never
+    /// collide). Published to <see cref="ChildContent"/> as a cascading value named
+    /// <see cref="ErrorIdCascadingName"/> whenever the error paragraph renders, so the cascade
+    /// reaches every Tm input inside the field's content: each input with no own <c>Error</c>
+    /// links the message through <c>aria-describedby</c>; hosts can reference it through this
+    /// property too.
+    /// </summary>
+    public string ErrorId => $"{EffectiveId}-field-error";
+
+    /// <summary>The cascaded reference: <see cref="ErrorId"/> while the error paragraph renders, otherwise null.</summary>
+    private string? CascadedErrorId => string.IsNullOrEmpty(EffectiveErrorMessage) ? null : ErrorId;
 
     private string? EffectiveErrorMessage => !string.IsNullOrEmpty(ErrorMessage)
         ? ErrorMessage

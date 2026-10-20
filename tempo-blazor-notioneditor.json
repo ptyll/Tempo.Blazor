@@ -99,11 +99,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Description",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -112,6 +107,11 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -126,16 +126,10 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Number of commands in this batch."
-        },
-        {
           "name": "Add",
           "kind": "Method",
           "type": "void",
-          "description": "Appends a command. The command must NOT yet have been executed.",
+          "description": "Appends a command. The command must NOT have been executed yet.",
           "parameters": [
             {
               "name": "command",
@@ -146,17 +140,26 @@
         {
           "name": "ExecuteAsync",
           "kind": "Method",
-          "type": "Task"
+          "type": "Task",
+          "description": "Runs every command in insertion order."
         },
         {
           "name": "UndoAsync",
           "kind": "Method",
-          "type": "Task"
+          "type": "Task",
+          "description": "Undoes every command in reverse (last-to-first) order."
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of commands currently in the batch."
         },
         {
           "name": "Description",
           "kind": "Property",
-          "type": "string"
+          "type": "string",
+          "description": "Human-readable label for the whole batch, shown in undo/redo affordances."
         }
       ],
       "examples": [
@@ -253,11 +256,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Description",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -266,6 +264,11 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -280,11 +283,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Description",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -293,6 +291,11 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string"
         },
         {
           "name": "PageId",
@@ -421,11 +424,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Description",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -434,6 +432,11 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -587,34 +590,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "CanRedo",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
-          "name": "CanUndo",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
-          "name": "IsInBatch",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether a batch is currently open."
-        },
-        {
-          "name": "NextRedoDescription",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Description of the next command that would be redone, or null."
-        },
-        {
-          "name": "NextUndoDescription",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Description of the next command that would be undone, or null."
-        },
-        {
           "name": "BatchScope",
           "kind": "Method",
           "type": "IAsyncDisposable",
@@ -696,6 +671,34 @@
           "kind": "Method",
           "type": "Task",
           "description": "Undoes the most recent command. No-op when CanUndo is false."
+        },
+        {
+          "name": "CanRedo",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "CanUndo",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IsInBatch",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a batch is currently open."
+        },
+        {
+          "name": "NextRedoDescription",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Description of the next command that would be redone, or null."
+        },
+        {
+          "name": "NextUndoDescription",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Description of the next command that would be undone, or null."
         }
       ]
     },
@@ -756,12 +759,6 @@
           "description": "Raised when a block type is converted (e.g. via slash menu or toolbar). Nested components such as column blocks subscribe to keep their local child cache in sync with the remote store."
         },
         {
-          "name": "HasDeniedBlockTypes",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when DeniedBlockTypes restricts at least one block type."
-        },
-        {
           "name": "IsBlockTypeAllowed",
           "kind": "Method",
           "type": "bool",
@@ -800,7 +797,8 @@
         {
           "name": "AggregateSession",
           "kind": "Property",
-          "type": "NotionEditorAggregateSession?"
+          "type": "NotionEditorAggregateSession?",
+          "description": "Active canonical snapshot session used by aggregate-only editor mutations and conflict recovery."
         },
         {
           "name": "AIProvider",
@@ -925,6 +923,12 @@
           "type": "ITmFileProvider?"
         },
         {
+          "name": "HasDeniedBlockTypes",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when DeniedBlockTypes restricts at least one block type."
+        },
+        {
           "name": "HistoryProvider",
           "kind": "Property",
           "type": "INotionVersionProvider?"
@@ -1042,6 +1046,11 @@
           "name": "WorkItemSource",
           "kind": "Property",
           "type": "ITmWorkItemProvider?"
+        },
+        {
+          "name": "TaskProvider",
+          "kind": "Property",
+          "type": "INotionTaskProvider?"
         }
       ]
     },
@@ -1135,12 +1144,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Bindings",
-          "kind": "Field",
-          "type": "IReadOnlyList<NotionKeyboardBinding>",
-          "description": "Read-only view of all currently registered bindings."
-        },
-        {
           "name": "GetShortcutCategories",
           "kind": "Method",
           "type": "IReadOnlyList<TmShortcutCategory>",
@@ -1181,6 +1184,12 @@
               "type": "NotionEditorAction"
             }
           ]
+        },
+        {
+          "name": "Bindings",
+          "kind": "Property",
+          "type": "IReadOnlyList<NotionKeyboardBinding>",
+          "description": "Read-only view of all currently registered bindings."
         }
       ]
     },
@@ -1368,11 +1377,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "All",
-          "kind": "Field",
-          "type": "IReadOnlyList<SlashMenuItem>"
-        },
-        {
           "name": "FindByType",
           "kind": "Method",
           "type": "SlashMenuItem?",
@@ -1382,6 +1386,11 @@
               "type": "BlockType"
             }
           ]
+        },
+        {
+          "name": "All",
+          "kind": "Property",
+          "type": "IReadOnlyList<SlashMenuItem>"
         }
       ]
     },
@@ -1393,7 +1402,24 @@
       "description": "Public recordstruct defined by Tempo.Blazor.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TableCellSelectionRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ColumnIndex",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Extend",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "RowIndex",
+          "kind": "Property",
+          "type": "int"
+        }
+      ]
     },
     {
       "itemName": "TableRowHeight",
@@ -1519,11 +1545,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Description",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -1532,6 +1553,11 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1546,11 +1572,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Description",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -1559,6 +1580,11 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1576,7 +1602,7 @@
           "name": "AddTempoBlazorNotionEditor",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the Notion-style editor component group.",
+          "description": "Registers the services required by TmNotionEditor and its blocks.",
           "parameters": [
             {
               "name": "services",
@@ -2154,6 +2180,12 @@
           "isRequired": false
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmNotionCommentDraftState>",
+          "isRequired": false,
+          "description": "Fires whenever the TmNotionCommentDraftState value changes - the new-thread/thread-reply composer, the inline reply or the entry edit gained/lost content. Value-equality deduped, so it does NOT fire on every keystroke. No composer text is observable through a parameter; use TmNotionCommentDraftState to build a dirty-guard before closing the panel or navigating away. The inline reply's auto-inserted quote and an untouched edit are not user content and do not raise HasUnsavedContent. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the consumer's own confirmation."
+        },
+        {
           "name": "OnMentionClicked",
           "type": "EventCallback<string>",
           "isRequired": false
@@ -2171,7 +2203,8 @@
         {
           "name": "Visible",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Whether the panel is visible. Set it to false ONLY after checking HasUnsavedDraft — the panel clears every draft slot when it hides, so a host that hides it without asking first silently discards the in-progress comment."
         }
       ]
     },
@@ -6116,6 +6149,12 @@
           "isRequired": false
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmNotionCommentDraftState>",
+          "isRequired": false,
+          "description": "Fires whenever the TmNotionCommentDraftState value changes — any of the panel's composers (new comment, thread reply, inline reply, entry edit) gained/lost content. Value-equality deduped, so it does NOT fire on every keystroke. No composer text is observable through a parameter; use TmNotionCommentDraftState to build a dirty-guard before a navigation that would silently discard an in-progress comment. Opening an edit or an inline reply reports its id/state immediately while HasUnsavedContent stays false until real user content exists (an edit differing from the entry body, a reply beyond the auto-inserted quote). Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the consumer's own confirmation."
+        },
+        {
           "name": "OnExpandedChanged",
           "type": "EventCallback<bool>",
           "isRequired": false
@@ -6158,6 +6197,12 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised after the comment count may have changed."
+        },
+        {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmNotionCommentDraftState>",
+          "isRequired": false,
+          "description": "Pass-through of the embedded panel's OnDraftChanged: forwards the panel's deduped TmNotionCommentDraftState transitions so a host rendering the section gets the same draft-guard visibility as the bare panel. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the host's own confirmation."
         },
         {
           "name": "OnExpandedChanged",
@@ -7913,6 +7958,12 @@
           "isRequired": false
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmNotionCommentDraftState>",
+          "isRequired": false,
+          "description": "Fires whenever the TmNotionCommentDraftState value changes - the bottom reply/new-comment composer, the inline reply or the entry edit gained/lost content. Value-equality deduped, so it does NOT fire on every keystroke. No composer text is observable through a parameter; use TmNotionCommentDraftState to build a dirty-guard before closing the panel or navigating away. The inline reply's auto-inserted quote and an untouched edit are not user content and do not raise HasUnsavedContent. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the consumer's own confirmation."
+        },
+        {
           "name": "OnMentionClicked",
           "type": "EventCallback<string>",
           "isRequired": false
@@ -7935,7 +7986,8 @@
         {
           "name": "Visible",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Whether the panel is visible. Set it to false ONLY after checking HasUnsavedDraft — the panel clears every draft slot when it hides, so a host that hides it without asking first silently discards the in-progress comment."
         }
       ]
     },

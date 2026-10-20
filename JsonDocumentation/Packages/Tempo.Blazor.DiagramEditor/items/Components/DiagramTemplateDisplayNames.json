@@ -1,0 +1,64 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Diagram.Templates",
+  "description": "Display-name helpers for diagram templates and their categories: resolves the localized text through resource keys derived from the template Id (TmDiagramTemplate_<id>) and the category name (TmDiagramTemplateCategory_<category>), falling back to the raw authored values, so the DiagramTemplate model itself stays unchanged.",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/DiagramTemplateDisplayNames.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "GetTemplateName",
+      "kind": "Method",
+      "type": "string",
+      "description": "Returns the localized display name for a template: the translation of the key derived from its Id when the key resolves, otherwise the template's raw name.",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "DiagramTemplate"
+        },
+        {
+          "name": "localizer",
+          "type": "ITmLocalizer"
+        }
+      ]
+    },
+    {
+      "name": "GetCategoryName",
+      "kind": "Method",
+      "type": "string",
+      "description": "Returns the localized category label: the translation of the key derived from the category when the key resolves, otherwise the raw category name.",
+      "parameters": [
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "localizer",
+          "type": "ITmLocalizer"
+        }
+      ]
+    },
+    {
+      "name": "GetLocalizedText",
+      "kind": "Method",
+      "type": "string",
+      "description": "Resolves a localized text for a resource key, falling back to the provided value when the key is empty or untranslated (localizers echoing [key] are treated as missing).",
+      "parameters": [
+        {
+          "name": "resourceKey",
+          "type": "string?"
+        },
+        {
+          "name": "fallback",
+          "type": "string"
+        },
+        {
+          "name": "localizer",
+          "type": "ITmLocalizer"
+        }
+      ]
+    }
+  ],
+  "itemName": "DiagramTemplateDisplayNames"
+}

@@ -38,7 +38,7 @@
 
     @if (Error is not null)
     {
-        <div id="@ErrorId" class="tm-expression-editor__error" role="alert">@Error</div>
+        <div id="@ErrorId" class="tm-expression-editor__error" role="@(AnnounceError ? "alert" : null)">@Error</div>
     }
 </div>
 
@@ -64,6 +64,24 @@
     /// <summary>Error message to display.</summary>
     [Parameter] public string? Error { get; set; }
 
+    /// <summary>
+    /// When <c>true</c> (default), the rendered <see cref="Error"/> message carries
+    /// <c>role="alert"</c> so screen readers announce it assertively the moment it appears.
+    /// Set <c>false</c> when the host moves focus to the invalid field itself (typically a modal
+    /// submit that focuses the first invalid control): the error is then read through
+    /// <c>aria-describedby</c> on the textarea, and the live region would announce the same text a
+    /// second time. With <c>false</c> the message still renders, keeps its error styling and stays
+    /// referenced by <c>aria-describedby</c>; only the <c>role</c> attribute is dropped.
+    /// <para>
+    /// Only safe when the same render that shows the error also moves focus to this control. Keep
+    /// the default for validation on blur or on input, async/server validation, or when focus
+    /// stays on the submit button — otherwise the error is not announced at all. With several
+    /// invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first
+    /// invalid field.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool AnnounceError { get; set; } = true;
+
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -73,7 +91,17 @@
     // ── Accessibility ────────────────────────────────────────────
     private readonly string _ariaId = Guid.NewGuid().ToString("n")[..8];
     private string ErrorId => $"{_ariaId}-error";
-    private string? DescribedBy => Error is not null ? ErrorId : null;
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// <see cref="Error"/> the textarea describes the field-level message, so a single
+    /// <c>TmFormField</c> error is reachable from the wrapped control too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private string? DescribedBy => Error is not null ? ErrorId : FormFieldErrorId;
 
     private async Task HandleInput(ChangeEventArgs e)
     {

@@ -2,11 +2,22 @@
 @using Tempo.Blazor.Components.Icons
 
 <button type="button"
-        class="tm-dropdown-item @(Disabled ? "tm-dropdown-item-disabled" : "") @Class"
-        role="menuitem"
+        class="tm-dropdown-item @(Disabled || AriaDisabled ? "tm-dropdown-item-disabled" : "") @Class"
+        role="@(Checked is null ? "menuitem" : "menuitemradio")"
+        aria-checked="@(Checked is null ? null : Checked.Value ? "true" : "false")"
+        aria-disabled="@(AriaDisabled ? "true" : null)"
         disabled="@Disabled"
         @onclick="HandleClickAsync"
         @attributes="AdditionalAttributes">
+    @if (Checked is not null)
+    {
+        <span class="tm-dropdown-item__check" aria-hidden="true">
+            @if (Checked.Value)
+            {
+                <TmIcon Name="@IconNames.Check" Size="IconSize.Sm" />
+            }
+        </span>
+    }
     @if (!string.IsNullOrEmpty(Icon))
     {
         <TmIcon Name="@Icon" Size="IconSize.Sm" />
@@ -30,6 +41,26 @@
     /// <summary>Disables the dropdown item.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>
+    /// Marks the item <c>aria-disabled="true"</c> and paints the disabled style while leaving it
+    /// focusable, so a keyboard or screen-reader user can land on it and hear its explanation.
+    /// A click does nothing. Unlike <see cref="Disabled"/>, the native <c>disabled</c> attribute is not set.
+    /// </summary>
+    [Parameter] public bool AriaDisabled { get; set; }
+
+    /// <summary>
+    /// When set, the item is a radio choice (<c>role="menuitemradio"</c>) and this is its checked state.
+    /// <c>null</c> (the default) keeps today's <c>menuitem</c>. A non-null value also renders a leading
+    /// check indicator, so the choice is not announced by colour alone.
+    /// </summary>
+    [Parameter] public bool? Checked { get; set; }
+
+    /// <summary>
+    /// When true, choosing this item does not close the menu and focus stays on the item.
+    /// Use it for a choice the user makes before picking another item, such as a radio scope.
+    /// </summary>
+    [Parameter] public bool KeepOpen { get; set; }
+
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
@@ -38,8 +69,8 @@
 
     private async Task HandleClickAsync()
     {
-        if (Disabled) return;
+        if (Disabled || AriaDisabled) return;
         if (Parent is not null)
-            await Parent.SelectItemAsync(Value);
+            await Parent.SelectItemAsync(Value, KeepOpen);
     }
 }

@@ -241,7 +241,7 @@
 
     @if (!string.IsNullOrEmpty(Error))
     {
-        <div id="@ErrorId" class="tm-input-error-message" role="alert">@Error</div>
+        <div id="@ErrorId" class="tm-input-error-message" role="@(AnnounceError ? "alert" : null)">@Error</div>
     }
     @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(Error))
     {

@@ -245,4 +245,25 @@ public class TmColorPickerTests : LocalizationTestBase
         cut.FindAll(".tm-color-picker-dropdown").Should().BeEmpty();
         cut.Find(".tm-color-picker-trigger").GetAttribute("aria-disabled").Should().Be("true");
     }
+
+    [Fact]
+    public void TmColorPicker_PaletteColorNames_NameTheDropdownSwatches()
+    {
+        var cut = Render<TmColorPicker>(parameters =>
+        {
+            parameters.Add(p => p.PaletteColors, new[] { "#C62828", "#2E7D32" });
+            parameters.Add(p => p.PaletteColorNames, new Dictionary<string, string>
+            {
+                ["#C62828"] = "Crimson",
+                ["#2E7D32"] = "Forest green",
+            });
+        });
+
+        cut.Find(".tm-color-picker-trigger").Click();
+
+        var swatches = cut.FindAll(".tm-color-palette-swatch");
+        swatches.Should().HaveCount(2);
+        swatches[0].GetAttribute("aria-label").Should().Be("Select color Crimson");
+        swatches[1].GetAttribute("aria-label").Should().Be("Select color Forest green");
+    }
 }

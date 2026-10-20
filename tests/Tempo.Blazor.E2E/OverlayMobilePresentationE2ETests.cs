@@ -245,4 +245,116 @@ public sealed class OverlayMobilePresentationE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Escape");
         await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
     }
+
+    // ── F19: the sheet gesture runs on the shared pointer-drag helper ──────────
+    // A swipe down the grabber dismisses a content sheet; Escape during a swipe cancels the drag
+    // first (the sheet stays open) and only a second Escape closes it. Touch-typed pointer events
+    // are dispatched in-page — what a finger sends. They carry real browser timestamps:
+    // PointerEventInit has no timeStamp, so passing one does nothing.
+
+    private static async Task SwipeSheetHandleAsync(IPage page, double dy, int steps = 12, int stepMs = 16)
+    {
+        await page.EvaluateAsync(
+            """
+            async ({ dy, steps, stepMs }) => {
+                const root = document.querySelector('.tm-overlay-panel-sheet');
+                const handle = root.querySelector('.tm-sheet__handle') ?? root.querySelector('.tm-drawer__header');
+                const r = handle.getBoundingClientRect();
+                const x = r.left + r.width / 2, y = r.top + r.height / 2;
+                const fire = (type, offset) => handle.dispatchEvent(new PointerEvent(type, {
+                    pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+                    clientX: x, clientY: y + offset, bubbles: true, cancelable: true,
+                }));
+                const wait = ms => new Promise(res => setTimeout(res, ms));
+                fire('pointerdown', 0);
+                for (let i = 1; i <= steps; i++) { await wait(stepMs); fire('pointermove', dy * i / steps); }
+                await wait(stepMs);
+                fire('pointerup', dy);
+            }
+            """, new Dictionary<string, object> { ["dy"] = dy, ["steps"] = steps, ["stepMs"] = stepMs });
+    }
+
+    [TestMethod]
+    public async Task Dropdown_At390_SwipeDownOnHandle_DismissesTheSheet()
+    {
+        var page = await OpenOverlayPageAsync(390, 844, touch: true);
+
+        var trigger = page.Locator("[data-testid='overlay-mobile-dropdown'] .tm-dropdown-trigger");
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await trigger.ClickAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        await page.WaitForTimeoutAsync(400);
+
+        // A 420px swipe down the grabber is a downward flick: a content sheet dismisses on it.
+        await SwipeSheetHandleAsync(page, 420);
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
+        Assert.AreEqual("false", await trigger.GetAttributeAsync("aria-expanded"),
+            "a swipe-dismiss closes the sheet the same way Done does");
+    }
+
+    [TestMethod]
+    public async Task Dropdown_At390_EscapeMidSwipe_KeepsTheSheetOpen_ThenSecondEscapeClosesIt()
+    {
+        var page = await OpenOverlayPageAsync(390, 844, touch: true);
+
+        var trigger = page.Locator("[data-testid='overlay-mobile-dropdown'] .tm-dropdown-trigger");
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await trigger.ClickAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        var panel = sheet.Locator(".tm-drawer__panel");
+        await page.WaitForTimeoutAsync(400);
+
+        // Focus inside the sheet so the drawer's own Escape handling is armed for the second press.
+        await sheet.Locator(".tm-dropdown-item").First.FocusAsync();
+
+        // Finger down, drag live (no pointerup yet).
+        await page.EvaluateAsync(
+            """
+            async () => {
+                const root = document.querySelector('.tm-overlay-panel-sheet');
+                const handle = root.querySelector('.tm-sheet__handle') ?? root.querySelector('.tm-drawer__header');
+                const r = handle.getBoundingClientRect();
+                const x = r.left + r.width / 2, y = r.top + r.height / 2;
+                const fire = (type, offset) => handle.dispatchEvent(new PointerEvent(type, {
+                    pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+                    clientX: x, clientY: y + offset, bubbles: true, cancelable: true,
+                }));
+                const wait = ms => new Promise(res => setTimeout(res, ms));
+                fire('pointerdown', 0);
+                for (let i = 1; i <= 6; i++) { await wait(32); fire('pointermove', 35 * i); }
+            }
+            """);
+        Assert.IsTrue(await panel.EvaluateAsync<bool>(
+            "el => /(^|;)\\s*height:/.test(el.getAttribute('style') ?? '')"),
+            "the drag must be live before Escape (an inline height is written)");
+
+        // The first Escape cancels the DRAG: the inline height rolls back, the sheet stays open,
+        // and the key is consumed — it must not reach the drawer.
+        await page.Keyboard.PressAsync("Escape");
+        Assert.IsFalse(await panel.EvaluateAsync<bool>(
+            "el => /(^|;)\\s*height:/.test(el.getAttribute('style') ?? '')"),
+            "Escape rolls the drag back and clears the inline height");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+
+        // Release the (synthetic) finger — the cancelled gesture holds no session any more.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const root = document.querySelector('.tm-overlay-panel-sheet');
+                const handle = root.querySelector('.tm-sheet__handle') ?? root.querySelector('.tm-drawer__header');
+                const r = handle.getBoundingClientRect();
+                handle.dispatchEvent(new PointerEvent('pointerup', {
+                    pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, buttons: 0,
+                    clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 + 210,
+                    bubbles: true, cancelable: true,
+                }));
+            }
+            """);
+
+        // The second Escape reaches the drawer and closes the sheet.
+        await page.Keyboard.PressAsync("Escape");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
+    }
 }

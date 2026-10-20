@@ -1,82 +1,108 @@
 @namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
 
-@if (IsVisible)
-{
-    <div class="tm-rte-link-dialog tm-rte-dialog">
-        <div class="tm-rte-link-backdrop" @onclick="OnBackdropClick"></div>
-        <div class="tm-rte-link-content">
-            <div class="tm-rte-link-header">
-                <h5>@Loc["TmRichEditor_LinkDialog_Title"]</h5>
-                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
-            </div>
-            <div class="tm-rte-link-body">
-                <div class="tm-rte-form-group">
-                    <label for="url-input">@Loc["TmRichEditor_LinkDialog_Url"]</label>
-                    <input type="text"
-                           id="url-input"
-                           class="tm-rte-link-url-input"
-                           placeholder="https://example.com"
-                           @bind="_url"
-                           @bind:event="oninput" />
-                    @if (_showError)
-                    {
-                        <div class="tm-rte-link-error">@Loc["TmRichEditor_LinkDialog_InvalidUrl"]</div>
-                    }
-                </div>
-                <div class="tm-rte-form-group">
-                    <label for="text-input">@Loc["TmRichEditor_LinkDialog_Text"]</label>
-                    <input type="text"
-                           id="text-input"
-                           class="tm-rte-link-text-input"
-                           placeholder="@Loc["TmRichEditor_LinkDialog_TextPlaceholder"]"
-                           @bind="_text"
-                           @bind:event="oninput" />
-                </div>
-            </div>
-            <div class="tm-rte-link-footer">
-                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
-                    @Loc["Tm_Cancel"]
-                </button>
-                <button type="button" 
-                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
-                        disabled="@(!IsValidUrl())"
-                        @onclick="InsertLink">
-                    @Loc["TmRichEditor_LinkDialog_Insert"]
-                </button>
-            </div>
+@* FZE-10: the dialog renders on the core TmModal primitive — the browser top layer, role="dialog",
+   a title it is named by, Escape and the shared focus trap — instead of its own fixed z-index
+   overlay (docs/overlays.md rule 9). The fields sit in a real <form>: Enter in any field submits
+   it (implicit submission through the footer's type=submit button), the submit handler
+   re-validates and shows the error for an invalid URL — the native path, no key emulation. *@
+<TmModal Show="@IsVisible"
+         Title="@Loc["TmRichEditor_LinkDialog_Title"]"
+         Size="ModalSize.Small"
+         Class="tm-rte-link-dialog tm-rte-dialog"
+         CloseOnOverlayClick="@CloseOnBackdropClick"
+         CloseOnEscape="true"
+         ShowCloseButton="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         InitialFocusTargetId="@_urlInputId"
+         OnClose="HandleClose">
+
+    <ChildContent>
+    <form id="@_formId" @onsubmit="InsertLink" @onsubmit:preventDefault novalidate>
+        <div class="tm-rte-form-group">
+            <label for="@_urlInputId">@Loc["TmRichEditor_LinkDialog_Url"]</label>
+            <input type="text"
+                   id="@_urlInputId"
+                   class="tm-rte-link-url-input"
+                   placeholder="@Loc["TmRichEditor_LinkDialog_UrlPlaceholder"]"
+                   @bind="_url"
+                   @bind:event="oninput" />
+            @if (_showError)
+            {
+                <div class="tm-rte-link-error" role="alert">@Loc["TmRichEditor_LinkDialog_InvalidUrl"]</div>
+            }
         </div>
-    </div>
-}
+        <div class="tm-rte-form-group">
+            <label for="@_textInputId">@Loc["TmRichEditor_LinkDialog_Text"]</label>
+            <input type="text"
+                   id="@_textInputId"
+                   class="tm-rte-link-text-input"
+                   placeholder="@Loc["TmRichEditor_LinkDialog_TextPlaceholder"]"
+                   @bind="_text"
+                   @bind:event="oninput" />
+        </div>
+    </form>
+
+    </ChildContent>
+
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost"
+                  OnClick="HandleClose"
+                  Class="tm-rte-btn-cancel">
+            @Loc["Tm_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  Type="ButtonType.Submit"
+                  Disabled="@(!IsValidUrl())"
+                  Class="tm-rte-btn-insert"
+                  AdditionalAttributes="@(new Dictionary<string, object> { ["form"] = _formId })">
+            @Loc["TmRichEditor_LinkDialog_Insert"]
+        </TmButton>
+    </Footer>
+</TmModal>
 
 @code {
     /// <summary>
     /// Whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
-    
+
     /// <summary>
     /// Preselected text for the link.
     /// </summary>
     [Parameter] public string? PreselectedText { get; set; }
-    
+
     /// <summary>
     /// Whether to close on backdrop click.
     /// </summary>
     [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
-    
+
     /// <summary>
     /// Callback when link is confirmed.
     /// </summary>
     [Parameter] public EventCallback<(string Url, string Text)> OnConfirm { get; set; }
-    
+
     /// <summary>
-    /// Callback when dialog is cancelled.
+    /// Callback when dialog is cancelled (Escape, backdrop, close or cancel button).
     /// </summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes — the host editor's
+    /// content surface, so the caret that opened the dialog is not lost.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     private string _url = string.Empty;
     private string _text = string.Empty;
     private bool _showError = false;
+
+    // Per-instance ids: the input ids stay unique when a page hosts several editors.
+    private string _idSuffix { get; } = Guid.NewGuid().ToString("N")[..8];
+    private string _urlInputId => $"tm-rte-link-url-{_idSuffix}";
+    private string _textInputId => $"tm-rte-link-text-{_idSuffix}";
+    private string _formId => $"tm-rte-link-form-{_idSuffix}";
 
     protected override void OnParametersSet()
     {
@@ -96,6 +122,8 @@
 
     private async Task InsertLink()
     {
+        // Re-validate on submit: Enter in a field runs this path too, and an invalid URL must
+        // show the error instead of confirming.
         if (!IsValidUrl())
         {
             _showError = true;
@@ -107,15 +135,7 @@
         Reset();
     }
 
-    private async Task OnBackdropClick()
-    {
-        if (CloseOnBackdropClick)
-        {
-            await OnCancel.InvokeAsync();
-        }
-    }
-
-    private async Task OnCancelClick()
+    private async Task HandleClose()
     {
         await OnCancel.InvokeAsync();
     }

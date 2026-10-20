@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using System.Globalization;
 using Tempo.Blazor.Components.Diagram.Models;
 
 namespace Tempo.Blazor.Components.Diagram;
@@ -21,10 +22,35 @@ public partial class TmDiagramToolbox : TmComponentBase
     /// <summary>Raised when a focused stencil item is activated from the keyboard.</summary>
     [Parameter] public EventCallback<string> StencilKeyboardInsert { get; set; }
 
+    /// <summary>When true, stencil tiles are inert: not draggable, aria-disabled, no insert on click or keys.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true.</summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
+
+    /// <summary>
+    /// UX review (the mobile Shapes sheet): when true, every category except the FIRST one (the
+    /// General/basic palette) starts collapsed — the sheet opens on the essentials and the user
+    /// expands the rest. Applied once; the user's own expand/collapse choices win afterwards.
+    /// </summary>
+    [Parameter] public bool CollapseCategoriesExceptFirst { get; set; }
+
     private bool _collapsed;
     private readonly HashSet<string> _collapsedPalettes = new(StringComparer.Ordinal);
     private ElementReference _containerRef;
     private bool _initialized;
+
+    /// <summary>Whether the <see cref="CollapseCategoriesExceptFirst"/> default was applied.</summary>
+    private bool _categoryDefaultsApplied;
+
+    /// <summary>The last-applied <see cref="CollapseCategoriesExceptFirst"/> value — a change
+    /// rebuilds the library groups (the flag drives the General-first ordering inside
+    /// <see cref="RefreshFilter"/>).</summary>
+    private bool _collapseCategoriesExceptFirstApplied;
+
+    /// <summary>Per-instance id of the visually-hidden read-only hint: two toolboxes on one page
+    /// must never share an id (a duplicate id breaks every aria-describedby reference).</summary>
+    private string ReadOnlyHintId { get; } = $"tm-diagram-toolbox-readonly-hint-{Guid.NewGuid():N}";
 
     private string _searchQuery = string.Empty;
     private List<ToolboxLibraryGroup> _filteredLibraries = [];
@@ -32,6 +58,33 @@ public partial class TmDiagramToolbox : TmComponentBase
     protected override void OnInitialized()
     {
         RefreshFilter();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // The flag decides the General-first library ordering inside RefreshFilter — a change
+        // must rebuild the groups, otherwise the General library stays pinned first (or the
+        // alphabetical order keeps it pinned away) until the next search keystroke.
+        if (CollapseCategoriesExceptFirst != _collapseCategoriesExceptFirstApplied)
+        {
+            _collapseCategoriesExceptFirstApplied = CollapseCategoriesExceptFirst;
+            RefreshFilter();
+        }
+
+        // UX review: the mobile Shapes sheet starts with only the FIRST LIBRARY (the General/basic
+        // set) expanded — every palette outside it starts collapsed. Applied exactly once —
+        // afterwards the user's own choices own the set.
+        if (CollapseCategoriesExceptFirst && !_categoryDefaultsApplied && _filteredLibraries.Count > 0)
+        {
+            _categoryDefaultsApplied = true;
+            for (var i = 1; i < _filteredLibraries.Count; i++)
+            {
+                foreach (var palette in _filteredLibraries[i].Palettes)
+                {
+                    _collapsedPalettes.Add(palette.Id);
+                }
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -58,14 +111,30 @@ public partial class TmDiagramToolbox : TmComponentBase
 
     private async Task OnDragStart(DragEventArgs e, string stencilId)
     {
+        if (ReadOnly) return;
         await StencilDragStart.InvokeAsync(stencilId);
     }
 
-    private async Task OnStencilKeyDown(KeyboardEventArgs e, string stencilId)
-    {
-        if (e.Key is "Enter" or " " or "Spacebar")
-            await StencilKeyboardInsert.InvokeAsync(stencilId);
-    }
+    /// <summary>Enter inserts on keydown (one per press — auto-repeat ignored); Space is handled on keyup.</summary>
+    private Task OnStencilKeyDown(KeyboardEventArgs e, string stencilId) =>
+        !ReadOnly && e.Key == "Enter" && !e.Repeat
+            ? StencilKeyboardInsert.InvokeAsync(stencilId)
+            : Task.CompletedTask;
+
+    /// <summary>Space activates on keyup, where a native button fires its click (keyboard convention).</summary>
+    private Task OnStencilKeyUp(KeyboardEventArgs e, string stencilId) =>
+        !ReadOnly && e.Key is " " or "Spacebar"
+            ? StencilKeyboardInsert.InvokeAsync(stencilId)
+            : Task.CompletedTask;
+
+    /// <summary>
+    /// Phase 6 (tablet and touch): tapping a tile is the non-drag alternative to the HTML5
+    /// drag — the same insert-at-viewport-centre path the keyboard uses (WCAG 2.5.7). An edge
+    /// stencil tap arms the edge tool instead of inserting a node, exactly like its drag does.
+    /// Inert in read-only.
+    /// </summary>
+    private Task OnStencilActivated(string stencilId) =>
+        ReadOnly ? Task.CompletedTask : StencilKeyboardInsert.InvokeAsync(stencilId);
 
     private void OnSearchChanged(string value)
     {
@@ -73,18 +142,47 @@ public partial class TmDiagramToolbox : TmComponentBase
         RefreshFilter();
     }
 
+    /// <summary>Culture-aware comparer for the visible labels: Czech users get Czech alphabetical order.
+    /// Cached per culture — the comparer is created once per culture, not once per call.</summary>
+    private StringComparer DisplayComparer
+    {
+        get
+        {
+            var culture = Loc.Culture ?? CultureInfo.CurrentUICulture;
+            if (_displayComparer is null || !Equals(_displayComparerCulture, culture))
+            {
+                _displayComparer = StringComparer.Create(culture, ignoreCase: true);
+                _displayComparerCulture = culture;
+            }
+            return _displayComparer;
+        }
+    }
+
+    private StringComparer? _displayComparer;
+    private CultureInfo? _displayComparerCulture;
+
     private void RefreshFilter()
     {
         var query = _searchQuery.Trim();
-        var stencils = string.IsNullOrWhiteSpace(query)
-            ? StencilRegistry.GetAll()
-            : StencilRegistry.Search(query);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            _filteredLibraries = BuildLibraryGroups(StencilRegistry.GetAll());
+            return;
+        }
 
-        _filteredLibraries = BuildLibraryGroups(stencils);
+        // Registry search covers tags/keywords/set ids; the localized display name and the raw
+        // name are matched diacritic-insensitively on top (D7), so "obdelnik" finds the rectangle.
+        var registryHits = new HashSet<string>(
+            StencilRegistry.Search(query).Select(s => s.Id),
+            StringComparer.Ordinal);
+        _filteredLibraries = BuildLibraryGroups(StencilRegistry.GetAll().Where(s =>
+            registryHits.Contains(s.Id)
+            || DiagramSearchText.MatchesAny(query, GetStencilDisplayName(s), s.Name)));
     }
 
     private List<ToolboxLibraryGroup> BuildLibraryGroups(IEnumerable<DiagramStencil> stencils)
-        => stencils
+    {
+        var libraries = stencils
             .GroupBy(GetSetId, StringComparer.Ordinal)
             .Select(setGroup =>
             {
@@ -100,11 +198,11 @@ public partial class TmDiagramToolbox : TmComponentBase
                             GetPaletteFallbackName(firstPaletteStencil),
                             GetPaletteOrder(firstPaletteStencil),
                             paletteGroup.OrderBy(stencil => stencil.Order)
-                                        .ThenBy(GetStencilDisplayName, StringComparer.Ordinal)
+                                        .ThenBy(GetStencilDisplayName, DisplayComparer)
                                         .ToList());
                     })
                     .OrderBy(palette => palette.Order)
-                    .ThenBy(palette => GetLocalizedText(palette.NameResourceKey, palette.FallbackName), StringComparer.Ordinal)
+                    .ThenBy(palette => GetLocalizedText(palette.NameResourceKey, palette.FallbackName), DisplayComparer)
                     .ToList();
 
                 return new ToolboxLibraryGroup(
@@ -114,8 +212,31 @@ public partial class TmDiagramToolbox : TmComponentBase
                     ShouldShowLibraryHeader(firstSetStencil, palettes),
                     palettes);
             })
-            .OrderBy(library => GetLocalizedText(library.NameResourceKey, library.FallbackName), StringComparer.Ordinal)
+            .OrderBy(library => GetLocalizedText(library.NameResourceKey, library.FallbackName), DisplayComparer)
             .ToList();
+
+        // UX review (the mobile Shapes sheet): the General/basic library leads — the sheet
+        // opens on the essentials and the other categories stay collapsed by default.
+        if (CollapseCategoriesExceptFirst)
+        {
+            libraries = libraries
+                .OrderByDescending(l => IsGeneralLibrary(l))
+                .ToList();
+        }
+
+        return libraries;
+    }
+
+    /// <summary>The built-in essentials set ("general"): identified by its set id only — a
+    /// localized-name comparison would also match a custom library whose name translates to
+    /// "General" and wrongly pin it first.</summary>
+    private bool IsGeneralLibrary(ToolboxLibraryGroup library)
+        => string.Equals(library.Id, "general", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether a palette body renders: a live search expands every palette that has
+    /// matches — the collapsed mobile defaults must never hide a search hit.</summary>
+    private bool IsPaletteExpanded(string paletteId)
+        => !string.IsNullOrWhiteSpace(_searchQuery) || !_collapsedPalettes.Contains(paletteId);
 
     private string GetLocalizedText(string? resourceKey, string fallback)
     {
@@ -136,6 +257,11 @@ public partial class TmDiagramToolbox : TmComponentBase
 
     private string GetStencilAriaLabel(string stencilDisplayName)
         => Loc["TmDiagramToolbox_InsertStencil", stencilDisplayName];
+
+    /// <summary>Read-only tiles stay visible but inert (A8/D9): the hint replaces the drag
+    /// tooltip so the tile never advertises an interaction it refuses.</summary>
+    private string GetReadOnlyHint()
+        => Loc["TmDiagramToolbox_ReadOnlyHint"];
 
     private static string GetStencilItemCssClass(DiagramStencil stencil)
         => stencil.Kind == DiagramStencilKind.Edge

@@ -10,14 +10,31 @@
 {
     @* U1/round 3: the palette is a modal viewport-anchored surface — its backdrop root carries
        popover="manual" and is promoted after the opening render, so opened from inside a promoted
-       drawer or sheet it paints above it instead of staying focused but invisible underneath. *@
-    <div class="tm-command-palette-backdrop @Class" popover="manual" data-tm-backdrop @ref="_backdrop" @attributes="AdditionalAttributes">
-        <TmFocusScope @ref="_scope"
-                      Class="tm-command-palette"
-                      Active="true"
-                      CloseOnEscape="true"
-                      OnEscape="CloseAsync"
-                      AriaLabel="@Loc["TmCommandPalette_Aria"]">
+       drawer or sheet it paints above it instead of staying focused but invisible underneath.
+       The backdrop is a click-to-dismiss surface (cluster-B §4): the handlers sit BEFORE
+       @attributes so a consumer onclick in AdditionalAttributes keeps today's precedence. The
+       dismissal requires the PRESS to start on the backdrop (review, phase 7): a drag-select from
+       the input that ends over the backdrop fires only the click there, so the panel fence below
+       keeps the press off the backdrop's tracking while the backdrop sets it. *@
+    <div class="tm-command-palette-backdrop @Class" popover="manual" data-tm-backdrop @ref="_backdrop" @onpointerdown="() => _pressOnBackdrop = true" @onclick="HandleBackdropClickAsync" @attributes="AdditionalAttributes">
+        @* Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
+           interop completed — an unpromoted popover root can be display:none and the
+           initial-focus move would land on <body>. The fence is a REAL element on purpose
+           (review, phase 7): Blazor applies element-level :stopPropagation directives, but the
+           same directives routed through a component's CaptureUnmatchedValues reach the renderer
+           as plain splatted attributes it ignores — the palette then dismissed on an input click
+           (proven by Palette_BackdropClick_Closes_AndPanelClickDoesNot). As an element, the pair
+           keeps presses AND clicks inside the panel off the backdrop's press tracking and close
+           handler (unlike TmKeyboardShortcutsHelp, which still uses the tag-level form). The wrapper carries no
+           class so the flex child is exactly the panel it wraps. *@
+        <div @onpointerdown="() => _pressOnBackdrop = false" @onpointerdown:stopPropagation @onclick:stopPropagation>
+            <TmFocusScope @ref="_scope"
+                          Class="tm-command-palette"
+                          Active="@(_gate?.ScopeActive == true)"
+                          NoteOpenerOnMount="true"
+                          CloseOnEscape="true"
+                          OnEscape="CloseAsync"
+                          AriaLabel="@Loc["TmCommandPalette_Aria"]">
             <div class="tm-command-palette-header">
                 <input class="tm-command-palette-input"
                        value="@_query"
@@ -25,6 +42,11 @@
                        @onkeydown="HandleInputKeyDownAsync"
                        placeholder="@Loc["TmCommandPalette_Placeholder"]"
                        aria-label="@Loc["TmCommandPalette_SearchAria"]"
+                       role="combobox"
+                       aria-expanded="@(_filtered.Count > 0 ? "true" : "false")"
+                       aria-controls="@(_filtered.Count > 0 ? _listId : null)"
+                       aria-autocomplete="list"
+                       aria-activedescendant="@(_filtered.Count > 0 ? OptionId(_highlightedIndex) : null)"
                        autocomplete="off" />
                 <button class="tm-command-palette-close" aria-label="@Loc["TmCommandPalette_Close"]" @onclick="CloseAsync">×</button>
             </div>
@@ -34,30 +56,56 @@
             }
             else
             {
-                <ul class="tm-command-palette-list" role="listbox">
-                    @for (var i = 0; i < _filtered.Count; i++)
+                <ul class="tm-command-palette-list" role="listbox" id="@_listId" aria-label="@Loc["TmCommandPalette_Aria"]">
+                    @if (GroupByCategory)
                     {
-                        var index = i;
-                        var action = _filtered[index];
-                        var focused = index == _highlightedIndex;
-                        <li class="tm-command-palette-item @(focused ? "tm-command-palette-item-focused" : "")"
-                            role="option"
-                            aria-selected="@(focused ? "true" : "false")"
-                            @onclick="() => ExecuteAsync(action)">
-                            <span class="tm-command-palette-title">@action.Title</span>
-                            @if (!string.IsNullOrEmpty(action.Description))
-                            {
-                                <span class="tm-command-palette-description">@action.Description</span>
-                            }
-                            @if (!string.IsNullOrEmpty(action.Shortcut))
-                            {
-                                <kbd class="tm-command-palette-shortcut">@action.Shortcut</kbd>
-                            }
-                        </li>
+                        @* A listbox's children must be options or groups. `group` is not an allowed
+                           role for `li` (ec0299b9 #1), so each category is a presentational row
+                           hosting a named div group; the divider is a border, not a role=separator,
+                           which a listbox may not contain. A group must be NAMED: a null/empty
+                           category renders no group wrapper at all — its options sit directly in
+                           the presentational row instead of an unnamed group. *@
+                        var groupNumber = 0;
+                        @foreach (var group in GroupedActions())
+                        {
+                            var labelId = $"{_groupLabelPrefix}-{groupNumber++}";
+                            <li role="none" class="tm-command-palette-group-item">
+                                @if (string.IsNullOrEmpty(group.Label))
+                                {
+                                    <ul role="none">
+                                        @foreach (var index in group.Indexes)
+                                        {
+                                            @RenderItem(index)
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <div class="tm-command-palette-group" role="group"
+                                         aria-labelledby="@labelId">
+                                        <span id="@labelId" class="tm-command-palette-group-label">@group.Label</span>
+                                        <ul role="none">
+                                            @foreach (var index in group.Indexes)
+                                            {
+                                                @RenderItem(index)
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < _filtered.Count; i++)
+                        {
+                            @RenderItem(i)
+                        }
                     }
                 </ul>
             }
         </TmFocusScope>
+        </div>
     </div>
 }
 
@@ -66,11 +114,70 @@
     private List<ICommandPaletteAction> _filtered = new();
     private int _highlightedIndex;
 
+    // Stable per instance so a group's aria-labelledby survives re-renders and two palettes on one
+    // page never share label ids.
+    private readonly string _groupLabelPrefix = $"tm-palette-group-{Guid.NewGuid():N}";
+
+    // Combobox wiring (cluster-B §12, f4057a47): the input is a role=combobox whose
+    // aria-activedescendant names the highlighted option, so the options need stable ids.
+    private readonly string _listId = $"tm-palette-list-{Guid.NewGuid():N}";
+
+    private string OptionId(int index) => $"{_listId}-opt-{index}";
+
+    private RenderFragment RenderItem(int index) => @<li class="tm-command-palette-item @(index == _highlightedIndex ? "tm-command-palette-item-focused" : "")"
+                                                         id="@OptionId(index)"
+                                                         role="option"
+                                                         aria-selected="@(index == _highlightedIndex ? "true" : "false")"
+                                                         @onclick="() => ExecuteAsync(_filtered[index])">
+        <span class="tm-command-palette-title">@_filtered[index].Title</span>
+        @if (!string.IsNullOrEmpty(_filtered[index].Description))
+        {
+            <span class="tm-command-palette-description">@_filtered[index].Description</span>
+        }
+        @if (!string.IsNullOrEmpty(_filtered[index].Shortcut))
+        {
+            if (SplitShortcuts)
+            {
+                <span class="tm-command-palette-shortcut">
+                    @foreach (var part in SplitShortcut(_filtered[index].Shortcut!))
+                    {
+                        <kbd>@part</kbd>
+                    }
+                </span>
+            }
+            else
+            {
+                <kbd class="tm-command-palette-shortcut">@_filtered[index].Shortcut</kbd>
+            }
+        }
+    </li>;
+
+    private IEnumerable<(string Label, List<int> Indexes)> GroupedActions()
+    {
+        var groups = new List<(string Label, List<int> Indexes)>();
+        for (var i = 0; i < _filtered.Count; i++)
+        {
+            var label = GroupOf(_filtered[i]);
+            if (groups.Count == 0 || groups[^1].Label != label)
+            {
+                groups.Add((label, new List<int>()));
+            }
+
+            groups[^1].Indexes.Add(i);
+        }
+
+        return groups;
+    }
+
     private TmFocusScope? _scope;
     private ElementReference _backdrop;
-    private TopLayerInterop? _topLayer;
-    private bool _promoted;
+    private PromotedScopeGate? _gate;
     private bool _wasOpen;
+
+    // Where the active press started. The backdrop sets it on its own pointerdown; the element
+    // fence around the panel resets it (and stops the event), so the click handler below can tell
+    // an outside click from the end of a drag-select that started on the panel.
+    private bool _pressOnBackdrop;
 
     /// <summary>Whether the command palette is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
@@ -80,6 +187,20 @@
 
     /// <summary>Actions available in the palette.</summary>
     [Parameter] public IEnumerable<ICommandPaletteAction>? Actions { get; set; }
+
+    /// <summary>
+    /// Groups actions by <see cref="ICommandPaletteAction.Category"/>: a heading per category and
+    /// a divider (CSS border) between groups. A null/empty category renders its options without a
+    /// group wrapper, because a <c>role=group</c> must be named. Defaults to false, which keeps the
+    /// historical flat list.
+    /// </summary>
+    [Parameter] public bool GroupByCategory { get; set; }
+
+    /// <summary>
+    /// Renders each <c>+</c>-separated part of a shortcut as its own <c>kbd</c>. Defaults to false,
+    /// which keeps the shortcut in a single <c>kbd</c>.
+    /// </summary>
+    [Parameter] public bool SplitShortcuts { get; set; }
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -115,12 +236,16 @@
     private void RecomputeFiltered()
     {
         var source = Actions ?? Enumerable.Empty<ICommandPaletteAction>();
-        _filtered = string.IsNullOrWhiteSpace(_query)
-            ? source.ToList()
-            : source
-                .Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
-                         || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true))
-                .ToList();
+        var matched = string.IsNullOrWhiteSpace(_query)
+            ? source
+            : source.Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
+                             || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true));
+
+        // Grouping keeps the caller's order and only pulls a category's items together, so a list
+        // that already arrives grouped does not get reordered.
+        _filtered = GroupByCategory
+            ? matched.GroupBy(GroupOf).SelectMany(group => group).ToList()
+            : matched.ToList();
 
         if (_highlightedIndex >= _filtered.Count)
         {
@@ -167,21 +292,59 @@
 
     private Task CloseAsync() => IsOpenChanged.InvokeAsync(false);
 
+    // The click-to-dismiss path. A click lands on the backdrop both for a plain outside click AND
+    // for a drag-select that started on the input and released over the backdrop; only the former
+    // may close (review, phase 7), and the flag says which one this is.
+    private Task HandleBackdropClickAsync()
+    {
+        if (!_pressOnBackdrop)
+        {
+            return Task.CompletedTask;
+        }
+
+        _pressOnBackdrop = false;
+        return CloseAsync();
+    }
+
+    private static string GroupOf(ICommandPaletteAction action) => action.Category ?? string.Empty;
+
+    // "Ctrl++" is Ctrl and the plus key: a trailing separator is itself a key, so only the empty
+    // parts that a doubled separator leaves in the MIDDLE are dropped.
+    private static IEnumerable<string> SplitShortcut(string shortcut)
+    {
+        var parts = shortcut.Split('+');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var part = parts[i].Trim();
+            if (part.Length > 0)
+            {
+                yield return part;
+            }
+            else if (i == parts.Length - 1 && parts.Length > 1)
+            {
+                yield return "+";
+            }
+        }
+    }
+
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, so the FIRST open of the session restores its opener.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         // U1: promote the backdrop right after the render that inserted it. Closing unmounts the
         // whole subtree, and a detached top-layer element is hidden by the browser automatically —
-        // no demote call is needed.
-        if (IsOpen && !_promoted)
+        // no demote call is needed. The gate also holds the trap back until the promote completed
+        // (c51ddf81 #1) and drops a promote that finished after the close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(IsOpen, () => IsOpen, _backdrop))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_backdrop);
-        }
-        else if (!IsOpen && _promoted)
-        {
-            _promoted = false;
+            StateHasChanged();
         }
     }
 
@@ -189,6 +352,6 @@
     public async ValueTask DisposeAsync()
     {
         if (_scope is not null) await _scope.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
     }
 }

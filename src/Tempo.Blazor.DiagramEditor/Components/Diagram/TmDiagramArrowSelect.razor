@@ -23,7 +23,7 @@
     @if (_isOpen)
     {
         <div id="@_menuId"
-             style="position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:9999;background:#ffffff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,0.15);max-height:260px;overflow-y:auto;padding:4px 0;min-width:180px;"
+             style="position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:var(--tm-z-popover);background:#ffffff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,0.15);max-height:260px;overflow-y:auto;padding:4px 0;min-width:180px;"
              role="listbox"
              tabindex="-1">
             @for (int i = 0; i < (Options?.Count ?? 0); i++)
@@ -48,10 +48,15 @@
 </div>
 
 @code {
+    /// <summary>Selected option value (arrowhead or dash pattern id).</summary>
     [Parameter] public string? Value { get; set; }
+    /// <summary>Raised when the user picks another option.</summary>
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    /// <summary>Options to choose from; each label is shown next to its preview.</summary>
     [Parameter] public IReadOnlyList<SelectOption<string>>? Options { get; set; }
+    /// <summary>Returns the inline SVG preview markup for an option value.</summary>
     [Parameter] public Func<string?, string>? PreviewRenderer { get; set; }
+    /// <summary>Additional CSS class applied to the root.</summary>
     [Parameter] public string? Class { get; set; }
 
     private bool _isOpen;

@@ -48,9 +48,9 @@
         @* Canvas background + page view + grid *@
         @if (ShowPageView)
         {
-            <rect x="-100000" y="-100000" width="200000" height="200000" fill="#f3f4f6" />
+            <rect class="tm-diagram-page-backdrop" x="-100000" y="-100000" width="200000" height="200000" fill="#f3f4f6" />
         }
-        <rect x="0" y="0"
+        <rect class="tm-diagram-page" x="0" y="0"
               width="@(Document?.Width ?? 3000)" height="@(Document?.Height ?? 2000)"
               fill="white" stroke="#d1d5db" stroke-width="1"
               rx="@(ShowPageView ? 0 : 4)"
@@ -228,14 +228,16 @@
                                 <div xmlns="http://www.w3.org/1999/xhtml"
                                      class="tm-diagram-edge-label"
                                      style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;line-height:1;">
-                                    @if (edge.Style?.EnableMathJax == true && ContainsMath(edge.Label))
-                                    {
-                                        <span class="tm-diagram-math">@edge.Label</span>
-                                    }
-                                    else
-                                    {
-                                        @edge.Label
-                                    }
+                                    <span class="tm-diagram-edge-label__text">
+                                        @if (edge.Style?.EnableMathJax == true && ContainsMath(edge.Label))
+                                        {
+                                            <span class="tm-diagram-math">@edge.Label</span>
+                                        }
+                                        else
+                                        {
+                                            @edge.Label
+                                        }
+                                    </span>
                                 </div>
                             </foreignObject>
                         }
@@ -267,8 +269,9 @@
                         var tgtCard = ComputeCardinalityPosition(edge, false);
                         @((MarkupString)$"<text x=\"{F(tgtCard.X)}\" y=\"{F(tgtCard.Y)}\" text-anchor=\"{tgtCard.TextAnchor}\" dominant-baseline=\"{tgtCard.Baseline}\" class=\"tm-diagram-edge-cardinality\">{edge.TargetCardinality}</text>")
                     }
-                    @* Selection handles (control points) *@
-                    @if (isSelected)
+                    @* Selection handles (control points) — never in read-only: they are
+                       drag/reshape affordances, while the outline above stays as the selection cue *@
+                    @if (isSelected && !ReadOnly)
                     {
                         var pts = DiagramGeometryHelper.GetEdgePoints(Document, edge);
                         for (int i = 0; i < pts.Length; i++)
@@ -493,7 +496,10 @@
                             <div class="tm-diagram-node__lock-indicator"
                                  title="@Loc["TmDiagramNode_Locked"]"
                                  aria-label="@Loc["TmDiagramNode_Locked"]"
-                                 style="position:absolute;right:4px;bottom:4px;width:14px;height:14px;pointer-events:none;z-index:100;">
+                                 style="position:absolute;right:4px;bottom:4px;width:14px;height:14px;pointer-events:none;z-index:var(--tm-z-dropdown);">
+                            @* Node-local badge: the token value only competes inside the node's
+                               own stacking context — it must sit above the node body content,
+                               never against app-level overlays. *@
                                 <svg viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block;">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -515,8 +521,10 @@
                        is none on it, so HTML ports positioned at the node's edges are
                        not reliably clickable. Keeping ports as native SVG ensures
                        `document.elementFromPoint` / real mouse events target the port
-                       element, matching draw.io's approach. *@
-                    @if (!ReadOnly)
+                       element, matching draw.io's approach.
+                       G2/mobile: without the connect affordances the ports would be a
+                       dead zone on the touch surface — render none (review fix). *@
+                    @if (!ReadOnly && ShowConnectArrows)
                     {
                         @foreach (var port in node.Ports)
                         {
@@ -565,7 +573,7 @@
         @{
             var _toolbarEdge = Document?.Edges.FirstOrDefault(e => _currentSelectionIds.Contains(e.Id));
         }
-        @if (_toolbarEdge is not null && _currentSelectionIds.Length == 1 && Document is not null)
+        @if (_toolbarEdge is not null && _currentSelectionIds.Length == 1 && Document is not null && !ReadOnly)
         {
             var _toolbarPts = DiagramGeometryHelper.GetEdgePoints(Document, _toolbarEdge);
             var _toolbarMidX = (_toolbarPts[0].X + _toolbarPts[^1].X) / 2;
@@ -586,15 +594,28 @@
         @* ── Pane 3 / overlayPane: selection outlines (JS SVG &lt;rect&gt;), future transient overlays ──── *@
         <g class="tm-diagram-overlay-pane"></g>
 
-        @* ── Pane 4 / decoratorPane: resize/rotate handles, connect arrows, edge waypoint handles ──────── *@
+        @* ── Pane 4 / decoratorPane: resize/rotate handles, port hit circles, connect arrows ────────
+           Fixed paint order per node (review fix — "buttons > gesture hit areas > visual handles"):
+           1. g.tm-diagram-node-handles   — the visible resize/rotate handles + their gesture hits
+           2. g.tm-diagram-port-hits      — finger-sized gesture hit circles over the ports
+           3. g.tm-diagram-connect-arrows — the quick-connect arrow BUTTONS (controls)
+           Whatever a finger must REACH (the connect arrows) paints last; a press lands on the
+           topmost painted element, so the arrows stay reachable over the port hit discs. *@
         <g class="tm-diagram-decorator-pane">
             @* F5 — per-node handles group. Each selected, non-locked, non-readonly
                node gets a single <g class="tm-diagram-node-handles"> mirroring its
                translate()+rotate() SVG transform. Handles themselves are laid out
                in node-local coordinates (0..W, 0..H) so rotation follows the node.
                JS `_updateSelection{,Transforms}` keeps this <g>'s transform in
-               sync during drags (see diagram-editor.js _updateNodeHandles). *@
-            @if (Document is not null && !ReadOnly)
+               sync during drags (see diagram-editor.js _updateNodeHandles).
+               Phase 7 (mobile, G2): the group splits — resize/rotate follow
+               ShowTransformHandles and the quick-connect arrows follow
+               ShowConnectArrows, so a mobile host keeps selection outlines
+               without reshaping or edge-drawing affordances. `data-has-ports="true"`
+               marks nodes that render port hit circles: the coarse-pointer CSS drops
+               the n/e/s/w mid-edge resize hits only there (they would sit on the
+               port hits); port-less nodes keep the full handle set. *@
+            @if (Document is not null && !ReadOnly && (ShowTransformHandles || ShowConnectArrows))
             {
                 @foreach (var _sid in _currentSelectionIds)
                 {
@@ -604,57 +625,140 @@
                     var _hCy = F(_hNode.H / 2.0);
                     var _hW = F(_hNode.W);
                     var _hH = F(_hNode.H);
+                    var _hHasPorts = _hNode.Ports.Any(p =>
+                        !(_hNode is { IsCollapsible: true, Collapsed: true }) || p.Side is PortSide.Top or PortSide.Bottom);
                     var _hTx = $"translate({F(_hNode.X)},{F(_hNode.Y)}) rotate({F(_hNode.Rotation)} {_hCx} {_hCy})";
 
-                    <g class="tm-diagram-node-handles" data-node-id="@_hNode.Id" transform="@_hTx">
-                        @* 8 resize squares at corners + edge mid-points, 8x8,
-                           centered on the node's bbox corners. Cursor hint per
-                           handle so the user sees the correct arrow before
-                           pressing. *@
-                        @foreach (var _h in _resizeHandles)
+                    <g class="tm-diagram-node-handles" data-node-id="@_hNode.Id" data-has-ports="@(_hHasPorts ? "true" : null)" transform="@_hTx">
+                        @* Phase 6 (tablet and touch): each direction renders the visible 8x8
+                           square PLUS an enlarged invisible hit rect centred on the same point.
+                           The hit rect carries the gesture — Pointer Events, so a finger drives
+                           it — and its size comes from --tm-diagram-handle-hit (44 on a coarse
+                           pointer). Cursor hint per handle so the user sees the correct arrow
+                           before pressing. *@
+                        @if (ShowTransformHandles)
                         {
-                            var (_hx, _hy, _cur) = _h switch
+                            @foreach (var _h in _resizeHandles)
                             {
-                                "nw" => (-4.0, -4.0, "nw-resize"),
-                                "n"  => (_hNode.W / 2.0 - 4.0, -4.0, "n-resize"),
-                                "ne" => (_hNode.W - 4.0, -4.0, "ne-resize"),
-                                "e"  => (_hNode.W - 4.0, _hNode.H / 2.0 - 4.0, "e-resize"),
-                                "se" => (_hNode.W - 4.0, _hNode.H - 4.0, "se-resize"),
-                                "s"  => (_hNode.W / 2.0 - 4.0, _hNode.H - 4.0, "s-resize"),
-                                "sw" => (-4.0, _hNode.H - 4.0, "sw-resize"),
-                                "w"  => (-4.0, _hNode.H / 2.0 - 4.0, "w-resize"),
-                                _    => (0.0, 0.0, "default"),
-                            };
-                            <rect class="tm-diagram-resize-handle tm-diagram-resize-handle--@_h"
-                                  x="@F(_hx)" y="@F(_hy)" width="8" height="8"
-                                  style="cursor: @_cur;"
-                                  @onmousedown:stopPropagation="true"
-                                  @onmousedown="e => OnResizeStart(e, _hNode.Id, _h)" />
+                                var (_cx, _cy, _cur) = _h switch
+                                {
+                                    "nw" => (0.0, 0.0, "nw-resize"),
+                                    "n"  => (_hNode.W / 2.0, 0.0, "n-resize"),
+                                    "ne" => (_hNode.W, 0.0, "ne-resize"),
+                                    "e"  => (_hNode.W, _hNode.H / 2.0, "e-resize"),
+                                    "se" => (_hNode.W, _hNode.H, "se-resize"),
+                                    "s"  => (_hNode.W / 2.0, _hNode.H, "s-resize"),
+                                    "sw" => (0.0, _hNode.H, "sw-resize"),
+                                    "w"  => (0.0, _hNode.H / 2.0, "w-resize"),
+                                    _    => (0.0, 0.0, "default"),
+                                };
+                                <rect class="tm-diagram-resize-handle tm-diagram-resize-handle--@_h"
+                                      x="@F(_cx - 4.0)" y="@F(_cy - 4.0)" width="8" height="8"
+                                      style="cursor: @_cur; pointer-events: none;" />
+                                <rect class="tm-diagram-resize-handle-hit"
+                                      data-resize-handle="@_h"
+                                      x="@F(_cx)" y="@F(_cy)"
+                                      style="cursor: @_cur;"
+                                      @onpointerdown:stopPropagation="true"
+                                      @onpointerdown="e => OnResizeStart(e, _hNode.Id, _h)" />
+                            }
+
+                            @* Rotate handle — stem line + grab circle centered above top edge,
+                               with the same enlarged invisible hit circle (phase 6). *@
+                            <line class="tm-diagram-rotate-handle-stem"
+                                  x1="@_hCx" y1="-30" x2="@_hCx" y2="0" />
+                            <circle class="tm-diagram-rotate-handle"
+                                    cx="@_hCx" cy="-38" r="7"
+                                    style="pointer-events: none;">
+                                <title>@Loc["TmDiagramEditor_RotateHandleLabel"]</title>
+                            </circle>
+                            <circle class="tm-diagram-rotate-handle-hit"
+                                    cx="@_hCx" cy="-38"
+                                    style="cursor: grab;"
+                                    @onpointerdown:stopPropagation="true"
+                                    @onpointerdown="e => OnRotateStartPointer(e, _hNode.Id)">
+                                <title>@Loc["TmDiagramEditor_RotateHandleLabel"]</title>
+                            </circle>
                         }
 
-                        @* Rotate handle — stem line + grab circle centered above top edge.
-                           Position chosen to match the pre-F5 HTML handle (top: -38px, 14px circle). *@
-                        <line class="tm-diagram-rotate-handle-stem"
-                              x1="@_hCx" y1="-30" x2="@_hCx" y2="0" />
-                        <circle class="tm-diagram-rotate-handle"
-                                cx="@_hCx" cy="-38" r="7"
-                                @onmousedown:stopPropagation="true"
-                                @onmousedown="e => OnRotateStartJs(e, _hNode.Id)">
-                            <title>@Loc["TmDiagramEditor_RotateHandleLabel"]</title>
-                        </circle>
+                    </g>
+                }
+            }
 
-                        @* Quick-connect arrows N/E/S/W (<foreignObject><button> for a11y). *@
+            @* Finger-sized invisible hit circles over the SELECTED node's PORTS (review fix:
+               finger edge-drawing discoverability). They render AFTER the transform-handles
+               groups, so at a port position the hit circle wins the paint order and the port
+               drag claims the press (the resize/rotate sessions veto through engine.touchPortAt).
+               Same data-port-id attribute as the visible circle — the engine resolves either.
+               The quick-connect arrow buttons render in their own group AFTER these hits: a
+               press on an arrow reaches the button (controls paint last), a press on the disc
+               still claims the port drag — both stay reachable on a coarse pointer.
+               Connection points get NO hit circle: a stencil's connection points sit exactly on
+               the resize handles (the default rectangle set is 4 corners + 4 midpoints + centre)
+               and a fat invisible circle there steals the handles' and the node body's presses.
+               They stay reachable through the mouse-sized visible circle and the edge-corridor
+               hit stack (J6). G2: only when the connect affordances render (tablet+); mobile
+               keeps the connect arrow / Connect dialog. *@
+            @if (Document is not null && !ReadOnly && ShowConnectArrows)
+            {
+                @foreach (var _sid in _currentSelectionIds)
+                {
+                    var _pNode = Document.Nodes.FirstOrDefault(n => n.Id == _sid);
+                    if (_pNode is null || IsNodeLocked(_pNode)) continue;
+                    var _pCx = _pNode.W / 2.0;
+                    var _pCy = _pNode.H / 2.0;
+                    var _pTx = $"translate({F(_pNode.X)},{F(_pNode.Y)}) rotate({F(_pNode.Rotation)} {F(_pCx)} {F(_pCy)})";
+
+                    <g class="tm-diagram-port-hits" data-node-id="@_pNode.Id" transform="@_pTx">
+                        @foreach (var port in _pNode.Ports)
+                        {
+                            if (_pNode is { IsCollapsible: true, Collapsed: true } && port.Side is not (PortSide.Top or PortSide.Bottom))
+                                continue;
+                            var (absX, absY) = DiagramGeometryHelper.ComputePortPosition(_pNode, port);
+                            @* r / fill / pointer-events are owned by CSS
+                               (.tm-diagram-port-hit): inert on a fine pointer, pointer-active
+                               only inside @media (pointer: coarse). No inline attributes. *@
+                            <circle class="tm-diagram-port-hit"
+                                    data-port-id="@port.Id"
+                                    cx="@F(absX - _pNode.X)"
+                                    cy="@F(absY - _pNode.Y)">
+                            </circle>
+                        }
+                    </g>
+                }
+            }
+
+            @* Quick-connect arrows N/E/S/W (<foreignObject><button> for a11y) — the CONTROLS of
+               the decorator pane, rendered in their own per-node group AFTER the port hits
+               (review fix: buttons > gesture hit areas > visual handles). Inside the handles
+               group the finger-sized port hit discs painted over the arrows and a finger could
+               never reach them; here the arrows stay the topmost hit target at their position.
+               The coarse-pointer CSS gives the arrow a 44px hit area and offsets the wrap
+               outward so it clears the port hit discs (the N arrow moves straight up — staying
+               centred — to clear the rotate hit); the E2E tablet suite asserts elementFromPoint
+               finds the arrow under a finger. *@
+            @if (Document is not null && !ReadOnly && ShowConnectArrows)
+            {
+                @foreach (var _sid in _currentSelectionIds)
+                {
+                    var _aNode = Document.Nodes.FirstOrDefault(n => n.Id == _sid);
+                    if (_aNode is null || IsNodeLocked(_aNode)) continue;
+                    var _aCx = _aNode.W / 2.0;
+                    var _aCy = _aNode.H / 2.0;
+                    var _aTx = $"translate({F(_aNode.X)},{F(_aNode.Y)}) rotate({F(_aNode.Rotation)} {F(_aCx)} {F(_aCy)})";
+
+                    <g class="tm-diagram-connect-arrows" data-node-id="@_aNode.Id" transform="@_aTx">
                         @foreach (var _dir in _connectDirections)
                         {
                             var (_ax, _ay) = _dir.Css switch
                             {
-                                "n" => (_hNode.W / 2.0 - 11.0, -24.0),
-                                "e" => (_hNode.W + 2.0, _hNode.H / 2.0 - 11.0),
-                                "s" => (_hNode.W / 2.0 - 11.0, _hNode.H + 2.0),
-                                "w" => (-24.0, _hNode.H / 2.0 - 11.0),
+                                "n" => (_aNode.W / 2.0 - 11.0, -24.0),
+                                "e" => (_aNode.W + 2.0, _aNode.H / 2.0 - 11.0),
+                                "s" => (_aNode.W / 2.0 - 11.0, _aNode.H + 2.0),
+                                "w" => (-24.0, _aNode.H / 2.0 - 11.0),
                                 _   => (0.0, 0.0),
                             };
-                            <foreignObject class="tm-diagram-connect-arrow-wrap"
+                            <foreignObject class="tm-diagram-connect-arrow-wrap tm-diagram-connect-arrow-wrap--@_dir.Css"
                                            x="@F(_ax)" y="@F(_ay)" width="22" height="22">
                                 <button xmlns="http://www.w3.org/1999/xhtml"
                                         type="button"
@@ -663,7 +767,7 @@
                                         title="@Loc[$"TmDiagramEditor_ConnectArrow{_dir.Label}"]"
                                         @onmousedown:stopPropagation="true"
                                         @onclick:stopPropagation="true"
-                                        @onclick="() => HandleConnectArrowClicked(_hNode.Id, _dir.Css)">
+                                        @onclick="() => HandleConnectArrowClicked(_aNode.Id, _dir.Css)">
                                     <span class="tm-diagram-connect-arrow__icon">+</span>
                                 </button>
                             </foreignObject>

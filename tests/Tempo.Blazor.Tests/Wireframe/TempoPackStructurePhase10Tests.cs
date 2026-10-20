@@ -247,6 +247,67 @@ public class TempoPackStructurePhase10Tests
         missing.Should().BeEmpty();
     }
 
+    // ── F4 (rules 13-15): the toolbar stencils mirror the component's new surface ─────────────────
+
+    [Fact]
+    public void ToolbarSchemas_ExposeTheF4Surface_WithPackParity()
+    {
+        var schemas = new BuiltInComponentSchemas().GetSchemas().ToDictionary(s => s.Type, StringComparer.Ordinal);
+        var button = schemas["TmToolbarButton"].Props.Single(p => p.Name == "labelPosition");
+        button.Type.Should().Be(PropType.Enum);
+        button.Default.Should().Be("inline");
+        button.Options.Should().Equal("inline", "below", "hidden");
+        var bar = schemas["TmToolbar"].Props.Single(p => p.Name == "overflow");
+        bar.Type.Should().Be(PropType.Bool);
+        bar.Default.Should().Be(false);
+
+        // Parity: the pack definition carries the same props as the schema (StructureDefinitions test) - here the
+        // new ones are present on the registry definition too.
+        var def = Registry().GetDef("TmToolbarButton")!;
+        def.Props.Select(p => p.Name).Should().Contain("labelPosition");
+        Registry().GetDef("TmToolbar")!.Props.Select(p => p.Name).Should().Contain("overflow");
+    }
+
+    [Fact]
+    public async Task TmToolbarButton_LabelBelow_DrawsTheTextUnderTheIcon()
+    {
+        var inline = await RenderAsync("TmToolbarButton", ("label", "Refresh"), ("icon", "refresh-cw"));
+        var below = await RenderAsync("TmToolbarButton", ("label", "Refresh"), ("icon", "refresh-cw"), ("labelPosition", "below"));
+
+        TextY(inline, "Refresh").Should().Be(16, "inline: the text is vertically centred beside the icon");
+        TextY(below, "Refresh").Should().BeGreaterThan(20, "below: the text sits under the icon");
+        TextX(below, "Refresh").Should().Be(40, "below: the text is centred under the icon (size.w / 2)");
+    }
+
+    [Fact]
+    public async Task TmToolbarButton_LabelHidden_OmitsTheText()
+    {
+        var svg = await RenderAsync("TmToolbarButton", ("label", "Refresh"), ("icon", "refresh-cw"), ("labelPosition", "hidden"));
+
+        svg.Should().NotContain(">Refresh<", "a hidden label stays the accessible name, not drawing");
+    }
+
+    [Fact]
+    public async Task TmToolbar_Overflow_DrawsTheMoreTrigger()
+    {
+        var withMore = await RenderAsync("TmToolbar", ("title", "Invoices"), ("overflow", true));
+        var without = await RenderAsync("TmToolbar", ("title", "Invoices"));
+
+        withMore.Should().Contain(">⋯<");
+        without.Should().NotContain(">⋯<");
+    }
+
+    private static double TextY(string svg, string text) => Attr(svg, text, "y");
+
+    private static double TextX(string svg, string text) => Attr(svg, text, "x");
+
+    private static double Attr(string svg, string text, string attribute)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(svg, $"<text[^>]*\\b{attribute}='([-0-9.]+)'[^>]*>{System.Text.RegularExpressions.Regex.Escape(text)}</text>");
+        match.Success.Should().BeTrue($"a <text> element with {text} must be drawn");
+        return double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     private static void Add(
         TheoryData<string, (string Key, object? Value)[], string[]> data,
         string type,

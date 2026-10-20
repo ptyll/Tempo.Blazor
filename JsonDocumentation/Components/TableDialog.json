@@ -2,7 +2,7 @@
   "itemName": "TableDialog",
   "kind": "Component",
   "category": "Activity",
-  "description": "Internal modal dialog for inserting tables in the rich text editor. Provides numeric row/column inputs (max 20x10) and a visual grid preview for interactive size selection with hover highlighting.",
+  "description": "Modal dialog for inserting tables in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Offers a rows/columns input pair and a hoverable size grid preview.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
   ],
@@ -24,6 +24,12 @@
       "isRequired": false
     },
     {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Modal dialog for inserting tables in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Offers a rows/columns input pair and a hoverable size grid preview."
+    },
+    {
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false
@@ -31,11 +37,7 @@
   ],
   "cssClasses": [
     "tm-rte-table-dialog",
-    "tm-rte-table-backdrop",
-    "tm-rte-table-content",
-    "tm-rte-table-header",
-    "tm-rte-table-body",
-    "tm-rte-table-footer",
+    "tm-rte-dialog",
     "tm-rte-table-rows-input",
     "tm-rte-table-cols-input",
     "tm-rte-table-preview",
@@ -44,7 +46,6 @@
     "tm-rte-table-grid-cell",
     "tm-rte-table-size-label",
     "tm-rte-form-row",
-    "tm-rte-btn-close",
     "tm-rte-btn-cancel",
     "tm-rte-btn-insert"
   ],

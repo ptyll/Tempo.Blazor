@@ -12,7 +12,7 @@
         @if (_findings.Count > 0)
         {
             <span class="tm-screening__pending" data-testid="@TestId("screening-pending-count")">
-                @string.Format(Loc["TmScreeningResultPanel_PendingCount"], PendingCount)
+                @Loc.Plural("TmScreeningResultPanel_PendingCount", PendingCount)
             </span>
         }
         <button type="button"

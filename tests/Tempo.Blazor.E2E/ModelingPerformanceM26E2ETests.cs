@@ -4,8 +4,16 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>Performance E2E checks for modeling editor phase M26.</summary>
+/// <remarks>
+/// <see cref="DoNotParallelize"/>: the budgets here are wall-clock Web Vitals (LCP) and
+/// frame-time probes — under the full lane's parallel load the SAME build measured 6.4 s LCP
+/// where an isolated run measures ~1 s (docs/e2e-test-lanes.md records the convention: perf
+/// assertions only hold on an idle machine). Serializing the class is what keeps the gate
+/// meaningful; a perf assertion that races other browsers is noise, not signal.
+/// </remarks>
 [TestClass]
 [TestCategory("WASM")]
+[DoNotParallelize]
 public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
 {
     private const string ModelingEditorUrl = "/modeling-editor";

@@ -81,8 +81,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         new("TmQueryInput.razor", null, null, null, null, null),
         // F5: TmMobileActionBar's "More" menu passes its own surface class — the popover-mode
         // panel (container-mobile on a desktop viewport) must paint background/border/padding
-        // like every other menu consumer.
-        new("TmMobileActionBar.razor", "tm-mobile-action-bar__menu-panel",
+        // like every other menu consumer. Since F4 the panel is opened by the shared
+        // ActionOverflowMenu (C#, so the population scan below also reads *.cs): the bar's class is
+        // the row, the toolbar's class is its sibling.
+        new("ActionOverflowMenu.cs", "tm-mobile-action-bar__menu-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
         new("TmContextMenu.razor", "tm-context-menu",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "0.25rem", null),
@@ -108,6 +110,26 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // surface must keep winning over the zero-specificity reset exactly like the others.
         new("TmColumnPicker.razor", "tm-column-picker-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
+        // Fáze 1 review: the TmDashboard switcher migrated from an absolutely-positioned menu div
+        // onto the shared panel (the TmDropdown pattern) — its surface keeps the same chrome.
+        new("TmDashboard.razor", "tm-dashboard-menu",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
+        // The view-manager dropdown rides the shared panel too — _data-table.css owns the class and
+        // declares the full chrome (surface, border, radius, shadow, padding).
+        new("TmViewManager.razor", "tm-view-manager-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
+        // The multi-view-list group-by picker: the surface/border ride the tokens directly —
+        // no hardcoded fallbacks (CSS-tokens-only audit).
+        new("TmMultiViewList.razor", "tm-mvl-group-dropdown",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
+        // ColumnMenuMode.Menu anchors one panel per data column header. The surface rides the
+        // tokens directly, so the zero-specificity overlay reset cannot win it.
+        new("TmDataTable.razor", "tm-data-table-col-menu-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
+        // FilterBuilderPresentation.Popover/Auto anchors the field picker and editor. The panel
+        // owns only the surface; overlay.js owns position and stacking.
+        new("TmFilterBuilder.razor", "tm-filter-builder-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>
@@ -146,6 +168,11 @@ public sealed class OverlayPanelComputedStyleRegressionTests
                 Path.GetFileName(file), "TmOverlayPanel.razor", StringComparison.Ordinal))
             .Where(file => File.ReadAllText(file).Contains("<TmOverlayPanel", StringComparison.Ordinal))
             .Select(Path.GetFileName)
+            // F4: the shared overflow menu opens the panel from C# (OpenComponent<TmOverlayPanel>) —
+            // a Razor tag would compile to a literal element for an internal owner.
+            .Concat(Directory.GetFiles(componentsDir, "*.cs", SearchOption.AllDirectories)
+                .Where(file => File.ReadAllText(file).Contains("OpenComponent<TmOverlayPanel>", StringComparison.Ordinal))
+                .Select(Path.GetFileName))
             .ToList();
 
         found.Should().NotBeEmpty(
@@ -181,6 +208,27 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         }
     }
 
+    /// <summary>
+    /// The positioning contract (N196 follow-up): overlay.js writes <c>top/left</c> in VIEWPORT
+    /// coordinates, which map 1:1 only because the zero-specificity <c>:where()</c> reset keeps
+    /// <c>position: fixed</c>. A consumer class that re-declares <c>position</c> (e.g. the legacy
+    /// <c>.tm-view-manager-panel { position: absolute }</c>) wins over <c>:where()</c> by
+    /// specificity and resolves those coordinates against the PAGE origin — the panel then parks
+    /// offscreen whenever the page is scrolled (E2E: ViewManager on the data-table page). Every
+    /// panel-carrying row must therefore still resolve <c>position</c> to the reset's <c>fixed</c>.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ConsumerData))]
+    public void ConsumerPanel_PositioningContract_KeepsViewportFixed(Consumer row)
+    {
+        var winner = CssCascade.Resolve(Bundle, PanelChain(row.PanelClass!), "position");
+        winner.Value.Should().Be("fixed",
+            "{0}: the panel class must not declare position/inset/z-index — overlay.js writes " +
+            "viewport coordinates that only position:fixed (the :where() reset) interprets " +
+            "correctly; a consumer position:absolute resolves them against the page origin and " +
+            "the panel flies offscreen on a scrolled page", row.File);
+    }
+
     /// <summary>Rows that carry a panel class — TmQueryInput's null-Class row is asserted by its
     /// own nested-chain fact instead, so a vacuous pass cannot masquerade as coverage.</summary>
     public static IEnumerable<object[]> ConsumerData =>
@@ -189,7 +237,7 @@ public sealed class OverlayPanelComputedStyleRegressionTests
 
     // ── N196's two halves, named for the review finding ─────────────────────
 
-    /// <summary>The reset half: a consumer's surface colour must beat the transparent reset.</summary>
+    /// <summary>\n    /// H11 (F4 review): the F4 toolbar's More panel passes its own surface class through the shared\n    /// ActionOverflowMenu - the row above covers the bar's class, this one the toolbar's. In popover mode the\n    /// panel must paint background/border/padding over the zero-specificity reset.\n    /// </summary>\n    [Fact]\n    public void ToolbarMorePanel_KeepsItsSurfaceBorderAndPadding()\n    {\n        AssertOwned(new Consumer("TmToolbar.razor", "tm-toolbar-more__panel", "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null), "background-color", "var(--tm-bg-surface)");\n        AssertOwned(new Consumer("TmToolbar.razor", "tm-toolbar-more__panel", null, null, null, null), "border-color", "var(--tm-border-color)");\n        AssertOwned(new Consumer("TmToolbar.razor", "tm-toolbar-more__panel", null, null, null, null), "padding", "var(--tm-space-1)");\n    }\n\n    /// <summary>The reset half: a consumer's surface colour must beat the transparent reset.</summary>
     [Fact]
     public void TmDropdown_Background_IsSurface_NotTransparent()
     {
@@ -354,6 +402,17 @@ public sealed class OverlayPanelComputedStyleRegressionTests
     /// (T8 — the months stack and the doubled footer hide). Every one of them keys on the SHEET
     /// element (a TmDrawer root) or its descendants — never on the shared <c>.tm-overlay-panel</c>
     /// floating element — so the N196 weight argument does not apply to them either.
+    /// F11 (2.9.1) adds the ContextMenu and NotificationBell sheet-context rules for the same
+    /// reason: <c>.tm-overlay-panel-sheet .tm-context-menu__item/-divider</c> (the sheet-mode item
+    /// inset, the T15 pattern) and <c>.tm-overlay-panel-sheet .tm-notification-bell__title/-list</c>
+    /// (the in-panel title drops so it does not duplicate the sheet header; the popover's 400px
+    /// list cap is a popover-height contract the content-height sheet does not inherit). They key
+    /// on the sheet's descendants only.
+    /// F11 review adds the bell's sheet inset rules: <c>.tm-overlay-panel-sheet
+    /// .tm-notification-bell__header/-item</c> (the popover's inline padding goes — the sheet body
+    /// pads instead, the T15 sibling contract) and <c>.tm-overlay-panel-sheet
+    /// .tm-notification-bell__actions</c> (the actions' optical inset shifts back by their own
+    /// padding). They key on the sheet's descendants only.
     /// </remarks>
     private static readonly IReadOnlyList<string> KnownOverlayPanelRules =
     [
@@ -371,6 +430,13 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         ".tm-overlay-panel-sheet .tm-dropdown-sep",
         ".tm-overlay-panel-sheet .tm-date-range-calendars",
         ".tm-overlay-panel-sheet .tm-date-range-footer",
+        ".tm-overlay-panel-sheet .tm-context-menu__item",
+        ".tm-overlay-panel-sheet .tm-context-menu__divider",
+        ".tm-overlay-panel-sheet .tm-notification-bell__title",
+        ".tm-overlay-panel-sheet .tm-notification-bell__list",
+        ".tm-overlay-panel-sheet .tm-notification-bell__header",
+        ".tm-overlay-panel-sheet .tm-notification-bell__item",
+        ".tm-overlay-panel-sheet .tm-notification-bell__actions",
     ];
 
     /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>

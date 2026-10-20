@@ -11,13 +11,23 @@ namespace Tempo.Blazor.Components.Diagram;
 /// <summary>Renders a diagram stencil shape inside a node.</summary>
 public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 {
+    /// <summary>Node rendered by this shape.</summary>
     [Parameter] public DiagramNode Node { get; set; } = default!;
+    /// <summary>Whether the node is selected (enables section editing affordances).</summary>
     [Parameter] public bool IsSelected { get; set; }
+    /// <summary>Raised with the port id when the pointer goes down on one of the node's ports.</summary>
     [Parameter] public EventCallback<string> OnPortMouseDownEvent { get; set; }
+    /// <summary>Raised with the data key and the new value when an inline section edit commits.</summary>
     [Parameter] public EventCallback<(string DataKey, object Value)> OnSectionEdit { get; set; }
+    /// <summary>Selected cells (row, column) when the node is a table.</summary>
     [Parameter] public List<(int Row, int Column)> SelectedTableCells { get; set; } = [];
+    /// <summary>Page that owns the node (used for page-relative lookups).</summary>
     [Parameter] public DiagramPage? Page { get; set; }
+    /// <summary>Document that owns the node (layers, styles).</summary>
     [Parameter] public DiagramDocument? Document { get; set; }
+
+    /// <summary>The effective read-only state: inline edits (sections, swimlane and table cells)
+    /// never start, and a flip closes any open inline editor without saving.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
     [Inject] private DiagramStencilRegistry StencilRegistry { get; set; } = default!;
@@ -51,6 +61,15 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
     protected override void OnParametersSet()
     {
         _stencil = StencilRegistry.GetStencil(Node.StencilId);
+
+        // A read-only flip (host parameter or the editor toggle) closes every open inline
+        // editor WITHOUT saving — the blur commit path is not allowed to fire in read-only.
+        if (ReadOnly)
+        {
+            CancelEdit();
+            CancelSwimlaneEdit();
+            CancelTableCellEdit();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -110,6 +129,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 
     private void StartEdit(string? dataKey, string text)
     {
+        if (ReadOnly || Node.IsLocked) return;
         if (string.IsNullOrEmpty(dataKey)) return;
         _editingDataKey = dataKey;
         _editingText = text;
@@ -118,6 +138,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 
     private void StartEditList(string? dataKey, IEnumerable<string> list)
     {
+        if (ReadOnly || Node.IsLocked) return;
         if (string.IsNullOrEmpty(dataKey)) return;
         _editingDataKey = dataKey;
         _editingText = string.Join("\n", list);
@@ -239,12 +260,15 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
             _ => "left",
         };
 
+    // `safe` falls back to start when the content overflows, so the first section (the UML
+    // class name) stays visible and only the tail clips. Engines without `safe` drop the
+    // declaration and use the initial flex-start, which is acceptable too.
     private static string GetVerticalAlignCss(string align)
         => align switch
         {
             "top" => "flex-start",
-            "bottom" => "flex-end",
-            _ => "center",
+            "bottom" => "safe flex-end",
+            _ => "safe center",
         };
 
     private string GetSectionText(DiagramStencilSection section)
@@ -377,6 +401,7 @@ public partial class TmDiagramStencilShape : ComponentBase, IAsyncDisposable
 
     private void StartSwimlaneEdit(int row, int column)
     {
+        if (ReadOnly || Node.IsLocked) return;
         _editingSwimlaneCell = (row, column);
         _editingSwimlaneText = GetSwimlaneLabel(row, column);
         _editSwimlaneFocusPending = true;

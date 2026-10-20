@@ -1,22 +1,30 @@
 @namespace Tempo.Blazor.Components.Layout
-@implements IDisposable
 
 <div @ref="_paneRef" class="tm-splitter__pane @GetCssClass()" style="@GetStyle()">
     @ChildContent
 </div>
 @if (Parent is not null && Parent.IsNotLastPane(this))
 {
-    <div @ref="_resizerRef" class="tm-splitter__resizer"
-         @onpointerdown="HandleResizerPointerDown"
-         @onpointermove="HandleResizerPointerMove"
-         @onpointerup="HandleResizerPointerUp"
-         @onpointercancel="HandleResizerPointerUp">
+    @* The gutter carries the layout box; the separator strip and the collapse button are SIBLINGS
+       — a button inside role="separator" would be announced as part of the separator's value. *@
+    <div class="tm-splitter__gutter">
+        <div @ref="_resizerRef" class="tm-splitter__resizer"
+             role="separator"
+             tabindex="0"
+             aria-orientation="@(Parent.Orientation == SplitterOrientation.Horizontal ? "vertical" : "horizontal")"
+             aria-valuenow="@AriaValueNow"
+             aria-valuemin="@AriaValueMin"
+             aria-valuemax="@AriaValueMax"
+             aria-valuetext="@AriaValueText"
+             aria-label="@Loc["TmSplitter_Resize"]"
+             @onkeydown="OnResizerKeyAsync"></div>
         @if (Collapsible)
         {
             <button type="button"
                     class="tm-splitter__collapse-btn"
+                    aria-label="@Loc[Collapsed ? "TmSplitter_Expand" : "TmSplitter_Collapse"]"
                     @onclick="ToggleCollapse">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tm-splitter__collapse-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="tm-splitter__collapse-icon">
                     @if (Parent.Orientation == SplitterOrientation.Horizontal)
                     {
                         <path d="M15 18l-6-6 6-6" />

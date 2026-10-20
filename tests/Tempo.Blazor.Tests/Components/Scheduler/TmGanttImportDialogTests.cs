@@ -212,4 +212,43 @@ public class TmGanttImportDialogTests : LocalizationTestBase
             "handler and the closeOnEscape flag must reach the shared focus-trap module");
         calls[0].Arguments[3].Should().Be(true);
     }
+
+    // ── Activate after promote (F3 follow-up, c51ddf81 #1 + #2) ───────────────
+
+    [Fact]
+    public void ImportDialog_ClosedDuringPromote_ReopenActivatesOnlyAfterTheNextPromote()
+    {
+        var top = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
+        // Each SetupVoid registers a FRESH handler whose per-invocation TaskCompletionSource stays
+        // pending until SetVoidResult() completes it (a set handler resolves later calls at once,
+        // so a reopen needs its own pending handler). Completing the FIRST promote after the close
+        // is exactly the stale completion the guard must survive (c51ddf81 #2).
+        var firstPromote = top.SetupVoid("promote", _ => true); // no result: the call stays pending
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        var activate = trap.SetupVoid("activate", _ => true).SetVoidResult();
+
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        activate.Invocations["activate"].Should().BeEmpty(
+            "the trap must not activate while the promote interop is still pending");
+
+        // Close while the first promote is in flight, THEN complete it: the guard after the await
+        // must drop it — a _scopeActive that survives the close would make the NEXT open activate
+        // before its own promotion (c51ddf81 #2).
+        cut.Render(p => p.Add(x => x.IsOpen, false));
+        firstPromote.SetVoidResult();
+
+        activate.Invocations["activate"].Should().BeEmpty(
+            "the dialog is closed and the spent promote is stale — nothing may activate");
+
+        // Re-open with a FRESH pending promote: this open's trap must wait for its own promotion.
+        var secondPromote = top.SetupVoid("promote", _ => true);
+        cut.Render(p => p.Add(x => x.IsOpen, true));
+
+        activate.Invocations["activate"].Should().BeEmpty(
+            "the reopened dialog's trap must wait for the second promotion, not ride the first open's scope state");
+
+        secondPromote.SetVoidResult();
+        cut.WaitForAssertion(() => activate.Invocations["activate"].Should().HaveCount(1, "completing the second promote is what releases the reopened trap's activation"));
+    }
 }

@@ -602,6 +602,23 @@ public class CssBundlerInputSourceTests
             $"{bundle} is tracked and rewritten by the pack; it is the artefact this whole file is about");
     }
 
+    [Fact]
+    public void CommittedBundle_IsWrittenByTheBundler_Utf8WithBom()
+    {
+        var path = Path.Combine(CssDirectory(), BundleName);
+        File.Exists(path).Should().BeTrue($"{path} is the tracked bundle this project file regenerates");
+
+        var head = new byte[3];
+        using (var fs = File.OpenRead(path))
+        {
+            fs.ReadExactly(head);
+        }
+
+        head.Should().Equal(new byte[] { 0xEF, 0xBB, 0xBF },
+            "the BundleCss task writes Encoding.UTF8 (with BOM); a BOM-less bundle means it was "
+            + "hand-edited — delete it and rebuild src/Tempo.Blazor");
+    }
+
     /// <summary>
     /// Widens the denominator from ONE task to the whole project file: whatever writes
     /// <c>tempo-blazor.bundled.css</c> has to be a thing somebody reasoned about, not merely a thing

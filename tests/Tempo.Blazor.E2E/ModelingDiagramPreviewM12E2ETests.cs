@@ -25,6 +25,89 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [Description("Viewer preview renders exactly the viewer toolbar groups and no unlock toggle")]
+    public async Task DiagramPreview_UsesViewerToolbarWithoutReadOnlyToggle()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+
+        // The toolbar contract lives on the TmToolbar, which the editor renders from the
+        // desktop band up. At the default demo viewport the preview column sits in the mobile
+        // band (phase 7: no command row, the viewer chrome is the zoom pill + the "⋯" menu),
+        // so pin the preview editor to the desktop band like a full-bleed host. The editor
+        // root IS the inline-size container, so the width goes on it directly.
+        await PinPreviewEditorToDesktopAsync(page);
+
+        var preview = page.Locator("[data-testid='modeling-diagram-preview']");
+
+        var groups = await preview.Locator("[data-tm-group]")
+            .EvaluateAllAsync<string[]>(
+                """
+                els => els
+                    .map(el => el.getAttribute('data-tm-group'))
+                    .filter(name => !!name)
+                """);
+        CollectionAssert.AreEquivalent(new[] { "zoom", "view", "search", "export" }, groups,
+            "the preview must render exactly the viewer toolbar groups");
+
+        // A host-pinned read-only preview can no longer be unlocked from the UI (DI1).
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='readonly']").CountAsync(),
+            "the preview must not offer the read-only unlock toggle");
+        Assert.AreEqual(0, await preview.Locator("button[aria-label='Switch to edit mode']").CountAsync());
+        Assert.AreEqual(1, await preview.Locator(".tm-diagram-editor--readonly").CountAsync(),
+            "the preview editor root carries the read-only state class");
+
+        // F6: the preview hides the document title through the editor API (ShowTitle="false").
+        Assert.AreEqual(0, await preview.Locator(".tm-diagram-editor__title").CountAsync(),
+            "the preview renders no document-title input");
+    }
+
+    [TestMethod]
+    [Description("Read-only preview (R1): clicking a node selects it for inspection; no resize handles render")]
+    public async Task DiagramPreview_ClickNode_SelectsForInspection()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        await PinPreviewEditorToDesktopAsync(page);
+
+        var nodeId = await page.EvaluateAsync<string?>(
+            "() => document.querySelector(\"[data-testid='modeling-diagram-preview'] g.tm-diagram-node\")?.getAttribute('data-node-id')");
+        Assert.IsNotNull(nodeId, "the preview must render a node");
+
+        await page.Locator($"[data-testid='modeling-diagram-preview'] g.tm-diagram-node[data-node-id='{nodeId}']").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 10_000 });
+        await page.WaitForTimeoutAsync(300);
+
+        Assert.AreEqual(1,
+            await page.Locator($"[data-testid='modeling-diagram-preview'] g.tm-diagram-node--selected[data-node-id='{nodeId}']").CountAsync(),
+            "a click in the read-only preview selects the node for the read-only properties panel");
+        Assert.AreEqual(0,
+            await page.Locator("[data-testid='modeling-diagram-preview'] .tm-diagram-resize-handle").CountAsync(),
+            "the read-only preview never renders resize handles");
+    }
+
+    [TestMethod]
+    [Description("Viewer preview offers no import, template or other editing toolbar commands")]
+    public async Task DiagramPreview_HasNoImportOrTemplateCommands()
+    {
+        var page = await OpenLoadedModelingPageAsync();
+        await WaitForPreviewNodeCountAtLeastAsync(page, 1);
+        await PinPreviewEditorToDesktopAsync(page);
+
+        var preview = page.Locator("[data-testid='modeling-diagram-preview']");
+        // Precondition: the command row really rendered — otherwise every absence check below is vacuous.
+        Assert.AreEqual(1, await preview.Locator("[data-tm-group='zoom']").CountAsync(),
+            "the desktop viewer toolbar must be rendered before asserting what it lacks");
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='import']").CountAsync(),
+            "nothing may be imported into a read-only preview");
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='templates']").CountAsync());
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='clipboard']").CountAsync());
+        Assert.AreEqual(0, await preview.Locator("[data-tm-group='insert']").CountAsync());
+        Assert.AreEqual(0, await preview.GetByText("Import", new() { Exact = true }).CountAsync(),
+            "no Import command surface anywhere in the preview");
+    }
+
+    [TestMethod]
     [Description("Preview canvas supports zooming and panning interactions")]
     public async Task DiagramPreview_CanvasZoomsAndPans()
     {
@@ -180,6 +263,26 @@ public sealed class ModelingDiagramPreviewM12E2ETests : WasmTestBase
         await page.Locator("[data-testid='modeling-editor'][data-state='loaded']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         return page;
+    }
+
+    /// <summary>Pins the preview editor to the desktop band (the editor root is the inline-size container).</summary>
+    private static async Task PinPreviewEditorToDesktopAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const editor = document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor");
+                if (!editor) throw new Error('preview editor not found');
+                editor.style.width = '1280px';
+                editor.style.maxWidth = '1280px';
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            """
+            () => document.querySelector("[data-testid='modeling-diagram-preview'] .tm-diagram-editor")
+                ?.getAttribute('data-editor-layout') === 'desktop'
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 15_000 });
     }
 
     private static async Task ExpectVisibleAsync(IPage page, string selector, int timeout = 5000)

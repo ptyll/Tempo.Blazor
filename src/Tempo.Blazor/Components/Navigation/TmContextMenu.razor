@@ -1,7 +1,11 @@
 @namespace Tempo.Blazor.Components.Navigation
 @using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Helpers
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="tm-context-menu-wrapper @Class" @attributes="AdditionalAttributes">
+<div @ref="_wrapperRef" class="tm-context-menu-wrapper @Class" @attributes="AdditionalAttributes">
     <div class="tm-context-menu__trigger"
          @ref="_triggerRef"
          role="button"
@@ -25,14 +29,20 @@
     @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow (modal body, scrolling region) can no longer clip it, and overlay.js
        repositions it on scroll/resize, flipping when the space below runs out. Bottom + End +
-       4px keep the historical "under the trigger, right edge aligned" look. *@
+       4px keep the historical "under the trigger, right edge aligned" look. F11: the menu opts
+       into the shared bottom sheet on a mobile viewport through MobilePresentation (default
+       Popover keeps the anchored popover at every width); the sheet header is titled with
+       SheetTitle or the localized TmContextMenu_SheetTitle default. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
+                    OnOpened="FocusFirstItemAsync"
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
                     Offset="4"
                     Role="menu"
+                    Title="@EffectiveSheetTitle"
+                    MobilePresentation="MobilePresentation"
                     Class="tm-context-menu">
         <CascadingValue Value="this" IsFixed="true">
             @ChildContent
@@ -43,6 +53,10 @@
 @code {
     private bool _isOpen;
     private ElementReference _triggerRef;
+    private ElementReference _wrapperRef;
+    private MenuNavInterop? _menuNav;
+    private bool _disposed;
+    private bool _focusTriggerAfterClose;
 
     private void SetOpen(bool open)
     {
@@ -55,12 +69,33 @@
     /// <summary>Menu item children (TmContextMenuItem).</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// How the menu presents on a narrow viewport. Default
+    /// <see cref="PanelPresentation.Popover"/>: the anchored popover at every width.
+    /// <see cref="PanelPresentation.Auto"/> opts into the shared bottom sheet on a mobile
+    /// viewport (the anchored popover otherwise) — the choice resolves from the viewport scope.
+    /// A forced value renders that presentation without measuring.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
+
+    /// <summary>
+    /// Title of the sheet header when the menu presents as a bottom sheet. When
+    /// <see langword="null"/> (default), the localized <c>TmContextMenu_SheetTitle</c> default
+    /// is used. The value also names the popover (<c>aria-label</c>) — the menu carries no other
+    /// accessible name, so a <c>role="menu"</c> popover is not unnamed.
+    /// </summary>
+    [Parameter] public string? SheetTitle { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    // SheetTitle=null falls back to the localized per-component default; the value also names
+    // the popover (TmOverlayPanel emits Title as its aria-label when nothing else names it).
+    private string EffectiveSheetTitle => string.IsNullOrEmpty(SheetTitle) ? Loc["TmContextMenu_SheetTitle"] : SheetTitle!;
 
     private void ToggleMenu()
     {
@@ -70,7 +105,56 @@
     internal void CloseMenu()
     {
         _isOpen = false;
+        // docs/overlays.md rule 4: an item activation closes without overlay.js's focus restore - return focus to the
+        // trigger (the TmDropdown.SelectItemAsync pattern), or a keyboard activation leaves focus on <body>.
+        _focusTriggerAfterClose = true;
         StateHasChanged();
+    }
+
+    /// <summary>A keyboard-opened menu hands focus to its first enabled item (shared owner: MenuNavInterop).</summary>
+    private Task FocusFirstItemAsync() => _disposed ? Task.CompletedTask : (_menuNav ??= new MenuNavInterop(JS)).FocusFirstAsync(_wrapperRef);
+
+    /// <summary>
+    /// Moves focus to the menu trigger. Safe to call after an action replaced or removed the
+    /// row the trigger lives on — a trigger that left the DOM is a no-op, not an exception.
+    /// Hosts use it where the built-in close-focus-restore cannot run, e.g. the diagram layers
+    /// panel focusing the moved row's "⋯" trigger after a menu-driven reorder.
+    /// </summary>
+    public async ValueTask FocusTriggerAsync()
+    {
+        if (_disposed) return;
+        try
+        {
+            await _triggerRef.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusTriggerAfterClose) return;
+        _focusTriggerAfterClose = false;
+        try
+        {
+            await _triggerRef.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        var menuNav = _menuNav;
+        _menuNav = null;
+        if (menuNav is not null) await menuNav.DisposeAsync();
     }
 
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase

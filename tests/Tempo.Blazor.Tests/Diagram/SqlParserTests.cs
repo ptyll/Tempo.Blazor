@@ -247,4 +247,57 @@ CREATE TABLE `user_roles` (
         userRoles.ForeignKeys.Should().Contain(fk => fk.ReferenceTable == "users");
         userRoles.ForeignKeys.Should().Contain(fk => fk.ReferenceTable == "roles");
     }
+
+    [Fact]
+    public void Parse_PathologicalInput_ThrowsInputTooComplex_OrCompletesQuickly()
+    {
+        // One never-closing CREATE TABLE repeated 20k times: the single-line body pattern must
+        // either finish fast or give up through the typed InputTooComplex error — never hang.
+        var sql = string.Concat(Enumerable.Repeat("CREATE TABLE t ( a INT ", 20000));
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            _ = SqlParser.Parse(sql);
+        }
+        catch (DiagramImportException ex)
+        {
+            ex.Error.Should().Be(DiagramImportError.InputTooComplex);
+            return;
+        }
+        finally
+        {
+            sw.Stop();
+        }
+
+        sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2),
+            "the parser must stay within the time budget on a pathological input");
+    }
+
+    [Fact]
+    public void Parse_InputOver512Kb_ThrowsInputTooComplex()
+    {
+        // The up-front length cap rejects an oversized script without running any regex.
+        var sql = "CREATE TABLE t (a INT); " + new string('x', 512 * 1024);
+
+        var act = () => SqlParser.Parse(sql);
+        act.Should().Throw<DiagramImportException>()
+            .Which.Error.Should().Be(DiagramImportError.InputTooComplex);
+    }
+
+    [Fact]
+    public void Parse_ExhaustedOverallBudget_ThrowsInputTooComplex_BetweenMatches()
+    {
+        // Many tables, each cheap: the per-match regex never times out, but the overall budget
+        // (checked between matches and column lines) still gives up. The internal overload takes
+        // the budget so a test need not burn a real second.
+        var sql = string.Concat(Enumerable.Range(0, 200)
+            .Select(i => $"CREATE TABLE Table{i} (Id INT PRIMARY KEY, Name VARCHAR(50));"));
+
+        SqlParser.Parse(sql, TimeSpan.FromMinutes(1)).Count.Should().Be(200);
+
+        var act = () => SqlParser.Parse(sql, TimeSpan.Zero);
+        act.Should().Throw<DiagramImportException>()
+            .Which.Error.Should().Be(DiagramImportError.InputTooComplex);
+    }
 }

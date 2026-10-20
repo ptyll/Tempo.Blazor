@@ -150,6 +150,12 @@
       "isRequired": false,
       "default": "[\"👍\", \"❤️\", \"😂\", \"🎉\", \"😮\", \"😢\"]",
       "description": "Emoji offered by the reaction picker."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmChatDraftState>",
+      "isRequired": false,
+      "description": "Fires whenever the TmChatDraftState value changes — a composer or thread-reply slot gained/lost text, or a message edit opened/changed/closed. Value-equality deduped, so it does NOT fire on every keystroke. The composer, the thread panel's reply input and the inline message edit hold text the host cannot observe through any parameter; use TmChatDraftState to build a dirty-guard before a reload or navigation that would silently discard an in-progress message. Opening an edit reports EditingMessageId immediately while HasUnsavedContent stays false until the text differs from the message as it was when the edit started."
     }
   ]
 }

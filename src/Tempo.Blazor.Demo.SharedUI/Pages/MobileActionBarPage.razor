@@ -57,11 +57,14 @@
                     @if (_showFixed)
                     {
                         @* A viewport-anchored bar is deliberate: it pins to the bottom edge of
-                           the whole window, so the demo renders it on demand only. *@
+                           the whole window, so the demo renders it on demand only. The chip class
+                           is the C13 token-only opt-in: the reserve tests read THIS bar, so the
+                           chip must grow the bar and its published reserve together. *@
                         <TmMobileActionBar Items="@_actions"
                                            MaxVisible="3"
                                            Placement="ActionBarPlacement.FixedViewport"
-                                           LayoutMode="TmLayoutMode.Mobile">
+                                           LayoutMode="TmLayoutMode.Mobile"
+                                           Class="mab-icon-chip">
                             <ChildContent>
                                 <p class="mab-fixed-docs">@Loc["TmMobileActionBarDemo_FixedBody"]</p>
                             </ChildContent>

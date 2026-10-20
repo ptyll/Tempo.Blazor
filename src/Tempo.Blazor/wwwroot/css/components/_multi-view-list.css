@@ -8,6 +8,12 @@
   border-radius: var(--tm-radius-lg);
   padding: var(--tm-space-4);
 }
+.tm-multi-view-list--plain {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
 
 /* Toolbar */
 .tm-mvl-toolbar {
@@ -28,6 +34,11 @@
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
+}
+.tm-mvl-item-count {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
 }
 
 /* External Filters */
@@ -61,6 +72,11 @@
   border-color: var(--tm-color-primary); 
 }
 
+/* Responsive table scrolling */
+.tm-mvl-table-scroll {
+  overflow-x: auto;
+}
+
 /* Table View */
 .tm-mvl-table { 
   width: 100%; 
@@ -85,12 +101,32 @@
   padding: var(--tm-space-2) var(--tm-space-3); 
   border-bottom: 1px solid var(--tm-border-color); 
 }
+/* TableCellLayout.Stacked: the subtitle sits under the title inside the cell, never on the td itself. */
+.tm-mvl-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+}
+.tm-mvl-cell-primary {
+  font-weight: var(--tm-font-weight-medium);
+}
+.tm-mvl-cell-secondary {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
 
 /* Card Grid */
-.tm-mvl-card-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); 
-  gap: var(--tm-space-4); 
+.tm-mvl-card-grid {
+  --tm-mvl-card-min: 16rem;
+  display: grid;
+  gap: var(--tm-space-4);
+  grid-template-columns: repeat(auto-fill, minmax(var(--tm-mvl-card-min), 1fr));
+}
+.tm-mvl-card-grid--virtualized {
+  grid-template-columns: 1fr;
+}
+.tm-mvl-card-grid--capped {
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--tm-mvl-card-min), calc((100% - (var(--tm-mvl-card-columns-max) - 1) * var(--tm-space-4)) / var(--tm-mvl-card-columns-max))), 1fr));
 }
 
 /* Card */
@@ -109,6 +145,46 @@
 .tm-mvl-card:hover { 
   box-shadow: var(--tm-shadow-md); 
   border-color: var(--tm-border-color-focus);
+}
+/* Stretched link: the title is the only tab stop and its ::after covers the card. The selection
+   checkbox paints above that layer so a click still toggles the row instead of activating it.
+   Scoped under the card so the filter builder's own .tm-stretched-link keeps its color rule. */
+.tm-mvl-card--stretched {
+  position: relative;
+}
+.tm-mvl-card--stretched .tm-stretched-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--tm-color-primary);
+  font-weight: var(--tm-font-weight-semibold);
+  font-size: var(--tm-font-size-sm);
+}
+.tm-mvl-card--stretched .tm-stretched-link:hover {
+  text-decoration: underline;
+}
+.tm-mvl-card--stretched .tm-stretched-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+/* The ring lives on the card, not on the title, so it outlines the whole activatable surface. */
+.tm-mvl-card--stretched .tm-stretched-link:focus-visible {
+  outline: none;
+}
+.tm-mvl-card--stretched:has(.tm-stretched-link:focus-visible) {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: 2px;
+}
+.tm-mvl-card--stretched .tm-mvl-card-select-row,
+.tm-mvl-card--stretched .tm-mvl-checkbox {
+  position: relative;
+  z-index: 1;
 }
 
 /* Card Header */
@@ -237,30 +313,27 @@
   align-items: center;
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-3);
-  border: 1px solid var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-surface, white);
-  color: var(--tm-text-secondary, #6b7280);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
   cursor: pointer;
 }
 
 .tm-mvl-group-btn:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 .tm-mvl-group-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 20;
+  /* Chrome only — the panel is a top-layer popover positioned by overlay.js (position:fixed);
+     anchoring declarations (position/inset/margin/z-index) here would fight that contract. */
   min-width: 12rem;
-  margin-top: var(--tm-space-1);
   padding: var(--tm-space-2);
-  border: 1px solid var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-surface, white);
-  box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1));
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  box-shadow: var(--tm-shadow-lg);
 }
 
 .tm-mvl-group-option {
@@ -268,13 +341,13 @@
   align-items: center;
   gap: var(--tm-space-2);
   padding: var(--tm-space-1) var(--tm-space-2);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   cursor: pointer;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 .tm-mvl-group-option:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 /* ── Group Sections (Card & List views) ─────────────────────── */
@@ -283,25 +356,21 @@
   margin-bottom: var(--tm-space-3);
 }
 
+.tm-mvl-group-card {
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  overflow: hidden;
+}
+
 .tm-mvl-group-header {
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
   padding: var(--tm-space-2) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  background: var(--tm-bg-surface);
   margin-bottom: var(--tm-space-2);
   font-weight: 600;
-}
-
-.tm-mvl-group-row {
-  background: var(--tm-surface-secondary, #f9fafb);
-  font-weight: 600;
-}
-
-.tm-mvl-group-row td {
-  padding: var(--tm-space-2) var(--tm-space-3);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
 }
 
 .tm-mvl-group-toggle {
@@ -311,16 +380,38 @@
   width: 1.5rem;
   height: 1.5rem;
   padding: 0;
-  border: none;
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border: 0;
+  border-radius: var(--tm-radius-sm);
   background: transparent;
-  color: var(--tm-text-secondary, #6b7280);
+  color: inherit;
   cursor: pointer;
-  font-size: 0.75rem;
+}
+
+.tm-mvl-group-card .tm-mvl-group-toggle {
+  justify-content: flex-start;
+  gap: var(--tm-space-2);
+  width: 100%;
+  height: auto;
+  text-align: left;
+  font: inherit;
+}
+
+.tm-mvl-group-body {
+  padding: 0 var(--tm-space-3) var(--tm-space-3);
+}
+
+.tm-mvl-group-row {
+  background: var(--tm-surface-secondary);
+  font-weight: 600;
+}
+
+.tm-mvl-group-row td {
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-toggle:hover {
-  background: var(--tm-bg-surface-secondary, #e5e7eb);
+  background: var(--tm-bg-surface-secondary);
 }
 
 .tm-mvl-group-label {
@@ -328,23 +419,23 @@
 }
 
 .tm-mvl-group-count {
-  color: var(--tm-text-tertiary, #9ca3af);
+  color: var(--tm-text-tertiary);
   font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 /* ── Per-Group Pagination ──────────────────────────────────── */
 
 .tm-mvl-group-pagination {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-pagination td {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-pagination .tm-pagination {
@@ -417,23 +508,23 @@
 
 [data-theme="dark"] .tm-mvl-row--selected,
 .tm-dark .tm-mvl-row--selected {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 [data-theme="dark"] .tm-mvl-row--selected td,
 .tm-dark .tm-mvl-row--selected td {
-  border-bottom-color: rgba(59, 130, 246, 0.15);
+  border-bottom-color: var(--tm-color-primary-subtle);
 }
 
 [data-theme="dark"] .tm-mvl-card--selected,
 .tm-dark .tm-mvl-card--selected {
   border-color: var(--tm-color-primary) !important;
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 [data-theme="dark"] .tm-mvl-list-item--selected,
 .tm-dark .tm-mvl-list-item--selected {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 /* ── Drag source ────────────────────────────────────────────── */

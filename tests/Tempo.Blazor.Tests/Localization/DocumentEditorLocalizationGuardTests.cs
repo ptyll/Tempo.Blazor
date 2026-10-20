@@ -99,7 +99,10 @@ public class DocumentEditorLocalizationGuardTests
         return new SortedSet<string>(
             document.RootElement.EnumerateObject()
                 .Select(property => property.Name)
-                .Where(name => name.StartsWith("TmDocumentEditor_", StringComparison.Ordinal)),
+                .Where(name => name.StartsWith("TmDocumentEditor_", StringComparison.Ordinal))
+                // _Few / _Many are optional plural forms (docs/localization-plurals.md): Czech has them,
+                // English and French need only the forms their grammar uses. _One/_Other stay compared.
+                .Where(name => !name.EndsWith("_Few", StringComparison.Ordinal) && !name.EndsWith("_Many", StringComparison.Ordinal)),
             StringComparer.Ordinal);
     }
 

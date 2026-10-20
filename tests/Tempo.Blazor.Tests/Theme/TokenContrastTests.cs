@@ -73,6 +73,40 @@ public sealed class TokenContrastTests
     /// <c>_button.css</c> and then measures it — a revert to the decorative token fails on the
     /// value, a token re-tune fails on the ratio.
     /// </summary>
+    /// <summary>
+    /// F8 review L3: the checked segment's fill measured 1.10:1 against the tray and its border
+    /// 1.13:1 (dark 1.41 / 1.0), so the selected state had no WCAG 1.4.11 boundary. The border must
+    /// be the strong token and hold 3:1 against the tray in light, dark and the indigo theme.
+    /// </summary>
+    [Fact]
+    public void SegmentedCheckedBorder_KeepsThreeToOne_AgainstTheTray()
+    {
+        var declared = ThemeCss.Property("_radio-group.css", ".tm-radio-segment--checked", "border-color");
+        declared.Should().Be("var(--tm-border-color-strong)");
+
+        foreach (var dark in new[] { false, true })
+        {
+            var graph = ThemeCss.TokenGraph(dark);
+            foreach (var (name, value) in ThemeCss.Declarations(ThemeCss.CssPath("theme-indigo.css")))
+            {
+                graph[name] = value;
+            }
+
+            var ratio = ThemeCss.Contrast(
+                ThemeCss.ResolveColour(declared, graph),
+                ThemeCss.ResolveColour("var(--tm-bg-muted)", graph));
+            ratio.Should().BeGreaterThanOrEqualTo(3.0,
+                "hranice vybraného segmentu proti liště ({0}, indigo) musí držet 3:1 — změřeno {1:0.00}:1",
+                dark ? "dark" : "light", ratio);
+        }
+
+        var css = ThemeCss.ComponentCss("_radio-group.css");
+        css.Should().Contain("forced-colors: active");
+        css.Should().Contain("background: Highlight");
+        css.Should().Contain("color: HighlightText");
+        css.Should().Contain("forced-color-adjust: none");
+    }
+
     [Fact]
     public void DefaultButtonBorder_IsAControlToken_AndKeepsThreeToOne()
     {
@@ -291,6 +325,61 @@ public sealed class TokenContrastTests
     }
 
     /// <summary>
+    /// f4057a47: the command palette's focused row painted <c>--tm-color-gray-50</c>, which in dark
+    /// IS <c>--tm-bg-surface</c> (1:1 — the highlight vanished exactly where keyboard users need it)
+    /// and about 1.04:1 on white in light. The row now paints the muted fill with a
+    /// <c>--tm-color-primary</c> outline, the <c>_multiselect.css</c> focused-option precedent. The
+    /// declarations are pinned (a revert to gray-50 fails on the string, a missing outline fails on
+    /// the null) and the outline colour is measured against the surface the palette paints on AND
+    /// against the muted fill the row itself paints — the boundary a user actually sees the outline
+    /// drawn over — each ≥3:1 (WCAG 1.4.11 non-text) in light, dark and the indigo theme, both
+    /// brightness modes.
+    /// </summary>
+    [Fact]
+    public void CommandPaletteHighlight_IsPaintedFromTokens_AndHoldsThreeToOne()
+    {
+        var fill = ThemeCss.TryProperty("_command-palette.css", ".tm-command-palette-item-focused", "background-color");
+        fill.Should().Be("var(--tm-bg-muted)",
+            "f4057a47: --tm-color-gray-50 IS the dark surface (1:1) and 1.04:1 on white — the focused row must paint the muted fill");
+
+        var hover = ThemeCss.TryProperty("_command-palette.css", ".tm-command-palette-item:hover", "background-color");
+        hover.Should().Be("var(--tm-bg-muted)",
+            "hover and focus share the muted fill; only the outline marks the active row");
+
+        var outline = ThemeCss.TryProperty("_command-palette.css", ".tm-command-palette-item-focused", "outline");
+        outline.Should().NotBeNull(
+            "the muted fill alone is ~1.1:1 against the surface, so the ≥3:1 cue is the outline");
+        var outlineToken = Regex.Match(outline!, @"var\((--tm-[\w-]+)", RegexOptions.None, TimeSpan.FromSeconds(5));
+        outlineToken.Success.Should().BeTrue("the outline must be painted from a token, not a hex");
+        outlineToken.Groups[1].Value.Should().Be("--tm-color-primary",
+            "primary is the accent the focused-option precedent outlines with");
+
+        foreach (var indigo in new[] { false, true })
+        {
+            foreach (var dark in new[] { false, true })
+            {
+                var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+                var boundary = ThemeCss.ResolveColour($"var({outlineToken.Groups[1].Value})", tokens);
+                var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+                ThemeCss.Contrast(boundary, surface).Should().BeGreaterThanOrEqualTo(
+                    3.0,
+                    "the focused row's outline is a non-text indicator and must hold 3:1 against " +
+                    "the palette surface ({0}, {1}) — measured {2:0.00}:1",
+                    indigo ? "indigo" : "default", dark ? "dark" : "light",
+                    ThemeCss.Contrast(boundary, surface));
+
+                var rowFill = ThemeCss.ResolveColour("var(--tm-bg-muted)", tokens);
+                ThemeCss.Contrast(boundary, rowFill).Should().BeGreaterThanOrEqualTo(
+                    3.0,
+                    "the outline must also hold 3:1 against the muted fill the focused row paints " +
+                    "({0}, {1}) — that is the boundary it is drawn over — measured {2:0.00}:1",
+                    indigo ? "indigo" : "default", dark ? "dark" : "light",
+                    ThemeCss.Contrast(boundary, rowFill));
+            }
+        }
+    }
+
+    /// <summary>
     /// F0 semantic tokens (00-cross-cutting §1 and §7.3). Each one must exist in BOTH themes:
     /// a token declared only on <c>:root</c> substitutes its <c>var()</c> where it is declared, so a
     /// dark theme switched on a parent element would inherit the light value. Status and priority
@@ -386,6 +475,10 @@ public sealed class TokenContrastTests
         {
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
+            "--tm-cal-range-bg",
+            "--tm-calendar-view-event-bg", "--tm-calendar-view-event-border",
+            "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
+            "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",
             "--tm-color-border-subtle", "--tm-color-primary", "--tm-color-primary-hover",
             "--tm-color-primary-soft-border", "--tm-color-primary-subtle", "--tm-color-primary-text",
             "--tm-color-surface-elevated", "--tm-color-surface-hover", "--tm-control-hover-fill",
@@ -732,6 +825,169 @@ public sealed class TokenContrastTests
                 ThemeCss.ResolveColour("var(--tm-cal-selected-bg)", tokens))
             .Should().BeGreaterThanOrEqualTo(4.5,
                 "text vybraného dne na jeho výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    /// <summary>
+    /// 421a41ce: the in-range fill used to stay the LIGHT <c>primary-100</c> in the dark theme, so
+    /// dark day text (<c>--tm-text-primary</c>) sat on a light fill at 1.11:1 (indigo 1.12:1).
+    /// The dark <c>--tm-cal-range-bg</c> is <c>primary-900</c> — 9.45:1 / 10.43:1, and already the
+    /// dark convention for a primary-tinted fill (<c>--tm-control-hover-fill</c>). The guard reads
+    /// the real declarations out of <c>_calendar-grid.css</c> first, so a revert to a hardcoded
+    /// fill fails on the value, not only on the ratio.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CalendarInRangeDayText_HoldsAa(bool indigo, bool dark)
+    {
+        ThemeCss.Property("_calendar-grid.css", ".tm-cal-day--in-range", "background")
+            .Should().Be("var(--tm-cal-range-bg)");
+        ThemeCss.Property("_calendar-grid.css", ".tm-cal-day", "color")
+            .Should().Be("var(--tm-text-primary)");
+
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+        ThemeCss.Contrast(ThemeCss.ResolveColour("var(--tm-text-primary)", tokens),
+                          PaintedColour("var(--tm-cal-range-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text dne v rozsahu ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    /// <summary>
+    /// 8b3c2021 §1b: <c>TmCalendarView</c> today/event pairs come from the
+    /// <c>--tm-calendar-view-*</c> tokens (light/dark pairs in the token files, not a component
+    /// dark block). Today text must hold AA on the today fill and event text on the event fill;
+    /// the highlighted-date dot is a non-text indicator held to 3:1 against the surface. The
+    /// light dot moved <c>primary-400</c> → <c>primary-500</c> because 400 measured 2.54:1
+    /// (indigo 2.98:1) against white, under the 1.4.11 floor.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CalendarViewTodayAndEvents_HoldAa(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-calendar-view-today-fg)", tokens),
+                ThemeCss.ResolveColour("var(--tm-calendar-view-today-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text dnešního dne na jeho výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-calendar-view-event-fg)", tokens),
+                ThemeCss.ResolveColour("var(--tm-calendar-view-event-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text události na její výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-calendar-view-highlight)", tokens),
+                ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+            .Should().BeGreaterThanOrEqualTo(3.0,
+                "tečka zvýrazněného data je non-text indikátor a musí držet 3:1 proti povrchu ({0} {1})",
+                indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    /// <summary>
+    /// 8b3c2021 §1b: <c>_calendar-view.css</c> used to carry two component dark blocks and ten hex
+    /// fallbacks (one not even the real scale value — <c>#1e3a5f</c> vs <c>primary-900</c>'s
+    /// <c>#1e3a8a</c>). Light/dark pairs live in the token files now; the component stylesheet is
+    /// theme-agnostic. The selected day paints <c>--tm-cal-selected-fg</c>, which removes the
+    /// white-on-primary baseline entry.
+    /// </summary>
+    [Fact]
+    public void CalendarView_HasNoComponentDarkBlocksOrHexFallbacks()
+    {
+        var css = ThemeCss.ComponentCss("_calendar-view.css");
+
+        css.Should().NotContain("data-theme", "the component has no dark block of its own anymore");
+        css.Should().NotContain(".tm-dark", "the component has no dark block of its own anymore");
+        Regex.IsMatch(css, @"#[0-9a-fA-F]{3,8}\b", RegexOptions.None, TimeSpan.FromSeconds(5))
+            .Should().BeFalse("hex fallbacks moved into the token files");
+
+        ThemeCss.Property(
+                "_calendar-view.css", ".tm-calendar-view__day-cell .tm-cal-day--selected", "color")
+            .Should().Be("var(--tm-cal-selected-fg)");
+    }
+
+
+    /// <summary>
+    /// b32847d0: the lightbox chrome paints from the <c>--tm-lightbox-*</c> tokens instead of the
+    /// literals the strict CSS audit carried, and the ink keeps its threshold over the WORST case
+    /// the stack can paint — a pure white image under the whole scrim → control-fill composite
+    /// (a darker image only raises the ratio). The round controls carry ICONS, so 3:1 (WCAG
+    /// 1.4.11); the loading line is text on the bare scrim, so 4.5:1. Both themes are measured:
+    /// the tokens resolve identically in dark by design — the chrome rides the near-black scrim,
+    /// where a themed ink would flip dark and sink into its own fill (tokens.css documents this).
+    /// The declaration pins make a revert to a literal fail on the string, before any ratio runs.
+    /// </summary>
+    [Fact]
+    public void LightboxControls_KeepContrast_OverTheScrim_WorstCaseImage()
+    {
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-backdrop", "background")
+            .Should().Be("var(--tm-lightbox-scrim)",
+                "the recorded CSS-audit debt was the literal backdrop; a revert re-opens it");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-prev", "background")
+            .Should().Be("var(--tm-lightbox-control-bg)");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-prev", "color")
+            .Should().Be("var(--tm-lightbox-control-fg)");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-next:hover", "background")
+            .Should().Be("var(--tm-lightbox-control-bg-hover)");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-loading", "color")
+            .Should().Be("var(--tm-lightbox-loading-fg)");
+
+        foreach (var dark in new[] { false, true })
+        {
+            var tokens = ThemeCss.TokenGraph(dark);
+            var scrim = OverScrim("var(--tm-lightbox-scrim)", tokens, "#ffffff");
+            var ink = ThemeCss.ResolveColour("var(--tm-lightbox-control-fg)", tokens);
+
+            foreach (var fill in new[] { "--tm-lightbox-control-bg", "--tm-lightbox-control-bg-hover" })
+            {
+                var painted = OverScrim($"var({fill})", tokens, scrim);
+                ThemeCss.Contrast(ink, painted).Should().BeGreaterThanOrEqualTo(
+                    3.0,
+                    "{0} ink over {1} painted to {2} over a white image ({3}) is icon chrome and "
+                        + "holds the 1.4.11 floor — measured {4:0.00}:1",
+                    ink, fill, painted, dark ? "dark" : "light", ThemeCss.Contrast(ink, painted));
+            }
+
+            var loading = OverScrim("var(--tm-lightbox-loading-fg)", tokens, scrim);
+            ThemeCss.Contrast(loading, scrim).Should().BeGreaterThanOrEqualTo(
+                4.5,
+                "the loading line is text on the scrim painted over a white image ({0}) — AA floor; "
+                    + "measured {1:0.00}:1",
+                dark ? "dark" : "light", ThemeCss.Contrast(loading, scrim));
+        }
+    }
+
+    /// <summary>
+    /// The opaque colour a translucent <c>--tm-lightbox-*</c> wash paints over
+    /// <paramref name="background"/>. <see cref="ThemeCss.ResolveColour"/> stops at the raw
+    /// <c>rgb(… / a)</c> literal (only the <c>rgb(from var(…))</c> form resolves deeper), so the
+    /// channels and the alpha are read out of the DECLARED value here — the same one-value source
+    /// the stylesheet ships, never a number copied into the test.
+    /// </summary>
+    private static string OverScrim(string tokenExpr, Dictionary<string, string> tokens, string background)
+    {
+        var value = ThemeCss.ResolveColour(tokenExpr, tokens);
+        var match = Regex.Match(
+            value,
+            @"rgba?\(\s*([0-9.]+)(?:\s*,\s*|\s+)([0-9.]+)(?:\s*,\s*|\s+)([0-9.]+)(?:\s*[,/]\s*([0-9.]+))?\s*\)",
+            RegexOptions.None, TimeSpan.FromSeconds(5));
+        match.Success.Should().BeTrue("'{0}' must be an rgb()/rgba() wash", value);
+
+        var channels = new[] { match.Groups[1], match.Groups[2], match.Groups[3] }
+            .Select(group => (int)Math.Round(
+                double.Parse(group.Value, CultureInfo.InvariantCulture), MidpointRounding.AwayFromZero));
+        var hex = "#" + string.Concat(channels.Select(channel => channel.ToString("x2", CultureInfo.InvariantCulture)));
+        var alpha = match.Groups[4].Success
+            ? double.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture)
+            : 1.0;
+        return alpha >= 1.0 ? hex : ThemeCss.Composite(hex, alpha, background);
     }
 
     [Theory]

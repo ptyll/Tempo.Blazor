@@ -2,7 +2,7 @@
   "itemName": "FindReplaceDialog",
   "kind": "Component",
   "category": "Activity",
-  "description": "Internal modal dialog providing find-and-replace functionality for the rich text editor. Supports single replace and replace-all operations with a result count indicator.",
+  "description": "Find-and-replace dialog for the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the saved editor selection). Anchored to the top of the viewport and immune to overlay clicks. The Replace/Replace All callbacks return the REAL replacement count from tmRichEditor.findAndReplace, which the result line reports (0 renders a localized 'no matches' message). Enter in a field submits the form and runs Replace (single) — never Replace All. Known limitation: matches are per text node; text split across inline formatting (e.g. foo<b>bar</b>) is not matched.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
   ],
@@ -19,19 +19,22 @@
       "default": "true"
     },
     {
-      "name": "OnFind",
-      "type": "EventCallback<string>",
-      "isRequired": false
-    },
-    {
       "name": "OnReplace",
-      "type": "EventCallback<(string Find, string Replace)>",
-      "isRequired": false
+      "type": "Func<(string Find, string Replace), Task<int>>?",
+      "isRequired": false,
+      "description": "Replaces the first occurrence. Must return the real number of replacements made (from tmRichEditor.findAndReplace) so the dialog can report the true outcome — including 'no matches' for 0."
     },
     {
       "name": "OnReplaceAll",
-      "type": "EventCallback<(string Find, string Replace)>",
-      "isRequired": false
+      "type": "Func<(string Find, string Replace), Task<int>>?",
+      "isRequired": false,
+      "description": "Replaces every occurrence. Must return the real number of replacements made (from tmRichEditor.findAndReplace) so the dialog can report the true outcome — including 'no matches' for 0."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element focus returns to when the dialog closes — the host editor's content surface, so the saved caret/selection can be replayed."
     },
     {
       "name": "OnCancel",
@@ -41,22 +44,18 @@
   ],
   "cssClasses": [
     "tm-rte-findreplace-dialog",
-    "tm-rte-findreplace-backdrop",
-    "tm-rte-findreplace-content",
-    "tm-rte-findreplace-header",
-    "tm-rte-findreplace-body",
-    "tm-rte-findreplace-footer",
+    "tm-rte-dialog",
     "tm-rte-findreplace-find-input",
     "tm-rte-findreplace-replace-input",
     "tm-rte-findreplace-result",
+    "tm-rte-btn-replace",
     "tm-rte-btn-replaceall",
-    "tm-rte-btn-close",
     "tm-rte-btn-cancel"
   ],
   "examples": [
     {
       "title": "Used internally by TmRichEditorFull",
-      "code": "<FindReplaceDialog IsVisible=\"true\" OnFind=\"HandleFind\" OnReplace=\"HandleReplace\" OnReplaceAll=\"HandleReplaceAll\" OnCancel=\"HandleCancel\" />"
+      "code": "<FindReplaceDialog IsVisible=\"true\" OnReplace=\"HandleReplace\" OnReplaceAll=\"HandleReplaceAll\" OnCancel=\"HandleCancel\" />"
     }
   ]
 }

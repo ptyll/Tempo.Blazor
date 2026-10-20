@@ -1,4 +1,6 @@
 @namespace Tempo.Blazor.Components.Scheduler
+@implements IDisposable
+@using Microsoft.Extensions.DependencyInjection
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @inject Microsoft.JSInterop.IJSRuntime JS
@@ -18,6 +20,7 @@
         {
             case TmScheduleViewType.Month:
                 <TmSchedulerMonthView CurrentDate="@CurrentDate"
+                                      Today="@TodayInDisplayZone()"
                                       Events="@_loadedEvents"
                                       MaxVisibleEvents="3"
                                       ReadOnly="@ReadOnly"
@@ -85,6 +88,9 @@
 
 @code {
     private IReadOnlyList<TmScheduleEvent> _loadedEvents = [];
+
+    /// <summary>Service provider for the optional user-zone lookups (never a required dependency).</summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
 
     /// <summary>Client-side event list. Alternative to DataProvider.</summary>
     [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
@@ -180,7 +186,13 @@
     /// </summary>
     [Parameter] public string? TimeZoneId { get; set; }
 
-    /// <summary>Resolves the effective display timezone (falls back to local when unset or invalid).</summary>
+    /// <summary>
+    /// Resolves the effective display timezone: an explicitly set <see cref="TimeZoneId"/> wins;
+    /// otherwise the circuit's <see cref="ITmUserTimeZone"/> — the browser's zone (UTC on Blazor
+    /// Server until the probe reports after the first interactive render, the runtime's zone on
+    /// WebAssembly) — and the machine-local zone only when no <see cref="ITmUserTimeZone"/> is
+    /// registered (a bare test context).
+    /// </summary>
     public TimeZoneInfo ResolveTimeZone()
     {
         if (!string.IsNullOrWhiteSpace(TimeZoneId)
@@ -189,13 +201,58 @@
             return tz;
         }
 
-        return TimeZoneInfo.Local;
+        return Services.GetService<ITmUserTimeZone>()?.Zone ?? TimeZoneInfo.Local;
+    }
+
+    /// <summary>Today's date in the display zone ("Today" navigation); falls back to the machine-local date.</summary>
+    private DateTime TodayInDisplayZone()
+    {
+        var zone = ResolveTimeZone();
+        return zone.Equals(TimeZoneInfo.Local)
+            ? DateTime.Today
+            : TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).Date;
     }
 
     protected override async Task OnParametersSetAsync()
     {
         await LoadEventsAsync();
     }
+
+    /// <summary>Re-renders once the user zone arrives (the browser probe is Server-only and one-shot).</summary>
+    private TmUserZoneObserver? _userZoneObserver;
+
+    /// <summary>Triggers the one-time browser zone probe after the first interactive render.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, RefreshAfterZoneChange);
+            if (_userZoneObserver is not null)
+            {
+                await _userZoneObserver.ProbeAsync();
+            }
+        }
+    }
+
+    private Task RefreshAfterZoneChange() => InvokeAsync(async () =>
+    {
+        // The zone only changes how LOCALLY-owned data renders: the plain Events list is
+        // renormalized in process, so it reloads. The provider and work-item paths own their range
+        // filtering server-side and (with no explicit TimeZoneId) are not normalized here —
+        // re-querying them because the browser reported its zone would be a surprise extra call.
+        if (string.IsNullOrWhiteSpace(TimeZoneId)
+            && DataProvider is null
+            && WorkItemSource is null
+            && Events is not null)
+        {
+            await LoadEventsAsync();
+        }
+
+        StateHasChanged();
+    });
+
+    /// <summary>Unsubscribes from the user zone; the component no longer refreshes when it changes.</summary>
+    public void Dispose() => _userZoneObserver?.Dispose();
 
     private async Task LoadEventsAsync()
     {
@@ -370,6 +427,6 @@
 
     private async Task NavigateToday()
     {
-        await CurrentDateChanged.InvokeAsync(DateTime.Today);
+        await CurrentDateChanged.InvokeAsync(TodayInDisplayZone());
     }
 }

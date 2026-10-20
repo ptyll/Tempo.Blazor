@@ -28,6 +28,9 @@
     width: 100%;
     height: 100%;
     min-height: 400px;
+    /* The canvas owns its surface: nodes drag immediately, a finger pans and pinch-zooms
+       instead of scrolling the page (the page still scrolls everywhere around it). */
+    touch-action: none;
 }
 
 .tm-wf-canvas--readonly {
@@ -44,6 +47,22 @@
 
 .tm-wf-state:hover {
     filter: brightness(0.95);
+}
+
+.tm-wf-state:focus {
+    outline: none;
+}
+
+/* SVG shapes have no box-shadow ring: the outline is the focus indicator. */
+.tm-wf-state:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+    .tm-wf-state:focus-visible {
+        outline-color: Highlight;
+    }
 }
 
 .tm-wf-state--selected rect {
@@ -70,6 +89,19 @@
 .tm-wf-port:hover {
     opacity: 1;
     r: 8;
+}
+
+/* Touch has no hover: the port is always visible and grows to a coarse 24px target. */
+@media (hover: none) {
+    .tm-wf-port {
+        opacity: 1;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-wf-port {
+        r: 12;
+    }
 }
 
 /* ── Transitions ── */
@@ -99,6 +131,69 @@
 
 .tm-wf-temp-line {
     pointer-events: none;
+    stroke: var(--tm-color-primary);
+    stroke-width: 2;
+    stroke-dasharray: 6 3;
+    fill: none;
+}
+
+@media (forced-colors: active) {
+    .tm-wf-temp-line {
+        stroke: Highlight;
+    }
+}
+
+/* ── Zoom overlay (the single-pointer alternative to pinch zoom) ── */
+
+.tm-wf-zoom-overlay {
+    position: absolute;
+    left: var(--tm-space-3, 0.75rem);
+    bottom: var(--tm-space-3, 0.75rem);
+    display: flex;
+    gap: var(--tm-space-1, 0.25rem);
+    z-index: 10;
+}
+
+.tm-wf-zoom-overlay__btn {
+    min-width: var(--tm-touch-target, 24px);
+    min-height: var(--tm-touch-target, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--tm-space-2, 0.5rem);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    cursor: pointer;
+    font-size: var(--tm-font-size-md, 1rem);
+    line-height: 1;
+    color: var(--tm-text-secondary);
+}
+
+.tm-wf-zoom-overlay__btn:hover {
+    background-color: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+/* The read-only canvas is inert, but viewing aids stay alive: zoom is not editing. */
+.tm-wf-canvas--readonly .tm-wf-zoom-overlay {
+    pointer-events: auto;
+}
+
+.tm-wf-zoom-overlay__btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-wf-zoom-overlay__btn {
+        border-color: ButtonText;
+        color: ButtonText;
+    }
+
+    .tm-wf-zoom-overlay__btn:focus-visible {
+        outline-color: Highlight;
+    }
 }
 
 /* ── Toolbox ── */

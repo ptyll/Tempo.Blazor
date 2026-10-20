@@ -70,6 +70,62 @@
     color: var(--tm-text-disabled);
 }
 
+.tm-signature-capture--overlay-clear .tm-signature-capture__surface {
+    position: relative;
+}
+
+.tm-signature-capture--overlay-clear .tm-signature-capture__clear {
+    position: absolute;
+    top: var(--tm-space-2);
+    inset-inline-end: var(--tm-space-2);
+    z-index: 1;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+}
+
+/* cluster-D §6: below 640px of the component's own width the overlay clear covers too much of
+   the pad (≈14% at 320 — a stroke can neither start under it nor pass beneath it). The tile
+   shrinks to exactly the touch target with the ✕ icon and the visually-hidden label (the
+   accessible name survives); at 320 that is ≈10% and at 390 ≈6%. The root is the size
+   container: inline-size: 100% pins it to the parent's width (a definite measure independent of
+   its contents) and the query styles only its descendants. */
+.tm-signature-capture--overlay-clear {
+    container: tm-signature / inline-size;
+    inline-size: 100%;
+}
+
+@container tm-signature (width < 640px) {
+    .tm-signature-capture--overlay-clear .tm-signature-capture__clear {
+        top: var(--tm-space-1);
+        inset-inline-end: var(--tm-space-1);
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+        padding: 0;
+    }
+
+    /* The sr-only clip keeps a second, modern clipping mechanism: a host reset that drops the
+       legacy `clip` (or a future cleanup) can no longer leak the label back onto the pad. */
+    .tm-signature-capture--overlay-clear .tm-signature-capture__clear-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* The narrower the pad, the larger the corner tile's share of it — at the 320 end the 44px
+       tile reached exactly the ≈10% ceiling. Growing the compact pad to 2.5 touch targets keeps
+       the tile comfortably under it (≈7% at a 240px pad) without touching wide containers. */
+    .tm-signature-capture--overlay-clear .tm-signature-capture__canvas {
+        min-height: calc(var(--tm-touch-target) * 2.5);
+    }
+}
+
 .tm-signature-capture__surface {
     min-height: var(--tm-space-16);
     border: 1px solid var(--tm-border-color);

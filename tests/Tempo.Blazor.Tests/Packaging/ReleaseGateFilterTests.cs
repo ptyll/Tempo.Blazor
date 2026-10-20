@@ -228,6 +228,43 @@ public sealed class ReleaseGateFilterTests
     }
 
     /// <summary>
+    /// The bundled-CSS freshness check has a REQUIRED SHAPE, not just required text: the touch must
+    /// run BEFORE the build (it is what makes the incremental <c>BundleCssFiles</c> target actually
+    /// regenerate) and the freshness diff must run AFTER it (it compares what the build produced
+    /// against the commit). Both steps inside one workflow but in the other order pass a
+    /// presence-only guard while protecting nothing — the touch after the build is a no-op and the
+    /// diff before it always compares the committed bundle with itself.
+    /// </summary>
+    [Fact]
+    public void TheBundleFreshnessCheck_RunsAfterTheBuild_AndTheTouchBeforeIt()
+    {
+        const string touchMarker = "touch src/Tempo.Blazor/wwwroot/css/tempo-blazor.css";
+        const string diffMarker = "git diff --exit-code -- src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css";
+
+        foreach (string relative in WorkflowRelativePaths)
+        {
+            var buildAndTest = JobSegments(ReadWorkflowCode(relative))
+                .Single(job => job.Name == "build-and-test");
+
+            BundleOrderViolation(buildAndTest.Body).Should().BeNull(
+                "{0}: the committed job must satisfy touch < build < diff", relative);
+
+            // MUTATION: the regression this ordering guard exists for is the two steps swapped.
+            // Rebuilding the job with the two markers exchanged must violate the ordering the
+            // helper checks, or the guard could never fire on the failure it is named for.
+            string swapped = buildAndTest.Body
+                .Replace(touchMarker, "\u0001freshness-touch\u0001", StringComparison.Ordinal)
+                .Replace(diffMarker, touchMarker, StringComparison.Ordinal)
+                .Replace("\u0001freshness-touch\u0001", diffMarker, StringComparison.Ordinal);
+
+            BundleOrderViolation(swapped).Should().NotBeNull(
+                "{0}: with the steps swapped, the touch reads as AFTER the build and the "
+                + "freshness diff BEFORE it — the disorder the ordering helper must name",
+                relative);
+        }
+    }
+
+    /// <summary>
     /// Mutation over the guard above: it is green on the healthy files, so feed it the shapes a
     /// careless revert produces and require each to be named. Without this the guard could be
     /// asserting over markers that are never absent, which is the same green either way.
@@ -283,6 +320,40 @@ public sealed class ReleaseGateFilterTests
                     + "as one — otherwise the guard becomes unsatisfiable for anyone documenting why "
                     + "the loop went away");
         }
+    }
+
+    /// <summary>
+    /// The workflow reader must see the SAME jobs whether the checkout handed it LF or CRLF.
+    /// <para>
+    /// The repository stores the workflows LF and the CI runner checks them out LF, but a Windows
+    /// working copy made under <c>core.autocrlf=true</c> is CRLF — and the line-anchored readers
+    /// (<see cref="JobSegments"/>'s <c>^  name:$</c>, the env-block readers, every mutation spelled
+    /// with a <c>"\n"</c> terminator) see no jobs at all in such a copy. A red from that says
+    /// nothing about the workflow: it is the reader that is broken, so the normalisation belongs at
+    /// <see cref="ReadRepoFile"/>, once, where every reader of this suite shares it.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TheWorkflowReader_SegmentsACrlfCopyLikeTheLfOriginal()
+    {
+        string lf = ReadWorkflowCode(WorkflowRelativePaths[1]);
+        string crlf = lf.Replace("\n", "\r\n", StringComparison.Ordinal);
+
+        JobSegments(StripYamlComments(NormalizeLineEndings(crlf))).Select(segment => segment.Name)
+            .Should().Equal(
+                JobSegments(lf).Select(segment => segment.Name),
+                "a CRLF working copy must segment into exactly the jobs the LF original has — "
+                + "line endings are a property of the checkout, not of the workflow");
+
+        JobSegments(lf).Select(segment => segment.Name).Should().Contain(
+            ["build-and-test", "publish"],
+            "the denominator: the reader must actually see the two jobs of a real publish workflow, "
+            + "or the equality above compares two empty lists");
+
+        ReadRepoFile(WorkflowRelativePaths[1]).Should().NotContain(
+            "\r",
+            "the reader normalises line endings, so what it hands back never carries a CR — "
+            + "on a CRLF checkout this is the assertion that fails before the fix");
     }
 
     /// <summary>
@@ -913,6 +984,13 @@ public sealed class ReleaseGateFilterTests
     /// The literals a publish workflow must contain, one per gap they close. Literals rather than a
     /// parsed step model because that is what a hasty revert deletes, and because this file has no
     /// YAML parser — the same trade the smtp4dev assertions above already make.
+    /// <para>
+    /// The bundled-CSS pair guards the freshness hole: the build regenerates
+    /// <c>tempo-blazor.bundled.css</c> and CI diffs it against the commit, but
+    /// <c>BundleCssFiles</c> is incremental — without the touch a fresh checkout's uniform mtimes
+    /// let MSBuild skip the bundler, and the freshness diff then compares the bundle with itself.
+    /// A stale committed bundle would ship last cycle's CSS.
+    /// </para>
     /// </summary>
     internal static readonly string[] RequiredReleaseMarkers =
     [
@@ -921,6 +999,8 @@ public sealed class ReleaseGateFilterTests
         "bash eng/verify-push-classifier.sh",
         "Test (non-English ambient culture)",
         "LC_ALL: cs_CZ.UTF-8",
+        "touch src/Tempo.Blazor/wwwroot/css/tempo-blazor.css",
+        "git diff --exit-code -- src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css",
     ];
 
     /// <summary>How the reverted inline push loop is SPELLED in the report below.</summary>
@@ -1128,6 +1208,54 @@ public sealed class ReleaseGateFilterTests
         }
 
         return segments;
+    }
+
+    /// <summary>
+    /// The ordering half of the bundled-CSS freshness shape as a pure predicate over one job body:
+    /// null when the touch step sits BEFORE the build and the freshness diff AFTER it (all three
+    /// markers present), otherwise the first violated relation spelled out. Both the live guard
+    /// and the swapped-steps mutation in
+    /// <see cref="TheBundleFreshnessCheck_RunsAfterTheBuild_AndTheTouchBeforeIt"/> go through this
+    /// one function, so the real files and the mutation are judged by exactly the same rule.
+    /// </summary>
+    internal static string? BundleOrderViolation(string jobBody)
+    {
+        const string touchMarker = "touch src/Tempo.Blazor/wwwroot/css/tempo-blazor.css";
+        const string diffMarker = "git diff --exit-code -- src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css";
+        const string buildMarker = "run: dotnet build";
+
+        int touch = jobBody.IndexOf(touchMarker, StringComparison.Ordinal);
+        int build = jobBody.IndexOf(buildMarker, StringComparison.Ordinal);
+        int diff = jobBody.IndexOf(diffMarker, StringComparison.Ordinal);
+
+        if (touch < 0)
+        {
+            return "the touch step must exist";
+        }
+
+        if (build < 0)
+        {
+            return "the build step must exist";
+        }
+
+        if (diff < 0)
+        {
+            return "the freshness diff must exist";
+        }
+
+        if (touch > build)
+        {
+            return "the touch must come BEFORE the build — after it, the incremental bundler "
+                + "target has already run and the touch regenerates nothing";
+        }
+
+        if (diff < build)
+        {
+            return "the freshness diff must come AFTER the build — before it, the diff compares "
+                + "the committed bundle against itself and can never fail";
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -1585,8 +1713,18 @@ public sealed class ReleaseGateFilterTests
         string root = FindRepoRoot();
         string path = Path.Combine(root, relativePath);
         File.Exists(path).Should().BeTrue($"release-gate workflow must exist at {relativePath}");
-        return File.ReadAllText(path);
+        return NormalizeLineEndings(File.ReadAllText(path));
     }
+
+    /// <summary>
+    /// The workflows, scripts and every needle in this suite are LF (the repository stores them LF
+    /// and the runner checks them out LF). A Windows working copy checked out under
+    /// <c>core.autocrlf=true</c> is CRLF, and the line-anchored readers (<see cref="JobSegments"/>,
+    /// the env-block readers, the <c>"\n"</c>-terminated mutations) then see no jobs at all — a red
+    /// that says nothing about the workflow. Normalise once, at the reader.
+    /// </summary>
+    internal static string NormalizeLineEndings(string text) =>
+        text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
 
     private static string FindRepoRoot()
     {

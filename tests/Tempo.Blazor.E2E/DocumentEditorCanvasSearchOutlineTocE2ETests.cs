@@ -185,14 +185,7 @@ public sealed class DocumentEditorCanvasSearchOutlineTocE2ETests : WasmTestBase
 
     private static async Task ResetPhase18ApiDocumentAsync()
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var client = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://localhost:5100")
-        };
+        using var client = DemoApiTestHttp.CreateClient();
 
         using var response = await client.PostAsync("/api/document-editor/reset", content: null);
         response.EnsureSuccessStatusCode();

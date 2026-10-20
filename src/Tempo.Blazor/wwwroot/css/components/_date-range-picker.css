@@ -17,7 +17,7 @@
   transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
 .tm-date-range-trigger:hover:not(:disabled) { border-color: var(--tm-color-primary); }
-.tm-date-range-trigger:focus { outline: none; border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+.tm-date-range-trigger:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 
 /* The popup is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
    overlay.js writes top/left (Bottom + Start + 4px replaces the old top:calc(100%+space-1);left:0).

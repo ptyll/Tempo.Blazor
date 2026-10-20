@@ -2,7 +2,7 @@
   "itemName": "TmSelect",
   "kind": "Component",
   "category": "Inputs",
-  "description": "Generic dropdown select component supporting typed options (string, Guid, enum, and the following numeric types — int, short, ushort, long, ulong, uint, byte, sbyte, decimal, double, float, including their nullable forms; other TValue such as bool, DateOnly, TimeOnly, DateTime, char, nint/nuint are not supported and silently fall back to default), label, placeholder, error/help text, disabled state, and manual option rendering via ChildContent. Uses native HTML <select> element with automatic value conversion. When TValue options come from the Options parameter, the round-trip is culture-invariant: both the rendered <option>/<select> value attribute and the change-event parser always use CultureInfo.InvariantCulture (e.g. decimal/double values render and parse as \"1.5\", never a culture-specific \"1,5\"), so the ambient thread culture cannot break selection. This invariance does NOT extend to ChildContent — see the ChildContent parameter for what a hand-written <option value> must contain. The bound Value is preselected regardless of whether options come from the Options parameter or from ChildContent (raw <option> children) — the component sets the <select> value attribute so the browser reflects the current selection on load.",
+  "description": "Generic dropdown select component supporting typed options (string, Guid, enum, and the following numeric types — int, short, ushort, long, ulong, uint, byte, sbyte, decimal, double, float, including their nullable forms; other TValue such as bool, DateOnly, TimeOnly, DateTime, char, nint/nuint are not supported and silently fall back to default), label, placeholder, error/help text, disabled state, and manual option rendering via ChildContent. Uses native HTML <select> element with automatic value conversion. Nullable TValue (decimal?, int?, Guid?, enum?, string) fully supports a null-valued SelectOption: it renders as a real <option value=\"\"> that is marked selected when the bound Value is null, the <select> pins the preselection with value=\"\", and selecting it fires ValueChanged(null) — so \"no selection\" is a visible, pickable choice instead of a fall back to the first option. The value=\"\" pin appears for nullable value types (decimal?, int?, Guid?, enum?) and for string when Options contains a null-valued option; a null-valued and an \"\"-valued string option share the single empty wire value and must not be mixed in the same list. For a non-nullable TValue the placeholder (and a selectable placeholder) maps to default(TValue) — 0, Guid.Empty, … — and can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound Value may be null must include a null option or a Placeholder, otherwise the browser shows the first option. When TValue options come from the Options parameter, the round-trip is culture-invariant: both the rendered <option>/<select> value attribute and the change-event parser always use CultureInfo.InvariantCulture (e.g. decimal/double values render and parse as \"1.5\", never a culture-specific \"1,5\"), so the ambient thread culture cannot break selection. This invariance does NOT extend to ChildContent — see the ChildContent parameter for what a hand-written <option value> must contain. The bound Value is preselected regardless of whether options come from the Options parameter or from ChildContent (raw <option> children) — the component sets the <select> value attribute so the browser reflects the current selection on load.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs",
     "@using Tempo.Blazor.Models"
@@ -33,10 +33,24 @@
       "description": "Placeholder option shown when no value is selected."
     },
     {
+      "name": "PlaceholderSelectable",
+      "type": "bool",
+      "isRequired": false,
+      "default": "False",
+      "description": "When true and Placeholder is set, the placeholder is rendered as a selectable (not disabled) <option value=\"\"> mapped to default(TValue) — typically null for nullable types — so the user can explicitly clear the selection back to empty. When false (default), the placeholder is a disabled, purely decorative option. Accessibility: a selectable placeholder is a real empty choice, not a name for the control — it is NOT used as the <select> aria-label, so set Label whenever this is true to keep an accessible name. Validation: with Required set, picking the selectable placeholder submits the empty value, so native validation reports the field as missing."
+    },
+    {
       "name": "Error",
       "type": "string?",
       "isRequired": false,
       "description": "Validation error message."
+    },
+    {
+      "name": "AnnounceError",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
     },
     {
       "name": "HelpText",
@@ -67,7 +81,7 @@
       "name": "Required",
       "type": "bool",
       "isRequired": false,
-      "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element."
+      "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
     },
     {
       "name": "Options",
@@ -115,12 +129,24 @@
       "code": "<TmSelect TValue=\"Guid\"\n          @bind-Value=\"_selectedTenantId\"\n          Label=\"Tenant\"\n          Placeholder=\"Select tenant\"\n          Options=\"@_tenantOptions\" />\n\n@code {\n    private Guid _selectedTenantId;\n    private List<SelectOption<Guid>> _tenantOptions = [];\n\n    protected override void OnInitialized()\n    {\n        _tenantOptions =\n        [\n            new(Guid.Parse(\"a1b2c3d4-0000-0000-0000-000000000001\"), \"Tenant Alpha\"),\n            new(Guid.Parse(\"a1b2c3d4-0000-0000-0000-000000000002\"), \"Tenant Beta\")\n        ];\n    }\n}"
     },
     {
+      "title": "Nullable select with an empty (null) option",
+      "code": "@* A null-valued SelectOption is a real, pickable <option value=\"\">: with the bound\n   value at null it renders marked selected, the <select> carries value=\"\" so the\n   preselection lands on it (never on the first option by accident), and picking it fires\n   ValueChanged(null). Works the same for int?, Guid?, enum? and string. *@\n\n<TmSelect TValue=\"decimal?\"\n          @bind-Value=\"_parentCategoryId\"\n          Label=\"Parent category\"\n          Options=\"@_categoryTreeOptions\" />\n\n<p>Parent: @(_parentCategoryId?.ToString() ?? \"null (root)\")</p>\n\n@code {\n    private decimal? _parentCategoryId; // null on purpose — the root option is selected on load\n\n    private List<SelectOption<decimal?>> _categoryTreeOptions =\n    [\n        new(null, \"Root (no parent)\"),\n        new(1m, \"Electronics\"),\n        new(2m, \"Books\")\n    ];\n}"
+    },
+    {
+      "title": "Selectable placeholder (clear the selection back to null)",
+      "code": "@* PlaceholderSelectable turns the placeholder into a real option: the user can pick it to\n   clear the selection back to default(TValue) (null for nullable types). Default is false,\n   which keeps the placeholder disabled and purely decorative. *@\n\n<TmSelect TValue=\"int?\"\n          @bind-Value=\"_priority\"\n          Label=\"Priority\"\n          Placeholder=\"No priority\"\n          PlaceholderSelectable=\"true\"\n          Options=\"@_priorityOptions\" />\n\n@code {\n    private int? _priority = 2;\n\n    private List<SelectOption<int?>> _priorityOptions =\n    [\n        new(1, \"Low\"),\n        new(2, \"Medium\"),\n        new(3, \"High\")\n    ];\n}"
+    },
+    {
       "title": "Select with disabled options",
       "code": "<TmSelect TValue=\"string\"\n          @bind-Value=\"_selected\"\n          Label=\"Subscription Plan\"\n          Options=\"@_planOptions\" />\n\n@code {\n    private string? _selected;\n\n    private List<SelectOption<string>> _planOptions =\n    [\n        new(\"free\", \"Free\"),\n        new(\"pro\", \"Pro\"),\n        new(\"enterprise\", \"Enterprise\", isDisabled: true)  // User cannot select this\n    ];\n}"
     },
     {
       "title": "Select with validation error and help text",
       "code": "@* Error takes priority over HelpText — when Error is set, HelpText is hidden. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_selectedDepartment\"\n          Label=\"Department\"\n          Placeholder=\"Select department\"\n          Error=\"@_error\"\n          HelpText=\"Choose your primary department\"\n          Options=\"@_departments\" />\n\n<button @onclick=\"Validate\">Submit</button>\n\n@code {\n    private string? _selectedDepartment;\n    private string? _error;\n\n    private List<SelectOption<string>> _departments =\n    [\n        new(\"IT\", \"IT\"),\n        new(\"HR\", \"Human Resources\"),\n        new(\"FIN\", \"Finance\")\n    ];\n\n    private void Validate()\n    {\n        _error = string.IsNullOrEmpty(_selectedDepartment)\n            ? \"Please select a department\"\n            : null;\n    }\n}"
+    },
+    {
+      "title": "Error without the assertive announcement (host moves focus to the field)",
+      "code": "@* AnnounceError=\"false\" drops role=\"alert\" from the error message: when the submit handler\n   moves focus to the invalid select, the error is already read through aria-describedby and\n   the live region would announce the same text a second time. The message itself, its\n   styling and the aria-describedby link are unchanged. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_currency\"\n          Label=\"Currency\"\n          Error=\"@_currencyError\"\n          AnnounceError=\"false\"\n          Options=\"@_currencies\" />"
     },
     {
       "title": "Manual option rendering via ChildContent (with preselection)",

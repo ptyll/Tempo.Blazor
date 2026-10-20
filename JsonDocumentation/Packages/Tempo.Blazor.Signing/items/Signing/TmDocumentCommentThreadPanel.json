@@ -102,6 +102,12 @@
       "type": "EventCallback<string?>",
       "isRequired": false,
       "description": "Selected thread id."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmCommentDraftState>",
+      "isRequired": false,
+      "description": "Notifies the parent that the panel's comment draft state changed. The reply and edit composers hold their text in private fields the host cannot observe through a parameter. Fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. IsEditorOpen is true while the reply composer is mounted (a thread is selected) or an edit is open; EditingCommentId carries the id of the comment under edit; HasUnsavedContent aggregates both - the reply text counts only while the reply composer is mounted, and for an edit it means the text differs from the comment body as it was when the edit started. The reply draft is cleared whenever the reply composer unmounts (selection change, clear selection, starting an edit). Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
     }
   ]
 }

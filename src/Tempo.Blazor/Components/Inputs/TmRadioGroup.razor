@@ -1,30 +1,61 @@
 @namespace Tempo.Blazor.Components.Inputs
 @typeparam T
 
-<div class="tm-radio-group @LayoutCssClass @Class" role="radiogroup"
-     aria-required="@(Required ? "true" : null)" @attributes="AdditionalAttributes">
+<div class="tm-radio-group @LayoutCssClass @AppearanceCssClass @Class" role="radiogroup"
+     aria-required="@(Required ? "true" : null)"
+     aria-invalid="@(IsInvalid ? "true" : null)"
+     aria-labelledby="@(!string.IsNullOrEmpty(Label) ? LabelId : null)"
+     aria-describedby="@DescribedBy"
+     @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-radio-group-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+        <label id="@LabelId" class="tm-radio-group-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
     @if (!string.IsNullOrEmpty(HelpText))
     {
         <span class="tm-radio-group-help">@HelpText</span>
     }
     <div class="tm-radio-group-options">
-        @foreach (var option in Options)
+        @if (Appearance == RadioAppearance.Segmented)
         {
-            <TmRadio Value="@((object?)option.Value)"
-                     Name="@Name"
-                     Label="@option.Label"
-                     IsChecked="@IsSelected(option.Value)"
-                     Disabled="@(Disabled || option.IsDisabled)"
-                     OnSelect="@(() => SelectOptionAsync(option.Value))" />
+            @* Native radios: the browser owns arrows, the single tab stop and the single activation.
+               Home/End are not native, so the input handles only those. *@
+            EnsureSegmentRefs(Options.Count);
+            var segmentIndex = 0;
+            @foreach (var option in Options)
+            {
+                var index = segmentIndex++;
+                var selected = IsSelected(option.Value);
+                var disabled = Disabled || option.IsDisabled;
+                <label class="tm-radio-segment @(selected ? "tm-radio-segment--checked" : "") @(disabled ? "tm-radio-segment--disabled" : "")">
+                    <input type="radio"
+                           @ref="_segmentRefs[index]"
+                           class="tm-sr-only"
+                           name="@Name"
+                           checked="@selected"
+                           disabled="@disabled"
+                           @onchange="() => SelectOptionAsync(option.Value)"
+                           @onkeydown="OnSegmentedKeyDown" />
+                    <span>@option.Label</span>
+                </label>
+            }
+        }
+        else
+        {
+            @foreach (var option in Options)
+            {
+                <TmRadio Value="@((object?)option.Value)"
+                         Name="@Name"
+                         Label="@option.Label"
+                         IsChecked="@IsSelected(option.Value)"
+                         Disabled="@(Disabled || option.IsDisabled)"
+                         OnSelect="@(() => SelectOptionAsync(option.Value))" />
+            }
         }
     </div>
     @if (!string.IsNullOrEmpty(Error))
     {
-        <span class="tm-radio-group-error">@Error</span>
+        <span id="@ErrorId" class="tm-radio-group-error" role="@(AnnounceError ? "alert" : null)">@Error</span>
     }
 </div>
 
@@ -40,6 +71,19 @@
 
     /// <summary>Validation error message.</summary>
     [Parameter] public string? Error { get; set; }
+
+    /// <summary>
+    /// When <c>true</c> (default), the rendered <see cref="Error"/> message carries
+    /// <c>role="alert"</c> so screen readers announce it assertively the moment it appears.
+    /// Set <c>false</c> when the host moves focus to the group itself (typically a modal submit
+    /// that focuses the first invalid control): the error is then read through
+    /// <c>aria-describedby</c> on the radiogroup container, and the live region would announce
+    /// the same text a second time. With <c>false</c> the message still renders, keeps its error
+    /// styling and stays referenced by <c>aria-describedby</c>; only the <c>role</c> attribute is
+    /// dropped. The same "only safe when the same render moves focus to the group" caveat as the
+    /// inputs applies.
+    /// </summary>
+    [Parameter] public bool AnnounceError { get; set; } = true;
 
     /// <summary>Currently selected value.</summary>
     [Parameter] public T? Value { get; set; }
@@ -59,12 +103,45 @@
     /// <summary>Layout direction. Defaults to Vertical.</summary>
     [Parameter] public RadioLayout Layout { get; set; } = RadioLayout.Vertical;
 
+    /// <summary>
+    /// How the options present. Defaults to <see cref="RadioAppearance.Radio"/>, the historical
+    /// radio buttons. <see cref="RadioAppearance.Segmented"/> renders a single-choice segmented
+    /// control for picking a value; switching content belongs to <c>TmTabs Variant=Pill</c>.
+    /// </summary>
+    [Parameter] public RadioAppearance Appearance { get; set; } = RadioAppearance.Radio;
+
+    // Stable for the instance so aria-labelledby keeps pointing at the label across renders.
+    private readonly string LabelId = $"tm-radio-label-{Guid.NewGuid():N}";
+
+    /// <summary>
+    /// Stable DOM id of the rendered error message, referenced by the radiogroup container's
+    /// <c>aria-describedby</c> (the same convention as the inputs' <c>{Id}-error</c>).
+    /// </summary>
+    public string ErrorId { get; } = $"tm-radio-error-{Guid.NewGuid():N}";
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// <see cref="Error"/> the group describes the field-level message, so a single
+    /// <c>TmFormField</c> error is reachable from the wrapped group too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private bool IsInvalid => !string.IsNullOrEmpty(Error);
+
+    private string? DescribedBy => !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId;
+
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Additional HTML attributes passed to the root div.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string AppearanceCssClass => Appearance == RadioAppearance.Segmented
+        ? "tm-radio-group--segmented"
+        : string.Empty;
 
     private string LayoutCssClass => Layout == RadioLayout.Horizontal
         ? "tm-radio-group-horizontal"
@@ -79,6 +156,45 @@
         {
             Value = optionValue;
             await ValueChanged.InvokeAsync(optionValue);
+        }
+    }
+
+    // One slot per option, filled by @ref during render. Grown, never shrunk, so a render that sees
+    // fewer options does not index past the end.
+    private readonly List<ElementReference> _segmentRefs = new();
+
+    private void EnsureSegmentRefs(int count)
+    {
+        while (_segmentRefs.Count < count)
+        {
+            _segmentRefs.Add(default);
+        }
+    }
+
+    /// <summary>
+    /// Home/End are the only keys this handles. Arrow keys, Space and Enter belong to the native
+    /// radio, and a static <c>preventDefault</c> would also swallow Tab, so the page scroll that
+    /// Home/End produce is accepted — the same trade-off <c>TmTabs</c> documents.
+    /// </summary>
+    private async Task OnSegmentedKeyDown(KeyboardEventArgs e)
+    {
+        if (Disabled || e.Key is not ("Home" or "End")) return;
+
+        var enabled = Options
+            .Select((option, index) => (option, index))
+            .Where(pair => !pair.option.IsDisabled)
+            .ToList();
+        if (enabled.Count == 0) return;
+
+        var target = e.Key == "Home" ? enabled[0] : enabled[^1];
+        if (!IsSelected(target.option.Value))
+        {
+            await SelectOptionAsync(target.option.Value);
+        }
+
+        if (target.index < _segmentRefs.Count)
+        {
+            await _segmentRefs[target.index].FocusAsync();
         }
     }
 }

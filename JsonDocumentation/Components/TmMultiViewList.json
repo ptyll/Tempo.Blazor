@@ -168,6 +168,12 @@
       "description": "Estimated card height for card view virtualization."
     },
     {
+      "name": "MaxCardColumns",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum number of card columns. Null (default) keeps auto-fill with the minimum card width. Values below 1 are ignored. A value of 1 or more adds tm-mvl-card-grid--capped and sets --tm-mvl-card-columns-max."
+    },
+    {
       "name": "VirtualListItemHeight",
       "type": "float",
       "isRequired": false,
@@ -201,6 +207,13 @@
       "description": "When true, shows the view-mode switcher buttons above the list."
     },
     {
+      "name": "ShowItemCount",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, shows the item count in the toolbar. Default: false."
+    },
+    {
       "name": "ShowSearch",
       "type": "bool",
       "isRequired": false,
@@ -230,6 +243,34 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "Responsive",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, allows horizontal scrolling for the table view. Defaults to false."
+    },
+    {
+      "name": "Appearance",
+      "type": "DataTableAppearance",
+      "isRequired": false,
+      "default": "Card",
+      "description": "Card keeps today's frame. Plain adds tm-multi-view-list--plain and removes frame and padding."
+    },
+    {
+      "name": "ViewSwitcherLabels",
+      "type": "ViewSwitcherLabels",
+      "isRequired": false,
+      "default": "IconsOnly",
+      "description": "IconsOnly (default) keeps today's icon buttons. IconsAndText adds the localized Table, Card and List names."
+    },
+    {
+      "name": "AvatarFallback",
+      "type": "AvatarFallback",
+      "isRequired": false,
+      "default": "None",
+      "description": "Fallback for a missing avatar URL in the card view. None (default) renders no avatar; Initials derives initials from the item title."
     },
     {
       "name": "AllowSelection",
@@ -288,6 +329,13 @@
       "description": "When true and a ViewProvider is set, shows the inline FilterBuilder for external filtering. Default: true. Set to false when the surrounding page owns the filtering UI to avoid duplicate filters."
     },
     {
+      "name": "ShowFilterResultPreview",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the inline filter builder shows how many records match the current filters. A DataProvider is asked with PageSize 1 and the preview reads TotalCount; without one the in-memory items are counted with the list's own filter rules. Default: false."
+    },
+    {
       "name": "ExternalFilterDefinitions",
       "type": "List<FilterDefinition>",
       "isRequired": false,
@@ -323,6 +371,38 @@
       "isRequired": true,
       "editorRequired": true,
       "description": "Unique identifier for this list instance. Used to scope saved views to specific lists (e.g. \"projects\", \"team-members\")."
+    },
+    {
+      "name": "CardActivation",
+      "type": "CardActivation",
+      "isRequired": false,
+      "default": "Button",
+      "description": "Card activation. Button (default) keeps the card as the tab stop. StretchedLink removes the card tab stop and puts the title in a covering link: an anchor when ItemHref returns a URL, otherwise a button that raises OnItemClick."
+    },
+    {
+      "name": "ItemHref",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Href of a card when CardActivation is StretchedLink. A non-empty result renders an anchor; null or empty renders a button that raises OnItemClick. Ignored for Button."
+    },
+    {
+      "name": "GroupHeaderTemplate",
+      "type": "RenderFragment<DataGroup<TItem>>?",
+      "isRequired": false,
+      "description": "Replaces the default group header (label and count) in every view. The context is the DataGroup. Omit it to keep the built-in header."
+    },
+    {
+      "name": "StatusVariantField",
+      "type": "Func<TItem, BadgeVariant>?",
+      "isRequired": false,
+      "description": "Maps an item to the status badge variant (success, warning, and the other BadgeVariant values). Omit it and every status badge uses the default variant."
+    },
+    {
+      "name": "TableCellLayout",
+      "type": "TableCellLayout",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "Table-view cell layout. Inline (default) keeps title and subtitle in their own columns. Stacked drops the subtitle column and renders its value under the title in the same cell."
     }
   ],
   "cssClasses": [

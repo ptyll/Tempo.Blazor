@@ -1,0 +1,21 @@
+{
+  "itemName": "ToolbarLabels",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Toolbar",
+  "description": "Whether the toolbar's buttons show their text next to the icon.",
+  "values": [
+    {
+      "name": "Auto",
+      "description": "The default: labels show, except on a narrow toolbar (below the mobile breakpoint, measured on the toolbar itself) where icon buttons fall back to icon only."
+    },
+    {
+      "name": "Icons",
+      "description": "Icon buttons never show their text; the text is still the accessible name."
+    },
+    {
+      "name": "IconsWithText",
+      "description": "Labels always show."
+    }
+  ]
+}

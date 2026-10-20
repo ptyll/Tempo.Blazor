@@ -37,3 +37,34 @@
 .tm-copy-button--copied:hover {
     color: var(--tm-color-success-text);
 }
+
+/* ── Visible label (opt-in, ShowLabel) ─────────────────── */
+.tm-copy-button--labelled {
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3);
+}
+
+/* Both states share one cell, so the wider label reserves the width and the swap cannot jump. */
+.tm-copy-button-labels {
+    display: grid;
+}
+
+.tm-copy-button-labels > .tm-copy-button-label {
+    grid-area: 1 / 1;
+}
+
+/* The inactive state stays in flow (not sr-only) so it keeps reserving its width. */
+.tm-copy-button-label--hidden {
+    visibility: hidden;
+}
+
+.tm-copy-button-label {
+    font-size: var(--tm-font-size-sm);
+    line-height: 1;
+}
+
+@media (pointer: coarse) {
+    .tm-copy-button--labelled {
+        min-height: var(--tm-touch-target);
+    }
+}

@@ -45,11 +45,24 @@
     border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
 }
 
+.tm-keyboard-shortcuts-heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1, 0.25rem);
+    min-width: 0;
+}
+
 .tm-keyboard-shortcuts-title {
     margin: 0;
     font-size: var(--tm-font-size-lg, 1.125rem);
     font-weight: var(--tm-font-weight-semibold, 600);
     color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-keyboard-shortcuts-subtitle {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
 }
 
 .tm-keyboard-shortcuts-close {
@@ -107,6 +120,12 @@
     gap: var(--tm-space-1, 0.25rem);
 }
 
+/* The readable joiner between alternative keys (KeySeparator other than '+'). */
+.tm-keyboard-shortcuts-or {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
 .tm-keyboard-shortcuts-key kbd {
     display: inline-flex;
     align-items: center;
@@ -114,6 +133,7 @@
     min-width: 1.75rem;
     height: 1.5rem;
     padding: 0 var(--tm-space-2, 0.5rem);
+    white-space: nowrap;
     font-size: var(--tm-font-size-xs, 0.75rem);
     font-family: inherit;
     font-weight: var(--tm-font-weight-medium, 500);

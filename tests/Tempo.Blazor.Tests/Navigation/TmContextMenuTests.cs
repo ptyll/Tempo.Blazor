@@ -279,6 +279,30 @@ public class TmContextMenuTests : LocalizationTestBase
         cut.WaitForAssertion(() => openPanelsDuringHandler.Should().Be(0));
     }
 
+    [Fact]
+    public async Task FocusTriggerAsync_FocusesTheTrigger_AndIsSafeAfterDispose()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Menu</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Action")));
+
+        await cut.InvokeAsync(() => cut.Instance.FocusTriggerAsync().AsTask());
+
+        var focused = JSInterop.Invocations
+            .Where(i => i.Identifier == "Blazor._internal.domWrapper.focus")
+            .Last().Arguments.OfType<ElementReference>().First();
+        var triggerRef = (ElementReference)typeof(TmContextMenu)
+            .GetField("_triggerRef", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(cut.Instance)!;
+        focused.Id.Should().Be(triggerRef.Id, "FocusTriggerAsync moves focus to the menu trigger");
+
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        await cut.InvokeAsync(() => cut.Instance.FocusTriggerAsync().AsTask());
+        JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus")
+            .Should().Be(1, "after dispose the call is a no-op, not an exception");
+    }
+
     // ── Helper ─────────────────────────────────────────────
 
     private IRenderedComponent<TmContextMenu> RenderOpenMenu()

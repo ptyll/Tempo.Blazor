@@ -20,6 +20,25 @@
     touch-action: none;
 }
 
+/* The three sliders are tab stops (role="slider"): the focus indicator is the shared ring; the
+   default outline is silenced so the two never paint over each other. */
+.tm-color-gradient-area:focus-visible,
+.tm-color-gradient-hue-track:focus-visible,
+.tm-color-gradient-alpha-track:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-color-gradient-area:focus-visible,
+    .tm-color-gradient-hue-track:focus-visible,
+    .tm-color-gradient-alpha-track:focus-visible {
+        box-shadow: none;
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+    }
+}
+
 .tm-color-gradient-saturation {
     position: absolute;
     inset: 0;
@@ -41,6 +60,21 @@
     box-shadow: 0 0 2px rgba(0,0,0,0.5);
     transform: translate(-50%, -50%);
     pointer-events: none;
+}
+
+/* A finger needs more than a 10px dot to see where it grabbed: the thumbs grow on a coarse
+   pointer without moving the layout. */
+@media (pointer: coarse) {
+    .tm-color-gradient-thumb {
+        width: var(--tm-space-4);
+        height: var(--tm-space-4);
+    }
+
+    .tm-color-gradient-hue-thumb,
+    .tm-color-gradient-alpha-thumb {
+        width: var(--tm-space-4);
+        height: var(--tm-space-4);
+    }
 }
 
 .tm-color-gradient-hue-track,

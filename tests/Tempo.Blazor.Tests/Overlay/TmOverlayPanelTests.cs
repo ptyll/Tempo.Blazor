@@ -79,6 +79,24 @@ public class TmOverlayPanelTests : LocalizationTestBase
         return module;
     }
 
+    [Fact]
+    public async Task Dismissal_DoesNotRestoreFocusById_OverlayJsOwnsTheAnchor()
+    {
+        // RestoreFocusTargetId is gone. Escape and outside-pointer dismissal return focus to the
+        // anchor inside overlay.js (preventScroll), so the component must not import a second path.
+        var module = SetupOverlayModule();
+
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .AddChildContent("<div>Body</div>"));
+
+        await cut.InvokeAsync(() => cut.Instance.NotifyDismissedAsync("escape"));
+        await cut.InvokeAsync(() => cut.Instance.NotifyDismissedAsync("outside"));
+
+        module.Invocations.Should().NotContain(i => i.Identifier == "focusById");
+        JSInterop.Invocations.Should().NotContain(i => i.Identifier == "eval");
+    }
+
     /// <summary>
     /// N198 (review 2026-09-22): a JSInterop handler for the <c>import</c> call whose result
     /// completes only when the test releases it — the window in which a first

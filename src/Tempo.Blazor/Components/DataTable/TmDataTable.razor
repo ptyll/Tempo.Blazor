@@ -5,6 +5,9 @@
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Services
@@ -14,7 +17,7 @@
     <span style="display:none" aria-hidden="true">@ChildContent</span>
 </CascadingValue>
 
-<div class="@WrapperCssClass @Class" @attributes="AdditionalAttributes">
+<div class="@RootCssClass" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -34,7 +37,7 @@
             <div class="tm-data-table-toolbar-right">
                 @if (ShouldRenderColumnPicker())
                 {
-                    <TmColumnPicker Columns="@GetColumnVisibilityItems()"
+                    <TmColumnPicker @ref="_columnPicker" Columns="@GetColumnVisibilityItems()"
                                     OnToggleColumn="OnToggleColumnAsync"
                                     OnReset="OnResetColumnsAsync" />
                 }
@@ -42,10 +45,14 @@
                 {
                     <TmViewManager Provider="ViewProvider"
                                    ViewContext="@ViewContext"
+                                   ShowActiveViewName="@ShowActiveViewName"
+                                   AllowSetDefault="@AllowSetDefault"
+                                   OnSetDefault="@OnSetDefault"
                                    OnViewApplied="ApplyViewAsync"
                                    GetCurrentView="GetCurrentView"
                                    GetCurrentFilters="() => _externalFilters"
                                    AvailableColumns="GetAvailableColumns()"
+                                    AvailableGroupableColumns="GetAvailableGroupableColumns()"
                                    FilterDefinitions="ViewFilterDefinitions"
                                    DisplayResolver="DisplayResolver"
                                    CanCreateTenantViews="ViewCanCreateTenantViews"
@@ -57,23 +64,71 @@
                     <div class="tm-data-table__export">
                         <TmDropdown Text="@(_isExporting ? Loc["TmDataTable_Exporting"] : Loc["TmDataTable_Export"])"
                                     Icon="@IconNames.Download"
+                                    OutlineTrigger="@IsRedesigned"
                                     Disabled="_isExporting"
                                     Class="tm-data-table__export-control"
                                     Align="OverlayAlign.End"
                                     Offset="4"
+                                     MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                     OnSelect="HandleExportSelectionAsync">
-                            <TmDropdownItem Value="csv"
-                                            Class="tm-data-table__export-item"
-                                            AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "csv" })">
-                                @Loc["TmDataTable_ExportCsv"]
-                            </TmDropdownItem>
-                            @if (XlsxExporter is not null)
+                            @if (ShowsExportScope)
                             {
-                                <TmDropdownItem Value="xlsx"
+                                <div role="group" aria-label="@Loc["TmDataTable_ExportScope"]">
+                                    <TmDropdownItem Value="scope-all"
+                                                    Checked="@(_exportScope == DataTableExportScope.All)"
+                                                    KeepOpen="true"
+                                                    Class="@ExportScopeItemClass(DataTableExportScope.All)"
+                                                    AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-scope"] = "all" })">
+                                        <span class="tm-data-table__export-label">@Loc.Plural("TmDataTable_ExportScopeAllCount", ExportAllCount)</span>
+                                        <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportScopeAllDescription"]</span>
+                                    </TmDropdownItem>
+                                    <TmDropdownItem Value="scope-selected"
+                                                    Checked="@(_exportScope == DataTableExportScope.Selected)"
+                                                    AriaDisabled="@(_selectedItems.Count == 0)"
+                                                    KeepOpen="true"
+                                                    Class="@ExportScopeItemClass(DataTableExportScope.Selected)"
+                                                    AdditionalAttributes="@ExportSelectedAttributes()">
+                                        <span class="tm-data-table__export-label">@ExportSelectedLabel()</span>
+                                        <span id="@(_selectedItems.Count == 0 ? _exportScopeEmptyId : null)" class="tm-data-table__export-description">@(_selectedItems.Count == 0 ? Loc["TmDataTable_ExportScopeSelectedEmpty"] : Loc["TmDataTable_ExportScopeSelectedDescription"])</span>
+                                    </TmDropdownItem>
+                                </div>
+                                <div class="tm-dropdown-sep" role="separator"></div>
+                            }
+                            @if (IsRedesigned)
+                            {
+                                <TmDropdownItem Value="csv"
+                                                Icon="@IconNames.FileText"
                                                 Class="tm-data-table__export-item"
-                                                AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "xlsx" })">
-                                    @Loc["TmDataTable_ExportXlsx"]
+                                                AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "csv" })">
+                                    <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportCsvShort"]</span>
+                                    <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportCsvDescription"]</span>
                                 </TmDropdownItem>
+                                @if (XlsxExporter is not null)
+                                {
+                                    <TmDropdownItem Value="xlsx"
+                                                    Icon="@IconNames.Table"
+                                                    Class="tm-data-table__export-item"
+                                                    AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "xlsx" })">
+                                        <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportXlsxShort"]</span>
+                                        <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportXlsxDescription"]</span>
+                                    </TmDropdownItem>
+                                }
+                            }
+                            else
+                            {
+                                <TmDropdownItem Value="csv"
+                                                Class="tm-data-table__export-item"
+                                                AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "csv" })">
+                                    @Loc["TmDataTable_ExportCsv"]
+                                </TmDropdownItem>
+                                @if (XlsxExporter is not null)
+                                {
+                                    <TmDropdownItem Value="xlsx"
+                                                    Class="tm-data-table__export-item"
+                                                    AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "xlsx" })">
+                                        @Loc["TmDataTable_ExportXlsx"]
+                                    </TmDropdownItem>
+                                }
                             }
                         </TmDropdown>
                     </div>
@@ -90,7 +145,17 @@
                              ActiveFilters="_externalFilters"
                              OnFiltersChanged="OnExternalFiltersChanged"
                              DisplayResolver="DisplayResolver"
+                             ShowResultPreview="ShowFilterResultPreview"
+                             ResultCountProvider="ResultCountProvider"
                              ShowClearAll="true" />
+        </div>
+    }
+
+    @if (ShowFilterSummary && _activeFilters.Count > 0)
+    {
+        <div class="tm-data-table-filter-summary">
+            <span>@Loc["TmDataTable_ActiveFilters", _activeFilters.Count]</span>
+            <button type="button" class="tm-link-button" @onclick="ClearAllFiltersAsync">@Loc["TmDataTable_ClearFilters"]</button>
         </div>
     }
 
@@ -109,12 +174,25 @@
     @* ── Grouping drop zone ────────────────────────────────────── *@
     @if (ShowGrouping)
     {
-        <div class="tm-data-table-group-zone @(_isDragOver ? "tm-data-table-group-zone--dragover" : "")"
+        <div class="tm-data-table-group-zone @(IsRedesigned ? "tm-data-table-group-zone--card" : null) @(_isDragOver ? "tm-data-table-group-zone--dragover" : "")"
              @ondragover="HandleGroupZoneDragOver"
              @ondragover:preventDefault="true"
              @ondrop="HandleGroupZoneDrop"
              @ondragenter="() => _isDragOver = true"
              @ondragleave="() => _isDragOver = false">
+            @if (IsRedesigned)
+            {
+                <span class="tm-data-table-group-label-prefix">@Loc["TmDataTable_GroupBy"]</span>
+            }
+            @if (ShouldRenderAddGrouping())
+            {
+                <TmDropdown Text="@Loc["TmDataTable_AddGrouping"]" Class="tm-data-table-add-grouping" OnSelect="AddGroupColumn">
+                    @foreach (var groupable in _columns.Where(c => c.Groupable && !_groupByColumns.Contains(c.Key)))
+                    {
+                        <TmDropdownItem Value="@groupable.Key">@groupable.Title</TmDropdownItem>
+                    }
+                </TmDropdown>
+            }
             @if (_groupByColumns.Count == 0)
             {
                 <span class="tm-data-table-group-placeholder">@Loc["TmDataTable_GroupDropPlaceholder"]</span>
@@ -134,13 +212,16 @@
                         <span>@(col?.Title ?? colKey)</span>
                         <button type="button"
                                 class="tm-data-table-group-chip-remove"
-                                @onclick="() => HandleRemoveGroupChip(colKey)">×</button>
+                                aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmDataTable_RemoveGrouping"], col?.Title ?? colKey)"
+                                @onclick="() => HandleRemoveGroupChip(colKey)">
+                            <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                        </button>
                     </div>
                 }
                 <div class="tm-data-table-group-actions">
-                    <button type="button" class="tm-data-table-group-expand-all"
+                    <button type="button" class="@(IsRedesigned ? "tm-link-button " : null)tm-data-table-group-expand-all"
                             @onclick="ExpandAllGroups">@Loc["TmDataTable_ExpandAll"]</button>
-                    <button type="button" class="tm-data-table-group-collapse-all"
+                    <button type="button" class="@(IsRedesigned ? "tm-link-button " : null)tm-data-table-group-collapse-all"
                             @onclick="CollapseAllGroups">@Loc["TmDataTable_CollapseAll"]</button>
                 </div>
             }
@@ -149,26 +230,30 @@
 
     @* ── Table ────────────────────────────────────────────────── *@
     <div class="@GetScrollContainerClass()" style="@GetScrollContainerStyle()">
-        <table class="tm-data-table" role="grid">
+        <table class="tm-data-table" role="grid" aria-rowcount="@(IsGrid ? GridAriaRowCount : null)" aria-colcount="@(IsGrid ? GridColumnCount : null)" @ref="_tableRef">
             @if (_visibleColumns.Count > 0 || Selectable)
             {
                 <thead>
-                    <tr>
+                    <tr role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? 1 : null)">
                         @if (HasDetail)
                         {
-                            <th class="tm-col-expander" aria-hidden="true"></th>
+                            <th class="tm-col-expander" aria-hidden="@(GridHeaderIsActive ? null : "true")" role="@(GridHeaderIsActive ? "columnheader" : null)" aria-colindex="@(GridHeaderIsActive ? 1 : null)" tabindex="@(GridHeaderIsActive ? HeaderTabIndex(0) : null)" @onkeydown="@(GridHeaderIsActive ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridHeaderKeyDownAsync(e, 0)) : default)" @onkeydown:stopPropagation="@GridHeaderIsActive"></th>
                         }
                         @if (Selectable)
                         {
-                            <th class="tm-col-check">
+                            var selectCol = HasDetail ? 1 : 0;
+                            <th class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(GridHeaderIsActive ? "columnheader" : null)" aria-colindex="@(GridHeaderIsActive ? selectCol + 1 : null)" tabindex="@(GridHeaderIsActive ? HeaderTabIndex(selectCol) : null)" @onkeydown="@(GridHeaderIsActive ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridHeaderKeyDownAsync(e, selectCol)) : default)" @onkeydown:stopPropagation="@GridHeaderIsActive">
                                 <input type="checkbox"
+                                       @ref="_selectAllRef"
                                        aria-label="@Loc["TmDataTable_SelectAll"]"
                                        checked="@IsAllSelected"
                                        @onchange="ToggleSelectAllAsync" />
                             </th>
                         }
-                        @foreach (var col in _visibleColumns)
+                        @{ var headerCol = GridDefaultColumn; }
+                        @foreach (var col in _renderedCellColumns)
                         {
+                            var thisHeaderCol = headerCol++;
                             @* A sortable header's control is a real <button> inside the <th>, not the <th>
                                itself. On a <button> BOTH Enter and Space are native activation — Space
                                included, because a button's default for Space is "click", where on the plain
@@ -184,13 +269,16 @@
                             <th class="@GetHeaderClass(col)"
                                 style="@GetColumnStyle(col)"
                                 data-sortable="@col.Sortable.ToString().ToLower()"
-                                tabindex="@(IsPinOnlyHeader(col) ? "0" : null)"
+                                role="@(GridHeaderIsActive ? "columnheader" : null)"
+                                aria-colindex="@(GridHeaderIsActive ? thisHeaderCol + 1 : null)"
+                                tabindex="@(GridHeaderIsActive ? HeaderTabIndex(thisHeaderCol) : IsPinOnlyHeader(col) ? "0" : null)"
+                                @onkeydown:stopPropagation="@GridHeaderIsActive"
                                 draggable="@(col.Groupable ? "true" : "false")"
                                 aria-sort="@GetAriaSortValue(col)"
-                                aria-keyshortcuts="@(ShowColumnMenu && !col.Sortable ? "P" : null)"
+                                aria-keyshortcuts="@HeaderKeyShortcuts(col)"
                                 @ondragstart="() => OnColumnDragStart(col.Key)"
                                 @ondragend="OnColumnDragEnd"
-                                @onkeydown="e => HandleHeaderKeyDownAsync(e, col)"
+                                @onkeydown="e => GridHeaderIsActive ? HandleGridHeaderKeyDownAsync(e, thisHeaderCol) : HandleHeaderKeyDownAsync(e, col)"
                                 @onclick="e => SortByAsync(col, HeaderClickRequestsMultiSort(e))">
                                 @if (col.HeaderTemplate is not null)
                                 {
@@ -236,7 +324,7 @@
                                             class="tm-th-sort"
                                             aria-label="@SortButtonAccessibleName(col)"
                                             title="@Loc["TmDataTable_MultiSortHint"]"
-                                            aria-keyshortcuts="@(ShowColumnMenu ? "P" : null)">
+                                            aria-keyshortcuts="@HeaderKeyShortcuts(col)">
                                         @if (col.HeaderTemplate is null)
                                         {
                                             <span>@col.Title</span>
@@ -252,7 +340,66 @@
                                 {
                                     <span>@col.Title</span>
                                 }
-                                @if (ShowColumnMenu)
+                                @if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu)
+                                {
+                                    @* Menu mode replaces the standalone pin button: the same affordances
+                                       live in one menu per data header, reached with M (see
+                                       HandleHeaderKeyDownAsync). The trigger reference is captured into a
+                                       per-column box, so each header anchors its own menu. *@
+                                    var menu = ColumnMenuOf(col.Key);
+                                    <button type="button"
+                                            @ref="menu.Trigger.Current"
+                                            tabindex="-1"
+                                            class="tm-data-table-col-menu tm-data-table-col-menu-btn @(menu.IsOpen ? "tm-data-table-col-menu--open" : null)"
+                                            aria-label="@Loc["TmDataTable_ColumnMenuFor", ColumnAccessibleName(col)]"
+                                            aria-haspopup="menu"
+                                            aria-expanded="@(menu.IsOpen ? "true" : "false")"
+                                            aria-controls="@(menu.IsOpen ? ColumnMenuId(col.Key) : null)"
+                                            data-column-key="@col.Key"
+                                            data-testid="@TestId($"col-menu-{col.Key}")"
+                                            @onclick:stopPropagation="true"
+                                            @onkeydown:stopPropagation="true"
+                                            @onkeyup:stopPropagation="true"
+                                            @onclick="() => ToggleColumnMenuAsync(col)">
+                                        <TmIcon Name="@IconNames.MoreVertical" Size="IconSize.Sm" />
+                                    </button>
+                                    <TmOverlayPanel Anchor="menu.Trigger.Current"
+                                                    IsOpen="menu.IsOpen"
+                                                    IsOpenChanged="open => SetColumnMenuOpenAsync(col, open)"
+                                                    OnOpened="FocusColumnMenuAsync"
+                                                    Placement="OverlayPlacement.Bottom"
+                                                    Align="OverlayAlign.End"
+                                                    Offset="4"
+                                                    Role="menu"
+                                                    Id="@ColumnMenuId(col.Key)"
+                                                    AriaLabel="@Loc["TmDataTable_ColumnMenuFor", ColumnAccessibleName(col)]"
+                                                    Title="@ColumnAccessibleName(col)"
+                                                    MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
+                                                    Class="tm-data-table-col-menu-panel"
+                                                    @onkeydown="e => OnColumnMenuKeyDownAsync(col, e)">
+                                        @foreach (var action in ColumnMenuActions(col))
+                                        {
+                                            if (action == "separator")
+                                            {
+                                                <div class="tm-dropdown-sep" role="separator"></div>
+                                                continue;
+                                            }
+                                            var isSortDirection = action is "sort-asc" or "sort-desc";
+                                            var isCurrentSort = action == ColumnMenuCheckedAction(col);
+                                            <button type="button"
+                                                    class="tm-dropdown-item"
+                                                    role="@(isSortDirection ? "menuitemradio" : "menuitem")"
+                                                    aria-checked="@(isSortDirection ? (isCurrentSort ? "true" : "false") : null)"
+                                                    tabindex="-1"
+                                                    data-action="@action"
+                                                    @onclick="() => RunColumnMenuActionAsync(col, action)"
+                                                    @onclick:stopPropagation="true">
+                                                @Loc[ColumnMenuActionKey(action)]
+                                            </button>
+                                        }
+                                    </TmOverlayPanel>
+                                }
+                                else if (ShowColumnMenu)
                                 {
                                     @* tabindex="-1": the pin is reachable from its header with P, not as a
                                        stop of its own. As a sequential stop it cost one extra Tab per
@@ -272,10 +419,32 @@
                                 }
                                 @if (col.Resizable)
                                 {
+                                    @* A keyboard-operable separator (WCAG 2.5.7): the drag runs in
+                                       data-table.js over the shared pointer-drag helper (attached once
+                                       per table on the first render); arrows / Home / End resize here
+                                       and commit through SetColumnWidthAsync. @onkeydown:stopPropagation
+                                       fences the <th>'s sort handler (a key must not BOTH resize and
+                                       sort); the empty SwallowHandleClick next to @onclick:stopPropagation
+                                       makes the barrier real — a stop without a handler is never visited
+                                       by the dispatcher, so the tap's click would otherwise sort.
+                                       valuenow/valuemin/valuemax are always emitted: a focusable
+                                       separator announces its value. data-col-key / data-min-width are
+                                       what the JS gesture reads on press. *@
                                     <span class="tm-col-resize-handle"
                                           data-testid="@TestId($"resize-{col.Key}")"
-                                          @onpointerdown:stopPropagation="true"
-                                          @onpointerdown="e => StartColumnResizeAsync(col, e)"></span>
+                                          data-col-key="@col.Key"
+                                          data-min-width="@MinColumnWidth"
+                                          role="separator"
+                                          aria-orientation="vertical"
+                                          tabindex="0"
+                                          aria-valuenow="@(GetPixelWidth(col) ?? DefaultPinnedWidth)"
+                                          aria-valuemin="@MinColumnWidth"
+                                          aria-valuemax="@(Math.Max(MaxColumnWidth, GetPixelWidth(col) ?? DefaultPinnedWidth))"
+                                          aria-label="@Loc["TmDataTable_ResizeColumn", ResizeHandleAccessibleName(col)]"
+                                          @onclick="SwallowHandleClick"
+                                          @onclick:stopPropagation="true"
+                                          @onkeydown="e => OnResizeHandleKeyAsync(col, e)"
+                                          @onkeydown:stopPropagation="true"></span>
                                 }
                             </th>
                         }
@@ -286,7 +455,7 @@
                     </tr>
                     @if (_visibleColumns.Any(c => c.Filterable))
                     {
-                        <tr class="tm-filter-row">
+                        <tr class="tm-filter-row" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? 2 : null)">
                             @if (HasDetail) { <th></th> }
                             @if (Selectable) { <th></th> }
                             @foreach (var col in _visibleColumns)
@@ -295,9 +464,20 @@
                                     @if (col.Filterable)
                                     {
                                         <TmColumnFilter ColumnKey="@col.Key"
+                                                        InputId="@(ColumnMenuMode == ColumnMenuMode.Menu ? ColumnFilterId(col.Key) : null)"
+                                                        ColumnTitle="@col.Title"
                                                         FilterType="@col.FilterType"
                                                         FilterOptions="@col.FilterOptions"
+                                                        FilterOperator="@col.FilterOperator"
+                                                        Value="@ColumnFilterValue(col.Key)"
+                                                        ValueChanged="v => OnColumnFilterValueChanged(col.Key, v)"
                                                         OnFilterChange="f => ApplyFilterAsync(col.Key, f)" />
+                                        @if (ShowFilterSummary && !IsContentToolbarMode && _activeFilters.Count > 0 && col.Key == _visibleColumns.Last(c => c.Filterable).Key)
+                                        {
+                                            <button type="button" class="tm-col-filter-clear-all" @onclick="ClearAllFiltersAsync">
+                                                @Loc["TmDataTable_ClearFilters"]
+                                            </button>
+                                        }
                                     }
                                 </th>
                             }
@@ -348,21 +528,30 @@
                                 Context="rowItem"
                                 ItemSize="VirtualItemSize"
                                 OverscanCount="VirtualOverscanCount">
+                        @{ var virtualRow = DisplayedIndexOf(rowItem); }
                         <tr class="@GetRowClass(rowItem)"
-                            tabindex="0"
+                            tabindex="@RowTabIndex()"
+                            role="@(IsGrid ? "row" : null)"
+                            aria-rowindex="@(IsGrid ? virtualRow + GridBodyRowOffset : null)"
                             @onclick="() => HandleRowClickAsync(rowItem)"
                             @onkeydown="e => HandleRowKeyDownAsync(e, rowItem)"
                             @onkeyup="e => HandleRowKeyUpAsync(e, rowItem)"
                             @attributes="GetRowAttributes(rowItem)">
                             @if (HasDetail)
                             {
-                                <td class="tm-col-expander"></td>
+                                <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, 0) : null)"
+                                    @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, 0, rowItem)) : default)"
+                                    @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid"></td>
                             }
                             @if (Selectable)
                             {
-                                <td class="tm-col-check">
+                                var virtualCheckCol = HasDetail ? 1 : 0;
+                                <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? virtualCheckCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, virtualCheckCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, virtualCheckCol) : null)"
+                                    @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, virtualCheckCol, rowItem)) : default)"
+                                    @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     <input type="checkbox"
                                            aria-label="@Loc["TmDataTable_SelectRow"]"
+                                           tabindex="@(IsGrid ? "-1" : null)"
                                            checked="@IsSelected(rowItem)"
                                            @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
                                            @onkeydown:stopPropagation="true"
@@ -370,9 +559,14 @@
                                            @onclick:stopPropagation="true" />
                                 </td>
                             }
-                            @foreach (var col in _visibleColumns)
+                            @{ var virtualCol = GridDefaultColumn; }
+                            @foreach (var col in _renderedCellColumns)
                             {
-                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)">
+                                var cellCol = virtualCol++;
+                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
+                                    role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, cellCol) : null)"
+                                    @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, cellCol, rowItem)) : default)"
+                                    @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     @if (col.CellTemplate is not null)
                                     {
                                         @col.CellTemplate(rowItem)
@@ -395,18 +589,18 @@
                         @if (Editable && IsEditingRow(currentRowIndex))
                         {
                             <CascadingValue Value="_editContext" IsFixed="false">
-                                <tr class="tm-row-editing tm-data-table-row--editing @(_editHasErrors ? "tm-data-table-row--invalid" : null)" data-testid="@TestId("row-editing")" @onkeydown="HandleEditKeyDownAsync">
+                                <tr class="tm-row-editing tm-data-table-row--editing @(_editHasErrors ? "tm-data-table-row--invalid" : null)" data-testid="@TestId("row-editing")" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? currentRowIndex + GridBodyRowOffset : null)" @onkeydown="HandleEditKeyDownAsync" @onkeydown:stopPropagation="@IsGrid">
                                     @if (HasDetail)
                                     {
                                         <td class="tm-col-expander"></td>
                                     }
                                     @if (Selectable)
                                     {
-                                        <td class="tm-col-check"></td>
+                                        <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)"></td>
                                     }
-                                    @foreach (var col in _visibleColumns)
+                                    @foreach (var col in _renderedCellColumns)
                                     {
-                                        <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)">
+                                        <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)">
                                             @if (!HasEditActions && ReferenceEquals(col, _visibleColumns[0]))
                                             {
                                                 @RowEditValidator
@@ -427,32 +621,43 @@
                                     }
                                     @if (HasEditActions)
                                     {
-                                        <td class="tm-data-table__edit-actions">
-                                            @RowEditValidator
-                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save"
-                                                    aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]"
-                                                    data-testid="@TestId("edit-commit")"
-                                                    @onkeydown:stopPropagation="true"
-                                                    @onclick:stopPropagation="true"
-                                                    @onclick="CommitEditAsync">
-                                                <TmIcon Name="save" />
-                                            </button>
-                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel"
-                                                    aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]"
-                                                    data-testid="@TestId("edit-cancel")"
-                                                    @onkeydown:stopPropagation="true"
-                                                    @onclick:stopPropagation="true"
-                                                    @onclick="CancelEditAsync">
-                                                <TmIcon Name="x" />
-                                            </button>
-                                        </td>
+                                        @if (EffectiveEditActionsMode != EditActionsMode.Footer)
+                                        {
+                                            <td class="tm-data-table__edit-actions @(IsMobileCards ? "tm-data-table__edit-actions--card-footer" : null)">
+                                                @RowEditValidator
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save"
+                                                        aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]"
+                                                        data-testid="@TestId("edit-commit")"
+                                                        @onkeydown:stopPropagation="true" @onclick:stopPropagation="true" @onclick="CommitEditAsync">
+                                                    @if (EffectiveEditActionsMode == EditActionsMode.Text) { @Loc["TmDataTable_SaveRow"] } else { <TmIcon Name="save" /> }
+                                                </button>
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel"
+                                                        aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]"
+                                                        data-testid="@TestId("edit-cancel")"
+                                                        @onkeydown:stopPropagation="true" @onclick:stopPropagation="true" @onclick="CancelEditAsync">
+                                                    @if (EffectiveEditActionsMode == EditActionsMode.Text) { @Loc["TmDataTable_CancelEdit"] } else { <TmIcon Name="x" /> }
+                                                </button>
+                                            </td>
+                                        }
                                     }
                                 </tr>
+                                @if (HasEditActions && EffectiveEditActionsMode == EditActionsMode.Footer)
+                                {
+                                    <tr class="tm-data-table-row--edit-footer">
+                                        <td class="tm-data-table__edit-actions" colspan="@EditFooterColSpan">
+                                            <div class="tm-data-table__edit-footer-actions">
+                                                @RowEditValidator
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save" aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]" data-testid="@TestId("edit-commit")" @onclick="CommitEditAsync"><TmIcon Name="save" /> @Loc["TmDataTable_SaveRow"]</button>
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel" aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]" data-testid="@TestId("edit-cancel")" @onclick="CancelEditAsync"><TmIcon Name="x" /> @Loc["TmDataTable_CancelEdit"]</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
                                 @if (_editHasErrors)
                                 {
                                     <tr class="tm-data-table-row--validation">
                                         <td colspan="@ColSpan">
-                                            <span class="tm-row-edit-error" data-testid="@TestId("edit-error")">@Loc["TmDataTable_EditInvalid"]</span>
+                                            <span class="tm-row-edit-error" role="alert" data-testid="@TestId("edit-error")">@Loc["TmDataTable_EditInvalid"]</span>
                                         </td>
                                     </tr>
                                 }
@@ -461,7 +666,9 @@
                         else
                         {
                             <tr class="@GetRowClass(rowItem)"
-                                tabindex="0"
+                                tabindex="@RowTabIndex()"
+                                role="@(IsGrid ? "row" : null)"
+                                aria-rowindex="@(IsGrid ? currentRowIndex + GridBodyRowOffset : null)"
                                 @ondblclick="() => StartEditAtAsync(currentRowIndex, rowItem)"
                                 @onclick="() => HandleRowClickAsync(rowItem)"
                                 @onkeydown="e => HandleRowKeyDownAsync(e, rowItem)"
@@ -469,10 +676,14 @@
                                 @attributes="GetRowAttributes(rowItem)">
                                 @if (HasDetail)
                                 {
-                                    <td class="tm-col-expander">
+                                    var expanderRow = currentRowIndex;
+                                    <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(expanderRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(expanderRow, 0) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, expanderRow, 0, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-row-expander-btn"
                                                 aria-label="@Loc["TmDataTable_ToggleDetail"]"
                                                 aria-expanded="@IsRowExpanded(rowItem).ToString().ToLowerInvariant()"
+                                                tabindex="@(IsGrid ? "-1" : null)"
                                                 data-testid="@TestId("expander")"
                                                 @onkeydown:stopPropagation="true"
                                                 @onkeyup:stopPropagation="true"
@@ -484,9 +695,14 @@
                                 }
                                 @if (Selectable)
                                 {
-                                    <td class="tm-col-check">
+                                    var checkCol = HasDetail ? 1 : 0;
+                                    var checkRow = currentRowIndex;
+                                    <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? checkCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(checkRow, checkCol) : null)" tabindex="@(IsGrid ? CellTabIndex(checkRow, checkCol) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, checkRow, checkCol, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <input type="checkbox"
                                                aria-label="@Loc["TmDataTable_SelectRow"]"
+                                               tabindex="@(IsGrid ? "-1" : null)"
                                                checked="@IsSelected(rowItem)"
                                                @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
                                                @onkeydown:stopPropagation="true"
@@ -494,9 +710,15 @@
                                                @onclick:stopPropagation="true" />
                                     </td>
                                 }
-                                @foreach (var col in _visibleColumns)
+                                @{ var colIndex = (HasDetail ? 1 : 0) + (Selectable ? 1 : 0); }
+                                @foreach (var col in _renderedCellColumns)
                                 {
-                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(CardMode ? col.Title : null)">
+                                    var cellCol = colIndex++;
+                                    var cellRow = currentRowIndex;
+                                    <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
+                                        role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(cellRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         @if (col.CellTemplate is not null)
                                         {
                                             @col.CellTemplate(rowItem)
@@ -509,9 +731,15 @@
                                 }
                                 @if (HasEditActions)
                                 {
-                                    <td class="tm-data-table__edit-actions">
+                                    var editCol = GridDefaultColumn + _renderedCellColumns.Count;
+                                    var editRow = currentRowIndex;
+                                    <td class="tm-data-table__edit-actions @(IsMobileCards ? "tm-data-table__edit-actions--card-footer" : null)"
+                                        role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? editCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(editRow, editCol) : null)" tabindex="@(IsGrid ? CellTabIndex(editRow, editCol) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, editRow, editCol, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--start"
                                                 aria-label="@Loc["TmDataTable_EditRow"]" title="@Loc["TmDataTable_EditRow"]"
+                                                tabindex="@(IsGrid ? "-1" : null)"
                                                 @onkeydown:stopPropagation="true"
                                                 @onkeyup:stopPropagation="true"
                                                 @onclick:stopPropagation="true"
@@ -536,7 +764,7 @@
     @* ── Pagination ───────────────────────────────────────────── *@
     @if (PagerRenders)
     {
-        <div class="tm-pagination-container" data-testid="@TestId("pagination-container")">
+        <div class="@PaginationContainerClass" data-testid="@TestId("pagination-container")">
             @* Left: Info — rendered only when this is the chosen placement, so the range is not
                printed twice (the pagination bar below can state it instead). ShowResultSummary=false
                suppresses even this slot; with placement=Pagination the TmPagination below prints the
@@ -557,12 +785,12 @@
 
             @* Center: Page controls + Page size (vše v jednom) *@
             <div class="tm-pagination-center">
-                <TmPagination CurrentPage="@_currentPage"
+                <TmPagination Compact="@(MobileLayout != DataTableMobileLayout.None)" CurrentPage="@_currentPage"
                               TotalPages="@_totalPages"
                               TotalCount="@_totalCount"
                               PageSize="@_pageSize"
                               PageSizeOptions="PageSizeOptions"
-                              ShowInfo="@(PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
+                              ShowInfo="@(MobileLayout == DataTableMobileLayout.None && PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
                               TestIdPrefix="@TestIdPrefix"
                               AdditionalAttributes="PaginationAttributes"
                               OnPageChange="GoToPageAsync"
@@ -581,7 +809,7 @@
             }
             else
             {
-                @Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount]
+                @(IsRedesigned ? Loc.Plural("TmDataTable_TotalItems", _totalCount) : Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount])
             }
         </div>
     }

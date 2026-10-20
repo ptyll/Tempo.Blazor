@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "How the TmEditorShell presents its Left/Right panels on a mobile layout: both stacked in one sheet, or switched through a tab strip inside the sheet.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/MobilePanelPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "MobilePanelPresentation",
+  "members": [
+    {
+      "name": "Sheet",
+      "description": "One bottom sheet whose body stacks every open panel, in Left, Right order."
+    },
+    {
+      "name": "Tabs",
+      "description": "A tab strip (role=\"tablist\") inside the sheet switches between the open panels — one panel visible at a time."
+    }
+  ],
+  "usageExample": "<TmEditorShell MobilePanelPresentation=\"MobilePanelPresentation.Tabs\" …>…</TmEditorShell>"
+}

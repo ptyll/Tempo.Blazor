@@ -23,6 +23,12 @@ reads the stylesheets to prove they match.
 - **Tablet** — from 640px up to, but not including, 1024px
 - **Desktop** — 1024px and above
 
+**Per-instance thresholds.** `TmLayoutObserver` and `TmEditorShell` take an optional
+`Breakpoints` (`TmLayoutBreakpoints(sm, lg)`, default `TmLayoutBreakpoints.Default` = the table
+above) for a component whose content needs other mode boundaries (an e-mail editor: mobile below 768,
+desktop from 1200). It moves only the *markup* branch — a stylesheet keeps the shared literals — and
+classification stays half-open. See [editor-shell.md](editor-shell.md).
+
 A new `@media` or `@container` condition uses one of these four widths. `TmBreakpointsTests` scans
 every `src/**/wwwroot/**/*.css` for `@container` widths; `@media` widths are held by
 `media-width-baseline.txt`, which is shrink-only and counts each occurrence.
@@ -153,10 +159,22 @@ that frame has no measurement yet.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid
-becomes two columns. A widget wider than half the desktop grid spans the full tablet row. Forcing
-`LayoutMode` restacks the grid, because the grid reads `data-layout`. Drag and resize are desktop
-only. The placement variables (`--tm-w-x`, `--tm-w-span`, `--tm-w-span-md`, `--tm-w-y`,
-`--tm-w-rows`, `--tm-w-order`) are scoped to `TmDashboard`; another component does not read them.
+becomes two columns — the query measures the **grid container** (`container-type` ancestor), which
+is ~48px narrower than the dashboard root because of its padding, so the six-to-two switch sits at
+about 816px of root width. A widget wider than half the desktop grid spans the full tablet row. The
+DOM renders in the visual (row, then column) order in every mode (`--tm-w-order` carries the same
+value), so Tab and screen readers match the eye. A collapsed or minimized card shrinks to its
+header: desktop keeps the saved slot reserved, tablet and mobile release the height
+(`grid-row: auto; min-height: auto`), and tablet/mobile rows are content-driven
+(`grid-auto-rows: auto`) with the card's desktop slot height as `min-height`
+(`--tm-w-min-block`, inner gaps included). The view-mode header stacks on tablet (switcher row,
+title row) and mobile (title row, switcher + Edit row) whenever a visible heading renders — the
+C#-emitted `tm-dashboard-toolbar--with-heading` / `--with-actions` modifier classes decide; the
+sr-only heading and `ShowTitle=false` keep the single row. The root is a named `role="region"`.
+Drag and resize are desktop only. On a mobile layout the header controls meet `--tm-touch-target`
+regardless of the pointer hardware. The placement variables (`--tm-w-x`, `--tm-w-span`,
+`--tm-w-span-md`, `--tm-w-y`, `--tm-w-rows`, `--tm-w-order`, `--tm-w-min-block`) are scoped to
+`TmDashboard`; another component does not read them.
 
 ## Touch
 
@@ -208,7 +226,12 @@ Two bottom bars exist and they are not interchangeable:
     (tokens.css) defaults to the bar height plus the bottom safe area and is what the
     `FixedViewport` body padding consumes. A host scrolling content under a fixed bar reads the
     same token for its own `scroll-padding-bottom`, so focused content is never hidden behind
-    the bar.
+    the bar. The reserve tracks the C13 icon chip only while the chip tokens are set on
+    `:root` — the token is evaluated there, with the default icon box. A scoped opt-in (a class
+    on one bar) that enlarges `--tm-mobile-action-bar-icon-box` in its own scope MUST
+    re-declare the reserve in that scope —
+    `--tm-mobile-action-bar-reserve-block-size: calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px))` —
+    or its body padding stays at the chip-off height while the bar grows.
   - **`position: sticky` breaks under an `overflow: hidden` or `overflow: auto` ancestor**
     (the scroll container becomes the sticky box's viewport — often the component itself, so
     the bar can never move). `overflow: clip` is fine. Render the bar outside clipped

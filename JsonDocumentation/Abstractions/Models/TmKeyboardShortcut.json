@@ -2,7 +2,7 @@
   "kind": "Record",
   "category": "Models",
   "namespace": "Tempo.Blazor.Models",
-  "description": "Represents a keyboard shortcut with key combination and description.",
+  "description": "A keyboard shortcut. Keys is split on KeySeparator (default '+', a chord) into one kbd per part; pass ' / ' so alternatives are not rendered as a chord.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmShortcutCategory.cs",
   "documentationStatus": "generated",

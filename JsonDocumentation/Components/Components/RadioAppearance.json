@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "description": "How TmRadioGroup presents its options: Radio (the default) or Segmented, a single-choice value control. Switching content belongs to TmTabs Variant=Pill.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/RadioAppearance.cs",
+  "documentationStatus": "generated",
+  "itemName": "RadioAppearance"
+}

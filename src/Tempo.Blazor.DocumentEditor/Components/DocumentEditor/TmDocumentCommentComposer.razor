@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
+@implements Tempo.Blazor.Abstractions.Shared.ITmDraftGuard
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Activity
 
@@ -76,6 +77,83 @@
     /// <summary>Raised when the composer is cancelled.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>
+    /// Notifies the parent that the composer's draft state changed. The composer holds its text
+    /// in a private field — no host can observe it through a parameter — so this callback is the
+    /// only push channel. Fires ONLY when the <see cref="TmCommentDraftState"/> value actually
+    /// changes (value-equality dedup), never on every keystroke. The state always reports
+    /// <see cref="TmCommentDraftState.IsEditorOpen"/> = <see langword="true"/> (the composer is
+    /// the editor) and <see cref="TmCommentDraftState.EditingCommentId"/> = <see langword="null"/>
+    /// (the composer does not know its comment);
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> is <see langword="true"/> once the text
+    /// differs from the seeded <see cref="InitialText"/> and is not empty — a freshly seeded edit
+    /// composer therefore does not report an unsaved draft until the user actually types.
+    /// </summary>
+    [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
+
+    /// <summary>
+    /// Whether the composer holds unsaved text that would be lost on discard — the SAME value
+    /// carried by <see cref="TmCommentDraftState.HasUnsavedContent"/> that
+    /// <see cref="OnDraftChanged"/> reports. Read live from the current text (not from the last
+    /// notification), so consumers can poll it at any time.
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Clears the composer text. Intended for the consumer AFTER the user confirmed the discard in
+    /// the consumer's OWN confirmation dialog — the component never shows a confirmation itself;
+    /// that is deliberately the consumer's responsibility.
+    /// <para>
+    /// When the composer already holds no unsaved text the call is a no-op — the state does not
+    /// change and the value-equality dedup suppresses any <see cref="OnDraftChanged"/>
+    /// notification. Safe to call from outside the render cycle; the reset and notification are
+    /// dispatched through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            _text = string.Empty;
+            StateHasChanged();
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmCommentDraftState _lastDraftState = new(true, null, false);
+
+    /// <summary>
+    /// Builds the current draft snapshot: the composer is always an open editor; the text is an
+    /// unsaved draft once it is not empty AND differs from the seeded <see cref="InitialText"/>
+    /// (compared against the value as the composer last received it, ordinally — an untouched
+    /// edit is not a draft, reverting to the original clears the flag again).
+    /// </summary>
+    private TmCommentDraftState BuildDraftState()
+        => new(
+            IsEditorOpen: true,
+            EditingCommentId: null,
+            HasUnsavedContent: !string.IsNullOrWhiteSpace(_text)
+                && !string.Equals(_text, _lastInitialText ?? string.Empty, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed — the
+    /// dedup keeps per-keystroke input events from re-rendering the parent.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
+    }
+
     private List<MentionUser> _mentionUsers = [];
     private bool _showMentionDropdown;
     private string _mentionQuery = string.Empty;
@@ -92,7 +170,7 @@
         : SubmitLabel!;
 
     /// <inheritdoc />
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         Placeholder ??= PlaceholderText;
         SubmitLabel ??= SubmitLabelText;
@@ -100,6 +178,9 @@
         {
             _lastInitialText = InitialText;
             _text = InitialText ?? string.Empty;
+            // The host re-seeded the composer (edit opened, comment swapped) — the draft state
+            // changed underneath the user; report the new baseline immediately.
+            await NotifyDraftChangedAsync();
         }
     }
 
@@ -113,11 +194,13 @@
         var text = _text.Trim();
         _text = string.Empty;
         await OnSubmit.InvokeAsync(text);
+        await NotifyDraftChangedAsync();
     }
 
     private async Task HandleInputAsync(ChangeEventArgs args)
     {
         _text = args.Value?.ToString() ?? string.Empty;
+        await NotifyDraftChangedAsync();
         await UpdateMentionSearchAsync();
     }
 
@@ -156,22 +239,23 @@
         _showMentionDropdown = _mentionUsers.Count > 0;
     }
 
-    private Task SelectMentionAsync(MentionUser user)
+    private async Task SelectMentionAsync(MentionUser user)
     {
         var atIndex = _text.LastIndexOf('@');
         if (atIndex >= 0)
         {
             _text = _text[..atIndex] + "@" + user.UserName + " ";
+            await NotifyDraftChangedAsync();
         }
 
         _showMentionDropdown = false;
         _mentionUsers.Clear();
-        return Task.CompletedTask;
     }
 
     private async Task CancelAsync()
     {
         _text = string.Empty;
         await OnCancel.InvokeAsync();
+        await NotifyDraftChangedAsync();
     }
 }

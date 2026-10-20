@@ -73,6 +73,19 @@ public class TmLayoutObserverTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ViewportScope_WithCustomBreakpoints_IsRejected_BecauseTheInternalProbeUsesTheDefaults()
+    {
+        // F6 r2 G2: the viewport probe overlays measure through classifies with the shared defaults,
+        // so a viewport-scope observer carrying other thresholds would disagree with them.
+        var act = () => Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.IsViewportScope, true)
+            .Add(p => p.Breakpoints, new TmLayoutBreakpoints(768, 1200))
+            .AddChildContent("<span>x</span>"));
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*viewport*");
+    }
+    [Fact]
     public async Task OnLayoutModeChanged_RerendersOnlyWhenTheModeChanges()
     {
         var module = JSInterop.SetupModule(ModulePath);

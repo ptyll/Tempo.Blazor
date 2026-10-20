@@ -7,7 +7,7 @@
 ### Key Features
 - **125+ reusable Razor components** organized into 28 categories (inputs, data tables, pickers, layout, feedback, charts, dashboards, workflow designer, etc.)
 - **Multi-target .NET support**: .NET 8.0, 9.0, and 10.0
-- **Full localization support** via `ITmLocalizer` (English + Czech built-in, extensible)
+- **Full localization support** via `ITmLocalizer` (English, Czech, Slovak and French built-in, extensible)
 - **CSS design system** with CSS custom properties (`--tm-*` tokens)
 - **Dark mode support** via `ThemeService`
 - **FluentValidation integration** (optional separate package)
@@ -100,10 +100,12 @@ dotnet test tests/Tempo.Blazor.E2E/
 scripts/run-e2e-smoke.ps1   # PR gate: TestCategory=Smoke, < 20 min
 scripts/run-e2e-full.ps1    # full lane: entire suite (~1450 tests, ~4h sharded)
 
-# JS engine unit tests (explicit file enumeration, no globs)
+# JS engine unit tests (node --test via scripts/run-node-tests.mjs; explicit file enumeration, no globs)
+npm ci                         # once: installs esbuild for the document-editor bundle tests
 npm run test:document-editor
 npm run test:reporting-modules
-npm run test:overlay
+npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
+npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
 ```
 
 ### Package Creation
@@ -311,9 +313,10 @@ Uses `Microsoft.AspNetCore.Mvc.Testing` for integration testing.
 ## Localization
 
 ### Resource Files
-**Location**: `src/Tempo.Blazor/Resources/` — three embedded JSON files (flat `"Key": "Value"` maps):
+**Location**: `src/Tempo.Blazor/Resources/` — four embedded JSON files (flat `"Key": "Value"` maps):
 - `TmResources.json` – English (default)
 - `TmResources.cs.json` – Czech
+- `TmResources.sk.json` – Slovak
 - `TmResources.fr.json` – French
 
 > Note: these replaced the old `.resx` files; there are no `.resx` resources anymore.
@@ -321,9 +324,15 @@ Uses `Microsoft.AspNetCore.Mvc.Testing` for integration testing.
 ### Adding New Keys
 1. Add the key to `TmResources.json` (English)
 2. Add the key to `TmResources.cs.json` (Czech)
-3. Add the key to `TmResources.fr.json` (French)
-4. Use in a component: `@Loc["KeyName"]` (`ITmLocalizer Loc` is injected globally via `_Imports.razor`)
-5. Add the key to `MockTmLocalizer` in `tests/Tempo.Blazor.Tests/Localization/LocalizationTestBase.cs` (English map in `BuildEnglishLocalizer`, Czech map in `BuildCzechLocalizer`) so component tests resolve it
+3. Add the key to `TmResources.sk.json` (Slovak)
+4. Add the key to `TmResources.fr.json` (French)
+5. Use in a component: `@Loc["KeyName"]` (`ITmLocalizer Loc` is injected globally via `_Imports.razor`)
+6. Add the key to `MockTmLocalizer` in `tests/Tempo.Blazor.Tests/Localization/LocalizationTestBase.cs` (English map in `BuildEnglishLocalizer`, Czech map in `BuildCzechLocalizer`) so component tests resolve it
+
+`TmResourceCompletenessTests` (same test folder) guards key completeness: every key in the English
+table must exist in the Czech, Slovak and French tables, with identical `{0}`-style placeholders,
+and every plural family must provide the forms each language's grammar needs (see
+[docs/localization-plurals.md](docs/localization-plurals.md)).
 
 ### Consuming Application Setup
 ```csharp
@@ -464,6 +473,45 @@ The `TmPdfViewer` component is a standalone PDF viewer powered by **PDF.js v5** 
 
 The diagram editor (`TmDiagramEditor`, `TmDiagramCanvas`) supports several advanced productivity features beyond basic drawing:
 
+### Editor Chrome (redesign plan 94d441f2)
+
+Since the DiagramEditor redesign the editor renders through the core `TmEditorShell` and resolves
+its presentation from its own container (`data-editor-layout` on the root, default breakpoints
+768/1200): desktop (≥1200) shows the full chrome — header (page tabs, document title, ONE
+Inspector toggle, "⋯" view-settings menu), one `TmToolbar` command row (`Overflow=Menu` with a
+"More" overflow), docked toolbox / inspector, status bar (zoom + Read-only toggle) and a minimap
+card;
+tablet (768–1199) keeps the docked panels (at most one expanded, the other rails), touch gestures
+and the **floating minimap overlay**; mobile (<768) is **viewing + light edits** (G2): a non-modal
+bottom sheet (peek/half/full) holds the Shapes palette and the Properties | Layers inspector, a
+Select/Shapes/Properties action bar (Pan in More) drives the surfaces, the sheet starts closed at
+load, the minimap is opt-in via "⋯" (hidden at load only while that toggle exists), the Shapes
+sheet keeps the General category first with the rest collapsed, and resize/rotate, edge drawing,
+layout and import stay tablet+ (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` drop
+the affordances). The mobile inspector presents flat Shapes | Properties | Layers sheet tabs (the
+shell's one `Extra` sheet tab).
+
+**Stable toolbar contract (frozen since phase 1):** groups carry `data-tm-group` from the frozen
+set `history | clipboard | tools | format | insert | arrange | search | panels | zoom | view |
+canvas-size | layout | export | templates | import | readonly`; `ToolbarPreset` (`Full`/`Viewer`)
+and `ToolbarGroups` (flags, `null` = by preset) decide the group set; `HeaderStart`/`HeaderActions`
+are host-action slots. Where a group renders (header / toolbar row / status bar / More menu) is a
+layout detail that may change — hosts (Modeling) key off `data-tm-group`/presets, never positional
+CSS selectors on the toolbar's internal DOM. `ReadOnly` is never assigned inside the component;
+the built-in toggle drives only the internal user state surfaced as `IsReadOnly`, and a host-pinned
+`ReadOnly="true"` hides the toggle and blocks every editing path. The inspector presents
+"Properties | Layers" tabs (`InspectorLayout`, `Stacked` opt-in); the minimap chooses card vs
+overlay through `MinimapPlacement`; pages stay as top tabs in every layout. Full contract:
+[docs/diagram-editor.md](docs/diagram-editor.md).
+
+**Touch:** all pointer work runs on the shared `pointer-drag.js` / `pointer-gesture.js` helpers
+(imported by the package's `diagram-editor-touch.js`) — resize/rotate handles carry an invisible
+hit area sized by `--tm-diagram-handle-hit` (`var(--tm-space-6)` = 24px,
+`var(--tm-touch-target)` = 44px on coarse pointers), two fingers pinch/pan
+the `viewBox`, long-press opens the context menu (mobile: the F3 bottom sheet; tablet/desktop: an
+anchored finger-sized menu offset from the finger via `data-anchor="touch"`), and toolbox tiles
+insert on tap while drag-and-drop keeps working.
+
 ### Unified SVG Canvas Architecture (4-pane model)
 
 Inspired by **draw.io / mxGraph**, the canvas uses a single SVG scene with four dedicated `<g>` panes instead of the legacy dual-layer SVG+HTML overlay. This eliminates the CTM/CSS-transform drift bug, enables true global Z-order interleaving between nodes and edges, and allows simple stencils to render as native SVG primitives.
@@ -480,6 +528,7 @@ Key consequences:
 - **Edges** live in the same scene pane and can be placed above or below nodes via `ZIndex`.
 - **Selection outlines** are SVG `<rect>` elements injected into the overlay pane by `diagram-editor.js`.
 - **Resize/rotate handles** are SVG `<rect>`/`<circle>` elements rendered by Blazor into the decorator pane and kept in sync during JS drags.
+- **Decorator pane paint order** follows the rule **buttons > gesture hit areas > visual handles**: each selected node renders, in order, (1) `g.tm-diagram-node-handles` (the visible resize/rotate handles plus their enlarged hit areas), (2) `g.tm-diagram-port-hits` (the finger-sized gesture hit circles over the ports) and (3) `g.tm-diagram-connect-arrows` (the quick-connect arrow buttons). Whatever a finger must reach paints last — a press lands on the topmost painted element, so the arrows stay reachable over the port hit discs on a coarse pointer. The JS transform sync (`_updateSelectionTransforms`, `_applyNodeRotation`) keeps every `[data-node-id]` group in the pane in sync generically, and a live resize hides `.tm-diagram-port-hits` and `.tm-diagram-connect-arrows` (their last-rendered positions would be stale while the geometry changes).
 - Pan and zoom are driven exclusively by the SVG `viewBox`; there is no `_syncHtmlTransform` or HTML overlay CSS transform.
 
 ### Auto Layout (dagre)
@@ -537,15 +586,17 @@ Key consequences:
 ## JavaScript Interop
 
 Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host pages when using the related core components:
-- `dashboard.js` — required by `TmDashboard` (drag & resize grid)
+- `dashboard.js` — required by `TmDashboard` (drag & resize grid; imports the shared `pointer-drag.js` from the same folder — no extra script tag)
 - `workflow-designer.js` — required by `TmWorkflowDesignerCanvas` (SVG drag, pan, zoom, transition creation)
 - `richEditor.js` — required by `TmRichEditorFull` / `TmRichEditorSimple` (contenteditable interop)
-- `scheduler.js` — required by `TmScheduler` (drag & drop events)
+- `scheduler.js` — required by `TmScheduler` (event resize; imports the shared `pointer-drag.js` from the same folder)
+- `pointer-drag.js` — the shared ES-module pointer-drag helper (capture by pointerId, threshold, long-press, cancel paths); never write a second drag implementation, see [docs/touch-interaction.md](docs/touch-interaction.md)
+- `pointer-gesture.js` — the shared ES-module multi-pointer helper (`attachPinch` two-finger pinch/pan with ctrl+wheel zoom, `createAutoScroller` edge auto-scroll); never write a second pinch, a host cancels its drag from the pinch's `onStart`, see [docs/touch-interaction.md](docs/touch-interaction.md)
 - `signature-capture.js` — required by `TmSignatureCapture`
 
 Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.PdfViewer`: `_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js`
-- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/dagre.min.js` and `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js`
+- `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (classic script; it dynamically imports `diagram-editor-touch.js`; `dagre.min.js`, the d3 bundles and `diagram-arrow-select.js` are separate `<script>` tags), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
 - `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js`
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`
@@ -570,6 +621,8 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (no suffix): `1.0.0`
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
+
+`.github/workflows/js-node-tests.yml` runs the four Node lanes on every push/PR.
 
 ## Useful Commands Reference
 
@@ -619,7 +672,7 @@ Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` 
 
 - **Code, XML documentation, and comments**: English
 - **Planning documents** (in `planning/`): Czech
-- **Library localization**: English (`en`) and Czech (`cs`) built-in, extensible
+- **Library localization**: English (`en`), Czech (`cs`), Slovak (`sk`) and French (`fr`) built-in, extensible. `TmResourceCompletenessTests` guards key parity: every English key must exist in the Czech, Slovak and French tables.
 
 ## NuGet Packages
 

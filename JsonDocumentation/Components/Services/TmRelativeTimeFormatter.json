@@ -1,0 +1,9 @@
+{
+  "kind": "Class",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.Localization",
+  "description": "The default ITmRelativeTimeFormatter: Tm_Time_* strings from ITmLocalizer, plural day forms from Loc.Plural, the current moment from a TimeProvider (system clock when none is registered) and calendar days judged in the time zone passed to Format. Registered scoped by AddTempoBlazor(), so each scope gets its own localizer and clock.",
+  "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTimeFormatter.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmRelativeTimeFormatter"
+}

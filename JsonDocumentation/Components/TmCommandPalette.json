@@ -2,7 +2,7 @@
   "itemName": "TmCommandPalette",
   "kind": "Component",
   "category": "Layout",
-  "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, and keyboard shortcut hints. Supports two-way binding on open state.",
+  "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, and keyboard shortcut hints. Supports two-way binding on open state; the backdrop dismisses on a click whose press started on it (a drag-select from the input that ends over the backdrop keeps it open). GroupByCategory adds a heading per category and a divider (CSS border) between groups; SplitShortcuts renders one kbd per key. Both default off, which keeps the flat list and the single shortcut kbd.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
@@ -27,6 +27,18 @@
       "description": "Actions available in the palette."
     },
     {
+      "name": "GroupByCategory",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Groups actions by Category: a heading per category and a divider (CSS border) between groups. A null/empty category renders its options without a group wrapper (a role=group must be named). Defaults to false."
+    },
+    {
+      "name": "SplitShortcuts",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders each '+'-separated part of a shortcut as its own kbd. Defaults to false."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -40,6 +52,9 @@
     "tm-command-palette-input",
     "tm-command-palette-close",
     "tm-command-palette-list",
+    "tm-command-palette-group",
+    "tm-command-palette-group-item",
+    "tm-command-palette-group-label",
     "tm-command-palette-item",
     "tm-command-palette-title",
     "tm-command-palette-description",

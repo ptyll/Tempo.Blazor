@@ -3,6 +3,41 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* Wrapper */
+.tm-data-table-virtual-scroll .tm-data-table tbody tr {
+  height: var(--tm-data-table-row-height);
+}
+.tm-data-table__export-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+.tm-data-table__export-label {
+  font-weight: var(--tm-font-weight-semibold);
+}
+.tm-view-modal-helper {
+  margin: 0 0 var(--tm-space-3);
+  color: var(--tm-text-muted);
+  font-size: var(--tm-font-size-sm);
+}
+.tm-data-table__export-description {
+  flex-basis: 100%;
+  color: var(--tm-text-muted);
+  font-size: var(--tm-font-size-sm);
+}
+.tm-data-table__export-scope--selected {
+  background: var(--tm-color-primary-subtle);
+}
+.tm-data-table-wrapper--card-surface {
+  border-radius: var(--tm-radius-card);
+  box-shadow: var(--tm-shadow-card);
+  border: 1px solid var(--tm-border-color);
+  background: var(--tm-bg-surface);
+}
+.tm-data-table-wrapper--container {
+  container-type: inline-size;
+  container-name: tm-data-table;
+}
 .tm-data-table-wrapper {
   display: flex;
   flex-direction: column;
@@ -53,8 +88,8 @@
   flex: 0 0 auto;
 }
 
-.tm-data-table__export-item {
-  white-space: nowrap;
+.tm-dropdown-item.tm-data-table__export-item:hover {
+  background: var(--tm-bg-surface-secondary);
 }
 
 .tm-data-table__export-control {
@@ -107,7 +142,7 @@
 }
 .tm-data-table th,
 .tm-data-table td {
-  padding: var(--tm-space-3) var(--tm-space-4);
+  padding: var(--tm-data-table-cell-py) var(--tm-data-table-cell-px);
   text-align: left;
   border-bottom: 1px solid var(--tm-border-color);
 }
@@ -144,7 +179,7 @@
   align-items: center;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -197,13 +232,13 @@
 .tm-data-table td.tm-col-pinned {
   position: sticky;
   z-index: 2;
-  background: var(--tm-bg-surface, #ffffff);
+  background: var(--tm-bg-surface);
 }
 .tm-data-table thead th.tm-col-pinned { z-index: 3; }
 .tm-data-table th.tm-col-pinned-left,
-.tm-data-table td.tm-col-pinned-left { box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18); }
+.tm-data-table td.tm-col-pinned-left { box-shadow: var(--tm-data-table-pin-shadow); }
 .tm-data-table th.tm-col-pinned-right,
-.tm-data-table td.tm-col-pinned-right { box-shadow: -2px 0 3px -2px rgba(0, 0, 0, 0.18); }
+.tm-data-table td.tm-col-pinned-right { box-shadow: var(--tm-data-table-pin-shadow-end); }
 .tm-data-table tbody tr.tm-row-selected td.tm-col-pinned { background: var(--tm-color-primary-subtle); }
 
 /* Column pin toggle
@@ -238,7 +273,7 @@
   height: 1.1rem;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   background: var(--tm-bg-surface-secondary);
   color: var(--tm-text-secondary);
   font-size: 0.75rem;
@@ -260,7 +295,7 @@
 .tm-col-pin-btn:focus-visible,
 .tm-col-pin-btn--active { opacity: 1; }
 .tm-col-pin-btn:hover { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
-.tm-col-pin-btn--active { color: var(--tm-color-primary, #3b82f6); }
+.tm-col-pin-btn--active { color: var(--tm-color-primary); }
 
 /* The library brings its own focus ring instead of borrowing the application's.
    Tempo made the sortable header a focus stop in 2.8.9 but shipped no `:focus`
@@ -269,8 +304,10 @@
    turns an element into a control owns that element's focus indicator. */
 .tm-data-table th:focus-visible,
 .tm-data-table tbody tr:focus-visible,
+.tm-data-table td[role="gridcell"]:focus-visible,
+.tm-data-table td[role="gridcell"][aria-colspan]:focus-visible,
 .tm-col-pin-btn:focus-visible {
-  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline: 2px solid var(--tm-color-primary);
   outline-offset: -2px;
 }
 /* The sort button's ring is drawn OUTSIDE the box, not over the text: `outline-offset: -2px`
@@ -279,28 +316,156 @@
    rather than a line through it. `color: inherit` keeps the sorted column's accent under focus the
    same way `:hover` does — focus must not repaint the label back to the resting ink. */
 .tm-th-sort:focus-visible {
-  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline: 2px solid var(--tm-color-primary);
   outline-offset: 2px;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   color: inherit;
 }
 
-/* Column resize handle */
+/* Column resize handle — a focusable role="separator": the drag lives in data-table.js over the
+   shared pointer-drag helper (a delegated drag, so touch-action is owned here, on the handle only —
+   the table around it keeps scrolling). The inline-end edge is a LOGICAL inset so the handle sits
+   on the column's trailing edge in RTL as well. */
 .tm-col-resize-handle {
   position: absolute;
   top: 0;
-  right: 0;
-  width: 6px;
+  inset-inline-end: 0;
+  width: var(--tm-space-2);
   height: 100%;
   cursor: col-resize;
   user-select: none;
   touch-action: none;
 }
-.tm-col-resize-handle:hover { background: var(--tm-color-primary, #3b82f6); opacity: 0.4; }
+.tm-col-resize-handle:hover { background: var(--tm-color-primary); opacity: 0.4; }
+/* The separator is a tab stop: the focus indicator is the shared ring (the default outline is
+   silenced so the two never paint over each other). */
+.tm-col-resize-handle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+/* A finger needs more than an 8px edge: the hit area widens into a real 24px target (the shared
+   touch-target size) and reaches a little INTO the neighbouring column, where the drag edge
+   actually is. That reach would poke past the table edge on the last column, so the last
+   child's handle stays inside; and the pin button — which sits where the widened handle now
+   paints — slides inward so the two targets never overlap. */
+@media (pointer: coarse) {
+  .tm-col-resize-handle {
+    width: var(--tm-space-6);
+    inset-inline-end: calc(-1 * var(--tm-space-3));
+  }
+
+  th:last-child .tm-col-resize-handle { inset-inline-end: 0; }
+
+  .tm-data-table th .tm-col-pin-btn { inset-inline-end: var(--tm-space-3); }
+}
+/* Forced colors: the handle must stay a visible, resizable landmark, not a hover-only whisper. */
+@media (forced-colors: active) {
+  .tm-col-resize-handle {
+    background: ButtonBorder;
+    opacity: 1;
+    forced-color-adjust: none;
+  }
+
+  .tm-col-resize-handle:focus-visible {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
 .tm-data-table th { position: relative; }
 
+/* Column menu (ColumnMenuMode.Menu)
+   ------------------------------------------------------------------
+   The kebab replaces the pin button, so it follows the same reveal contract: invisible at rest,
+   visible the moment the pointer OR the keyboard is on the header, and visible while its own
+   menu is open. A focus stop that paints nothing is a WCAG 2.4.7 failure, so :focus-within and
+   the trigger's own aria-expanded state are required, not optional. The hit area grows to the
+   touch target on a coarse pointer — the button stays out of the Tab order (tabindex=-1, reached
+   with M), so the larger target is for the finger, not for another Tab stop. */
+.tm-data-table-col-menu,
+.tm-data-table-col-menu-btn {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: var(--tm-space-2);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-space-7);
+  block-size: var(--tm-space-7);
+  min-inline-size: var(--tm-space-7);
+  min-block-size: var(--tm-space-7);
+  padding: 0;
+  border: var(--tm-border-width) solid transparent;
+  border-radius: var(--tm-radius-sm);
+  background: var(--tm-bg-surface-secondary);
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.tm-data-table th:hover .tm-data-table-col-menu,
+.tm-data-table th:focus-within .tm-data-table-col-menu,
+.tm-data-table-col-menu:focus-visible,
+.tm-data-table-col-menu[aria-expanded="true"] { opacity: 1; }
+
+@media (hover: hover) {
+  .tm-data-table-col-menu { opacity: 0; }
+
+  .tm-data-table th:hover .tm-data-table-col-menu,
+  .tm-data-table th:focus-within .tm-data-table-col-menu,
+  .tm-data-table-col-menu:focus-visible,
+  .tm-data-table-col-menu[aria-expanded="true"] { opacity: 1; }
+}
+
+.tm-data-table-col-menu:hover,
+.tm-data-table-col-menu[aria-expanded="true"] {
+  background: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+}
+
+.tm-data-table-col-menu:focus-visible {
+  outline: 2px solid var(--tm-color-primary);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .tm-data-table-col-menu {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+    inset-inline-end: var(--tm-space-1);
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .tm-data-table-col-menu {
+    border-color: ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .tm-data-table-col-menu:focus-visible { outline-color: Highlight; }
+}
+
+/* Chrome only — no position/inset/z-index: the panel is positioned by overlay.js (see the
+   contract in _overlay-panel.css and .tm-view-manager-panel above). */
+.tm-data-table-col-menu-panel {
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-md);
+  min-inline-size: 12rem;
+  padding: var(--tm-space-1);
+}
+
+.tm-data-table-col-menu-panel[role="menu"] .tm-dropdown-item { min-block-size: var(--tm-touch-target); }
+
 @media (prefers-reduced-motion: reduce) {
-  .tm-col-pin-btn { transition: none; }
+  .tm-col-pin-btn,
+  .tm-data-table-col-menu { transition: none; }
 }
 
 /* Master-detail expandable rows */
@@ -326,7 +491,7 @@
 .tm-row-expander-icon--open::before { transform: rotate(90deg); }
 .tm-data-table tr.tm-row-detail > td {
   background: var(--tm-bg-surface-secondary);
-  padding: var(--tm-space-3, 0.75rem) var(--tm-space-4, 1rem);
+  padding: var(--tm-space-3) var(--tm-space-4);
 }
 @media (prefers-reduced-motion: reduce) {
   .tm-row-expander-icon::before { transition: none; }
@@ -425,8 +590,8 @@
   height: 1rem;
   margin-left: 0.125rem;
   padding: 0 0.2rem;
-  border-radius: var(--tm-radius-full, 999px);
-  background: var(--tm-color-primary, #3b82f6);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
   color: var(--tm-text-inverse);
   font-size: 0.625rem;
   font-weight: 600;
@@ -594,9 +759,9 @@
   min-width: 4rem;
 }
 .tm-pagination-page-size:focus {
-  outline: none;
+  outline: 2px solid transparent;
   border-color: var(--tm-color-primary);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -604,6 +769,7 @@
    ═══════════════════════════════════════════════════════════════ */
 .tm-column-picker { position: relative; }
 .tm-column-picker-toggle { white-space: nowrap; color: var(--tm-color-primary-600); }
+.tm-icon-columns { display: inline-flex; align-items: center; }
 [data-theme="dark"] .tm-column-picker-toggle,
 .tm-dark .tm-column-picker-toggle { color: var(--tm-color-primary-300); }
 /* The panel element is a TmOverlayPanel root: overlay.js positions it in the top layer, so no
@@ -686,11 +852,18 @@
   align-items: center;
   gap: var(--tm-space-1);
 }
+.tm-view-manager-toggle-name {
+  max-inline-size: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tm-view-manager-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + var(--tm-space-1));
-  z-index: var(--tm-z-dropdown);
+  /* Positioning contract: the panel is a top-layer popover positioned by overlay.js in viewport
+     coordinates (position:fixed from the :where() reset) — declaring position/top/right here
+     would resolve those coordinates against the page origin and park the panel offscreen whenever
+     the page is scrolled. Chrome (surface/border/shadow/padding/size) only — no position/inset/
+     z-index (the contract in _overlay-panel.css). */
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);
@@ -704,6 +877,10 @@
 }
 .tm-view-section:last-child { 
   margin-bottom: 0; 
+}
+.tm-view-empty {
+  padding: var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
 }
 .tm-view-section-header {
   display: flex;
@@ -722,7 +899,20 @@
   max-height: 12rem; 
   overflow-y: auto; 
 }
+.tm-view-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+}
 .tm-view-item {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  text-align: start;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
@@ -838,7 +1028,7 @@
   color: var(--tm-text-primary);
   background: var(--tm-bg-surface);
 }
-.tm-col-filter-input:focus { outline: none; border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+.tm-col-filter-input:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-col-filter-clear {
   position: absolute;
   right: var(--tm-space-1);
@@ -916,21 +1106,21 @@
   gap: var(--tm-space-2);
   min-height: 2.5rem;
   padding: var(--tm-space-2) var(--tm-space-3);
-  border: 2px dashed var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-surface-secondary, #f9fafb);
+  border: 2px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-surface-secondary);
   margin-bottom: var(--tm-space-3);
   transition: border-color 0.15s, background-color 0.15s;
 }
 
 .tm-data-table-group-zone--dragover {
-  border-color: var(--tm-color-primary, #3b82f6);
-  background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 5%, transparent);
+  border-color: var(--tm-color-primary);
+  background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
 }
 
 .tm-data-table-group-placeholder {
-  color: var(--tm-text-tertiary, #9ca3af);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-tertiary);
+  font-size: var(--tm-font-size-sm);
   font-style: italic;
 }
 
@@ -939,10 +1129,10 @@
   align-items: center;
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-2);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-color-primary, #3b82f6);
-  color: white;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary-text);
+  font-size: var(--tm-font-size-sm);
   cursor: grab;
   user-select: none;
 }
@@ -959,16 +1149,17 @@
   height: 1.25rem;
   padding: 0;
   border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  color: white;
+  border-radius: var(--tm-radius-full);
+  background: transparent;
+  color: inherit;
   font-size: 0.75rem;
   cursor: pointer;
   line-height: 1;
 }
 
 .tm-data-table-group-chip-remove:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--tm-color-primary);
+  color: var(--tm-text-inverse);
 }
 
 .tm-data-table-group-actions {
@@ -977,32 +1168,20 @@
   margin-left: auto;
 }
 
-.tm-data-table-group-expand-all,
-.tm-data-table-group-collapse-all {
-  padding: var(--tm-space-1) var(--tm-space-2);
-  border: 1px solid var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-surface, white);
-  color: var(--tm-text-secondary, #6b7280);
-  font-size: var(--tm-font-size-xs, 0.75rem);
-  cursor: pointer;
+.tm-data-table-group-label-prefix {
+  font-weight: var(--tm-font-weight-semibold);
 }
 
-.tm-data-table-group-expand-all:hover,
-.tm-data-table-group-collapse-all:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
-}
 
 /* ── Group Rows ─────────────────────────────────────────────── */
 
 .tm-data-table-group-row {
-  background: var(--tm-surface-secondary, #f9fafb);
-  font-weight: 600;
+  background: var(--tm-surface-secondary);
 }
 
 .tm-data-table-group-row td {
   padding: var(--tm-space-2) var(--tm-space-3);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-data-table-group-level-1 td {
@@ -1021,26 +1200,35 @@
   height: 1.5rem;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: transparent;
-  color: var(--tm-text-secondary, #6b7280);
+  color: var(--tm-text-secondary);
   cursor: pointer;
   margin-right: var(--tm-space-1);
   font-size: 0.75rem;
 }
 
 .tm-data-table-group-toggle:hover {
-  background: var(--tm-bg-surface-secondary, #e5e7eb);
+  background: var(--tm-bg-surface-secondary);
+}
+
+.tm-data-table-group-chevron {
+  transition: transform var(--tm-transition-fast);
+}
+
+.tm-data-table-group-chevron--open {
+  transform: rotate(90deg);
 }
 
 .tm-data-table-group-label {
   margin-right: var(--tm-space-2);
+  font-weight: var(--tm-font-weight-semibold);
 }
 
 .tm-data-table-group-count {
-  color: var(--tm-text-tertiary, #9ca3af);
-  font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-muted);
+  font-weight: normal;
+  font-size: var(--tm-font-size-sm);
 }
 
 .tm-data-table-group-aggregates {
@@ -1048,16 +1236,16 @@
   gap: var(--tm-space-3);
   margin-left: var(--tm-space-4);
   font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
-  color: var(--tm-text-secondary, #6b7280);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
 }
 
 /* ── Per-Group Pagination ──────────────────────────────────── */
 
 .tm-data-table-group-pagination td {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-data-table-group-pagination .tm-pagination {
@@ -1065,12 +1253,12 @@
 }
 
 .tm-pagination-compact {
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
   gap: var(--tm-space-2);
 }
 
 .tm-pagination-compact .tm-pagination-info {
-  font-size: var(--tm-font-size-xs, 0.75rem);
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-pagination-compact .tm-page-btn,
@@ -1078,7 +1266,7 @@
   min-width: 1.5rem;
   height: 1.5rem;
   padding: 0 var(--tm-space-1);
-  font-size: var(--tm-font-size-xs, 0.75rem);
+  font-size: var(--tm-font-size-xs);
 }
 
 /* ── Draggable Column Headers ───────────────────────────────── */
@@ -1106,8 +1294,8 @@
   max-height: 10rem;
   overflow-y: auto;
   padding: var(--tm-space-2);
-  border: 1px solid var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1119,7 +1307,8 @@
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   /* Visually hide the header row; labels move into each cell. */
-  .tm-data-table-wrapper--card .tm-data-table thead {
+  .tm-data-table-wrapper--card .tm-data-table thead,
+  .tm-data-table-wrapper--cards .tm-data-table thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1134,24 +1323,30 @@
   .tm-data-table-wrapper--card .tm-data-table,
   .tm-data-table-wrapper--card .tm-data-table tbody,
   .tm-data-table-wrapper--card .tm-data-table tbody tr,
-  .tm-data-table-wrapper--card .tm-data-table tbody td {
+  .tm-data-table-wrapper--card .tm-data-table tbody td,
+  .tm-data-table-wrapper--cards .tm-data-table,
+  .tm-data-table-wrapper--cards .tm-data-table tbody,
+  .tm-data-table-wrapper--cards .tm-data-table tbody tr,
+  .tm-data-table-wrapper--cards .tm-data-table tbody td {
     display: block;
     width: 100%;
   }
 
-  .tm-data-table-wrapper--card .tm-data-table tbody tr {
-    margin-bottom: var(--tm-space-3, 0.75rem);
-    padding: var(--tm-space-2, 0.5rem);
+  .tm-data-table-wrapper--card .tm-data-table tbody tr,
+  .tm-data-table-wrapper--cards .tm-data-table tbody tr {
+    margin-bottom: var(--tm-space-3);
+    padding: var(--tm-space-2);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-lg, 0.5rem);
+    border-radius: var(--tm-radius-lg);
     background: var(--tm-bg-surface);
   }
 
-  .tm-data-table-wrapper--card .tm-data-table tbody td {
+  .tm-data-table-wrapper--card .tm-data-table tbody td,
+  .tm-data-table-wrapper--cards .tm-data-table tbody td {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--tm-space-3, 0.75rem);
+    gap: var(--tm-space-3);
     border: none;
     text-align: right;
     /* Cell content must wrap within the card: an unbroken token (id, hash,
@@ -1165,11 +1360,155 @@
     min-width: 0;
   }
 
-  .tm-data-table-wrapper--card .tm-data-table tbody td[data-label]::before {
+  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-data-table-cell--card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    text-align: left;
+  }
+
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Title"] {
+    grid-column: 1 / -1;
+    font-weight: var(--tm-font-weight-semibold);
+  }
+
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Badge"],
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Media"] {
+    grid-column: 1 / -1;
+  }
+
+  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-col-check,
+  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-data-table__edit-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    min-height: var(--tm-touch-target);
+  }
+
+  .tm-data-table-wrapper--card .tm-data-table tbody td[data-label]::before,
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before {
     content: attr(data-label);
-    flex: 0 0 auto;
-    font-weight: var(--tm-font-weight-semibold, 600);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-secondary);
     text-align: left;
   }
+
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before {
+    grid-column: 1;
+  }
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label] {
+    justify-content: initial;
+  }
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before { grid-column: 1; }
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label] > * { grid-column: 2; }
+}
+
+.tm-data-table-wrapper--responsive th.data-mobile-pinned,
+.tm-data-table-wrapper--responsive td.data-mobile-pinned {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--tm-bg-surface);
+}
+.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) th.data-mobile-pinned,
+.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) td.data-mobile-pinned {
+  left: var(--tm-touch-target);
+}
+.tm-data-table-wrapper--responsive .tm-col-check--mobile-pinned {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table th:nth-child(2),
+.tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--tm-bg-surface);
+}
+.tm-multi-view-list--responsive .tm-mvl-toolbar-left--responsive {
+  flex: 1 1 100%;
+  width: 100%;
+}
+.tm-multi-view-list--responsive .tm-mvl-switcher button {
+  min-height: var(--tm-touch-target);
+  min-width: var(--tm-touch-target);
+}
+.tm-data-table-wrapper--cards .tm-data-table__edit-actions {
+  min-height: var(--tm-touch-target);
+  align-items: center;
+}
+
+/* Markup hooks that phases 3–11 restyle. Minimum real rules so the classes are not frozen
+   exceptions; nothing here changes the default (non-opt-in) surface. */
+.tm-data-table-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+.tm-col-filter-clear-all {
+  background: none;
+  border: none;
+  color: var(--tm-color-primary);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tm-col-filter-clear-all:hover { color: var(--tm-color-primary-hover); }
+.tm-data-table-group-expand-all,
+.tm-data-table-group-collapse-all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+}
+.tm-data-table-row--edit-footer {
+  background: var(--tm-surface-secondary);
+}
+.tm-data-table-row--edit-footer > td {
+  padding: var(--tm-space-2) var(--tm-data-table-cell-px);
+  background: var(--tm-surface-secondary);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+/* EditActionsMode.Footer: flex lives on the inner wrapper so colspan on the td is honored. */
+.tm-data-table__edit-footer-actions {
+  display: flex;
+  gap: var(--tm-space-2);
+  justify-content: flex-end;
+}
+/* Mobile cards: the action cell is not in a table, so flex on the cell itself is fine. */
+.tm-data-table__edit-actions--card-footer {
+  display: flex;
+  gap: var(--tm-space-2);
+  justify-content: flex-end;
+  padding: var(--tm-space-2) var(--tm-data-table-cell-px);
+  background: var(--tm-surface-secondary);
+}
+.tm-view-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+}
+.tm-view-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+}
+.tm-view-set-default-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: none;
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  color: var(--tm-text-secondary);
 }

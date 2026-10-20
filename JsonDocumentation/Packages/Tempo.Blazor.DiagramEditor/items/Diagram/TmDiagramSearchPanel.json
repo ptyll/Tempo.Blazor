@@ -61,6 +61,12 @@
       "description": "Error message displayed when the regex pattern is invalid."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true the panel is search-only: the replace field and the Replace / Replace all buttons are not rendered (the editor passes its effective read-only state)."
+    },
+    {
       "name": "ReplaceQuery",
       "type": "string",
       "isRequired": false,

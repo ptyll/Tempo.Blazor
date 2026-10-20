@@ -484,11 +484,7 @@ public abstract class ReportServerE2ETestBase : PlaywrightTestBase
     {
         try
         {
-            using var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-            };
-            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
+            using var client = new HttpClient(DemoApiTestHttp.CreateHandler()) { Timeout = TimeSpan.FromSeconds(2) };
             using var response = await client.GetAsync(url).ConfigureAwait(false);
             // Require a real 200 so "ready" means the host actually serves (Api /health, Web login page),
             // not merely that the port answers.

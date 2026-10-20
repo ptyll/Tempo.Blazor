@@ -2,7 +2,7 @@
   "itemName": "TmDiagramTemplateCard",
   "kind": "Component",
   "category": "Diagram",
-  "description": "Selectable card that previews a single diagram template, showing its thumbnail (or an initial-letter placeholder), name, and up to three tags. Raises OnClick when chosen; used to populate the template gallery grid.",
+  "description": "Selectable card that previews a single diagram template, showing its thumbnail (or an initial-letter placeholder), localized name, localized category chip and up to three tags clamped to two lines. Click or Space raises OnClick (select); double-click or Enter raises OnActivateRequest (create immediately — the gallery wires it to create without the footer detour); used to populate the template gallery grid.",
   "packageId": "Tempo.Blazor.DiagramEditor",
   "namespace": "Tempo.Blazor.Components.Diagram",
   "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/TmDiagramTemplateCard.razor",
@@ -24,7 +24,14 @@
     {
       "name": "OnClick",
       "type": "EventCallback",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised once per selection activation: mouse click or Space."
+    },
+    {
+      "name": "OnActivateRequest",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised once per creation activation: double-click or Enter (repeat-guarded)."
     },
     {
       "name": "BaseUri",

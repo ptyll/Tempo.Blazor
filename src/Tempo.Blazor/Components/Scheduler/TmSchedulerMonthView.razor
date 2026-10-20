@@ -13,7 +13,7 @@
         {
             var d = day;
             var isOther = d.Month != CurrentDate.Month;
-            var isToday = d == DateOnly.FromDateTime(DateTime.Today);
+            var isToday = d == DateOnly.FromDateTime(Today);
             var css = "tm-scheduler-month-day"
                 + (isOther ? " tm-scheduler-month-day--other" : "")
                 + (isToday ? " tm-scheduler-month-day--today" : "");
@@ -76,6 +76,9 @@
 
     /// <summary>Currently displayed date (determines which month to show).</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>Today's date in the display zone (highlights the today cell). Defaults to DateTime.Today.</summary>
+    [Parameter] public DateTime Today { get; set; } = DateTime.Today;
 
     /// <summary>Events to display.</summary>
     [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }

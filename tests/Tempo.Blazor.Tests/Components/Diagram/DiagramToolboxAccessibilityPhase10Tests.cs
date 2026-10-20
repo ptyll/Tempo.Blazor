@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Diagram;
 using Tempo.Blazor.Components.Diagram.Stencils;
@@ -77,18 +78,53 @@ public class DiagramToolboxAccessibilityPhase10Tests : LocalizationTestBase
         label!.GetAttribute("aria-hidden").Should().Be("true");
     }
 
-    [Theory]
-    [InlineData("Enter")]
-    [InlineData(" ")]
-    public void Stencil_Item_Keyboard_Insert_Invokes_Callback(string key)
+    [Fact]
+    public void Enter_InsertsOnKeyDown_ExactlyOnce_IgnoringRepeat()
     {
-        string? insertedStencilId = null;
-        var cut = Render<TmDiagramToolbox>(parameters => parameters
-            .Add(component => component.StencilKeyboardInsert, EventCallback.Factory.Create<string>(this, id => insertedStencilId = id)));
+        var count = 0;
+        var cut = Render<TmDiagramToolbox>(p => p.Add(c => c.StencilKeyboardInsert,
+            EventCallback.Factory.Create<string>(this, _ => count++)));
+        var tile = cut.Find("[data-stencil-id='phase10.diagram.core.node']");
+        tile.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        tile.KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        tile.KeyUp(new KeyboardEventArgs { Key = "Enter" });
+        count.Should().Be(1);
+    }
 
-        cut.Find("[data-stencil-id='phase10.diagram.core.node']").KeyDown(key);
+    [Fact]
+    public void Space_InsertsOnKeyUp_NotOnKeyDown()
+    {
+        var count = 0;
+        var cut = Render<TmDiagramToolbox>(p => p.Add(c => c.StencilKeyboardInsert,
+            EventCallback.Factory.Create<string>(this, _ => count++)));
+        var tile = cut.Find("[data-stencil-id='phase10.diagram.core.node']");
+        tile.KeyDown(new KeyboardEventArgs { Key = " " });
+        count.Should().Be(0);
+        tile.KeyUp(new KeyboardEventArgs { Key = " " });
+        count.Should().Be(1);
+    }
 
-        insertedStencilId.Should().Be("phase10.diagram.core.node");
+    [Fact]
+    public void ReadOnly_TilesAreInert()
+    {
+        var count = 0;
+        var cut = Render<TmDiagramToolbox>(p => p
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.StencilKeyboardInsert, EventCallback.Factory.Create<string>(this, _ => count++)));
+        var tile = cut.Find("[data-stencil-id='phase10.diagram.core.node']");
+        tile.GetAttribute("aria-disabled").Should().Be("true");
+        tile.GetAttribute("draggable").Should().Be("false");
+        tile.Click(); tile.KeyDown(new KeyboardEventArgs { Key = "Enter" }); tile.KeyUp(new KeyboardEventArgs { Key = " " });
+        count.Should().Be(0);
+    }
+
+    [Fact]
+    public void SearchInput_HasNoInvalidClearableAttribute()
+    {
+        var cut = Render<TmDiagramToolbox>();
+
+        cut.Find(".tm-diagram-toolbox__search input").HasAttribute("clearable")
+            .Should().BeFalse("TmSearchInput has no Clearable parameter — an unknown attribute would render verbatim");
     }
 
     [Fact]

@@ -86,6 +86,25 @@ public class TmMultiViewListGroupingTests : LocalizationTestBase
     // --- Table view grouping ---
 
     [Fact]
+    public void MultiViewList_TableView_GroupToggle_IsChevronOnlyCompactButton()
+    {
+        var cut = RenderWithGrouping();
+
+        cut.Find(".tm-mvl-group-btn").Click();
+        cut.FindAll(".tm-mvl-group-dropdown input[type='checkbox']").First().Change(true);
+
+        var toggle = cut.Find(".tm-mvl-group-toggle");
+        toggle.QuerySelector("svg").Should().NotBeNull();
+        toggle.TextContent.Trim().Should().BeEmpty();
+        toggle.QuerySelector(".tm-mvl-group-label").Should().BeNull();
+        toggle.QuerySelector(".tm-mvl-group-count").Should().BeNull();
+        toggle.HasAttribute("aria-controls").Should().BeFalse();
+        toggle.ParentElement!.QuerySelector(".tm-mvl-group-label").Should().NotBeNull();
+        toggle.ParentElement!.QuerySelector(".tm-mvl-group-count").Should().NotBeNull();
+        toggle.ParentElement!.ClassList.Contains("tm-mvl-group-card").Should().BeFalse();
+    }
+
+    [Fact]
     public void MultiViewList_TableView_GroupByDepartment_ShowsGroupRows()
     {
         var cut = RenderWithGrouping(groupsCollapsedByDefault: true);
@@ -134,7 +153,16 @@ public class TmMultiViewListGroupingTests : LocalizationTestBase
         cut.Find(".tm-mvl-group-btn").Click();
         cut.FindAll(".tm-mvl-group-dropdown input[type='checkbox']").First().Change(true);
 
-        cut.FindAll(".tm-mvl-group-section").Should().HaveCount(3);
+        var sections = cut.FindAll(".tm-mvl-group-section");
+        sections.Should().HaveCount(3);
+        sections.Should().OnlyContain(section => section.ClassList.Contains("tm-mvl-group-card"));
+
+        var headers = cut.FindAll(".tm-mvl-group-toggle");
+        headers.Should().HaveCount(3);
+        headers.Should().OnlyContain(header => !string.IsNullOrWhiteSpace(header.GetAttribute("aria-controls")));
+        headers.Should().OnlyContain(header => header.ParentElement!.ParentElement!.ClassList.Contains("tm-mvl-group-card"));
+        headers.Select(header => header.GetAttribute("aria-controls"))
+            .Should().OnlyContain(controlledId => !string.IsNullOrWhiteSpace(controlledId) && cut.FindAll($"#{controlledId}").Count == 1);
     }
 
     // --- List view grouping ---

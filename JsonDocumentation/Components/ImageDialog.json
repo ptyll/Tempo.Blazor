@@ -2,7 +2,7 @@
   "itemName": "ImageDialog",
   "kind": "Component",
   "category": "Activity",
-  "description": "Internal modal dialog for inserting images in the rich text editor. Provides URL and alt text inputs with URL validation and backdrop click to close.",
+  "description": "Modal dialog for inserting images in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and alt text inputs with URL validation.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
   ],
@@ -24,6 +24,12 @@
       "isRequired": false
     },
     {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Modal dialog for inserting images in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and alt text inputs with URL validation."
+    },
+    {
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false
@@ -31,14 +37,9 @@
   ],
   "cssClasses": [
     "tm-rte-image-dialog",
-    "tm-rte-image-backdrop",
-    "tm-rte-image-content",
-    "tm-rte-image-header",
-    "tm-rte-image-body",
-    "tm-rte-image-footer",
+    "tm-rte-dialog",
     "tm-rte-image-url-input",
     "tm-rte-image-alt-input",
-    "tm-rte-btn-close",
     "tm-rte-btn-cancel",
     "tm-rte-btn-insert"
   ],

@@ -4,7 +4,7 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Charts;
 
-public class SankeyChartDemoPageTests : LocalizationTestBase
+public class SankeyChartDemoPageTests : DemoPageLocalizationTestBase
 {
     [Fact]
     public void ChartsPage_RendersFinancialSankeyVariantsAndClickOutput()

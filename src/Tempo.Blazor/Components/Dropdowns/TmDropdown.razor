@@ -3,13 +3,19 @@
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Overlay
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using Tempo.Blazor.Helpers
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
+<div @ref="_wrapperRef" class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             @ref="_triggerRef"
-            class="tm-dropdown-trigger"
-            aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
+            class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn tm-btn-outline" : "")"
+            disabled="@Disabled"
+            aria-expanded="@(Disabled ? null : _isOpen ? "true" : "false")"
             aria-haspopup="true"
+            data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
             @onclick="Toggle">
         @if (!string.IsNullOrEmpty(Icon))
         {
@@ -27,6 +33,7 @@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
+                    OnOpened="FocusFirstItemAsync"
                     Placement="Placement"
                     Align="Align"
                     Offset="Offset"
@@ -94,13 +101,38 @@
     /// <summary>Disables the dropdown.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>Applies the outline button style to the trigger.</summary>
+    [Parameter] public bool OutlineTrigger { get; set; }
+
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The toolbar the dropdown sits in, if any: its trigger then joins the toolbar's roving
+    /// tab stop (C6) instead of being its own Tab stop.</summary>
+    [CascadingParameter] private Tempo.Blazor.Components.Toolbar.TmToolbar? Toolbar { get; set; }
+
     private bool _isOpen;
     private bool _focusTriggerAfterClose;
     private ElementReference _triggerRef;
+    private ElementReference _wrapperRef;
+    private MenuNavInterop? _menuNav;
+    private bool _disposed;
+
+    /// <summary>The Disabled value seen by the previous parameter pass: the menu closes only on a
+    /// transition into disabled, not on every re-render of an already disabled dropdown.</summary>
+    private bool _lastDisabled;
+
+    protected override void OnParametersSet()
+    {
+        // A dropdown that became disabled while its menu was open must not keep the open menu
+        // around: the trigger is dead (native disabled), so nothing could ever close it again.
+        if (Disabled && !_lastDisabled)
+        {
+            _isOpen = false;
+        }
+        _lastDisabled = Disabled;
+    }
 
     private void Toggle()
     {
@@ -113,21 +145,32 @@
         _isOpen = open;
     }
 
-    /// <summary>Called by TmDropdownItem when an item is selected.</summary>
-    public async Task SelectItemAsync(string value)
+    /// <summary>Called by TmDropdownItem when an item is selected. Closes the menu.</summary>
+    public Task SelectItemAsync(string value) => SelectItemAsync(value, keepOpen: false);
+
+    /// <summary>
+    /// Called by TmDropdownItem when an item is selected.
+    /// <paramref name="keepOpen"/> skips the close and the return-focus-to-trigger step, so a radio
+    /// choice can be followed by another item without reopening the menu. Focus stays on the item.
+    /// </summary>
+    public async Task SelectItemAsync(string value, bool keepOpen)
     {
         if (Disabled) return;
-        // N319: close BEFORE invoking the handler. The menu is a top-layer popover — a dialog
-        // the handler opens would render UNDER the still-open menu (and the first Escape would
-        // close the menu, not the dialog). The yield lets the close re-render hide the popover.
-        _isOpen = false;
-        // docs/overlays.md rule 4: a selection close does not route through overlay.js, so the
-        // dropdown restores focus to the trigger itself — otherwise a keyboard selection leaves
-        // focus on <body> (review finding T3). FocusAsync lands in OnAfterRenderAsync, after the
-        // close re-render (the pattern from docs/keyboard-activation-convention.md).
-        _focusTriggerAfterClose = true;
-        StateHasChanged();
-        await Task.Yield();
+        if (!keepOpen)
+        {
+            // N319: close BEFORE invoking the handler. The menu is a top-layer popover — a dialog
+            // the handler opens would render UNDER the still-open menu (and the first Escape would
+            // close the menu, not the dialog). The yield lets the close re-render hide the popover.
+            _isOpen = false;
+            // docs/overlays.md rule 4: a selection close does not route through overlay.js, so the
+            // dropdown restores focus to the trigger itself — otherwise a keyboard selection leaves
+            // focus on <body> (review finding T3). FocusAsync lands in OnAfterRenderAsync, after the
+            // close re-render (the pattern from docs/keyboard-activation-convention.md).
+            _focusTriggerAfterClose = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
         await OnSelect.InvokeAsync(value);
     }
 
@@ -149,6 +192,21 @@
         }
     }
 
+    /// <summary>
+    /// A menu opened from the keyboard must hand focus to its first enabled item, or the roving keys
+    /// (which listen on the menu) are unreachable. Fires once per open, after the panel is displayed;
+    /// best-effort - without JS the menu keeps the native Tab order.
+    /// </summary>
+    private Task FocusFirstItemAsync() => _disposed ? Task.CompletedTask : (_menuNav ??= new MenuNavInterop(JS)).FocusFirstAsync(_wrapperRef);
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        var menuNav = _menuNav;
+        _menuNav = null;
+        if (menuNav is not null) await menuNav.DisposeAsync();
+    }
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
     // and routes it through TmOverlayPanel.NotifyDismissedAsync — a bubbling handler on this
     // div could never run in a real browser (dead-branch sweep, N169 follow-up).

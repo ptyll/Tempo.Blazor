@@ -14,6 +14,12 @@
       "default": "Empty"
     },
     {
+      "name": "InputId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the filter control, so a column menu can move focus to it. Left unset, the control renders no id and the default markup is unchanged."
+    },
+    {
       "name": "FilterType",
       "type": "FilterType",
       "isRequired": false,
@@ -28,6 +34,30 @@
       "name": "OnFilterChange",
       "type": "EventCallback<DataTableFilter?>",
       "isRequired": false
+    },
+    {
+      "name": "ColumnTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Column caption. When set, the accessible name and placeholder use TmDataTable_FilterColumn (\"Filter: {0}\"). Omitted keeps the generic Filter label."
+    },
+    {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Controlled filter text. When set, it overwrites the inner value on every parameter update. Null leaves the control uncontrolled."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised with the new text when the user edits or clears the filter."
+    },
+    {
+      "name": "FilterOperator",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Operator sent with the filter. Null or whitespace keeps the historical contains operator."
     }
   ],
   "cssClasses": [

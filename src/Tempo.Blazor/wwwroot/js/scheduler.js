@@ -1,30 +1,74 @@
 // ═══════════════════════════════════════════════════════════════
 // Tempo.Blazor Scheduler JS Interop
-// Handles resize and drag operations for scheduler events
+// Resize of scheduler events (time grid + timeline) with a mouse, a finger or a pen.
+//
+// The gesture itself — Pointer Events, pointer capture by pointerId, threshold, Escape /
+// pointercancel / lost-capture cancel, touch-action — is the shared core helper pointer-drag.js.
+// This file is a classic script (window.TempoBlazor.Scheduler), so it loads the helper with a
+// dynamic import() from the same _content folder it was served from. It only owns the scheduler
+// maths: slot snapping, the live size of the event and the NotifyResizeComplete call.
 // ═══════════════════════════════════════════════════════════════
 
 (function () {
     'use strict';
 
+    // Resolved NOW: document.currentScript is only set while the classic script runs synchronously.
+    var helperUrl = (function () {
+        try {
+            var script = document.currentScript;
+            if (script && script.src) return new URL('pointer-drag.js', script.src).href;
+            return new URL('_content/Tempo.Blazor/js/pointer-drag.js', document.baseURI).href;
+        } catch (e) {
+            return '_content/Tempo.Blazor/js/pointer-drag.js';
+        }
+    })();
+
+    var HANDLE_SELECTOR = '.tm-scheduler-event-resize-handle';
+    var MIN_SIZE = 10;       // px: an event is never dragged smaller than this
+    var THRESHOLD = 2;       // px of movement before a mouse/pen press becomes a resize
+    var LONG_PRESS_MS = 400; // touch only: a quick swipe scrolls; hold, then drag, resizes
+
     // Namespace
     window.TempoBlazor = window.TempoBlazor || {};
     window.TempoBlazor.Scheduler = {
 
-        _currentResize: null,
         _dotNetRefs: new Map(),
+        _drag: null,
+        _generation: 0,
+
+        /** Resolves when the pointer helper is attached (or failed to load). */
+        ready: Promise.resolve(),
 
         /**
-         * Initialize resize handling for a scheduler
-         * Call this once when scheduler is rendered
+         * Initialize resize handling for all schedulers on the page.
+         * Safe to call repeatedly: a previous attachment is detached first.
          */
         init: function () {
-            // Remove any existing listener to avoid duplicates
-            if (this._boundMouseDown) {
-                document.removeEventListener('mousedown', this._boundMouseDown);
-            }
+            var self = this;
+            this._detachDrag();
+            var generation = ++this._generation;
 
-            this._boundMouseDown = this._handleMouseDown.bind(this);
-            document.addEventListener('mousedown', this._boundMouseDown);
+            this.ready = import(helperUrl).then(function (helper) {
+                // init/destroy was called again while the module was loading.
+                if (generation !== self._generation) return;
+                self._drag = helper.attach(document, {
+                    selector: HANDLE_SELECTOR,
+                    threshold: THRESHOLD,
+                    // Touch only (the helper ignores it for mouse and pen). A finger that moves before
+                    // the hold is a scroll, not a resize — Chromium's touch adjustment snaps a swipe
+                    // that starts on the event body onto this handle, and threshold 2 used to commit it.
+                    longPressMs: LONG_PRESS_MS,
+                    // The handle keeps its click inert after a resize; HTML5 drag-and-drop of the
+                    // event body is untouched because only the handle selector starts a gesture.
+                    onPress: function (info) { return self._press(info); },
+                    onMove: function (info) { self._move(info); },
+                    onEnd: function () { self._end(); },
+                    onCancel: function () { self._rollback(); },
+                    onRelease: function () { self._release(); }
+                });
+            }).catch(function (err) {
+                console.warn('Scheduler: pointer-drag.js could not be loaded; event resize is unavailable', err);
+            });
         },
 
         /**
@@ -48,177 +92,149 @@
         },
 
         /**
-         * Handle mousedown on resize handles
+         * A press landed on a resize handle: capture the geometry of the event and its container.
+         * Returning false vetoes the gesture (nothing is touched).
          */
-        _handleMouseDown: function (e) {
-            // Check if we clicked on a resize handle
-            const resizeHandle = e.target.closest('.tm-scheduler-event-resize-handle');
-            if (!resizeHandle) return;
-
-            // Prevent default to stop any other behavior (including drag start)
-            e.preventDefault();
-            e.stopPropagation();
+        _press: function (info) {
+            var resizeHandle = info.target;
+            if (!resizeHandle) return false;
 
             // Find the parent event element (could be timegrid or timeline)
-            const eventElement = resizeHandle.closest('.tm-scheduler-timegrid-event, .tm-scheduler-timeline-event');
-            if (!eventElement) return;
+            var eventElement = resizeHandle.closest('.tm-scheduler-timegrid-event, .tm-scheduler-timeline-event');
+            if (!eventElement) return false;
 
-            // Determine resize edge (left or right)
-            const resizeEdge = resizeHandle.dataset.resizeEdge || 'right';
+            // Determine resize edge (left or right, top or bottom)
+            var resizeEdge = resizeHandle.dataset.resizeEdge || 'right';
 
             // Determine if this is a timeline or timegrid event
-            const isTimeline = eventElement.classList.contains('tm-scheduler-timeline-event');
+            var isTimeline = eventElement.classList.contains('tm-scheduler-timeline-event');
 
             // Get the appropriate container for calculations
-            const container = isTimeline
+            var container = isTimeline
                 ? resizeHandle.closest('.tm-scheduler-timeline-row-body')
                 : resizeHandle.closest('.tm-scheduler-timegrid-body');
-
-            if (!container) return;
-
-            // Temporarily disable dragging on the event element
-            const originalDraggable = eventElement.draggable;
-            eventElement.draggable = false;
-            eventElement.setAttribute('data-resizing', 'true');
+            if (!container) return false;
 
             // Get slot duration from data attribute or default
-            const schedulerContainer = isTimeline
+            var schedulerContainer = isTimeline
                 ? container.closest('.tm-scheduler-timeline')
                 : container.closest('.tm-scheduler-timegrid');
-            const slotMinutes = parseInt(schedulerContainer?.dataset.slotDuration) || 30;
+            var slotMinutes = parseInt(schedulerContainer && schedulerContainer.dataset.slotDuration) || 30;
 
-            // Get event ID from the element
-            const eventId = eventElement.dataset.eventId;
+            var containerRect = container.getBoundingClientRect();
+            var eventRect = eventElement.getBoundingClientRect();
+            var containerSize = isTimeline ? containerRect.width : containerRect.height;
+            if (!(containerSize > 0)) return false;
 
-            // Find the dotNetRef for this scheduler container
-            const dotNetRef = schedulerContainer ? this._dotNetRefs.get(schedulerContainer) : null;
+            this._session = {
+                eventElement: eventElement,
+                isTimeline: isTimeline,
+                resizeEdge: resizeEdge,
+                slotMinutes: slotMinutes,
+                eventId: eventElement.dataset.eventId,
+                dotNetRef: schedulerContainer ? this._dotNetRefs.get(schedulerContainer) : null,
+                originalDraggable: eventElement.draggable,
+                // Blazor renders the geometry inline (percentages of the day). A cancel must put THOSE back:
+                // clearing the properties would let the event collapse to its CSS min-height.
+                originalStyle: {
+                    left: eventElement.style.left || '',
+                    top: eventElement.style.top || '',
+                    width: eventElement.style.width || '',
+                    height: eventElement.style.height || ''
+                },
+                originalSize: isTimeline ? eventRect.width : eventRect.height,
+                originalLeft: isTimeline ? eventRect.left - containerRect.left : 0,
+                originalTop: !isTimeline ? eventRect.top - containerRect.top : 0,
+                // Minutes per pixel ratio (24 hours = 1440 minutes)
+                minutesPerPixel: (24 * 60) / containerSize,
+                delta: 0
+            };
 
-            // Store original dimensions
-            const containerRect = container.getBoundingClientRect();
-            const eventRect = eventElement.getBoundingClientRect();
-            const originalSize = isTimeline ? eventRect.width : eventRect.height;
-            const containerSize = isTimeline ? containerRect.width : containerRect.height;
-            const startPos = isTimeline ? e.clientX : e.clientY;
-
-            // For timeline left resize or timegrid top resize, we need the original position
-            const originalLeft = isTimeline ? eventRect.left - containerRect.left : 0;
-            const originalTop = !isTimeline ? eventRect.top - containerRect.top : 0;
-
-            // Start resize tracking
-            this._startResizeTracking(eventElement, container, startPos, slotMinutes, originalDraggable,
-                originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop, dotNetRef);
+            // Temporarily disable HTML5 dragging on the event element while its edge is dragged.
+            eventElement.draggable = false;
+            eventElement.setAttribute('data-resizing', 'true');
+            return true;
         },
 
-        /**
-         * Track resize movement
-         */
-        _startResizeTracking: function (eventElement, container, startPos, slotMinutes, originalDraggable,
-            originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop, dotNetRef) {
-            const self = this;
-            let currentDelta = 0;
-            let isResizing = true;
+        /** Live size of the event while the pointer moves. */
+        _move: function (info) {
+            var s = this._session;
+            if (!s) return;
 
-            // Minutes per pixel ratio (24 hours = 1440 minutes)
-            const minutesPerPixel = (24 * 60) / containerSize;
+            var deltaPos = s.isTimeline ? info.dx : info.dy;
+            var deltaMinutes = Math.round(deltaPos * s.minutesPerPixel / s.slotMinutes) * s.slotMinutes;
+            if (deltaMinutes === s.delta) return;
 
-            function onMouseMove(e) {
-                if (!isResizing) return;
-
-                const currentPos = isTimeline ? e.clientX : e.clientY;
-                const deltaPos = currentPos - startPos;
-                const deltaMinutes = Math.round(deltaPos * minutesPerPixel / slotMinutes) * slotMinutes;
-
-                if (deltaMinutes !== currentDelta) {
-                    currentDelta = deltaMinutes;
-
-                    if (isTimeline) {
-                        if (resizeEdge === 'left') {
-                            // Left resize: adjust left position and width
-                            const newLeft = originalLeft + deltaPos;
-                            const newWidth = originalSize - deltaPos;
-
-                            if (newWidth > 10) { // Minimum width
-                                eventElement.style.left = newLeft + 'px';
-                                eventElement.style.width = newWidth + 'px';
-                            }
-                        } else {
-                            // Right resize: adjust width only
-                            const newWidth = originalSize + deltaPos;
-
-                            if (newWidth > 10) { // Minimum width
-                                eventElement.style.width = newWidth + 'px';
-                            }
-                        }
-                    } else {
-                        // TimeGrid resize (vertical)
-                        if (resizeEdge === 'top') {
-                            // Top resize: adjust top position and height
-                            const newTop = originalTop + deltaPos;
-                            const newHeight = originalSize - deltaPos;
-
-                            if (newHeight > 10) { // Minimum height
-                                eventElement.style.top = newTop + 'px';
-                                eventElement.style.height = newHeight + 'px';
-                            }
-                        } else {
-                            // Bottom resize: adjust height only
-                            const newHeight = originalSize + deltaPos;
-
-                            if (newHeight > 10) { // Minimum height
-                                eventElement.style.height = newHeight + 'px';
-                            }
-                        }
-                    }
-
-                    // Store current delta for later
-                    // deltaMinutes is negative when dragging left, positive when dragging right
-                    // This works for both edges: left edge drag-left = earlier start, right edge drag-right = later end
-                    eventElement.dataset.resizeDeltaMinutes = currentDelta;
-                    eventElement.dataset.resizeEdge = resizeEdge;
-                }
-            }
-
-            function onMouseUp(e) {
-                if (!isResizing) return;
-                isResizing = false;
-
-                // Remove event listeners
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-
-                // Restore draggable on the event element
-                eventElement.draggable = originalDraggable;
-                eventElement.removeAttribute('data-resizing');
-
-                // Get the final delta
-                const finalDelta = parseInt(eventElement.dataset.resizeDeltaMinutes) || 0;
-
-                // Reset styles to let Blazor re-render with correct values
-                if (isTimeline) {
-                    eventElement.style.width = '';
-                    if (resizeEdge === 'left') {
-                        eventElement.style.left = '';
-                    }
+            var style = s.eventElement.style;
+            var newSize;
+            if (s.isTimeline) {
+                if (s.resizeEdge === 'left') {
+                    newSize = s.originalSize - deltaPos;
+                    if (newSize <= MIN_SIZE) return;
+                    style.left = (s.originalLeft + deltaPos) + 'px';
+                    style.width = newSize + 'px';
                 } else {
-                    eventElement.style.height = '';
-                    if (resizeEdge === 'top') {
-                        eventElement.style.top = '';
-                    }
+                    newSize = s.originalSize + deltaPos;
+                    if (newSize <= MIN_SIZE) return;
+                    style.width = newSize + 'px';
                 }
-
-                // Clean up data attributes
-                delete eventElement.dataset.resizeDeltaMinutes;
-                delete eventElement.dataset.resizeEdge;
-
-                // Call Blazor to notify about the resize
-                if (eventId && finalDelta !== 0) {
-                    self._notifyBlazorResize(dotNetRef, eventId, finalDelta, resizeEdge);
-                }
+            } else if (s.resizeEdge === 'top') {
+                newSize = s.originalSize - deltaPos;
+                if (newSize <= MIN_SIZE) return;
+                style.top = (s.originalTop + deltaPos) + 'px';
+                style.height = newSize + 'px';
+            } else {
+                newSize = s.originalSize + deltaPos;
+                if (newSize <= MIN_SIZE) return;
+                style.height = newSize + 'px';
             }
 
-            // Add global event listeners
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+            // Only a delta whose size passed the minimum guard can be committed.
+            // deltaMinutes is negative when dragging left/up, positive when dragging right/down:
+            // left edge drag-left = earlier start, right edge drag-right = later end.
+            s.delta = deltaMinutes;
+        },
+
+        /** The pointer was released after a real resize: tell .NET once. */
+        _end: function () {
+            var s = this._session;
+            if (!s) return;
+            // Put the Blazor-rendered geometry back FIRST: under Blazor WebAssembly the render that applies
+            // the new size runs synchronously inside invokeMethodAsync, and a later cleanup would overwrite it.
+            this._restoreGeometry(s);
+            if (s.eventId && s.delta !== 0) {
+                this._notifyBlazorResize(s.dotNetRef, s.eventId, s.delta, s.resizeEdge);
+            }
+        },
+
+        /** Escape, pointercancel, lost capture, destroy: nothing is committed. */
+        _rollback: function () {
+            if (this._session) this._session.delta = 0;
+        },
+
+        /** Runs on EVERY path (tap, end, cancel, veto-after-start): put the event back. */
+        _release: function () {
+            var s = this._session;
+            this._session = null;
+            if (!s) return;
+
+            s.eventElement.draggable = s.originalDraggable;
+            s.eventElement.removeAttribute('data-resizing');
+            this._restoreGeometry(s);
+        },
+
+        /** Puts back the inline geometry Blazor rendered; once per session (after a commit Blazor re-renders the new one). */
+        _restoreGeometry: function (s) {
+            if (s.restored) return;
+            s.restored = true;
+            var style = s.eventElement.style;
+            if (s.isTimeline) {
+                style.width = s.originalStyle.width;
+                if (s.resizeEdge === 'left') style.left = s.originalStyle.left;
+            } else {
+                style.height = s.originalStyle.height;
+                if (s.resizeEdge === 'top') style.top = s.originalStyle.top;
+            }
         },
 
         /**
@@ -234,10 +250,16 @@
         },
 
         /**
-         * Cancel ongoing resize operation
+         * Cancel an ongoing resize operation (restores the event, notifies nothing)
          */
         cancelResize: function () {
-            // Implementation for manual cancellation if needed
+            if (this._drag) this._drag.cancel('cancelled');
+        },
+
+        _detachDrag: function () {
+            var drag = this._drag;
+            this._drag = null;
+            if (drag) drag.detach();
         },
 
         /**
@@ -245,14 +267,13 @@
          * Call when the scheduler component is disposed
          */
         destroy: function () {
-            if (this._boundMouseDown) {
-                document.removeEventListener('mousedown', this._boundMouseDown);
-                this._boundMouseDown = null;
-            }
-            this._currentResize = null;
+            this._generation++;
+            this._detachDrag();
             this._dotNetRefs.clear();
         }
     };
+
+    window.TempoBlazor.Scheduler._session = null;
 
     // Auto-initialize on DOM ready
     if (document.readyState === 'loading') {

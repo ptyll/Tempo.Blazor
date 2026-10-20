@@ -57,6 +57,10 @@ window.tmDiagramEditor = {
 
     init: function (container, dotNetRef, options) {
         const id = container.id || 'tmd-' + Math.random().toString(36).substr(2, 9);
+        // A Blazor re-render can call init on a container whose previous instance is still
+        // registered (no dispose between): tear it down first so no listener or touch session
+        // survives onto the fresh instance.
+        if (this.instances.has(id)) this.destroy(container);
         container.id = id;
 
         const svg = container.querySelector('.tm-diagram-canvas__svg');
@@ -104,6 +108,10 @@ window.tmDiagramEditor = {
             rubberStartDoc: null,
             rubberEl: null,
 
+            // two-finger pinch/pan (pointer-gesture.js drives it; the flag lets the chrome
+            // defer viewport moves that would fight the gesture)
+            isPinching: false,
+
             // tool mode
             toolMode: 'select',
             spaceHeld: false,
@@ -150,23 +158,17 @@ window.tmDiagramEditor = {
             dragWholeEdgeStartDoc: null,
             dragWholeEdgeDeltaDoc: { x: 0, y: 0 },
 
-            // pinch zoom
-            pinchStartDist: 0,
-            pinchStartScale: 1,
-            pinchMidDoc: null,
-            pinchViewBoxStart: null,
-
-            // long press
-            longPressTimer: null,
-            longPressStart: null,
-            longPressNodeId: null,
-
             // magnetic guidelines
             guideLines: [],
         };
 
         this.instances.set(id, inst);
         this._attachEvents(inst);
+        // Phase 6: the touch/pen gesture stack (node drag, pan, long-press menu, pinch/pan,
+        // resize/rotate sessions) lives in diagram-editor-touch.js over the shared core helpers
+        // pointer-drag.js / pointer-gesture.js — a second pinch or long-press here is forbidden
+        // (decision F7-POINTER-DRAG-PLURALS-RELATIVE-TIME).
+        this._loadTouchModule(inst);
 
         // Auto-fit the content into the visible canvas on first initialization.
         // Without this, the default viewBox (e.g. 0 0 3000 2000) is much larger
@@ -194,7 +196,13 @@ window.tmDiagramEditor = {
         const id = container.id;
         const inst = this.instances.get(id);
         if (!inst) return;
+        inst.__destroyed = true;   // a touch module still importing must not attach onto this canvas
 
+        if (inst.__touchDetach) {
+            try { inst.__touchDetach(); } catch (_e) { /* the sessions are already gone */ }
+            inst.__touchDetach = null;
+        }
+        this._cancelRotateSession(inst);   // before inst.svg = null: the rollback needs the geometry
         this._detachEvents(inst);
         if (inst.rubberEl) inst.rubberEl.remove();
         this._clearSelectionOutlines(inst);
@@ -243,6 +251,63 @@ window.tmDiagramEditor = {
     },
 
     // ── Event attachment ──────────────────────────────────────────────────────
+    // The mouse path stays here (characterization parity, phase 6); every touch/pen gesture is
+    // the shared-helper session stack in diagram-editor-touch.js — no touchstart handlers.
+
+    // Resolved NOW: document.currentScript is only set while this classic script runs. When it
+    // is null (type="module", a loader or an injected script) find our own <script> tag; the last
+    // resort resolves the deployed path against document.baseURI so <base href> is honoured and
+    // the result is always an absolute URL (a bare '_content/...' string is not a module
+    // specifier: import() would throw TypeError).
+    _touchModuleUrl: (function () {
+        const TOUCH = 'diagram-editor-touch.js';
+        try {
+            const script = document.currentScript;
+            if (script && script.src) return new URL(TOUCH, script.src).href;
+        } catch (_e) { /* fall through */ }
+        try {
+            const tags = document.querySelectorAll ? document.querySelectorAll('script[src]') : [];
+            for (let i = tags.length - 1; i >= 0; i--) {
+                const src = tags[i].src || '';
+                // diagram-editor.js or a fingerprinted diagram-editor.<hash>.js, never -touch.js
+                if (/\/diagram-editor(\.[A-Za-z0-9_-]+)?\.js(?:[?#]|$)/.test(src)) return new URL(TOUCH, src).href;
+            }
+        } catch (_e) { /* fall through */ }
+        try {
+            return new URL('_content/Tempo.Blazor.DiagramEditor/js/' + TOUCH, document.baseURI).href;
+        } catch (_e) {
+            return '/_content/Tempo.Blazor.DiagramEditor/js/' + TOUCH;
+        }
+    })(),
+
+    // Test seam: the Node tests replace this to avoid a real dynamic import.
+    _importTouchModule: function (url) { return import(url); },
+
+    _loadTouchModule: function (inst) {
+        if (inst.__touchDetach) return Promise.resolve();
+        if (inst.__touchLoading) return inst.__touchLoading;
+        const self = this;
+        // Alive = not destroyed and still THE instance for its container id (a re-init replaces it).
+        const alive = function () {
+            return !inst.__destroyed && !!inst.container && self.instances.get(inst.container.id) === inst;
+        };
+        inst.__touchLoading = Promise.resolve()
+            .then(function () { return self._importTouchModule(self._touchModuleUrl); })
+            .then(function (module) {
+                if (!alive()) return null;
+                return module.attachTouch(self, inst);     // returned: a rejection reaches .catch
+            })
+            .then(function (detach) {
+                if (typeof detach !== 'function') return;
+                if (!alive() || inst.__touchDetach) { detach(); return; }
+                inst.__touchDetach = detach;
+            })
+            .catch(function (err) {
+                console.warn('tmDiagramEditor: the touch module could not be loaded; touch gestures are unavailable', err);
+            })
+            .finally(function () { inst.__touchLoading = null; });
+        return inst.__touchLoading;
+    },
 
     _attachEvents: function (inst) {
         inst._onMouseDown = (e) => this._onMouseDown(e, inst);
@@ -251,9 +316,6 @@ window.tmDiagramEditor = {
         inst._onWheel = (e) => this._onWheel(e, inst);
         inst._onKeyDown = (e) => this._onKeyDown(e, inst);
         inst._onKeyUp = (e) => this._onKeyUp(e, inst);
-        inst._onTouchStart = (e) => this._onTouchStart(e, inst);
-        inst._onTouchMove = (e) => this._onTouchMove(e, inst);
-        inst._onTouchEnd = (e) => this._onTouchEnd(e, inst);
         inst._onDrop = (e) => this._onDrop(e, inst);
         inst._onDragOver = (e) => { e.preventDefault(); };
         inst._onContextMenu = (e) => this._onContextMenu(e, inst);
@@ -261,10 +323,6 @@ window.tmDiagramEditor = {
 
         inst.container.addEventListener('mousedown', inst._onMouseDown);
         inst.container.addEventListener('wheel', inst._onWheel, { passive: false });
-        inst.container.addEventListener('touchstart', inst._onTouchStart, { passive: false });
-        inst.container.addEventListener('touchmove', inst._onTouchMove, { passive: false });
-        inst.container.addEventListener('touchend', inst._onTouchEnd);
-        inst.container.addEventListener('touchcancel', inst._onTouchEnd);
         inst.container.addEventListener('drop', inst._onDrop);
         inst.container.addEventListener('dragover', inst._onDragOver);
         inst.container.addEventListener('contextmenu', inst._onContextMenu);
@@ -278,10 +336,6 @@ window.tmDiagramEditor = {
     _detachEvents: function (inst) {
         inst.container.removeEventListener('mousedown', inst._onMouseDown);
         inst.container.removeEventListener('wheel', inst._onWheel);
-        inst.container.removeEventListener('touchstart', inst._onTouchStart);
-        inst.container.removeEventListener('touchmove', inst._onTouchMove);
-        inst.container.removeEventListener('touchend', inst._onTouchEnd);
-        inst.container.removeEventListener('touchcancel', inst._onTouchEnd);
         inst.container.removeEventListener('drop', inst._onDrop);
         inst.container.removeEventListener('dragover', inst._onDragOver);
         inst.container.removeEventListener('contextmenu', inst._onContextMenu);
@@ -307,54 +361,73 @@ window.tmDiagramEditor = {
     _onContextMenu: function (e, inst) {
         if (inst.readOnly || !inst.dotNetRef) return;
 
+        e.preventDefault();
+
+        // R4: every touch long-press (node, edge, empty canvas) is owned by the contextMenu
+        // session (600 ms, diagram-editor-touch.js). Android Chrome and Windows touch also fire a
+        // native contextmenu for the same hold — swallow it BEFORE the close-on-menu branch, or
+        // the touch-synthesized event ON the just-opened menu would close it again.
+        if (this._isTouchContextMenu(e, inst)) return;
+
         // If clicking on the custom context menu itself, close it and prevent native menu
         if (e.target.closest('.tm-diagram-editor__context-menu')) {
-            e.preventDefault();
             inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
             return;
         }
 
-        e.preventDefault();
+        this._openContextMenuFor(inst, this._contextMenuTarget(e.target), e.clientX, e.clientY);
+    },
 
-        // No need to call CloseContextMenu here — OnNodeContextMenu/OnEdgeContextMenu/OnCanvasContextMenu
-        // will set _contextMenuOpen = true and openContextMenu will replace the old menu and listeners.
-
-        const labelGroupEl = e.target.closest('.tm-diagram-edge-label-group');
+    // Shared by the right-click and the touch long-press: what the press is on.
+    _contextMenuTarget: function (target) {
+        if (!target || !target.closest) return { kind: 'canvas' };
+        const labelGroupEl = target.closest('.tm-diagram-edge-label-group');
         if (labelGroupEl) {
             const labelHandle = labelGroupEl.querySelector('[data-label-handle]');
-            const edgeId = labelHandle ? labelHandle.getAttribute('data-edge-id') : null;
-            if (edgeId) {
-                inst.dotNetRef.invokeMethodAsync('OnEdgeContextMenu', edgeId, e.clientX, e.clientY);
-                return;
-            }
+            const edgeId = (labelHandle && labelHandle.getAttribute('data-edge-id')) || labelGroupEl.getAttribute('data-edge-id');
+            if (edgeId) return { kind: 'edge', id: edgeId };
         }
-
-        const tableCellEl = e.target.closest('.tm-diagram-node__table-cell');
-        const nodeEl = e.target.closest('.tm-diagram-node');
-        const edgeEl = e.target.closest('.tm-diagram-edge-hit-path');
-
+        const tableCellEl = target.closest('.tm-diagram-node__table-cell');
+        const nodeEl = target.closest('.tm-diagram-node');
         if (tableCellEl && nodeEl) {
-            const nodeId = nodeEl.getAttribute('data-node-id');
+            const id = nodeEl.getAttribute('data-node-id');
             const row = parseInt(tableCellEl.getAttribute('data-row'), 10);
             const col = parseInt(tableCellEl.getAttribute('data-col'), 10);
-            if (nodeId && !isNaN(row) && !isNaN(col)) {
-                inst.dotNetRef.invokeMethodAsync('OnTableCellContextMenu', nodeId, row, col, e.clientX, e.clientY);
-            }
-        } else if (nodeEl) {
-            const nodeId = nodeEl.getAttribute('data-node-id');
-            if (nodeId) {
-                inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', nodeId, e.clientX, e.clientY);
-            }
-        } else if (edgeEl) {
-            const edgeId = edgeEl.getAttribute('data-edge-id');
-            if (edgeId) {
-                inst.dotNetRef.invokeMethodAsync('OnEdgeContextMenu', edgeId, e.clientX, e.clientY);
-            }
-        } else {
-            const docPt = this._screenToDoc(inst, e.clientX, e.clientY);
-            inst.dotNetRef.invokeMethodAsync('OnCanvasContextMenu', docPt.x, docPt.y, e.clientX, e.clientY);
+            return (id && !isNaN(row) && !isNaN(col)) ? { kind: 'cell', id, row, col } : null;
+        }
+        if (nodeEl) { const id = nodeEl.getAttribute('data-node-id'); return id ? { kind: 'node', id } : null; }
+        const edgeEl = target.closest('.tm-diagram-edge-hit-path');
+        if (edgeEl) { const id = edgeEl.getAttribute('data-edge-id'); return id ? { kind: 'edge', id } : null; }
+        return { kind: 'canvas' };
+    },
+
+    _openContextMenuFor: function (inst, t, clientX, clientY, origin) {
+        if (!t || !inst.dotNetRef) return;
+        const src = origin || 'mouse';
+        if (t.kind === 'cell') inst.dotNetRef.invokeMethodAsync('OnTableCellContextMenu', t.id, t.row, t.col, clientX, clientY, src);
+        else if (t.kind === 'node') inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', t.id, clientX, clientY, src);
+        else if (t.kind === 'edge') inst.dotNetRef.invokeMethodAsync('OnEdgeContextMenu', t.id, clientX, clientY, src);
+        else {
+            const docPt = this._screenToDoc(inst, clientX, clientY);
+            inst.dotNetRef.invokeMethodAsync('OnCanvasContextMenu', docPt.x, docPt.y, clientX, clientY, src);
         }
     },
+
+    _isTouchContextMenu: function (e, inst) {
+        if (!inst.__touchDetach) return false;   // no touch stack on this canvas: a contextmenu is a mouse right-click
+        if (e.pointerType === 'touch') return true;                                    // contextmenu is a PointerEvent in Chromium/Firefox
+        if (inst.__touchContacts && inst.__touchContacts.size > 0) return true;        // fired during the hold
+        return inst.__lastTouchUpAt > 0 && Date.now() - inst.__lastTouchUpAt < 800;     // Windows: fired on lift
+    },
+
+    // Touch hooks for the long-press session (R4).
+    touchContextMenuTarget: function (inst, target) {
+        if (inst.readOnly || !target || !target.closest || !target.closest('.tm-diagram-canvas__svg')) return null;
+        return this._contextMenuTarget(target);
+    },
+    // `origin` is the pointer type that opened the menu ('touch'); C# mirrors it as
+    // data-anchor="touch" so openContextMenu can offset the menu away from the finger.
+    touchOpenContextMenu: function (inst, t, clientX, clientY, origin) { this._openContextMenuFor(inst, t, clientX, clientY, origin); },
 
     // ── Coordinate helpers ────────────────────────────────────────────────────
 
@@ -378,6 +451,14 @@ window.tmDiagramEditor = {
         if (inst.dotNetRef)
             inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', x, y, w, h);
     },
+
+    // Zoom limits shared by wheel, pinch, zoomTo and fitToView. C# mirror: DiagramZoomLimits.cs
+    // (the zoom buttons step between them); DiagramZoomLimitsTests keeps both equal.
+    MIN_SCALE: 0.15,
+    MAX_SCALE: 5.0,
+    // The fit ceiling: zoomToRect and fitToView never fit content LARGER than this on screen.
+    FIT_MAX_SCALE: 2.0,
+    _clampScale: function (s) { return Math.min(this.MAX_SCALE, Math.max(this.MIN_SCALE, s)); },
 
     _snap: function (inst, v) {
         const g = inst.gridSize;
@@ -550,10 +631,43 @@ window.tmDiagramEditor = {
         return null;
     },
 
+    // First element carrying `className` at the press: the raw target first, then the hit stack
+    // (edges paint over nodes, so a port / connection point under an edge corridor is not the
+    // event target). `stack` is computed once per mousedown by the caller. A search for a port
+    // or a connection point also accepts the finger-sized `.tm-diagram-port-hit` circle rendered
+    // over them (it carries the same data-port-id / data-cp-* attributes).
+    _firstWithClass: function (target, stack, className) {
+        const hitAlias = className === 'tm-diagram-port' || className === 'tm-diagram-connection-point';
+        const direct = target && target.closest ? target.closest('.' + className) : null;
+        if (direct) return direct;
+        if (hitAlias && target && target.closest) {
+            const hit = target.closest('.tm-diagram-port-hit');
+            if (hit) return hit;
+        }
+        for (let i = 0; i < stack.length; i++) {
+            const el = stack[i];
+            if (el.classList && (el.classList.contains(className) || (hitAlias && el.classList.contains('tm-diagram-port-hit')))) return el;
+        }
+        return null;
+    },
+
     // ── Mouse down ───────────────────────────────────────────────────────────
 
     _onMouseDown: function (e, inst) {
-        if (inst.readOnly && e.button !== 1) return;
+        // Read-only (R1): the left button inspects (selects a node, clears on the empty surface);
+        // middle button, Space+drag and the Pan tool still pan below. Edges select through the
+        // Blazor @onclick (OnEdgeClicked), so a press on an edge is left alone here.
+        if (inst.readOnly && e.button !== 1 && !inst.spaceHeld && inst.toolMode !== 'pan') {
+            if (e.button !== 0) return;
+            // Read-only keeps the canvas focusable (keyboard panning, Escape): the writable
+            // path below focuses it, so the inspection branch must do the same.
+            inst.container.focus({ preventScroll: true });
+            if (e.target.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')) return;
+            const roNodeEl = e.target.closest('[data-node-id]');
+            if (roNodeEl) this.selectNodeForInspection(inst, roNodeEl, !!(e.ctrlKey || e.metaKey));
+            else this.clearSelectionForInspection(inst);
+            return;
+        }
 
         // Ignore when interacting with inline edit inputs or edge toolbars
         if (e.target.closest('.tm-diagram-node__inline-input, .tm-diagram-node__inline-textarea, .tm-diagram-edge-label-input, .tm-diagram-edge-toolbar')) {
@@ -747,10 +861,17 @@ window.tmDiagramEditor = {
             return;
         }
 
-        // Left-click on edge hit-path? -> start whole-edge drag
+        // Left-click on edge hit-path? -> start whole-edge drag. A port sitting under the
+        // pointer wins over the edge corridor, though: edges paint over nodes, so the fat
+        // invisible hit path is the top element at a port's position and the raw target is
+        // the hit path, not the port (phase 8 regression — pressing a port that carries an
+        // attached edge started a whole-edge drag and edge drawing became impossible).
+        const pointerStack = (typeof document.elementsFromPoint === 'function') ? document.elementsFromPoint(e.clientX, e.clientY) : [];
         if (!isRightClick && !inst.readOnly) {
             const edgeHitEl = this._findHitPath(e);
-            if (edgeHitEl) {
+            var portUnderPointer = !!edgeHitEl && !!(this._firstWithClass(e.target, pointerStack, 'tm-diagram-port')
+                || this._firstWithClass(e.target, pointerStack, 'tm-diagram-connection-point'));
+            if (edgeHitEl && !portUnderPointer) {
                 const edgeId = edgeHitEl.getAttribute('data-edge-id');
                 if (edgeId) {
                     if (!inst.selectedIds.has(edgeId)) {
@@ -781,9 +902,20 @@ window.tmDiagramEditor = {
             }
         }
 
-        // Port clicked? -> start edge drawing (skip if node is locked)
-        const portEl = e.target.closest('.tm-diagram-port');
-        if (portEl && !inst.readOnly) {
+        // Port clicked? -> start edge drawing (skip if node is locked). The port may sit
+        // UNDER an edge hit path (edges paint over nodes and the hit path becomes the event
+        // target), so when the raw target is not a port, resolve the element stack under
+        // the pointer (phase 8, _firstWithClass). Occlusion: the stack is only consulted when
+        // the raw target is the port itself or an edge corridor that paints over it — a press on
+        // another control (a resize/rotate handle hit, a node body, …) is that control's
+        // gesture, and a port buried deeper in the stack under it is COVERED, not pressed.
+        var rawHit = e.target && e.target.closest ? e.target : null;
+        var stackAllowed = !!rawHit && (!!(rawHit.closest('.tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'))
+            || !!(rawHit.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group')));
+        var portEl = stackAllowed ? this._firstWithClass(e.target, pointerStack, 'tm-diagram-port') : null;
+        // A `.tm-diagram-port-hit` circle may stand in for a CONNECTION POINT (data-cp-*): only a
+        // real port carries data-port-id — let the connection-point branch handle the rest.
+        if (portEl && portEl.getAttribute('data-port-id') && !inst.readOnly) {
             const nodeEl = portEl.closest('[data-node-id]');
             if (nodeEl && nodeEl.getAttribute('data-locked') === 'true') return;
             e.preventDefault();
@@ -795,7 +927,7 @@ window.tmDiagramEditor = {
         }
 
         // Connection point clicked? -> start edge drawing with fixed constraint
-        const cpEl = e.target.closest('.tm-diagram-connection-point');
+        const cpEl = stackAllowed ? this._firstWithClass(e.target, pointerStack, 'tm-diagram-connection-point') : null;
         if (cpEl && !inst.readOnly) {
             const nodeEl = cpEl.closest('[data-node-id]');
             if (nodeEl && nodeEl.getAttribute('data-locked') === 'true') return;
@@ -811,8 +943,9 @@ window.tmDiagramEditor = {
         }
 
         // Resize / rotate / connect clicked? -> let Blazor handle it (do NOT stopPropagation,
-        // otherwise Blazor's document-level event delegation never receives the event)
-        if (e.target.closest('.tm-diagram-resize-handle, .tm-diagram-rotate-handle, .tm-diagram-connect-arrow')) {
+        // otherwise Blazor's document-level event delegation never receives the event). The -hit
+        // rects (phase 6) carry the gesture for every pointer type.
+        if (e.target.closest('.tm-diagram-resize-handle, .tm-diagram-rotate-handle, .tm-diagram-resize-handle-hit, .tm-diagram-rotate-handle-hit, .tm-diagram-connect-arrow')) {
             return;
         }
 
@@ -1391,6 +1524,116 @@ window.tmDiagramEditor = {
 
     // ── Mouse up ─────────────────────────────────────────────────────────────
 
+    // The edge-draw commit shared by the mouse path (_onMouseUp) and the touch path
+    // (touchEndEdgeDraw, J12a). One commit path, one JsOnEdgeCreated shape.
+    _commitEdgeDraw: function (inst, clientX, clientY) {
+        // When the source is floating (free-line from empty canvas) pass
+        // the doc-space source point so the backend can create an edge
+        // with SourcePoint instead of a source node/port. Floating
+        // coordinates are grid-snapped when `gridSize > 0` so free
+        // endpoints line up with the grid just like node positions do.
+        const floatingSource = !inst.drawSource.nodeId;
+        const srcPtX = floatingSource ? this._snap(inst, inst.drawSource.x) : null;
+        const srcPtY = floatingSource ? this._snap(inst, inst.drawSource.y) : null;
+
+        // Edge-to-edge connection takes priority
+        if (inst.drawHoverEdgeId && inst.drawHoverEdgeT !== null) {
+            inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+                inst.drawSource.nodeId, inst.drawSource.portId,
+                null, null,
+                inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+                inst.drawHoverEdgeId, inst.drawHoverEdgeT,
+                inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+                null, null, null,
+                null, null,
+                srcPtX, srcPtY,
+                null);
+            this._cancelEdgeDraw(inst);
+            return;
+        }
+        // Use elementFromPoint because e.target may hit SVG grid/path instead of HTML port overlay
+        const hitEl = document.elementFromPoint(clientX, clientY);
+        let portEl = hitEl ? hitEl.closest('.tm-diagram-port') : null;
+        // Phase 3.2 smart-snap to port — if the cursor isn't directly on
+        // a port but _is_ over a node, pull the target onto the closest
+        // port within the same threshold used by `_updateEdgeDraw`
+        // (15 / scale in doc units). This mirrors the preview behavior
+        // so what the user sees during drag is what they get on release.
+        let smartSnapNodeEl = null;
+        if (!portEl) {
+            const nodeUnderCursor = hitEl ? hitEl.closest('[data-node-id]') : null;
+            if (nodeUnderCursor) {
+                const nId = nodeUnderCursor.getAttribute('data-node-id');
+                const upDoc = this._screenToDoc(inst, clientX, clientY);
+                const nearest = this._findNearestPortOnNode(inst, nId, upDoc.x, upDoc.y, 15 / Math.max(inst.scale, 0.01));
+                if (nearest && nearest.portEl) {
+                    portEl = nearest.portEl;
+                    smartSnapNodeEl = nodeUnderCursor;
+                }
+            }
+        }
+        if (portEl) {
+            const nodeEl = portEl.closest('[data-node-id]') || smartSnapNodeEl;
+            if (nodeEl) {
+                const targetNodeId = nodeEl.getAttribute('data-node-id');
+                const targetPortId = portEl.getAttribute('data-port-id');
+                console.log('[EdgeDraw] Port connect -> nodeId=' + targetNodeId + ' portId=' + targetPortId);
+                // Allow self-connections (loop edges)
+                inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+                    inst.drawSource.nodeId, inst.drawSource.portId,
+                    targetNodeId, targetPortId,
+                    inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+                    null, 0.5,
+                    inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+                    null, null, null,
+                    null, null,
+                    srcPtX, srcPtY,
+                    null);
+                this._cancelEdgeDraw(inst);
+                return;
+            }
+        }
+        const cpEl = hitEl ? hitEl.closest('.tm-diagram-connection-point') : null;
+        if (cpEl) {
+            const nodeEl = cpEl.closest('[data-node-id]');
+            if (nodeEl) {
+                const targetNodeId = nodeEl.getAttribute('data-node-id');
+                const targetRx = parseFloat(cpEl.getAttribute('data-cp-rx'));
+                const targetRy = parseFloat(cpEl.getAttribute('data-cp-ry'));
+                const targetPerimeter = cpEl.getAttribute('data-cp-perimeter') === 'true';
+
+                inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+                    inst.drawSource.nodeId, inst.drawSource.portId,
+                    targetNodeId, null,
+                    inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+                    null, 0.5,
+                    inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+                    targetRx, targetRy, targetPerimeter,
+                    null, null,
+                    srcPtX, srcPtY,
+                    null);
+                this._cancelEdgeDraw(inst);
+                return;
+            }
+        }
+        // Dangling edge: drop on empty canvas
+        const docPt = this._screenToDoc(inst, clientX, clientY);
+        const tgtX = this._snap(inst, docPt.x);
+        const tgtY = this._snap(inst, docPt.y);
+        console.log('[EdgeDraw] Dangling -> pt=' + tgtX + ',' + tgtY);
+        inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
+            inst.drawSource.nodeId, inst.drawSource.portId,
+            null, null,
+            inst.drawSource.side, inst.drawSource.offset, null, 0.5,
+            null, 0.5,
+            inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
+            null, null, null,
+            tgtX, tgtY,
+            srcPtX, srcPtY,
+            null);
+        this._cancelEdgeDraw(inst);
+    },
+
     _onMouseUp: function (e, inst) {
         // Pending free-line draw that never escalated (user just *clicked*
         // on empty canvas in edge mode — no drag). In phase 2 this promotes
@@ -1426,111 +1669,7 @@ window.tmDiagramEditor = {
         }
 
         if (inst.isDrawingEdge) {
-            // When the source is floating (free-line from empty canvas) pass
-            // the doc-space source point so the backend can create an edge
-            // with SourcePoint instead of a source node/port. Floating
-            // coordinates are grid-snapped when `gridSize > 0` so free
-            // endpoints line up with the grid just like node positions do.
-            const floatingSource = !inst.drawSource.nodeId;
-            const srcPtX = floatingSource ? this._snap(inst, inst.drawSource.x) : null;
-            const srcPtY = floatingSource ? this._snap(inst, inst.drawSource.y) : null;
-
-            // Edge-to-edge connection takes priority
-            if (inst.drawHoverEdgeId && inst.drawHoverEdgeT !== null) {
-                inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                    inst.drawSource.nodeId, inst.drawSource.portId,
-                    null, null,
-                    inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                    inst.drawHoverEdgeId, inst.drawHoverEdgeT,
-                    inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                    null, null, null,
-                    null, null,
-                    srcPtX, srcPtY,
-                    null);
-                this._cancelEdgeDraw(inst);
-                return;
-            }
-            // Use elementFromPoint because e.target may hit SVG grid/path instead of HTML port overlay
-            const hitEl = document.elementFromPoint(e.clientX, e.clientY);
-            let portEl = hitEl ? hitEl.closest('.tm-diagram-port') : null;
-            // Phase 3.2 smart-snap to port — if the cursor isn't directly on
-            // a port but _is_ over a node, pull the target onto the closest
-            // port within the same threshold used by `_updateEdgeDraw`
-            // (15 / scale in doc units). This mirrors the preview behavior
-            // so what the user sees during drag is what they get on release.
-            let smartSnapNodeEl = null;
-            if (!portEl) {
-                const nodeUnderCursor = hitEl ? hitEl.closest('[data-node-id]') : null;
-                if (nodeUnderCursor) {
-                    const nId = nodeUnderCursor.getAttribute('data-node-id');
-                    const upDoc = this._screenToDoc(inst, e.clientX, e.clientY);
-                    const nearest = this._findNearestPortOnNode(inst, nId, upDoc.x, upDoc.y, 15 / Math.max(inst.scale, 0.01));
-                    if (nearest && nearest.portEl) {
-                        portEl = nearest.portEl;
-                        smartSnapNodeEl = nodeUnderCursor;
-                    }
-                }
-            }
-            if (portEl) {
-                const nodeEl = portEl.closest('[data-node-id]') || smartSnapNodeEl;
-                if (nodeEl) {
-                    const targetNodeId = nodeEl.getAttribute('data-node-id');
-                    const targetPortId = portEl.getAttribute('data-port-id');
-                    console.log('[EdgeDraw] Port connect -> nodeId=' + targetNodeId + ' portId=' + targetPortId);
-                    // Allow self-connections (loop edges)
-                    inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                        inst.drawSource.nodeId, inst.drawSource.portId,
-                        targetNodeId, targetPortId,
-                        inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                        null, 0.5,
-                        inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                        null, null, null,
-                        null, null,
-                        srcPtX, srcPtY,
-                        null);
-                    this._cancelEdgeDraw(inst);
-                    return;
-                }
-            }
-            const cpEl = hitEl ? hitEl.closest('.tm-diagram-connection-point') : null;
-            if (cpEl) {
-                const nodeEl = cpEl.closest('[data-node-id]');
-                if (nodeEl) {
-                    const targetNodeId = nodeEl.getAttribute('data-node-id');
-                    const targetRx = parseFloat(cpEl.getAttribute('data-cp-rx'));
-                    const targetRy = parseFloat(cpEl.getAttribute('data-cp-ry'));
-                    const targetPerimeter = cpEl.getAttribute('data-cp-perimeter') === 'true';
-
-                    inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                        inst.drawSource.nodeId, inst.drawSource.portId,
-                        targetNodeId, null,
-                        inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                        null, 0.5,
-                        inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                        targetRx, targetRy, targetPerimeter,
-                        null, null,
-                        srcPtX, srcPtY,
-                        null);
-                    this._cancelEdgeDraw(inst);
-                    return;
-                }
-            }
-            // Dangling edge: drop on empty canvas
-            const docPt = this._screenToDoc(inst, e.clientX, e.clientY);
-            const tgtX = this._snap(inst, docPt.x);
-            const tgtY = this._snap(inst, docPt.y);
-            console.log('[EdgeDraw] Dangling -> pt=' + tgtX + ',' + tgtY);
-            inst.dotNetRef.invokeMethodAsync('JsOnEdgeCreated',
-                inst.drawSource.nodeId, inst.drawSource.portId,
-                null, null,
-                inst.drawSource.side, inst.drawSource.offset, null, 0.5,
-                null, 0.5,
-                inst.drawSource.constraintRx, inst.drawSource.constraintRy, inst.drawSource.constraintPerimeter,
-                null, null, null,
-                tgtX, tgtY,
-                srcPtX, srcPtY,
-                null);
-            this._cancelEdgeDraw(inst);
+            this._commitEdgeDraw(inst, e.clientX, e.clientY);
             return;
         }
 
@@ -1812,240 +1951,474 @@ window.tmDiagramEditor = {
         const vb = this._getViewBox(inst);
         const pt = this._screenToDoc(inst, e.clientX, e.clientY);
 
-        const newW = vb.w * factor;
-        const newH = vb.h * factor;
-
         const svgRect = inst.svg.getBoundingClientRect();
-        const newScale = svgRect.width / newW;
-        if (newScale < 0.15 || newScale > 5.0) return;
-
-        const newX = pt.x - (pt.x - vb.x) * factor;
-        const newY = pt.y - (pt.y - vb.y) * factor;
+        const curScale = svgRect.width / vb.w;
+        // Outside the range (a restored viewBox the limits no longer cover): only a tick that
+        // moves TOWARD the range applies, capped at the boundary — never a jump past it.
+        let newScale = curScale / factor;
+        if (curScale < this.MIN_SCALE) {
+            if (newScale <= curScale) return;
+            newScale = Math.min(newScale, this.MIN_SCALE);
+        }
+        else if (curScale > this.MAX_SCALE) {
+            if (newScale >= curScale) return;
+            newScale = Math.max(newScale, this.MAX_SCALE);
+        }
+        else {
+            newScale = this._clampScale(newScale);
+            if (Math.abs(newScale - curScale) < 1e-9) return;   // already at the limit
+        }
+        const f = curScale / newScale;                      // effective factor after the clamp
+        const newW = vb.w * f;
+        const newH = vb.h * f;
+        const newX = pt.x - (pt.x - vb.x) * f;
+        const newY = pt.y - (pt.y - vb.y) * f;
 
         this._setViewBox(inst, newX, newY, newW, newH);
         inst.dotNetRef.invokeMethodAsync('OnZoomChanged', newScale);
         inst.dotNetRef.invokeMethodAsync('OnViewportChanged', newX, newY, newW, newH);
     },
 
-    // ── Touch events ─────────────────────────────────────────────────────────
+    // ── Touch/pen gesture hooks (diagram-editor-touch.js) ────────────────────
+    // The sessions (core pointer-drag.js / pointer-gesture.js) drive the SAME inst state as the
+    // mouse path — selection, node drag, pan, rotation — so each gesture keeps one implementation.
+    // There is deliberately no second pinch and no second long-press here (decision
+    // F7-POINTER-DRAG-PLURALS-RELATIVE-TIME).
 
-    _onTouchStart: function (e, inst) {
-        if (inst.readOnly) return;
-
-        // Pinch zoom start
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            this._cancelLongPress(inst);
-            const t1 = e.touches[0];
-            const t2 = e.touches[1];
-            const dx = t2.clientX - t1.clientX;
-            const dy = t2.clientY - t1.clientY;
-            inst.pinchStartDist = Math.sqrt(dx * dx + dy * dy);
-            inst.pinchStartScale = inst.scale;
-            inst.pinchMidDoc = this._screenToDoc(inst, (t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2);
-            inst.pinchViewBoxStart = this._getViewBox(inst);
-            return;
+    /** R1: read-only inspection — selects a node (mouse click or finger tap) without arming a
+     *  drag, resize, rotate or connect. `additive` toggles it (Ctrl/Cmd+click). */
+    selectNodeForInspection: function (inst, nodeEl, additive) {
+        const id = nodeEl ? nodeEl.getAttribute('data-node-id') : null;
+        if (!id || !this._isNodeInActiveGroup(inst, nodeEl)) return false;
+        if (additive) {
+            if (inst.selectedIds.has(id)) inst.selectedIds.delete(id);
+            else inst.selectedIds.add(id);
+        } else {
+            if (inst.selectedIds.size === 1 && inst.selectedIds.has(id)) return true;
+            inst.selectedIds = new Set([id]);
         }
+        this._updateSelection(inst);
+        inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [...inst.selectedIds]);
+        return true;
+    },
 
-        if (e.touches.length !== 1) return;
-
-        const t = e.touches[0];
-        const nodeEl = document.elementFromPoint(t.clientX, t.clientY)?.closest('[data-node-id]');
-
-        if (nodeEl) {
-            e.preventDefault();
-            const id = nodeEl.getAttribute('data-node-id');
-            const isLocked = nodeEl.getAttribute('data-locked') === 'true';
-            if (!inst.selectedIds.has(id)) {
-                inst.selectedIds = new Set([id]);
-                this._updateSelection(inst);
-                inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
-            }
-
-            if (isLocked || inst.readOnly) {
-                // Cancel long press for locked nodes
-                this._cancelLongPress(inst);
-                return;
-            }
-
-            inst.isDragging = true;
-            inst.dragNodeIds = [...inst.selectedIds];
-
-            // Include children of selected nodes
-            const allIds = new Set(inst.dragNodeIds);
-            inst.dragNodeIds.forEach(nid => {
-                if (inst.scenePane) {
-                    inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
-                        const cid = childEl.getAttribute('data-node-id');
-                        if (cid) allIds.add(cid);
-                    });
-                }
-            });
-            inst.dragNodeIds = [...allIds];
-
-            // Include group nodes
-            inst.dragNodeIds = this._includeGroupNodes(inst, inst.dragNodeIds);
-
-            inst.dragStartScreen = { x: t.clientX, y: t.clientY };
-            inst.dragStartPositions = {};
-            inst.dragNodeIds.forEach(nid => {
-                const r = this._nodeRect(inst, nid);
-                if (r) inst.dragStartPositions[nid] = { x: r.x, y: r.y };
-            });
-            inst.dotNetRef.invokeMethodAsync('OnDragStarted', inst.dragNodeIds);
-
-            // Long press for context menu
-            inst.longPressNodeId = id;
-            inst.longPressStart = { x: t.clientX, y: t.clientY };
-            inst.longPressTimer = setTimeout(() => {
-                if (inst.longPressNodeId && inst.dotNetRef) {
-                    inst.dotNetRef.invokeMethodAsync('OnNodeContextMenu', inst.longPressNodeId, inst.longPressStart.x, inst.longPressStart.y);
-                }
-                inst.longPressTimer = null;
-                inst.longPressNodeId = null;
-            }, 600);
-            return;
+    /** R1: read-only inspection — a finger tap on an edge selects it (the touch layer prevents
+     *  the default, so the Blazor @onclick never fires for taps; the mouse keeps using it). */
+    selectEdgeForInspection: function (inst, el) {
+        const idEl = el && el.closest ? el.closest('[data-edge-id]') : null;
+        const id = (idEl ?? el)?.getAttribute?.('data-edge-id');
+        if (!id) return false;
+        if (!(inst.selectedIds.size === 1 && inst.selectedIds.has(id))) {
+            inst.selectedIds = new Set([id]);
+            this._updateSelection(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
         }
+        return true;
+    },
 
-        // Pan on empty canvas
-        e.preventDefault();
+    /** R1: read-only inspection — a click/tap on the empty surface clears the selection. */
+    clearSelectionForInspection: function (inst) {
+        if (inst.selectedIds.size === 0) return;
+        inst.selectedIds.clear();
+        this._updateSelection(inst);
+        inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', []);
+    },
+
+    touchPressNode: function (inst, nodeEl, clientX, clientY) {
+        if (inst.readOnly) return false;
+        const id = nodeEl.getAttribute('data-node-id');
+        if (!id) return false;
+        if (!inst.selectedIds.has(id)) {
+            inst.selectedIds = new Set([id]);
+            this._updateSelection(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [id]);
+        }
+        inst.container.focus({ preventScroll: true });
+        return nodeEl.getAttribute('data-locked') !== 'true';
+    },
+
+    touchPressEdge: function (inst, edgeEl) {
+        if (inst.readOnly) return false;
+        const edgeId = edgeEl.getAttribute('data-edge-id');
+        if (!edgeId) return false;
+        if (!inst.selectedIds.has(edgeId)) {
+            inst.selectedIds = new Set([edgeId]);
+            this._updateSelection(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [edgeId]);
+        }
+        return true;
+    },
+
+    touchBeginNodeDrag: function (inst, nodeEl, clientX, clientY) {
+        if (inst.readOnly || inst.isDragging) return;
+        const id = nodeEl ? nodeEl.getAttribute('data-node-id') : null;
+        if (!id || nodeEl.getAttribute('data-locked') === 'true') return;
+        if (!inst.selectedIds.has(id)) return;   // the press must have selected it first
+
+        inst.isDragging = true;
+        inst.dragNodeIds = [...inst.selectedIds];
+
+        // Include children of selected nodes
+        const allIds = new Set(inst.dragNodeIds);
+        inst.dragNodeIds.forEach(nid => {
+            if (inst.scenePane) {
+                inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
+                    const cid = childEl.getAttribute('data-node-id');
+                    if (cid && this._isNodeInActiveGroup(inst, childEl)) allIds.add(cid);
+                });
+            }
+        });
+        inst.dragNodeIds = [...allIds];
+
+        // Include group nodes
+        inst.dragNodeIds = this._includeGroupNodes(inst, inst.dragNodeIds);
+
+        inst.dragStartScreen = { x: clientX, y: clientY };
+        inst.dragStartPositions = {};
+        inst.dragNodeIds.forEach(nid => {
+            const r = this._nodeRect(inst, nid);
+            if (r) inst.dragStartPositions[nid] = { x: r.x, y: r.y, w: r.w, h: r.h };
+        });
+        inst.dotNetRef.invokeMethodAsync('OnDragStarted', inst.dragNodeIds);
+    },
+
+    touchMoveNodeDrag: function (inst, clientX, clientY) {
+        if (!inst.isDragging || inst.dragNodeIds.length === 0 || !inst.dragStartScreen) return;
+        const dxScreen = clientX - inst.dragStartScreen.x;
+        const dyScreen = clientY - inst.dragStartScreen.y;
+        let dxDoc = dxScreen / inst.scale;
+        let dyDoc = dyScreen / inst.scale;
+
+        const guides = this._computeSnapGuides(inst, inst.dragNodeIds, inst.dragStartPositions, dxDoc, dyDoc);
+        if (guides.x !== null) dxDoc += guides.x.delta;
+        if (guides.y !== null) dyDoc += guides.y.delta;
+        this._drawGuideLines(inst, guides);
+
+        inst.dragNodeIds.forEach(id => {
+            const start = inst.dragStartPositions[id];
+            if (!start) return;
+            const nx = start.x + dxDoc;
+            const ny = start.y + dyDoc;
+            const clamped = this._clampChildPosition(inst, id, nx, ny);
+            this._setNodeTranslate(inst, id, clamped.x, clamped.y);
+        });
+        this._updateSelectionTransforms(inst);
+    },
+
+    touchEndNodeDrag: function (inst, clientX, clientY) {
+        if (!inst.isDragging) return;
+        const moves = inst.dragNodeIds.map(id => {
+            const r = this._nodeRect(inst, id);
+            if (!r) return null;
+            const sx = this._snap(inst, r.x);
+            const sy = this._snap(inst, r.y);
+            this._setNodeTranslate(inst, id, sx, sy);
+            return { id, x: sx, y: sy };
+        }).filter(Boolean);
+
+        inst.isDragging = false;
+        inst.dragNodeIds = [];
+        inst.dragStartScreen = null;
+        inst.dragStartPositions = {};
+        this._clearGuideLines(inst);
+
+        if (moves.length === 1) {
+            inst.dotNetRef.invokeMethodAsync('OnElementMoved', moves[0].id, moves[0].x, moves[0].y);
+        } else if (moves.length > 1) {
+            inst.dotNetRef.invokeMethodAsync('OnElementsMoved', moves);
+        }
+    },
+
+    touchCancelNodeDrag: function (inst) { this._cancelNodeDrag(inst); },
+
+    // Shared node-drag rollback (mouse path, touch path, read-only flip, pinch hand-over):
+    // every dragged node returns to its start position, the guides drop, and C# learns the
+    // drag died so ShouldRender() resumes (OnDragStarted latched it off — J1b).
+    _cancelNodeDrag: function (inst) {
+        if (!inst.isDragging) return;
+        // Roll the gesture back: every dragged node returns to its start position.
+        inst.dragNodeIds.forEach(id => {
+            const start = inst.dragStartPositions[id];
+            if (!start) return;
+            this._setNodeTranslate(inst, id, start.x, start.y);
+        });
+        inst.isDragging = false;
+        inst.dragNodeIds = [];
+        inst.dragStartScreen = null;
+        inst.dragStartPositions = {};
+        this._clearGuideLines(inst);
+        this._updateSelectionTransforms(inst);
+        // C# stopped rendering at OnDragStarted (ShouldRender => !_isJsDragging): release it.
+        if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('OnDragCancelled');
+    },
+
+    // A touch gesture starting while the context menu is open dismisses it (the finger is
+    // clearly doing something else). The _menuOpen flag is kept by openContextMenu/closeContextMenu.
+    _closeMenuIfOpen: function (inst) {
+        if (inst._menuOpen && inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
+    },
+
+    touchBeginPan: function (inst, clientX, clientY) {
+        this._closeMenuIfOpen(inst);
+        if (inst.isPanning) return;
         inst.isPanning = true;
-        inst.panStartScreen = { x: t.clientX, y: t.clientY };
+        inst.panStartScreen = { x: clientX, y: clientY };
         inst.viewBoxStart = this._getViewBox(inst);
     },
 
-    _onTouchMove: function (e, inst) {
-        // Pinch zoom
-        if (e.touches.length === 2 && inst.pinchStartDist > 0) {
-            e.preventDefault();
-            const t1 = e.touches[0];
-            const t2 = e.touches[1];
-            const dx = t2.clientX - t1.clientX;
-            const dy = t2.clientY - t1.clientY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const factor = inst.pinchStartDist / dist;
+    touchMovePan: function (inst, clientX, clientY) {
+        if (!inst.isPanning || !inst.panStartScreen || !inst.viewBoxStart) return;
+        const vb = inst.viewBoxStart;
+        const dxDoc = (clientX - inst.panStartScreen.x) / inst.scale;
+        const dyDoc = (clientY - inst.panStartScreen.y) / inst.scale;
+        this._setViewBox(inst, vb.x - dxDoc, vb.y - dyDoc, vb.w, vb.h);
+    },
 
-            const vb = inst.pinchViewBoxStart;
-            const mid = inst.pinchMidDoc;
-            if (!vb || !mid) return;
+    touchEndPan: function (inst) {
+        if (!inst.isPanning) return;
+        inst.isPanning = false;
+        inst.panStartScreen = null;
+        inst.viewBoxStart = null;
+        const vb = this._getViewBox(inst);
+        inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
+        inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+    },
 
-            const newW = vb.w * factor;
-            const newH = vb.h * factor;
-            const svgRect = inst.svg.getBoundingClientRect();
-            const newScale = svgRect.width / newW;
-            if (newScale < 0.15 || newScale > 5.0) return;
-
-            const newX = mid.x - (mid.x - vb.x) * factor;
-            const newY = mid.y - (mid.y - vb.y) * factor;
-
-            this._setViewBox(inst, newX, newY, newW, newH);
-            if (inst.dotNetRef)
-                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', newX, newY, newW, newH);
-            return;
-        }
-
-        if (e.touches.length !== 1) return;
-        const t = e.touches[0];
-
-        // Cancel long press if finger moved significantly
-        if (inst.longPressTimer && inst.longPressStart) {
-            const moveDist = Math.sqrt(Math.pow(t.clientX - inst.longPressStart.x, 2) + Math.pow(t.clientY - inst.longPressStart.y, 2));
-            if (moveDist > 10) {
-                this._cancelLongPress(inst);
-            }
-        }
-
-        if (inst.isDragging && inst.dragNodeIds.length > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            const dxScreen = t.clientX - inst.dragStartScreen.x;
-            const dyScreen = t.clientY - inst.dragStartScreen.y;
-            let dxDoc = dxScreen / inst.scale;
-            let dyDoc = dyScreen / inst.scale;
-
-            const guides = this._computeSnapGuides(inst, inst.dragNodeIds, inst.dragStartPositions, dxDoc, dyDoc);
-            if (guides.x !== null) dxDoc += guides.x.delta;
-            if (guides.y !== null) dyDoc += guides.y.delta;
-            this._drawGuideLines(inst, guides);
-
-            inst.dragNodeIds.forEach(id => {
-                const start = inst.dragStartPositions[id];
-                if (!start) return;
-                let nx = start.x + dxDoc;
-                let ny = start.y + dyDoc;
-                const clamped = this._clampChildPosition(inst, id, nx, ny);
-                this._setNodeTranslate(inst, id, clamped.x, clamped.y);
-            });
-            this._updateSelectionTransforms(inst);
-            return;
-        }
-
-        if (inst.isPanning && inst.panStartScreen) {
-            e.preventDefault();
+    touchCancelPan: function (inst) {
+        if (!inst.isPanning) return;
+        if (inst.viewBoxStart) {
             const vb = inst.viewBoxStart;
-            const dxScreen = t.clientX - inst.panStartScreen.x;
-            const dyScreen = t.clientY - inst.panStartScreen.y;
-            const dxDoc = dxScreen / inst.scale;
-            const dyDoc = dyScreen / inst.scale;
-            this._setViewBox(inst, vb.x - dxDoc, vb.y - dyDoc, vb.w, vb.h);
+            this._setViewBox(inst, vb.x, vb.y, vb.w, vb.h);
+        }
+        inst.isPanning = false;
+        inst.panStartScreen = null;
+        inst.viewBoxStart = null;
+    },
+
+    // A port / connection point under the finger (the raw target first, then the hit stack —
+    // an edge corridor paints over it, see _firstWithClass, J6). The invisible
+    // `.tm-diagram-port-hit` circles rendered for the selected node's ports count as ports too:
+    // they are the finger-sized press target a coarse pointer actually hits.
+    touchPortAt: function (inst, event) {
+        if (inst.readOnly || !event) return null;
+        const stack = typeof document.elementsFromPoint === 'function' ? document.elementsFromPoint(event.clientX, event.clientY) : [];
+        const el = this._firstWithClass(event.target, stack, 'tm-diagram-port')
+            || this._firstWithClass(event.target, stack, 'tm-diagram-connection-point');
+        if (!el) return null;
+        // Occlusion: the port/cp only wins when the raw press target is the port itself (or its
+        // finger-sized hit circle) or an edge corridor that paints over it (J6). A press on
+        // another control (a resize/rotate handle hit, a node body, …) is that control's gesture
+        // — a port buried deeper in the hit stack under it is COVERED, not pressed.
+        const raw = event.target;
+        const rawIsPort = !!(raw && raw.closest && raw.closest('.tm-diagram-port, .tm-diagram-port-hit, .tm-diagram-connection-point'));
+        const rawIsEdge = !!(raw && raw.closest && raw.closest('.tm-diagram-edge-hit-path, .tm-diagram-edge-label-group'));
+        if (!rawIsPort && !rawIsEdge) return null;
+        const nodeEl = el.closest('[data-node-id]');
+        if (!nodeEl || nodeEl.getAttribute('data-locked') === 'true') return null;
+        // G2: edge drawing is tablet+ (the editor mirrors its layout on the root).
+        const root = inst.container.closest('[data-editor-layout]');
+        if (root && root.getAttribute('data-editor-layout') === 'mobile') return null;
+        return el;
+    },
+    touchBeginEdgeDraw: function (inst, el, clientX, clientY) {
+        this._closeMenuIfOpen(inst);
+        const nodeEl = el.closest('[data-node-id]');
+        const nodeId = nodeEl.getAttribute('data-node-id');
+        // A `.tm-diagram-port-hit` circle carries EITHER data-port-id (a port) or the data-cp-*
+        // attributes (a connection point) — decide by the attribute, not the class.
+        if (el.getAttribute('data-port-id')) {
+            this._startEdgeDraw(inst, nodeId, el.getAttribute('data-port-id'), clientX, clientY);
+        } else {
+            this._startEdgeDraw(inst, nodeId, null, clientX, clientY, null, 0.5,
+                parseFloat(el.getAttribute('data-cp-rx')), parseFloat(el.getAttribute('data-cp-ry')),
+                el.getAttribute('data-cp-perimeter') === 'true');
+        }
+    },
+    touchMoveEdgeDraw: function (inst, clientX, clientY) { this._updateEdgeDraw(inst, clientX, clientY); },
+    touchEndEdgeDraw: function (inst, clientX, clientY) { if (inst.isDrawingEdge) this._commitEdgeDraw(inst, clientX, clientY); },
+    touchCancelEdgeDraw: function (inst) { if (inst.isDrawingEdge) this._cancelEdgeDraw(inst); },
+
+    // ── Two-finger pinch/pan (pointer-gesture.js reports the geometry) ───────
+
+    touchPinchBegin: function (inst) {
+        this._closeMenuIfOpen(inst);
+        inst.isPinching = true;
+        return this._getViewBox(inst);
+    },
+
+    touchPinchChange: function (inst, startVb, scale, centerX, centerY, dx, dy) {
+        if (!startVb || !isFinite(scale) || scale <= 0) return;
+        const rect = inst.svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        // Clamp instead of rejecting: at a limit the pinch sits exactly at the limit and the
+        // two-finger pan keeps working (a rejected frame froze both).
+        const startScale = rect.width / startVb.w;
+        const effective = this._clampScale(startScale * scale) / startScale;
+        const newW = startVb.w / effective;
+        const newH = startVb.h / effective;
+
+        // The viewport point under the gesture's START centre stays under the centre, plus the
+        // two-finger pan in new-scale document units.
+        const px = (centerX - dx) - rect.left;
+        const py = (centerY - dy) - rect.top;
+        const docX = startVb.x + px * (startVb.w / rect.width);
+        const docY = startVb.y + py * (startVb.h / rect.height);
+        const panX = dx * (newW / rect.width);
+        const panY = dy * (newH / rect.height);
+        this._setViewBox(inst, docX - px * (newW / rect.width) - panX, docY - py * (newH / rect.height) - panY, newW, newH);
+    },
+
+    touchPinchEnd: function (inst, startVb, scale, dx, dy) {
+        inst.isPinching = false;
+        const vb = this._getViewBox(inst);
+        inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
+        inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+        inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
+    },
+
+    touchPinchCancel: function (inst, startVb) {
+        inst.isPinching = false;
+        if (!startVb) return;
+        this._setViewBox(inst, startVb.x, startVb.y, startVb.w, startVb.h);
+    },
+
+    // ── Rotation session (shared by the mouse path and the touch session) ────
+
+    _beginRotateSession: function (inst, nodeId, clientX, clientY, initialRotation, snap) {
+        if (inst.isRotating) return;
+        const r = this._nodeRect(inst, nodeId);
+        if (!r) return;
+
+        inst.isRotating = true;
+        inst.rotateNodeId = nodeId;
+        inst.rotateCenterDoc = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+        inst.rotateStartNodeRotation = initialRotation;
+        inst.rotateSnap = snap || 0;
+        inst.rotateGroupMembers = null;
+
+        const startPt = this._screenToDoc(inst, clientX, clientY);
+        inst.rotateStartAngle = Math.atan2(startPt.y - inst.rotateCenterDoc.y, startPt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
+
+        // If rotating a group, cache member start rotations for real-time updates
+        const nodeEl = this._nodeEl(inst, nodeId);
+        if (nodeEl && nodeEl.getAttribute('data-stencil-id') === 'general.group' && inst.scenePane) {
+            inst.rotateGroupMembers = [];
+            inst.scenePane.querySelectorAll('g.tm-diagram-node[data-node-id]').forEach(el => {
+                if (el.getAttribute('data-parent-group-id') === nodeId) {
+                    const memberId = el.getAttribute('data-node-id');
+                    const memberRot = this._getNodeRotation(el);
+                    inst.rotateGroupMembers.push({ id: memberId, startRotation: memberRot });
+                }
+            });
         }
     },
 
-    _onTouchEnd: function (e, inst) {
-        this._cancelLongPress(inst);
-
-        // End pinch zoom
-        if (inst.pinchStartDist > 0 && e.touches.length < 2) {
-            inst.pinchStartDist = 0;
-            inst.pinchStartScale = 1;
-            inst.pinchMidDoc = null;
-            inst.pinchViewBoxStart = null;
-            const vb = this._getViewBox(inst);
-            if (inst.dotNetRef)
-                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+    _moveRotateSession: function (inst, clientX, clientY) {
+        if (!inst.isRotating) return;
+        const pt = this._screenToDoc(inst, clientX, clientY);
+        const angle = Math.atan2(pt.y - inst.rotateCenterDoc.y, pt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
+        let delta = angle - inst.rotateStartAngle;
+        let rot = inst.rotateStartNodeRotation + delta;
+        if (inst.rotateSnap > 0) {
+            rot = Math.round(rot / inst.rotateSnap) * inst.rotateSnap;
         }
+        this._applyNodeRotation(inst, inst.rotateNodeId, rot);
+        if (inst.rotateGroupMembers) {
+            const groupDelta = rot - inst.rotateStartNodeRotation;
+            inst.rotateGroupMembers.forEach(m => {
+                this._applyNodeRotation(inst, m.id, m.startRotation + groupDelta);
+            });
+        }
+    },
 
-        if (inst.isDragging) {
-            const moves = inst.dragNodeIds.map(id => {
-                const r = this._nodeRect(inst, id);
-                if (!r) return null;
-                const sx = this._snap(inst, r.x);
-                const sy = this._snap(inst, r.y);
-                this._setNodeTranslate(inst, id, sx, sy);
-                return { id, x: sx, y: sy };
-            }).filter(Boolean);
+    _endRotateSession: function (inst) {
+        if (!inst.isRotating) return;
+        inst.isRotating = false;
+        const nodeId = inst.rotateNodeId;
+        const nodeEl = this._nodeEl(inst, nodeId);
+        const rot = nodeEl ? this._getNodeRotation(nodeEl) : inst.rotateStartNodeRotation;
+        if (inst.dotNetRef) {
+            inst.dotNetRef.invokeMethodAsync('OnRotateEnded', nodeId, rot);
+        }
+        inst.rotateNodeId = null;
+        inst.rotateGroupMembers = null;
+    },
 
-            inst.isDragging = false;
-            inst.dragNodeIds = [];
-            inst.dragStartScreen = null;
-            inst.dragStartPositions = {};
-            this._clearGuideLines(inst);
-
-            if (moves.length === 1) {
-                inst.dotNetRef.invokeMethodAsync('OnElementMoved', moves[0].id, moves[0].x, moves[0].y);
-            } else if (moves.length > 1) {
-                inst.dotNetRef.invokeMethodAsync('OnElementsMoved', moves);
+    _cancelRotateSession: function (inst) {
+        if (inst.__rotateMouseDetach) inst.__rotateMouseDetach();   // never leak the mouse listeners
+        if (!inst.isRotating) return;
+        inst.isRotating = false;
+        if (inst.rotateNodeId) {
+            this._applyNodeRotation(inst, inst.rotateNodeId, inst.rotateStartNodeRotation);
+            if (inst.rotateGroupMembers) {
+                inst.rotateGroupMembers.forEach(m => {
+                    this._applyNodeRotation(inst, m.id, m.startRotation);
+                });
             }
-            return;
         }
-
-        if (inst.isPanning) {
-            inst.isPanning = false;
-            inst.panStartScreen = null;
-            inst.viewBoxStart = null;
-            const vb = this._getViewBox(inst);
-            inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
-            inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
-        }
+        inst.rotateNodeId = null;
+        inst.rotateGroupMembers = null;
     },
 
-    _cancelLongPress: function (inst) {
-        if (inst.longPressTimer) {
-            clearTimeout(inst.longPressTimer);
-            inst.longPressTimer = null;
+    startRotate: function (container, nodeId, clientX, clientY, initialRotation, snap) {
+        const inst = this.instances.get(container ? container.id : null);
+        if (!inst || inst.readOnly || inst.isRotating) return;   // re-entry: a second press mid-rotation is ignored
+        this._beginRotateSession(inst, nodeId, clientX, clientY, initialRotation, snap);
+        if (!inst.isRotating) return;
+
+        const self = this;
+        const detach = function () {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            if (inst.__rotateMouseDetach === detach) inst.__rotateMouseDetach = null;
+        };
+        const move = function (e) {
+            if (!inst.isRotating) { detach(); return; }
+            e.preventDefault();
+            self._moveRotateSession(inst, e.clientX, e.clientY);
+        };
+        const up = function () {
+            detach();                       // ALWAYS first: a cancelled session must not leak listeners
+            self._endRotateSession(inst);   // no-op when the session was cancelled
+        };
+        inst.__rotateMouseDetach = detach;
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+    },
+
+    touchBeginRotate: function (inst, nodeId, clientX, clientY) {
+        const nodeEl = this._nodeEl(inst, nodeId);
+        if (!nodeEl) return;
+        this._beginRotateSession(inst, nodeId, clientX, clientY, this._getNodeRotation(nodeEl), 0);
+    },
+
+    touchMoveRotate: function (inst, clientX, clientY) {
+        this._moveRotateSession(inst, clientX, clientY);
+    },
+
+    touchEndRotate: function (inst) {
+        this._endRotateSession(inst);
+    },
+
+    touchCancelRotate: function (inst) {
+        this._cancelRotateSession(inst);
+    },
+
+    // ── Viewport re-measure (phase 6) ────────────────────────────────────────
+    // After the editor chrome changed around the canvas (a docked panel expanded, collapsed or
+    // was resized), the SVG box changed size without any view change: re-derive the scale and
+    // report the viewport and zoom — no Blazor re-render of the canvas.
+
+    relayout: function (container) {
+        const inst = this.instances.get(container ? container.id : null);
+        if (!inst || !inst.svg) return;
+        const vb = this._getViewBox(inst);
+        const rect = inst.svg.getBoundingClientRect();
+        if (rect.width > 0 && vb.w > 0) inst.scale = rect.width / vb.w;
+        if (inst.dotNetRef) {
+            inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x, vb.y, vb.w, vb.h);
+            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
         }
-        inst.longPressStart = null;
-        inst.longPressNodeId = null;
     },
 
     // ── Edge drawing helpers ─────────────────────────────────────────────────
@@ -2638,6 +3011,7 @@ window.tmDiagramEditor = {
         const ids = [...inst.selectedIds];
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (inst.readOnly) return;
             if (ids.length === 0) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             e.preventDefault();
@@ -2663,6 +3037,7 @@ window.tmDiagramEditor = {
 
         if (e.key === 'Escape') {
             e.preventDefault();
+            if (inst.isRotating) { this._cancelRotateSession(inst); return; }
             if (inst.isPendingEdgeDraw) {
                 inst.isPendingEdgeDraw = false;
                 inst.pendingEdgeStart = null;
@@ -2707,10 +3082,12 @@ window.tmDiagramEditor = {
         if (e.ctrlKey || e.metaKey) {
             switch (e.key.toLowerCase()) {
                 case 'z':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     inst.dotNetRef.invokeMethodAsync(e.shiftKey ? 'OnRedo' : 'OnUndo');
                     return;
                 case 'y':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     inst.dotNetRef.invokeMethodAsync('OnRedo');
                     return;
@@ -2719,6 +3096,7 @@ window.tmDiagramEditor = {
                     inst.dotNetRef.invokeMethodAsync('OnSelectAll');
                     return;
                 case 'd':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnDuplicate', ids);
                     return;
@@ -2731,6 +3109,7 @@ window.tmDiagramEditor = {
                     }
                     return;
                 case 'v':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (e.shiftKey) {
                         inst.dotNetRef.invokeMethodAsync('OnPasteStyle');
@@ -2747,14 +3126,17 @@ window.tmDiagramEditor = {
                     inst.dotNetRef.invokeMethodAsync('OnShowReplace');
                     return;
                 case 'b':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnToggleBold');
                     return;
                 case 'i':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnToggleItalic');
                     return;
                 case 'u':
+                    if (inst.readOnly) return;
                     e.preventDefault();
                     if (ids.length > 0) inst.dotNetRef.invokeMethodAsync('OnToggleUnderline');
                     return;
@@ -2776,6 +3158,7 @@ window.tmDiagramEditor = {
                     return;
                 case 'g':
                     if (e.shiftKey) {
+                        if (inst.readOnly) return;
                         e.preventDefault();
                         if (ids.length === 1) {
                             const selId = ids[0];
@@ -2796,6 +3179,7 @@ window.tmDiagramEditor = {
                     return;
                 case 'l':
                     if (e.shiftKey) {
+                        if (inst.readOnly) return;
                         e.preventDefault();
                         inst.dotNetRef.invokeMethodAsync('OnLockSelected');
                     }
@@ -2803,8 +3187,9 @@ window.tmDiagramEditor = {
             }
         }
 
-        // Quick-insert stencils (A,S,D,F,R)
-        if (!e.ctrlKey && !e.metaKey && !e.target.matches('input,textarea,select')) {
+        // Quick-insert stencils (A,S,D,F,R). Read-only skips THIS block only — an early
+        // return here would also kill the H/V tool shortcuts that stay live in read-only.
+        if (!e.ctrlKey && !e.metaKey && !inst.readOnly && !e.target.matches('input,textarea,select')) {
             const stencilMap = {
                 'KeyA': 'general.text',
                 'KeyS': 'general.sticky-note',
@@ -2832,6 +3217,8 @@ window.tmDiagramEditor = {
         // Tool-mode shortcuts: H → pan, V → select, L/C/E → edge.
         // `E` was added in Phase 3 to match draw.io's edge shortcut; `L`
         // and `C` are kept for backwards compatibility.
+        // R1: read-only keeps H and V live (navigation/inspection tools); the edge
+        // shortcuts are edit-only and stay blocked.
         if (!e.ctrlKey && !e.metaKey && !e.target.matches('input,textarea,select')) {
             if (e.code === 'KeyH') {
                 e.preventDefault();
@@ -2846,6 +3233,7 @@ window.tmDiagramEditor = {
                 return;
             }
             if (e.code === 'KeyL' || e.code === 'KeyC' || e.code === 'KeyE') {
+                if (inst.readOnly) return;
                 e.preventDefault();
                 this._applyToolMode(inst, 'edge');
                 inst.dotNetRef.invokeMethodAsync('OnToolModeChanged', 'edge');
@@ -2857,6 +3245,7 @@ window.tmDiagramEditor = {
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             if (ids.length === 0) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (inst.readOnly) { e.preventDefault(); return; }
             e.preventDefault();
             const step = e.shiftKey ? 10 : 1;
             const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
@@ -2950,14 +3339,17 @@ window.tmDiagramEditor = {
                 const outline = inst.overlayPane.querySelector('[data-sel-for="' + id + '"]');
                 if (outline) outline.setAttribute('transform', tr);
             }
-            // F5: keep the decorator-pane per-node handles group (resize rects,
-            // rotate circle, connect-arrow foreignObjects) in sync with the
-            // live node during JS-driven drags. Blazor re-renders it after the
-            // drag commits, but during the drag we must update the DOM directly
-            // otherwise the handles would lag behind the node.
+            // F5: keep the decorator-pane per-node groups (transform handles, the finger-sized
+            // port hit circles and the quick-connect arrows — every group Blazor renders with
+            // data-node-id for this node) in sync with the live node during JS-driven drags.
+            // Blazor re-renders them after the drag commits, but during the drag we must update
+            // the DOM directly otherwise the handles would lag behind the node. The generic
+            // [data-node-id] selector covers whichever groups exist (a mobile host renders no
+            // handles group, a read-only host renders none at all) without a per-class lookup.
             if (inst.decoratorPane) {
-                const handles = inst.decoratorPane.querySelector('g.tm-diagram-node-handles[data-node-id="' + id + '"]');
-                if (handles) handles.setAttribute('transform', tr);
+                inst.decoratorPane.querySelectorAll('[data-node-id="' + id + '"]').forEach(el => {
+                    el.setAttribute('transform', tr);
+                });
             }
         });
     },
@@ -3405,9 +3797,80 @@ window.tmDiagramEditor = {
         inst.pageScale = scale || 1.0;
     },
 
+    // Mirror a host-side read-only change into the instance. This must run on
+    // EVERY read-only flip (not only at init): otherwise `_onKeyDown` keeps
+    // mutating the document and drags keep moving DOM nodes after the host
+    // locked the editor. Any gesture caught mid-flight is released here so a
+    // read-only switch never leaves a half-finished drag or edge draw.
+    setReadOnly: function (container, readOnly) {
+        const inst = this.instances.get(container.id);
+        if (!inst) return;
+        inst.readOnly = !!readOnly;
+
+        if (inst.readOnly) {
+            // Touch/pen editing sessions (node drag, long-press, resize, rotate): their onCancel
+            // callbacks roll back through the engine hooks and OnResizeCancelled.
+            if (inst.__touchDetach && typeof inst.__touchDetach.cancelEditing === 'function') {
+                try { inst.__touchDetach.cancelEditing('read-only'); } catch (_e) { /* best effort */ }
+            }
+            // Mouse or touch rotation: restore the start angle (the mouse listener leak is J8, phase 3).
+            this._cancelRotateSession(inst);
+        }
+
+        if (inst.isPendingEdgeDraw) {
+            inst.isPendingEdgeDraw = false;
+            inst.pendingEdgeStart = null;
+        }
+        if (inst.isDrawingEdge) {
+            this._cancelEdgeDraw(inst);
+        }
+        if (inst.isDraggingWholeEdge) {
+            const group = inst.svg.querySelector('g.tm-diagram-edge-group[data-edge-id="' + inst.dragWholeEdgeId + '"]');
+            if (group) group.removeAttribute('transform');
+            inst.isDraggingWholeEdge = false;
+            inst.dragWholeEdgeId = null;
+            inst.dragWholeEdgeStartDoc = null;
+            inst.dragWholeEdgeDeltaDoc = { x: 0, y: 0 };
+            this._clearGuideLines(inst);
+        }
+        if (inst.isDraggingWaypoint || inst.isDraggingSegment || inst.isDraggingJetty ||
+            inst.isDraggingEdgeLabel || inst.isDraggingDangling) {
+            inst.isDraggingWaypoint = false;
+            inst.dragWaypointEdgeId = null;
+            inst.dragWaypointIndex = null;
+            inst.dragWaypointStartScreen = null;
+            inst.dragWaypointStartDoc = null;
+            inst.isDraggingSegment = false;
+            inst.isDraggingJetty = false;
+            inst.dragJettyEdgeId = null;
+            inst.isDraggingEdgeLabel = false;
+            inst.dragEdgeLabelId = null;
+            inst.isDraggingDangling = false;
+            // Same rollback path as Escape: rolls back the virtual-bend
+            // transaction when one is in flight, no-op otherwise.
+            if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('OnCancelEdgeEdit');
+        }
+        this._cancelNodeDrag(inst);
+        if (inst.isRubberBand) {
+            inst.isRubberBand = false;
+            inst.rubberStartDoc = null;
+            if (inst.rubberEl) {
+                inst.rubberEl.remove();
+                inst.rubberEl = null;
+            }
+        }
+        if (inst.isPanning) {
+            inst.isPanning = false;
+            inst.panStartScreen = null;
+            inst.viewBoxStart = null;
+        }
+        inst.container.style.cursor = inst.toolMode === 'pan' ? 'grab' : '';
+    },
+
     zoomTo: function (container, scale) {
         const inst = this.instances.get(container.id);
         if (!inst) return;
+        scale = this._clampScale(scale);
         const vb = this._getViewBox(inst);
         const cx = vb.x + vb.w / 2;
         const cy = vb.y + vb.h / 2;
@@ -3446,19 +3909,24 @@ window.tmDiagramEditor = {
 
         if (!hasNodes) {
             const svgRect = inst.svg.getBoundingClientRect();
-            this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH);
-            const emptyScale = inst.scale;
+            // The empty-document branch obeys the same limits: the raw canvas size can resolve
+            // outside [MIN_SCALE, MAX_SCALE] (a small canvas on a big screen zooms past the max).
+            const emptyScale = this._clampScale(svgRect.width / inst.canvasW);
+            const newW = svgRect.width / emptyScale;
+            const newH = svgRect.height / emptyScale;
+            this._setViewBox(inst, 0, 0, newW, newH);
+            const settled = inst.scale;
             if (inst.dotNetRef) {
-                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', 0, 0, inst.canvasW, inst.canvasH);
-                inst.dotNetRef.invokeMethodAsync('OnZoomChanged', emptyScale);
+                inst.dotNetRef.invokeMethodAsync('OnViewportChanged', 0, 0, newW, newH);
+                inst.dotNetRef.invokeMethodAsync('OnZoomChanged', settled);
             }
-            return emptyScale;
+            return settled;
         }
 
         const contentW = maxX - minX + padding * 2;
         const contentH = maxY - minY + padding * 2;
         const svgRect = inst.svg.getBoundingClientRect();
-        const fitScale = Math.min(svgRect.width / contentW, svgRect.height / contentH, 2.0);
+        const fitScale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
         const newW = svgRect.width / fitScale;
         const newH = svgRect.height / fitScale;
         const nx = minX - padding;
@@ -3471,67 +3939,159 @@ window.tmDiagramEditor = {
         return fitScale;
     },
 
+    // ── Fixed-position placement (context menu, table inserter) ─────────────
+    // The box a position:fixed descendant of `host` resolves against, in viewport coordinates:
+    // the viewport, or an ancestor that establishes a containing block for fixed descendants
+    // (layout/paint containment, container-type in some engines, transform, filter). MEASURED
+    // with an inset:0 probe, never assumed: its rect IS the containing block's padding box.
+    _fixedContainingBlock: function (host) {
+        const viewport = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+        if (!host || typeof document === 'undefined' || !document.createElement) return viewport;
+        const probe = document.createElement('div');
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;margin:0;border:0;padding:0;visibility:hidden;pointer-events:none;';
+        host.appendChild(probe);
+        const r = probe.getBoundingClientRect();
+        probe.remove();
+        if (!(r.width > 0 && r.height > 0)) return viewport;
+        return { left: r.left, top: r.top, width: r.width, height: r.height };
+    },
+
+    // Clamps a w×h box anchored at the VIEWPORT point (x, y) into the visible part of the
+    // containing block `cb` (cb ∩ viewport, minus `margin`); returns the cb-LOCAL left/top to
+    // write into style, plus the available height of that visible region.
+    _placeFixed: function (cb, x, y, w, h, margin) {
+        const minX = Math.max(cb.left, 0) + margin;
+        const minY = Math.max(cb.top, 0) + margin;
+        const maxX = Math.min(cb.left + cb.width, window.innerWidth) - margin;
+        const maxY = Math.min(cb.top + cb.height, window.innerHeight) - margin;
+        const vx = Math.max(minX, Math.min(x, maxX - w));
+        const vy = Math.max(minY, Math.min(y, maxY - h));
+        return { left: vx - cb.left, top: vy - cb.top, availHeight: Math.max(0, maxY - minY) };
+    },
+
     openContextMenu: function (container, menuEl) {
         if (!container || !menuEl) return;
         const inst = this.instances.get(container.id);
         if (!inst) return;
+        const self = this;
         // Clean up any existing dismiss handlers first
-        if (inst._menuDismissHandler) {
-            document.removeEventListener('mousedown', inst._menuDismissHandler);
-            document.removeEventListener('keydown', inst._menuKeyHandler);
-            inst._menuDismissHandler = null;
-            inst._menuKeyHandler = null;
-        }
+        self._teardownMenu(inst);
         setTimeout(function () {
             if (!menuEl) return;
-            const rect = menuEl.getBoundingClientRect();
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
             const margin = 8;
-            let left = parseFloat(menuEl.style.left) || 0;
-            let top = parseFloat(menuEl.style.top) || 0;
-            if (left + rect.width + margin > vw) {
-                left = Math.max(margin, vw - rect.width - margin);
+            // VIEWPORT coordinates from C# (data-screen-x/y); the style is OUR output and may
+            // already be translated by an earlier call — never read it back.
+            const readCoord = function (attr, styleProp) {
+                const v = parseFloat(menuEl.getAttribute(attr));
+                return Number.isFinite(v) ? v : (parseFloat(menuEl.style[styleProp]) || 0);
+            };
+            let x = readCoord('data-screen-x', 'left');
+            let y = readCoord('data-screen-y', 'top');
+            // The containing block the FIXED menu resolves against, MEASURED with the probe from
+            // the menu's own parent (its real ancestor chain); the editor root is the fallback
+            // for hosts that render the menu elsewhere.
+            const cb = self._fixedContainingBlock(menuEl.parentElement || container.closest('.tm-diagram-editor'));
+            menuEl.style.maxHeight = '';
+            let rect = menuEl.getBoundingClientRect();
+            const avail = Math.max(160, self._placeFixed(cb, 0, 0, 0, 0, margin).availHeight);
+            if (rect.height > avail) {
+                menuEl.style.maxHeight = avail + 'px';
+                rect = menuEl.getBoundingClientRect();
             }
-            if (top + rect.height + margin > vh) {
-                top = Math.max(margin, vh - rect.height - margin);
+            if (menuEl.getAttribute('data-anchor') === 'touch') {
+                // Opened by a finger long-press: park the finger-sized menu ABOVE the finger so
+                // the release never lands on an item (flip below when there is no room).
+                const fingerY = y;
+                y = fingerY - rect.height - 16;
+                if (y < Math.max(cb.top, 0) + margin) y = fingerY + 16;
+                x = x + 16;
             }
-            menuEl.style.left = left + 'px';
-            menuEl.style.top = top + 'px';
+            const pos = self._placeFixed(cb, x, y, rect.width, rect.height, margin);
+            menuEl.style.left = pos.left + 'px';
+            menuEl.style.top = pos.top + 'px';
+
+            inst._menuOpen = true;
+
+            // A11y: roving focus over the native menuitem buttons — focus the first ENABLED item
+            // after placement, ArrowUp/Down/Home/End move (no Enter/Space emulation: the items are
+            // native <button>s and activate themselves), Escape closes in the key handler below.
+            const menuItems = function () {
+                const all = menuEl.querySelectorAll ? [...menuEl.querySelectorAll('[role="menuitem"]')] : [];
+                return all.filter(it => !it.disabled && it.getAttribute('aria-disabled') !== 'true');
+            };
+            const items = menuItems();
+            items.forEach((it) => { it.tabIndex = -1; });
+            if (items.length > 0 && typeof items[0].focus === 'function') {
+                items[0].tabIndex = 0;
+                items[0].focus({ preventScroll: true });
+            }
 
             inst._menuDismissHandler = function (e) {
-                if (e.button !== 0) return; // only left click outside
+                if (e.button !== undefined && e.button !== 0) return; // only a primary press outside
                 if (e.target.closest('.tm-diagram-editor__context-menu')) return;
                 if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
-                document.removeEventListener('mousedown', inst._menuDismissHandler);
-                document.removeEventListener('keydown', inst._menuKeyHandler);
-                inst._menuDismissHandler = null;
-                inst._menuKeyHandler = null;
+                self._teardownMenu(inst);
             };
             inst._menuKeyHandler = function (e) {
                 if (e.key === 'Escape') {
                     if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
-                    document.removeEventListener('mousedown', inst._menuDismissHandler);
-                    document.removeEventListener('keydown', inst._menuKeyHandler);
-                    inst._menuDismissHandler = null;
-                    inst._menuKeyHandler = null;
+                    self._teardownMenu(inst);
+                    return;
                 }
+                if (e.key === 'Tab') {
+                    // Tab closes the menu and lets the default Tab proceed: focus leaves the
+                    // closed menu and follows the document's natural tab order (a11y review fix).
+                    if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
+                    self._teardownMenu(inst);
+                    return;
+                }
+                const step = { ArrowDown: 1, ArrowUp: -1 };
+                if (!(e.key in step) && e.key !== 'Home' && e.key !== 'End') return;
+                const enabled = menuItems();
+                if (enabled.length === 0) return;
+                const current = enabled.indexOf(typeof document !== 'undefined' ? document.activeElement : null);
+                let next;
+                if (e.key === 'Home') next = 0;
+                else if (e.key === 'End') next = enabled.length - 1;
+                else if (current < 0) next = step[e.key] > 0 ? 0 : enabled.length - 1;
+                else next = (current + step[e.key] + enabled.length) % enabled.length;
+                enabled.forEach((it) => { it.tabIndex = -1; });
+                enabled[next].tabIndex = 0;
+                enabled[next].focus({ preventScroll: true });
+                e.preventDefault?.();
             };
-            document.addEventListener('mousedown', inst._menuDismissHandler);
+            // pointerdown in the CAPTURE phase, not mousedown: a touch tap on the canvas must
+            // dismiss the menu too, before the pan / edge-draw sessions claim the press.
+            document.addEventListener('pointerdown', inst._menuDismissHandler, true);
             document.addEventListener('keydown', inst._menuKeyHandler);
         }, 0);
+    },
+
+    // Removes the dismissal/key listeners, marks the menu closed and returns the focus to the
+    // canvas when the menu owned it.
+    _teardownMenu: function (inst) {
+        if (inst._menuDismissHandler) {
+            document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
+            inst._menuDismissHandler = null;
+        }
+        if (inst._menuKeyHandler) {
+            document.removeEventListener('keydown', inst._menuKeyHandler);
+            inst._menuKeyHandler = null;
+        }
+        inst._menuOpen = false;
+        const active = typeof document !== 'undefined' ? document.activeElement : null;
+        if (active && active.closest && active.closest('.tm-diagram-editor__context-menu')
+            && inst.container && typeof inst.container.focus === 'function') {
+            inst.container.focus({ preventScroll: true });
+        }
     },
 
     closeContextMenu: function (container) {
         if (!container) return;
         const inst = this.instances.get(container.id);
         if (!inst) return;
-        if (inst._menuDismissHandler) {
-            document.removeEventListener('mousedown', inst._menuDismissHandler);
-            document.removeEventListener('keydown', inst._menuKeyHandler);
-            inst._menuDismissHandler = null;
-            inst._menuKeyHandler = null;
-        }
+        this._teardownMenu(inst);
     },
 
     scrollTo: function (container, centreX, centreY) {
@@ -3552,15 +4112,14 @@ window.tmDiagramEditor = {
         const svgRect = inst.svg.getBoundingClientRect();
         const contentW = w + padding * 2;
         const contentH = h + padding * 2;
-        const scale = Math.min(svgRect.width / contentW, svgRect.height / contentH, 2.0);
-        const clampedScale = Math.max(0.25, scale);
-        const newW = svgRect.width / clampedScale;
-        const newH = svgRect.height / clampedScale;
+        const scale = this._clampScale(Math.min(svgRect.width / contentW, svgRect.height / contentH, this.FIT_MAX_SCALE));
+        const newW = svgRect.width / scale;
+        const newH = svgRect.height / scale;
         const nx = x + w / 2 - newW / 2;
         const ny = y + h / 2 - newH / 2;
         this._setViewBox(inst, nx, ny, newW, newH);
         if (inst.dotNetRef)
-            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', clampedScale);
+            inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
         if (inst.dotNetRef)
             inst.dotNetRef.invokeMethodAsync('OnViewportChanged', nx, ny, newW, newH);
     },
@@ -3594,6 +4153,25 @@ window.tmDiagramEditor = {
         if (inst) this._updateSelection(inst);
     },
 
+    // Live resize (mouse C# drag or the touch/pen session): the finger-sized port hit circles
+    // and the quick-connect arrows keep their last-rendered positions while the node geometry
+    // changes under them, so the canvas carries `tm-diagram-canvas--resizing` for the gesture's
+    // duration and the CSS hides `.tm-diagram-port-hits` and `.tm-diagram-connect-arrows`.
+    // C# sets true in TryBeginResize and false on commit/rollback
+    // (Blazor re-renders the hits and arrows at the new geometry afterwards).
+    setResizing: function (container, resizing) {
+        const inst = this.instances.get(container ? container.id : null);
+        if (!inst || !inst.container) return;
+        inst.container.classList.toggle('tm-diagram-canvas--resizing', !!resizing);
+    },
+
+    // Scrolls the element's nearest scrollable ancestor just enough to make it visible —
+    // the companion to ElementReference.FocusAsync(preventScroll: true), so roving focus
+    // (the connect dialog's arrow-key grid) never jolts the page scroll position.
+    scrollNearest: function (el) {
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    },
+
     getDragStencilId: function () {
         return window.__tmDiagramDragStencil ?? null;
     },
@@ -3606,11 +4184,13 @@ window.tmDiagramEditor = {
         const h = parseFloat(el.getAttribute('data-h') || '0');
         const tr = this._buildNodeTransform(p.x, p.y, angle, w, h);
         el.setAttribute('transform', tr);
-        // F5: also rotate the handles group in decorator-pane so the resize
-        // squares, rotate knob and connect arrows track the live rotation.
+        // F5: also rotate the decorator-pane groups (handles, port hits, connect arrows) so
+        // every affordance tracks the live rotation. The generic [data-node-id] selector
+        // covers whichever per-node groups Blazor rendered.
         if (inst.decoratorPane) {
-            const handles = inst.decoratorPane.querySelector('g.tm-diagram-node-handles[data-node-id="' + nodeId + '"]');
-            if (handles) handles.setAttribute('transform', tr);
+            inst.decoratorPane.querySelectorAll('[data-node-id="' + nodeId + '"]').forEach(handle => {
+                handle.setAttribute('transform', tr);
+            });
         }
         this._updateSelection(inst);
     },
@@ -3621,72 +4201,6 @@ window.tmDiagramEditor = {
         this._applyNodeRotation(inst, nodeId, angle);
     },
 
-    startRotate: function (container, nodeId, clientX, clientY, initialRotation, snap) {
-        const inst = this.instances.get(container ? container.id : null);
-        if (!inst) return;
-        const r = this._nodeRect(inst, nodeId);
-        if (!r) return;
-
-        inst.isRotating = true;
-        inst.rotateNodeId = nodeId;
-        inst.rotateCenterDoc = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
-        inst.rotateStartNodeRotation = initialRotation;
-        inst.rotateSnap = snap || 0;
-        inst.rotateGroupMembers = null;
-
-        const startPt = this._screenToDoc(inst, clientX, clientY);
-        inst.rotateStartAngle = Math.atan2(startPt.y - inst.rotateCenterDoc.y, startPt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
-
-        // If rotating a group, cache member start rotations for real-time updates
-        const nodeEl = this._nodeEl(inst, nodeId);
-        if (nodeEl && nodeEl.getAttribute('data-stencil-id') === 'general.group' && inst.scenePane) {
-            inst.rotateGroupMembers = [];
-            inst.scenePane.querySelectorAll('g.tm-diagram-node[data-node-id]').forEach(el => {
-                if (el.getAttribute('data-parent-group-id') === nodeId) {
-                    const memberId = el.getAttribute('data-node-id');
-                    const memberRot = this._getNodeRotation(el);
-                    inst.rotateGroupMembers.push({ id: memberId, startRotation: memberRot });
-                }
-            });
-        }
-
-        const self = this;
-        const move = function (e) {
-            if (!inst.isRotating) return;
-            e.preventDefault();
-            const pt = self._screenToDoc(inst, e.clientX, e.clientY);
-            const angle = Math.atan2(pt.y - inst.rotateCenterDoc.y, pt.x - inst.rotateCenterDoc.x) * 180 / Math.PI;
-            let delta = angle - inst.rotateStartAngle;
-            let rot = inst.rotateStartNodeRotation + delta;
-            if (inst.rotateSnap > 0) {
-                rot = Math.round(rot / inst.rotateSnap) * inst.rotateSnap;
-            }
-            self._applyNodeRotation(inst, inst.rotateNodeId, rot);
-            if (inst.rotateGroupMembers) {
-                const groupDelta = rot - inst.rotateStartNodeRotation;
-                inst.rotateGroupMembers.forEach(function (m) {
-                    self._applyNodeRotation(inst, m.id, m.startRotation + groupDelta);
-                });
-            }
-        };
-        const up = function (e) {
-            if (!inst.isRotating) return;
-            inst.isRotating = false;
-            document.removeEventListener('mousemove', move);
-            document.removeEventListener('mouseup', up);
-            const nodeEl = self._nodeEl(inst, inst.rotateNodeId);
-            const rot = nodeEl ? self._getNodeRotation(nodeEl) : inst.rotateStartNodeRotation;
-            if (inst.dotNetRef) {
-                inst.dotNetRef.invokeMethodAsync('OnRotateEnded', inst.rotateNodeId, rot);
-            }
-            inst.rotateNodeId = null;
-            inst.rotateGroupMembers = null;
-        };
-
-        document.addEventListener('mousemove', move);
-        document.addEventListener('mouseup', up);
-    },
-
     computeOrthogonalWaypoints: function (x1, y1, side1, x2, y2, side2, routing, sourceSpacing, targetSpacing, srcBounds, tgtBounds, obstacles) {
         return this._computeOrthogonalWaypoints(x1, y1, side1, x2, y2, side2, routing, sourceSpacing, targetSpacing, srcBounds, tgtBounds, obstacles);
     },
@@ -3695,6 +4209,155 @@ window.tmDiagramEditor = {
         const inst = this.instances.get(container.id);
         if (!inst) return { x: clientX, y: clientY };
         return this._screenToDoc(inst, clientX, clientY);
+    },
+
+    // ── Mobile sheet-visible band centre (tap-insert above the peek sheet) ────
+    // The mobile panels sheet is a non-modal bottom drawer whose PANEL covers the lower
+    // band of the canvas, so a tap-insert at the viewport centre can land under it.
+    // The sheet ROOT spans the whole stage (it is click-through), so only the
+    // .tm-drawer__panel marks the covered band.
+    // The canvas client band not covered by the open mobile sheet panel:
+    // { inst, rect, top, bottom } or null (no instance / zero-size svg / sheet covers everything).
+    _visibleBand: function (root) {
+        if (!root) return null;
+        const canvasEl = root.querySelector('.tm-diagram-canvas');
+        const inst = canvasEl ? this.instances.get(canvasEl.id) : null;
+        if (!inst || !inst.svg) return null;
+        const rect = inst.svg.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return null;
+        let bottom = rect.bottom;
+        const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
+        if (panel) {
+            const pr = panel.getBoundingClientRect();
+            if (pr.height > 0 && pr.top < bottom && pr.top > rect.top) bottom = pr.top;
+        }
+        if (bottom <= rect.top) return null;
+        return { inst, rect, top: rect.top, bottom };
+    },
+
+    // [x, y] in document coordinates — the C# side reads double[] (TryGetVisibleBandCentreAsync).
+    visibleBandCentre: function (root) {
+        const b = this._visibleBand(root);
+        if (!b) return null;
+        const p = this._screenToDoc(b.inst, b.rect.left + b.rect.width / 2, (b.top + b.bottom) / 2);
+        return [p.x, p.y];
+    },
+
+    // UX review (mobile sheet focus): moves focus to the first tile of the host's mobile action
+    // bar — the sheet's close button unmounts with the sheet, and the bar is the one reopen
+    // path (the shell's own panels toggle is hidden while a bar renders). Resolves false when
+    // no bar exists.
+    focusFirstAction: function (root) {
+        if (!root) return false;
+        const el = root.querySelector('.tm-mobile-action-bar__action');
+        if (!el) return false;
+        el.focus({ preventScroll: true });
+        return true;
+    },
+
+    // Pans (never zooms) so the doc-space rect lies inside the band above the mobile sheet with
+    // `margin` screen px of air. UX review: (1) a live gesture owns the viewBox — the pan is
+    // refused while the user drags/pans/rubber-bands/pinches; (2) the sheet panel's snap
+    // animation is AWAITED (getAnimations().finished) so the measured band is the settled one —
+    // when animations cannot be observed, the panel top is computed from the stage bottom minus
+    // the panel's target height instead; (3) a ~500 ms fallback resolves false so the C# await
+    // never hangs on a stalled animation.
+    revealRectAboveSheet: function (root, x, y, w, h, margin) {
+        const self = this;
+        return new Promise(function (resolve) {
+            const early = self._visibleBand(root);
+            if (!early) { resolve(false); return; }
+            if (early.inst.isDragging || early.inst.isPanning || early.inst.isRubberBand || early.inst.isPinching) {
+                resolve(false); return;
+            }
+
+            var settled = false;
+            var timer = null;
+            var finish = function (ok) {
+                if (settled) return;
+                settled = true;
+                if (timer) clearTimeout(timer);
+                resolve(ok);
+            };
+            timer = setTimeout(function () { finish(false); }, 500);
+
+            var pan = function () {
+                requestAnimationFrame(function () { requestAnimationFrame(function () {
+                    // The ~500 ms fallback may have won the race while the animation promise was
+                    // still pending — a late pan must never touch the viewBox after resolving.
+                    if (settled) return;
+                    const b = self._visibleBand(root);
+                    if (!b) { finish(false); return; }
+                    // The wait gave a gesture time to start (a pinch during the snap animation):
+                    // a live gesture owns the viewBox, exactly like the early guard above.
+                    if (b.inst.isDragging || b.inst.isPanning || b.inst.isRubberBand || b.inst.isPinching) {
+                        finish(false); return;
+                    }
+                    const s = b.inst.scale || 1;
+                    const vb = self._getViewBox(b.inst);
+                    const m = (margin ?? 16) / s;
+                    // The settled band: the panel top either measured after the animation ended,
+                    // or computed from the stage bottom and the panel's target height.
+                    let bottom = b.bottom;
+                    const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
+                    if (panel && panel.offsetHeight != null) {
+                        const stage = panel.closest ? panel.closest('.tm-editor-shell__stage') : null;
+                        const sr = stage ? stage.getBoundingClientRect() : null;
+                        if (sr && panel.offsetHeight > 0) {
+                            bottom = Math.min(b.rect.bottom, sr.bottom - panel.offsetHeight);
+                        }
+                    }
+                    if (bottom <= b.rect.top) { finish(false); return; }
+                    const bandTop = vb.y + (b.top - b.rect.top) / s;
+                    const bandBottom = vb.y + (bottom - b.rect.top) / s;
+                    const bandLeft = vb.x, bandRight = vb.x + vb.w;
+                    let dx = 0, dy = 0;
+                    if (h + 2 * m > bandBottom - bandTop || y - m < bandTop) dy = (y - m) - bandTop;
+                    else if (y + h + m > bandBottom) dy = (y + h + m) - bandBottom;
+                    if (w + 2 * m > bandRight - bandLeft || x - m < bandLeft) dx = (x - m) - bandLeft;
+                    else if (x + w + m > bandRight) dx = (x + w + m) - bandRight;
+                    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) { finish(false); return; }
+                    self._setViewBox(b.inst, vb.x + dx, vb.y + dy, vb.w, vb.h);
+                    if (b.inst.dotNetRef)
+                        b.inst.dotNetRef.invokeMethodAsync('OnViewportChanged', vb.x + dx, vb.y + dy, vb.w, vb.h);
+                    finish(true);
+                }); });
+            };
+
+            const panel = root.querySelector('.tm-editor-shell__sheet .tm-drawer__panel');
+            const anims = panel && panel.getAnimations ? panel.getAnimations() : [];
+            if (anims && anims.length) {
+                // The snap transition owns the panel geometry: measure after it settles. A
+                // rejected/aborted animation still proceeds (the fallback timer bounds the wait).
+                Promise.all(anims.map(function (a) { return a.finished; })).then(pan, pan);
+            }
+            else {
+                pan();
+            }
+        });
+    },
+
+    // ── Table inserter anchor (UX review phase 4) ─────────────────────────────
+    // The picker renders at the editor root as a FIXED popover (never inside a toolbar item,
+    // which collapses inert into "More"), so Blazor needs the viewport point to pin it to: the
+    // Insert trigger while the group sits on the bar, otherwise the toolbar's "More" trigger
+    // that now owns the group's commands. Returns null when nothing is measurable (the caller
+    // keeps its previous position).
+    tableInserterAnchor: function (root) {
+        if (!root) return null;
+        const insertTrigger = root.querySelector("[data-tm-group='insert'] .tm-dropdown-trigger");
+        const onBar = insertTrigger !== null
+            && insertTrigger.closest('.tm-toolbar-item--collapsed') === null;
+        const anchorEl = onBar ? insertTrigger : root.querySelector('.tm-toolbar-more');
+        if (!anchorEl) return null;
+        const rect = anchorEl.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return null;
+        // The grid popover is ~200×230; keep it inside the visible containing block. Probe from
+        // the popover's own parent (its real ancestor chain) — the editor root is the fallback.
+        const width = 208, height = 240, margin = 8, gap = 6;
+        const cbHost = root.parentElement || root;
+        const pos = this._placeFixed(this._fixedContainingBlock(cbHost), rect.left, rect.bottom + gap, width, height, margin);
+        return [pos.left, pos.top];
     },
 
     // ── Magnetic guidelines ────────────────────────────────────────────────
@@ -4190,6 +4853,39 @@ window.tmDiagramEditor = {
         clone.querySelector('.tm-diagram-overlay-pane')?.remove();
         // Remove any temporary draw path
         clone.querySelectorAll('.tm-diagram-edge-draw-path').forEach(function (el) { el.remove(); });
+
+        // Inline the computed paints of the token-driven surfaces: the serialized SVG is
+        // standalone and no longer sees the theme stylesheet, so var()-driven fills/colors
+        // would fall back to black in the exported file. Copy what the LIVE canvas computes
+        // (including any host override of --tm-diagram-paper / --tm-diagram-node-ink) onto
+        // the matching clone elements as inline styles.
+        const PAINT_SOURCES = [
+            { selector: '.tm-diagram-page', props: ['fill', 'stroke'] },
+            { selector: '.tm-diagram-page-backdrop', props: ['fill'] },
+            { selector: '.tm-diagram-edge-label__text', props: ['color', 'background-color'] }
+        ];
+        PAINT_SOURCES.forEach(function (rule) {
+            const live = inst.svg.querySelectorAll(rule.selector);
+            const clones = clone.querySelectorAll(rule.selector);
+            for (let i = 0; i < live.length && i < clones.length; i++) {
+                const computed = window.getComputedStyle(live[i]);
+                rule.props.forEach(function (prop) {
+                    const value = computed.getPropertyValue(prop);
+                    if (value) clones[i].style.setProperty(prop, value);
+                });
+            }
+        });
+
+        // The canvas-scoped custom properties must travel too: node bodies, table cells and
+        // labels inside the serialized tree reference var(--tm-diagram-node-ink) /
+        // var(--tm-diagram-paper), and the standalone export has no stylesheet to resolve them.
+        // Setting the computed values on the clone ROOT re-points every var() in the tree.
+        const canvasComputed = window.getComputedStyle(inst.svg);
+        ['--tm-diagram-node-ink', '--tm-diagram-paper'].forEach(function (prop) {
+            const value = canvasComputed.getPropertyValue(prop);
+            if (value) clone.style.setProperty(prop, value);
+        });
+
         // Wrap every foreignObject in <switch> with a <rect> fallback so viewers
         // that do not support foreignObject still render a visible placeholder.
         // (draw.io/mxGraph pattern — see planning/DIAGRAM_UNIFIED_SVG_PLAN.md §11.5)
@@ -4311,5 +5007,25 @@ window.tmDiagramStencilShape = {
 
     getRef: function (nodeId) {
         return this._refs.get(nodeId);
+    }
+};
+
+// ── TmDiagramMinimap pointer capture ────────────────────────────────────────
+//
+// The minimap's viewport drag captures the pointer so the gesture survives a
+// finger/mouse slipping off the svg mid-drag (the old pointerleave bail-out).
+window.tmDiagramMinimap = {
+    capturePointer: function (svgElement, pointerId) {
+        if (!svgElement || typeof svgElement.setPointerCapture !== 'function' || pointerId == null) return;
+        try { svgElement.setPointerCapture(pointerId); } catch { /* capture is an enhancement */ }
+    },
+
+    releasePointer: function (svgElement, pointerId) {
+        if (!svgElement || typeof svgElement.releasePointerCapture !== 'function' || pointerId == null) return;
+        try {
+            if (typeof svgElement.hasPointerCapture !== 'function' || svgElement.hasPointerCapture(pointerId)) {
+                svgElement.releasePointerCapture(pointerId);
+            }
+        } catch { /* already released */ }
     }
 };

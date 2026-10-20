@@ -88,6 +88,10 @@ public class DiagramF5E2ETests : WasmTestBase
                 const deco = document.querySelector('.tm-diagram-decorator-pane');
                 const scene = document.querySelector('.tm-diagram-scene-pane');
                 const handlesGroups = deco ? deco.querySelectorAll('g.tm-diagram-node-handles[data-node-id="{{nodeId}}"]') : [];
+                // Paint-order contract (review fix, phase 4): the quick-connect arrows live in
+                // their OWN sibling g.tm-diagram-connect-arrows (painted after the port hit
+                // discs), not inside the handles group anymore.
+                const arrowsGroups = deco ? deco.querySelectorAll('g.tm-diagram-connect-arrows[data-node-id="{{nodeId}}"]') : [];
                 let tagSummary = {};
                 let resizeRectCount = 0;
                 let rotateCircleCount = 0;
@@ -96,12 +100,14 @@ public class DiagramF5E2ETests : WasmTestBase
                     const g = handlesGroups[0];
                     g.querySelectorAll('rect.tm-diagram-resize-handle').forEach(() => resizeRectCount++);
                     g.querySelectorAll('circle.tm-diagram-rotate-handle').forEach(() => rotateCircleCount++);
-                    g.querySelectorAll('foreignObject.tm-diagram-connect-arrow-wrap').forEach(() => connectFoCount++);
                     // Snapshot all resize handle variants present for a better error.
                     ['nw','n','ne','e','se','s','sw','w'].forEach(v => {
                         tagSummary[v] = g.querySelectorAll('rect.tm-diagram-resize-handle--' + v).length;
                     });
                 }
+                arrowsGroups.forEach(g => {
+                    g.querySelectorAll('foreignObject.tm-diagram-connect-arrow-wrap').forEach(() => connectFoCount++);
+                });
                 // Nothing handle-like should be left inside the node's own <g> in the scene-pane.
                 const sceneStray = scene
                     ? scene.querySelectorAll('g.tm-diagram-node[data-node-id="{{nodeId}}"] .tm-diagram-resize-handle, ' +
@@ -110,6 +116,8 @@ public class DiagramF5E2ETests : WasmTestBase
                     : 0;
                 return JSON.stringify({
                     handlesGroupCount: handlesGroups.length,
+                    arrowsGroupCount: arrowsGroups.length,
+                    arrowsGroupParentClass: arrowsGroups.length ? (arrowsGroups[0].parentElement && arrowsGroups[0].parentElement.getAttribute('class')) : null,
                     parentClass: handlesGroups.length ? (handlesGroups[0].parentElement && handlesGroups[0].parentElement.getAttribute('class')) : null,
                     hasTransform: handlesGroups.length ? !!(handlesGroups[0].getAttribute('transform') || '').match(/translate\(/) : false,
                     resizeRectCount, rotateCircleCount, connectFoCount, tagSummary, sceneStray,
@@ -132,7 +140,11 @@ public class DiagramF5E2ETests : WasmTestBase
         root.GetProperty("rotateCircleCount").GetInt32().Should().Be(1,
             "F5.4 — rotate handle is a single <circle>");
         root.GetProperty("connectFoCount").GetInt32().Should().Be(4,
-            "F5.5 — 4 quick-connect arrows (N/E/S/W) as <foreignObject> wrappers");
+            "F5.5 — 4 quick-connect arrows (N/E/S/W) as <foreignObject> wrappers in the arrows group");
+        root.GetProperty("arrowsGroupCount").GetInt32().Should().Be(1,
+            "the arrows render in exactly one g.tm-diagram-connect-arrows per selected node");
+        root.GetProperty("arrowsGroupParentClass").GetString().Should().Contain("tm-diagram-decorator-pane",
+            "the arrows group lives in the decorator-pane too");
         root.GetProperty("sceneStray").GetInt32().Should().Be(0,
             "F5.8 — no legacy HTML handles linger inside the node's <g> in the scene-pane");
     }

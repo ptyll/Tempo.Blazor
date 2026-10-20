@@ -15,7 +15,8 @@ namespace Tempo.Blazor.Tests.Theme;
 /// button sweep answers "does anything else own <c>.tm-btn*</c>" and its answer is complete. Nobody
 /// was asking the same question about every other shared class, and the 2.8.22 changelog claimed the
 /// button sweep covered it. It did not: fifteen further pairs were sitting in the same directory —
-/// all fifteen fixed in 2.8.26, so <see cref="RecordedCollisions"/> now stands empty.
+/// all fifteen fixed in 2.8.26; the pairs still listed in <see cref="RecordedCollisions"/> are the
+/// descendant-selector findings recorded since 2.9.0.
 /// </para>
 /// <para>
 /// EVERY KNOWN PAIR HAS ITS OWN ROW. A single number ("15 known collisions") would become a threshold
@@ -202,6 +203,21 @@ public class UnconstrainedClassOwnershipTests
         // loads after _button.css by design, and the footer rule is a strictly narrower context
         // (.tm-modal--sheet footer), which is the whole opt-in (decision F2-BTN-LABEL-SPAN).
         ".tm-btn-label Tempo.Blazor/_button.css|Tempo.Blazor/_modal.css",
+
+        // Fáze 7 (dashboard redesign): the create dialog's footer buttons opt into 48px touch
+        // targets on a coarse pointer — _dashboard.css scopes the min-height bump to the
+        // .tm-dashboard-create-modal sheet, which is strictly narrower than _modal.css's own
+        // .tm-modal-footer .tm-btn floor, so the manifest order decides nothing new.
+        ".tm-btn Tempo.Blazor/_dashboard.css|Tempo.Blazor/_modal.css",
+
+        // Dashboard widget charts: SVG text painted at 11/12px inside a widget slot renders ≈6px
+        // and illegible, so _dashboard.css re-declares font-size on the chart text classes through
+        // the strictly narrower .tm-widget .tm-chart chain (specificity (0,3,0)) — an intentional,
+        // strictly-narrower override: _chart.css's bare rules always lose inside widgets and keep
+        // everywhere else.
+        ".tm-chart__axis-label Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
+        ".tm-chart__label Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
+        ".tm-chart__value Tempo.Blazor/_chart.css|Tempo.Blazor/_dashboard.css",
     ];
 
     [Fact]

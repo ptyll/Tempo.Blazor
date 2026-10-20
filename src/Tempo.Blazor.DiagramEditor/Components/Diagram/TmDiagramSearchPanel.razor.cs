@@ -44,14 +44,26 @@ public partial class TmDiagramSearchPanel : ComponentBase
     /// <summary>Error message displayed when the regex pattern is invalid.</summary>
     [Parameter] public string? RegexError { get; set; }
 
+    /// <summary>When true the panel is search-only: the replace field and the Replace / Replace all
+    /// buttons are not rendered (the editor passes its effective read-only state).</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     /// <summary>Fires when the user clicks the Replace button.</summary>
     [Parameter] public EventCallback OnReplace { get; set; }
 
     /// <summary>Fires when the user clicks the Replace All button.</summary>
     [Parameter] public EventCallback OnReplaceAll { get; set; }
 
-    private bool CanReplace => ResultsCount > 0 && !string.IsNullOrEmpty(Query) && string.IsNullOrEmpty(RegexError);
-    private bool CanReplaceAll => ResultsCount > 0 && !string.IsNullOrEmpty(Query) && string.IsNullOrEmpty(RegexError);
+    private bool CanReplace => !ReadOnly && ResultsCount > 0 && !string.IsNullOrEmpty(Query) && string.IsNullOrEmpty(RegexError);
+    private bool CanReplaceAll => CanReplace;
+
+    /// <summary>Per-instance id of the error span: two panels on one page must never share an
+    /// id (a duplicate id breaks the aria-describedby reference for every instance after the first).</summary>
+    private string ErrorId { get; } = $"tm-diagram-search-error-{Guid.NewGuid():N}";
+
+    /// <summary>The pattern error state: marks the query input aria-invalid and ties the
+    /// role="alert" error span to it through aria-describedby.</summary>
+    private bool HasError => !string.IsNullOrEmpty(RegexError);
 
     private async Task OnQueryChanged(string value)
     {

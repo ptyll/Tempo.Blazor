@@ -195,8 +195,9 @@ public static class DiagramSearchService
             yield break;
         }
 
-        // Label-like data keys
-        foreach (var key in new[] { "label", "name", "title" })
+        // Label-like data keys — the same priority order the connect dialog title uses
+        // (DiagramNodeText); "text" intentionally stays a generic data match below.
+        foreach (var key in DiagramNodeText.SearchLabelKeys)
         {
             var value = node.Data.TryGetValue(key, out var v) ? v?.ToString() : null;
             if (Matches(value, term, regex))

@@ -19,8 +19,13 @@
 }
 @if (IsOpen)
 {
+    @* Activate-after-promote (c51ddf81 #1): a MODAL drawer's trap may only activate once the
+       promote interop completed — an unpromoted popover root can be display:none and the
+       initial-focus move would land on <body>. An inline drawer has no popover and stays active
+       immediately. *@
     <TmFocusScope @ref="_scope"
-                  Active="true"
+                  Active="@(!Modal || _gate?.ScopeActive == true)"
+                  NoteOpenerOnMount="true"
                   Modal="Modal"
                   Class="@RootClass"
                   AriaLabelledBy="@LabelledBy"
@@ -74,7 +79,7 @@
                 }
             </div>
 
-            <div class="tm-drawer__body">
+            <div @ref="_body" class="tm-drawer__body">
                 @ChildContent
             </div>
 
@@ -219,14 +224,19 @@
     private TmSheetHandle? _handle;
     private ElementReference _panel;
     private ElementReference _header;
+    private ElementReference _body;
     private SheetInterop? _sheet;
+    private ScrollRegionInterop? _scrollRegion;
+    private bool _scrollRegionAttached;
+    // The (LabelledBy, Label) pair last forwarded to the scroll region, so a title/aria-label that
+    // renders or changes while open can re-point it (cluster-B 8.3).
+    private (string? LabelledBy, string? Label) _regionLabel;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
-    private bool _promoted;
     private string? _gestureKey;
     private bool _disposed;
     private TmFocusScope? _scope;
-    private TopLayerInterop? _topLayer;
+    private PromotedScopeGate? _gate;
     private readonly OverlayLayout _layout = new();
     private int _snapIndex;
     private int _snapIndexParam = int.MinValue;
@@ -245,7 +255,7 @@
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -327,6 +337,15 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, so the FIRST open of the session restores its opener — a module that
+            // loaded with the first activation opened with no opener record, and that close fell
+            // to <body>.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         var gestureKey = $"{ShowHandle}:{SnapList}";
         if (IsOpen && IsSheet && (!_gestureAttached || _gestureKey != gestureKey))
         {
@@ -342,19 +361,40 @@
 
         // U1: promote a MODAL drawer root (every position) to the top layer right after the render
         // that inserted it. Closing unmounts the whole subtree, and a detached top-layer element
-        // is hidden by the browser automatically — no demote call is needed.
-        if (IsOpen && Modal && !_promoted)
+        // is hidden by the browser automatically — no demote call is needed. The gate also holds
+        // the modal trap back until the promote completed (c51ddf81 #1) and drops a promote that
+        // finished after the close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(IsOpen && Modal, () => IsOpen && Modal, _scope?.Element))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            if (_scope is not null)
-            {
-                await _topLayer.PromoteAsync(_scope.Element);
-            }
+            StateHasChanged();
         }
-        else if ((!IsOpen || !Modal) && _promoted)
+
+        // A long body becomes a keyboard-reachable region only while it overflows (the TmDialog
+        // scroller contract); a short drawer grows no extra tab stop. Named by the title when one
+        // names the drawer; a title or aria-label that renders or changes after the attach
+        // re-points the region's name (cluster-B 8.3).
+        if (IsOpen && !_scrollRegionAttached)
         {
-            _promoted = false;
+            _scrollRegionAttached = true;
+            _regionLabel = (LabelledBy, LabelledBy is null ? AriaLabel : null);
+            _scrollRegion ??= new ScrollRegionInterop(JS);
+            await _scrollRegion.AttachAsync(_body, _regionLabel.LabelledBy, _regionLabel.Label);
+        }
+        else if (!IsOpen && _scrollRegionAttached)
+        {
+            _scrollRegionAttached = false;
+            _regionLabel = default;
+            if (_scrollRegion is not null) await _scrollRegion.DetachAsync();
+        }
+        else if (_scrollRegionAttached)
+        {
+            var (labelledBy, label) = (LabelledBy, LabelledBy is null ? AriaLabel : null);
+            if (labelledBy != _regionLabel.LabelledBy || label != _regionLabel.Label)
+            {
+                _regionLabel = (labelledBy, label);
+                await _scrollRegion!.UpdateLabelAsync(labelledBy, label);
+            }
         }
     }
 
@@ -366,7 +406,11 @@
         // The handle is the gesture target when there is one. Without it the header follows the
         // finger — never the scrolling body, which has to keep scrolling.
         ElementReference? target = ShowHandle && _handle is not null ? _handle.Element : _header;
-        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef, trackViewport: Modal);
+        // An inline sheet measures its snaps against its own root (the positioned host it fills),
+        // passed explicitly — the module no longer depends on the hard-coded .tm-drawer lookup
+        // (F6 carry-forward). A modal sheet tracks the visible viewport.
+        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef,
+            trackViewport: Modal, basis: Modal ? null : _scope?.Element);
         if (_disposed) await _sheet.DetachAsync();
     }
 
@@ -454,7 +498,8 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
+        if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }

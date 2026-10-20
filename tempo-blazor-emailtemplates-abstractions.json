@@ -111,7 +111,45 @@
       "description": "A fully rendered email ready to be delivered.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Contracts/EmailMessage.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Cc",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The carbon-copy recipients."
+        },
+        {
+          "name": "From",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The sender address (when the host does not impose a fixed one)."
+        },
+        {
+          "name": "Html",
+          "kind": "Property",
+          "type": "string",
+          "description": "The HTML body."
+        },
+        {
+          "name": "Subject",
+          "kind": "Property",
+          "type": "string",
+          "description": "The subject line."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "The plain-text alternative body."
+        },
+        {
+          "name": "To",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The primary recipients."
+        }
+      ]
     },
     {
       "itemName": "IEmailSender",
@@ -420,7 +458,27 @@
       "description": "A render error projected for transport.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Dtos/RenderErrorDto.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Optional source column."
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Optional source line."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "string",
+          "description": "The error message."
+        }
+      ]
     },
     {
       "itemName": "RenderPreviewRequest",
@@ -590,7 +648,7 @@
       "members": [
         {
           "name": "Assembly",
-          "kind": "Field",
+          "kind": "Property",
           "type": "System.Reflection.Assembly",
           "description": "Gets the assembly that contains the email template engine, model and contracts."
         }
@@ -678,7 +736,33 @@
       "description": "A single import diagnostic (localization key plus optional detail and position).",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Import/ImportMessage.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "int?",
+          "description": "1-based source column, when known."
+        },
+        {
+          "name": "Detail",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional contextual detail (e.g. the offending element name)."
+        },
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string",
+          "description": "Localization key describing the diagnostic."
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "type": "int?",
+          "description": "1-based source line, when known."
+        }
+      ]
     },
     {
       "itemName": "ImportResult",
@@ -773,7 +857,27 @@
       "description": "Describes a layout preset for presentation in the toolbox.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Layout/LayoutPresetDescriptor.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "NameKey",
+          "kind": "Property",
+          "type": "string",
+          "description": "The localization key for the preset's display name."
+        },
+        {
+          "name": "Preset",
+          "kind": "Property",
+          "type": "LayoutPreset",
+          "description": "The preset value."
+        },
+        {
+          "name": "Widths",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The column widths the preset produces."
+        }
+      ]
     },
     {
       "itemName": "LayoutPresets",
@@ -853,7 +957,27 @@
       "description": "A single layout validation finding.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Layout/LayoutValidationMessage.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string",
+          "description": "The localization key describing the finding."
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "type": "string",
+          "description": "A locator for the offending node (section/block identifier)."
+        },
+        {
+          "name": "Severity",
+          "kind": "Property",
+          "type": "LayoutSeverity",
+          "description": "How serious the finding is."
+        }
+      ]
     },
     {
       "itemName": "LayoutValidator",
@@ -1290,11 +1414,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Border",
           "kind": "Property",
           "type": "string",
@@ -1347,6 +1466,11 @@
           "kind": "Property",
           "type": "IList<EmailAccordionItem>",
           "description": "Gets the accordion items."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -1481,11 +1605,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Align",
           "kind": "Property",
           "type": "string",
@@ -1606,6 +1725,11 @@
           "description": "Gets or sets the text transform (text-transform)."
         },
         {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
+        },
+        {
           "name": "VerticalAlign",
           "kind": "Property",
           "type": "string",
@@ -1629,11 +1753,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailCarouselBlock.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
         {
           "name": "Align",
           "kind": "Property",
@@ -1681,6 +1800,11 @@
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets whether thumbnails are visible or hidden (thumbnails)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -1827,11 +1951,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Align",
           "kind": "Property",
           "type": "string",
@@ -1854,6 +1973,11 @@
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the line thickness (border-width)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         },
         {
           "name": "Width",
@@ -1898,11 +2022,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "BackgroundColor",
           "kind": "Property",
           "type": "string?",
@@ -1919,6 +2038,11 @@
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the layout direction (direction)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         },
         {
           "name": "VerticalAlign",
@@ -1944,11 +2068,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailHeroBlock.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
         {
           "name": "BackgroundColor",
           "kind": "Property",
@@ -1998,6 +2117,11 @@
           "description": "Gets or sets the sizing mode, fluid-height or fixed-height (mode)."
         },
         {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
+        },
+        {
           "name": "VerticalAlign",
           "kind": "Property",
           "type": "string",
@@ -2015,11 +2139,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailImageBlock.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
         {
           "name": "Align",
           "kind": "Property",
@@ -2087,6 +2206,11 @@
           "description": "Gets or sets the image title (title)."
         },
         {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
+        },
+        {
           "name": "Width",
           "kind": "Property",
           "type": "string?",
@@ -2104,11 +2228,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailNavbarBlock.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
         {
           "name": "Align",
           "kind": "Property",
@@ -2132,6 +2251,11 @@
           "kind": "Property",
           "type": "IList<EmailNavbarLink>",
           "description": "Gets the navigation links."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -2230,15 +2354,15 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Content",
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the raw content emitted verbatim into the MJML output."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -2361,11 +2485,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Align",
           "kind": "Property",
           "type": "string",
@@ -2430,6 +2549,11 @@
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the text padding (text-padding)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -2498,15 +2622,15 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Height",
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the spacer height (height)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -2544,11 +2668,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailTableBlock.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
         {
           "name": "Align",
           "kind": "Property",
@@ -2608,6 +2727,11 @@
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the table layout algorithm (table-layout)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         },
         {
           "name": "Width",
@@ -2754,11 +2878,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
-        {
           "name": "Align",
           "kind": "Property",
           "type": "string",
@@ -2829,6 +2948,11 @@
           "kind": "Property",
           "type": "string?",
           "description": "Gets or sets the text transform (text-transform)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -2842,11 +2966,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Model/Blocks/EmailWrapperBlock.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Type",
-          "kind": "Field",
-          "type": "override BlockType"
-        },
         {
           "name": "BackgroundColor",
           "kind": "Property",
@@ -2888,6 +3007,11 @@
           "kind": "Property",
           "type": "string",
           "description": "Gets or sets the text alignment (text-align)."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType"
         }
       ]
     },
@@ -3079,7 +3203,45 @@
       "description": "Describes a block kind available in the editor toolbox: how to present it and how to create one.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Registry/BlockDescriptor.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Category",
+          "kind": "Property",
+          "type": "string",
+          "description": "Localization-friendly category id used to group the toolbox."
+        },
+        {
+          "name": "Factory",
+          "kind": "Property",
+          "type": "Func<EmailBlockBase>",
+          "description": "Creates a new block instance with sensible defaults."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string",
+          "description": "Icon token used by the toolbox."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identifier (the JSON discriminator token for built-ins, or a custom id)."
+        },
+        {
+          "name": "NameKey",
+          "kind": "Property",
+          "type": "string",
+          "description": "Localization key for the toolbox display name."
+        },
+        {
+          "name": "Type",
+          "kind": "Property",
+          "type": "BlockType",
+          "description": "The underlying block type the factory produces."
+        }
+      ]
     },
     {
       "itemName": "BlockRegistry",
@@ -3185,7 +3347,27 @@
       "description": "A single document validation finding (reuses LayoutSeverity).",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/DocumentValidationMessage.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string",
+          "description": "The localization key describing the finding."
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "type": "string",
+          "description": "A locator for the offending node (block/section identifier)."
+        },
+        {
+          "name": "Severity",
+          "kind": "Property",
+          "type": "LayoutSeverity",
+          "description": "How serious the finding is."
+        }
+      ]
     },
     {
       "itemName": "EmailDocumentValidator",
@@ -3299,8 +3481,20 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Errors",
+          "kind": "Property",
+          "type": "IReadOnlyList<RenderError>",
+          "description": "Any errors reported during compilation."
+        },
+        {
+          "name": "Html",
+          "kind": "Property",
+          "type": "string",
+          "description": "The produced HTML (may be partial or empty when errors occurred)."
+        },
+        {
           "name": "Success",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "Gets whether compilation produced no errors."
         }
@@ -3396,7 +3590,27 @@
       "description": "An error or warning produced while compiling MJML to HTML.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/RenderError.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "int?",
+          "description": "1-based source column, when known."
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "type": "int?",
+          "description": "1-based source line, when known."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable description of the problem."
+        }
+      ]
     },
     {
       "itemName": "RenderResult",
@@ -3409,10 +3623,40 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Errors",
+          "kind": "Property",
+          "type": "IReadOnlyList<RenderError>",
+          "description": "Errors gathered across the pipeline phases, in order."
+        },
+        {
+          "name": "Html",
+          "kind": "Property",
+          "type": "string",
+          "description": "The rendered HTML body."
+        },
+        {
+          "name": "Preheader",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The preheader after variable substitution, if any."
+        },
+        {
+          "name": "Subject",
+          "kind": "Property",
+          "type": "string",
+          "description": "The subject after variable substitution."
+        },
+        {
           "name": "Success",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "Gets whether rendering completed without errors."
+        },
+        {
+          "name": "TextVersion",
+          "kind": "Property",
+          "type": "string",
+          "description": "The plain-text alternative after variable substitution."
         }
       ]
     },
@@ -3713,7 +3957,27 @@
       "description": "A single template syntax error with its source position.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateError.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "int",
+          "description": "1-based column number."
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "type": "int",
+          "description": "1-based line number."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable description from the parser."
+        }
+      ]
     },
     {
       "itemName": "TemplateSecurityOptions",
@@ -3768,12 +4032,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Gets whether the template is syntactically valid."
-        },
-        {
           "name": "SyntaxErrorKey",
           "kind": "Field",
           "type": "string",
@@ -3796,6 +4054,12 @@
           "kind": "Property",
           "type": "IReadOnlyList<TemplateError>",
           "description": "Gets the syntax errors found (empty when valid)."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether the template is syntactically valid."
         },
         {
           "name": "Valid",
@@ -3865,7 +4129,21 @@
       "description": "A variable referenced by a template, with its dotted path and inferred kind.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateVariableInfo.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "VariableKind",
+          "description": "Whether the variable is iterated as a collection."
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "type": "string",
+          "description": "The dotted variable path (e.g. user.address.city)."
+        }
+      ]
     },
     {
       "itemName": "VariableKind",

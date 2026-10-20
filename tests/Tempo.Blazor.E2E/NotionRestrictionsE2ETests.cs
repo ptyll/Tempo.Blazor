@@ -130,11 +130,7 @@ public sealed class NotionRestrictionsE2ETests : NotionE2ETestBase
 
     private static async Task SetRestrictionsAsync(Guid pageId, int mode, IReadOnlyList<AclEntry> entries)
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler) { BaseAddress = new Uri(ApiBaseUrl) };
+        using var http = DemoApiTestHttp.CreateClient(ApiBaseUrl);
         var response = await http.PutAsJsonAsync($"/api/notion/permissions/pages/{pageId:D}", new
         {
             pageId,

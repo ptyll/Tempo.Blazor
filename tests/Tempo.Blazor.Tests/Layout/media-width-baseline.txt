@@ -7,8 +7,6 @@ src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
-src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css | 480
-src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css | 640
 src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css | 959
 src/Tempo.Blazor.Signing/wwwroot/css/components/_document-comments.css | 960
 src/Tempo.Blazor.Signing/wwwroot/css/components/_pdf-template-designer.css | 1100
@@ -17,7 +15,6 @@ src/Tempo.Blazor.Spreadsheet/wwwroot/css/components/_spreadsheet.css | 768
 src/Tempo.Blazor/wwwroot/css/components/_data-table.css | 640
 src/Tempo.Blazor/wwwroot/css/components/_data-table.css | 768
 src/Tempo.Blazor/wwwroot/css/components/_dynamic-form.css | 640
-src/Tempo.Blazor/wwwroot/css/components/_lightbox.css | 768
 src/Tempo.Blazor/wwwroot/css/components/_notification-toast.css | 640
 src/Tempo.Blazor/wwwroot/css/components/_pivot-table.css | 768
 src/Tempo.Blazor/wwwroot/css/components/_stepper.css | 768

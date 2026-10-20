@@ -30,13 +30,13 @@
       "name": "RestoreFocusTarget",
       "type": "ElementReference?",
       "isRequired": false,
-      "description": "The element focus returns to on deactivation. Null restores whatever was focused when the scope opened."
+      "description": "The element focus returns to on deactivation. Null restores whatever was focused when the scope opened. A disconnected or inside-the-scope target is skipped and the restore falls back to the opener; a focus the app placed on a live element outside is never stolen."
     },
     {
       "name": "RestoreFocusTargetId",
       "type": "string?",
       "isRequired": false,
-      "description": "The id of the restore target, recorded on the root so a test and the module can both find it."
+      "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Same skip rules as RestoreFocusTarget."
     },
     {
       "name": "AriaLabelledBy",
@@ -81,6 +81,13 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether deactivation restores focus."
+    },
+    {
+      "name": "NoteOpenerOnMount",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Advanced: set when the scope's Active flips true only after its content has mounted (e.g. behind a promote/gate), so the opener is noted before content autofocus. The note is sent once per open — the module keeps the first note of an open."
     },
     {
       "name": "OnDeactivated",

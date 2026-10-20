@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Demo.Services;
+using Tempo.Blazor.Demo.SharedUI.Localization;
 using Tempo.Blazor.Demo.SharedUI.Services;
 using Tempo.Blazor.Demo.Validators;
 using Tempo.Blazor.DocumentEditor.Services;
@@ -87,6 +88,9 @@ builder.Services.AddScoped<SignalRCollaborationProvider>();
 
 // Register Tempo.Blazor services
 builder.Services.AddTempoBlazor();
+// Demo-only strings (TmDemo_*, *Demo_* pages) come from SharedUI's DemoResources; everything
+// else falls through to the library's TmResources. The Server side registers the same decorator.
+builder.Services.AddTempoDemoLocalizer();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();

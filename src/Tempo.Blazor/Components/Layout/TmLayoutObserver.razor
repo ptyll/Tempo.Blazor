@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Layout
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Microsoft.JSInterop
+@using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Abstractions.Layout
 @implements IAsyncDisposable
 @inject IJSRuntime JS
@@ -34,9 +35,10 @@
     private readonly string _id = $"tm-layout-{Guid.NewGuid():n}";
     private ElementReference _root;
     private bool _attaching;
-    private IJSObjectReference? _module;
+    private LazyJsModule? _lazy;
     private DotNetObjectReference<TmLayoutObserver>? _dotNetRef;
     private bool _observing;
+    private TmLayoutBreakpoints _observedBreakpoints = TmLayoutBreakpoints.Default;
     private bool _disposed;
     private TmLayoutMode? _measured;
     private TmLayoutMode _resolved;
@@ -90,6 +92,15 @@
     /// </summary>
     [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
 
+    /// <summary>
+    /// The thresholds this observer classifies its width with. Null (default) uses
+    /// <see cref="TmLayoutBreakpoints.Default"/> — <see cref="TmBreakpoints.Sm"/> and
+    /// <see cref="TmBreakpoints.Lg"/> — so nothing changes for existing hosts. A component whose
+    /// content needs other steps (an editor shell that goes desktop from 1200) passes its own pair.
+    /// A stylesheet keeps the shared literals; only the markup branch moves.
+    /// </summary>
+    [Parameter] public TmLayoutBreakpoints? Breakpoints { get; set; }
+
     /// <summary>Unmatched attributes forwarded to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
@@ -127,6 +138,12 @@
     {
         if (ChildContent is not null && LayoutContent is not null)
             throw new InvalidOperationException("Set ChildContent or LayoutContent, not both. LayoutContent is how an owner branches its own markup on the resolved layout.");
+
+        // The overlays that resolve from the viewport scope measure it with an internal probe that
+        // classifies with the shared defaults. A viewport-scope observer with another pair would
+        // disagree with them, so per-instance thresholds belong to container observers only.
+        if (IsViewportScope && Breakpoints is not null && Breakpoints != TmLayoutBreakpoints.Default)
+            throw new InvalidOperationException("Breakpoints cannot be set on the viewport-scope observer (IsViewportScope): the overlays that read the viewport scope classify it with the shared TmLayoutBreakpoints.Default. Use Breakpoints on a container observer.");
     }
 
     protected override async Task OnParametersSetAsync()
@@ -148,33 +165,45 @@
     /// <summary>True when this observer measures its own root. A forced mode, or Auto under a forced ancestor, does not.</summary>
     private bool Measures => LayoutMode == TmLayoutMode.Auto && Parent is not { Mode: not TmLayoutMode.Auto };
 
+    private TmLayoutBreakpoints EffectiveBreakpoints => Breakpoints ?? TmLayoutBreakpoints.Default;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Re-register when the thresholds changed: the module classifies with what it was given, so
+        // the same width must be re-evaluated against the new pair (it reports on the next frame).
+        if (_observing && !_disposed && _lazy is { IsImported: true } && EffectiveBreakpoints != _observedBreakpoints)
+        {
+            _observedBreakpoints = EffectiveBreakpoints;
+            await _lazy.TryInvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
+            return;
+        }
+
         if (!Measures || _observing || _attaching || _disposed) return;
 
         // Set before the first await, so a second render during the import cannot start another one.
         _attaching = true;
         _dotNetRef ??= DotNetObjectReference.Create(this);
-        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        // Dispose may have run while the import was awaiting. Release what it could not see.
-        if (_disposed)
+        _lazy ??= new LazyJsModule(JS, ModulePath);
+        // Null when JS is unavailable — or when dispose ran while the import was awaiting and the
+        // helper released the module it outlived. As before, _attaching stays set: the observer
+        // never retries a failed import.
+        if (await _lazy.GetAsync() is null)
         {
-            await ReleaseAsync();
+            if (_disposed) await ReleaseAsync();
             return;
         }
 
-        // A loose or substituted runtime (bUnit's default) resolves the import to null. There is
-        // nothing to observe then, and nothing to leak on dispose.
-        if (_module is null) return;
-
         _observing = true;
         _attaching = false;
-        await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, new
-        {
-            breakpoints = new { sm = TmBreakpoints.Sm, md = TmBreakpoints.Md, lg = TmBreakpoints.Lg },
-        });
+        _observedBreakpoints = EffectiveBreakpoints;
+        await _lazy.TryInvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
         if (_disposed) await ReleaseAsync();
     }
+
+    private static object ObserveOptions(TmLayoutBreakpoints breakpoints) => new
+    {
+        breakpoints = new { sm = breakpoints.Sm, md = TmBreakpoints.Md, lg = breakpoints.Lg },
+    };
 
     /// <summary>Called by layout-observer.js when the measured mode changes. An unchanged mode is ignored.</summary>
     /// <param name="mode">One of <c>desktop</c>, <c>tablet</c>, <c>mobile</c>.</param>
@@ -213,21 +242,16 @@
 
     private async Task ReleaseAsync()
     {
-        var module = _module;
+        var lazy = _lazy;
         var observing = _observing;
-        _module = null;
         _observing = false;
         _dotNetRef?.Dispose();
         _dotNetRef = null;
-        if (module is null) return;
+        if (lazy is null) return;
 
-        try
-        {
-            if (observing) await module.InvokeVoidAsync("disconnect", _id);
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        // The disconnect never triggers a fresh import: a module that was never imported has
+        // nothing to disconnect. The helper swallows the guarded failure classes itself.
+        if (observing && lazy.IsImported) await lazy.TryInvokeVoidAsync("disconnect", _id);
+        await lazy.DisposeAsync();
     }
 }

@@ -158,6 +158,75 @@ public sealed class TmModelingDiagramPreviewTests : LocalizationTestBase
         document.Nodes.Should().HaveCount(1);
     }
 
+    [Fact]
+    public void Preview_uses_viewer_toolbar_preset()
+    {
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        // Phase 4 scattered the groups across the editor regions (search/view in the header,
+        // zoom in the status bar), so the check is editor-scoped, not toolbar-scoped.
+        var groupNames = cut.FindAll("[data-testid='diagram-editor'] [data-tm-group]")
+            .Select(g => g.GetAttribute("data-tm-group")!)
+            .ToList();
+
+        // The preview is a read-only viewer surface: only the viewer groups may render.
+        groupNames.Should().BeEquivalentTo(["zoom", "view", "search", "export"]);
+        groupNames.Should().NotContain("import", "the preview must not offer imports");
+        groupNames.Should().NotContain("templates", "the preview must not offer templates");
+        groupNames.Should().NotContain("readonly", "a host-pinned read-only preview cannot be unlocked");
+
+        // The viewer zoom readout stays reachable by the Modeling E2E selector.
+        cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Preview_hides_the_document_title_through_the_editor_api()
+    {
+        // F6: the preview hides the editor's document title with ShowTitle="false" — never
+        // with CSS (Preview_has_no_positional_toolbar_css forbids __title there).
+        using var cut = Render<TmModelingDiagramPreview>(parameters => parameters
+            .Add(p => p.Document, CreateDocument(nodeCount: 2)));
+
+        cut.FindAll("[data-testid='diagram-editor'] .tm-diagram-editor__title").Should().BeEmpty(
+            "the Modeling preview renders no document-title input");
+        cut.Find(".tm-diagram-editor__zoom-label").Should().NotBeNull(
+            "the viewer chrome (zoom readout) still renders");
+    }
+
+    [Fact]
+    public void Preview_has_no_positional_toolbar_css()
+    {
+        var css = File.ReadAllText(FindPreviewCssPath());
+
+        css.Should().NotContain("nth-of-type",
+            "positional selectors break as soon as the editor toolbar is regrouped");
+        css.Should().NotContain("__toolbar-row",
+            "Modeling must not style the internal toolbar rows of the diagram editor");
+        css.Should().NotContain("insert-dropdown-wrapper",
+            "Modeling must not hide internal editor controls by class");
+        css.Should().NotContain("tm-diagram-editor__title",
+            "title visibility must come from the editor API, not from Modeling CSS");
+        css.Should().NotContain("toolbar-spacer",
+            "spacer visibility must come from the editor API, not from Modeling CSS");
+        css.Should().NotContain("tm-toolbar-btn--active",
+            "Modeling must not restyle internal editor toolbar button states");
+    }
+
+    private static string FindPreviewCssPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent!;
+        }
+
+        directory.Should().NotBeNull("repo root with TempoBlazor.slnx must be reachable from the test output");
+        return Path.Combine(
+            directory!.FullName,
+            "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingDiagramPreview.razor.css");
+    }
+
     private static DiagramDocument CreateDocument(int nodeCount)
     {
         var page = new DiagramPage

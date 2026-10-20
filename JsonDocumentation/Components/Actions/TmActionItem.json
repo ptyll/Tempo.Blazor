@@ -31,11 +31,49 @@
       "description": "Overflow rank ONLY — it never changes the render order. The bar and the \"More\" menu render in the order of Items; the items beyond the visible budget move into the menu by ascending priority (the lowest priority overflows first, ties drop the last item first). Disabled items still count towards the budget."
     },
     {
+      "name": "Overflow",
+      "type": "ActionOverflow",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Pins the item to the surface or to the overflow menu independently of Priority: Never keeps it on the surface (it counts against the visible budget), Always puts it in the \"More\" menu even when the budget would show it (it does not count), Auto (default) lets the budget and the Priority rank decide."
+    },
+    {
+      "name": "Danger",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Marks a destructive action. The overflow menu tints the entry with the danger colour so a destructive item keeps its meaning when it leaves the surface."
+    },
+    {
+      "name": "Checked",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "The action's on/off state when it is a toggle. null (default) is a plain action — a menuitem in the \"More\" menu. true/false make it a menuitemcheckbox with aria-checked and a check mark in the menu, and add aria-pressed to its tile on the mobile action bar. Activating it still runs OnClick (and closes the menu like every entry); the host flips the state in the callback.",
+      "example": "new() { Id = \"grid\", Label = \"Grid\", Checked = _gridOn,\n         OnClick = EventCallback.Factory.Create(this, () => _gridOn = !_gridOn) }"
+    },    {
+      "name": "CheckedMixed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders a toggle whose Checked is false as partially on (aria-checked / aria-pressed = \"mixed\"). Ignored when Checked is null or true."
+    },    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
       "default": "false",
       "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
+    },
+    {
+      "name": "Group",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable key of the group the action belongs to in the \"More\" menu. Consecutive items (in Items order — grouping never reorders) with the same non-empty key render as one role=group section named by GroupLabel, and adjacent runs are divided by a role=separator. Null or empty means ungrouped. No effect on the surface itself."
+    },
+    {
+      "name": "GroupLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name and visible header of the item's group in the \"More\" menu, read from the FIRST item of a run. Empty renders the run without a group wrapper (separators only)."
     },
     {
       "name": "OnClick",

@@ -217,6 +217,8 @@ public class TmPaginationTests : LocalizationTestBase
         current[0].GetAttribute("data-testid").Should().Be("pagination-page-3");
 
         cut.Find("[data-testid='pagination-page-2']").HasAttribute("aria-current").Should().BeFalse();
+        cut.Find(".tm-pagination-prev .tm-icon, .tm-pagination-prev svg").Should().NotBeNull();
+        cut.Find(".tm-pagination-next .tm-icon, .tm-pagination-next svg").Should().NotBeNull();
     }
 
     [Fact]

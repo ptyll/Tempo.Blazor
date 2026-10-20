@@ -43,6 +43,16 @@ public interface IDataTableExporter
     byte[] Export(DataTableExportData data);
 }
 
+/// <summary>Which rows a data-table export includes.</summary>
+public enum DataTableExportScope
+{
+    /// <summary>Every row matching the current filter and sort, paging bypassed. This is the default.</summary>
+    All,
+
+    /// <summary>Only the rows the user has checked. Requires a selectable table.</summary>
+    Selected
+}
+
 /// <summary>Built-in export formats supported by <c>TmDataTable</c>.</summary>
 public enum DataTableExportFormat
 {
@@ -57,10 +67,12 @@ public enum DataTableExportFormat
 /// <param name="Format">Generated file format.</param>
 /// <param name="FileName">Browser download file name.</param>
 /// <param name="RowCount">Number of exported data rows, excluding the header.</param>
+/// <param name="Scope">Whether the file contains every matching row or only the checked rows.</param>
 public sealed record DataTableExportResult(
     DataTableExportFormat Format,
     string FileName,
-    int RowCount);
+    int RowCount,
+    DataTableExportScope Scope = DataTableExportScope.All);
 
 /// <summary>
 /// Optional service contract for producing XLSX bytes without adding an Open XML dependency to

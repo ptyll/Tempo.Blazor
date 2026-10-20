@@ -167,6 +167,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmTopBar"] = ["navigation-bar"],
             ["TmSidebar"] = ["sidebar"],
             ["TmDrawer"] = ["drawer"],
+            ["TmEditorShell"] = ["editor-shell"],
+            ["TmSidePanel"] = ["side-panel"],
             ["TmSection"] = ["section"],
             ["TmCommandPalette"] = ["command-palette", "search-input"],
             ["TmKeyboardShortcutsHelp"] = ["keyboard-shortcuts"],
@@ -177,6 +179,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmToolbar"] = ["toolbar"],
             ["TmToolbarButton"] = ["toolbar", "button"],
             ["TmToolbarDivider"] = ["toolbar"],
+            ["TmToolbarGroup"] = ["toolbar"],
+            ["TmToolbarItem"] = ["toolbar"],
             ["TmFormActionBar"] = ["toolbar"],
             ["TmAlert"] = ["alert"],
             ["TmModal"] = ["modal"],
@@ -262,6 +266,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             "__group__",
             "TmCard",
             "TmDrawer",
+            "TmEditorShell",
+            "TmSidePanel",
             "TmSection",
             "TmStackLayout",
             "TmModal",
@@ -589,9 +595,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             DefaultWidth = 200, DefaultHeight = 80,
             Props =
             [
-                P("label",    "Label",    PropType.String,     "Options", cat: "Content"),
-                P("options",  "Options",  PropType.StringList, cat: "Content"),
-                P("required", "Required", PropType.Bool,       false,     cat: "Behavior"),
+                P("label",      "Label",      PropType.String,     "Options", cat: "Content"),
+                P("options",    "Options",    PropType.StringList, cat: "Content"),
+                P("appearance", "Appearance", PropType.Enum,      "Radio",   cat: "Appearance",
+                    opts: ["Radio", "Segmented"]),
+                P("required",   "Required",   PropType.Bool,       false,     cat: "Behavior"),
                 P("disabled", "Disabled", PropType.Bool,       false,     cat: "Behavior"),
             ]
         };
@@ -1537,6 +1545,37 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
 
         yield return new WireframeComponentSchema
         {
+            Type = "TmEditorShell", Category = "Layout", DisplayName = "Editor Shell",
+            DefaultWidth = 960, DefaultHeight = 560,
+            IsContainer = true,
+            Props =
+            [
+                P("leftTitle",    "Left Panel Title",    PropType.String, "Blocks",     cat: "Content"),
+                P("rightTitle",   "Right Panel Title",   PropType.String, "Properties", cat: "Content"),
+                P("leftOpen",     "Left Panel Open",     PropType.Bool,   true,         cat: "State"),
+                P("rightOpen",    "Right Panel Open",    PropType.Bool,   true,         cat: "State"),
+                P("mobilePanels", "Mobile Presentation", PropType.Enum, "sheet", cat: "Appearance",
+                    opts: ["sheet", "tabs"]),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSidePanel", Category = "Layout", DisplayName = "Side Panel",
+            DefaultWidth = 360, DefaultHeight = 420,
+            IsContainer = true,
+            Props =
+            [
+                P("title",        "Title",       PropType.String, "Panel", cat: "Content"),
+                P("open",         "Open",        PropType.Bool,   true,    cat: "State"),
+                P("presentation", "Presentation", PropType.Enum,  "auto",  cat: "Appearance",
+                    opts: ["auto", "docked", "sheet"]),
+                P("width",        "Width",       PropType.Int,    360,     cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
             Type = "TmSection", Category = "Layout", DisplayName = "Section",
             DefaultWidth = 400, DefaultHeight = 160,
             Props = [P("title", "Title", PropType.String, "Section Title", cat: "Content")]
@@ -1619,6 +1658,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title",  "Title",  PropType.String, "",    cat: "Content"),
                 P("sticky", "Sticky", PropType.Bool,   false, cat: "Appearance"),
+                P("overflow", "Overflow menu", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 
@@ -1630,7 +1670,34 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("label",    "Label",    PropType.String, "Action", cat: "Content"),
                 P("icon",     "Icon",     PropType.Icon,             cat: "Content"),
+                P("labelPosition", "Label position", PropType.Enum, "inline", cat: "Appearance",
+                    opts: ["inline","below","hidden"]),
                 P("disabled", "Disabled", PropType.Bool,   false,    cat: "Behavior"),
+                // F12/C2: a toggle (aria-pressed) — the wireframe draws the pressed look.
+                P("pressed",  "Pressed (toggle)", PropType.Bool, false, cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmToolbarGroup", Category = "Toolbar", DisplayName = "Toolbar Group",
+            DefaultWidth = 220, DefaultHeight = 32,
+            Props =
+            [
+                P("label", "Label", PropType.String, "Group", cat: "Content"),
+            ]
+        };
+
+        // F14/C1: a non-button control (a select, colour picker, toggle) on the bar; in the More
+        // menu it is a plain entry or a labelled group — the wireframe draws the bordered control
+        // box with its label and a small chevron.
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmToolbarItem", Category = "Toolbar", DisplayName = "Toolbar Item",
+            DefaultWidth = 140, DefaultHeight = 32,
+            Props =
+            [
+                P("label", "Label", PropType.String, "Item", cat: "Content"),
             ]
         };
 
@@ -1964,12 +2031,14 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             DefaultWidth = 800, DefaultHeight = 500,
             Props =
             [
-                P("layoutMode",    "Layout Mode",    PropType.Enum, "auto", cat: "Behavior",
+                P("title",        "Title",         PropType.String, "Dashboard", cat: "Content"),
+                P("layoutMode",   "Layout Mode",   PropType.Enum,   "auto",      cat: "Behavior",
                     opts: ["auto", "desktop", "tablet", "mobile"]),
-                P("columns",       "Columns",        PropType.Int,  3,     cat: "Appearance"),
-                P("rows",          "Rows",           PropType.Int,  2,     cat: "Appearance"),
-                P("editable",      "Editable",       PropType.Bool, false, cat: "Behavior"),
-                P("showAddWidget", "Show Add Widget",PropType.Bool, false, cat: "Appearance"),
+                P("columns",      "Columns",       PropType.Int,    3,           cat: "Appearance"),
+                P("rows",         "Rows",          PropType.Int,    2,           cat: "Appearance"),
+                P("editable",     "Editable",      PropType.Bool,   false,       cat: "Behavior"),
+                P("showAddWidget","Show Add Widget",PropType.Bool,  false,       cat: "Appearance"),
+                P("showSwitcher", "Show Switcher", PropType.Bool,   true,        cat: "Appearance"),
             ]
         };
 
@@ -2492,8 +2561,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             DefaultWidth = 520, DefaultHeight = 340,
             Props =
             [
-                P("title",     "Title",      PropType.String, "Diagram",   cat: "Content"),
-                P("nodeCount", "Node Count", PropType.Int,    4,           cat: "Appearance"),
+                P("title",      "Title",      PropType.String, "Diagram",   cat: "Content"),
+                P("nodeCount",  "Node Count", PropType.Int,    4,           cat: "Appearance"),
+                // The editor's responsive band (tablet rail + drawer, mobile action bar) — maps to
+                // TmDiagramEditor.LayoutMode (TmLayoutMode). "auto" renders the desktop variant.
+                P("layoutMode",    "Layout Mode",    PropType.Enum,   "auto",    cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
+                // Maps to TmDiagramEditor.ToolbarPreset (DiagramToolbarPreset.Full / .Viewer).
+                P("toolbarPreset", "Toolbar Preset", PropType.Enum,   "full",    cat: "Behavior",
+                    opts: ["full", "viewer"]),
+                // Maps to TmDiagramEditor.ReadOnly (host-pinned read-only).
+                P("readOnly",      "Read Only",      PropType.Bool,   false,     cat: "Behavior"),
+                // Maps to TmDiagramEditor.ShowMinimap.
+                P("showMinimap",   "Show Minimap",   PropType.Bool,   true,      cat: "Appearance"),
             ]
         };
 

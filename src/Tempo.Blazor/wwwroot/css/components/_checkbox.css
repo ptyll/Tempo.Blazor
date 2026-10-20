@@ -90,6 +90,7 @@
   background-color: var(--tm-control-hover-fill, var(--tm-bg-surface));
 }
 .tm-checkbox-input:focus-visible ~ .tm-checkbox-custom {
+  outline: 2px solid transparent;
   box-shadow: var(--tm-focus-ring);
 }
 /* Both glyphs sit on the primary fill, so both take the shared control-glyph token; the dark theme

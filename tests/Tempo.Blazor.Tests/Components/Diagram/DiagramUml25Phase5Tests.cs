@@ -209,6 +209,27 @@ public class DiagramUml25Phase5Tests : LocalizationTestBase
     }
 
     [Fact]
+    public void Class_ContentStyle_UsesSafeCenter()
+    {
+        // U7: content taller than the node must clip at the BOTTOM only — `safe center`
+        // falls back to start on overflow so the class-name header stays visible.
+        var registry = new DiagramStencilRegistry();
+        registry.RegisterProvider(new BuiltInDiagramStencilProvider());
+        Services.AddSingleton(registry);
+
+        var node = new DiagramNode { StencilId = "uml.class", W = 180, H = 100 };
+        node.Data["name"] = "Customer";
+        node.Data["attributes"] = new[] { "- id: Guid", "- name: string", "- email: string" };
+        node.Data["methods"] = new[] { "+ Save(): void", "+ Load(): void" };
+
+        var cut = Render<TmDiagramStencilShape>(parameters => parameters
+            .Add(p => p.Node, node));
+
+        cut.Find(".tm-diagram-node__content").GetAttribute("style")
+            .Should().Contain("justify-content:safe center");
+    }
+
+    [Fact]
     public void AddTempoBlazorDiagramEditor_Registers_Uml25_Provider()
     {
         var services = new ServiceCollection();

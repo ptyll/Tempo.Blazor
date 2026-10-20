@@ -295,6 +295,33 @@ public class TmViewManagerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TwoInstances_UseDistinctRadioGroupNames()
+    {
+        var provider = BuildProvider();
+        var first = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId)
+            .Add(c => c.CanCreateTenantViews, true));
+        var second = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, "other-context")
+            .Add(c => c.CurrentUserId, TestUserId)
+            .Add(c => c.CanCreateTenantViews, true));
+
+        first.Find(".tm-view-manager-toggle").Click();
+        first.Find(".tm-btn-primary").Click();
+        second.Find(".tm-view-manager-toggle").Click();
+        second.Find(".tm-btn-primary").Click();
+
+        var firstName = first.Find("input[type=radio]").GetAttribute("name");
+        var secondName = second.Find("input[type=radio]").GetAttribute("name");
+        firstName.Should().StartWith("tm-view-scope-");
+        secondName.Should().StartWith("tm-view-scope-");
+        firstName.Should().NotBe(secondName);
+    }
+
+    [Fact]
     public async Task ViewManager_OpenCreateModal_RendersRealIdsTheTrapCanResolve()
     {
         var provider = BuildProvider();

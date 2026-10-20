@@ -2,6 +2,8 @@
 
 Kompletní přehled všech komponent knihovny Tempo.Blazor, jejich parametrů, příkladů použití a validace formulářů.
 
+Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, editor shell, přetečení toolbaru, pointer drag, plurály a relativní čas) mapuje [docs/redesign-foundation.md](docs/redesign-foundation.md); každá smlouva má vlastní dokument, tato stránka je jen odkazuje.
+
 ---
 
 ## Obsah
@@ -3522,6 +3524,8 @@ Dynamický renderer formuláře z definic polí (metadata-driven).
 
 ## DataTable
 
+Nové opt-in režimy a výchozí hodnoty popisuje [průvodce redesignem datové tabulky](docs/data-table-redesign.md).
+
 ### TmDataTable\<TItem\>
 
 Kompletní datová tabulka s řazením, filtrováním, stránkováním, groupingem a virtualizací.
@@ -3872,6 +3876,7 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `tm-filter-select` | Select pole |
 | `tm-filter-value-input` | Input hodnoty |
 | `tm-filter-apply` | Tlačítko aplikace |
+| `tm-filter-result-preview` | Náhled počtu odpovídajících záznamů (`aria-live="polite"`) |
 
 #### Parametry
 
@@ -3881,6 +3886,8 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `ActiveFilters` | `IReadOnlyList<ActiveFilter>` | `[]` | Aktuální filtry |
 | `OnFiltersChanged` | `EventCallback<IReadOnlyList<ActiveFilter>>` | — | Změna filtrů |
 | `ShowClearAll` | `bool` | `true` | Zobrazit "Smazat vše" |
+| `ShowResultPreview` | `bool` | `false` | Zobrazí živý počet záznamů odpovídajících filtrům včetně rozpracovaného filtru v editoru; region se renderuje jen spolu s `ResultCountProvider` |
+| `ResultCountProvider` | `Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?` | `null` | Vrátí počet záznamů odpovídajících zadaným filtrům, nebo `null` když je neznámý. Volá se s debounce 300 ms, dokud je `ShowResultPreview` true |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `Disabled` | `bool` | `false` | Zakáže builder filtrů |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
@@ -5227,17 +5234,20 @@ Vertikální časová osa.
 
 ### TmToolbar
 
-Panel nástrojů s tlačítky.
+Panel nástrojů s tlačítky. Má roli toolbar s roving tabindexem (jeden tab stop, šipky vlevo/vpravo, Home/End). `Overflow=Menu` přesune tlačítka, která se nevejdou, do nabídky Více (nejdřív `Secondary`, `OverflowOnly` vždy); popisky řídí `Labels`. Viz [docs/toolbar.md](docs/toolbar.md).
 
 #### CSS třídy
 
 | Třída | Popis |
 |-------|-------|
-| `tm-toolbar` | Kořenový kontejner |
+| `tm-toolbar` | Kořenový kontejner (container `tm-toolbar`) |
 | `tm-toolbar--sticky` | Přilepený nahoře |
 | `tm-toolbar-start` | Levá strana |
 | `tm-toolbar-title` | Nadpis |
 | `tm-toolbar-actions` | Akce vpravo |
+| `tm-toolbar-more` | Tlačítko Více (overflow) |
+| `tm-toolbar-more__panel` / `__menu` / `__item` / `__label` | Nabídka Více |
+| `tm-toolbar-item--collapsed` | Tlačítko, které se nevešlo (mimo tok, neviditelné, inert) |
 
 #### Parametry
 
@@ -5247,6 +5257,11 @@ Panel nástrojů s tlačítky.
 | `ChildContent` | `RenderFragment` | — | Obsah (tlačítka) |
 | `Actions` | `RenderFragment?` | `null` | Akce vpravo |
 | `Sticky` | `bool` | `false` | Přilepený nahoře |
+| `Overflow` | `ToolbarOverflow` | `None` | `None` / `Menu` — přetečení do nabídky Více |
+| `Labels` | `ToolbarLabels` | `Auto` | `Auto` / `Icons` / `IconsWithText` — viditelné popisky |
+| `OverflowLabel` | `string?` | `null` | Název a tooltip tlačítka Více |
+| `AriaLabel` | `string?` | `null` | Přístupný název lišty |
+| `OverflowPresentation` | `PanelPresentation` | `Auto` | Prezentace nabídky Více na telefonu |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -5261,6 +5276,7 @@ Tlačítko v toolbaru.
 | `tm-toolbar-btn` | Základní třída tlačítka |
 | `tm-toolbar-btn-text` | Text tlačítka |
 | `tm-toolbar-btn--{variant}` | Varianta (dynamicky: `ghost`, `primary`, `secondary`, `danger`) |
+| `tm-toolbar-btn--label-below` / `--icon-only` / `--labels-auto` | Popisek pod ikonou / jen ikona / popisek mizí podle šířky lišty |
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
@@ -5270,6 +5286,8 @@ Tlačítko v toolbaru.
 | `OnClick` | `EventCallback` | — | Klik |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Variant` | `ButtonVariant` | `Ghost` | Varianta |
+| `Priority` | `ToolbarButtonPriority` | `Primary` | `Primary` / `Secondary` / `OverflowOnly` — pořadí odchodu do Více (ne pořadí vykreslení) |
+| `LabelPosition` | `ToolbarLabelPosition` | `Inline` | `Inline` / `Below` / `Hidden` — poloha popisku |
 | `Class` | `string?` | `null` | CSS |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -5560,8 +5578,11 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 - **Mazání dashboardů** — Mazání s potvrzovacím dialogem (nelze smazat výchozí dashboard)
 - **Výchozí dashboard** — Nastavení výchozího dashboardu pro uživatele
 - **Editace názvu** — Přejmenování dashboardu v editačním režimu
-- **Drag & Drop** — Přesun widgetů myší
+- **Drag & Drop** — Přesun widgetů myší, dotykem i perem (sdílený helper `pointer-drag.js`, F5)
 - **Resize** — Změna velikosti widgetů
+- **Klávesnicové přesouvání** — Úchyt je tlačítko: Enter/Space zvedne a položí, šipky posunou o buňku, Shift+šipky změní velikost, Escape vrátí (F4)
+- **Přeuspořádání bez dragu** — Kompaktní editační režim na tabletu/mobilu: tlačítka Move up / Move down (F4)
+- **Redesign chrome (F2/F3/F7)** — Parametry `Appearance`, `Title`, `Subtitle`, `HeaderStart`, `HeaderActions`, `ShowHeader`, `ShowWidgetIcons`, `ShowWidgetDescriptions`, `WidgetHeaderActions`; responzivní hlavička, dotykové cíle ≥ 44 px, dialogy jako bottom sheet na mobilu. Detailní dokumentace: [docs/dashboard.md](dashboard.md).
 
 #### CSS třídy
 
@@ -5582,7 +5603,9 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `tm-dashboard-menu-header` | Hlavička menu |
 | `tm-dashboard-menu-item` | Položka menu |
 | `tm-dashboard-menu-item--active` | Aktivní položka |
-| `tm-dashboard-menu-badge` | Badge položky (★ výchozí) |
+| `tm-dashboard-menu-default` | Viditelný popis výchozího dashboardu (★ + text) |
+| `tm-dashboard-menu-default-hint` | Doplňující hint, proč výchozí nelze smazat |
+| `tm-dashboard-switcher` | Přepínač dashboardů (select-like tlačítko) |
 | `tm-dashboard-menu-action` | Akce položky (hvězdička, koš) |
 | `tm-dashboard-menu-divider` | Oddělovač v menu |
 | `tm-dashboard-grid-container` | Kontejner mřížky |
@@ -5592,7 +5615,10 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `tm-widget` | Widget |
 | `tm-widget--collapsed` | Sbalený widget |
 | `tm-widget--minimized` | Minimalizovaný widget |
-| `tm-widget--dragging` | Přetahovaný widget |
+| `tm-widget--dragging` | Přetahovaný widget (stav z dashboard.js) |
+| `tm-widget--grabbed` | Widget zvednutý klávesnicí |
+| `tm-widget--highlight` | Čerstvě přidaný widget (krátké zvýraznění) |
+| `tm-widget--wide` | Widget širší než polovina gridu |
 | `tm-widget-header` | Hlavička widgetu |
 | `tm-widget-header-left` | Levá strana hlavičky |
 | `tm-widget-drag-handle` | Úchyt pro přetahování |
@@ -5614,11 +5640,23 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `DashboardId` | `string?` | `null` | ID dashboardu |
 | `UserId` | `string?` | `null` | ID uživatele |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Appearance` | `DashboardAppearance` | `Plain` | `Plain` = plocha na pozadí workspace, `Card` = ohraničující karta (`.tm-dashboard--framed`) |
+| `Title` | `string?` | `null` | Text nadpisu (přepíše název dashboardu) |
+| `Subtitle` | `string?` | `null` | Druhý řádek pod nadpisem |
+| `HeaderStart` | `RenderFragment?` | `null` | Obsah hostitele na začátku hlavičky |
+| `HeaderActions` | `RenderFragment?` | `null` | Akce hostitele na konci hlavičky (před tlačítkem Edit, jen view režim) |
+| `ShowHeader` | `bool` | `true` | Zobrazit toolbar v view režimu (edit režim ho vždy zobrazí) |
 | `ShowTitle` | `bool` | `true` | Zobrazit název |
+| `ShowWidgetIcons` | `bool` | `true` | Ikona kategorie v hlavičce widgetu |
+| `ShowWidgetDescriptions` | `bool` | `false` | Popis widgetu pod titulkem |
+| `WidgetHeaderActions` | `RenderFragment<WidgetInstance>?` | `null` | Slot hostitele v hlavičce každého widgetu |
 | `AllowEdit` | `bool` | `true` | Povolit úpravy |
-| `OnDashboardChanged` | `EventCallback<DashboardLayout>` | — | Změna layoutu |
+| `CloseOnSelect` | `bool` | `true` | Zavřít selektor po výběru widgetu (`false` = přidávat více za sebou) |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Vynucený rozvržení režim (Auto měří šířku) |
+| `InitialMode` | `TmLayoutMode` | `Desktop` | Režim před prvním měřením |
+| `ResolvedLayoutChanged` | `EventCallback<TmLayoutMode>` | — | Změna vyřešeného rozvržení (nekombinovat s two-way `LayoutMode`) |
+| `OnDashboardChanged` | `EventCallback<DashboardConfig>` | — | Změna aktuálního dashboardu |
 | `WidgetTemplate` | `RenderFragment<WidgetInstance>?` | `null` | Šablona widgetu |
-| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Lokalizační klíče
 
@@ -7566,25 +7604,72 @@ Dark mode tokeny jsou definovány v `tokens-dark.css` a automaticky se aplikují
 
 Hlavní editor pro tvorbu diagramů. Podporuje více stránek, vrstvy, undo/redo, auto-layout a import/export.
 
+Editor je postaven na jádru `TmEditorShell` (redesign DiagramEditoru, plán 94d441f2): hlavička
+(záložky stránek, název dokumentu, pojmenované přepínače panelů, menu „⋯“ s mřížkou/přichytáváním),
+jedna příkazová řada na `TmToolbar` (`Overflow=Menu`, přetečení „More“), ukotvený toolbox vlevo,
+inspektor vpravo a stavová lišta (zoom + přepínač Read-only). Detaily kontraktů viz
+[docs/diagram-editor.md](docs/diagram-editor.md).
+
 Nástroj **Edge/Spojnice** umí kreslit i volné čáry kdekoli na plátně:
 
 - **Tažením** na prázdném plátně vznikne jednoduchá jednosegmentová hrana s plovoucími konci.
 - **Klikem** (bez tažení) na prázdné plátno se zahájí kreslení *polyčáry* — další kliky přidávají body polyline, dvojklik / Enter čáru ukončí v aktuální pozici kurzoru (jako plovoucí konec), klik na port / uzel / hranu čáru ukončí s navázáním. **Escape** nebo pravé tlačítko rozpracovanou polyčáru zahodí.
+
+#### Toolbar kontrakt (stabilní veřejné API)
+
+Vnoření hostitelé (např. Modeling preview) se opírají o kontrakt, nikdy o poziční CSS selektory
+interního DOM toolbaru:
+
+- `ToolbarPreset` — `Full` (výchozí, všechny skupiny) nebo `Viewer` (jen `zoom`, `view`, `search`,
+  `export`; bez přepínače read-only).
+- `ToolbarGroups` — volitelné flagy (`DiagramToolbarGroups`), `null` = podle presetu.
+- `data-tm-group` — každá skupina nese stabilní atribut z frozen sady `history | clipboard | tools
+  | format | insert | arrange | search | panels | zoom | view | canvas-size | layout | export |
+  templates | import | readonly`. Kde přesně skupina renderuje (hlavička / řada toolbaru / stavová
+  lišta / menu More) je layout detail — hodnoty atributů a sada skupin jsou kontrakt.
+- `HeaderStart` / `HeaderActions` — sloty pro akce hostitele v první (hlavičkové) řadě.
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Document` | `DiagramDocument?` | `null` | Aktivní dokument |
-| `ReadOnly` | `bool` | `false` | Pouze pro čtení |
+| `DocumentChanged` | `EventCallback<DiagramDocument>` | — | Vyvoláno po každé mutaci |
+| `ReadOnly` | `bool` | `false` | Pouze pro čtení (nikdy se nepřiřazuje uvnitř komponenty) |
+| `IsReadOnly` | `bool` (get) | — | Efektivní stav `ReadOnly \|\| _userReadOnly`; vnitřní přepínač Read-only mění jen uživatelskou část |
+| `ToolbarPreset` | `DiagramToolbarPreset` | `Full` | Sada skupin toolbaru (`Full` / `Viewer`) |
+| `ToolbarGroups` | `DiagramToolbarGroups?` | `null` | Explicitní flagy skupin (přepíše preset) |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Sloty pro akce hostitele v hlavičce |
+| `InspectorLayout` | `DiagramInspectorLayout` | `Tabs` | Inspektor: `Tabs` (Vlastnosti \| Vrstvy) nebo `Stacked` (opt-in sloupcové posloupnost) |
+| `MinimapPlacement` | `DiagramMinimapPlacement` | `Auto` | Minimapa: `Auto` (karta na desktopu, overlay od tabletu), `Panel`, `Overlay` |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Režim rozvržení (auto / desktop / tablet / mobile) |
+| `LayoutBreakpoints` | `TmLayoutBreakpoints?` | `null` | Vlastní prahy kontejneru (default 768/1200) |
+| `ShowStatusBar` | `bool` | `true` | Stavová lišta pod plátnem (zoom, read-only) |
+| `ShowTitle` | `bool` | `true` | Editovatelný název dokumentu v hlavičce |
 | `ShowToolbox` | `bool` | `true` | Zobrazit panel nástrojů |
 | `ShowPropertiesPanel` | `bool` | `true` | Zobrazit panel vlastností |
 | `ShowLayersPanel` | `bool` | `true` | Zobrazit panel vrstev |
 | `ShowMinimap` | `bool` | `true` | Zobrazit minimapu |
-| `ShowToolbar` | `bool` | `true` | Zobrazit toolbar |
+| `ShowToolbar` | `bool` | `true` | Zobrazit toolbar / akční lištu |
 | `ShowGrid` | `bool` | `true` | Zobrazit mřížku |
 | `GridSize` | `int` | `8` | Velikost buňky mřížky |
 | `ShowPageView` | `bool` | `true` | Zobrazit okraje stránky |
+| `OnSelectedIdsChanged` | `EventCallback<string[]>` | — | Změna výběru |
+| `ExportHttpClientName` | `string` | `""` | Pojmenovaný HttpClient pro export SVG/PNG/PDF |
+| `Class` | `string?` | `null` | Volitelná CSS třída |
+
+#### Responzivní rozsah (G2)
+
+- **Desktop (≥ 1200):** plná editace i kompletní chrome (hlavička, příkazová řada, ukotvené panely,
+  stavová lišta, karta minimapy).
+- **Tablet (768–1199):** stejné ukotvené panely přes `TmEditorShell`, dotykové gesta, 44px úchyty
+  pro prst, plovoucí minimapa, dlouhé podržení = kontextové menu. Plná editace zůstává.
+- **Mobil (< 768):** prohlížení + lehké úpravy — canvas a nemodální spodní sheet (peek/half/full)
+  s paletou *Shapes* a inspektorem *Vlastnosti \| Vrstvy*, akční lišta (Select/Pan/Vlastnosti,
+  export v „More“), plovoucí zoom pilulka a minimapa, tap-insert z palety, undo/redo, mazání,
+  viditelnost/zámek/aktivní vrstva. **Resize/rotate, kreslení hran, zarovnání/rozdělení, layout a
+  import jsou až od tabletu.** Přepínače úchytů: `TmDiagramCanvas.ShowTransformHandles` /
+  `ShowConnectArrows`.
 
 ### TmDiagramCanvas
 
@@ -7606,6 +7691,9 @@ Zoom a pan jsou řízeny výhradně přes SVG `viewBox` — žádný duplicitní
 | `ShowGrid` | `bool` | `true` | Zobrazit mřížku |
 | `GridSize` | `int` | `8` | Velikost buňky mřížky |
 | `ShowPageView` | `bool` | `true` | Zobrazit okraje stránky |
+| `Zoom` | `double` | `1.0` | Aktuální přiblížení (dvousměrně přes `ZoomChanged`) |
+| `ShowTransformHandles` | `bool` | `true` | Resize/rotate úchyty výběru (mobil je skrývá — G2) |
+| `ShowConnectArrows` | `bool` | `true` | Šipky pro kreslení hran na portech (mobil je skrývá — G2) |
 | `Class` | `string?` | `null` | Volitelná CSS třída |
 
 ### TmDiagramSqlImportDialog

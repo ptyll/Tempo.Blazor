@@ -1,0 +1,21 @@
+{
+  "itemName": "ToolbarLabelPosition",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Toolbar",
+  "description": "Where a TmToolbarButton shows its text label relative to the icon.",
+  "values": [
+    {
+      "name": "Inline",
+      "description": "Icon and label on one line (the default)."
+    },
+    {
+      "name": "Below",
+      "description": "The label sits under the icon - the ribbon style of the tablet mockups."
+    },
+    {
+      "name": "Hidden",
+      "description": "No visible label. The text stays the accessible name (aria-label) of the button."
+    }
+  ]
+}

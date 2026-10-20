@@ -1,0 +1,11 @@
+{
+  "itemName": "EditActionsMode",
+  "kind": "Enum",
+  "category": "Data Table",
+  "description": "Presentation of inline row edit actions.",
+  "values": [
+    {"name":"Icons","description":"Icon actions, preserving current markup."},
+    {"name":"Text","description":"Localized text buttons."},
+    {"name":"Footer","description":"Actions in a separate footer row."}
+  ]
+}

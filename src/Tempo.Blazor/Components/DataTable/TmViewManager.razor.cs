@@ -12,6 +12,19 @@ namespace Tempo.Blazor.Components.DataTable;
 /// </summary>
 public partial class TmViewManager : ComponentBase
 {
+    /// <summary>When true, show the active view name beside the view toggle icon.</summary>
+    [Parameter] public bool ShowActiveViewName { get; set; }
+
+    /// <summary>
+    /// When true, each non-default view offers Set as default. The choice is persisted through
+    /// <see cref="Provider"/> and the list reloads; <see cref="OnSetDefault"/> is notified afterwards.
+    /// A failed write is reported in the panel error and does not change the current default.
+    /// </summary>
+    [Parameter] public bool AllowSetDefault { get; set; }
+
+    /// <summary>Raised when the user requests that a view become the default.</summary>
+    [Parameter] public EventCallback<DataTableView> OnSetDefault { get; set; }
+
     /// <summary>Data provider for views.</summary>
     [Parameter, EditorRequired] public IDataTableViewProvider Provider { get; set; } = default!;
 
@@ -58,6 +71,9 @@ public partial class TmViewManager : ComponentBase
     [Parameter] public string? CurrentTenantId { get; set; }
 
     private bool _isOpen;
+    private ElementReference _toggleRef;
+
+    private void SetOpen(bool open) => _isOpen = open;
 
     // Per instance. A hardcoded id restores focus to the first manager on the page.
     private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
@@ -66,6 +82,7 @@ public partial class TmViewManager : ComponentBase
     private bool _showModal;
     private List<DataTableView> _views = [];
     private DataTableView? _editingView;
+    private bool _saveCurrent;
     private DataTableView? _defaultView;
     private DataTableView? _activeView;
 
@@ -116,6 +133,36 @@ public partial class TmViewManager : ComponentBase
         _isOpen = false;
     }
 
+    private string? ToggleTitle => ShowActiveViewName && _activeView is not null ? _activeView.Name : null;
+
+    private string SetDefaultLabel(DataTableView view) => string.Format(
+        System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_SetDefaultNamed"], view.Name);
+
+    private async Task RequestSetDefaultAsync(DataTableView view)
+    {
+        if (string.IsNullOrEmpty(view.Id))
+            return;
+
+        DataTableView persisted;
+        try
+        {
+            _errorMessage = null;
+            await Provider.SetDefaultViewAsync(ViewContext, view.Id, CurrentTenantId, CurrentUserId);
+            await LoadViewsAsync();
+            persisted = _views.FirstOrDefault(v => v.Id == view.Id) ?? view;
+        }
+        catch
+        {
+            // Only a failed write or reload is a set-default failure. A consumer callback that
+            // throws after the default was saved must not be reported as a failed save, nor swallowed.
+            _errorMessage = Loc["TmViewManager_SetDefaultFailed"];
+            return;
+        }
+
+        if (OnSetDefault.HasDelegate)
+            await OnSetDefault.InvokeAsync(persisted);
+    }
+
     private async Task ApplyViewAsync(DataTableView view)
     {
         _activeView = view;
@@ -156,6 +203,7 @@ public partial class TmViewManager : ComponentBase
     private void OpenCreateModal()
     {
         _editingView = null;
+        _saveCurrent = false;
         _viewName = "";
         _viewScope = ViewScope.Personal;
         _selectedColumns = AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
@@ -169,6 +217,7 @@ public partial class TmViewManager : ComponentBase
     private void OpenEditModal(DataTableView view)
     {
         _editingView = view;
+        _saveCurrent = false;
         _viewName = view.Name;
         _viewScope = view.Scope;
         _selectedColumns = view.VisibleColumns?.ToList() ?? [];
@@ -278,7 +327,8 @@ public partial class TmViewManager : ComponentBase
 
         var current = GetCurrentView();
         _editingView = null;
-        _viewName = $"{current.Name} (Copy)";
+        _saveCurrent = true;
+        _viewName = $"{current.Name} {Loc["TmViewManager_CopySuffix"]}";
         _viewScope = ViewScope.Personal;
         _selectedColumns = current.VisibleColumns?.ToList() ?? AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
         _selectedGroupColumns = current.GroupByColumns?.ToList() ?? [];

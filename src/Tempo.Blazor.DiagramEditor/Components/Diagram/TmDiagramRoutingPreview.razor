@@ -31,8 +31,11 @@
 </button>
 
 @code {
+    /// <summary>Edge routing style previewed by the tile (&quot;straight&quot;, &quot;orthogonal&quot;, &quot;curved&quot;, …).</summary>
     [Parameter] public string Routing { get; set; } = "straight";
+    /// <summary>Whether the tile shows the current routing (selected state).</summary>
     [Parameter] public bool IsSelected { get; set; }
+    /// <summary>Raised when the tile is activated.</summary>
     [Parameter] public EventCallback OnClick { get; set; }
 
     private bool _isSelected => IsSelected;

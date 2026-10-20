@@ -1,0 +1,1182 @@
+using System.Globalization;
+using Microsoft.Playwright;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Tempo.Blazor.E2E;
+
+/// <summary>
+/// F4 lane: the overflow toolbar on the REAL components (the /toolbar-forms demo drives
+/// <c>TmToolbar</c>/<c>TmToolbarButton</c> as shipped) at 1440, 1024, 390 and 320 — phone sizes with
+/// touch emulation. The checks are computed values and real key presses, never markup alone: how many
+/// buttons really fit, that a collapsed copy is invisible and unreachable, the roving tabindex
+/// (one tab stop, arrows skip hidden/disabled), the More menu keyboard (ArrowUp/Down, Home/End,
+/// typeahead, Escape returning focus), the bottom sheet on a phone with 44px items, Labels=Auto
+/// measured on the toolbar and the label-below ribbon. Every screenshot is viewport-only at the real
+/// viewport height (FullPage resets touch emulation).
+/// </summary>
+[TestClass]
+public class ToolbarOverflowE2ETests : WasmTestBase
+{
+    private string ShotDir
+        => Path.Combine(FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "TestResults", "toolbar-overflow");
+
+    [TestInitialize]
+    public void EnsureShotDir() => Directory.CreateDirectory(ShotDir);
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
+    }
+
+    private async Task<IPage> OpenAsync(int width, int height, bool touch, string locale = "en-US", bool reducedMotion = false)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = touch,
+            IsMobile = touch,
+            Locale = locale,
+            IgnoreHTTPSErrors = true,
+            ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/toolbar-forms");
+        await WaitForAppReadyAsync(page);
+        await page.Locator("[data-testid='toolbar-overflow-demo']").WaitForAsync();
+        return page;
+    }
+
+    private static ILocator Bar(IPage page, string testId) => page.Locator($"[data-testid='{testId}']");
+
+    /// <summary>Waits until the toolbar's fit measurement has settled (the trigger renders or nothing collapses).</summary>
+    private static async Task SettleAsync(IPage page, string testId)
+    {
+        await page.WaitForTimeoutAsync(600);
+        var bar = Bar(page, testId);
+        await bar.WaitForAsync();
+        // Two frames: measurement is rAF-coalesced, the re-render follows the interop call.
+        await page.EvaluateAsync("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))");
+    }
+
+    private async Task<string> ShootAsync(IPage page, ILocator subject, string name)
+    {
+        // Frame the subject near the top of the viewport; the capture itself is viewport-only.
+        await subject.EvaluateAsync("el => { el.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy({ top: -120, behavior: 'instant' }); }");
+        await page.WaitForTimeoutAsync(500);
+        await page.Mouse.MoveAsync(0, 0);
+        await page.EvaluateAsync("() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+        var path = Path.Combine(ShotDir, $"{name}.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        return path;
+    }
+
+    private static async Task<string[]> OnBarTextsAsync(ILocator bar)
+        => await bar.Locator("button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)")
+            .EvaluateAllAsync<string[]>("els => els.map(e => e.textContent.trim())");
+
+    private static async Task<string[]> CollapsedTextsAsync(ILocator bar)
+        => await bar.Locator(".tm-toolbar-item--collapsed")
+            .EvaluateAllAsync<string[]>("els => els.map(e => e.textContent.trim())");
+
+    private static async Task<string[]> MenuTextsAsync(IPage page)
+        => await page.Locator("[role='menu'] [role='menuitem']")
+            .EvaluateAllAsync<string[]>("els => els.map(e => e.textContent.trim())");
+
+    private static async Task AssertNoPageOverflowAsync(IPage page, string where)
+    {
+        var overflow = await page.EvaluateAsync<double>(
+            "() => document.documentElement.scrollWidth - document.documentElement.clientWidth");
+        Assert.IsTrue(overflow <= 1, $"{where}: the page must not scroll horizontally (overflow {overflow}px)");
+    }
+
+    // ── 1440: everything fits; only the overflow-only buttons live in the menu ─────────────────────
+
+    [TestMethod]
+    public async Task Desktop_1440_WideToolbar_KeepsAutoButtons_AndOverflowOnlyLiveInTheMenu()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-1100");
+        var bar = Bar(page, "toolbar-overflow-1100");
+
+        CollectionAssert.AreEqual(
+            new[] { "New", "Open", "Save", "Copy", "Paste" },
+            await OnBarTextsAsync(bar),
+            "all five Auto buttons fit in 1100px, in the written order, with visible labels");
+        Assert.AreEqual(0, await bar.Locator(".tm-toolbar-item--collapsed").CountAsync());
+
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await Assertions.Expect(trigger).ToBeVisibleAsync();
+        Assert.AreEqual("false", await trigger.GetAttributeAsync("aria-expanded"));
+        await trigger.ClickAsync();
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        CollectionAssert.AreEqual(new[] { "Export", "Delete" }, await MenuTextsAsync(page), "OverflowOnly buttons are ONLY in the menu");
+        Assert.AreEqual(0, await page.Locator(".tm-overlay-panel-sheet").CountAsync(), "a desktop viewport shows the anchored popover");
+
+        var shot = await ShootAsync(page, bar, "toolbar-1440-menu-open");
+        Assert.IsTrue(File.Exists(shot));
+        await AssertNoPageOverflowAsync(page, "1440");
+    }
+
+    // ── 1024 (tablet): the 380px toolbar collapses Secondary buttons, Primary stay ─────────────────
+
+    [TestMethod]
+    public async Task Tablet_1024_MidToolbar_CollapsesSecondaryFirst_AndTheCollapsedCopyIsInvisibleAndInert()
+    {
+        var page = await OpenAsync(1024, 768, touch: false);
+        await SettleAsync(page, "toolbar-overflow-380");
+        var bar = Bar(page, "toolbar-overflow-380");
+
+        var onBar = await OnBarTextsAsync(bar);
+        var collapsed = await CollapsedTextsAsync(bar);
+        Assert.IsTrue(collapsed.Length > 0, "380px cannot hold five labelled buttons - something must collapse");
+        CollectionAssert.IsSubsetOf(new[] { "New", "Save" }, onBar, "Primary buttons are the last to leave");
+        foreach (var name in collapsed)
+        {
+            CollectionAssert.Contains(new[] { "Open", "Copy", "Paste" }, name, $"\"{name}\" collapsed but is not Secondary");
+        }
+
+        // The collapsed copy is real but unseen and unreachable.
+        var first = bar.Locator(".tm-toolbar-item--collapsed").First;
+        Assert.AreEqual("hidden", await first.EvaluateAsync<string>("el => getComputedStyle(el).visibility"));
+        Assert.AreEqual("absolute", await first.EvaluateAsync<string>("el => getComputedStyle(el).position"));
+        Assert.IsTrue(await first.EvaluateAsync<bool>("el => el.inert"), "inert: not focusable, not clickable");
+        Assert.AreEqual("true", await first.GetAttributeAsync("aria-hidden"));
+
+        // Both places: every collapsed button is offered in the menu, in written order, then the pinned ones.
+        await bar.Locator("button.tm-toolbar-more").ClickAsync();
+        var menu = await MenuTextsAsync(page);
+        CollectionAssert.AreEqual(
+            new[] { "Open", "Copy", "Paste", "Export", "Delete" }.Where(t => menu.Contains(t)).ToArray(), menu);
+        foreach (var name in collapsed) CollectionAssert.Contains(menu, name);
+        CollectionAssert.Contains(menu, "Export");
+        CollectionAssert.Contains(menu, "Delete");
+
+        // No stray divider: a divider with no visible button after it inside its group is hidden.
+        var dangling = await bar.Locator(".tm-toolbar-divider").EvaluateAllAsync<bool[]>("""
+            els => els.map(d => { let n = d.nextElementSibling; while (n) { if (n.matches('button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)')) return false; n = n.nextElementSibling; } return getComputedStyle(d).visibility !== 'hidden'; })
+            """);
+        Assert.IsFalse(dangling.Any(x => x), "a divider followed only by collapsed buttons must not be painted");
+
+        // The bar never scrolls or wraps: its row stays inside its own box.
+        var fits = await bar.EvaluateAsync<bool>("el => el.scrollWidth <= el.clientWidth + 1");
+        Assert.IsTrue(fits, "the toolbar must not overflow horizontally");
+
+        await ShootAsync(page, bar, "toolbar-1024-collapsed-menu-open");
+        await AssertNoPageOverflowAsync(page, "1024");
+    }
+
+    [TestMethod]
+    public async Task Tablet_1024_ResizingTheWindow_CollapsesAndExpandsWithoutStickyState()
+    {
+        var page = await OpenAsync(1024, 768, touch: false);
+        await SettleAsync(page, "toolbar-overflow-380");
+        var bar = Bar(page, "toolbar-overflow-380");
+        var before = await CollapsedTextsAsync(bar);
+        Assert.IsTrue(before.Length > 0);
+
+        // A phone-width window narrows the demo wrapper below 380px: strictly more buttons collapse.
+        await page.SetViewportSizeAsync(340, 800);
+        await SettleAsync(page, "toolbar-overflow-380");
+        var narrow = await CollapsedTextsAsync(bar);
+        Assert.IsTrue(narrow.Length > before.Length, $"a narrower toolbar collapses more buttons (before {before.Length}, narrow {narrow.Length})");
+        foreach (var name in before) CollectionAssert.Contains(narrow, name, "what was collapsed stays collapsed when there is less room");
+
+        await page.SetViewportSizeAsync(1024, 768);
+        await SettleAsync(page, "toolbar-overflow-380");
+        CollectionAssert.AreEqual(before, await CollapsedTextsAsync(bar), "back at 1024 the same buttons collapse (the partition is a pure function of the room)");
+    }
+    // ── keyboard: roving tabindex ────────────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Keyboard_RovingTabindex_OneTabStop_ArrowsSkipCollapsedAndDisabled_RtlIndependent()
+    {
+        var page = await OpenAsync(1024, 768, touch: false);
+        await SettleAsync(page, "toolbar-overflow-380");
+        var bar = Bar(page, "toolbar-overflow-380");
+        Assert.AreEqual("toolbar", await bar.GetAttributeAsync("role"));
+        Assert.AreEqual("Document tools", await bar.GetAttributeAsync("aria-label"));
+
+        var stops = await bar.Locator("[tabindex='0']").CountAsync();
+        Assert.AreEqual(1, stops, "exactly one tab stop in the toolbar");
+
+        var focusable = await bar.EvaluateAsync<string[]>(
+            """
+            el => [...el.querySelectorAll('button.tm-toolbar-btn, button.tm-toolbar-more')]
+                  .filter(b => !b.disabled && !b.closest('.tm-toolbar-item--collapsed'))
+                  .map(b => b.getAttribute('aria-label') || b.textContent.trim())
+            """);
+        Assert.IsTrue(focusable.Length >= 3, "New, Save and the More trigger at least");
+
+        // Tab enters on the tab stop, ArrowRight walks the visible buttons and wraps, never into a collapsed copy.
+        await page.Locator("[data-testid='toolbar-overflow-380'] [tabindex='0']").FocusAsync();
+        var visited = new List<string>();
+        for (var i = 0; i < focusable.Length + 1; i++)
+        {
+            visited.Add(await page.EvaluateAsync<string>("() => document.activeElement.getAttribute('aria-label') || document.activeElement.textContent.trim()"));
+            await page.Keyboard.PressAsync("ArrowRight");
+        }
+
+        CollectionAssert.AreEqual(focusable, visited.Take(focusable.Length).ToArray(), "ArrowRight visits exactly the enabled on-bar controls, in order");
+        Assert.AreEqual(visited[0], visited[^1], "and wraps around");
+
+        await page.Keyboard.PressAsync("End");
+        Assert.AreEqual(focusable[^1], await page.EvaluateAsync<string>("() => document.activeElement.getAttribute('aria-label') || document.activeElement.textContent.trim()"));
+        await page.Keyboard.PressAsync("Home");
+        Assert.AreEqual(focusable[0], await page.EvaluateAsync<string>("() => document.activeElement.getAttribute('aria-label') || document.activeElement.textContent.trim()"));
+        Assert.AreEqual(1, await bar.Locator("[tabindex='0']").CountAsync(), "the tab stop follows focus");
+
+        // Tab leaves the toolbar (it does not walk its buttons).
+        await page.Keyboard.PressAsync("Tab");
+        var stillInside = await page.EvaluateAsync<bool>("() => !!document.activeElement.closest('[data-testid=\"toolbar-overflow-380\"]')");
+        Assert.IsFalse(stillInside, "Tab moves on to the next control, outside the toolbar");
+
+        // Vertical arrows are left alone: the page may scroll, focus stays.
+        await page.Locator("[data-testid='toolbar-overflow-380'] [tabindex='0']").FocusAsync();
+        var label = await page.EvaluateAsync<string>("() => document.activeElement.getAttribute('aria-label') || document.activeElement.textContent.trim()");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual(label, await page.EvaluateAsync<string>("() => document.activeElement.getAttribute('aria-label') || document.activeElement.textContent.trim()"));
+    }
+
+    // ── More menu keyboard ───────────────────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Keyboard_MoreMenu_ArrowsHomeEndTypeahead_EscapeReturnsFocus_ActivationInvokesOnce()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var bar = Bar(page, "toolbar-overflow-300");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await Assertions.Expect(trigger).ToBeVisibleAsync();
+
+        // Focus scrolls the trigger into view smoothly; opening while it still moves would park the panel
+        // (anchor not settled) - a user presses Enter after the page stopped, so the test does too.
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        Assert.AreEqual("true", await trigger.GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual(await page.Locator("[role='menu']").First.EvaluateAsync<string>("el => el.closest('.tm-overlay-panel, [id]')?.id ?? ''"),
+            await trigger.GetAttributeAsync("aria-controls"), "aria-controls points at the rendered panel");
+
+        var items = await MenuTextsAsync(page);
+        Assert.IsTrue(items.Length >= 3, "Open/Copy/Paste collapse into the menu next to Export/Delete");
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest(\"[role=menuitem]\")", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), "the first enabled item has initial focus");
+
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual(items[1], await ActiveMenuItemAsync(page));
+        await page.Keyboard.PressAsync("ArrowUp");
+        await page.Keyboard.PressAsync("ArrowUp");
+        Assert.AreEqual(items[^1], await ActiveMenuItemAsync(page), "ArrowUp wraps to the last item");
+        await page.Keyboard.PressAsync("Home");
+        Assert.AreEqual(items[0], await ActiveMenuItemAsync(page));
+        await page.Keyboard.PressAsync("End");
+        Assert.AreEqual(items[^1], await ActiveMenuItemAsync(page));
+
+        await page.Keyboard.PressAsync("Home");
+        await page.WaitForTimeoutAsync(800);
+        await page.Keyboard.PressAsync("e");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page), "typeahead: E focuses Export");
+        await page.WaitForTimeoutAsync(800);
+        await page.Keyboard.PressAsync("d");
+        Assert.AreEqual("Delete", await ActiveMenuItemAsync(page), "typeahead: D focuses Delete");
+
+        // Only one item is a tab stop inside the menu (roving).
+        var menuStops = await page.Locator("[role='menu'] [role='menuitem'][tabindex='0']").CountAsync();
+        Assert.AreEqual(1, menuStops);
+
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        Assert.AreEqual("false", await trigger.GetAttributeAsync("aria-expanded"), "aria-expanded is accurate after Escape");
+        Assert.IsTrue(await trigger.EvaluateAsync<bool>("el => el === document.activeElement"), "focus returns to the trigger");
+
+        // Activation: Enter on a menu item invokes the button's OnClick exactly once and closes the menu.
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.Keyboard.PressAsync("End");
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator("[data-testid='toolbar-overflow-log']")).ToContainTextAsync("Delete");
+        Assert.AreEqual(1, await page.Locator("[data-testid='toolbar-overflow-log']").CountAsync());
+    }
+
+    private static Task<string> ActiveMenuItemAsync(IPage page)
+        => page.EvaluateAsync<string>("() => document.activeElement?.closest('[role=\"menuitem\"]')?.textContent.trim() ?? '(none)'");
+
+    // ── 390 / 320 phones, touch ──────────────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Phone_390_Touch_MoreOpensTheBottomSheet_With44pxItems_AndNoPageOverflow()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var bar = Bar(page, "toolbar-overflow-300");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await Assertions.Expect(trigger).ToBeVisibleAsync();
+
+        var box = await trigger.BoundingBoxAsync();
+        Assert.IsNotNull(box);
+        Assert.IsTrue(box!.Width >= 43.5 && box.Height >= 43.5, $"the More trigger is a 44px target on touch ({box.Width}x{box.Height})");
+        foreach (var button in await bar.Locator("button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)").AllAsync())
+        {
+            var b = await button.BoundingBoxAsync();
+            Assert.IsTrue(b!.Height >= 43.5, $"toolbar buttons are touch targets (height {b.Height})");
+            var clipped = await button.EvaluateAsync<bool>("el => { const t = el.querySelector('.tm-toolbar-btn-text'); return !!t && el.scrollWidth > el.clientWidth + 1; }");
+            Assert.IsFalse(clipped, "a labelled button keeps its natural width - its text must not overflow the button box");
+        }
+
+        await ShootAsync(page, bar, "toolbar-390-closed");
+        await trigger.TapAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        foreach (var item in await page.Locator("[role='menu'] [role='menuitem']").AllAsync())
+        {
+            var b = await item.BoundingBoxAsync();
+            Assert.IsTrue(b!.Height >= 43.5, $"menu items are 44px on a phone (height {b.Height})");
+        }
+
+        var sheetBox = await sheet.BoundingBoxAsync();
+        Assert.IsTrue(Math.Abs(sheetBox!.Y + sheetBox.Height - 844) <= 2, "the sheet is anchored to the viewport bottom");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
+        var path = Path.Combine(ShotDir, "toolbar-390-sheet-open.png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        Assert.IsTrue(File.Exists(path));
+
+        // Choosing an item closes the sheet and runs the action once.
+        await page.Locator("[role='menu'] [role='menuitem']").Last.TapAsync();
+        await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator("[data-testid='toolbar-overflow-log']")).ToContainTextAsync("Delete");
+        await AssertNoPageOverflowAsync(page, "390");
+    }
+
+    [TestMethod]
+    public async Task Phone_390_MoreSheet_TabAndShiftTab_StayInsideTheSheet()
+    {
+        // F6 follow-up (f4c27b20 #1): the sheet menu is a roving group (item tabindex=-1). The
+        // trap's Tab cycle used to count those items, so Tab on the real last tab stop fell
+        // through to the browser, which skipped the -1 items and dropped focus to <body> — out
+        // of the sheet. Tab and Shift+Tab must cycle inside the sheet forever, every press must
+        // MOVE focus onto a real tab stop, and the first Tab from the menu item must land on the
+        // sheet's expected next stop (the header Done button).
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.classList?.contains('tm-toolbar-more') ?? false",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.Keyboard.PressAsync("Enter");
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await PressTabAndAssertCycleStepAsync(page, shift: false, step: 1);
+        var afterFirstTab = await page.EvaluateAsync<string>("() => document.activeElement?.className ?? ''");
+        Assert.IsTrue(afterFirstTab.Contains("tm-overlay-panel-sheet__done"),
+            $"the first Tab from the roving menu item lands on the sheet Done button, was on {afterFirstTab}");
+        for (var i = 1; i < 5; i++)
+        {
+            await PressTabAndAssertCycleStepAsync(page, shift: false, step: i + 1);
+        }
+        for (var i = 0; i < 5; i++)
+        {
+            await PressTabAndAssertCycleStepAsync(page, shift: true, step: i + 1);
+        }
+    }
+
+    private static async Task<string> ActiveKeyAsync(IPage page)
+        => await page.EvaluateAsync<string>(
+            "() => { const el = document.activeElement; return el ? el.tagName + '|' + (el.className ?? '') + '|' + (el.textContent ?? '').trim().slice(0, 30) : 'none'; }");
+
+    /// <summary>
+    /// One Tab/Shift+Tab press with its invariants asserted as they hold, not after a fixed sleep:
+    /// focus CHANGED, it stayed inside the sheet, and it sits on a real tab stop (tabindex !== -1).
+    /// </summary>
+    private static async Task PressTabAndAssertCycleStepAsync(IPage page, bool shift, int step)
+    {
+        var label = $"{(shift ? "Shift+Tab" : "Tab")} {step}";
+        var before = await ActiveKeyAsync(page);
+        await page.Keyboard.PressAsync(shift ? "Shift+Tab" : "Tab");
+        await page.WaitForFunctionAsync(
+            "before => { const el = document.activeElement; return !!el && (el.tagName + '|' + (el.className ?? '') + '|' + (el.textContent ?? '').trim().slice(0, 30)) !== before; }",
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        var now = await ActiveKeyAsync(page);
+        Assert.AreNotEqual(before, now, $"{label}: focus must move to another element");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('.tm-overlay-panel-sheet')"),
+            $"{label}: focus must stay inside the sheet, was on {now}");
+        var tabindex = await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute?.('tabindex') ?? ''");
+        Assert.AreNotEqual("-1", tabindex, $"{label}: focus must sit on a real tab stop, was on {now}");
+    }
+
+    [TestMethod]
+    public async Task Phone_320_Touch_Czech_AllToolbars_StayInsideTheViewport()
+    {
+        var page = await OpenAsync(320, 640, touch: true, locale: "cs-CZ");
+        foreach (var id in new[] { "toolbar-overflow-1100", "toolbar-overflow-380", "toolbar-overflow-300", "toolbar-ribbon" })
+        {
+            await SettleAsync(page, id);
+            var inside = await Bar(page, id).EvaluateAsync<bool>("el => { const r = el.getBoundingClientRect(); return r.left >= -1 && r.right <= innerWidth + 1 && el.scrollWidth <= el.clientWidth + 1; }");
+            Assert.IsTrue(inside, $"{id}: the toolbar must stay inside the 320px viewport without scrolling");
+            Assert.IsTrue(await Bar(page, id).Locator("button.tm-toolbar-more").CountAsync() == 1, $"{id}: a 320px toolbar overflows into More");
+        }
+
+        var czTitle = await page.Locator("[data-testid='toolbar-overflow-demo'] h2").InnerTextAsync();
+        Assert.AreEqual("Toolbar s přetečením", czTitle, "the demo is localized (cs)");
+
+        var bar = Bar(page, "toolbar-overflow-300");
+        await bar.Locator("button.tm-toolbar-more").TapAsync();
+        await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToBeVisibleAsync();
+        var texts = await MenuTextsAsync(page);
+        CollectionAssert.Contains(texts, "Exportovat");
+        CollectionAssert.Contains(texts, "Smazat");
+        foreach (var item in await page.Locator("[role='menu'] [role='menuitem']").AllAsync())
+        {
+            var clipped = await item.EvaluateAsync<bool>("el => el.scrollWidth > el.clientWidth + 1");
+            Assert.IsFalse(clipped, "a menu entry must not clip at 320 (the label truncates inside its own span)");
+        }
+
+        var path = Path.Combine(ShotDir, "toolbar-320-cs-sheet-open.png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        Assert.IsTrue(File.Exists(path));
+        await page.Keyboard.PressAsync("Escape");
+        await AssertNoPageOverflowAsync(page, "320 cs");
+    }
+
+    [TestMethod]
+    public async Task Phone_320_French_MoreTrigger_IsNamedInFrench()
+    {
+        var page = await OpenAsync(320, 640, touch: true, locale: "fr-FR");
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        Assert.AreEqual("Plus", await trigger.GetAttributeAsync("aria-label"));
+        await trigger.TapAsync();
+        var texts = await MenuTextsAsync(page);
+        CollectionAssert.Contains(texts, "Exporter");
+        CollectionAssert.Contains(texts, "Supprimer");
+        await ShootAsync(page, Bar(page, "toolbar-overflow-300"), "toolbar-320-fr-sheet-open");
+    }
+
+    // ── labels ───────────────────────────────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Labels_Auto_DropsTheLabelByTheToolbarWidth_NotTheViewport()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        var narrow = Bar(page, "toolbar-labels-auto");
+        var wide = Bar(page, "toolbar-labels-auto-wide");
+        await narrow.WaitForAsync();
+
+        // The SAME 1440 viewport: the 360px toolbar is below the mobile breakpoint, the 720px one is not.
+        Assert.AreEqual("none", await narrow.Locator(".tm-toolbar-btn-text").First.EvaluateAsync<string>("el => getComputedStyle(el).display"),
+            "a toolbar narrower than 640px drops its labels (container query on the toolbar)");
+        Assert.AreNotEqual("none", await wide.Locator(".tm-toolbar-btn-text").First.EvaluateAsync<string>("el => getComputedStyle(el).display"),
+            "a 720px toolbar keeps its labels");
+        Assert.AreEqual("New", await narrow.Locator("button.tm-toolbar-btn").First.GetAttributeAsync("aria-label"),
+            "a CSS-hidden label stays the accessible name");
+
+        var narrowButton = await narrow.Locator("button.tm-toolbar-btn").First.BoundingBoxAsync();
+        var wideButton = await wide.Locator("button.tm-toolbar-btn").First.BoundingBoxAsync();
+        Assert.IsTrue(wideButton!.Width > narrowButton!.Width, "the labelled button is wider than its icon-only twin");
+        await ShootAsync(page, narrow, "toolbar-1440-labels-auto");
+    }
+
+    [TestMethod]
+    public async Task Ribbon_LabelBelow_StacksTheLabelUnderTheIcon_AndKeepsDividers()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+
+        var first = bar.Locator("button.tm-toolbar-btn--label-below").First;
+        await Assertions.Expect(first).ToBeVisibleAsync();
+        var stacked = await first.EvaluateAsync<bool>(
+            """
+            el => {
+                const icon = el.querySelector('.tm-icon').getBoundingClientRect();
+                const text = el.querySelector('.tm-toolbar-btn-text').getBoundingClientRect();
+                return text.top >= icon.bottom - 1 && Math.abs((text.left + text.width / 2) - (icon.left + icon.width / 2)) <= 2;
+            }
+            """);
+        Assert.IsTrue(stacked, "the label sits centred under the icon");
+        Assert.IsTrue(await bar.Locator(".tm-toolbar-divider").CountAsync() >= 2, "groups are separated by dividers");
+        await ShootAsync(page, bar, "toolbar-1440-ribbon");
+
+        await page.SetViewportSizeAsync(1024, 768);
+        await SettleAsync(page, "toolbar-ribbon");
+        await ShootAsync(page, bar, "toolbar-1024-ribbon");
+    }
+
+    // ── themes and motion ────────────────────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Dark_MoreMenuAndButtons_UseThemeSurfaces()
+    {
+        var page = await OpenAsync(1024, 768, touch: false);
+        await page.EvaluateAsync("() => { document.documentElement.setAttribute('data-theme', 'dark'); document.documentElement.classList.add('tm-dark'); }");
+        await SettleAsync(page, "toolbar-overflow-380");
+        var bar = Bar(page, "toolbar-overflow-380");
+        await bar.Locator("button.tm-toolbar-more").ClickAsync();
+        var panel = page.Locator(".tm-toolbar-more__panel");
+        await Assertions.Expect(panel).ToBeVisibleAsync();
+
+        var panelBg = await panel.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        var pageBg = await page.EvaluateAsync<string>("() => getComputedStyle(document.body).backgroundColor");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", panelBg, "the popover paints a surface");
+        Assert.AreNotEqual("rgb(255, 255, 255)", panelBg, "the dark surface is not the light one");
+        var itemColor = await panel.Locator("[role='menuitem']").First.EvaluateAsync<string>("el => getComputedStyle(el).color");
+        Assert.AreNotEqual(panelBg, itemColor, $"item text must contrast with the surface (page {pageBg})");
+        await ShootAsync(page, bar, "toolbar-1024-dark-menu-open");
+    }
+
+    [TestMethod]
+    public async Task ReducedMotion_ToolbarButtonsDoNotTransition()
+    {
+        var page = await OpenAsync(1440, 900, touch: false, reducedMotion: true);
+        await SettleAsync(page, "toolbar-overflow-1100");
+        var bar = Bar(page, "toolbar-overflow-1100");
+        var duration = await bar.Locator("button.tm-toolbar-btn").First.EvaluateAsync<string>("el => getComputedStyle(el).transitionDuration");
+        var triggerDuration = await bar.Locator("button.tm-toolbar-more").EvaluateAsync<string>("el => getComputedStyle(el).transitionDuration");
+        Assert.IsTrue(duration.Split(',').All(d => double.Parse(d.Trim().TrimEnd('s'), CultureInfo.InvariantCulture) <= 0.001),
+            $"reduced motion zeroes the button transition (was {duration})");
+        Assert.IsTrue(triggerDuration.Split(',').All(d => double.Parse(d.Trim().TrimEnd('s'), CultureInfo.InvariantCulture) <= 0.001),
+            $"and the More trigger's (was {triggerDuration})");
+    }
+
+    // ── the same menu keyboard on a plain TmDropdown (F5 carry-forward m8) ───────────────────────
+
+    [TestMethod]
+    public async Task Keyboard_TmDropdown_UsesTheSharedMenuKeyboard_OnDesktopAndInTheSheet()
+    {
+        foreach (var (width, height, touch) in new[] { (1440, 900, false), (390, 844, true) })
+        {
+            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                HasTouch = touch,
+                IsMobile = touch,
+                IgnoreHTTPSErrors = true,
+            });
+            RegisterContext(context);
+            var page = await context.NewPageAsync();
+            await page.GotoAsync($"{BaseUrl}/overlay", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
+            await WaitForAppReadyAsync(page);
+
+            var trigger = page.Locator("[data-testid='overlay-mobile-dropdown'] .tm-dropdown-trigger");
+            await trigger.ScrollIntoViewIfNeededAsync();
+            await page.WaitForTimeoutAsync(1200);
+            await trigger.FocusAsync();
+            await page.Keyboard.PressAsync("Enter");
+            await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+            await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+            var items = await MenuTextsAsync(page);
+            Assert.AreEqual(3, items.Length, $"{width}: three entries");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: first item focused");
+            await page.Keyboard.PressAsync("ArrowDown");
+            Assert.AreEqual(items[1], await ActiveMenuItemAsync(page), $"{width}: ArrowDown");
+            await page.Keyboard.PressAsync("End");
+            Assert.AreEqual(items[2], await ActiveMenuItemAsync(page), $"{width}: End");
+            await page.Keyboard.PressAsync("Home");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: Home");
+            await page.Keyboard.PressAsync("ArrowUp");
+            Assert.AreEqual(items[2], await ActiveMenuItemAsync(page), $"{width}: ArrowUp wraps");
+            // Every label starts with "Export": a repeated single character cycles through the matches
+            // (from the last item it wraps to the first).
+            await page.Keyboard.PressAsync("e");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: typeahead E cycles to the next match and wraps");
+            await page.Keyboard.PressAsync("z");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: a character that matches nothing leaves focus alone");
+            await page.Keyboard.PressAsync("Escape");
+            await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        }
+    }
+
+    // ── F4 review round 1 ────────────────────────────────────────────────────────────────────────
+
+    private static async Task<bool> ErrorUiVisibleAsync(IPage page)
+        => await page.EvaluateAsync<bool>("() => { const e = document.getElementById('blazor-error-ui'); return !!e && getComputedStyle(e).display !== 'none'; }");
+
+    private static async Task<string[]> VisibleBarButtonsAsync(ILocator bar)
+        => await OnBarTextsAsync(bar);
+
+    /// <summary>Document-order children of the measured row that matter to the eye: visible dividers and visible buttons.</summary>
+    private static async Task<string[]> VisibleRowSequenceAsync(ILocator bar)
+        => await bar.EvaluateAsync<string[]>(
+            """
+            el => [...el.querySelectorAll('.tm-toolbar-divider, button.tm-toolbar-btn')]
+                .filter(n => !n.classList.contains('tm-toolbar-item--collapsed') && getComputedStyle(n).visibility !== 'hidden')
+                .map(n => n.classList.contains('tm-toolbar-divider') ? '|' : 'b')
+            """);
+
+    [TestMethod]
+    public async Task H1_OpenMoreMenu_SurvivesTheToolbarGainingAnItem_WhenResizedNarrower_NoRendererCrash()
+    {
+        // UX B1: the open menu gained an item IN FRONT of its first enabled item -> "Unexpected frame type during
+        // RemoveOldFrame: ElementReferenceCapture", #blazor-error-ui, a dead page.
+        var page = await OpenAsync(560, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+        await bar.Locator("button.tm-toolbar-more").ClickAsync();
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        var before = await MenuTextsAsync(page);
+
+        await page.SetViewportSizeAsync(400, 900);
+        await page.WaitForTimeoutAsync(2500);
+
+        Assert.IsFalse(await ErrorUiVisibleAsync(page), "the renderer must survive a reorder of the open menu");
+        var after = await MenuTextsAsync(page);
+        Assert.IsTrue(after.Length >= before.Length, $"a narrower toolbar lists at least as many entries ({before.Length} -> {after.Length})");
+        foreach (var name in new[] { "Copy", "Paste", "Layout", "Export" }) CollectionAssert.Contains(after, name);
+
+        // and the page is still alive: a bar button still logs its click.
+        await page.Keyboard.PressAsync("Escape");
+        await bar.Locator("button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)").First.ClickAsync();
+        await Assertions.Expect(page.Locator("[data-testid='toolbar-overflow-log']")).ToBeVisibleAsync();
+    }
+
+    [TestMethod]
+    public async Task H1_Rotation_LandscapeToPortrait_WithTheMenuOpen_KeepsThePageAlive()
+    {
+        // The 1100px demo toolbar always has a More trigger (Export/Delete are overflow-only) and fits 5 buttons at
+        // 844 but only a few at 390, so the open menu GAINS items in front of its first one when rotated.
+        var page = await OpenAsync(844, 390, touch: true);
+        await SettleAsync(page, "toolbar-overflow-1100");
+        var bar = Bar(page, "toolbar-overflow-1100");
+        await bar.Locator("button.tm-toolbar-more").TapAsync();
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        var before = await MenuTextsAsync(page);
+
+        await page.SetViewportSizeAsync(390, 844);
+        await page.WaitForTimeoutAsync(2500);
+
+        Assert.IsFalse(await ErrorUiVisibleAsync(page), "rotating with the More menu open must not crash the renderer");
+        var after = await MenuTextsAsync(page);
+        Assert.IsTrue(after.Length >= before.Length, $"the narrow toolbar lists at least as many entries ({before.Length} -> {after.Length})");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
+    }
+    [TestMethod]
+    public async Task H2_ButtonsInsideAGroupWrapper_AreAllVisibleOnAWideBar_AndCollapseAndRecoverWhenNarrowed()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        var host = page.Locator("[data-testid='toolbar-group-host']");
+        await SettleAsync(page, "toolbar-group");
+        var bar = Bar(page, "toolbar-group");
+
+        Assert.AreEqual("group", await bar.Locator("[data-tm-toolbar-group]").First.GetAttributeAsync("role"));
+        Assert.AreEqual(0, await bar.Locator(".tm-toolbar-item--collapsed").CountAsync(), "a wrapped group of buttons on a 1100px bar must not collapse");
+        Assert.AreEqual(0, await bar.Locator("button.tm-toolbar-more").CountAsync(), "nothing overflows: no More trigger");
+        var wide = await VisibleBarButtonsAsync(bar);
+        Assert.IsTrue(wide.Length >= 5, $"all buttons visible at 1100px (got {wide.Length})");
+
+        await host.EvaluateAsync("el => { el.style.width = '300px'; }");
+        await SettleAsync(page, "toolbar-group");
+        Assert.IsTrue(await bar.Locator(".tm-toolbar-item--collapsed").CountAsync() > 0, "300px cannot hold the group - Secondary buttons collapse");
+        Assert.IsTrue(await bar.EvaluateAsync<bool>("el => el.scrollWidth <= el.clientWidth + 1"), "the narrowed bar does not overflow");
+        CollectionAssert.Contains(await VisibleBarButtonsAsync(bar), "Save", "the Pinned Save never collapses");
+
+        await host.EvaluateAsync("el => { el.style.width = '1100px'; }");
+        await SettleAsync(page, "toolbar-group");
+        Assert.AreEqual(0, await bar.Locator(".tm-toolbar-item--collapsed").CountAsync(), "widening brings every button back (the fit recovers)");
+    }
+
+    [TestMethod]
+    public async Task H3_AConditionalButtonInsertedMidBar_AtATightWidth_NeverLeavesAHole_OrOverflowsTheBar()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-conditional");
+        var bar = Bar(page, "toolbar-conditional");
+        await page.Locator("[data-testid='toolbar-conditional-toggle']").ClickAsync();
+        await SettleAsync(page, "toolbar-conditional");
+
+        var domOrder = await bar.Locator("button.tm-toolbar-btn").EvaluateAllAsync<string[]>("els => els.map(e => e.textContent.trim())");
+        CollectionAssert.Contains(domOrder, "Open");
+        Assert.IsTrue(domOrder.ToList().IndexOf("Open") < domOrder.Length - 1, "the inserted button sits MID-bar");
+
+        Assert.IsTrue(await bar.EvaluateAsync<bool>("el => el.scrollWidth <= el.clientWidth + 1"), "the bar must not overflow after the insertion (the old registration order never recovered)");
+        var collapsed = await CollapsedTextsAsync(bar);
+        var expectedTail = domOrder.Skip(domOrder.Length - collapsed.Length).ToArray();
+        CollectionAssert.AreEqual(expectedTail, collapsed, "equal-rank buttons: the collapsed ones are the LAST ones in DOM order - no hole in the middle");
+
+        if (collapsed.Length > 0)
+        {
+            await bar.Locator("button.tm-toolbar-more").ClickAsync();
+            CollectionAssert.AreEqual(collapsed, (await MenuTextsAsync(page)).ToArray(), "menu order follows the DOM order");
+        }
+    }
+
+    [TestMethod]
+    public async Task H4_Ribbon_At390_NeverShowsTwoDividersWithoutAVisibleButtonBetween()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-ribbon");
+        var seq = await VisibleRowSequenceAsync(Bar(page, "toolbar-ribbon"));
+        var joined = string.Concat(seq);
+
+        Assert.IsFalse(joined.Contains("||"), $"two visible dividers in a row (\"Pan | | Find\"): {joined}");
+        Assert.IsFalse(joined.StartsWith('|') || joined.EndsWith('|'), $"a leading/trailing divider separates nothing: {joined}");
+        await ShootAsync(page, Bar(page, "toolbar-ribbon"), "toolbar-390-ribbon-dividers");
+    }
+
+    [TestMethod]
+    [DataRow(1440)]
+    [DataRow(390)]
+    [DataRow(320)]
+    public async Task Q1_PinnedSave_NeverMovesIntoMore_AtAnyWidth(int width)
+    {
+        var page = await OpenAsync(width, 844, touch: width < 640);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+
+        CollectionAssert.Contains(await OnBarTextsAsync(bar), "Save", $"the Pinned Save stays on the bar at {width}px");
+        if (await bar.Locator("button.tm-toolbar-more").CountAsync() == 1)
+        {
+            await bar.Locator("button.tm-toolbar-more").ClickAsync();
+            CollectionAssert.DoesNotContain(await MenuTextsAsync(page), "Save", "a Pinned button is never offered in the menu");
+        }
+    }
+
+    [TestMethod]
+    public async Task H5_StandaloneToolbarButtons_AreNotForcedTo44pxOrNonShrinking()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        var probe = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const host = document.createElement('div');
+                host.style.cssText = 'display:flex;width:60px';
+                host.innerHTML = '<button class="tm-toolbar-btn" type="button">Standalone</button>';
+                document.body.appendChild(host);
+                const s = getComputedStyle(host.firstChild);
+                const r = JSON.stringify({ minHeight: s.minHeight, flexShrink: s.flexShrink });
+                host.remove();
+                return r;
+            }
+            """);
+        StringAssert.Contains(probe, "\"flexShrink\":\"1\"", "outside a toolbar the button keeps the pre-F4 flex-shrink");
+        Assert.IsFalse(probe.Contains("\"minHeight\":\"44px\"", StringComparison.Ordinal), $"outside a toolbar no 44px minimum ({probe})");
+    }
+
+    [TestMethod]
+    public async Task H6_ToolbarInASpaceBetweenFlexRow_HasWidthOnlyWithTheDocumentedHostFix()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-shrink-fixed");
+        var fixedWidth = await Bar(page, "toolbar-shrink-fixed").EvaluateAsync<double>("el => el.getBoundingClientRect().width");
+        var plainWidth = await Bar(page, "toolbar-shrink-plain").EvaluateAsync<double>("el => el.getBoundingClientRect().width");
+
+        Assert.IsTrue(fixedWidth > 200, $"with the host fix (flex: 1 1 auto; min-width: 0) the toolbar has room ({fixedWidth}px)");
+        Assert.IsTrue(plainWidth < fixedWidth, $"without it the size container collapses toward zero intrinsic width ({plainWidth}px < {fixedWidth}px) - the documented breaking change");
+    }
+
+    [TestMethod]
+    public async Task H16_AFocusedBarButtonThatCollapses_HandsFocusToTheMoreTrigger_NotBody()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-1100");
+        var bar = Bar(page, "toolbar-overflow-1100");
+        var paste = bar.Locator("button.tm-toolbar-btn", new LocatorLocatorOptions { HasTextString = "Paste" });
+        await paste.FocusAsync();
+        Assert.IsTrue(await paste.EvaluateAsync<bool>("el => el === document.activeElement"));
+
+        await page.SetViewportSizeAsync(520, 900);
+        await SettleAsync(page, "toolbar-overflow-1100");
+
+        Assert.IsTrue(await paste.EvaluateAsync<bool>("el => el.classList.contains('tm-toolbar-item--collapsed')"), "Paste (Secondary) collapsed at 520px");
+        var active = await page.EvaluateAsync<string>("() => document.activeElement?.classList.contains('tm-toolbar-more') ? 'more' : (document.activeElement?.tagName ?? 'none')");
+        Assert.AreEqual("more", active, "focus moved to the More trigger instead of dropping to <body>");
+    }
+
+    [TestMethod]
+    public async Task H16_TabOutOfAnOpenPopoverMenu_ClosesIt_AndAriaExpandedFollows()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // The popover is not in the tab order of the page after the menu: Tab moves focus out of menu AND trigger.
+        await page.Keyboard.PressAsync("Tab");
+
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        Assert.AreEqual("false", await trigger.GetAttributeAsync("aria-expanded"), "aria-expanded follows the dismissal");
+    }
+
+    [TestMethod]
+    public async Task I1_AnOverflowOnlyButtonWrittenMidBar_KeepsItsPositionInTheMenu()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflowonly-mid");
+        var bar = Bar(page, "toolbar-overflowonly-mid");
+        // New (pinned), Export (OverflowOnly, written 2nd), Copy, Paste (Secondary): squeeze so the Secondary pair leaves.
+        await bar.EvaluateAsync("el => { el.parentElement.style.width = '260px'; }");
+        await SettleAsync(page, "toolbar-overflowonly-mid");
+
+        var collapsed = await CollapsedTextsAsync(bar);
+        Assert.IsTrue(collapsed.Length > 0, "a 260px bar cannot hold New + Copy + Paste");
+        await bar.Locator("button.tm-toolbar-more").ClickAsync();
+
+        var expected = new[] { "Export" }.Concat(collapsed).ToArray();
+        CollectionAssert.AreEqual(expected, (await MenuTextsAsync(page)).ToArray(),
+            "Export was written between New and Copy, so it precedes the collapsed Copy/Paste in the menu (the old order put it last)");
+        Assert.AreEqual(0, await bar.Locator("button.tm-toolbar-btn", new LocatorLocatorOptions { HasText = "Export" }).CountAsync(),
+            "Export has no button on the bar - only the hidden position marker");
+    }
+
+    [TestMethod]
+    public async Task I2_ReopeningTheMoreMenu_ThenShiftTabToTheTriggerAndTabBackIn_KeepsTheMenuOpen()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await page.Keyboard.PressAsync("Shift+Tab");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.classList.contains('tm-toolbar-more') === true"), "Shift+Tab from the first item lands on the trigger");
+        await page.Keyboard.PressAsync("Tab");
+        await page.WaitForTimeoutAsync(300);
+
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        Assert.AreEqual("true", await trigger.GetAttributeAsync("aria-expanded"), "the stale first-open listener must not dismiss the re-opened menu");
+    }
+
+    [TestMethod]
+    [DataRow(600)]
+    [DataRow(400)]
+    [DataRow(460)]
+    public async Task I6_RibbonNarrowedFrom1100_NeverOverlapsButtons_NorSpillsPastTheBar(int target)
+    {
+        var page = await OpenAsync(1100, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        await page.SetViewportSizeAsync(target, 900);
+        await SettleAsync(page, "toolbar-ribbon");
+        await page.WaitForTimeoutAsync(500);
+
+        var boxes = await Bar(page, "toolbar-ribbon").Locator("button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)")
+            .EvaluateAllAsync<double[][]>("els => els.map(e => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }).sort((a, b) => a[0] - b[0])");
+        var bar = await Bar(page, "toolbar-ribbon").EvaluateAsync<double[]>("el => { const r = el.getBoundingClientRect(); return [r.left, r.right]; }");
+        for (var i = 1; i < boxes.Length; i++)
+        {
+            Assert.IsTrue(boxes[i][0] >= boxes[i - 1][1] - 0.5, $"{target}px: visible bar buttons {i - 1} and {i} overlap ({boxes[i - 1][1]} > {boxes[i][0]})");
+        }
+
+        foreach (var box in boxes)
+        {
+            Assert.IsTrue(box[1] <= bar[1] + 0.5 && box[0] >= bar[0] - 0.5, $"{target}px: a visible button spills past the toolbar edge");
+        }
+
+        await ShootAsync(page, Bar(page, "toolbar-ribbon"), $"toolbar-ribbon-1100-to-{target}");
+    }
+
+    [TestMethod]
+    public async Task H10_SplitButtonAndContextMenu_OpenedFromTheKeyboard_FocusTheirFirstItem_AndReturnFocusOnActivation()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
+        await WaitForAppReadyAsync(page);
+
+        var split = page.Locator(".tm-split-button__toggle").First;
+        await split.ScrollIntoViewIfNeededAsync();
+        await page.WaitForTimeoutAsync(1200);
+        await split.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menu]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Save as Draft", await page.EvaluateAsync<string>("() => document.activeElement.textContent.trim()"), "split button: first item focused on open");
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        var trigger = page.Locator(".tm-context-menu__trigger").First;
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await page.WaitForTimeoutAsync(1200);
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menu]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Edit", await page.EvaluateAsync<string>("() => document.activeElement.textContent.trim()"), "context menu: first item focused on open");
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        await page.WaitForFunctionAsync("() => document.activeElement?.closest('.tm-context-menu__trigger') !== null", null, new PageWaitForFunctionOptions { Timeout = 5000 });
+    }
+
+    [TestMethod]
+    public async Task H16_WideningWithAKeyboardOpenedMenu_WhoseTriggerUnmounts_NeverDropsFocusToBody()
+    {
+        var page = await OpenAsync(560, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.WaitForTimeoutAsync(2500);
+
+        Assert.IsFalse(await ErrorUiVisibleAsync(page));
+        var activeTag = await page.EvaluateAsync<string>("() => document.activeElement?.tagName ?? 'none'");
+        Assert.AreNotEqual("BODY", activeTag, "the menu closed with the trigger gone: focus lands on the toolbar's last roving control");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('.tm-toolbar')"), "and stays inside the toolbar");
+    }
+
+    // ── F12/C2: a pressed tool keeps its state in More ───────────────────────────────────────────
+
+    private ILocator PressedPanEntry(IPage page)
+        => page.Locator("[role='menu'] [role='menuitemcheckbox']", new PageLocatorOptions { HasTextString = "Pan" });
+
+    [TestMethod]
+    public async Task C2_PressedToolInMore_IsACheckedEntry_AndSpaceTogglesIt_AndClosesTheMenu()
+    {
+        // 1440 desktop, popover: the Pan tool is OverflowOnly+Pressed=true, so the 300px demo bar
+        // keeps it in the More menu at every width — deterministic, no resizing needed.
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-pressed");
+        var bar = Bar(page, "toolbar-pressed");
+
+        // The toggle that stays on the bar announces its state too (Select starts unpressed).
+        var select = bar.Locator("button.tm-toolbar-btn", new LocatorLocatorOptions { HasTextString = "Select" });
+        Assert.AreEqual("false", await select.GetAttributeAsync("aria-pressed"), "the on-bar toggle carries aria-pressed");
+        await select.ClickAsync();
+        Assert.AreEqual("true", await select.GetAttributeAsync("aria-pressed"), "clicking the host toggle flips it");
+        await ShootAsync(page, bar, "toolbar-1440-pressed-bar");
+
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await trigger.ClickAsync();
+        var entry = PressedPanEntry(page);
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("menuitemcheckbox", await entry.GetAttributeAsync("role"), "collapsed: the toggle is a menuitemcheckbox");
+        Assert.AreEqual("true", await entry.GetAttributeAsync("aria-checked"), "the collapsed pressed tool keeps its state");
+        Assert.IsNull(await entry.GetAttributeAsync("aria-pressed"), "a menu entry announces checked, not pressed");
+
+        // A REAL Space press activates the focused checkbox: the menu CLOSES (close-before-invoke) and the state flips.
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitemcheckbox]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Pan", await page.EvaluateAsync<string>("() => document.activeElement.closest('[role=menuitemcheckbox]').textContent.trim()"), "initial focus is on the first entry");
+
+        // C2 review: in a menu that offers checkable entries the plain entries are indented by the
+        // check-mark slot, so checkbox and plain labels share the same left x (±1px rounding).
+        var labelLefts = await page.EvaluateAsync<double[]>("() => Array.from(document.querySelectorAll(\"[role='menu'] .tm-toolbar-more__label\")).map(l => l.getBoundingClientRect().left)");
+        Assert.IsTrue(labelLefts.Length > 0, "the open menu rendered labelled entries");
+        Assert.IsTrue(labelLefts.Max() - labelLefts.Min() <= 1,
+            $"checkbox and plain labels share the same left x ±1px (measured {labelLefts.Min():F2}..{labelLefts.Max():F2})");
+
+        await page.Keyboard.PressAsync("Space");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        await trigger.ClickAsync();
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("false", await entry.GetAttributeAsync("aria-checked"), "Space toggled the collapsed tool");
+        // The reopen races the initial focus move: Enter must land ON the checkbox, so wait for the
+        // focus before pressing (same wait as after the first open above).
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitemcheckbox]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        await trigger.ClickAsync();
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("true", await entry.GetAttributeAsync("aria-checked"), "Enter toggled it back on");
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    public async Task C2_PressedToolInThePhoneSheet_IsACheckedEntry_AndTapTogglesIt()
+    {
+        // 390 phone: the More menu is the shared bottom sheet; the checkable entry behaves the same
+        // and the sheet's initial focus lands ON the checkbox (the old sheet selector knew only
+        // menuitem/option).
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-pressed");
+        var bar = Bar(page, "toolbar-pressed");
+
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await trigger.TapAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        var entry = PressedPanEntry(page);
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("true", await entry.GetAttributeAsync("aria-checked"));
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitemcheckbox]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        var path = Path.Combine(ShotDir, "toolbar-390-pressed-sheet.png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        Assert.IsTrue(File.Exists(path));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
+
+        await entry.TapAsync();
+        await Assertions.Expect(sheet).ToHaveCountAsync(0);
+        await trigger.TapAsync();
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("false", await entry.GetAttributeAsync("aria-checked"), "the tap toggled the collapsed tool");
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToHaveCountAsync(0);
+    }
+
+    // ── C3: groups keep labelled sections in the More menu ───────────────────────────────────────
+
+    private const string AxeCdn = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js";
+
+    private static async Task<string[]> RunAxeAsync(IPage page, string hostSelector)
+    {
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = AxeCdn });
+        return await page.EvaluateAsync<string[]>(
+            """
+            async (hostSelector) => {
+                const host = document.querySelector(hostSelector) || document.body;
+                const result = await axe.run(host, {
+                    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                    resultTypes: ['violations']
+                });
+                return result.violations
+                    .filter(v => v.impact === 'critical' || v.impact === 'serious')
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).join('; ')})`);
+            }
+            """, hostSelector);
+    }
+
+    private static async Task<string[]> MenuStructureAsync(IPage page)
+        => await page.EvaluateAsync<string[]>(
+            """
+            () => Array.from(document.querySelector('.tm-toolbar-more__menu')?.children ?? [])
+                .map(el => el.getAttribute('role') ?? 'none')
+            """);
+
+    [TestMethod]
+    public async Task C3_GroupedToolsInPopover_TheMenuShowsLabelledGroupSections_AndArrowsSkipTheHeadings()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-group-menu");
+        var bar = Bar(page, "toolbar-group-menu");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await Assertions.Expect(trigger).ToBeVisibleAsync();
+
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1200);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // The group run renders as a labelled section with a decoration header; the ungrouped
+        // Export run is a sibling after the separator.
+        var group = page.Locator(".tm-toolbar-more__menu [role='group']");
+        await Assertions.Expect(group).ToBeVisibleAsync();
+        Assert.AreEqual("Edit", await group.GetAttributeAsync("aria-label"), "the section is named by the group's label");
+        var header = group.Locator(".tm-toolbar-more__group-label");
+        Assert.AreEqual("Edit", await header.TextContentAsync());
+        Assert.AreEqual("true", await header.GetAttributeAsync("aria-hidden"), "the visible header is decoration");
+        Assert.AreEqual(-1, (await header.EvaluateAsync<string[]>("el => [el.getAttribute('tabindex')]")).ToList().IndexOf("0"), "the header is never the tab stop");
+
+        CollectionAssert.AreEqual(
+            new[] { "group", "separator", "menuitem" },
+            await MenuStructureAsync(page),
+            "one labelled group run, one divider, one ungrouped run");
+        Assert.AreEqual("tm-toolbar-more__separator", await page.Locator(".tm-toolbar-more__menu [role='separator']").GetAttributeAsync("class"));
+
+        // Arrow keys land on real entries only: Redo -> Cut (inside the group), then ACROSS the
+        // separator to Export. A header or divider would break the exact sequence.
+        await page.Keyboard.PressAsync("Home");
+        Assert.AreEqual("Redo", await ActiveMenuItemAsync(page), "initial focus is the group's first entry");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Cut", await ActiveMenuItemAsync(page));
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page), "ArrowDown crosses the separator and the group boundary");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Redo", await ActiveMenuItemAsync(page), "wraps to the first item");
+        await page.Keyboard.PressAsync("End");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page));
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            "() => !document.activeElement?.classList?.contains('tm-toolbar-more__group-label') && !!document.activeElement?.closest('[role=menuitem]')"),
+            "the roving set never lands on a group heading");
+
+        // axe on the open popover: the role=menu children (group/separator/menuitem) are allowed.
+        var violations = await RunAxeAsync(page, ".tm-toolbar-more__panel");
+        Assert.AreEqual(0, violations.Length, $"open grouped popover must have no critical/serious a11y violations: {string.Join(" | ", violations)}");
+
+        var shot = await ShootAsync(page, bar, "toolbar-1440-grouped-menu-open");
+        Assert.IsTrue(File.Exists(shot));
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    public async Task C3_GroupedToolsInThe390Sheet_TheSectionKeepsItsHeading_ArrowsCrossIt_AndAxeIsClean()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-group-menu");
+        var bar = Bar(page, "toolbar-group-menu");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+
+        await trigger.TapAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        var group = page.Locator(".tm-overlay-panel-sheet [role='group']");
+        await Assertions.Expect(group).ToBeVisibleAsync();
+        Assert.AreEqual("Edit", await group.GetAttributeAsync("aria-label"));
+        Assert.AreEqual("true", await group.Locator(".tm-toolbar-more__group-label").GetAttributeAsync("aria-hidden"));
+        CollectionAssert.AreEqual(
+            new[] { "group", "separator", "menuitem" },
+            await MenuStructureAsync(page));
+
+        foreach (var item in await page.Locator("[role='menu'] [role='menuitem']").AllAsync())
+        {
+            var b = await item.BoundingBoxAsync();
+            Assert.IsTrue(b!.Height >= 43.5, $"grouped menu entries are 44px targets in the sheet (height {b.Height})");
+        }
+
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Redo", await ActiveMenuItemAsync(page), "the sheet's initial focus is the group's first entry");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Cut", await ActiveMenuItemAsync(page));
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page), "the arrows cross the section inside the sheet too");
+
+        var violations = await RunAxeAsync(page, ".tm-overlay-panel-sheet");
+        Assert.AreEqual(0, violations.Length, $"grouped sheet must have no critical/serious a11y violations: {string.Join(" | ", violations)}");
+
+        var path = Path.Combine(ShotDir, "toolbar-390-grouped-sheet-open.png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        Assert.IsTrue(File.Exists(path));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
+
+        // An entry of the group still invokes (and closes the sheet like every entry).
+        await page.Locator("[role='menu'] [role='menuitem']").First.TapAsync();
+        await Assertions.Expect(sheet).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator("[data-testid='toolbar-overflow-log']")).ToContainTextAsync("Redo");
+        await AssertNoPageOverflowAsync(page, "390 grouped");
+    }
+}

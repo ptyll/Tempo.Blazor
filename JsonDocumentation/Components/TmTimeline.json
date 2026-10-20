@@ -2,7 +2,7 @@
   "itemName": "TmTimeline",
   "kind": "Component",
   "category": "Timeline",
-  "description": "Vertical activity timeline displaying entries with author avatars, timestamps with relative formatting, content, and an internal/external badge. Supports filtering internal entries.",
+  "description": "Vertical activity timeline displaying entries with author avatars, timestamps formatted by the shared ITmRelativeTimeFormatter (just now, 5 min ago, yesterday at 4:20 PM, an absolute date from a week on), content, and an internal/external badge. Supports filtering internal entries.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Timeline"
   ],

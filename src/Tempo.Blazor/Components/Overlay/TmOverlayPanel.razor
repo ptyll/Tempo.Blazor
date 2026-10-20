@@ -34,7 +34,8 @@
            is handed down — the drawer never measures a second time. ChildContent wraps in a
            content div that carries Role/Id/AdditionalAttributes, so menu/listbox ownership (axe
            aria-required-parent) and aria-controls targets survive the popover→sheet switch; a
-           dialog role stays on the drawer's focus-scope root. *@
+           dialog role stays on the drawer's focus-scope root, and the wrapper (a generic div then)
+           emits no aria-label/aria-labelledby — name attributes are prohibited on a generic div. *@
         <TmDrawer IsOpen="true"
                   IsOpenChanged="HandleSheetOpenChanged"
                   Position="DrawerPosition.Bottom"
@@ -67,10 +68,11 @@
                 </button>
             </HeaderContent>
             <ChildContent>
-                <div class="tm-overlay-panel-sheet__content"
+                <div @ref="_sheetContentRef"
+                     class="tm-overlay-panel-sheet__content"
                      id="@Id"
-                     role="@(Role is "dialog" ? null : Role)"
-                     aria-label="@AriaLabel"
+                     role="@SheetContentRole"
+                     aria-label="@SheetContentAriaLabel"
                      aria-labelledby="@SheetContentLabelledBy"
                      @attributes="AdditionalAttributes">
                     @ChildContent
@@ -116,10 +118,17 @@
 
 @code {
     private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
+    private const string MenuNavModulePath = "./_content/Tempo.Blazor/js/tm-menu-nav.js";
 
     private readonly string _key = $"tm-overlay-{Guid.NewGuid():n}";
     private readonly string _sheetTitleId = $"tm-overlay-panel-sheet-title-{Guid.NewGuid():n}";
     private ElementReference _panelRef;
+    private ElementReference _sheetContentRef;
+    // The menu keyboard module (tm-menu-nav.js, F4): attached to a Role="menu" panel once per open.
+    // _menuNavOnSheet remembers WHICH element carries it (popover root vs sheet content wrapper), so
+    // a layout flip of an open menu re-attaches to the element that replaced it.
+    private IJSObjectReference? _menuNav;
+    private bool? _menuNavOnSheet;
     private TmFocusScope? _scope;
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmOverlayPanel>? _dotNetRef;
@@ -135,6 +144,11 @@
     private bool _openedPending;
     private bool _openedFired;
     private string? _openOptionsSignature;
+    // m2: incremented on every overlay.js open(). overlay.js stamps its first-visibility reports
+    // with the sequence of the open that armed them, so a report that was already in flight while
+    // .NET closed and reopened the panel is recognizably stale and must not re-fire OnOpened of
+    // the NEW open.
+    private int _openSeq;
 
     /// <summary>
     /// Id of the rendered panel element. Defaults to a generated value; supply one when the anchor
@@ -201,7 +215,10 @@
     /// sheet mode after the sheet's opening render. Use it for post-open focus moves — e.g.
     /// focusing a filter input — because a consumer's <c>OnAfterRenderAsync</c> can run before
     /// the panel is displayed, and a focus move against a still-hidden popover is dropped
-    /// (UX review round 2, m3). Fires once per open; closing resets it.
+    /// (UX review round 2, m3). Fires once per open; closing resets it. A panel that OPENED
+    /// while its anchor was scrolled out of the viewport was parked <c>visibility:hidden</c> —
+    /// the focus move a handler ran here no-op'd — so it fires once more when overlay.js
+    /// reports the panel's first real visibility (<see cref="NotifyPanelVisibleAsync"/>).
     /// </summary>
     [Parameter] public EventCallback OnOpened { get; set; }
 
@@ -319,18 +336,34 @@
     private string SheetAriaLabel => SheetTitle ?? Loc["TmOverlayPanel_SheetFallback"];
 
     /// <summary>
-    /// The content wrapper's <c>aria-labelledby</c>: the consumer's explicit id wins; otherwise the
-    /// sheet header title names the wrapper (menu/listbox/dialog content inside the sheet is then
-    /// labelled by the same visible title the user reads).
+    /// The role the sheet's content wrapper carries. "dialog" resolves to null — the dialog role
+    /// stays on the drawer's focus-scope root, and the wrapper is then a generic div, which must
+    /// carry no accessible-name attributes at all (axe aria-prohibited-attr).
     /// </summary>
-    private string? SheetContentLabelledBy => AriaLabelledBy ?? (SheetTitle is not null ? _sheetTitleId : null);
+    private string? SheetContentRole => Role is "dialog" ? null : Role;
+
+    /// <summary>The wrapper's <c>aria-label</c> — only when the wrapper carries a role.</summary>
+    private string? SheetContentAriaLabel => SheetContentRole is not null ? AriaLabel : null;
 
     /// <summary>
-    /// Menus and listboxes opened as a sheet land initial focus on the first menuitem/option —
-    /// the header Done is a fallback, not the starting point. Other roles keep the scope default.
+    /// The content wrapper's <c>aria-labelledby</c>: the consumer's explicit id wins; otherwise the
+    /// sheet header title names the wrapper (menu/listbox/dialog content inside the sheet is then
+    /// labelled by the same visible title the user reads). Emitted only when the wrapper carries a
+    /// role — a generic div (Role null or "dialog") prohibits name attributes; the sheet's name
+    /// lives on the drawer root (<see cref="SheetAriaLabel"/>) instead.
+    /// </summary>
+    private string? SheetContentLabelledBy => SheetContentRole is null
+        ? null
+        : AriaLabelledBy ?? (SheetTitle is not null ? _sheetTitleId : null);
+
+    /// <summary>
+    /// Menus and listboxes opened as a sheet land initial focus on the first menu entry/option —
+    /// the header Done is a fallback, not the starting point. C2: checkable entries
+    /// (<c>menuitemcheckbox</c>, <c>menuitemradio</c>) are first-class entries too, so the selector
+    /// names every role tm-menu-nav.js roves across. Other roles keep the scope default.
     /// </summary>
     private string? SheetInitialFocusSelector => Role is "menu" or "listbox"
-        ? ".tm-overlay-panel-sheet__content [role='menuitem'], .tm-overlay-panel-sheet__content [role='option']"
+        ? ".tm-overlay-panel-sheet__content [role='menuitem'], .tm-overlay-panel-sheet__content [role='menuitemcheckbox'], .tm-overlay-panel-sheet__content [role='menuitemradio'], .tm-overlay-panel-sheet__content [role='option']"
         : null;
 
     private ElementReference? SheetRestoreTarget => Anchor.Id is not null ? Anchor : null;
@@ -362,7 +395,7 @@
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -393,6 +426,38 @@
         return !IsVisible;
     }
 
+    /// <summary>
+    /// Called by overlay.js when a panel that opened while its anchor was scrolled out of the
+    /// viewport (parked <c>visibility:hidden</c>) becomes visible for the first time in this
+    /// open. The post-open focus move ran against the hidden panel and no-op'd, so
+    /// <see cref="OnOpened"/> is raised again now that the panel is actually on screen and a
+    /// pending initial focus can land for real (the More menu opened mid-scroll). Fire-and-forget
+    /// from overlay.js: a call that lands after the panel closed is ignored, and a sheet — which
+    /// never parks — rejects the report outright. The <paramref name="openSeq"/> argument is the
+    /// sequence of the JS open that armed the report; a report of an EARLIER open (in flight
+    /// while the panel was closed and reopened) is dropped, so a stale report can never fire the
+    /// new open's <see cref="OnOpened"/> (m2).
+    /// </summary>
+    [JSInvokable]
+    public Task NotifyPanelVisibleAsync(int openSeq)
+    {
+        if (!IsVisible || IsSheet || openSeq != _openSeq)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Inside the lambda: a report racing the close (its render already ran the release
+        // branch) must not arm a pending OnOpened for a panel that is on its way out.
+        return InvokeAsync(() =>
+        {
+            if (IsVisible && !IsSheet && openSeq == _openSeq)
+            {
+                _openedPending = true;
+            }
+            StateHasChanged();
+        });
+    }
+
     private async Task ApplyOpenAsync(bool open, bool dismissed, string? reason)
     {
         if (IsOpen.HasValue)
@@ -408,6 +473,10 @@
         {
             await OnDismissed.InvokeAsync(reason);
         }
+
+        // Focus returns to the anchor inside overlay.js (Escape and outside pointerdown both call
+        // anchor.focus({ preventScroll: true }) when focus would otherwise die on <body>). A second
+        // restore from here used to eval an id, which CSP blocks and which raced the anchor restore.
 
         // Uncontrolled mode mutates _internalOpen without a parent re-render, and the
         // JS-invoked dismissal path must marshal back onto the renderer either way.
@@ -503,6 +572,9 @@
                 if (!_jsOpen)
                 {
                     _jsOpen = true;
+                    // m2: this open's sequence — overlay.js stamps its first-visibility reports
+                    // with it; the count matches the JS side (first open = 1, each reopen +1).
+                    _openSeq++;
                     _openOptionsSignature = signature;
                     await _module.InvokeVoidAsync("open", _key, panel, anchor, _dotNetRef, BuildOptions());
                     // m3: only now — showPopover() has run — is the panel actually displayed; a
@@ -546,6 +618,11 @@
                 await _module.InvokeVoidAsync("close", _key);
             }
 
+            if (IsVisible && Role == "menu" && _menuNavOnSheet != IsSheet && (IsSheet || _jsOpen))
+            {
+                await AttachMenuNavAsync();
+            }
+
             if (_openedPending)
             {
                 _openedPending = false;
@@ -558,11 +635,53 @@
                 // Both presentations reset here: the popover close branch above and a sheet that
                 // unmounted with the close — the next open must fire OnOpened again.
                 _openedFired = false;
+                _menuNavOnSheet = null;
             }
         }
         finally
         {
             _jsSync.Release();
+        }
+    }
+
+    /// <summary>
+    /// Attaches the shared menu keyboard (ArrowUp/Down, Home/End, typeahead, roving tabindex) to the
+    /// menu element of the current presentation. Best-effort: where JS is unavailable the menu keeps
+    /// the native Tab order.
+    /// </summary>
+    private async Task AttachMenuNavAsync()
+    {
+        var element = IsSheet ? _sheetContentRef : (TrapFocus ? _scope?.Element ?? default : _panelRef);
+        if (element.Id is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _menuNav ??= await JS.InvokeAsync<IJSObjectReference>("import", MenuNavModulePath);
+            if (_disposed || _menuNav is null)
+            {
+                return;
+            }
+
+            // A popover menu can be dismissed from JS (Tab out of menu AND trigger -> NotifyDismissedAsync, so the
+            // trigger's aria-expanded never goes stale); the sheet's own trap/Done owns focus, so it gets neither.
+            if (IsSheet || _dotNetRef is null)
+            {
+                await _menuNav.InvokeVoidAsync("attach", element);
+            }
+            else
+            {
+                await _menuNav.InvokeVoidAsync("attach", element, _dotNetRef, Anchor.Id is not null ? Anchor : (ElementReference?)null);
+            }
+
+            _menuNavOnSheet = IsSheet;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException
+            or ObjectDisposedException or InvalidOperationException)
+        {
+            // Best-effort: a missing module or a torn-down circuit must never fail the open.
         }
     }
 
@@ -601,6 +720,17 @@
                         await _module.DisposeAsync();
                     }
                     catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException)
+                    {
+                    }
+                }
+
+                if (_menuNav is not null)
+                {
+                    try
+                    {
+                        await _menuNav.DisposeAsync();
+                    }
+                    catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException)
                     {
                     }
                 }

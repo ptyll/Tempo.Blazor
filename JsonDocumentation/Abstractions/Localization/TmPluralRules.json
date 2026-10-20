@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.Localization",
+  "description": "Selects the plural category (One, Few, Many, Other) of a number for a culture from the CLDR rules Tempo.Blazor ships strings for: cs/sk (1, 2-4, fractions, 5+), pl, fr (0-1, millions) and English/default (1, other). A region uses its language.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralRules.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmPluralRules"
+}

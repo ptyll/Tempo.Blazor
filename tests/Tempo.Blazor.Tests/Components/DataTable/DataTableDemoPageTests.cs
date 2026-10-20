@@ -29,7 +29,10 @@ public class DataTableDemoPageTests : LocalizationTestBase
 
         var exportSection = cut.Find("[data-testid='dt-export-section']");
         exportSection.QuerySelector("[data-testid='export-table']").Should().NotBeNull();
-        exportSection.TextContent.Should().Contain("CSV").And.Contain("XLSX");
+        exportSection.QuerySelectorAll("tbody input[type='checkbox']").Should().NotBeEmpty(
+            "the export demo opts into AllowExportSelected, so the table is selectable");
+
+        cut.Find("[data-testid='dt-grid-keyboard-section']").Should().NotBeNull();
     }
 
     private sealed class DemoApiHandler : HttpMessageHandler

@@ -3,6 +3,7 @@
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Forms
 @inject ToastService Toast
+@inject IJSRuntime JS
 <PageTitle>Form Inputs – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -27,6 +28,31 @@
             <div class="space-y-4">
                 <TmTextInput Label="With Error" Value="bad value" Error="This field contains an error" />
                 <TmTextInput Label="With Help Text" HelpText="We'll never share your email with anyone." @bind-Value="_help" />
+            </div>
+        </div>
+        <div class="showcase-card" data-testid="announce-error-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Error announcement (<code>AnnounceError</code>)</h3>
+            <div class="space-y-4">
+                <!-- Default: the message itself is a role="alert" live region and announces the error the moment it appears. -->
+                <TmTextInput data-testid="announce-demo-default"
+                             Label="Recipient (default)"
+                             @bind-Value="_announceDefault"
+                             Error="@_announceDefaultError" />
+                <!-- Muted (AnnounceError="false"): the submit handler moves focus to the field, so the
+                     error is read once through aria-describedby instead of a live region + description. -->
+                <TmTextInput data-testid="announce-demo-amount"
+                             Id="announce-demo-amount"
+                             Label="Amount (focus moved by submit)"
+                             @bind-Value="_announceAmount"
+                             Error="@_announceAmountError"
+                             AnnounceError="false" />
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Use only when the submit handler moves focus to the field; keep the default for blur/live validation.
+                </p>
+                <TmButton data-testid="announce-demo-submit"
+                          Type="ButtonType.Button"
+                          Variant="ButtonVariant.Primary"
+                          OnClick="SubmitAnnounceDemo">Submit</TmButton>
             </div>
         </div>
     </div>
@@ -79,6 +105,30 @@
                     </p>
                 </div>
             }
+        </div>
+    </div>
+    <div class="demo-grid demo-grid-2 mt-4">
+        <div class="showcase-card" data-testid="select-nullable-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Nullable value with a root (null) option</h3>
+            <TmSelect TValue="decimal?"
+                      Label="Parent category"
+                      Options="@_categoryTreeOptions"
+                      @bind-Value="_selectedParentCategory" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                Bound value: <strong class="font-mono" data-testid="select-nullable-value">@FormatBound(_selectedParentCategory)</strong>
+            </p>
+        </div>
+        <div class="showcase-card" data-testid="select-clearable-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Selectable placeholder (clears back to null)</h3>
+            <TmSelect TValue="int?"
+                      Label="Priority"
+                      Placeholder="No priority"
+                      PlaceholderSelectable="true"
+                      Options="@_priorityOptions"
+                      @bind-Value="_selectedPriority" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                Bound value: <strong class="font-mono" data-testid="select-clearable-value">@FormatNullableInt(_selectedPriority)</strong>
+            </p>
         </div>
     </div>
 </section>
@@ -222,6 +272,13 @@
                               Label="Subscription Plan"
                               Options="@_planOptions"
                               @bind-Value="_selectedPlan" />
+                <div class="mt-6" data-testid="radio-segmented-demo">
+                    <TmRadioGroup T="string"
+                                  Label="Device"
+                                  Appearance="RadioAppearance.Segmented"
+                                  Options="@_deviceOptions"
+                                  @bind-Value="_selectedDevice" />
+                </div>
             </div>
             <div class="flex items-center">
                 @if (!string.IsNullOrEmpty(_selectedPlan))
@@ -811,6 +868,27 @@
     private static string FormatBound(decimal? value) =>
         value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null";
 
+    private static string FormatNullableInt(int? value) => value?.ToString() ?? "null";
+
+    // Nullable TmSelect demo (a null-valued option + a selectable placeholder)
+    private static readonly List<SelectOption<decimal?>> _categoryTreeOptions =
+    [
+        new(null, "Root (no parent)"),
+        new(1m, "Electronics"),
+        new(2m, "Books"),
+    ];
+
+    private static readonly List<SelectOption<int?>> _priorityOptions =
+    [
+        new(1, "Low"),
+        new(2, "Medium"),
+        new(3, "High"),
+    ];
+
+    // null on purpose: with a null-valued option in the list, "no parent" is a real displayed choice.
+    private decimal? _selectedParentCategory;
+    private int? _selectedPriority = 2;
+
     private void HandlePriceSubmit()
     {
         Toast.ShowSuccess($"Unit price accepted: {FormatBound(_priceModel.UnitPrice)}");
@@ -1025,6 +1103,16 @@
         new("viewer", "Viewer"),
     };
 
+    // Demo sample data, not library copy: the showcase labels below are English on purpose.
+    private string? _selectedDevice = "desktop";
+
+    private List<RadioOption<string>> _deviceOptions = new()
+    {
+        new("Desktop", "desktop"),
+        new("Tablet", "tablet"),
+        new("Mobile", "mobile"),
+    };
+
     private List<RadioOption<string>> _planOptions = new()
     {
         new("Free plan", "free"),
@@ -1062,6 +1150,35 @@
     {
         _personModel = new PersonFormModel();
         _submitSuccess = false;
+    }
+
+    // AnnounceError demo: the muted field (AnnounceError="false") is announced only when focus
+    // reaches it (aria-describedby), so the submit handler moves focus to it right after the
+    // error re-render — otherwise the error would not be announced at all (WCAG 4.1.3).
+    private string _announceDefault = string.Empty;
+    private string _announceAmount = string.Empty;
+    private string? _announceDefaultError;
+    private string? _announceAmountError;
+    private bool _focusAmountAfterRender;
+
+    private void SubmitAnnounceDemo()
+    {
+        _announceDefaultError = string.IsNullOrWhiteSpace(_announceDefault)
+            ? "Recipient is required"
+            : null;
+        _announceAmountError = string.IsNullOrWhiteSpace(_announceAmount)
+            ? "Amount is required"
+            : null;
+        _focusAmountAfterRender = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusAmountAfterRender)
+        {
+            _focusAmountAfterRender = false;
+            await JS.InvokeVoidAsync("eval", "document.getElementById('announce-demo-amount')?.focus();");
+        }
     }
 
     // Signature Pad

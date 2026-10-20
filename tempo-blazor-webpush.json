@@ -124,6 +124,12 @@
           "kind": "Property",
           "type": "string",
           "description": "VAPID subject (a mailto: or origin URL)."
+        },
+        {
+          "name": "IsConfigured",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when a usable VAPID key pair is configured."
         }
       ]
     }

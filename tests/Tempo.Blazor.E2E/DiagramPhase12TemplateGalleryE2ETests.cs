@@ -14,12 +14,14 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
     protected override string BaseUrl => "http://localhost:5010";
 
     [TestMethod]
-    [Description("Diagram template gallery exposes UML, BPMN, and ArchiMate templates and can create a BPMN document")]
+    [Description("Diagram template gallery exposes UML, BPMN, and ArchiMate templates, activates cards from the keyboard, and can create a BPMN document")]
     public async Task TemplateGallery_CreatesBpmnTemplateAndCapturesScreenshots()
     {
         var page = await CreateDiagramPageAsync();
 
-        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Templates" }).ClickAsync();
+        // Since phase 4 the Templates command lives on the core TmToolbar and collapses into
+        // the "More" menu when the row runs out of room — click it wherever it currently is.
+        await DiagramEditorE2E.OpenToolbarCommandAsync(page, "[data-tm-group='templates'] button", "Templates");
         await page.Locator(".tm-diagram-template-gallery").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         await ExpectTemplateAsync(page, "UML 2.5 Class Baseline");
@@ -27,6 +29,22 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
         await ExpectTemplateAsync(page, "ArchiMate 3 Layered Baseline");
         await AssertNoTextOverflowAsync(page);
         await SaveStableScreenshotAsync(page, "diagram_phase12_template_gallery");
+
+        // Keyboard activation (phase 2): the card is a div[role=button] — Space selects it
+        // exactly once, without any mouse interaction. (Since phase 5 Enter/double-click
+        // CREATE — the selection tap kept for the keyboard is Space.)
+        var bpmnCard = page.Locator(".tm-diagram-template-card").Filter(new LocatorFilterOptions { HasText = "BPMN 2 Process Baseline" });
+        await bpmnCard.FocusAsync();
+        await page.Keyboard.PressAsync(" ");
+        await ExpectCardPressedAsync(page, bpmnCard);
+        Assert.IsTrue(await IsCreateEnabledAsync(page), "Create must enable after keyboard (Space) selection");
+
+        var umlCard = page.Locator(".tm-diagram-template-card").Filter(new LocatorFilterOptions { HasText = "UML 2.5 Class Baseline" });
+        await umlCard.FocusAsync();
+        await page.Keyboard.PressAsync(" ");
+        await ExpectCardPressedAsync(page, umlCard);
+        Assert.IsFalse(await bpmnCard.GetAttributeAsync("aria-pressed") == "true", "selection must move to the newly activated card");
+        Assert.IsTrue(await IsCreateEnabledAsync(page), "Create must stay enabled after keyboard (Space) selection");
 
         await page.GetByText("BPMN 2 Process Baseline", new PageGetByTextOptions { Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Create" }).ClickAsync();
@@ -37,7 +55,16 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
         await AssertNodesDoNotOverlapAsync(page, "bpmn2.event.start", "bpmn2.task.user", "bpmn2.gateway.exclusive", "bpmn2.event.end");
         await SaveStableScreenshotAsync(page, "diagram_phase12_bpmn_template_created");
 
-        TestContext.WriteLine("UX: template gallery is scannable, and the BPMN template creates a readable process baseline without overlapping core nodes.");
+        TestContext.WriteLine("UX: template gallery is scannable, card activation works from the keyboard (Enter and Space), and the BPMN template creates a readable process baseline without overlapping core nodes.");
+    }
+
+    private static Task ExpectCardPressedAsync(IPage page, ILocator card)
+        => Assertions.Expect(card).ToHaveAttributeAsync("aria-pressed", "true", new LocatorAssertionsToHaveAttributeOptions { Timeout = 5000 });
+
+    private static async Task<bool> IsCreateEnabledAsync(IPage page)
+    {
+        var create = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Create" });
+        return await create.IsEnabledAsync();
     }
 
     private async Task<IPage> CreateDiagramPageAsync()
@@ -125,13 +152,9 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
 
     private static async Task SaveStableScreenshotAsync(IPage page, string name)
     {
-        var directory = Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "TestResults",
-            "phase12-e2e");
+        // Durable directory inside the repo — vstest wipes TestResults at the end of a run,
+        // so committed evidence lives in tests/Tempo.Blazor.E2E/__screenshots__/diagram-editor/.
+        var directory = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "__screenshots__", "diagram-editor");
         directory = Path.GetFullPath(directory);
         Directory.CreateDirectory(directory);
 
@@ -142,7 +165,9 @@ public sealed class DiagramPhase12TemplateGalleryE2ETests : PlaywrightTestBase
         });
         Assert.IsTrue(bytes.Length > 20_000, $"{name} screenshot should contain a rendered editor, not a blank page.");
 
-        await File.WriteAllBytesAsync(Path.Combine(directory, $"{name}.png"), bytes);
+        var path = Path.Combine(directory, $"{name}.png");
+        await File.WriteAllBytesAsync(path, bytes);
+        Assert.IsTrue(File.Exists(path), $"{name} screenshot must be written to the durable directory");
     }
 
     private sealed class NodeBox

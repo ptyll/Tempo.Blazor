@@ -6,143 +6,15 @@
 // it settled on; it never writes the height. C# owns the snap index, and an inline height written
 // here would freeze the sheet at whatever the last gesture set.
 //
-// The module also owns the shared top-layer promote/demote/raise helpers (TopLayerInterop). Every
-// modal viewport-anchored overlay root carries popover="manual" and promotes itself at open; the
-// pinned-on-top registry keeps toast containers above every modal surface (F3 review round 3, R3-M1).
+// Top-layer promotion lives in tm-top-layer.js; this module re-exports the helpers so hosts that
+// imported them from here keep working (TopLayerInterop imports tm-top-layer.js directly).
 //
 // Heights are fractions of the visible viewport, matching --tm-sheet-height. A sheet with no snap
 // points sizes to its content under the max-height cap, so a short menu is not forced to half height.
 
-// Roots that must stay above every other promoted surface while they hold content — the toast
-// containers register here through TopLayerInterop. promote() and raise() re-raise every registered
-// root that is still popover-open AFTER their own showPopover, so a surface promoted later (a
-// drawer, sheet or dialog opened after a toast went up) can never cover it.
-const pinnedRoots = new Set();
+import { attach as attachPointerDrag } from './pointer-drag.js';
 
-/**
- * Registers a root as pinned on top. Called by a toast container when it first promotes; the
- * registry is what promote()/raise() re-raise after every later promotion.
- * @param {HTMLElement} root the pinned root (a toast container)
- */
-export function pinRoot(root) {
-    if (root) pinnedRoots.add(root);
-}
-
-/**
- * Removes a root from the pinned registry (the container demoted empty or disposed). No-op for a
- * root that was never pinned.
- * @param {HTMLElement} root the previously pinned root
- */
-export function unpinRoot(root) {
-    pinnedRoots.delete(root);
-}
-
-/**
- * Re-raises every pinned root that is still open, in registration order. Called after a promotion
- * so pinned status UI stays above the newly promoted surface. A pinned root that left the DOM is
- * unregistered instead of re-raised — a detached popover is hidden by the browser anyway.
- * @param {HTMLElement|null} except a root to skip (the one that was just promoted/raised)
- */
-function reRaisePinnedRoots(except) {
-    for (const pinned of [...pinnedRoots]) {
-        if (pinned === except || pinned === null || pinned === undefined) continue;
-        if (!pinned.isConnected) {
-            pinnedRoots.delete(pinned);
-            continue;
-        }
-        try {
-            // An empty toast container demotes itself, so :popover-open IS the has-content signal:
-            // re-raising a closed container would pop an empty overlay above everything.
-            if (pinned.matches(':popover-open')) {
-                pinned.hidePopover();
-                pinned.showPopover();
-            }
-        }
-        catch {
-            // InvalidStateError — the element is being detached; the browser hides a dead
-            // top-layer element on its own.
-        }
-    }
-}
-
-/**
- * Shows a popover root in the browser top layer, no-op when it is already open, the Popover API is
- * missing or the element is being detached.
- * @param {HTMLElement} root the overlay root
- */
-function show(root) {
-    try {
-        if (!root.matches(':popover-open')) {
-            root.showPopover();
-        }
-    }
-    catch {
-        // InvalidStateError — the element is being detached; the browser hides a dead top-layer
-        // element on its own.
-    }
-}
-
-/**
- * Promotes a modal overlay root to the browser top layer. Every modal viewport-anchored overlay
- * root carries popover="manual" (F3 review round 2, U1): a modal drawer at any position, the
- * TmModal/TmDialog overlay root, the command palette, the keyboard-shortcuts overlay, the
- * lightbox, the Gantt import dialog and the toast containers. showPopover() lifts the root above
- * every z-index stacking context and outside every ancestor's overflow/transform clipping — a
- * sticky app bar (TmTopBar under TmBottomNavigation) or a transformed host can then neither
- * confine nor cover it, and a surface opened LATER from inside it (a dialog from a sheet, a toast
- * from a dialog) promotes after it, so the top-layer order equals the open order. The DOM stays
- * in place, so the nested focus trap and the Escape order are unchanged. No-op where the Popover
- * API is missing. After its own promotion every PINNED root (a toast container holding toasts) is
- * re-raised above it, so toasts stay above every modal surface, always — the drawer's own
- * promote must not cover a toast that is already on screen (F3 review round 3, R3-M1).
- * @param {HTMLElement} root the overlay root (a drawer focus-scope element, a modal overlay, the
- *   command palette backdrop, the toast container, …)
- */
-export function promote(root) {
-    if (!root || typeof root.showPopover !== 'function') {
-        return;
-    }
-    show(root);
-    reRaisePinnedRoots(root);
-}
-
-/**
- * Demotes a promoted root (hidePopover). No-op where the Popover API is missing or the element
- * is not currently promoted. Callers whose root STAYS in the DOM (the toast containers) demote on
- * close; an overlay that unmounts on close (drawer/modal/dialog) needs nothing — a detached
- * top-layer element is hidden by the browser automatically.
- * @param {HTMLElement} root the overlay root
- */
-export function demote(root) {
-    if (!root || typeof root.hidePopover !== 'function') {
-        return;
-    }
-    try {
-        if (root.matches(':popover-open')) {
-            root.hidePopover();
-        }
-    }
-    catch {
-        // InvalidStateError — the element is being detached; nothing to demote.
-    }
-}
-
-/**
- * Re-raises a promoted root above everything promoted after it, pinned roots included: the other
- * pinned roots re-raise FIRST and the pusher LAST, so the toast that just arrived paints topmost.
- * hidePopover + showPopover in one synchronous step, so no frame paints without it.
- * TmToastContainer calls this on every push, so a toast always lands above sheets and dialogs
- * opened before it (they stay promoted underneath).
- * @param {HTMLElement} root the overlay root
- */
-export function raise(root) {
-    if (!root || typeof root.showPopover !== 'function') {
-        return;
-    }
-    reRaisePinnedRoots(root);
-    demote(root);
-    show(root);
-}
+export { pinRoot, unpinRoot, promote, demote, raise } from './tm-top-layer.js';
 
 /**
  * The snap a released sheet settles to.
@@ -172,9 +44,9 @@ export function settle(snaps, released, swipeToDismiss, velocity = 0, startFract
     // snap in its direction from the snap it started on — from a higher snap that is a step down,
     // because a 300px/300ms swipe is a "back to half" gesture, not a close. Only a very fast
     // release (> 2 px/ms, vaul's behaviour) closes the sheet from any snap. Every dismiss here
-    // honours swipeToDismiss: with the flag off, a flick from the lowest snap clamps to it and a
-    // fast flick settles at it. A one-snap sheet is not decided here: its dismiss is relative to
-    // the height it started at.
+    // honours swipeToDismiss: with the flag off, a fast flick steps one snap down like any flick
+    // and clamps at the lowest snap; it never dismisses. A one-snap sheet is not decided here: its
+    // dismiss is relative to the height it started at.
     if (snaps.length > 1 && swipeToDismiss && released < lowest - 0.15) {
         return { dismiss: true, snap: lowest, index: 0 };
     }
@@ -219,25 +91,30 @@ export function keyboardOffset(layoutHeight, viewport) {
 }
 
 /**
- * Writes the visible viewport and the keyboard gap onto the sheet root, and keeps them current.
+ * Writes the visible viewport and the keyboard gap onto the tracking root, and keeps them current.
  * Listens to visualViewport resize and scroll: iOS moves the visual viewport with offsetTop on
  * scroll rather than resize. Returns a function that removes the listeners.
- * @param {HTMLElement} root the sheet root
+ * @param {HTMLElement} root the sheet root (kept for signature compatibility)
+ * @param {{ invokeMethodAsync: Function }|null} host the component to tell about a keyboard change
+ * @param {HTMLElement=} trackRoot the element that carries the lengths; defaults to root. An
+ *   explicit root lets a host pin the variables to a fixed ancestor without growing the
+ *   class-name closest lookup (F6 carry-forward).
  * @returns {() => void} stop
  */
-export function trackViewport(root, host) {
-    if (!root) return () => {};
+export function trackViewport(root, host, trackRoot) {
+    const target = trackRoot ?? root;
+    if (!target) return () => {};
 
     const apply = () => {
         const viewport = window.visualViewport;
         if (!viewport) return;
         const offset = keyboardOffset(window.innerHeight, viewport);
-        root.style.setProperty('--tm-sheet-viewport', offset.viewport);
-        root.style.setProperty('--tm-sheet-keyboard', offset.keyboard);
+        target.style.setProperty('--tm-sheet-viewport', offset.viewport);
+        target.style.setProperty('--tm-sheet-keyboard', offset.keyboard);
         const open = Number.parseFloat(offset.keyboard) > 0;
-        if (root.classList) {
-            if (root.classList.contains('tm-sheet--keyboard') === open) return;
-            root.classList.toggle('tm-sheet--keyboard', open);
+        if (target.classList) {
+            if (target.classList.contains('tm-sheet--keyboard') === open) return;
+            target.classList.toggle('tm-sheet--keyboard', open);
             host?.invokeMethodAsync('HandleSheetKeyboardAsync', open).catch(() => {});
         }
     };
@@ -271,18 +148,21 @@ const gestures = new Map();
  * @param {boolean} swipeToDismiss whether a release below the lowest snap closes the sheet
  * @param {{ invokeMethodAsync: Function }|null} host the component to tell about a snap or a dismiss
  * @param {string} id the sheet's id, so a second attach replaces the first
+ * @param {boolean|{ track?: boolean, basis?: HTMLElement, viewportRoot?: HTMLElement }} options
+ *   a legacy boolean means `track` (a modal sheet tracks the visible viewport; an inline sheet
+ *   measures against its host). The object form: `track` (default true), `basis` — the explicit
+ *   inline host element, so an embedded sheet no longer relies on the hard-coded `.tm-drawer`
+ *   closest lookup — and `viewportRoot`, the element that carries the keyboard lengths.
  */
-export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, track = true) {
+export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, options = true) {
     if (!panel) return;
+    const opts = typeof options === 'boolean' ? { track: options } : (options ?? {});
+    const track = opts.track !== false;
     detach(id);
 
     const sorted = Array.isArray(snaps) ? snaps : [];
-    let startY = 0;
     let startHeight = 0;
     let startFraction = 0;
-    let dragging = false;
-    let armed = false;
-    let pointerId = null;
     // Recent pointer samples. A real pointerup lands on the last move, so velocity taken from that
     // move alone is always 0 and a flick never dismisses. The window is the last ~80ms.
     const samples = [];
@@ -294,10 +174,14 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
     };
 
     // An inline sheet is a fraction of its host, not of the viewport. A modal sheet tracks the
-    // visible viewport. Measured at the call, so a release sees the host as it is now.
+    // visible viewport. Measured at the call, so a release sees the host as it is now. The basis
+    // is the explicit host element when the caller passes one; the `.tm-drawer` closest lookup is
+    // only the legacy fallback for hosts that predate the option.
     const basis = () => {
         if (!track) {
-            const hostBox = panel.closest?.('.tm-drawer')?.getBoundingClientRect?.().height
+            const explicit = opts.basis?.getBoundingClientRect?.().height;
+            const hostBox = explicit
+                ?? panel.closest?.('.tm-drawer')?.getBoundingClientRect?.().height
                 ?? panel.parentElement?.clientHeight;
             if (hostBox > 0) return hostBox;
         }
@@ -311,105 +195,94 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         panel.style.transition = '';
     };
 
-    const capture = (event) => {
-        if (typeof handle.setPointerCapture === 'function' && event.pointerId !== undefined) {
-            try { handle.setPointerCapture(event.pointerId); } catch { /* already released */ }
-        }
-    };
-
-    const onDown = (event) => {
-        if (event.button !== undefined && event.button !== 0) return;
-        dragging = true;
-        // Never arm on pointerdown. A tap, and a press on the close button, stay a click until
-        // the finger actually moves. Arming immediately dismissed a content sheet on a tap.
-        armed = false;
-        pointerId = event.pointerId;
-        startY = event.clientY;
-        samples.length = 0;
-        remember(event.clientY, event.timeStamp ?? 0);
-        startHeight = panel.getBoundingClientRect().height;
-        // A press on the handle itself captures immediately. A fast drag whose first move leaves
-        // the 44px handle would otherwise never arm. A header press still waits for the 6px arm,
-        // so a click on the close button stays a click.
-        if (event.target === handle || event.target?.closest?.('.tm-sheet__handle') === handle) capture(event);
-        const basisNow = basis();
-        startFraction = basisNow > 0 ? startHeight / basisNow : 0;
-    };
-
-    const onMove = (event) => {
-        if (!dragging || (pointerId !== null && event.pointerId !== pointerId)) return;
-        if (!armed) {
-            // A press on the close button stays a click until the finger actually moves.
-            if (Math.abs(event.clientY - startY) < 6) return;
-            armed = true;
-            panel.style.transition = 'none';
-            capture(event);
-        }
-        remember(event.clientY, event.timeStamp ?? samples.at(-1)?.time ?? 0);
-        const next = Math.max(0, startHeight - (event.clientY - startY));
-        panel.style.height = `${next}px`;
-    };
-
-    const finish = (event, cancelled) => {
-        if (!dragging || (pointerId !== null && event.pointerId !== undefined && event.pointerId !== pointerId)) return;
-        const wasArmed = armed;
-        dragging = false;
-        armed = false;
-        pointerId = null;
-
-        // A tap never armed. Leave the inline styles alone: clearing them is a no-op, but a click
-        // that follows pointerup must still land on the grabber, not on a backdrop the panel
-        // collapsed onto.
-        if (!wasArmed) return;
-
-        // Measure before clearing: resetInline drops the inline height, and a read after it sees 0.
-        const viewport = basis();
-        const height = panel.getBoundingClientRect().height;
-        const now = event.timeStamp ?? samples.at(-1)?.time ?? 0;
-        const recent = samples.filter(sample => sample.time >= now - 80);
-        const origin = recent[0];
-        const elapsed = origin ? Math.max(1, now - origin.time) : 1;
-        const velocity = origin ? (event.clientY - origin.y) / elapsed : 0;
-        resetInline();
-        if (cancelled || !wasArmed) return;
-
-        const released = viewport > 0 ? height / viewport : 0;
-        // An upward drag never dismisses, whatever the velocity sample says. The start fraction
-        // tells settle which snap the gesture left, so a flick steps from there.
-        const downward = (event.clientY - startY) > 0;
-        // A content sheet, and a one-snap sheet, dismiss only past a quarter of the height they
-        // started at, or on a downward flick. A multi-snap sheet uses the lowest-snap margin and
-        // steps one snap per flick.
-        if (sorted.length <= 1) {
-            if (swipeToDismiss && downward && (released < startFraction * 0.75 || velocity > 0.5)) {
-                host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
-            }
-            else if (sorted.length === 1) {
-                host?.invokeMethodAsync('HandleSheetSnappedAsync', 0).catch(() => {});
-            }
-            return;
-        }
-        const result = settle(sorted, released, swipeToDismiss, velocity, startFraction, downward);
-        if (result.dismiss) {
-            host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
-            return;
-        }
-        host?.invokeMethodAsync('HandleSheetSnappedAsync', result.index).catch(() => {});
-    };
-
-    const onUp = (event) => finish(event, false);
-    const onCancel = (event) => finish(event, true);
+    // The gesture itself lives in the shared pointer-drag helper: one implementation of pointer
+    // capture by id, the 6px arm, every cancel path (Escape, pointercancel, lostpointercapture, a
+    // missed mouse-up) and the second-finger guard. What stays here is only what the sheet owns:
+    // measuring, the inline height and the settle/dismiss decision.
+    let pressTarget = null;
+    let drag = null;
     if (handle) {
-        handle.addEventListener('pointerdown', onDown);
-        handle.addEventListener('pointermove', onMove);
-        handle.addEventListener('pointerup', onUp);
-        handle.addEventListener('pointercancel', onCancel);
+        drag = attachPointerDrag(handle, {
+            threshold: 6,
+            // A press on the grabber itself captures immediately: a fast drag whose first move
+            // leaves the 44px handle would otherwise never start. A header press waits for the
+            // 6px arm, so a click on the close button stays a click (F0-5).
+            captureOn: handle.classList?.contains('tm-sheet__handle') ? 'press' : 'start',
+            touchAction: null,       // _sheet.css / _drawer.css own touch-action: none
+            suppressClick: true,     // the click that follows a real drag lands on a moving panel
+            dragClass: null,
+            onPress({ y, event }) {
+                pressTarget = event.target ?? null;
+                startHeight = panel.getBoundingClientRect().height;
+                const basisNow = basis();
+                startFraction = basisNow > 0 ? startHeight / basisNow : 0;
+                samples.length = 0;
+                remember(y, event.timeStamp ?? 0);
+            },
+            onStart({ dy }) {
+                // The old code armed on VERTICAL movement only, so a sideways drift never started
+                // a drag. pointer-drag arms on Math.hypot, so a ≥6px sideways drift would now
+                // start a drag from a header button and swallow its click. Veto exactly that: a
+                // press on a control (close/Done) that has not moved vertically (|dy| < 6) stays
+                // a click; a vertical move still drags the sheet, as before.
+                const control = pressTarget?.closest?.('button, a, input, select, textarea, [role="button"]');
+                if (control && control !== handle && Math.abs(dy) < 6) return false;
+                panel.style.transition = 'none';
+            },
+            onMove({ y, dy, event }) {
+                remember(y, event.timeStamp ?? samples.at(-1)?.time ?? 0);
+                panel.style.height = `${Math.max(0, startHeight - dy)}px`;
+            },
+            onEnd({ event, y, dy }) {
+                // Measure before clearing: resetInline drops the inline height, and a read after
+                // it sees 0.
+                const viewport = basis();
+                const height = panel.getBoundingClientRect().height;
+                const now = event.timeStamp ?? samples.at(-1)?.time ?? 0;
+                const recent = samples.filter(sample => sample.time >= now - 80);
+                const origin = recent[0];
+                const elapsed = origin ? Math.max(1, now - origin.time) : 1;
+                const velocity = origin ? (y - origin.y) / elapsed : 0;
+                resetInline();
+
+                const released = viewport > 0 ? height / viewport : 0;
+                // An upward drag never dismisses, whatever the velocity sample says. The start
+                // fraction tells settle which snap the gesture left, so a flick steps from there.
+                const downward = dy > 0;
+                // A content sheet, and a one-snap sheet, dismiss only past a quarter of the height
+                // they started at, or on a downward flick. A multi-snap sheet uses the lowest-snap
+                // margin and steps one snap per flick.
+                if (sorted.length <= 1) {
+                    if (swipeToDismiss && downward && (released < startFraction * 0.75 || velocity > 0.5)) {
+                        host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
+                    }
+                    else if (sorted.length === 1) {
+                        host?.invokeMethodAsync('HandleSheetSnappedAsync', 0).catch(() => {});
+                    }
+                    return;
+                }
+                const result = settle(sorted, released, swipeToDismiss, velocity, startFraction, downward);
+                if (result.dismiss) {
+                    host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
+                    return;
+                }
+                host?.invokeMethodAsync('HandleSheetSnappedAsync', result.index).catch(() => {});
+            },
+            onCancel() {
+                // A cancel (Escape, pointercancel, lostpointercapture, a missed mouse-up) restores
+                // the snap C# owns; nothing is reported.
+                resetInline();
+            },
+        });
     }
 
-    const stopViewport = track
-        ? trackViewport(panel.closest?.('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel, host)
-        : () => {};
-    gestures.set(id, { handle, onDown, onMove, onUp, onCancel, stopViewport });
+    // The class-name closest lookup is the fallback only: a caller that pins the lengths to an
+    // explicit root (or that has no matching ancestor) never grows this list.
+    const trackingRoot = opts.viewportRoot
+        ?? panel.closest?.('.tm-sheet, .tm-drawer, .tm-modal-overlay')
+        ?? panel;
+    const stopViewport = track ? trackViewport(trackingRoot, host) : () => {};
+    gestures.set(id, { drag, stopViewport });
 }
 
 /** Removes the gesture and the viewport tracking for a sheet. Safe to call twice. */
@@ -417,12 +290,7 @@ export function detach(id) {
     const gesture = gestures.get(id);
     if (!gesture) return;
     gestures.delete(id);
-    if (gesture.handle) {
-        gesture.handle.removeEventListener('pointerdown', gesture.onDown);
-        gesture.handle.removeEventListener('pointermove', gesture.onMove);
-        gesture.handle.removeEventListener('pointerup', gesture.onUp);
-        gesture.handle.removeEventListener('pointercancel', gesture.onCancel);
-    }
+    gesture.drag?.detach();
     gesture.stopViewport?.();
 }
 

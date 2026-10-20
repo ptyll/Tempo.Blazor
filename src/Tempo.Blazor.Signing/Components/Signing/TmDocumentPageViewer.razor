@@ -219,7 +219,9 @@
                                     </button>
                                 </header>
                                 <p class="tm-document-page-viewer__draft-location">@Loc["TmDocumentComments_PageLocation", _draftAnchor.PageNumber]</p>
-                                <TmCommentComposer Placeholder="@Loc["TmDocumentComments_NewPlaceholder"]"
+                                <TmCommentComposer @bind-Value="_draftText"
+                                                   @bind-Value:after="NotifyDraftChangedAsync"
+                                                   Placeholder="@Loc["TmDocumentComments_NewPlaceholder"]"
                                                    AriaLabel="@Loc["TmDocumentComments_NewLabel"]"
                                                    SubmitText="@Loc["TmDocumentComments_AddComment"]"
                                                    MentionUsers="@MentionUsers"
@@ -231,13 +233,15 @@
                             </section>
                         }
 
-                        <TmDocumentCommentThreadPanel Threads="@CommentThreads"
+                        <TmDocumentCommentThreadPanel @ref="_threadPanel"
+                                                      Threads="@CommentThreads"
                                                       SelectedThreadId="@SelectedCommentThreadId"
                                                       SelectedThreadIdChanged="SelectCommentThreadAsync"
                                                       CurrentUserId="@CurrentUserId"
                                                       MentionUsers="@MentionUsers"
                                                       AllowReplyToResolved="@AllowReplyToResolved"
                                                       Disabled="@Disabled"
+                                                      OnDraftChanged="HandlePanelDraftChangedAsync"
                                                       OnReplyRequested="@OnCommentReplyRequested"
                                                       OnResolveRequested="@OnCommentResolveRequested"
                                                       OnReopenRequested="@OnCommentReopenRequested"

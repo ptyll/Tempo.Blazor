@@ -1,77 +1,75 @@
 @namespace Tempo.Blazor.Components.Diagram
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.Diagram.Commands
 @using Tempo.Blazor.Components.Diagram.Models
+@using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Overlay
 
-<div class="tm-diagram-layers @Class" data-collapsed="@_collapsed">
-    <button type="button" class="tm-diagram-layers__toggle" @onclick="ToggleCollapse"
-            aria-label="@Loc["TmDiagramLayers_Toggle"]" title="@Loc["TmDiagramLayers_Toggle"]">
-        <TmIcon Name="@(_collapsed ? IconNames.ChevronLeft : IconNames.ChevronRight)" />
-    </button>
+<div class="tm-diagram-layers @(ShowCollapseToggle ? null : "tm-diagram-layers--embedded") @Class"
+     data-collapsed="@(ShowCollapseToggle && _collapsed)" data-testid="@RootTestId("diagram-layers")">
+    @if (ShowCollapseToggle)
+    {
+        <button type="button" class="tm-diagram-layers__toggle" @onclick="ToggleCollapse"
+                aria-label="@Loc["TmDiagramLayers_Toggle"]" title="@Loc["TmDiagramLayers_Toggle"]">
+            <TmIcon Name="@(_collapsed ? IconNames.ChevronLeft : IconNames.ChevronRight)" />
+        </button>
+    }
 
     <div class="tm-diagram-layers__inner">
         <div class="tm-diagram-layers__header">
-            <h3 class="tm-diagram-layers__title">@Loc["TmDiagramLayers_Title"]</h3>
+            @if (ShowTitle)
+            {
+                <h3 class="tm-diagram-layers__title" id="@_titleId">@Loc["TmDiagramLayers_Title"]</h3>
+            }
             <button type="button" class="tm-diagram-layers__add-btn"
                     aria-label="@Loc["TmDiagramLayers_AddLayer"]"
                     title="@Loc["TmDiagramLayers_AddLayer"]"
                     @onclick="OnAddLayer"
-                    disabled="@ReadOnly">
+                    disabled="@ReadOnly"
+                    @ref="_addButtonRef">
                 <TmIcon Name="@IconNames.Plus" />
             </button>
         </div>
 
-        <div class="tm-diagram-layers__list" role="list" aria-label="@Loc["TmDiagramLayers_Title"]">
-            @foreach (var layer in SortedLayers)
+        <ul class="tm-diagram-layers__list" aria-labelledby="@(ShowTitle ? _titleId : null)">
+            @{ var orderedLayers = SortedLayers.ToList(); var layerCount = orderedLayers.Count; }
+            @for (var rowIndex = 0; rowIndex < orderedLayers.Count; rowIndex++)
             {
+                var layer = orderedLayers[rowIndex];
                 var isActive = ActiveLayerId == layer.Id;
                 var isEditing = _editingLayerId == layer.Id;
-                <div class="tm-diagram-layers__item"
-                     role="listitem"
-                     data-layer-id="@layer.Id"
-                     draggable="true"
-                     @ondragstart="e => OnDragStart(e, layer.Id)"
-                     @ondragover="OnDragOver"
-                     @ondragover:preventDefault
-                     @ondrop="e => OnDrop(e, layer.Id)"
-                     @ondrop:preventDefault
-                     @ondragenter="e => OnDragEnter(e, layer.Id)"
-                     @ondragleave="OnDragLeave">
+                <li @key="layer.Id" class="tm-diagram-layers__item @(isActive ? "tm-diagram-layers__item--active" : "") @(_dragOverLayerId == layer.Id ? "tm-diagram-layers__item--drag-over" : "") @(layer.IsVisible ? null : "tm-diagram-layers__item--hidden")"
+                    data-layer-id="@layer.Id"
+                    aria-current="@(isActive ? "true" : null)"
+                    draggable="@(!ReadOnly && !isEditing ? "true" : "false")"
+                    @ondragstart="e => OnDragStart(e, layer.Id)"
+                    @ondragover="OnDragOver"
+                    @ondragover:preventDefault
+                    @ondrop="e => OnDrop(e, layer.Id)"
+                    @ondrop:preventDefault
+                    @ondragenter="e => OnDragEnter(e, layer.Id)"
+                    @ondragleave="OnDragLeave">
                     <div class="tm-diagram-layers__drag-handle">
                         <TmIcon Name="@IconNames.GripVertical" />
                     </div>
 
                     <button type="button"
                             class="tm-diagram-layers__active @(_defaultLayerId == layer.Id ? "tm-diagram-layers__active--default" : "")"
-                            aria-label="@Loc["TmDiagramLayers_SetActive"]"
-                            title="@Loc["TmDiagramLayers_SetActive"]"
+                            aria-pressed="@(isActive ? "true" : "false")"
+                            aria-label="@Loc["TmDiagramLayers_SetActiveWithName", layer.Name]"
+                            title="@Loc["TmDiagramLayers_SetActiveWithName", layer.Name]"
                             @onclick="() => OnSetActive(layer.Id)"
                             disabled="@ReadOnly">
-                        @if (isActive)
-                        {
-                            <span class="tm-diagram-layers__radio tm-diagram-layers__radio--checked"></span>
-                        }
-                        else
-                        {
-                            <span class="tm-diagram-layers__radio"></span>
-                        }
+                        <span class="tm-diagram-layers__radio @(isActive ? "tm-diagram-layers__radio--checked" : "")" aria-hidden="true"></span>
                     </button>
 
                     <button type="button"
                             class="tm-diagram-layers__visibility"
-                            aria-label="@(layer.IsVisible ? Loc["TmDiagramLayers_Hide"] : Loc["TmDiagramLayers_Show"])"
-                            title="@(layer.IsVisible ? Loc["TmDiagramLayers_Hide"] : Loc["TmDiagramLayers_Show"])"
+                            aria-label="@(layer.IsVisible ? Loc["TmDiagramLayers_HideWithName", layer.Name] : Loc["TmDiagramLayers_ShowWithName", layer.Name])"
+                            title="@(layer.IsVisible ? Loc["TmDiagramLayers_HideWithName", layer.Name] : Loc["TmDiagramLayers_ShowWithName", layer.Name])"
                             @onclick="() => OnToggleVisibility(layer)"
                             disabled="@ReadOnly">
                         <TmIcon Name="@(layer.IsVisible ? IconNames.Eye : IconNames.EyeOff)" />
-                    </button>
-
-                    <button type="button"
-                            class="tm-diagram-layers__lock"
-                            aria-label="@(layer.IsLocked ? Loc["TmDiagramLayers_Unlock"] : Loc["TmDiagramLayers_Lock"])"
-                            title="@(layer.IsLocked ? Loc["TmDiagramLayers_Unlock"] : Loc["TmDiagramLayers_Lock"])"
-                            @onclick="() => OnToggleLock(layer)"
-                            disabled="@ReadOnly">
-                        <TmIcon Name="@(layer.IsLocked ? IconNames.Lock : IconNames.Unlock)" />
                     </button>
 
                     @if (isEditing)
@@ -79,6 +77,7 @@
                         <input class="tm-diagram-layers__name-input"
                                type="text"
                                value="@_editName"
+                               aria-label="@Loc["TmDiagramLayers_Rename"]"
                                @oninput="e => _editName = e.Value?.ToString() ?? _editName"
                                @onkeydown="e => OnNameKeyDown(e, layer)"
                                @onblur="() => OnNameBlur(layer)"
@@ -87,37 +86,94 @@
                     else
                     {
                         <span class="tm-diagram-layers__name"
+                              tabindex="0"
+                              role="button"
+                              @ref="_nameRefs[layer.Id]"
                               @ondblclick="() => OnStartEdit(layer)"
-                              title="@Loc["TmDiagramLayers_DoubleClickToEdit"]">
+                              @onkeydown="e => OnNameKeyDown(e, layer)"
+                              @onkeyup="e => OnNameKeyUp(e, layer)"
+                              title="@Loc["TmDiagramLayers_NameTitle", layer.Name]">
                             @layer.Name
                         </span>
                     }
 
-                    @if (Document?.Layers.Count > 1 && layer.Id != _defaultLayerId)
+                    @* X5/D17: the lock is an indicator only — Lock/Unlock lives in the row's ⋯ menu. *@
+                    @if (layer.IsLocked)
                     {
-                        <button type="button"
-                                class="tm-diagram-layers__delete"
-                                aria-label="@Loc["TmDiagramLayers_Delete"]"
-                                title="@Loc["TmDiagramLayers_Delete"]"
-                                @onclick="() => OnRemoveLayer(layer)"
-                                disabled="@ReadOnly">
-                            <TmIcon Name="@IconNames.Trash" />
-                        </button>
+                        <span class="tm-diagram-layers__locked" title="@Loc["TmDiagramLayers_Locked"]">
+                            <TmIcon Name="@IconNames.Lock" Size="IconSize.Sm" />
+                            <span class="tm-sr-only">@Loc["TmDiagramLayers_Locked"]</span>
+                        </span>
                     }
-                </div>
+
+                    @* D4: the core TmContextMenu owns menu semantics — Escape/outside dismissal,
+                       arrow roving, focus return to the trigger and the mobile bottom sheet. *@
+                    @if (!ReadOnly)
+                    {
+                        var rowMenuHolder = GetRowMenuHolder(layer.Id);
+                        <TmContextMenu @ref="rowMenuHolder.Menu"
+                                       Class="tm-diagram-layers__row-menu"
+                                       MobilePresentation="RowMenuPresentation"
+                                       SheetTitle="@layer.Name">
+                            <Trigger>
+                                <span class="tm-diagram-layers__row-menu-trigger" title="@Loc["TmDiagramLayers_RowActions"]">
+                                    <TmIcon Name="@IconNames.MoreHorizontal" />
+                                    <span class="tm-sr-only">@Loc["TmDiagramLayers_RowActionsWithName", layer.Name]</span>
+                                </span>
+                            </Trigger>
+                            <ChildContent>
+                                <TmContextMenuItem Class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--rename"
+                                                   Icon="@IconNames.Edit" Label="@Loc["TmDiagramLayers_Rename"]"
+                                                   OnClick="() => OnRowMenuRename(layer)" />
+                                <TmContextMenuItem Class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--lock"
+                                                   Icon="@(layer.IsLocked ? IconNames.Unlock : IconNames.Lock)"
+                                                   Label="@(layer.IsLocked ? Loc["TmDiagramLayers_Unlock"] : Loc["TmDiagramLayers_Lock"])"
+                                                   OnClick="() => OnToggleLock(layer)" />
+                                <TmContextMenuItem Class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--up"
+                                                   Icon="@IconNames.ArrowUp" Label="@Loc["TmDiagramLayers_MoveUp"]"
+                                                   Disabled="@(rowIndex == 0)"
+                                                   OnClick="() => OnMoveLayer(layer, -1)" />
+                                <TmContextMenuItem Class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--down"
+                                                   Icon="@IconNames.ArrowDown" Label="@Loc["TmDiagramLayers_MoveDown"]"
+                                                   Disabled="@(rowIndex == layerCount - 1)"
+                                                   OnClick="() => OnMoveLayer(layer, +1)" />
+                                @if (SelectedNodes.Count > 0)
+                                {
+                                    <TmContextMenuItem Class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--move-selected"
+                                                       Icon="@IconNames.Layers" Label="@Loc["TmDiagramLayers_MoveSelectedHere"]"
+                                                       Disabled="@SelectedNodes.All(n => n.LayerId == layer.Id)"
+                                                       OnClick="() => OnMoveNodesToLayer(layer.Id)" />
+                                }
+                                @if (layerCount > 1 && layer.Id != _defaultLayerId)
+                                {
+                                    <TmContextMenuItem IsDivider="true" />
+                                    <TmContextMenuItem Class="tm-diagram-layers__row-menu-item tm-diagram-layers__row-menu-item--delete"
+                                                       Icon="@IconNames.Trash" IsDangerous="true"
+                                                       Label="@Loc["TmDiagramLayers_Delete"]"
+                                                       OnClick="() => OnRowMenuDelete(layer)" />
+                                }
+                            </ChildContent>
+                        </TmContextMenu>
+                    }
+                </li>
             }
-        </div>
+        </ul>
 
         @if (SelectedNodes.Count > 0 && !ReadOnly)
         {
             <div class="tm-diagram-layers__move-section">
-                <label class="tm-diagram-layers__move-label">@Loc["TmDiagramLayers_MoveToLayer"]</label>
+                <label class="tm-diagram-layers__move-label" for="@_moveSelectId">@Loc["TmDiagramLayers_MoveToLayer"]</label>
                 <TmSelect TValue="string"
+                          Id="@_moveSelectId"
                           Value="_moveTargetLayerId"
                           ValueChanged="OnMoveNodesToLayer"
                           Options="MoveLayerOptions"
                           Placeholder="@Loc["TmDiagramLayers_SelectLayer"]" />
             </div>
         }
+
+        @* Polite live region: lock/unlock, move up/down, delete, hidden/shown and nodes-moved
+           results are announced here (the controls themselves keep their short aria-labels). *@
+        <div class="tm-sr-only" role="status" aria-live="polite" aria-atomic="true">@_announcement</div>
     </div>
 </div>

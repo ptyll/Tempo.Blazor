@@ -21,10 +21,37 @@ namespace Tempo.Blazor.Tests.Toolbar;
 /// </remarks>
 public sealed class ToolbarRoleGuardTests
 {
+    /// <summary>
+    /// F4: the ONE markup that claims <c>role="toolbar"</c> — core <c>TmToolbar</c>, which ships the real
+    /// mechanism (tm-toolbar.js: roving tabindex + arrow/Home/End). Anything else stays banned; a new
+    /// claimant must add itself here AND pass <see cref="TheAllowListedToolbar_ShipsTheRovingMechanism"/>.
+    /// </summary>
+    private static readonly string[] RovingToolbarImplementations =
+    [
+        "src/Tempo.Blazor/Components/Toolbar/TmToolbar.razor",
+    ];
+
+    [Fact]
+    public void TheAllowListedToolbar_ShipsTheRovingMechanism()
+    {
+        var root = FindRepositoryRoot();
+        foreach (var relative in RovingToolbarImplementations)
+        {
+            var markup = File.ReadAllText(Path.Combine(root, relative));
+            ToolbarRoleScanner.Find(markup, relative).Should().NotBeEmpty(
+                $"{relative} is on the allow-list because it claims role=toolbar");
+            // H14: a comment mentioning the module satisfied the old Contain("tm-toolbar.js"). The markup must USE the interop\n            // wrapper, and the wrapper must carry the module path and the attach call - comments stripped.\n            var code = System.Text.RegularExpressions.Regex.Replace(markup, @"@\*.*?\*@", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline);\n            code.Should().Contain("new ToolbarInterop(", $"{relative} must attach the roving-tabindex module it claims the role with");\n            code.Should().Contain("AttachAsync(");\n            var interop = System.Text.RegularExpressions.Regex.Replace(\n                File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "Helpers", "ToolbarInterop.cs")), @"^\\s*///.*$|//.*$", string.Empty, System.Text.RegularExpressions.RegexOptions.Multiline);\n            interop.Should().Contain("\\"./_content/Tempo.Blazor/js/tm-toolbar.js\\"").And.Contain("\\"attach\\"");
+        }
+
+        var module = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "js", "tm-toolbar.js"));
+        module.Should().Contain("export function nextRovingIndex").And.Contain("export function rovingItems")
+            .And.Contain("tabindex").And.Contain("keydown");
+    }
+
     [Fact]
     public void LibraryAndDemoMarkup_DoesNotClaimToolbarWithoutARovingMechanism()
     {
-        var hits = FindToolbarRoles(ReadSrcMarkup());
+        var hits = FindToolbarRoles(ReadSrcMarkup().Where(file => !RovingToolbarImplementations.Contains(file.RelativePath)).ToList());
 
         hits.Should().BeEmpty(
             "role=toolbar bez roving tabindexu je afordance bez mechanismu. Nalezeno:\n"

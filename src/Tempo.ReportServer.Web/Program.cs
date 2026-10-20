@@ -1,9 +1,28 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Localization;
 using Tempo.ReportServer.Api.Security;
 using Tempo.ReportServer.Web;
 using Tempo.ReportServer.Web.Client;
 using Tempo.ReportServer.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Without request localization the server leg renders in the OS culture of the machine hosting the
+// app (e.g. Czech on a Czech Windows) regardless of the browser's Accept-Language — the prerendered
+// chrome and every server-side string flip language per deployment. Pin the supported set to the
+// library's built-in cultures and honour the browser's preference, falling back to English.
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    CultureInfo[] supported =
+    [
+        new CultureInfo("en-US"), new CultureInfo("en"),
+        new CultureInfo("cs"), new CultureInfo("sk"), new CultureInfo("fr"),
+    ];
+    options.DefaultRequestCulture = new RequestCulture("en-US");
+    options.SupportedCultures = supported;
+    options.SupportedUICultures = supported;
+});
 
 var razorComponents = builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
@@ -47,6 +66,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
 }
+
+app.UseRequestLocalization();
 
 UseProjectStaticAssets(app, "Tempo.Blazor.Reporting");
 UseProjectStaticAssets(app, "Tempo.Blazor");
@@ -166,3 +187,6 @@ static string ContentTypeFor(string path)
         ".woff2" => "font/woff2",
         _ => "application/octet-stream",
     };
+
+// The WebApplicationFactory host-localization tests reference the entry point explicitly.
+public partial class Program;

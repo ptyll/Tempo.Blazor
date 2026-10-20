@@ -95,16 +95,34 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the selection has text and at least one valid rectangle."
-        },
-        {
           "name": "ToAnchor",
           "kind": "Method",
           "type": "DocumentCommentAnchor",
           "description": "Builds a text range anchor from this selection."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the selection has text and at least one valid rectangle."
+        },
+        {
+          "name": "Page",
+          "kind": "Property",
+          "type": "int",
+          "description": "One-based page number the selection belongs to."
+        },
+        {
+          "name": "Rects",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentCommentRect>",
+          "description": "Normalized highlight rectangles covering the selection."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "The selected text."
         }
       ]
     },
@@ -132,7 +150,7 @@
           "name": "AddTempoBlazorPdfViewer",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the PDF viewer component group.",
+          "description": "Registers the services required by the PDF viewer component group. Also calls AddTempoBlazor(), so the core services do not need to be registered separately.",
           "parameters": [
             {
               "name": "services",

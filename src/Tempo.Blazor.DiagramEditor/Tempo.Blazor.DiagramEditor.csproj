@@ -35,7 +35,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="wwwroot\diagram-templates\*.json" />
+    <!-- Exact embedded resource names (RootNamespace-independent): the lookup keys off the full
+         name "Tempo.Blazor.DiagramEditor.diagram-templates.<file>", never a suffix scan. -->
+    <EmbeddedResource Include="wwwroot\diagram-templates\*.json"
+                      LogicalName="Tempo.Blazor.DiagramEditor.diagram-templates.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">

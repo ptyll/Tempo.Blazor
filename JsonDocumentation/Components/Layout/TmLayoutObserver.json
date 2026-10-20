@@ -64,6 +64,12 @@
       "isRequired": false,
       "default": "Desktop",
       "description": "The mode rendered before the first measurement: static SSR, prerender and the first frame."
+    },
+    {
+      "name": "Breakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "The thresholds this observer classifies its width with. Null uses TmLayoutBreakpoints.Default (640 / 1024), so existing hosts do not change. Per instance only: stylesheets keep the shared TmBreakpoints literals."
     }
   ],
   "cssClasses": [

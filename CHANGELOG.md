@@ -2,7 +2,2387 @@
 
 ## 2.9.1 (unreleased)
 
+### Fixed
+
+- **TmOverlayPanel no longer takes a focus-restore id.** `RestoreFocusTargetId` was removed.
+  Escape returns focus to the anchor inside `overlay.js` (`anchor.focus({ preventScroll: true })`)
+  when focus would otherwise die. An outside click does not: the user clicked somewhere else.
+  Do not pass the old parameter.
+
+- **TmFilterBuilder focuses its own first field option.** Opening the picker no longer runs
+  `document.querySelector` through `eval`, so a second builder on the page focuses its own option.
+  Escape inside an open nested date picker closes that picker and leaves the filter editor open.
+
+- **TmMultiViewList view switcher is a radiogroup.** The group is named "View"
+  (`TmMvl_ViewSwitcher`). Exactly one radio is tabbable; ArrowLeft/Right/Up/Down change the view and move
+  focus, and those arrows no longer scroll the page.
+
+- **TmDataTable grid keyboard.** `KeyboardNavigation="Grid"` now keeps exactly one roving tabindex
+  across selection, detail, grouping, virtualization, editing and an empty table. Enter activates
+  the row once (cell key events no longer also reach the row), Space toggles selection without
+  activating, Home/End include the checkbox and expander columns, and focus follows the active cell.
+  Grid mode `aria-rowcount` now includes the header rows (the column header, and the filter row
+  when one renders), so the last body's `aria-rowindex` is never past the announced count.
+  Collapsing a group, hiding a column, or pressing End on the edit-action column keeps that
+  single tab stop; controls inside a cell (expander, checkbox, edit action, group toggle) are
+  `tabindex="-1"` so Tab leaves the grid instead of stepping into them.
+
+### Added
+
+- **Remaining opt-in presentation parameters.** All default `false` or to today's presentation.
+  `TmMultiViewList.TableCellLayout.Stacked` drops the subtitle column and renders its value under
+  the title (inner `.tm-mvl-cell-stack`; the `td` stays a table cell); `Inline` is unchanged. `TmFilterBuilder.Presentation` of
+  `Popover` or `Auto` opens the field picker and editor in a `TmOverlayPanel` anchored to Add
+  filter — `Auto` becomes a sheet on a narrow viewport, `Popover` stays a popover; `Inline`
+  (including PickersPage) stays in the document flow. `AllowSetDefault` shows "Set {name} as
+  default", persists through `IDataTableViewProvider.SetDefaultViewAsync`, reloads and then raises
+  `OnSetDefault`; the default view is `aria-current` with a visually hidden "Default view".
+  `ShowActiveViewName` puts the active view's name on the toggle (truncated at 16rem, full name in
+  `title`). `EditActionsMode.Footer` moves Save and Cancel into a following row whose cell spans
+  every rendered column; `Text` labels the in-row buttons. `GroupHeaderTemplate` and
+  `StatusVariantField` were already wired; their docs now say what they do. See
+  `docs/data-table-redesign.md`.
+
+- **Filter result preview.** `TmDataTable` and `TmMultiViewList` take `ShowFilterResultPreview`
+  (default `false`). When the inline filter builder renders, it shows how many records match the
+  current filters, including a valid filter still being edited: a `DataProvider` is asked with
+  `PageSize` 1 and the preview reads `TotalCount`, while in-memory data is counted with the
+  component's own filter rules. A standalone `TmFilterBuilder` takes `ShowResultPreview` plus
+  `ResultCountProvider` (`Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>`) directly.
+  Changes are debounced (300 ms) into one call, the text is pluralized (`TmFilterBuilder_ResultPreview`)
+  and announced in a `role="status"` region with `aria-live="polite"`. The region is in the document
+  as soon as both are set. While the first count is in flight the region shows a spinner and
+  "Counting…" (`TmFilterBuilder_ResultPreviewLoading`); a later refresh keeps the previous count and
+  sets `aria-busy`. A null count or a thrown exception leaves the region empty. The old static
+  "Preview" placeholder is gone — see Breaking / Migration.
+
+- **TmDataTable `AllowExportSelected`.** Opt-in export scope. With `Selectable="true"` the export
+  menu offers "All rows" (every row matching the current filter and sort) and "Selected rows (N)"
+  (the checked rows, sorted like the current view, with any row a later filter hid appended in
+  the order it was checked). The selected choice is `aria-disabled` while nothing is checked — still
+  focusable, so its description "Select rows to export them" is announced — and picking a scope
+  leaves the menu open. `ExportAsync(format)` still
+  exports every matching row; `ExportAsync(format, DataTableExportScope.Selected)` exports the
+  selection, and `OnExportCompleted` reports the scope on `DataTableExportResult.Scope` (default
+  `All`). The default menu is unchanged.
+
+- **TmDataTable `ColumnMenuMode.Menu`.** Opt-in kebab menu in each data column header
+  (`aria-label` "Column options: {column}", `aria-haspopup="menu"`, `aria-expanded`). Items follow
+  the column: Sort ascending / Sort descending and Clear sort (`Sortable`, clear only while the
+  column is sorted), Pin left / Pin right or Unpin, Group by this column (`Groupable`), Hide column
+  (`Hideable`, omitted for the last visible column) and Filter (`Filterable`, focuses that
+  column's filter control). `M` and `Alt+ArrowDown` (announced in `aria-keyshortcuts`) open it from
+  the focused header, `Escape` closes it, and the kebab
+  is `tabindex="-1"`. The expander, checkbox and edit-action columns get no menu, and the toolbar
+  gains no button, so `ToolbarMode="ContentOnly"` hides the toolbar but keeps the kebab. `ShowColumnMenu="false"`
+  hides the kebab. `None` (the default) is unchanged — the pin toggle and its `P` shortcut stay. See
+  `docs/data-table-redesign.md`.
+
+- **TmMultiViewList `ItemHref`.** With `CardActivation="StretchedLink"` a non-empty href renders the
+  card title as an anchor that covers the card; without one the title is a button that raises
+  `OnItemClick`. The card itself is no longer a tab stop. `Button` (the default) is unchanged.
+
+- **Wireframe:** the `TmDiagramEditor` stencil now mirrors the redesigned editor shell — header,
+  command row, shapes palette, Properties|Layers inspector with docked minimap and status bar on
+  desktop; collapsed palette rail and inspector drawer on tablet; compact header and
+  Select | Shapes | Properties | More action bar on mobile (Pan lives in More). New stencil props
+  `toolbarPreset`
+  (`full` | `viewer`, maps to `DiagramToolbarPreset`), `readOnly` and `showMinimap`; the existing
+  `layoutMode` prop (`auto` | `desktop` | `tablet` | `mobile`) now selects the variant (`auto`
+  always renders the desktop variant, whatever the element width). Existing wireframe documents
+  with a `TmDiagramEditor` element render the new desktop shell (exported PNG/SVG change).
+
+- **Core tokens: `--tm-paper`, `--tm-paper-ink`, `--tm-paper-ink-muted`, `--tm-paper-border`,
+  `--tm-paper-backdrop`.** Theme-invariant colours for content that represents a printed page
+  (diagram pages today; document pages and report previews can adopt them). They are LITERAL
+  light values declared only in `tokens.css` — deliberately NOT re-declared in `tokens-dark.css`,
+  because absence under the dark selector is what keeps the paper white in every theme; hosts
+  may rebrand them by targeting `:root`, `[data-theme="dark"]` and `.tm-dark` together.
+
+- **TmEditorShell: `ShowMobilePanelsToggle` parameter (default `true`).** The labelled
+  closed-state bar naming the hidden panels renders only while the parameter is true: a host
+  that renders its own mobile action bar (the F5 `TmMobileActionBar`, whose tiles reopen the
+  panels) sets it to `false`, giving the mobile panels sheet exactly ONE reopen path and
+  landing focus on the host's bar after the sheet closes (instead of the hidden shell toggle).
+
+- **TmDiagramToolbox: `CollapseCategoriesExceptFirst` parameter.** The mobile Shapes sheet
+  starts with only the first (General/basic) category expanded; the user's own expand/collapse
+  choices win afterwards.
+
+- **DiagramEditor review fixes (phase 6/7 mobile follow-up, plan cbb1964a fze-6).** Mobile
+  layout state: the editor keeps a per-session mobile snapshot (sheet + minimap collapse)
+  initialised to the X1 defaults, saved on every mobile exit and applied on every mobile entry —
+  mobile → desktop → mobile keeps the state the user left behind, while the desktop state in
+  between is untouched; `ApplyResolvedLayout` runs the exit branches before the entry branches,
+  so desktop → mobile → tablet ends with the palette railed and the inspector expanded.
+  `TmDiagramEditor.Tablet.razor.cs` writes the inspector flags only through
+  `SetInspectorOpen`. Minimap: the mobile default-hide now applies ONLY while the "⋯" toggle
+  exists (`MobileMinimapToggleAvailable = ShowToolbar && ShowMinimap && (Panels || View
+  group)`), so a `ToolbarGroups` selection without Panels/View keeps the overlay visible and a
+  Viewer preset with `ShowMinimap` keeps the map reachable; the viewport drag freezes the
+  pointerdown-time bounds/scale (render + client→svg mapping), captures the pointer
+  (`tmDiagramMinimap.capturePointer`) instead of ending on pointerleave, and clamps to the
+  frozen bounds; hidden layers' nodes/edges are excluded from the map and edge waypoints /
+  free ends / label anchors are included in the framed region; the collapse button moved into
+  a header strip (small title + button) that never covers the map, with state-specific
+  labels (`TmDiagramEditor_HideMinimap` / `ShowMinimap`), `aria-expanded` +
+  `aria-controls` on both collapse and reopen, and focus management (collapse → reopen button
+  on tablet / "⋯" trigger on mobile; reopen → collapse button). The mobile "⋯" menu closes
+  after Search / Minimap and refocuses its trigger; the action bar's first tile mirrors the
+  tool mode (Pan tile while panning, tapping returns to Select; Pan stays in "More" while
+  Select is active); the Shapes / Properties tiles are checked while the sheet is open on
+  their panel and tapping the active tile closes the sheet; the floating zoom pill reads
+  − | % | + | fit; the search panel's options row (all-pages + regex) wraps as one unit, the
+  regex toggle carries the `TmDiagram_UseRegex` accessible name and the checkbox is finger-sized
+  on a coarse pointer; the sticky Delete in the long-press actions sheet never lets items show
+  through below it (the drawer body's bottom padding gives way, the danger item carries the
+  safe-area inset); a selection with the sheet already open on the Layers tab keeps the tab and
+  snap (it switches to Properties only from a closed sheet or the Shapes tab); the shell
+  opening the Shapes side on mobile also opens the inspector, so all three sheet tabs exist;
+  when the shell's own panels toggle is hidden, the sheet's close hands focus to the action
+  bar (`tmDiagramEditor.focusFirstAction`). `TmEditorShell.ExtraOpen` now also requires the
+  resolved Mobile layout (the Extra tab is mobile-only); the closed-state toggle label names
+  the Extra panel too; `revealRectAboveSheet` waits for the sheet panel's snap animations
+  (`getAnimations().finished`, or computes the band top from the stage bottom − panel
+  offsetHeight), refuses to pan during a drag/pan/rubber-band/pinch and resolves false on a
+  ~500 ms timeout instead of hanging. The mobile "⋯" groups, the zoom pill and the minimap
+  overlay markup moved to `TmDiagramEditor.MobileChrome.razor.cs` (`.razor` length budget).
+
+- **DiagramEditor: public `DiagramImportException` / `DiagramImportError` for CSV/SQL import
+  failures.** `CsvParser`, the CSV generators and `SqlParser` throw the typed
+  `DiagramImportException` (deriving from `InvalidOperationException`, so existing catch blocks
+  keep working); the `DiagramImportError` enum pins explicit values (`Unknown = 0`, then
+  `CsvEmpty`, `CsvNoData`, `CsvMinColumns`, `MappingMissing`, `ColumnNotFound`,
+  `InputTooComplex`) and the dialogs map it to localized texts — `Exception.Message` stays an
+  English developer sentence and is never shown to end users. `SqlParser.Parse` enforces an
+  overall ~1 s deadline (Stopwatch, checked between matches and column lines; internal
+  overload takes a `TimeSpan` budget for tests) and a 512 KB input cap, `CsvParser.Parse`
+  shares the 512 KB cap.
+
+- **DiagramEditor: template thumbnail generation API.** The public `DiagramThumbnailOptions`
+  type (`Tempo.Blazor.Abstractions`, init-only setters, `Width`/`Height` defaulting to
+  300×200) and the `DiagramThumbnailSvgGenerator.Generate(document, options)` overload let
+  hosts render fitted 16:10 SVG thumbnails of any `DiagramDocument`; `Generate` validates the
+  viewport (`ArgumentOutOfRangeException` for non-positive `Width`/`Height`).
+
+- **DiagramEditor review fixes (phase 4 follow-up).** Connect arrows are finger-reachable on a
+  coarse pointer: the decorator pane renders per node, in paint order, the visible
+  resize/rotate handles (`g.tm-diagram-node-handles`), then the finger-sized port hit discs
+  (`g.tm-diagram-port-hits`), then the quick-connect arrow buttons in their own group
+  (`g.tm-diagram-connect-arrows`) — the rule is **buttons > gesture hit areas > visual
+  handles**. The arrows get a 44 px hit area on coarse pointers (`--tm-diagram-connect-hit`,
+  a `::before` inset) and the wrap offsets outward by `handle-hit/2 + gap` (the N arrow stays
+  centred horizontally and shifts straight up by the offset plus the rotate-hit size, so its
+  press area clears the rotate handle's hit circle); the JS transform sync keeps every
+  `[data-node-id]` group glued to the node during drags and hides the port hits and arrows
+  while a resize runs. The SQL/CSV import dialogs separate the debounced preview error
+  (polite `role=status` region, textarea `aria-describedby` + `aria-invalid`) from the
+  import-click failure (`TmAlert role=alert` only after Import); the CSV wording for
+  no-data/min-columns waits until the pasted text has two lines, a vanished mapped column is
+  cleared with a polite explanation (mappings survive a transient failed parse), and empty
+  mappings auto-map to headers matching the semantic field name or localized label
+  (fold-compare). The connect dialog owns its placeholder key, offers a "Search all shapes"
+  escape hatch outside the live region when the narrowed palette has no match, moves focus
+  into the grid on ArrowDown from search (`FocusAsync(preventScroll: true)` + scrollIntoView
+  `nearest`), clears its tile references when hidden, takes the column count from a single
+  source (`--tm-connect-cols`) and opens in the editor's resolved layout (no grid→list flash
+  on mobile). Template thumbnails draw no labels on a transparent 16:10 viewport fitted to
+  the node bounds (`xMidYMid meet`), return no thumbnail for node-less documents (the card
+  falls back to the category icon), respect an explicit `thumbnailUrl` from `index.json` and
+  load through `Lazy<Task>` caches; the built-in templates resolve by exact embedded resource
+  name (csproj `LogicalName`) and `DiagramTemplateRegistry.InitializeAsync` is thread-safe
+  (parallel callers await one load); a faulted cached load resets under its lock so the next
+  call retries instead of replaying the exception forever (the same for each provider's
+  `Lazy<Task>` catalog cache). `TmDiagramEditor` recents adopt host values only when
+  the host reference changes (a stale re-render can no longer clobber a just-added recent),
+  and the preview debounce is shared through an internal `DiagramPreviewDebouncer`. New keys:
+  `TmDiagramConnectDialog_SearchPlaceholder`, `TmDiagramConnectDialog_SearchAllShapes`,
+  `TmDiagramCsvImportDialog_ErrorTooLarge` (en/cs/sk/fr).
+
+- **DiagramEditor tablet: finger edge-drawing discoverability (phase 3 review fixes).** The
+  selected node's ports render invisible finger-sized hit circles (`.tm-diagram-port-hit`, same
+  `data-port-id`, sized by `--tm-diagram-handle-hit`) AFTER the transform-handles group, so the
+  port drag claims the press where they paint; the resize/rotate sessions veto through
+  `engine.touchPortAt` (memoized per event), so only one session claims a pointer. The hit
+  circles are pointer-active only on a coarse pointer — on desktop they stay inert (no shadow
+  over the mid-edge resize handles or the small visible ports). The occlusion rule is explicit:
+  a port only wins when the raw press target is the port/hit circle or an edge corridor over it —
+  a port buried under another control is covered. Connection points get no hit circle: a
+  stencil's connection points sit exactly on the resize handles (the default rectangle set is
+  4 corners + 4 midpoints + centre) — they stay reachable via the visible circle or an edge
+  corridor only. On a coarse pointer the n/e/s/w mid-edge resize hits do not render
+  (`data-has-ports` scope: only where the node renders port hits) and only the selected node's
+  ports show — no sticky hover (a `(hover: none)` query, so a hybrid laptop keeps its hover). Mobile (`ShowConnectArrows="false"`) renders no ports, connection points or hit circles
+  at all: no invisible dead zone on the touch surface.
+
+- **CI: `js-node-tests.yml` runs the Node lanes (`test:overlay`, `test:diagram-editor`,
+  `test:reporting-modules`, `test:document-editor`) on Node 24 for every push and pull request.**
+
+- **DiagramEditor tablet: drag a finger or a pen from a port or connection point to draw an edge
+  (same commit path as the mouse, `_commitEdgeDraw`).** Mobile keeps the connect arrow / Connect
+  dialog.
+
+- **DiagramEditor redesign — plan summary (phases 1–7).** `TmDiagramEditor` was rebuilt on the
+  core responsive primitives (`TmEditorShell`, `TmToolbar Overflow=Menu`, `TmOverlayPanel`,
+  `TmModal.MobilePresentation`, `TmMobileActionBar`, `pointer-drag.js`/`pointer-gesture.js`)
+  following the reference mockups: an explicit toolbar contract (`ToolbarPreset` /
+  `ToolbarGroups` / frozen `data-tm-group` values, phase 1), wave-0 bug/localization/a11y fixes
+  (phase 2), a tokenized visual layer aligned with the mockups (phase 3), the desktop restructure
+  onto header + one command row + status bar + tabbed inspector (phase 4, DI2/DI3), dialogs on
+  `TmModal` with the narrowed `TmDiagramConnectDialog` connect picker (phase 5, DI4), tablet with
+  touch gestures and the floating minimap (phase 6) and mobile viewing + light edits below 768px
+  (phase 7, G2 — resize/rotate, edges, layout and import stay tablet+). Host actions render
+  through the `HeaderStart` / `HeaderActions` slots (G9). The toolbar contract, `InspectorLayout`,
+  `MinimapPlacement` and the responsive scope are documented in
+  [docs/diagram-editor.md](docs/diagram-editor.md); every breaking DOM/CSS change is listed under
+  Breaking / Migration below.
+
+- **`TmDiagramEditor` mobile viewing and light edits (DiagramEditor redesign phase 7, G2).** Below
+  the 768px container band the editor renders the shell's mobile presentation: a non-modal bottom
+  sheet (peek/half/full snap points) holding the Shapes palette and the Properties | Layers
+  inspector, the core F5 action bar (Select | Pan | Properties tiles with an export-only "More"
+  overflow), a floating zoom pill over the canvas corner, the floating minimap, and the long-press
+  context menu as a shared F3 bottom sheet. Light edits on mobile: selection, text and style in
+  the properties, layer visibility/lock/active layer and "move to layer", delete, undo/redo and
+  tap-insert from the palette; resize/rotate, edge drawing, align/distribute, layout and import
+  stay tablet+. New `TmDiagramCanvas` parameters `ShowTransformHandles` and `ShowConnectArrows`
+  (both default `true`) let any host drop the reshaping or edge-drawing affordances where the form
+  factor forbids them. A selection opens the sheet peeked on the properties panel; a host-made
+  viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the
+  `Viewer` preset) — renders no action bar or panels sheet; the user's own Read-only toggle keeps
+  them (read-only panels).
+  Localization: `TmDiagramEditor_ShapesTab`, `TmDiagramEditor_ActionsSheetTitle` and
+  `TmDiagramEditor_ZoomControls` (en/cs/sk/fr).
+
+- **`TmDiagramConnectDialog` (DiagramEditor redesign phase 5, DI4).** The connect picker is its
+  own component: the source node's stencil set as the default palette, search over the registry,
+  "Show all" opt-in, recently-used-first ordering, roving arrow-key tile grid (no preselection),
+  localized stencil names, a mobile bottom sheet with plain rows and a Close footer button, and
+  focus return to the canvas. `TmDiagramEditor` hosts it and passes the source stencil plus the
+  canvas restore target. Dialogs of the editor now carry the foundation presentation contract:
+  `FooterLayout=Inline`, `TmModal.Subtitle` (CSV/SQL), `XLarge` template gallery with search and
+  category chips in one row, double-click/Enter create on template cards, two-column CSV mapping
+  rows with a sticky-header pinned-first-column preview, the SQL summary box with icon stat chips
+  and localized built-in template/category names via `TmDiagramTemplate_*` /
+  `TmDiagramTemplateCategory_*` keys (en/cs/sk/fr).
+
+- **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4, DI2/DI3).** The editor
+  renders through the core `TmEditorShell`: a header (page tabs on top per DI3, document title,
+  named panel toggles with visible labels, "⋯" view-settings menu), a single command row built on
+  the core `TmToolbar` (`Overflow=Menu`, `Priority`-driven overflow, visible labels below icons,
+  labelled `TmToolbarGroup`s carrying the frozen `data-tm-group` contract), a status bar with the
+  zoom controls and the Read-only toggle, a collapsible minimap card, and an inspector presenting
+  "Properties | Layers" tabs (new `InspectorLayout` parameter, `Stacked` opt-in) with a dedicated
+  Actions section. Docked panels resize/collapse through the shell. New parameters:
+  `InspectorLayout`, `ShowStatusBar`, `ShowTitle`.
+
+- **`TmDiagramEditor` explicit toolbar contract (DiagramEditor redesign phase 1).** Every toolbar
+  group now carries a stable `data-tm-group` attribute from the frozen set `history | clipboard |
+  tools | format | insert | arrange | search | panels | zoom | view | canvas-size | layout | export
+  | templates | import | readonly`, and visibility is decided in C# through the new `ToolbarPreset`
+  (`DiagramToolbarPreset.Full` default — today's look; `Viewer` renders only zoom, view, search and
+  export) and `ToolbarGroups` (flags, `null` = by preset) parameters. `HeaderStart`/`HeaderActions`
+  render slots open the first/last toolbar row to host actions. The contract is public API: hosts
+  (Modeling) key off `data-tm-group`/presets instead of positional CSS selectors on the toolbar's
+  internal DOM. `IsReadOnly` exposes the effective read-only state (see Breaking / Migration).
+  The `Viewer` preset still renders the document-title input (disabled while read-only — the
+  document name is a header element, not a toolbar group, so it intentionally stays outside the
+  group contract), while the search control received the standard toolbar-group chrome. The
+  Modeling preview hides it with `ShowTitle="false"`.
+
+- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` (renamed from `ExportSelectedOnly`; it filters the exported rows to the checked selection), `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation.
+
+- **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
+
+- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
+
+- **`TmMultiViewList.ViewSwitcherLabels`.** Default `IconsOnly` keeps today's icon buttons.
+  `IconsAndText` adds the localized Table, Card and List names. The radiogroup contract is unchanged.
+
+- **`TmDataTable.Appearance` and `TmFilterBuilder.Presentation`.** Both default to today's
+  look: `Plain` adds no card class, `Inline` keeps the filter editor in the flow (PickersPage
+  included). Opt in with `Card` or `Popover`. `Appearance=Card` is the opt-in for the redesigned
+  export item (icon, short label and format description), the "Add grouping" dropdown, the group
+  bar prefix and the no-pager summary `TmDataTable_TotalItems` (`{0} record` / `{0} records`).
+  The default no-pager summary stays `TmDataTable_ShowingItems`. Keep a custom line with
+  `PaginationInfoTemplate`.
+
+- **`TmDataTable.KeyboardNavigation`.** Opt-in `Grid` uses roving tabindex: one cell is
+  tabbable, arrows / Home / End / PageUp / PageDown move it, Enter activates the row once.
+  Default stays `Rows` (today's Tab-per-row). **Upcoming / Migration:** `Grid` becomes the
+  default in the next major. Keep today's behavior with
+  `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`. `TmMultiViewList` stays on row
+  navigation and has no grid parameter.
+
+- **`TmDashboard` documentation.** The redesigned dashboard (and widget selector) is now
+  documented in [docs/dashboard.md](docs/dashboard.md): the chrome parameters
+  (`Appearance`, `Title`/`Subtitle`/`HeaderStart`/`HeaderActions`/`ShowHeader`,
+  `ShowWidgetIcons`, `ShowWidgetDescriptions`, `WidgetHeaderActions`), `CloseOnSelect`,
+  the keyboard alternative and non-drag reordering, and the `dashboard.js` /
+  `pointer-drag.js` script requirements.
+
+- **`TmDashboard` post-review hardening and UX polish (the redesign plan's last two remaining
+  tasks).**
+
+  - Widget selector chips (mobile) are native `aria-pressed` toggle buttons — the same contract
+    as the desktop category sidebar — instead of `role=radio` buttons without the arrow-key
+    roving tabindex a radiogroup demands (hardening).
+  - `dashboard.js` `scrollWidgetIntoView` escapes the instance id through `CSS.escape` before it
+    joins the attribute selector (with the `tm-focus-trap.js` stub-DOM fallback), and documents
+    why the drop preview stays a JS-appended node: a Blazor-owned preview would need a JS→.NET
+    round-trip per pointermove and would re-render under an active pointer (hardening).
+  - Leaving edit mode via "Save changes" or "Cancel" now resets the keyboard grab state, so a
+    grab held during the exit can no longer paint the grabbed style in view mode (hardening).
+  - Adding a widget whose definition is wider than the grid (host typo, wider saved
+    `GridConfig`) clamps the instance to the grid's column count in
+    `FindNonOverlappingPosition` — the same clamp the resize and the drop commit already apply;
+    the clamp also covers the empty-dashboard early return (hardening).
+  - Widget titles clamp at TWO lines before the ellipsis: a 3-column KPI card at 1440 px
+    squeezed "Revenue KPI" to "Revenue …" although the header had room for a second line (UX).
+  - Chart axis/value/label text inside widget cards repaints at 20 viewBox units (≈ 10 px in
+    typical slots) — the fixed 600×400 chart viewBox scaled the 11-unit ticks to ≈ 6 px, which
+    was illegible. The override is scoped to `.tm-widget` and tunable through
+    `--tm-widget-chart-font-size`; standalone charts keep their tuned size (UX).
+  - The dashboard create/rename dialogs' disabled primary button (Create/Apply) swaps the global
+    0.5 opacity veil (white label at ≈ 1.4:1) for a legible muted state: soft primary fill with
+    the `--tm-color-primary-text` ink (UX).
+  - The widget selector's mobile sheet stacks its footer — hint above, full-width Done below —
+    so the hint no longer crowds the button (UX).
+  - Verified the indigo variant reaches the dashboard accents: the theme-matrix E2E now pins the
+    themed primary on the dashboard's Edit button in all four light/dark × default/indigo
+    combinations. (The residual dark-indigo ≈ dark-default impression is by design: dark paints
+    the pale `-400` primary step in both themes, and the categorical tile/chart colours are
+    theme-independent on purpose.)
+  - The f6 tablet captures are named for their real 900×768 viewport (`tablet-900-*.png`, was
+    `tablet-1024-*.png` — 1024 itself sits on desktop), and the selector E2E waits out the
+    overlay's 0.3 s fade before shooting: a mid-fade screenshot read as "the desktop dialog
+    lacks the tablet/mobile scrim", while the scrim and blur are identical at every width (now
+    asserted in the desktop test).
+
+- **`TmDashboard` short labels on the mobile edit-mode action bar (Y11 pattern).** The bar
+  tiles carry `TmDashboard_AddWidgetShort` / `TmDashboard_RenameShort` ("Add" / "Rename",
+  "Přidat" / "Přejmenovat", "Pridať" / "Premenovať", "Ajouter" / "Renommer") — at 320 px the
+  full "Ajouter un widget" / "Renommer le tableau de bord" labels needed three lines and were
+  cut by the two-line clamp; the desktop toolbar keeps the full wording. New localization keys
+  in all four resource tables plus `MockTmLocalizer`.
+
+- **`TmDashboard` F7b — the redesign plan's remaining tasks resolved.**
+
+  - Loading state (F2 UX §5.7): while the provider's first load is in flight the grid renders
+    two card-shaped `TmSkeleton` placeholders (`.tm-dashboard-skeleton-card`, 4 default rows
+    tall) with `aria-busy="true"` on the grid container and a localized sr-only "Loading"
+    status — the empty state (which would falsely claim there are no widgets) renders only
+    after the load answered.
+  - Error state (F2 UX §5.8): `IDashboardProvider` failures on the load path (dashboard list,
+    default dashboard, switcher selection) and the save path no longer crash the host. A soft
+    danger `TmAlert` renders above the grid (`tm-dashboard-error`) with a localized message and
+    a "Try again" action that re-runs the failed operation; a failed save keeps edit mode open.
+    New localization keys `TmDashboard_Loading`, `TmDashboard_LoadError`, `TmDashboard_SaveError`
+    and `TmDashboard_Retry` in all four resource tables plus `MockTmLocalizer`.
+  - Mobile rename: the compact edit mode's action bar gains a Rename entry (Add, Save, Rename
+    on the bar, Cancel overflows into the More sheet as before) that opens a rename dialog —
+    the desktop toolbar hosting the inline editor is hidden on a mobile layout, so rename was
+    unreachable there. The dialog's form is the Enter-to-apply contract, Escape/backdrop cancel.
+  - New token `--tm-dashboard-min-height: 37.5rem` (`tokens.css`): the G-6 follow-up — the
+    dashboard root's `min-height: 600px` literal is now `var(--tm-dashboard-min-height)` so
+    hosts can raise or drop the workspace floor.
+  - Category tile ink (F2 UX §5.11): the decorative widget icon tiles (dashboard and widget
+    selector) now paint their icon in
+    `color-mix(in srgb, var(--category-color) 75%, var(--tm-text-primary))`, so amber on its
+    12% tint stays readable in light mode (was ≈ 2.1:1) without changing the tile hue.
+  - Narrow-card widget header: an `@container tm-dashboard (width < 768px)` rule wraps
+    `.tm-widget-header-left` and drops `.tm-widget-move-group` onto its own row in compact edit
+    mode so the title regains the full width at 390px cards (markup unchanged).
+  - The CSS bundle was regenerated. DOM/tab order of the widgets already followed the visual
+    (Y, X) order since F3 (`WidgetLayout`), closing the last F2 coordination note.
+
+- **`TmDashboard` Fáze 7 — dialogs and the dashboard switcher on mobile (dashboard redesign
+  plan, phase 7), riding the F2/F3 foundation primitives.**
+
+  - The dashboard switcher menu (a `TmOverlayPanel`, the `TmDropdown` pattern) switched from
+    `MobilePresentation=Popover` to `MobilePresentation=Auto`: it stays the anchored popover on
+    desktop/tablet and presents as a bottom sheet titled with the localized "Dashboards" on a
+    phone. Focus returns to the switcher trigger on every close path (Done, Escape, backdrop).
+  - The delete-dashboard confirmation passes `TmDialog.Icon="trash-2"` (the destructive glyph)
+    and keeps `MobilePresentation=Auto` + `FooterLayout=Stacked`, so on the mobile sheet Delete
+    paints above Cancel (column-reverse) with ≥ 44 px targets.
+  - The switcher menu's default-dashboard row now explains WHY it cannot be deleted: a muted
+    full-width hint line (`span.tm-dashboard-menu-default-hint`, localized) under the "Default"
+    label instead of only the star marker. The hint is the row's LAST child (outside the inline
+    actions span, with `flex-wrap: wrap` on the row), so it wraps under the name instead of
+    squeezing it to zero width, and the select `menuitem` references it via `aria-describedby`
+    so screen readers moving through `role=menu` hear it. The 48px coarse-pointer footer
+    target uses `var(--tm-space-12)` instead of a raw `3rem`.
+  - New localization keys `TmDashboard_NameExample` ("e.g. Team overview" / "např. Týmový
+    přehled" / "napr. Tímový prehľad" / "p. ex. Vue d'équipe") and `TmDashboard_DefaultCannotDelete`
+    in all four resource tables plus `MockTmLocalizer`.
+  - The create dialog's name placeholder is now a concrete example (`TmDashboard_NameExample`)
+    instead of a repeat of the field label; its Cancel button is the outlined secondary variant
+    (foundation footer convention: Cancel secondary, Create primary; the sheet splits the inline
+    footer 50/50 with ≥ 48 px targets). The rename inline edit keeps the original
+    `TmDashboard_NamePlaceholder` key.
+  - New CSS class `tm-dashboard-menu-default-hint` in `_dashboard.css` (tokens only); the CSS
+    bundle was regenerated. The scoped 48px footer rule registers the deliberate
+    `.tm-btn _dashboard.css|_modal.css` pair in `UnconstrainedClassOwnershipTests`.
+
+- **`TmDashboard` F2 chrome redesign — the dashboard is redesigned around the reference
+  `dashboard--desktop.png`, and every part of that redesign is parameterized** (dashboard
+  redesign plan, phase F2). New parameters, all additive:
+
+  - `Appearance` (`DashboardAppearance.Plain | Card`, default `Plain`) — the chrome of the root
+    surface (see Breaking / Migration below; `Card` restores the pre-2.9.1 wrapping surface card
+    via the new `tm-dashboard--framed` class).
+  - `Title` — heading text overriding the current dashboard's name in view and edit mode.
+    Without a `Title` (and with an `IDashboardProvider`) the view-mode heading is visually
+    hidden (`tm-sr-only`), because the switcher trigger now shows the dashboard's name; the `h2`
+    stays in the DOM for screen readers and existing `.tm-dashboard-title` selectors.
+  - `Subtitle` — secondary line under the heading in view mode.
+  - `HeaderStart` — host content at the start of the header (breadcrumbs, back link).
+  - `HeaderActions` — host actions at the end of the view-mode header, rendered BEFORE the
+    Edit button so DOM order = tab order; not rendered in edit mode.
+  - `ShowHeader` (default `true`) — hides the whole toolbar in view mode; edit mode always
+    renders the toolbar (it carries Save/Cancel).
+  - `ShowWidgetIcons` (default `true`) — the widget header renders a 40px category icon tile
+    from `WidgetDefinition.Icon`, tinted with the category colour over the surface through
+    `color-mix` and the new global `--tm-category-tint` token (light 12%, dark 20%).
+  - `ShowWidgetDescriptions` (default `false`) — renders `WidgetDefinition.Description` as a
+    secondary line under the widget title.
+  - `WidgetHeaderActions` (`RenderFragment<WidgetInstance>?`) — a host slot in every widget
+    header (badge, "view all" link, period select), rendered before the collapse chevron in
+    view mode only; the host owns its content's accessible names.
+
+- **`WidgetDefinition.IsCollapsible` (default `true`)** in `Tempo.Blazor.Abstractions` — an
+  additive model property. `TmDashboard`'s collapse chevron now respects it: a widget registered
+  with `IsCollapsible = false` renders no collapse control.
+
+- New localization keys `TmDashboard_Default` ("Default" / "Výchozí" / "Predvolená" / "Par
+  défaut") and `TmDashboard_SwitcherAriaLabel` ("Dashboards: {0}" / "Nástěnky: {0}" /
+  "Nástenky: {0}" / "Tableaux de bord : {0}") in all four resource tables plus `MockTmLocalizer`.
+
+- The dashboard switcher menu's default-dashboard marker is now a visible text label
+  (`span.tm-dashboard-menu-default`, star icon + localized "Default") instead of a bare starred
+  icon announced through `role="img"`; the menu aligns to the START of the trigger and spans at
+  least its width (`MatchAnchorWidth`).
+
+- Entering edit mode moves focus to the "Add widget" button (previously focus fell to `<body>`
+  when the Edit trigger left the DOM); on a mobile layout the move is skipped silently because
+  the actions live in the mobile action bar.
+
+- **`TmDashboard` F4 — reordering without drag: compact edit mode and a keyboard alternative for
+  move and resize (dashboard redesign plan, phase F4; WCAG 2.1.1 / 2.5.7).**
+
+  - **Compact edit mode** (`tm-dashboard--compact-edit`, tablet portrait and mobile): the drag
+    handle and the resize handles do not render; each widget card grows **Move up / Move down**
+    icon buttons (`tm-widget-move-btn--up` / `--down`, ≥ 44 px targets, named for the widget they
+    act on through `aria-describedby` pointing at the card title) next to the existing Remove
+    button. Both moves swap the card's `(X, Y)` with its previous/next neighbour in the linear
+    `(Y, X)` order (DA2) and push overlaps when `GridConfig.AllowOverlap` is false — the
+    `WidgetInstance` model objects are reused, only their coordinates change. A freshly added
+    widget is briefly highlighted (`tm-widget--highlight`, guarded under
+    `prefers-reduced-motion`) and scrolled into view — on a 390 px layout the new card can land
+    below the fold, so `dashboard.js` gained a `tempoDashboard.scrollWidgetIntoView` helper the
+    component calls after the render that added the widget.
+  - **Keyboard grab mode (desktop)**: the drag handle (`span.tm-widget-drag-handle`) is now a
+    real `<button aria-pressed>` — Tab-reachable, with `aria-describedby` pointing at a shared
+    sr-only instruction line. Enter/Space (native activation) grab and drop; the arrow keys move
+    the grabbed widget one cell (clamped to the grid); Shift+arrow resizes one step, clamped to
+    `WidgetDefinition.MinWidth/MaxWidth/MinHeight/MaxHeight` (0 = unlimited; the grid width is
+    the width ceiling); Escape cancels and restores the pre-grab geometry. The entire move and
+    resize logic lives in C# — `dashboard.js` still supplies only raw mouse drag/resize cells.
+  - **Live announcements**: every grab, cell move, resize step, drop and cancel is announced
+    through a polite live region (`tm-dashboard-live-region`), e.g. "Widget: column 3, row 2,
+    4 × 3". New localization keys `TmDashboard_MoveUp`, `TmDashboard_MoveDown`,
+    `TmDashboard_DragHandleInstructions`, `TmDashboard_PositionAnnouncement`,
+    `TmDashboard_Grabbed` and `TmDashboard_MoveCancelled` in all four resource tables plus
+    `MockTmLocalizer`.
+
+- **`TmWidgetSelector` F6 redesign — desktop, tablet and the mobile sheet (dashboard redesign
+  plan, phase F6), following `widget-selector--{desktop,tablet,mobile}.png`.**
+
+  - New parameter **`CloseOnSelect` (default `true`)** on `TmWidgetSelector` and pass-through on
+    `TmDashboard` (DA1). With `false` the selector stays open: the added card flips to a green
+    "✓ Přidáno" badge, a `AllowMultiple` widget grows an added counter
+    (`TmWidgetSelector_AddedCount`, "Added ({0})"), a polite live region announces the addition,
+    and the dashboard still highlights/scrolls to the newest widget once the selector closes.
+  - New parameter **`LayoutMode` (`TmLayoutMode`, default `Auto`)** on `TmWidgetSelector` — a
+    forced value pins the presentation (including the mobile chip row and the bottom sheet) for
+    tests and embedded hosts.
+  - Mobile: the category sidebar is replaced by a horizontally scrollable **chip radio group**
+    (`role="radiogroup"`, chips with counts, `TmWidgetSelector_Categories` as the group label);
+    cards stack in one column with a ≥ 44 px plus in the right corner; the selector presents as
+    the F2 bottom sheet with a sticky footer and safe-area padding.
+  - Tablet keeps the sidebar and goes to two card columns. All selector breakpoints follow the
+    resolved `data-layout` (layout/container), never a viewport media query.
+  - Visual refresh: 56 px pastel category tiles (shared `DashboardCategoryStyles` `color-mix`
+    tint, contrast-safe in dark mode), `--tm-radius-card` card corners, plain-text category
+    counts, spaced size label ("4 × 3", no monospace), permanently visible plus indicator
+    (40–44 px under `pointer: coarse`), primary "Hotovo" footer button.
+  - New localization keys `TmWidgetSelector_AddedCount`, `TmWidgetSelector_AddWidgetAria`
+    ("Přidat {0}") and `TmWidgetSelector_Categories` in all four resource tables plus
+    `MockTmLocalizer`.
+
+- **Core: `TmContextMenu.FocusTriggerAsync()`.** The core context menu now exposes a public
+  `ValueTask FocusTriggerAsync()` that moves focus to the menu trigger (`preventScroll`) and treats
+  a trigger that already left the DOM as a no-op instead of throwing. Hosts call it after an action
+  replaced or removed the row the trigger lived on — the diagram layers panel uses it to focus the
+  moved row's "⋯" trigger after a menu-driven reorder and the neighbour's trigger after a delete,
+  paths where the built-in close-focus-restore cannot run.
+
+- **Core tokens: `--tm-data-table-cell-py` / `--tm-data-table-cell-px` are defined in
+  `tokens.css`.** `_data-table.css` already read them with `var(--tm-space-3)` /
+  `var(--tm-space-4)` fallbacks; the tokens are now declared with exactly those values, so
+  nothing renders differently, but hosts can tune `TmDataTable` cell density by overriding the
+  two tokens on `:root` (or on a wrapper). The strict CSS token audit no longer counts them as
+  undefined.
+
+- **TmEditorShell: optional `Extra` / `ExtraTitle` slot** — a third tab of the mobile panels
+  sheet after `Right` (opens and closes with the right panel, selected through
+  `ActiveMobilePanel = EditorShellPanel.Extra`; Sheet presentation only, ignored on
+  desktop/tablet and by the Tabs presentation). New enum value `EditorShellPanel.Extra`.
+  Backward compatible: without `Extra` the sheet is unchanged. `TmDiagramEditor` uses it for the
+  flat mobile Shapes | Properties | Layers tabs (X2).
+
+- **TmDiagramPropertiesPanel / TmDiagramLayersPanel / TmDiagramToolbox: new `ShowTitle`
+  parameter (default `true`).** The editor passes `false` where a tab or sheet tab already names
+  the panel (no duplicate heading inside the mobile sheet); standalone hosts are unaffected (U4).
+
+- **TmDiagramEditor: new `MobileSheetInitiallyOpen` parameter (default `false`)** — the opt-out
+  that restores the pre-2.9.1 mobile open-on-load sheet (see Breaking / Migration).
+
+- **`TmDropdown.OutlineTrigger`.** Renders the trigger as an outlined button
+  (`tm-btn tm-btn-outline`) instead of the default stealth trigger — the data-table toolbar's
+  export dropdown uses it so the trigger reads as a button inside the row.
+
+- **`TmSigningFormRunner` autosave debounce and `TmModelingEditor` loading delays run on an
+  injectable `TimeProvider`.** `AddTempoBlazorSigning` / `AddTempoBlazorModeling` register
+  `TimeProvider.System` with `TryAddSingleton` (a host that pinned its own clock keeps it), so a
+  consumer or test drives the delays through a `FakeTimeProvider` instead of sleeping; without a
+  registration both components fall back to `TimeProvider.System`.
+
+- **`TmActivityComments` can now report its draft state to the host page — the hook behind
+  dirty-guard dialogs.** A host that must ask "discard your changes?" before a refresh/retry
+  could not see a half-written comment: the editor state is private and the existing events fire
+  only after the comment is submitted. Four consumer-facing additive members close the gap (the capability
+  was driven by a concrete consumer — an outage-management consumer page, whose guard needs
+  to see the draft before reloading):
+  the new `TmCommentDraftState` record in `Tempo.Blazor.Abstractions` (`IsEditorOpen`,
+  `EditingCommentId`, `HasUnsavedContent` — flags only, never the raw draft text), the new
+  `[Parameter] EventCallback<TmCommentDraftState> OnDraftChanged`, which fires ONLY when the state
+  value actually changes (value-equality dedup — never once per keystroke, so wiring the callback
+  does not re-render the parent while the user types), the new `public bool HasUnsavedDraft`
+  property for polling the current state at any time (e.g. from a refresh/retry guard), and the
+  new `public Task DiscardDraftAsync()` for the consumer path after the user confirmed the
+  discard in the host's OWN dialog — it closes the open editor (new comment or inline edit),
+  clears its content and is a deliberate no-op when nothing is open. Semantics: a new comment
+  counts as unsaved once its content is not effectively empty; an edit of an existing comment
+  counts as unsaved only once its content differs from the comment's original body — opening an
+  edit and leaving it untouched is not a draft. Consumers compiling against the previous version
+  behave identically without wiring `OnDraftChanged`; the only behaviour adjustments are the three
+  fixes recorded under Fixed above (starting an edit closes the new-comment editor; the Add button
+  is hidden while an edit is open; effectively-empty markup is not submitted as a new comment).
+  Test seam: new `SetEditorContentForTestAsync(string)` (awaits the draft notification); the
+  existing void `SetEditorContentForTest` keeps its signature and now also raises
+  `OnDraftChanged` (fire-and-forget). No new user-facing strings were added.
+
+- **`TmFocusScope.NoteOpenerOnMount`** (advanced, default `false`): set when the scope's `Active`
+  flips true only after its content has mounted (e.g. behind a promote/gate), so the opener is
+  noted before content autofocus — a surface whose gate releases `Active` after its content child
+  has already autofocus-focussed a field then restores the focus to the trigger on close instead
+  of to that dying field. The note is sent once per open and never suppresses the trap itself: a
+  scope that is `Active` on the same first parameter set (an inline drawer, a plain scope)
+  activates as usual. The library's gated owners (`TmModal`, `TmDialog`, `TmDrawer`,
+  `TmLightbox`, `TmCommandPalette`, `TmKeyboardShortcutsHelp`, `TmGanttImportDialog`) set this
+  themselves; hosts rendering `TmFocusScope` behind their own mount-then-activate gate can opt in.
+
+- **`TmSelect.PlaceholderSelectable`** (bool, default `false`): when `true` (and `Placeholder` is
+  set), the placeholder renders as a selectable — not disabled — `<option value="">` mapped to
+  `default(TValue)` (typically `null` for nullable types), giving users a one-click "clear the
+  selection" affordance without adding a null entry to `Options` themselves. The default `false`
+  keeps the placeholder disabled exactly as before. Two documented caveats: a selectable
+  placeholder is a real empty choice, not a name for the control — it is no longer used as the
+  `<select>` aria-label, so set `Label` to keep an accessible name; and with `Required="true"`
+  picking it submits the empty value, which native validation counts as missing.
+
+- **`TmWorkflowDesignerCanvas` works on touch, and every drag has a keyboard alternative.** The
+  private document mouse listeners are gone; `workflow-designer.js` now runs three delegated
+  `pointer-drag.js` sessions plus `pointer-gesture.js`: states drag with a finger immediately (a
+  canvas owns its surface, no long-press — a tap still selects), the empty canvas pans with one
+  finger, two fingers pinch-zoom around their centre (the first finger's drag hands over and rolls
+  back the moment the second finger lands, committing nothing), ctrl+wheel zooms around the cursor,
+  and a node dragged against the viewport edge auto-scrolls the page (`createAutoScroller`), with
+  the node re-positioned under the stationary finger on every applied frame. Escape, pointercancel
+  and a mid-drag unmount restore the start transform/viewBox VERBATIM and commit nothing. For the
+  keyboard: states are `role="button"` tab stops with a roving tabindex inside the canvas group —
+  Tab reaches them, the arrows move the focus, Enter selects (Space on keyup, exactly once),
+  Delete removes the focused state, and **Alt+arrows move the node one grid step through the same
+  commit path as the drag**, announced on a `role="status"` live region ("Draft moved to 60, 200").
+  Shift+F10 (or the ContextMenu key) opens the context menu on a focused state — a right-click
+  opens the same menu and cancels the gesture in flight — whose new
+  **"Connect to…"** entry lists the other states — the non-drag alternative to dragging from a
+  port — and the new overlay **+ / − zoom buttons** are the single-pointer alternative to the
+  pinch (WCAG 2.5.7). The menu opens with the focus on its first item (the arrows/Home/End rove
+  through it via `tm-menu-nav.js`), Escape closes it and returns the focus to the state, and the
+  Connect-to switch keeps the focus inside the menu. Keyboard Delete removes the focused state and
+  hands the roving focus to the neighbouring state (the zoom buttons when the last one goes). The
+  port drop is hit-tested with `document.elementFromPoint`, so the
+  transition lands on the state under the finger even though the pointer was captured by the port.
+  Localization keys `TmWorkflowDesignerCanvas_EditProperties/_DeleteState/_DeleteTransition/
+  _AddInitialState/_AddState/_AddFinalState/_ConnectTo/_StateLabel/_InitialState/
+  _IntermediateState/_FinalState/_StateMoved/_StateDeleted/_ZoomIn/_ZoomOut` (en/cs/fr) replace
+  the hardcoded menu strings.
+
+- **`pointer-gesture.js` — the shared multi-pointer module: `attachPinch` (two-finger pinch/pan)
+  and `createAutoScroller` (edge auto-scroll), with ctrl+wheel zoom.** Multi-pointer gestures now
+  have the same single home as drags. `attachPinch` tracks the first two touch pointers by id
+  (capture per finger, a third finger ignored), starts on the second finger, reports the scale
+  relative to the gesture start (clamped to `minScale`/`maxScale`) with the finger centre and its
+  pan, and commits exactly once when the count drops below two; `pointercancel`, `Escape`
+  (document capture phase, `stopPropagation` — a lone finger leaves the key to the surrounding
+  dialog) and `detach` roll back through `onCancel` and never commit. ctrl+wheel (trackpad pinch)
+  zooms around the cursor with `scale = Math.exp(-deltaY / 100)` — a non-passive listener,
+  `preventDefault` only while ctrl is held, one `onEnd` debounced 150 ms after the last tick.
+  `createAutoScroller` is the spreadsheet-canvas edge auto-scroll made generic: within 36 px of a
+  container edge it scrolls up to 28 px per frame, driven by `update(x, y)` from a drag's `onMove`
+  and stopped from `onRelease`, with cumulative `scrolledX`/`scrolledY` and an `onScroll` hook that
+  re-hit-tests the drop target. `pointer-drag.js` stays single-pointer: the second finger never
+  breaks an active drag by itself — the host hands over by calling `drag.cancel('pinch')` from the
+  pinch's `onStart`. A pinch must always ship a single-pointer alternative (zoom buttons,
+  WCAG 2.5.7); see "Multi-pointer gestures" in `docs/touch-interaction.md`. Not breaking; no
+  consumer yet — the workflow designer adopts it in its own plan.
+
+- **`attachKeyboardMove` accepts `{ shift: true }` and reports `step.shift` for Alt+Shift+Arrow
+  (the keyboard resize alternative, e.g. growing a Scheduler event).** Without the option
+  Alt+Shift+Arrow stays ignored and unprevented; Ctrl/Meta chords stay ignored either way; the
+  plain Alt+Arrow step reports `shift: false`. Not breaking.
+
+- **`GanttHelper.GetTodayOffset(timelineStart, pixelPerDay, today)` overload** — pass the
+  user-zone today so a custom today line lands where the host's zone says "now" is; the existing
+  two-argument call keeps using the machine's `DateTime.Today`.
+
+- **User time zone plumbing: `ITmUserTimeZone` (default since this release, see Breaking /
+  Migration above).** The scoped `ITmUserTimeZone` (one browser read per circuit, shared by every
+  consumer) and the private `TmUserTimeProvider` clock over it power relative time, the Scheduler's
+  `ResolveTimeZone()` fallback and the Gantt's "today". Never replace the app-wide
+  `TimeProvider`: Kestrel and cookie authentication are singletons that consume it, so a scoped
+  `TimeProvider` fails the host under `ValidateScopes`. On WebAssembly `ITmUserTimeZone.Zone` is the
+  runtime's local zone immediately (it already is the browser's zone; `InvariantTimezone` must stay
+  false, the default). On Blazor Server the library reads
+  `Intl.DateTimeFormat().resolvedOptions().timeZone` once per circuit after the first interactive
+  render (new `tm-user-zone.js` module), resolves it with `TimeZoneInfo.FindSystemTimeZoneById` and
+  falls back to UTC for an unknown id; during prerender the zone stays UTC/unresolved. The
+  relative-time components (`TmTimeline`, `TmActivityTimeline`, `TmActivityComments`,
+  `TmNotificationBell`) re-render once the zone arrives, and on Server those four trigger the
+  browser probe from their first interactive render — a page with none of them on screen must call
+  `ITmUserTimeZone.SetZone` to get a resolved zone. `SetZone` also lets a host profile setting win
+  over the browser value. Nothing ticks the stamps — the host re-renders as
+  before. The manual
+  registration snippet in `docs/localization-plurals.md` (scoped formatter over your own lazy
+  `TimeProvider`) stays valid for hosts that prefer to own the plumbing.
+
+- **`TmEditorShell.MobileSheetSnapPoints` (C8).** The mobile panels sheet no longer hard-wires its
+  half/full snap pair: a host passes the fractions of the shell's stage the sheet snaps to
+  (ascending, `0–1`; `MobileSheetSnapIndex` indexes the list, 0 = the lowest). Invalid values are
+  dropped and the list is sorted and deduplicated with the `TmDrawer` rules; an empty result falls
+  back to the default `[0.5, 1.0]`. The lowest snap also drives the canvas reserve, so the covered
+  fraction stays scrollable into view with custom snaps. On a short stage the 14rem floor
+  (`--tm-editor-shell-sheet-min-block`, overridable) now applies to the whole sheet panel — header,
+  tabs and body — capped at the stage height: at 390×520 the half snap used to leave ~40px of body.
+
+- **Toolbar non-button items: `TmToolbarItem` (F14/C1).** A toolbar can now hold controls that are
+  not buttons — a `TmSelect`, `TmColorPicker`, `TmToggle`, a custom dropdown — and they leave the
+  bar exactly like a `TmToolbarButton`. The `TmToolbarItem` wrapper is the measured item
+  (`data-tm-toolbar-item` + `data-rank` + `data-pin`, one item in `tm-toolbar.js` even with nested
+  content): it collapses whole (out of flow, invisible, `inert`), so its width stays measurable and
+  widening brings it back. In the "More" menu an item is offered as **plain menu entries — never a
+  free template** (a select inside `role="menu"` is invalid ARIA): either one entry
+  (`MenuLabel` + `OnMenuInvoke`, with optional `MenuIcon` and `MenuKeepOpen` — typically opening the
+  full control in a dialog or sheet while the menu stays open under it), or a labelled group via
+  `MenuItems` (the entries render as one `role="group"` section named by `MenuLabel`, checkable
+  entries included, in the written order). `Priority` is the same overflow rank a button has;
+  `OverflowOnly` renders only the hidden position marker and lives only in "More"; an item collapses
+  only when it offers something in "More" — `MenuItems` with entries, or a non-empty `MenuLabel`
+  bound to an `OnMenuInvoke` handler; without either it has no menu representation and never leaves
+  the bar (it behaves as `Pinned`). `Disabled` disables the "More" entry/entries. A `TmToolbarButton` nested in
+  an item never registers twice. Note for hosts: `MenuItems` is compared **structurally** when the
+  toolbar decides whether to recompute — a fresh-but-equal list per render is not a change, so
+  rebuild it whenever the rendered state changes (a reference comparison would loop the recompute).
+  The entries need unique `Id`s (or unique labels — the label is the fallback key the menu focuses
+  by).
+
+  ```razor
+  <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Text tools">
+      <TmToolbarItem MenuLabel="Font size" Priority="ToolbarButtonPriority.Secondary" MenuItems="@_sizes">
+          <TmSelect TValue="int" @bind-Value="_fontSize" Options="@_sizeOptions" />
+      </TmToolbarItem>
+      <TmToolbarItem MenuLabel="Text colour" OnMenuInvoke="@OpenColourDialog" MenuKeepOpen="true">
+          <TmColorPicker @bind-Value="_colour" />
+      </TmToolbarItem>
+  </TmToolbar>
+  ```
+
+  A text-entry control (a native `select`/`input`) inside an item stays **its own Tab stop** — the
+  toolbar's arrow keys visit the item's first non-text-entry focusable instead. Internally the
+  toolbar now ranks any `IToolbarOverflowItem` (`TmToolbarButton` unchanged in behaviour).
+
+- **`TmToolbarButton.PreserveFocus` (F14/C4-a).** When `true`, pressing the button with a mouse, pen
+  or finger does not move focus to it — the `pointerdown`/`mousedown` defaults are prevented — so an
+  editor's text selection (and caret) survives a formatting command. Keyboard activation (Enter/
+  Space) and the "More" menu entry are unchanged. This is the core contract the DocumentEditor and
+  DiagramEditor toolbars need for their formatting commands; a host-splatted `aria-pressed` and all
+  other button parameters compose with it. Default `false` (existing buttons keep focus, nothing to
+  migrate).
+
+- **Toolbar groups: `TmToolbarGroup`, and group headings in the "More" menu.** Buttons can now be
+  grouped into a `TmToolbarGroup`:
+
+  ```razor
+  <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Diagram tools">
+      <TmToolbarGroup Label="Edit">
+          <TmToolbarButton Icon="@IconNames.Undo" Text="Undo" />
+          <TmToolbarButton Icon="@IconNames.Redo" Text="Redo" Priority="ToolbarButtonPriority.Secondary" />
+      </TmToolbarGroup>
+      <TmToolbarDivider />
+      <TmToolbarButton Icon="@IconNames.Save" Text="Save" Priority="ToolbarButtonPriority.Pinned" />
+  </TmToolbar>
+  ```
+
+  On the bar the group is the layout wrapper the measurement flattens (`data-tm-toolbar-group`):
+  its buttons take room individually and still collapse on their own, exactly like the raw
+  `role="group"` wrapper this replaces. With `Label` set, the wrapper is a real `role="group"` with
+  an accessible name; without one it stays a layout-only wrapper with no role. When the group's
+  buttons collapse into the "More" menu (of the toolbar or the mobile action bar), they keep the
+  group: each contiguous run of items of one group renders as a `role="group"` section named by the
+  group's label, with a visible but `aria-hidden` header, and adjacent runs are divided by a
+  `role="separator"` (never leading, never trailing). The written order is the menu order — grouping
+  never reorders, so a group interrupted by an ungrouped button renders as two runs around it.
+  The arrow keys, Home/End and typeahead cross the sections without stopping on a heading or a
+  divider, and the initial focus stays on the first enabled menu item. The shared action model grew
+  the same concept for hand-built lists: `TmActionItem.Group` (the stable run key) and
+  `TmActionItem.GroupLabel` (the section's name, read from the first item of a run). Renaming a
+  group re-labels its open menu section immediately. The wireframe editor gained a matching
+  "Toolbar Group" stencil (a dashed group frame with the label).
+
+- **Toolbar and action-surface toggle state (F12/C2): `TmToolbarButton.Pressed` and
+  `TmActionItem.Checked`.** A toolbar button can now be a toggle: `Pressed` (`bool?`, default
+  `null` = a plain button with no `aria-pressed`; `true`/`false` render `aria-pressed` and the
+  pressed look — subtle primary fill, primary ink and an inset primary ring that clears 3:1 in
+  both themes) and `PressedMixed` (`bool`, renders `aria-pressed="mixed"` for a toggle whose
+  state is `false` — e.g. Bold over a partly bold selection; mixed paints ring-only, a
+  transparent background with the same inset ring, so a partly-on control reads apart from a
+  pressed one — and hover restyles neither state like a plain control). Both states survive
+  forced colors (Windows High Contrast): pressed paints the `SelectedItem` fill with
+  `SelectedItemText` ink, mixed keeps the ring-only distinction (`Canvas` background, the
+  `SelectedItem` ring). The host owns the state and flips
+  it in `OnClick`. When a pressed button collapses into the toolbar's "More" menu, its entry is a
+  `role="menuitemcheckbox"` with the matching `aria-checked` and a check-mark slot (Check when
+  on, Minus when mixed, empty when off) instead of a plain `menuitem` — activating it still
+  closes the menu (the close-before-invoke contract) and toggles. In a menu that offers
+  checkable entries, plain entries are indented by the check-mark slot, so every label starts at
+  the same left edge. The same model is exposed by
+  the shared action model: `TmActionItem.Checked` (`bool?`) and `CheckedMixed` (`bool`) render
+  `TmMobileActionBar` tiles with `aria-pressed` and checkable entries in its "More" menu. Radio
+  modes (`menuitemradio`) are deliberately not part of this. The sheet's initial-focus selector
+  now names `menuitemcheckbox`/`menuitemradio` beside `menuitem`/`option`, so a sheet whose
+  first entry is checkable focuses the entry, not the header Done. The wireframe
+  `TmToolbarButton` stencil gained a `pressed` prop that draws the highlighted button.
+
+  ```razor
+  @* before: a host could only splat the attribute — the bar button announced it,
+     the "More" menu entry stayed a plain menuitem *@
+  <TmToolbarButton Icon="@IconNames.Hand" Text="Pan"
+                   aria-pressed="@(_panPressed ? "true" : "false")" />
+
+  @* after: the parameter drives the bar button AND the "More" menu entry *@
+  <TmToolbarButton Icon="@IconNames.Hand" Text="Pan"
+                   Pressed="@_panPressed" OnClick="@(() => _panPressed = !_panPressed)" />
+  ```
+
+- **`TmContextMenu`, `TmSplitButton` and `TmNotificationBell` opt into the shared mobile bottom
+  sheet (F11).** All three render `TmOverlayPanel` and kept the anchored popover at every width;
+  each now carries two additive parameters (default behaviour is unchanged, nothing to migrate):
+  `MobilePresentation` (`PanelPresentation`, default `Popover` — `Auto` presents the shared
+  content-height bottom sheet on a mobile viewport and the anchored popover otherwise, a forced
+  value renders that presentation without measuring) and `SheetTitle` (`string?`, names the sheet
+  header; `null` falls back to new localized defaults `TmContextMenu_SheetTitle` ("Menu" /
+  "Nabídka" / "Menu"), `TmSplitButton_SheetTitle` ("More actions" / "Další akce" / "Autres
+  actions") and `TmNotificationBell_SheetTitle` ("Notifications" / "Oznámení" / "Notifications")).
+  There is no sheet logic in the components — the same `TmDrawer Position=Bottom` primitive every
+  anchored panel composes (title + Done in the header, Escape/backdrop/swipe dismiss, focus back
+  on the trigger). Sheet-mode details: the menus' `role="menu"` moves onto the sheet content
+  wrapper, menu items become full-width rows flush with the sheet header and 44px tap targets on
+  coarse pointers, and the bell's in-panel header title is dropped inside the sheet (it would
+  duplicate the sheet header) while its filter/mark-all actions stay reachable and the popover's
+  400px list cap is not inherited by the content-height sheet. The popover presentation keeps its
+  markup — the bell stays named by its visible in-panel title, and the two menus gain only the
+  `aria-label` that `TmOverlayPanel` already derives from `Title` (the same contract
+  `TmDropdown` has had since F3).
+
+  ```razor
+  @* opt-in: bottom sheet on a phone, popover on desktop *@
+  <TmContextMenu MobilePresentation="PanelPresentation.Auto" SheetTitle="Row actions">…</TmContextMenu>
+  <TmSplitButton Text="Save" MobilePresentation="PanelPresentation.Auto">…</TmSplitButton>
+  <TmNotificationBell MobilePresentation="PanelPresentation.Auto" />
+  ```
+
+- **`docs/redesign-foundation.md` maps the redesign foundation.** One page links the
+  contracts this release introduced (tokens, layout, sheet, focus scope, overlays,
+  toolbar overflow, the mobile action bar, the editor shell, pointer drag, plurals
+  and relative time) instead of restating them, and lists the follow-ups that are
+  deliberately not in this release.
+
+- **Additive core extensions (F8).** Every parameter defaults off. The shortcuts dialog's title gains a
+  stable `id` and the dialog an `aria-labelledby` pointing at it, the palette's result list gains an
+  `aria-label`, and the copy button's accessible name is localized — accessibility fixes, documented
+  under Changed above; everything else keeps its markup.
+  `TmKeyboardShortcutsHelp.Description` renders a subtitle under the title, wrapped with the title in a
+  heading group that exists only when a description is set. `TmKeyboardShortcut` gains an optional
+  `KeySeparator` (default `+`), so a pair like "Arrow Up / Arrow Down" stays two keys instead of being
+  split into a chord; a separator other than `+` renders the localized "or" between the keys.
+  `TmCopyButton.ShowLabel` renders the localized Copy/Copied text beside the icon (both labels share
+  one grid cell, so the button keeps its width; a polite status announces "Copied"); the accessible
+  name stays "Copy to clipboard". `TmCommandPalette.GroupByCategory` renders each category as a
+  labelled `role="group"` (the divider is a CSS border), and `SplitShortcuts` renders one `kbd` per key. `TmSignatureCapture.ClearButtonPlacement`
+  (`Actions|Overlay`, default `Actions`) moves the same clear button into the top-end corner of the
+  surface. A segmented control is a convention, not a component
+  ([docs/segmented-control.md](docs/segmented-control.md)): content switching uses `TmTabs Variant=Pill`,
+  a value uses `TmRadioGroup.Appearance` (`Radio|Segmented`, default `Radio`). Seventeen lucide names
+  the redesign plans share (`tablet`, `panel-left`, `group`, `magnet`, `scan`, `corner-up-left`, …)
+  now render as built-in icons.
+
+- **`pointer-drag.js` — the one shared pointer-drag helper** (`_content/Tempo.Blazor/js/pointer-drag.js`,
+  F7): `attach(el, { threshold, longPressMs, selector, onStart, onMove, onEnd, onCancel, onRelease })`
+  with pointer capture by `pointerId`, a movement threshold, touch long-press that keeps scrolling
+  working, cancel on Escape / `pointercancel` / `lostpointercapture` / a missed mouse-up / `detach()`,
+  `touch-action` guidance (`.tm-touch-drag-handle`, `.tm-pointer-dragging`), one-shot click
+  suppression, `prefers-reduced-motion` reported to every callback, and per-instance state so several
+  components drag at once. `tm-editor-shell.js` (the F6 panel resizer) and `scheduler.js` (event resize,
+  B13: touch and pen now work, handles grow on coarse pointers) run on it. Every adopter must ship a
+  non-drag alternative (WCAG 2.5.7, `Alt`+arrows): see [docs/touch-interaction.md](docs/touch-interaction.md).
+- **`Loc.Plural("Key", n)`** — grammatical plurals from CLDR rules (`TmPluralRules`: cs/sk
+  one-few-many-other, pl, fr one-many-other, en one-other) over `Key_One/_Few/_Many/_Other`, then
+  `Key_Other`, then the plain key — and the plain key is used only when no family exists anywhere.
+  `ITmLocalizer.Culture` and `ITmLocalizer.TryGetString` are default interface members, so an existing
+  implementation still *compiles*. It does not keep working unchanged when it delegates: a class that
+  forwards the indexer to the built-in localizer and overrides only the plain key is bypassed, because
+  `TryGetString("Key_One")` reads the shipped family through that indexer. Such a localizer must
+  override the family keys `_One/_Other`, plus `_Few`/`_Many` where its language needs them. A
+  null `Culture` (what a mocking proxy returns for the unimplemented member) falls back to
+  `CurrentUICulture` instead of throwing. A host class that already declares a public `Culture` or
+  `TryGetString` now implicitly implements the new members.
+- **`ITmRelativeTimeFormatter`** (Abstractions) with the default `TmRelativeTimeFormatter`
+  (`Tm_Time_*` in en/cs/fr, injectable `TimeProvider`, explicit time zone): "právě teď", "před 5 min",
+  "včera v 16:20", "zítra v 9:00", "za 5 dní", an absolute date from a week on (B19).
+  `TmRelativeTime.Resolve` is public: every component — including split packages, which call
+  `AddTempoBlazor()` and cannot see internals — resolves the formatter through this one helper
+  (registered `ITmRelativeTimeFormatter`, else the default over the component's localizer and clock)
+  instead of copying the fallback.
+- **Demo: new `/localization` page** with a count stepper and presets (0/1/2/5/21/22/25/1000000) that
+  shows every shipped plural family, the culture and the CLDR category for the count, and a
+  relative-time stamp; the demo language switcher now offers FR alongside EN/CS.
+
+- **Overflow toolbar (F4).** `TmToolbar.Overflow` (`None|Menu`), `Labels`
+  (`Auto|Icons|IconsWithText`), `OverflowLabel`, `AriaLabel` and `OverflowPresentation`;
+  `TmToolbarButton.Priority` (`Primary|Secondary|OverflowOnly`) and `LabelPosition`
+  (`Inline|Below|Hidden`). **`ToolbarButtonPriority.Pinned`** (appended as the last member, so existing values keep
+  their numbers) never moves into More — it maps to `ActionOverflow.Never` and is measured as fixed width (the
+  trailing Save / primary call to action; the demo ribbon pins Save). A layout wrapper marked
+  `data-tm-toolbar-group` (or `role="group"`) keeps its buttons individually collapsible; the order of record is the
+  DOM order `tm-toolbar.js` reports (`OnFitChanged(maxVisible, orderedIds)`); a divider that separates nothing is
+  hidden (`data-tm-divider-redundant`). The buttons that do not fit move into a More menu — the same shared
+  menu host as the F5 action bar, a bottom sheet on a phone — lowest priority first, `OverflowOnly`
+  always there; render order stays the written order. `tm-toolbar.js` measures how many buttons
+  fit (rAF-coalesced, signature dedup) and generalises the DocumentEditor's `toolbar-overflow.mjs`
+  (the editor migrates in its own plan). See [docs/toolbar.md](docs/toolbar.md).
+- **`TmActionItem.Overflow`** (`Auto|Never|Always`) pins an action to the bar or to the More
+  menu independently of `Priority`, and `TmActionItem.Danger` tints its menu entry; the shared
+  `ActionOverflowLayout.Partition` honours the pins for both the action bar and the toolbar.
+- **Menu keyboard for every `role=menu` surface.** `tm-menu-nav.js`, attached by
+  `TmOverlayPanel` to each `Role="menu"` panel (popover or sheet): ArrowUp/ArrowDown/Home/End
+  roving over the enabled items, typeahead (diacritic- and case-insensitive) and a roving tabindex —
+  `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both overflow menus get the keys from the panel. A menu
+  opened from the keyboard also needs its first item focused: `TmDropdown`, `TmSplitButton` and `TmContextMenu`
+  each wire `OnOpened` → `focusFirst` through the shared `MenuNavInterop`, and a `TmContextMenu` item activation
+  returns focus to its trigger. Tab out of an open popover menu closes it (`aria-expanded` follows).
+- `TmToolbarButton` with `LabelPosition="Below"` stacks the label under the icon; `Hidden`
+  omits the text span and keeps the text as the accessible name.
+- `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
+  `TmPopover`, with `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` forwarded by the two
+  components. `TmOverlayPanel.TrapFocus` for dialog popups that must enforce their modality, and
+  `Title` for the sheet header. `TmDrawer.AriaLabel` names a drawer whose header is rendered
+  through `HeaderContent`.
+- `overlay.js` positions panels against the *visible* viewport: `positionFloating` +
+  `readViewport` read `visualViewport`, so an on-screen keyboard opening flips/clamps an open panel
+  into view, and `visualViewport` resize/scroll re-place open panels.
+- `docs/overlays.md`: when to use popover vs modal vs sheet, and the migration path for packages
+  carrying local clamp/focus-trap copies (NotionEditor's ~5 clamp copies, DocumentEditor's four
+  focus traps).
+- Semantic tokens for the redesign, in both `tokens.css` and `tokens-dark.css`: `--tm-bg-workspace`,
+  `--tm-radius-card`, `--tm-radius-control`, `--tm-shadow-card`, `--tm-shadow-popover`,
+  `--tm-touch-target`, `--tm-focus-ring`, `--tm-border-color-strong`, the `--tm-status-*` chip
+  pairs and the `--tm-priority-*` glyphs. Existing components do not reference them yet, so the
+  default appearance is unchanged.
+- Opt-in indigo theme (`theme-indigo.css`, activated with `data-tm-theme="indigo"`). The blue
+  scale stays the default. The demo exposes a switch that persists the choice in `localStorage`.
+- Shared keys `Tm_Ok`, `Tm_Done` and `Tm_More` in en/cs/fr.
+- `TmFocusScope`, the public focus-trap root. `TmSheetHandle`, the shared grabber.
+  `MobilePresentation`, `FooterLayout` and `DialogLayout`. `InitialFocusTargetId` on the scope.
+  [docs/bottom-sheet.md](docs/bottom-sheet.md).
+- `scripts/audit-css-strict.mjs` with a shrink-only baseline, gated by `CssTokenAuditTests`, and
+  `ScopedCssOwnershipTests` with its own shrink-only baseline. The audit now also flags the named
+  colours `white` and `black`, and judges white-on-primary per rule rather than per line. See
+  `docs/css-token-aliases.md` and `docs/scoped-css-ownership.md`.
+- `TmOverlayPanel.AriaLabel` / `TmOverlayPanel.AriaLabelledBy` parameters for giving the panel an
+  accessible name. Every `Role="dialog"` panel ships one; `AriaLabelledBy` is preferred when the
+  panel renders a visible title.
+- `OverlayPanelRules_Inventory_*` tests pin the exact `.tm-overlay-panel` rule set of the bundled
+  CSS (the `:where()` reset, the fallback closed-state hide, the `:where()` open display) so a
+  new or re-weighted global rule on the shared element fails as a finding (CF03c).
+- `TmOverlayPanel.SheetDoneEnabled` gates the sheet header's Done action (sheet mode only): a
+  consumer mid-task keeps Done disabled until its input is complete — the date-range picker
+  disables it until BOTH dates are picked.
+- `TmOverlayPanel.OnOpened` fires after the panel is actually displayed — the popover's
+  `showPopover()` has run, or the opening sheet render batch completed — so consumers that move
+  focus (a filter input) no longer land on a hidden element.
+- `InitialFocusSelector` on `TmFocusScope` and `TmDrawer` resolves the initial-focus target
+  inside the scope from a CSS selector (e.g. the first menuitem of a menu sheet); an explicit
+  `InitialFocusTarget`/`InitialFocusTargetId` still wins.
+- `TmMobileActionBar` and the shared `TmActionItem` model (F5): a component-scoped mobile action
+  bar rendering up to `MaxVisible` actions with the overflow in a "More" menu that composes
+  `TmOverlayPanel` (anchored popover on desktop, the shared bottom sheet on a mobile viewport —
+  never a local copy of sheet/gesture/focus logic). `Placement` defaults to `StickyContainer`
+  (`position: sticky` inside the component's own container — never `position: fixed` like
+  `TmBottomNavigation`, which stays application chrome); `FixedViewport` is a deliberate opt-in
+  anchoring to the viewport with the bottom safe area, and `Inline` renders the bar statically.
+  With the default `Auto` visibility the bar exists only below the mobile breakpoint, resolved
+  from the container (or from the viewport scope for `FixedViewport`); `LayoutMode` forces a mode
+  for hosts and bUnit tests. The `ChildContent` region renders above the bar at every layout —
+  only the bar hides above the breakpoint — and, unlike `TmToolbar`'s free-form fragments, it is
+  the content the bar belongs to: the bar reserves nothing for it except the FixedViewport
+  placement, where the region's bottom padding equals the bar height (the published
+  `--tm-mobile-action-bar-reserve-block-size` token) so nothing is covered at 320 or 390.
+  Bar actions are the bar's own tile buttons (icon over a two-line label), not `TmButton`, and
+  `Priority` is only an overflow rank — the bar and the menu render in `Items` order. The public
+  `CloseMoreAsync()` lets a host close the "More" menu after a confirmed `KeepMenuOpen` action.
+  `docs/responsive-conventions.md` documents the
+  bottom-navigation-vs-action-bar split; the demo page is `/mobile-action-bar`; the wireframe
+  stencil registers the `action-bar` role. Reference usage: `TmDashboard` edit mode on mobile
+  renders Add/Save/Cancel through the bar instead of the wrapping toolbar.
+
+- `TmEditorShell` and `TmSidePanel` (F6, `Tempo.Blazor.Components.Layout`): the responsive frame for
+  canvas editors and a standalone inspector. `TmEditorShell` exposes the slots `Header`, `Toolbar`,
+  `Left`, `Canvas`, `Right`, `StatusBar`, `MobileActions` (`IReadOnlyList<TmActionItem>`, rendered
+  by `TmMobileActionBar`) and the optional rail slots `LeftRail` / `RightRail`. It resolves its own
+  layout from its container (`LayoutMode` / `InitialMode` / `ResolvedLayoutChanged`) with
+  per-instance thresholds (`Breakpoints`, a `TmLayoutBreakpoints(sm, lg)`; the same optional
+  parameter exists on `TmLayoutObserver`). **Desktop** and **tablet** are docked panels with a strip
+  toggle each (hide / collapse to a 44px rail / expand, `aria-expanded`, `aria-controls` only while
+  the controlled panel is rendered); on tablet **at most one panel is expanded** and there is no
+  modal. **Mobile** is the canvas plus an inline, non-modal bottom sheet (snaps 50% / 100%) with a
+  Left/Right tab strip when two panels are open, or `MobilePanelPresentation.Tabs` — a full-region
+  `Left | Canvas | Right` `tablist` (`CanvasTitle`). `ActiveMobilePanel` and `MobileSheetSnapIndex`
+  are two-way so a host can switch to the properties on a block selection and collapse the sheet on
+  an "add block" action; the Toolbar slot is not rendered on mobile when `MobileActions` is set.
+  `LeftOpen`, `RightOpen`, `CollapsedPanels` (`[Flags] EditorShellPanel`, now with `None = 0`) and
+  `LeftWidth` / `RightWidth` are two-way. Each expanded docked panel has a resize **separator**
+  (`role="separator"`, pointer drag + arrow keys, `MinLeftWidth` / `MaxLeftWidth` /
+  `MinRightWidth` / `MaxRightWidth`, never below `MinCanvasWidth`); `PersistWidthsKey` persists only
+  user-resized widths to `localStorage` (validated, an explicit host width wins). Focus returns to a
+  replaced trigger only when focus was lost. `TmSidePanel` is the docked-or-sheet inspector
+  (`SidePanelPresentation` `Auto | Docked | Sheet`: docked when its container resolves Desktop, a
+  modal sheet otherwise whose side/bottom geometry follows the viewport scope; `Open` two-way,
+  `Title`, `HeaderActions`, `FooterContent`, `Side` (`SidePanelSide.Left | Right`), `Width`,
+  `RestoreFocusTargetId`). Both compose `TmDrawer` — no local sheet, gesture or focus logic.
+  `docs/editor-shell.md` documents the pattern (incl. the e-mail editor mapping) for the
+  DiagramEditor, Wireframe, Signing designer, PdfAnnotator, Modeling and e-mail editors; the demo
+  page is `/editor-shell`; the wireframe stencil registers the `editor-shell` and `side-panel` roles.
+- `tm-sheet.js` accepts an explicit basis element and an explicit track-viewport flag for an inline
+  sheet, the browser top-layer promotion helpers moved to `tm-top-layer.js` (the `tm-sheet.js`
+  exports re-export them, so every existing caller keeps working), and the `TmDrawer` and
+  `TmModal` bodies now become a keyboard-reachable scroll region while they overflow (see
+  **Changed**).
+- `TmLightbox.RestoreFocusTargetId` (`string?`, default `null`): the id of the element focus
+  returns to when the lightbox closes; null restores the element that held focus when it opened.
+  `TmImageGallery` passes the thumbnail of the image on screen, so Escape after browsing lands on
+  the image the user is looking at — in every browser, including the ones that never focus a
+  clicked button.
+
+- **Slovak (sk) ships as a built-in language for every component.** `TmResources.sk.json` — all
+  5,606 English keys in natural Slovak (not a Czech copy-paste; a test rejects Czech-only
+  ě/ř/ů characters) plus the Slovak `_Few`/`_Many` forms of all 16 plural families — is embedded
+  into `Tempo.Blazor.dll` next to en/cs/fr and read by the same `JsonStringLocalizer` naming
+  convention, so `CultureInfo("sk")` (or `sk-SK`, which falls back to its language) localizes
+  every component under Blazor Server and WebAssembly alike. Counted texts agree with the count
+  through the Slovak one/few/many/other rules `TmPluralRules` already carried ("1 nález",
+  "2–4 nálezy", "5+ nálezov"; "1 čakajúca zmena", "2–4 čakajúce zmeny", "5+ čakajúcich zmien"),
+  and the relative-time stamps read "pred 2 dňami", "o 5 dní". The demo language switcher gained
+  an SK button; E2E (`LocalizationPluralsE2ETests`) verifies Slovak rows on the `/localization`
+  page, and bUnit covers the Slovak table via `JsonStringLocalizerTests`/`PluralLocalizerTests`.
+  The new `TmResourceCompletenessTests` guard enforces en→cs/sk/fr key parity with identical
+  placeholders;
+  `docs/localization-plurals.md`, README and AGENTS.md document the fourth language, and the
+  `ITmLocalizer` JSON documentation now shows the decorator pattern for rewording shipped
+  translations in an application (registered after `AddTempoBlazor()`).
+
 ### Breaking / Migration
+
+- **The default-view marker in `TmViewManager` is now named.** The decorative `★` stays, with
+  `aria-hidden="true"`, and a visually hidden "Default view" (`TmViewManager_DefaultView`) names it
+  for assistive technology. A custom `ITmLocalizer` must supply that key. <!-- snapshot:dt-viewmanager -->
+
+- **`TmFilterBuilder.ShowResultPreview` no longer shows a static "Preview".** Before this version,
+  `ShowResultPreview="true"` rendered the literal preview placeholder even with no count source.
+  It now renders a live count, and only when `ResultCountProvider` is also set. A custom
+  `ITmLocalizer` must supply the plural forms of `TmFilterBuilder_ResultPreview` (`{0}`); the key
+  is no longer a single static string.
+
+  ```razor
+  @* before: showed "Preview" *@
+  <TmFilterBuilder ShowResultPreview="true" />
+
+  @* after: pass a count function as well *@
+  <TmFilterBuilder ShowResultPreview="true" ResultCountProvider="CountAsync" />
+  ```
+
+- **`TmDataTable` export menu on phones: sheet → popover.** With the default
+  `MobileLayout = DataTableMobileLayout.None` the export dropdown now opens as an anchored
+  popover on a phone instead of the bottom sheet. Hosts that relied on the sheet opt back by
+  setting `MobileLayout` (`Scroll` or `Cards`), which keeps the automatic mobile presentation
+  (`PanelPresentation.Auto` → sheet under the phone breakpoint); the items stay ≥ 44 px tall
+  in both presentations.
+
+- **TmDiagramEditor (mobile): the panels sheet starts closed and the minimap starts hidden.** On a
+  mobile layout the canvas gets the whole stage on first render; the action bar's new *Shapes* tile,
+  the *Properties* tile or a node selection opens the sheet, and the minimap is toggled from the
+  header "⋯" menu. The action bar now reads Select | Shapes | Properties; *Pan* moved into *More*.
+  The sheet tabs are flat — Shapes | Properties | Layers (no nested inspector tabs on mobile).
+  Restore the old open-on-load sheet with `MobileSheetInitiallyOpen="true"`:
+  ```razor
+  @* before (2.9.1 preview): sheet peeked on load *@  <TmDiagramEditor Document="doc" />
+  @* after, same look as before *@                    <TmDiagramEditor Document="doc" MobileSheetInitiallyOpen="true" />
+  ```
+
+- **DiagramEditor – `TmDiagramLayersPanel` row menu now uses the core `TmContextMenu`.**
+  `.tm-diagram-layers__row-menu` is now the `TmContextMenu` wrapper. The trigger is a
+  `div[role="button"]` carrying the core `.tm-context-menu__trigger` class (the inner
+  `.tm-diagram-layers__row-menu-trigger` span remains, so clicks on it still bubble) — selectors
+  like `button.tm-diagram-layers__row-menu-trigger` no longer match anything. The trigger's
+  accessible name comes from the inner sr-only "Actions for layer {name}" span, and in
+  `TmDiagramEditor` the panel root's `data-collapsed` is always `False` (the editor owns the
+  collapse through its own chrome — key off that, not off the panel attribute). The item classes
+  (`…row-menu-item--rename/--lock/--up/--down/--delete`, new `--move-selected`) are kept, but they
+  now ride the core `tm-context-menu__item` markup, and a "Move selected nodes here" entry appears
+  when nodes are selected. In read-only the menu is not rendered at all. Before:
+  `.tm-diagram-layers__row-menu { … }` styled the popup. After: style the core menu
+  (`.tm-context-menu`); host CSS targeting the old popup classes must move to the core classes.
+
+- **DiagramEditor – `TmDiagramLayersPanel` accessibility tree is a list, not a radiogroup.**
+  The layer list is a `ul`/`li` list (was `div role="radiogroup"`), and the active-layer control is
+  a toggle button with `aria-pressed` (was `role="radio"` + `aria-checked`). Class hooks are
+  unchanged. Before: `[role='radio'][aria-checked='true']`. After:
+  `.tm-diagram-layers__active[aria-pressed='true']`.
+
+- **DiagramEditor – `TmDiagramLayersPanel` row: the inline lock and delete buttons are removed in
+  every mode.** Lock/Unlock and Delete live in the row's ⋯ menu, and a locked layer shows a
+  non-interactive `.tm-diagram-layers__locked` indicator. The hooks `.tm-diagram-layers__lock` /
+  `.tm-diagram-layers__delete` are gone. New parameter `ShowCollapseToggle` (default `true`,
+  standalone rendering unchanged); `TmDiagramEditor` passes `false`, so the embedded panel fills
+  the inspector and has no `>` tab.
+
+- **DiagramEditor – recently used shapes are per editor.** The connect dialog no longer shares one
+  process-wide list (on Blazor Server it leaked picks between users). New optional
+  `TmDiagramEditor.RecentStencilIds` / `RecentStencilIdsChanged` let a host persist them:
+  before – nothing to do (global list); after –
+  `<TmDiagramEditor @bind-RecentStencilIds="_userRecents" />` to keep recents per user.
+
+- **DiagramEditor – SQL/CSV import preview is debounced (300 ms).** The live preview no longer
+  parses on every keystroke. Consumer bUnit tests that type into `TmDiagramSqlImportDialog` /
+  `TmDiagramCsvImportDialog` and assert the preview immediately must register a `FakeTimeProvider`
+  and advance it: before – `textarea.Input(sql); cut.Find(".tm-diagram-sql-import__preview");`
+  after – `Services.AddSingleton<TimeProvider>(time); textarea.Input(sql);
+  time.Advance(TimeSpan.FromMilliseconds(301)); await cut.InvokeAsync(() => {})`. The resource keys
+  `TmDiagramSqlImportDialog_ErrorParse` and `TmDiagramCsvImportDialog_ErrorParse` are deprecated
+  (no longer read) and will be removed in the next minor release.
+
+- **DiagramEditor – template gallery is one flat grid and the built-in catalog loads again.** The
+  per-category `<h4 class="tm-diagram-template-gallery__section-title">` headings are gone (category
+  chips and the per-card category stay); the embedded built-in templates (Blank, Basic Flowchart,
+  UML Class, ER, Network) were silently missing because of a resource-name bug and now appear in
+  every host, with generated thumbnails also for the ArchiMate/BPMN/C4/UML 2.5 templates. Before –
+  selectors on `.tm-diagram-template-gallery__section(-title)`; after – use
+  `.tm-diagram-template-card__category`. Hosts that register their own "blank" template: the
+  registry dedupes by id with provider priority.
+
+- **`TmDiagramCanvas` context-menu callbacks gained a trailing `string Origin` element.**
+  The pointer type that opened the menu (`"mouse"` or `"touch"`) now rides with every context-menu
+  event — a touch-originated menu anchors offset from the finger instead of under it. Migration:
+  widen the handler tuple on all four callbacks (the new element arrives last):
+  `EventCallback<(string NodeId, double ScreenX, double ScreenY)>` →
+  `EventCallback<(string NodeId, double ScreenX, double ScreenY, string Origin)>` (`OnNodeContextMenu`),
+  `EventCallback<(string EdgeId, double ScreenX, double ScreenY)>` →
+  `EventCallback<(string EdgeId, double ScreenX, double ScreenY, string Origin)>` (`OnEdgeContextMenu`),
+  `EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY)>` →
+  `EventCallback<(string NodeId, int Row, int Column, double ScreenX, double ScreenY, string Origin)>` (`OnTableCellContextMenu`),
+  `EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY)>` →
+  `EventCallback<(double CanvasX, double CanvasY, double ScreenX, double ScreenY, string Origin)>` (`OnCanvasContextMenu`).
+
+- **`TmDiagramEditor` read-only: nodes are selectable for inspection, and a finger always pans.** In the effective read-only state a mouse click or a finger tap selects a node (Ctrl/Cmd+click toggles) — a tap on an edge selects the edge through the engine (`selectEdgeForInspection`) — so the read-only properties panel shows a plain summary (shape name, text/data fields, position/size, fill/stroke swatches; label, routing, source/target for edges); nothing can be moved, resized, rotated or connected. The Select tool stays enabled and `KeyV` keeps working in read-only (only the edge shortcuts stay blocked, and entering read-only disarms an armed edge tool); the read-only toggle keeps the constant "Read-only" label with only the icon swapping. A host read-only flip reaches the JS instance in the same parameter pass even while a JS drag latches the render gate, closes the connect dialog and any open inline editor (edge label, stencil sections, table cells) without saving, and a mouse press focuses the canvas so keyboard panning keeps working. A finger that lands on a node or an edge pans the canvas in read-only; in edit mode a finger drag that starts on an edge now pans too (a tap still selects the edge). Toolbox tiles carry a localized read-only hint (`TmDiagramToolbox_ReadOnlyHint`) as their title and a single visually-hidden `aria-describedby` description. Migration: hosts that relied on read-only clicks never changing the selection must ignore `OnSelectedIdsChanged` while read-only.
+
+- **`TmDiagramToolbox` keyboard: Space inserts on keyup, Enter ignores auto-repeat; new `ReadOnly` parameter.** Follows docs/keyboard-activation-convention.md: Space now activates on keyup (was keydown) and a held Enter inserts exactly one shape. With `ReadOnly="true"` (the editor passes its effective read-only state) tiles stay visible and focusable but are `aria-disabled`, not draggable and insert nothing. Migration: tests that pressed Space with `KeyDown(" ")` alone must dispatch `KeyDown(" ")` + `KeyUp(" ")`.
+
+- **Data-table defaults stay `Plain`.** `TmDataTable.Appearance` remains `Plain`, `TmFilterBuilder.Presentation` remains `Inline`, `MobileLayout` remains `None`, `KeyboardNavigation` remains `Rows`, and `ShowFilterSummary` remains `false`. Grid ARIA (`aria-rowcount`, `aria-colcount`, `role="row"`, `role="gridcell"`) renders only when `KeyboardNavigation=Grid`. The redesigned group bar, export item and no-pager "N records" summary render only when `Appearance=Card`. `CardMode` keeps `tm-data-table-wrapper--card` and `data-label`; it no longer emits `--cards`, `tm-data-table-cell--card` or forces `EditActionsMode.Text`. Those belong to `MobileLayout=Cards`.
+- **Approved accessibility markup, recorded against the pre-redesign snapshots.**
+  - `TmColumnPicker` fills `span.tm-icon-columns` with a `TmIcon` instead of an empty span. <!-- snapshot:dt-basic --> <!-- snapshot:dt-cardmode --> <!-- snapshot:dt-filters --> <!-- snapshot:dt-grouping --> <!-- snapshot:dt-viewmanager --> <!-- snapshot:dt-paged --> <!-- snapshot:dt-selectable --> <!-- snapshot:dt-export --> <!-- snapshot:dt-virtualized -->
+    Before: `<span class="tm-icon-columns"></span>`
+    After: `<span class="tm-icon-columns"><svg class="tm-icon">…</svg></span>`
+  - `TmViewManager` items are buttons inside `.tm-view-item-row`, the panel is a `TmOverlayPanel` (the `.tm-overlay` backdrop is gone) and the toggle is `tm-btn-outline` with `aria-expanded` / `aria-haspopup="dialog"`. <!-- snapshot:dt-viewmanager -->
+    Before: `<button class="tm-btn tm-btn-secondary tm-view-manager-toggle">`
+    After: `<button class="tm-btn tm-btn-outline tm-view-manager-toggle" aria-expanded="true" aria-haspopup="dialog">`
+  - Group toggles and the group-chip remove control use `TmIcon` plus `aria-expanded` / `aria-label` instead of `▼`, `▶` and `×`. <!-- snapshot:dt-grouping --> <!-- snapshot:mvl-grouped -->
+    Before: `<button class="tm-data-table-group-chip-remove">×</button>`
+    After: `<button class="tm-data-table-group-chip-remove" aria-label="Remove grouping by Role"><svg class="tm-icon">…</svg></button>`
+  - `TmPagination` previous and next buttons use `TmIcon` chevrons instead of `‹` / `›`. <!-- snapshot:pagination-default --> <!-- snapshot:dt-paged -->
+    Before: `<button aria-label="Previous">‹</button>`
+    After: `<button aria-label="Previous"><svg class="tm-icon">…</svg></button>`
+  - `TmColumnFilter` names the input with the column title (`Filter: {0}`) when the column has one. <!-- snapshot:dt-filters -->
+    Before: `<input placeholder="Filter" aria-label="Filter" />`
+    After: `<input placeholder="Filter: Name" aria-label="Filter: Name" />`
+  - A void checkbox renders its closing tag. <!-- snapshot:dt-selectable -->
+    Before: `<input type="checkbox" /></th>`
+    After: `<input type="checkbox"></input></th>`
+  - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` named "View" (not "Table view") with one roving `tabindex`, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
+    Before: `<span class="tm-mvl-status">Active</span>`
+    After: `<span class="tm-badge tm-mvl-status">Active</span>`
+  - `ExportSelectedOnly` was renamed to `AllowExportSelected`. Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
+  - `TmOverlayPanel.RestoreFocusTargetId` was removed. Focus returns to the anchor; do not pass the old parameter.
+
+- **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below
+  768px now renders the dedicated mobile layout, replacing the old `max-width: 640px` viewport
+  stack (toolbox fixed to 280px above the canvas, the inspector hidden).** The mobile layout is
+  container-driven (`data-editor-layout="mobile"` mirrors the resolved shell layout) and renders
+  through the core shell: a compact header (document title, icon-only Undo/Redo, the "⋯"
+  view-settings menu — search and the Read-only toggle moved into that menu, the docked-panel
+  toggles are gone because the panels live in the sheet), horizontally scrollable page tabs, the
+  full-area canvas with a floating zoom pill (`+ / % / − / fit`,
+  `.tm-diagram-editor__zoom-overlay`) and the floating minimap, a **non-modal bottom sheet**
+  (peek/half/full snaps) presenting Shapes | Inspector (the inspector keeps its Properties |
+  Layers tabs), and the core F5 action bar **Select | Pan | Properties | More**. The "More" menu
+  carries the export commands only — layout and import stay tablet+; the long-press context menu
+  presents as the shared F3 bottom sheet (`.tm-diagram-editor__context-sheet`) instead of the
+  `position:fixed` menu, without the align/distribute (node menu) and auto-layout (canvas menu)
+  entries; resize/rotate handles and quick-connect arrows are not rendered
+  (`TmDiagramCanvas.ShowTransformHandles` / `ShowConnectArrows` new, default `true`). A host-made
+  viewer — pinned `ReadOnly="true"` or a toolbar group set without editing groups (e.g. the
+  `Viewer` preset) — renders no action bar or panels sheet on mobile — only the floating zoom and
+  minimap; the user's own Read-only toggle keeps them (read-only panels).
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before (<640px viewport): viewport media query; toolbox 280px, inspector display:none -->
+  <div class="tm-diagram-editor__toolbox-wrap">…</div>
+  <!-- .tm-diagram-editor__right-stack hidden by @media (max-width: 640px) -->
+
+  <!-- after (<768px container): the shell's mobile presentation -->
+  <div class="tm-diagram-editor" data-editor-layout="mobile">
+    <div class="tm-diagram-editor__zoom-overlay">…</div>
+    <div class="tm-diagram-editor__minimap-overlay">…</div>
+    <div class="tm-editor-shell__stage tm-editor-shell__stage--sheet-open">
+      <div class="tm-editor-shell__sheet tm-drawer--inline tm-drawer--bottom">…</div>
+    </div>
+    <div class="tm-mobile-action-bar" data-layout="mobile">…</div>
+  </div>
+  ```
+
+  Host CSS keyed on `@media (max-width: 640px)` around the editor must branch on
+  `data-editor-layout='mobile'` instead (a narrow editor inside a wide window keeps the desktop
+  presentation). The old viewport media block in the package CSS was replaced by
+  `[data-editor-layout='mobile']` rules with the same toolbox tightening. Performance note: the
+  sheet interactions (open, tab switch, snap) do not re-render `TmDiagramCanvas` — the editor
+  marks those passes chrome-only and the canvas skips them (its render gate never skips a
+  content-affecting pass).
+
+- **`TmDiagramEditor` tablet and touch layout (DiagramEditor redesign phase 6, DI3): the editor
+  now resolves its layout from its own container width, and a tablet container changes the panel
+  chrome.** New parameters: `LayoutMode` (`Auto` default — the editor measures itself; forced
+  `Tablet`/`Desktop`/`Mobile` pins the presentation, e.g. for tests), `LayoutBreakpoints` (null =
+  the editor's own band — tablet from 768px, desktop from 1200px; pass
+  `new TmLayoutBreakpoints(640, 1024)` to follow the shared `TmBreakpoints` instead) and
+  `MinimapPlacement` (`Auto` default — the right-column minimap card on desktop, a floating
+  overlay over the canvas corner from tablet down; `Panel`/`Overlay` force the choice).
+
+  From tablet down (container 768–1199 with the defaults) the shell keeps **at most one docked
+  panel expanded** — expanding the palette rails the inspector and vice versa — and the palette
+  renders as a 44px rail by default (a labelled grid button beside the shell's chevron expands
+  it; expanded, it renders as a grid of tiles). Selecting a node raises the inspector back up.
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- 2.9.0: minimap wrapped in the right column -->
+  <div class="tm-diagram-editor__minimap-wrap">…</div>
+
+  <!-- 2.9.1 desktop (MinimapPlacement=Auto/Panel): docked card -->
+  <div class="tm-diagram-editor__minimap-card">…</div>
+
+  <!-- 2.9.1 from tablet down: the palette is a rail, the minimap floats over the canvas -->
+  <div class="tm-editor-shell__rail tm-editor-shell__rail--left" data-region="rail-left">…</div>
+  <div class="tm-diagram-editor__minimap-overlay">…</div>
+  ```
+
+  Host CSS keyed on `.tm-diagram-editor__minimap-wrap` (2.9.0) must move to
+  `.tm-diagram-editor__minimap-card` **and** `.tm-diagram-editor__minimap-overlay` (or pin
+  `MinimapPlacement="DiagramMinimapPlacement.Panel"` to keep a single root).
+
+  The editor root now carries `data-editor-layout="desktop|tablet|mobile"` (mirrors the resolved
+  shell layout) — branch host CSS on that attribute; the editor root is a named inline-size
+  container (`tm-diagram-editor`), so `@container tm-diagram-editor (…)` with the shared
+  TmBreakpoints literals works too. Whether that container (or the mobile shell stage, a
+  `container-type: size` box) becomes the containing block of `position: fixed` descendants
+  differs between engines, so the engine measures it at runtime: the context menu and the
+  table-inserter popover are translated and clamped into the editor box when the editor is the
+  containing block, and clamped to the viewport otherwise. Hosts that repositioned them must
+  not assume viewport coordinates — read the element's `getBoundingClientRect()` instead.
+
+- **`TmDiagramEditor` markup classes removed by the redesign (2.9.0 → 2.9.1).** Host CSS or
+  tests keyed on these 2.9.0 classes must migrate:
+
+  | 2.9.0 selector | 2.9.1 replacement |
+  |---|---|
+  | `.tm-toolbar-btn--active` on toggle buttons (tools Select/Pan/Edge, panel toggles, grid/snap/page/rulers, Read-only) | `[aria-pressed="true"]` on the same button (`button[aria-pressed='true']` scoped to `[data-tm-group=…]`) |
+  | `.tm-diagram-editor__body` (the toolbox / canvas / right-column row) | gone — the shell regions: `.tm-editor-shell__main`, `[data-region="canvas"]`, `[data-region="left"]` / `[data-region="right"]` |
+  | `.tm-diagram-editor__minimap-wrap` | `.tm-diagram-editor__minimap-card` (docked) or `.tm-diagram-editor__minimap-overlay` (floating) — see `MinimapPlacement` |
+  | `.tm-diagram-editor__toolbar-spacer` | gone — the command row is a core `TmToolbar`; header items are laid out by `.tm-diagram-editor__header-bar` |
+  | `.tm-diagram-insert-dropdown-wrapper` | gone — the Insert command is a `TmToolbarItem` inside `[data-tm-group='insert']` |
+  | `.tm-diagram-template-card__tags` | `.tm-diagram-template-card__meta` (row) containing one `.tm-diagram-template-card__tag` per tag |
+  | `.tm-diagram-template-gallery__header` | `.tm-diagram-template-gallery__toolbar` (see the gallery entry above) |
+  | Enter on a `TmDiagramTemplateCard` selected it | Enter (and double-click) raise `OnActivateRequest` = create; Space/click still select (see the card entry above) |
+  | inline `.tm-alert.tm-alert--danger` + `.tm-pivot-btn` dismiss for import/export errors | core `TmAlert` (`Severity=Error`, `Dismissable`); the `tm-alert` classes are still rendered by the component, the dismiss button is TmAlert's own |
+
+  ```css
+  /* before (2.9.0) */
+  .tm-diagram-editor__toolbar-group .tm-toolbar-btn--active { … }
+  /* after (2.9.1) */
+  .tm-diagram-editor [data-tm-group] button[aria-pressed="true"] { … }
+  ```
+
+- **`TmDiagramCanvas` resize/rotate handles start from Pointer Events with enlarged invisible hit
+  areas (phase 6).** Each visible 8×8 handle square is now decorative (`pointer-events: none`) and
+  is covered by an invisible hit rect/circle (`.tm-diagram-resize-handle-hit` /
+  `.tm-diagram-rotate-handle-hit`) that carries `@onpointerdown`. The hit size is the CSS variable
+  `--tm-diagram-handle-hit` on `.tm-diagram-node-handles` — `24px` by default, `44px` on a coarse
+  pointer — in SVG user units, so it scales with canvas zoom. Mouse behaviour is unchanged (the C#
+  resize machine and `startRotate` keep running for the mouse); touch/pen resize and rotation are
+  driven by the new `diagram-editor-touch.js` over the core `pointer-drag.js` and report through
+  the new `OnResizeStarted`/`OnResizeMoved`/`OnResizeEnded`/`OnResizeCancelled` interop points.
+  Host CSS that attached its own handlers to `rect.tm-diagram-resize-handle` must move to the
+  hit rects (or the handles group).
+
+  ```css
+  /* before: the visible square carried the gesture */
+  .tm-diagram-resize-handle { pointer-events: auto; }
+  /* after: the invisible hit area carries it, sized by the variable */
+  .tm-diagram-node-handles { --tm-diagram-handle-hit: 24px; }
+  @media (pointer: coarse) { .tm-diagram-node-handles { --tm-diagram-handle-hit: 44px; } }
+  ```
+
+- **`TmDiagramCanvas` touch stack rewritten on the shared pointer helpers (phase 6).** The
+  hand-rolled `touchstart/touchmove/touchend` handlers, the custom pinch and the custom 600ms
+  long-press are gone; every touch gesture is a session of the core `pointer-drag.js` /
+  `pointer-gesture.js` in the new `diagram-editor-touch.js` module. Behaviour notes for hosts:
+  two-finger pinch now also **pans** (previously it only zoomed) and both gestures work while
+  read-only; the long-press context menu opens when the 600ms hold completes (moving the finger
+  first drags the node and never opens the menu — before, moving cancelled the menu but the drag
+  state had already been armed at `touchstart`); a tap on an edge hit path now selects the edge so
+  tablets can edit it. Plain-wheel zoom is unchanged (`attachPinch`'s ctrl+wheel stays off). The
+  engine gained `tmDiagramEditor.relayout(container)` — after host chrome around the canvas
+  changes, it re-measures and reports `OnViewportChanged`/`OnZoomChanged` without a canvas
+  re-render (the editor calls it when a docked panel expands, collapses or resizes).
+
+- **`TmDiagramToolbox` stencil tiles insert on tap/click (phase 6).** A tap (or a desktop click —
+  a drag is never the only way to insert, WCAG 2.5.7) on a stencil tile inserts it at the visible
+  viewport centre through the same path the keyboard uses; tapping an edge stencil arms the edge
+  tool instead of inserting. Drag-and-drop keeps working unchanged. `TmDiagramMinimap` is driven
+  by Pointer Events (`onpointerdown/move/up`) instead of mouse events and its SVG carries
+  `touch-action: none`, so the viewport rect can be dragged with a finger.
+
+- **`TmDiagramLayersPanel` row "⋯" menu (phase 6).** Every layer row gained a "⋯" trigger
+  (`.tm-diagram-layers__row-menu-trigger`) with Rename / Move up / Move down / Delete — the
+  non-drag alternative to the layer drag-and-drop; Move pushes the same undoable
+  `ReorderLayersCommand` the drop does. On `(hover: none)` pointers the delete affordance is
+  always visible and on `(pointer: coarse)` the row controls grow to the 44px touch target.
+
+- **`TmDiagramEditor` desktop restructure (DiagramEditor redesign phase 4): the two toolbar rows
+  became header + single command row + status bar, and the inspector grew "Properties | Layers"
+  tabs.** The editor now renders through the core `TmEditorShell` (header / toolbar / left /
+  canvas / right / status-bar regions). What moved:
+
+  | Group (`data-tm-group`) | Before (2.9.1 phase 1) | After (phase 4) |
+  |---|---|---|
+  | `history` `clipboard` `tools` `format` `insert` `arrange` `layout` `export` `import` `templates` | toolbar row 1 / row 2 | one command row (core `TmToolbar`, Priority overflow into its "More" menu, labels below icons) |
+  | `search` | toolbar row 1 | header, named "Search" toggle |
+  | `panels` | toolbar row 1 | header, named toggles (Tools / Properties / Layers / Minimap) |
+  | `view` `canvas-size` | toolbar row 2 | header "⋯" menu (`.tm-diagram-editor__view-menu-panel`, rendered hidden in the DOM when closed) |
+  | `zoom` | toolbar row 2 | status bar (`.tm-diagram-editor__statusbar`), `.tm-diagram-editor__zoom-label` preserved |
+  | `readonly` | toolbar row 2 | status bar |
+
+  DOM/CSS impact and migration:
+
+  ```html
+  <!-- before: groups lived inside the toolbar rows -->
+  <div class="tm-diagram-editor__toolbar">
+    <div class="tm-diagram-editor__toolbar-row">…[data-tm-group=search]…</div>
+    <div class="tm-diagram-editor__toolbar-row">…[data-tm-group=zoom]…</div>
+  </div>
+
+  <!-- after: header bar + command toolbar + status bar -->
+  <div class="tm-diagram-editor__header-bar">…[data-tm-group=search][data-tm-group=panels]…⋯</div>
+  <div class="tm-diagram-editor__toolbar">…command groups only…</div>
+  <div class="tm-diagram-editor__statusbar">…[data-tm-group=zoom][data-tm-group=readonly]…</div>
+  ```
+
+  Host CSS keyed on `.tm-diagram-editor__toolbar-row`, on the position of a group inside the
+  toolbar, or on `.tm-diagram-editor__toolbar [data-tm-group='zoom']` must move to the new
+  regions — query `[data-tm-group]` from the editor root (`[data-testid='diagram-editor']
+  [data-tm-group]`), never positionally. `flex-wrap: wrap` on the old toolbar rows is gone:
+  overflow is the core `TmToolbar` "More" menu (`data-tm-toolbar-item`), so a command that
+  collapsed can be `inert` until it is opened from the menu. `__toolbar-row` no longer exists;
+  `__props-wrap`, `__layers-wrap`, `__right-stack` and `__right-wrap` remain as aliases inside
+  the inspector, and `__toolbox-wrap`/`__minimap-card` wrap the docked panels. The toolbar
+  toggle buttons keep their tooltips ("Toggle toolbox", "Toggle inspector",
+  "Toggle minimap"; see the Inspector toggle entry), so attribute selectors keep working; the new
+  visible labels are `TmDiagramEditor_Panel*` keys. The Properties/Layers panels now render behind
+  inspector tabs (`TmTabs`) — an inactive tab's panel is not in the DOM; opt out with the new
+  `InspectorLayout="DiagramInspectorLayout.Stacked"`. With only one panel available
+  (`ShowPropertiesPanel`/`ShowLayersPanel`), it renders alone in `__right-wrap` without the tab
+  strip.
+
+  `ShowToolbar="false"` keeps its pre-redesign meaning: it hides every control that used to live
+  in the toolbar — now the header bar's built-in controls (title, search/panel toggles, "⋯" menu),
+  the command row and the status bar (and on mobile the zoom pill and the action bar). Page tabs,
+  panels, canvas, minimap and the `HeaderStart`/`HeaderActions` host slots stay. This restores
+  2.9.0 behaviour (not a new break).
+
+  The Properties panel's order/grouping/collapse/lock actions moved into a dedicated
+  **Actions** section (with a Delete button raised through `OnDeleteRequested`). The collapsed
+  Import group offers SQL/CSV entries in "More"; the JSON file picker stays on the bar item
+  (a browser file dialog cannot be opened from a menu entry), and the Import group is pinned to
+  the bar (`Priority=Pinned`) at every toolbar width. New parameters: `InspectorLayout`
+  (`Tabs` default / `Stacked` opt-in), `ShowStatusBar` (default `true`), `ShowTitle`
+  (default `true` — hide the document title through the API, never through CSS).
+
+- **TmDiagramEditor header: the *Properties* and *Layers* toggles were merged into one *Inspector* toggle.** It shows/hides the whole inspector (on tablet it rails it); the inspector's Properties | Layers tabs choose the content. Below 1024px of *editor* width (a container query on the editor root, not the whole tablet band) the header toggles are icon-only — the visible name stays as `aria-label`, the tooltip in `title`. The accessible names "Toggle properties panel" and "Toggle layers" are gone — migrate selectors to the new stable test ids:
+  ```text
+  before: button[title='Toggle layers'], button[title='Toggle properties panel'], GetByRole(Button, "Toggle layers")
+  after:  [data-testid='diagram-editor-toggle-inspector']   (also: diagram-editor-toggle-toolbox, diagram-editor-toggle-minimap)
+  ```
+
+- **`TmDiagramEditor`: the built-in Read-only/Edit toggle no longer overwrites the `[Parameter]
+  ReadOnly` and disappears while the host pins read-only (DI1).**
+  Previously clicking the toolbar's Read-only/Edit toggle assigned the `ReadOnly` parameter itself, so
+  a host that pinned `ReadOnly="true"` (for example a read-only preview surface) could be unlocked
+  from the UI — the parameter was silently rewritten to `false`. The toggle now flips an internal
+  user state instead, exposed by the new public `IsReadOnly` property (`ReadOnly || user-toggle`),
+  and every editing path (toolbar, keyboard shortcuts, context menu, import, templates, paste, canvas
+  interop) is gated on that effective state. The toggle is not rendered at all while the host sets
+  `ReadOnly="true"` or when the `readonly` toolbar group is disabled.
+
+  ```razor
+  @* before: the toggle overwrote the parameter — a pinned read-only viewer could unlock itself *@
+  <TmDiagramEditor Document="@document" ReadOnly="true" />
+  @* clicking the toolbar "Edit" button set ReadOnly=false on the component *@
+
+  @* after: the host's ReadOnly=true cannot be overridden — the toggle is not even rendered *@
+  <TmDiagramEditor Document="@document" ReadOnly="true" />
+
+  @* hosts that want a user-facing lock keep the default ReadOnly="false"; the toggle works as
+     before, never writes back to the parameter, and the effective state is readable: *@
+  <TmDiagramEditor @ref="editor" Document="@document" />
+  @code { var locked = editor.IsReadOnly; }
+  ```
+
+  The same release introduces the stable toolbar contract for nested hosts: `ToolbarPreset`
+  (`Full` is the default and keeps today's look; `Viewer` renders only zoom, view, search and
+  export), `ToolbarGroups` (flags that override the preset), the `HeaderStart`/`HeaderActions`
+  slots, and a `data-tm-group` attribute on every toolbar group. Model it into your CSS/anchors —
+  never against the toolbar's internal DOM. The Modeling diagram preview now uses
+  `ToolbarPreset="Viewer"` instead of hiding editor controls with positional `nth-of-type` CSS
+  selectors.
+
+- **`TmDiagramEditor` connect modal became the `TmDiagramConnectDialog` component and defaults to
+  the source node's stencil set (DI4).** Previously the "choose a shape to connect" modal listed
+  every node stencil in the library (~150 tiles at once) with no search. The new dialog offers by
+  default only the node stencils of the source node's own set (declared `SetId`, else the id's
+  family prefix — a UML node offers UML shapes, a `general.rectangle` offers the 12 "general"
+  shapes), with a search field (reusing `DiagramStencilRegistry.Search`), a "Show all" toggle as
+  the explicit opt-in to the whole node library, recently-used tiles floated first, a roving
+  arrow-key grid (no tile preselected) and a mobile bottom-sheet presentation with a Close footer
+  button; edge stencils stay excluded everywhere. On a phone the tiles present as plain rows
+  (no chevrons). Focus returns to the canvas through the modal's public focus scope
+  (`RestoreFocusTarget`).
+
+  ```html
+  <!-- before: .tm-diagram-connect-modal__grid held EVERY node stencil, desktop tiles only -->
+  <div class="tm-diagram-connect-modal__grid"> … ~150 tiles … </div>
+
+  <!-- after: toolbar (search + "Show all") and the scoped palette; list rows below 640px,
+       a .tm-diagram-connect-modal__close footer button on the mobile sheet -->
+  <div class="tm-diagram-connect-modal__toolbar">…search…show-all…</div>
+  <div class="tm-diagram-connect-modal__grid">…palette tiles…</div>
+  ```
+
+  Host CSS keyed on the bare `__grid` showing the whole library, or asserting
+  `items.Count == all node stencils`, must opt into the full list first (click
+  `.tm-diagram-connect-modal__show-all`) or scope to the palette. The old
+  `TmDiagramEditor_SelectStencilTitle` resource key is reused unchanged.
+
+- **`TmDiagramTemplateCard` keyboard contract: Enter (and double-click) now CREATE, Space keeps
+  the selection tap.** The gallery mockup's shortcut is create-without-detour: `TmDiagramTemplateCard`
+  gained an `OnActivateRequest` callback raised by double-click and by the Enter keydown
+  (repeat-guarded); single click and Space still raise `OnClick` (select). Host code that relied
+  on Enter only selecting must handle `OnActivateRequest` (or ignore it) — `TmDiagramTemplateGallery`
+  wires it to create immediately. Cards also render the localized category chip
+  (`.tm-diagram-template-card__category`) next to the tags and the whole meta row is clamped to
+  two lines.
+
+- **`TmDiagramTemplateGallery` and the import dialogs are localized through Id-derived keys and
+  present through the foundation `TmModal` contract.** Template names resolve via
+  `TmDiagramTemplate_<id with - → _>` and categories via
+  `TmDiagramTemplateCategory_<name>` (fallback: the raw values — the `DiagramTemplate` model is
+  unchanged), so a Czech gallery shows "Prázdný diagram" / "Obecné" instead of "Blank Diagram" /
+  "General". The gallery dialog is `Size=XLarge` with the search field and the category chips in
+  one toolbar row (`.tm-diagram-template-gallery__toolbar` replaces `__header`), the CSV mapping
+  form is a two-column label|select row list (the type and layout selects span the full dialog
+  width), the CSV preview pins its header row and first column, and all four dialogs pass
+  `FooterLayout=Inline` plus the viewport-driven mobile presentation (bottom sheet under 640px).
+  Host CSS on `.tm-diagram-template-gallery__header` or the stacked CSV mapping rows must move to
+  the new structure.
+
+- **The duplicate page-tab button has its own `tm-diagram-editor__page-tab-duplicate` class
+  (DiagramEditor redesign phase 2).** The duplicate action previously reused the close button's
+  class, so CSS targeting `.tm-diagram-editor__page-tab-close` silently styled both buttons; the
+  icons also moved from raw glyphs to `TmIcon`.
+
+  ```razor
+  @* before: duplicate carried the close-button class *@
+  <button class="tm-diagram-editor__page-tab-close">⧉</button>
+
+  @* after: each action has its own class (close keeps the danger-red hover) *@
+  <button class="tm-diagram-editor__page-tab-duplicate"><TmIcon Name="files" /></button>
+  <button class="tm-diagram-editor__page-tab-close"><TmIcon Name="x" /></button>
+  ```
+
+  **Migration:** host CSS that wanted to catch both buttons keeps working unchanged; CSS that
+  meant to style only the close button must not rely on `__page-tab-close` matching duplicate
+  anymore — target both classes explicitly.
+
+- **Column filter accessible name and the view-scope radio group name changed when a caption is set.**
+  A `TmColumnFilter` (and the inline filter `TmDataTable` renders) that receives `ColumnTitle`
+  announces `Filter: {column}` (`TmDataTable_FilterColumn`) instead of the generic `Filter`.
+  Without `ColumnTitle` the label is unchanged.
+
+  ```html
+  <!-- before -->
+  <input placeholder="Filter" aria-label="Filter" />
+  <input type="radio" name="viewScope" />
+
+  <!-- after -->
+  <input placeholder="Filter: Name" aria-label="Filter: Name" />
+  <input type="radio" name="tm-view-scope-{instanceId}" />
+  ```
+
+  A selector `[name=viewScope]` no longer matches. `TmDataTableColumn.FilterOperator` is additive
+  and defaults to null, which still sends `contains` — server providers are unchanged until a
+  column opts in.
+
+- **`TmDashboard` widget move/resize no longer uses HTML5 drag-and-drop or mouse events — the
+  gesture is the shared `pointer-drag.js` helper (Pointer Events: mouse, touch and pen).**
+  Previously moving a widget only worked with a mouse (HTML5 `dragstart`/`dragover`/`drop`) and
+  resizing only with mouse events; a finger did nothing. Now a finger, a pen and the mouse all
+  drag and resize through the same core helper the Scheduler uses, Escape/pointercancel roll the
+  widget back, and the drop preview follows the pointer. Host impact:
+
+  ```html
+  <!-- before: nothing else needed — dashboard.js attached its own dragstart/mouse handlers -->
+  <script src="_content/Tempo.Blazor/js/dashboard.js"></script>
+
+  <!-- after: the same single script tag; pointer-drag.js is NOT a new script tag —
+       dashboard.js loads it with a dynamic import() from its own URL (same folder) -->
+  <script src="_content/Tempo.Blazor/js/dashboard.js"></script>
+  ```
+
+  Hosts synthesizing the old events in tests must dispatch Pointer Events instead
+  (`pointerdown`/`pointermove`/`pointerup` on the `.tm-widget-drag-handle` /
+  `.tm-widget-resize-handle`, bubbling to the grid). The widget header no longer renders
+  `draggable`, and the Razor surface carries no `@ondragstart/@ondragend/@onmousedown` handlers;
+  the resize clamps through the new `data-min-w/data-max-w/data-min-h/data-max-h` attributes the
+  component renders from the `WidgetDefinition` (grid cells; max `0` = unlimited). The JSInvokable
+  contract (`OnGridPositionChanged`/`OnWidgetResized`), `window.tempoDashboard.init/destroy` and
+  the keyboard grab mode are unchanged. `touch-action: none` now lives on the handles only, so
+  the page keeps scrolling everywhere else.
+
+- **`TmDashboard`'s drag handle is now a `<button>` (F4 keyboard alternative), not a
+  `<span>`.** The handle keeps the class `tm-widget-drag-handle` and the grip icon, but hosts
+  styling or scripting the element must account for the element change:
+
+  ```css
+  /* before (2.9.0) — handle was a span */
+  span.tm-widget-drag-handle { display: block; }
+
+  /* after (2.9.1) — handle is a button: the native reset is built in; keep host overrides on
+     the class, not on the span element selector */
+  .tm-widget-drag-handle { display: inline-flex; }
+  ```
+
+  ```js
+  // before: querySelector('span.tm-widget-drag-handle')  → null now
+  // after:  querySelector('button.tm-widget-drag-handle')
+  ```
+
+- **`TmWidgetSelector` card visuals changed (F6): the plus indicator is always visible and an
+  already-added single-instance card is no longer dimmed.** Previously the 24 px plus floated in
+  at `opacity: 0` until hover/focus (invisible on touch), and a non-addable card wore a 0.5
+  opacity veil. Now the plus is a permanently painted 32 px ringed circle (≥ 44 px target under
+  `pointer: coarse` and on the mobile layout), the added state is a green "✓ Přidáno" badge
+  instead of the veil, and the icon tile is a 56 px pastel `color-mix` of the category colour.
+  Hosts overriding `.tm-widget-card-add` / `.tm-widget-card--disabled` opacity rules must drop
+  them:
+
+  ```css
+  /* before (2.9.0) */
+  .tm-widget-card-add { opacity: 0; }
+  .tm-widget-card--disabled { opacity: 0.5; }
+
+  /* after (2.9.1) — visibility is the default; the badge carries the added state */
+  .tm-widget-card-add { /* always painted */ }
+  .tm-widget-card--disabled { cursor: default; }
+  ```
+
+  The selector's responsive block also moved from the `@media (width < 768px)` viewport query to
+  `data-layout` attribute rules on `.tm-widget-selector-modal` (mobile hides the sidebar for the
+  chip radio group; tablet keeps the sidebar with two card columns) — hosts keying CSS on the old
+  media query should key on `data-layout` instead.
+
+- **`TmDashboard` default appearance changed from a wrapping card to `Plain`.** The component no
+  longer paints a white rounded card around itself: the root sits directly on the workspace
+  background (`--tm-bg-workspace`) and the widget cards are the only surfaces — the reference
+  look. Hosts that embed the dashboard on a contrasting page and want the old framing opt back
+  in explicitly:
+
+  ```razor
+  @* before (2.9.0) — the component rendered its own surface card *@
+  <TmDashboard DashboardId="overview" />
+
+  @* after (2.9.1) — Plain is the default; opt back into the card *@
+  <TmDashboard DashboardId="overview" Appearance="DashboardAppearance.Card" />
+  ```
+
+- **`AllowEdit=false` no longer renders the dashboard-edit button nor the empty state's
+  "Add widgets" CTA.** Previously the button (and CTA) rendered but entering edit mode did
+  nothing — a dead control advertising a disabled capability. Hosts relying on the button's
+  presence for layout or `data-testid='dashboard-edit'` selectors under `AllowEdit=false` must
+  drop the expectation; the header keeps the host's `HeaderActions` in view mode.
+
+- **The widget title is now a real heading: `h3.tm-widget-title` with a stable `id`
+  (`tm-widget-title-{InstanceId}`), sized `--tm-font-size-lg`.** 2.9.0 rendered a plain
+  `span.tm-widget-title`. Host CSS or tests keying on the `span` element must key on the class
+  (or `h3`) instead; the id is what the collapse/remove controls reference through
+  `aria-describedby`.
+
+- **`TmDashboard` widget icon tiles are rendered by default (`ShowWidgetIcons=true`).** A host
+  that wants the pre-2.9.1 bare widget headers turns them off:
+
+  ```razor
+  @* before: widget headers showed only the title *@
+  <TmDashboard />
+
+  @* after: same look as 2.9.0 *@
+  <TmDashboard ShowWidgetIcons="false" />
+  ```
+
+- **The view-mode "Edit" button is primary (`tm-btn-primary`) and lost its `title` attribute**
+  (the visible text is the accessible name). Host CSS or tests keying on `tm-btn-secondary` for
+  `[data-testid='dashboard-edit']` must key on `tm-btn-primary` (or drop the variant selector).
+
+- **Edit-mode toolbar button hierarchy swapped: "Save changes" is now primary, "Add widget"
+  secondary, "Cancel" ghost** (one primary element per region). Tests keying on
+  `tm-btn-primary` for the add-widget button must switch to the save button or the test id
+  `dashboard-add-widget`.
+
+- **Removed chrome:** the header toolbar lost its `border-bottom` underline and bottom padding;
+  the widget header lost its grey band (`--tm-bg-surface-secondary`) and `border-bottom`; edit
+  mode no longer draws a `2px dashed` frame around the root (the subtle background grid +
+  "Edit Mode" badge signal edit mode instead); widget cards no longer lift their shadow on
+  hover (the card is not clickable); the `.tm-dashboard-menu-badge` class is gone (replaced by
+  `.tm-dashboard-menu-default` with a visible label). Host CSS overriding those rules needs to
+  target the new structure.
+
+- **`ShowTitle` stays and is intentionally NOT obsoleted**: it hides the heading (and subtitle)
+  while keeping the switcher and header actions — a different concern than `ShowHeader`. Hosts
+  using `ShowTitle="false"` keep working unchanged.
+
+- **The dashboard switcher trigger is a select-like control (`button.tm-dashboard-switcher`)**
+  showing the current dashboard's name instead of the word "Dashboards", with the formatted
+  accessible name `TmDashboard_SwitcherAriaLabel` ("Dashboards: {0}") so the accessible name
+  contains the visible text (WCAG 2.5.3).
+
+- **`TmDashboard` F3 — widget DOM order, released height after collapse, tablet/mobile header
+  and touch targets (dashboard redesign plan, phase F3).** The tablet (`data-layout="tablet"`)
+  and mobile (`data-layout="mobile"`) layouts become usable at 1024/768/390/320px:
+
+  - **Widget DOM order = visual (row, then column) order in every mode.** The grid renders its
+    widgets sorted by `(Y, X, InstanceId)` — the same key as `--tm-w-order`, which is still
+    emitted — so Tab and screen readers follow the eye (WCAG 2.4.3/1.3.2). On desktop the
+    explicit placement is unchanged; only the DOM order differs.
+  - **A collapsed or minimized card releases its height.** Desktop keeps the saved `Y` slot
+    reserved and only shrinks the card to its header; tablet and mobile also drop the row span,
+    so the stack closes up. `WidgetInstance.Height` is untouched — expanding restores the slot.
+  - **Tablet rows are content-driven**: `grid-auto-rows: auto` with the card's desktop slot
+    height as `min-height` (the new component variable `--tm-w-min-block`, inner gaps included).
+    Narrower cards no longer clip. Mobile cards use the same min-height (previously the inner
+    gaps were missing, so cards were `(H-1) × gap` shorter than their desktop slot).
+  - **The view-mode header stacks below desktop** when a visible heading renders (the new
+    C#-computed modifier classes `tm-dashboard-toolbar--with-heading` /
+    `tm-dashboard-toolbar--with-actions`): tablet puts HeaderStart + the switcher on row 1 and
+    title/subtitle + actions on row 2; mobile puts HeaderStart + title on row 1, the switcher
+    and Edit on row 2 (actions move to row 3 when `HeaderActions` renders). The sr-only heading
+    and `ShowTitle=false` keep the single-row header. On a mobile layout the switcher, the
+    header buttons and the widget chevrons meet `--tm-touch-target` (44px) regardless of the
+    pointer hardware, the switcher drops its 14–20rem width floor, and the inline rename input
+    fills the available width.
+  - **The root is a named region**: `role="region"` with `aria-labelledby` pointing at the
+    heading (visible or `tm-sr-only`), falling back to `aria-label` when no heading renders —
+    several dashboards on one page stay distinguishable.
+
+  Migration for each visible behavior change:
+
+  - **Widget DOM order.** 2.9.0 rendered widgets in the order they were added and used CSS
+    `order` to draw them correctly; Tab order and screen readers ignored that CSS. Host tests or
+    CSS selecting widgets by DOM position (`:nth-child`, sibling combinators) now see the
+    `(Y, X, InstanceId)` order instead of the insertion order — select by `data-instance-id`
+    (or another stable attribute) instead.
+  - **Collapse / minimize.** The old `tm-widget--minimized` rule forced `grid-row: span 1` via
+    `!important`, which also reset `grid-row-start` — a minimized desktop widget silently lost
+    its saved `Y` and jumped to the first free row — and no mode released a collapsed card's
+    height. Remove host overrides of `tm-widget--collapsed` / `tm-widget--minimized` sizing and
+    let the component size the card to its header (desktop keeps the slot, tablet/mobile
+    release it).
+  - **Compact-mode heights.** Host CSS that expected the fixed `span H` rows on tablet, or the
+    gap-less mobile `min-height`, must switch to overriding `--tm-w-min-block` (or
+    `--tm-w-rows` / `--row-height`) instead of the row spans.
+  - **Stacked header.** Hosts that pinned the mobile toolbar-right to its own full-width row
+    (`flex-basis: 100%`) or relied on the switcher's 14–20rem floor below desktop must drop
+    those overrides — the switcher now spans the free space and must shrink to fit 320px next
+    to the Edit button.
+  - **Root region semantics.** Host tests asserting the root has no role, or asserting the exact
+    attribute list of `.tm-dashboard`, must accept the always-named `role="region"`.
+  - **Documented (not a change):** inside tablet, the six-to-two column switch follows the grid
+    container (`@container tm-dashboard (width < 768px)`), which is ~48px narrower than the
+    dashboard root — the effective root width for the two-column step is ~816px, not 768px.
+
+- **Draft-guard surface for every comment composer the host cannot observe — `TmChat`,
+  `TmNotionPageCommentPanel`, `TmNotionBlockCommentPanel`, `TmNotionTextCommentPanel`,
+  `TmNotionPageCommentSection`, `TmDocumentCommentComposer`, `TmDocumentCommentThread`,
+  `TmDocumentCommentRail`, `TmDocumentCommentThreadPanel` and `TmDocumentPageViewer` now expose
+  `OnDraftChanged`, `HasUnsavedDraft` and `DiscardDraftAsync`**, mirroring the additive pattern
+  `TmActivityComments` introduced earlier in 2.9.1. All of these components keep their composer
+  text in private fields (or child composers the host does not bind), so a host could never tell
+  that the user had typed a message or comment that a reload, a navigation or a panel close would
+  silently throw away. The new surface follows one contract across the family:
+
+  - `[Parameter] EventCallback<…> OnDraftChanged` fires ONLY when the draft-state record actually
+    changes (value-equality dedup with the last state assigned before invoking) — never on every
+    keystroke. Three records carry the flags (never the draft text itself), all in
+    `Tempo.Blazor.Abstractions`: **`TmChatDraftState`** (`HasComposerDraft`, `HasThreadReplyDraft`,
+    `EditingMessageId`, aggregate `HasUnsavedContent`) for `TmChat`, in the
+    `Tempo.Blazor.Models` namespace next to the other chat models; **`TmNotionCommentDraftState`**
+    (`HasNewCommentDraft`, `HasThreadReplyDraft`, `HasInlineReplyDraft`, `EditingEntryId`,
+    aggregate `HasUnsavedContent`) for the three Notion panels and the section pass-through, in
+    the `Tempo.Blazor.NotionEditor.Models` namespace next to the other Notion models; and
+    **`TmCommentDraftState`** (`IsEditorOpen`, `EditingCommentId`, `HasUnsavedContent`) for
+    `TmActivityComments` and the DocumentEditor and Signing components. All three implement
+    `ITmDraftState` (see below).
+  - `HasUnsavedDraft` polls the same aggregate flag live from the current composer state (not from
+    the last notification), for hosts that prefer polling over push.
+  - `DiscardDraftAsync` clears every draft slot (composer text, open reply, open edit) after the
+    consumer's OWN confirmation dialog — no component shows a confirmation itself; that remains
+    deliberately the consumer's responsibility. All of them dispatch through `InvokeAsync` and are
+    no-ops (no notification) when no draft exists.
+  - **`ITmDraftState`** (`HasUnsavedContent`) and **`ITmDraftGuard`** (`HasUnsavedDraft` +
+    `DiscardDraftAsync`) in `Tempo.Blazor.Abstractions.Shared` codify the contract:
+    `ITmDraftState` is implemented by all three records, `ITmDraftGuard` by every component with
+    the surface (`TmActivityComments`, `TmChat`, the three Notion panels plus
+    `TmNotionPageCommentSection`, `TmDocumentCommentComposer`, `TmDocumentCommentThread`,
+    `TmDocumentCommentRail`, `TmDocumentCommentThreadPanel` and `TmDocumentPageViewer`), so a
+    generic host page can hold `ITmDraftGuard?` / `ITmDraftState?` without caring which concrete
+    component it renders.
+
+  Per-component semantics worth knowing: `TmChat` reports the main composer, the open thread
+  panel's reply input and message edits (an edit opened without changes is NOT an unsaved draft —
+  the flag rises once the text differs from the message as it was when the edit started;
+  a thread panel that unmounts parameter-driven — its root message left `Messages` — clears its
+  slot and reports the cleared state); `DiscardDraftAsync` clears the text slots but leaves the
+  thread panel open (its visibility is the host's `ActiveThreadRootId` business). The Notion
+  panels treat the inline reply's auto-inserted quote the same way — content up to the auto-quote
+  is not user input — and hiding a panel (`Visible` → `false`) clears every draft slot and
+  reports the cleared state, so a host should check `HasUnsavedDraft` before hiding.
+  `TmNotionPageCommentSection` is a pure pass-through (`@ref` + delegation) of the embedded panel.
+  In the DocumentEditor stack the leaf `TmDocumentCommentComposer` carries the surface and both
+  hosts aggregate it: `TmDocumentCommentThread` over its reply/edit composers (each slot gated by
+  its mount condition, so a resolved thread or a withdrawn `CanComment` reports the closed, empty
+  state instead of a stale composer's text) and `TmDocumentCommentRail` over everything it
+  renders — its own new-comment composer AND every rendered `TmDocumentCommentThread`: the rail
+  merges the threads' reported states (IsEditorOpen = new composer or any thread editor,
+  EditingCommentId = the first thread's editing id, HasUnsavedContent = any slot), prunes
+  threads the host removes, and `DiscardDraftAsync` reaches all of them. In Signing,
+  `TmDocumentCommentThreadPanel` binds its reply/edit composers internally (the reply text is
+  cleared whenever the reply composer unmounts — selection change, clear selection, edit start —
+  and the aggregate counts it only while the reply composer is mounted), and
+  `TmDocumentPageViewer` aggregates its own new-thread draft panel with the embedded thread
+  panel (states flow in through the panel's OnDraftChanged callback, both contributions are
+  gated by `CommentsEnabled && CommentThreadPanelTemplate is null`, so a host-owned panel
+  template or a comment disable reports the closed state; `EditingCommentId` comes from the
+  panel; the viewer's own draft always creates a NEW thread).
+
+  Standalone editors that already expose their text through `Value`/`ValueChanged` binding —
+  `TmRichEditorFull`, `TmRichEditorSimple` and the Signing `TmCommentComposer` — deliberately stay
+  unchanged: a host that binds them already sees every character.
+
+- **`TmDiagramLayersPanel` styles live in exactly one stylesheet now (DiagramEditor redesign
+  phase 3).** The panel's rules were duplicated: a scoped `TmDiagramLayersPanel.razor.css` AND a
+  legacy global copy inside `Tempo.Blazor.DiagramEditor`'s `_diagram-editor.css`. The global copy
+  is deleted (together with its dead rules for markup that no longer exists:
+  `.tm-diagram-layers__selected-section`, `__select`, `__actions`, `__action-btn`, `__icon-btn`,
+  `__label`); the scoped component stylesheet is the single source
+  (`TmDiagramLayersPanelTests.SingleStyleSource` pins it). No class that any markup, test or
+  consumer still uses was removed — the live class names are unchanged, so most hosts need no
+  action. Two consequences to migrate for:
+
+  ```css
+  /* before — two sources; the global copy could be "edited" with no effect
+     (the scoped copy won on specificity) */
+  wwwroot/css/components/_diagram-editor.css   .tm-diagram-layers__item { ... }   /* deleted */
+  Components/Diagram/TmDiagramLayersPanel.razor.css .tm-diagram-layers__item { ... }  /* the source */
+
+  /* after — override the scoped source (or ::deep from a parent's razor.css);
+     a host that linked ONLY the package's global stylesheet and styled
+     .tm-diagram-layers* must load the RCL scoped bundle ({App}.styles.css),
+     which the demos already do */
+  ```
+
+  ```text
+  # dead class names, removed without alias (no markup/test/consumer referenced them):
+  #   .tm-diagram-layers__selected-section / __select / __actions / __action-btn
+  #   .tm-diagram-layers__icon-btn / __label
+  ```
+
+- **`TmDiagramTemplateCard` is a vertical card (DiagramEditor redesign phase 3, mockup).** The
+  card now stacks the 16:10 preview ABOVE the name/tags (`flex-direction: column` with
+  `aspect-ratio: 16 / 10` on `.tm-diagram-template-card__thumb`); the DOM order
+  (thumb → info) is unchanged, so selectors keep matching. A host that laid the card out as a
+  horizontal row from CSS must set `flex-direction: row` on `.tm-diagram-template-card` again
+  and give `.tm-diagram-template-card__thumb` an explicit width.
+
+- **`TmDiagramEditor`/dialogs: component-level dark overrides removed (DiagramEditor redesign
+  phase 3).** Every `[data-theme="dark"]` / `.tm-dark` block and every hex/rgba literal in the
+  DiagramEditor package's CSS was replaced by semantic `--tm-*` tokens (the strict token audit
+  of the package went from 168 baseline entries to 0). Dark mode now follows `tokens-dark.css`
+  exclusively; a host that RE-Pointed one of the removed component dark values must override the
+  semantic token instead (e.g. `--tm-color-surface-elevated`), not the component class.
+
+- **`TmWidgetSelector` renders on `TmModal` — its private overlay markup is gone.** The selector
+  no longer renders `.tm-widget-selector-overlay` (its own `position: fixed` root) or a private
+  header/close button; the modal owns the overlay, the panel chrome, the title and the close
+  control. The dialog surface is now `.tm-modal-overlay > .tm-modal-container > .tm-modal`
+  (`.tm-focus-scope`, `role="dialog"`), and the familiar `.tm-widget-selector-modal` class moved
+  INSIDE it onto the content root (search + category/grid area). Hosts (or test suites) that
+  queried the old DOM must migrate, before/after:
+
+  ```css
+  /* before */
+  .tm-widget-selector-overlay { /* the fixed overlay root, z-index var(--tm-z-modal) */ }
+  .tm-widget-selector-header  { /* title + subtitle + close button */ }
+  .tm-widget-selector-close   { /* the × button */ }
+
+  /* after — styled by the library's _modal.css; style the content root instead */
+  .tm-modal-overlay { }              /* the overlay (was .tm-widget-selector-overlay) */
+  .tm-modal-close   { }              /* the × button (aria-label "Close") */
+  .tm-widget-selector-modal { }      /* now the content root INSIDE .tm-modal-body */
+  ```
+
+  ```csharp
+  // Playwright/bUnit selectors, before → after:
+  //   .tm-widget-selector-overlay        → .tm-modal-overlay  (or .tm-widget-selector-modal)
+  //   .tm-widget-selector-close          → .tm-modal-close
+  //   .tm-widget-selector-modal h3       → .tm-modal-title
+  ```
+
+  The `.tm-widget-selector-modal` contract class is unchanged in name — only its position in the
+  DOM moved one level down (inside the modal body), and `.tm-widget-selector-category` /
+  `.tm-widget-card-icon` are untouched.
+
+- **The `TmDashboard` switcher menu is an overlay-panel ARIA menu of native buttons.** The menu
+  renders through `TmOverlayPanel` (popover="manual", positioned by `overlay.js`) — hosts that
+  styled `.tm-dashboard-menu` as an absolutely-positioned dropdown (`position: absolute;
+  top: calc(100% …)`) must drop those declarations, exactly like the `TmDropdown` migration; the
+  class stays on the panel root. The old `div.tm-overlay` click-away backdrop behind it is gone
+  (the panel dismisses on outside pointerdown itself). Each dashboard row changed from a
+  `div[role="menuitem"]` with emulated Enter/Space to a `div[role="none"]` wrapper around a
+  native `button[role="menuitem"].tm-dashboard-menu-item__select` plus sibling native action
+  buttons (`button[role="menuitem"].tm-dashboard-menu-action[-danger]`) whose labels now name the
+  dashboard — the new `TmDashboard_DeleteNamed` ("Delete dashboard {0}") and
+  `TmDashboard_SetAsDefaultNamed` ("Set {0} as default") keys replace the bare
+  `TmDashboard_Delete`/`TmDashboard_SetAsDefault` labels on those buttons. The current dashboard's
+  select entry carries `aria-current="true"`. The rename save icon now uses
+  `TmDashboard_ApplyName` ("Apply name") instead of `TmDashboard_SaveChanges`, and the inline
+  rename is a `<form>` (Enter applies, Escape cancels). Tests that dispatched
+  `KeyDown("Enter")`/`KeyUp(" ")` at a `.tm-dashboard-menu-item` row must instead click the native
+  select button (or press keys in a real browser), and `.tm-dashboard-menu-item` rows no longer
+  carry `tabindex`/`role="menuitem"` themselves — the entries are the buttons inside. The widget
+  cards in `TmWidgetSelector` changed from `div.tm-widget-card` to `button.tm-widget-card` with
+  span children (`.tm-widget-card-title`, `.tm-widget-card-desc` replace the inner `h4`/`p`, the
+  icon/info/meta/add wrappers are spans) and render on a `ModalSize.XLarge` modal whose height is
+  the `--tm-widget-selector-height` token (`min(60vh, 35rem)`, applied as a `max-height`) —
+  `.tm-widget-card` queries keep working, but anything that asserted `TagName == "div"` (or relied
+  on the div not being focusable, or selected `.tm-widget-card-info h4`) must move to the button.
+
+- **The 267 demo-only localization keys are no longer in the `Tempo.Blazor` resource tables.** An
+  application that read any of them through `ITmLocalizer` now gets the raw key — copy the strings
+  into your own decorator (see the demo-keys entry under `Changed` below).
+
+- **An overlay close now leaves the focus where a live element OUTSIDE the closing surface
+  already holds it, and an explicit restore target INSIDE the surface is skipped.** Previously
+  `TmModal`/`TmDialog`/`TmDrawer`/`TmFocusScope` always ran their restore on close: when an app's
+  OK handler had settled the focus on a post-close action button before the close render, the
+  restore yanked it back to the opener (or, worse, onto a captured element inside the overlay,
+  which then fell to `<body>` when the render removed it). And a `RestoreFocusTarget` that lay
+  inside the closing surface was focused anyway — handing focus to an element the close was about
+  to remove. Now the restore runs only while the closing surface still holds the focus (or focus
+  fell to `<body>`), and every restore candidate — opener or explicit target — must be connected
+  and OUTSIDE the surface. Apps that depended on the close re-focusing the opener after they had
+  placed focus elsewhere must migrate, before/after:
+
+  ```razor
+  <!-- before: the close stole the focus back from the "Created" button -->
+  <TmModal OnOk="() => { show = false; createdButton.FocusAsync(); }" />
+
+  <!-- after: unchanged code, new behaviour — the focus placed on the live "Created" button
+       (after the close render) holds; the close restores the opener only when the surface
+       still owned the focus -->
+  <TmModal OnOk="() => { show = false; _focusCreatedPending = true; }" />
+  @code {
+      protected override async Task OnAfterRenderAsync(bool firstRender)
+      {
+          if (_focusCreatedPending) { _focusCreatedPending = false; await _createdButton.FocusAsync(); }
+      }
+  }
+  ```
+
+  (A focus issued synchronously inside the OK handler — BEFORE the close render — was and is
+  dropped by the browser, because the open modal holds the page `inert`; the pending-flag pattern
+  above is the supported way and works on both render modes.)
+
+  The second half: a `RestoreFocusTarget`/`RestoreFocusTargetId` that resolves to an element
+  inside the closing surface (or a disconnected one) no longer receives the focus — the restore
+  falls back to the opener, so a misconfigured target cannot strand the focus on a dying element.
+
+- **`TmColorPalette`'s accessibility tree moved from an invalid grid to a radiogroup of radios.**
+  The old markup put `role="grid"` on the palette and `role="gridcell"` + `aria-selected` on the
+  swatch buttons — an ARIA grid needs `role="row"` wrappers, so screen readers never exposed a
+  usable grid, and `aria-selected` on a non-list option carried no checked semantics. The grid
+  is now `role="radiogroup"` (same localized `aria-label`) and each swatch is `role="radio"`
+  with `aria-checked` instead of `aria-selected`; the roving tabindex, the arrow/Home/End focus
+  movement and the native-button Enter/Space activation are unchanged. Hosts querying the
+  palette's roles or the selected swatch must migrate, before/after:
+
+  ```html
+  <!-- before -->
+  <div class="tm-color-palette-grid" role="grid" aria-label="Select color">
+      <button type="button" role="gridcell" aria-selected="true" …></button>
+  </div>
+
+  <!-- after -->
+  <div class="tm-color-palette-grid" role="radiogroup" aria-label="Select color">
+      <button type="button" role="radio" aria-checked="true" aria-label="Select color Red" …></button>
+  </div>
+  ```
+
+  The generic per-swatch `aria-label` is gone with it: unnamed colors announce
+  "Select color {value}", and `ColorNames` (see Accessibility) replaces the value with a real
+  name.
+
+- **`TmNotificationBell` entries are native `<button type="button">` elements, not
+  `div @onclick` rows.** A `div` with a click handler is a keyboard trap — a keyboard user could
+  open the dropdown but never activate a notification (WCAG 2.1.1). Each entry is now a real
+  button (the browser delivers the activation; no emulated key handlers per
+  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md)), it holds no
+  nested interactive element, and its inner wrappers (`__avatar`, `__content`) became `<span>`s
+  because a button's content model is phrasing content. The entry keeps its previous styling
+  (the UA button chrome is reset in `_notification-bell.css`, a focus-visible ring was added).
+  DOM, before/after:
+
+  ```html
+  <!-- before -->
+  <div class="tm-notification-bell__item">
+      <div class="tm-notification-bell__avatar">…</div>
+      <div class="tm-notification-bell__content">…</div>
+  </div>
+
+  <!-- after -->
+  <button type="button" class="tm-notification-bell__item">
+      <span class="tm-notification-bell__avatar">…</span>
+      <span class="tm-notification-bell__content">…</span>
+  </button>
+  ```
+
+  Consumers styling the entries over the classes keep working (all selectors are class-based);
+  consumers selecting the entries by tag (`div.tm-notification-bell__item`) must select
+  `button.tm-notification-bell__item` instead.
+
+- **`TmWorkflowDesignerCanvas`'s svg root is `role="group"`, not `role="img"`** — `img` tells
+  assistive technology the subtree is a picture, which hid the now-focusable state nodes from it
+  entirely. The accessible name (the canvas aria-label) is unchanged. DOM, before/after:
+
+  ```html
+  <!-- before: the states inside were invisible to assistive technology -->
+  <svg viewBox="0 0 800 500" aria-label="Workflow designer canvas" role="img">…</svg>
+
+  <!-- after: a labelled group whose state nodes are focusable buttons -->
+  <svg viewBox="0 0 800 500" aria-label="Workflow designer canvas" role="group">…</svg>
+  ```
+
+  Two more behaviour changes ride along: **plain wheel no longer zooms the canvas** — ctrl+wheel
+  (trackpad pinch) does, exactly like the diagram editor, and plain wheel scrolls the page again;
+  and **a click that follows a real node drag no longer also selects the node** (a tap still
+  selects — the drag gesture swallows only the click that terminates a drag).
+
+- **`workflow-designer.js` now imports `pointer-drag.js` and `pointer-gesture.js`.** A `script-src`
+  policy that allows `workflow-designer.js` must also allow the two helpers it loads with a dynamic
+  `import()` — same `_content/Tempo.Blazor/js/` origin, so the host-wide nonce or hash that covers
+  `scheduler.js` covers all of them; a per-file hash must list `pointer-drag.js` and
+  `pointer-gesture.js` too. In exchange the designer no longer carries its own mouse gesture.
+
+- **The rich text editor dialogs (link, image, table, video, find & replace) are now `TmModal`s.**
+  They used to paint their own `position: fixed` overlay at `z-index: 1040` with no `role`,
+  `aria-modal`, Escape handling or focus trap — opened while a promoted drawer, sheet or modal was
+  up they could paint underneath it. Now each dialog renders the core `TmModal` primitive: the
+  browser top layer, `role="dialog"` named by its title (`aria-labelledby`), Escape and the
+  backdrop dismiss it, the shared focus trap holds Tab inside, focus returns to the editor surface
+  on every close path, and the caret/selection that opened the dialog is replayed before the
+  insertion (link/image/table/video) or on plain close (find & replace). The dialog chrome
+  (header with the `h5` title, the `×` close button, the panel box) is the standard modal chrome
+  now. Consumers who positioned or targeted the removed self-overlay parts must target the modal
+  parts instead:
+
+  ```razor
+  @* before: dialog rendered its own fixed overlay *@
+  <div class="tm-rte-link-dialog">
+      <div class="tm-rte-link-backdrop"></div>
+      <div class="tm-rte-link-content">
+          <div class="tm-rte-link-header"><h5>Insert Link</h5><button class="tm-rte-btn-close">×</button></div>
+          <div class="tm-rte-link-body">…</div>
+          <div class="tm-rte-link-footer">…</div>
+      </div>
+  </div>
+
+  @* after: the same form content on the TmModal chrome; the dialog root class rides on the
+     overlay root, body content goes straight into the modal body *@
+  <div class="tm-modal-overlay tm-rte-link-dialog tm-rte-dialog" popover="manual">…</div>
+  ```
+
+  The `.tm-rte-link/image/table/video/findreplace-backdrop`, `-content`, `-header`, `-body`,
+  `-footer` and `.tm-rte-btn-close` classes no longer exist; the inputs (`.tm-rte-link-url-input`
+  …), the size grid and the result badge keep their classes. Each dialog also grew one optional
+  parameter: `RestoreFocusTargetId` — the id of the element (the editor surface) focus returns to
+  when the dialog closes; the rich editors pass their editor automatically. Two more breaking
+  details: the footer buttons are `TmButton`s now (Ghost Cancel + Primary/Secondary action, the
+  `tm-rte-btn-cancel`/`tm-rte-btn-insert`/`tm-rte-btn-replace`/`tm-rte-btn-replaceall` hook classes
+  stay), and `FindReplaceDialog.OnReplace`/`OnReplaceAll` changed from `EventCallback` to
+  `Func<(string Find, string Replace), Task<int>>?` — the handler must return the real replacement
+  count (from `tmRichEditor.findAndReplace`) so the dialog can report it; `OnFind` was removed.
+
+- **`TmSplitterPane`'s resizer is a keyboard-operable separator driven by the new `tm-splitter.js`
+  module (no more `eval`).** The strip renders `role="separator"` with `tabindex="0"`,
+  `aria-orientation` (a horizontal splitter's separator is a vertical strip and reports
+  `vertical`), `aria-valuenow` with `aria-valuetext` (`"200 px"` — the pane is measured in the DOM
+  when its `Size` is not a plain pixel length, so the value is never missing),
+  `aria-valuemin` (always emitted; `0` without a parseable `MinSize`), `aria-valuemax` (always
+  emitted; the splitter's measured main-axis length without a parseable `MaxSize`) and a
+  localized `aria-label` (`TmSplitter_Resize`). Arrows resize by 16 px (Shift by 64 px, along the
+  splitter's axis only, inverted in RTL exactly like the pointer drag) and `Home`/`End` jump to a
+  bound — `0` and the measured splitter length when no pixel `MinSize`/`MaxSize` parses — the
+  WCAG 2.5.7 non-drag alternative. The collapse button (localized now,
+  `TmSplitter_Collapse`/`TmSplitter_Expand`) is the strip's SIBLING inside a
+  `.tm-splitter__gutter` wrapper, never a child of `role="separator"`. The drag itself
+  moved out of Blazor pointer handlers (which re-rendered on every move) and out of the `eval`'d
+  `window.TempoSplitter` shim into `tm-splitter.js` over the shared `pointer-drag.js` helper: the
+  pane follows the pointer as an inline `flex` with no re-render per move and exactly one commit
+  per gesture; Escape, pointercancel and a mid-drag detach restore the pane's exact start style
+  (the drag's `flex` shorthand would otherwise leave the authored inline `flex-basis` destroyed);
+  the horizontal delta inverts in RTL; and under `(pointer: coarse)` the strip's hit area widens
+  to a full `--tm-touch-target` (the collapse button grows to it too). There is deliberately no
+  `SizeChanged` event. Consumer-facing DOM, before/after:
+
+  ```razor
+  @* before: a bare div with Blazor pointer handlers, no role, not focusable *@
+  <div class="tm-splitter__resizer">
+      <button type="button" class="tm-splitter__collapse-btn">…</button>
+  </div>
+
+  @* after: a gutter wrapping the separator tab stop (keys resize) and, as its sibling, the
+     collapse button with its own accessible name — never inside the separator *@
+  <div class="tm-splitter__gutter">
+      <div class="tm-splitter__resizer" role="separator" tabindex="0"
+           aria-orientation="vertical" aria-valuenow="200" aria-valuetext="200 px"
+           aria-valuemin="100" aria-valuemax="800" aria-label="Resize panes"></div>
+      <button type="button" class="tm-splitter__collapse-btn" aria-label="Collapse pane">…</button>
+  </div>
+  ```
+
+  **CSP:** a `script-src` policy must allow `tm-splitter.js` next to `pointer-drag.js` (same
+  `_content/Tempo.Blazor/js/` origin, so the host-wide nonce or hash that covers `scheduler.js`
+  covers both; a per-file hash must list the module too). In exchange the splitter — and the range
+  slider below — no longer need `unsafe-eval`.
+
+- **`TmRangeSlider` drags natively: two stacked `input[type=range]`, no JS and no `eval`.** The
+  `window.TempoSlider` shim (an `eval`'d pointer gesture that leaked its window listeners, never
+  released capture and died on touch, because the container had no `touch-action`) is gone, and the
+  shipped `wwwroot/js/slider.js` static asset is **deleted** — no host page ever loaded it, and a
+  host that did would have silently degraded the eval-free component. Each thumb now drags itself
+  through CSS: the input swallows pointer events, the thumb pseudo-elements answer them, and on
+  `(pointer: coarse)` the thumbs grow to `--tm-touch-target`. Both thumbs carry localized
+  accessible names (`TmRangeSlider_Start` / `TmRangeSlider_End`, prefixed `{Label} – ` when a
+  `Label` is set), and the root gains `tm-range-slider--start-on-top` whenever the start thumb is
+  in the upper half of the range — parked on or a step from the end thumb, it would otherwise be
+  trapped beneath it — so the start thumb stays draggable. A gesture that runs past a bound is
+  clamped on the INPUT itself (the raw value renders first, then the clamped rewrite forces the
+  thumb back inside the range), and the fill uses `inset-inline-start`, so the range mirrors in
+  RTL. Behaviour change: clicking the empty track no longer jumps the nearest thumb — grab a
+  thumb, or focus it and use the arrows. DOM, before/after:
+
+  ```razor
+  @* before: unnamed thumbs; a JS gesture owned the container *@
+  <input type="range" class="tm-range-slider__input tm-range-slider__input--start"
+         min="0" max="100" />
+
+  @* after: named thumbs that drag themselves; the container has no listeners *@
+  <input type="range" class="tm-range-slider__input tm-range-slider__input--start"
+         min="0" max="100" aria-label="Price – Minimum" />
+  ```
+
+- **Relative time (and the Scheduler/Gantt "today") is judged in the USER's time zone by default;
+  `AddTempoUserTimeZone()` is an obsolete no-op.** An earlier 2.9.1 preview added
+  `ITmUserTimeZone` + `AddTempoUserTimeZone()` as an OPT-IN (2.9.0 never shipped it); this release
+  flips the default on, so the call is gone — it is kept as an `[Obsolete]` no-op so code written
+  against it compiles. `AddTempoBlazor()` registers the relative-time formatter over a private clock
+  whose `LocalTimeZone` reads `ITmUserTimeZone.Zone` — the browser's zone on Blazor Server (UTC
+  until the browser probe reports after the first interactive render, then
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`), the runtime's zone on WebAssembly. The day
+  boundary and the clock time inside "yesterday at 4:20 PM" follow the browser, not the server.
+  `TmScheduler.ResolveTimeZone()` (when the host set no `TimeZoneId`) and the Gantt's "today" (the
+  today marker, new-task defaults, the overdue highlight, the embedded calendar) reuse the same
+  `ITmUserTimeZone`, so Scheduler/Gantt and the stamps agree; the Scheduler and the Gantt now also
+  trigger the browser probe from their first interactive render and re-render when the zone arrives.
+  The app-wide `TimeProvider` is still never replaced (Kestrel and cookie authentication consume
+  it), and a host profile setting still wins via `ITmUserTimeZone.SetZone`.
+  **Breaking vs 2.9.0** (2.9.0 had no opt-in, so this is the real before/after):
+
+  ```csharp
+  // before (2.9.0): the SERVER's zone decided the day boundaries
+  builder.Services.AddTempoBlazor();
+  // formatter ran over TimeProvider.System → days judged in the server zone;
+  // TmScheduler.ResolveTimeZone() with no TimeZoneId → TimeZoneInfo.Local (the server zone)
+
+  // after (2.9.1 default): the USER's zone decides
+  builder.Services.AddTempoBlazor();
+  // formatter runs over the browser probe → UTC until it reports, then the browser zone;
+  // TmScheduler.ResolveTimeZone() with no TimeZoneId → ITmUserTimeZone.Zone (UTC until the probe)
+  ```
+
+  A host that wants the 2.9.0 server-zone behaviour (or its own zone plumbing) registers a scoped
+  `ITmRelativeTimeFormatter` over the clock of its choice after `AddTempoBlazor()` and passes an
+  explicit `TimeZoneId` to its `TmScheduler` instances:
+
+  ```csharp
+  // keep the 2.9.0 server-zone behaviour
+  builder.Services.AddTempoBlazor();
+  builder.Services.AddScoped<ITmRelativeTimeFormatter>(sp => new TmRelativeTimeFormatter(
+      sp.GetRequiredService<ITmLocalizer>(), TimeProvider.System));
+  // <TmScheduler TimeZoneId="Central Europe Standard Time" … /> — the display zone, explicitly
+  ```
+
+  See [docs/localization-plurals.md](docs/localization-plurals.md) for the full plumbing notes
+  (why the app-wide `TimeProvider` must stay untouched, the probe timing, host overrides). A host
+  with no `IJSRuntime` at all (a pure backend resolving the formatter) gets a formatter over a
+  machine-local/resolved zone service — the same day boundary the plain formatter had — and never
+  faults on the missing interop.
+
+- **The deprecated `TmTimeline_*` keys are removed from the resources.** `TmTimeline_JustNow`,
+  `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`, `TmTimeline_DaysAgo` and `TmTimeline_DateFormat`
+  were deprecated earlier in this release (the library stopped reading them); they are now gone from
+  `TmResources.json`, `TmResources.cs.json` and `TmResources.fr.json` as well, so a host that still
+  overrides them no longer shadows anything. **Migration:** override the `Tm_Time_*` family instead
+  (or register your own `ITmRelativeTimeFormatter`):
+
+  ```csharp
+  // before
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "TmTimeline_MinutesAgo"
+  // after
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "Tm_Time_MinutesAgo"
+  ```
+
+### Upcoming
+
+- **`TmDataTable.KeyboardNavigation` becomes `Grid` by default in the next major release.** Keep today's behavior by explicitly setting `KeyboardNavigation="DataTableKeyboardNavigation.Rows"`.
+
+### Changed
+
+- **DiagramEditor: inspector page orientation is a labelled Portrait/Landscape segmented control**
+  with `aria-pressed`.
+
+- **DiagramEditor: the status-bar mode control keeps a constant visible label** — *Read-only*
+  (`TmDiagramEditor_ReadOnly`) — in both states; the state travels on `aria-pressed`, the
+  lock/pencil icon and the tooltip wording (`TmDiagramEditor_Editing` / `TmDiagramEditor_ReadOnly`),
+  and the accessible name repeats the visible label (WCAG 2.5.3). The same shape applies to the
+  mobile "⋯" menu toggle.
+
+- **DiagramEditor: UML stencils (`uml.*`) grow to fit their content** (rounded up to the 10-unit
+  grid, never shrunk) when inserted from the palette, through the Connect dialog or when a document
+  is created from a template. The growth is content-driven only: a stencil whose data carries no
+  list section (attributes/methods/values — activity start/end, note, actor, …) keeps its stencil
+  default height, and the content sum has no minimum-height floor beyond that default. Connect
+  placement and swimlane drop detection use the fitted height, so a class-like stencil that grows
+  (e.g. abstract-class 140→150) is centred and dropped into the cell its body actually overlaps.
+  Stencil content taller than its node keeps its first section visible
+  and clips at the bottom (`justify-content: safe center`) instead of being clipped at both edges.
+  The property-edit resize path (editing attributes/methods inline) shares the same content
+  measurement: `DiagramUmlAutoHeight` exposes one `ContentHeight(stencilId, data)` used by both
+  `Fit` and `Compute`, so an inline edit grows the node exactly like insertion — grid-rounded,
+  never below the node's current (default) height, no 140/120/100 stencil floor. Demo UML sample:
+  Customer class height corrected.
+
+- **DiagramEditor: canvas-scoped paper/ink tokens.** `--tm-diagram-paper` and
+  `--tm-diagram-node-ink` are declared on `.tm-diagram-canvas`, so a host rebrand (e.g. sepia
+  paper) targets `.tm-diagram-canvas` or deeper — no `!important`, no shallower ancestor. Edge
+  labels reuse the paper for their halo pill. `exportViewportAsSvg` copies the computed
+  fill/stroke/color/background of the live page, backdrop and edge-label text onto the serialized
+  clone, AND sets the computed `--tm-diagram-node-ink` / `--tm-diagram-paper` values on the clone
+  root, so every `var()` inside the exported tree (node bodies, table cells, labels) resolves to
+  the paints the user actually saw (including host overrides). New package tokens:
+  `--tm-diagram-swimlane-header` (1.875rem = 30px, declared on `.tm-diagram-canvas`) drives the
+  swimlane header band so the painted header stays in step with
+  `DiagramNodeSwimlaneData.HeaderSize = 30`; `--tm-diagram-statusbar-btn` (1.875rem) keeps the
+  status-bar buttons at the same 30px band; `--tm-diagram-chip-font` (0.6875rem = 11px, declared
+  on `.tm-diagram-editor`) is the package chip scale for the page-tab close button and the
+  template-card category/tags.
+
+- **TmDiagramMinimap frames the diagram content instead of the whole page (X4).** The map's viewBox
+  is now the union of all node boxes and the current viewport, padded by 10 % (never smaller than a
+  fifth of the page), and the viewport rectangle draws as a transparent outline *under* the node
+  boxes — it no longer hides the content it frames in light themes. Taps and drags map through the
+  fitted origin, so navigation always matches what is shown. The width follows the editor layout
+  (112 / 160 / 200 px for mobile / tablet / desktop); the mobile CSS override of
+  `.tm-diagram-minimap__svg` width was removed — hosts must not resize the minimap svg with CSS (the
+  tap mapping is computed from the `Width` parameter). The tablet/mobile overlay collapses in place
+  (`.tm-diagram-editor__minimap-overlay-collapse`) and reopens from the floating
+  `.tm-diagram-editor__minimap-overlay-reopen` button.
+
+- **TmDiagramEditor (mobile): selecting a node pans the canvas so the selection stays visible above
+  the peeked panels sheet (U3).** Tap-insert lands in the band above the sheet again — the JS helper
+  returned an object the .NET side could not read, so the band measurement silently fell back to the
+  viewport centre; `tmDiagramEditor.visibleBandCentre` now returns a `[x, y]` array.
+
+- **TmDiagramEditor (mobile): the floating zoom overlay reads horizontally** (+ | % | − | fit along
+  the bottom edge) instead of the 176 px vertical pill that covered a third of the narrow canvas.
+
+- **DiagramEditor zoom: the zoom buttons now step through 15 %…500 % (added 15 %, 400 %, 500 %),
+  the same range as wheel, pinch, `zoomTo` and fit-to-view.** At a limit, a pinch or a wheel tick
+  clamps exactly to the limit instead of freezing just before it, and the two-finger pan keeps
+  working.
+
+- **DiagramEditor touch: a 600 ms long-press opens the context menu on edges and on the empty
+  canvas too (it was node-only, so iOS had no edge/canvas menu), and the native touch
+  `contextmenu` is swallowed, so the menu opens exactly once. Pen keeps the native press-and-hold
+  menu.**
+
+- **`TmDiagramEditor` visual layer aligned with the redesign mockups — tokenized, no structure
+  change (DiagramEditor redesign phase 3).** Paint-only pass over the package's CSS plus small
+  markup touches; the toolbar keeps its `data-tm-group` contract, no group is re-ordered (that is
+  phase 4) and no toolbar function changed:
+
+  - The editor chrome (root, page-tabs strip, toolbar) paints the themed workspace tone
+    (`--tm-bg-workspace`, F0) instead of a hardcoded surface, so the indigo theme and dark mode
+    recolor it without component overrides.
+  - Toolbar groups are FLAT (no boxed button groups); the cluster separators and the 40px row
+    height carry the structure, buttons/controls use `--tm-radius-control` and the active tool
+    paints `--tm-color-primary-subtle` + primary ink (same convention as the core
+    `aria-pressed` toolbar button).
+  - Page tabs mark the ACTIVE page with a primary underline instead of a raised boxed tab.
+  - The stencil palette reads like the mockup: sentence-case category headers with the chevron
+    on the RIGHT (markup order swapped inside the button; `aria-expanded` unchanged) and
+    card-like rows for the stencils.
+  - Inspector property sections use `--tm-radius-card`; the Fill/Stroke fields show the current
+    hex value as text next to the swatch (`.tm-diagram-properties__color-value`, mockup
+    "Vzhled" section).
+  - The SQL/CSV import dialogs paint the live parse result as a summary box with icon stats
+    (`.tm-diagram-{sql,csv}-import__stat`), the CSV preview table has a sticky `thead`, and the
+    template gallery cards are vertical (see Breaking / Migration).
+  - Everything paints through semantic tokens; translucent washes derive from tokens via
+    `color-mix()`. The package's strict token-audit baseline dropped from 168 entries to 0 and
+    `DiagramResponsiveScreenshotTests` gained a 1440×900 light/dark × default/indigo matrix
+    (editor, layers panel and the four dialogs) whose dark captures assert that the editor
+    surfaces resolve to dark backgrounds with readable text and that no white island leaks
+    into the chrome (computed-style checks), so a component-level light colour leaking into
+    dark mode fails the test.
+
+- **The demo-only localization keys moved out of the `Tempo.Blazor` package into the demo
+  applications.** All 267 keys that only demo pages use — `TmDemo_*` and the `TmToolbarDemo_*`,
+  `TmEditorShellDemo_*`, `TmDiagramDemo_*`, `TmMobileActionBarDemo_*`, `TmChartDemo_*`,
+  `TmResponsiveDemo_*`, `TmSankeyChartDemo_*`, `TmDataTableDemo_*`, `TmSidePanelDemo_*`,
+  `TmCalendarHeatmapDemo_*`, `TmRichEditorDemo_*` families, plus the lone
+  `TmModelingEditor_DemoError` (en/cs/sk/fr alike) — used to ship in
+  the library's embedded `TmResources` tables, inflating every consuming application's bundle with
+  ~1,000 strings no component ever reads. They now live in the demo's own embedded
+  `DemoResources.{json,cs,sk,fr}.json` (`Tempo.Blazor.Demo.SharedUI/Resources`), served by the new
+  `DemoTmLocalizer` (`ITmLocalizer` decorator: demo keys from the demo tables, everything else
+  falls through to the built-in `TmResources`), registered in all three demo hosts — WASM, Server
+  and both InteractiveAuto sides — via `builder.Services.AddTempoDemoLocalizer()` right after
+  `AddTempoBlazor()`. Demo pages inject the same `ITmLocalizer` as before and needed no changes;
+  no library component changed; the 267 demo keys are no longer in the Tempo.Blazor resource
+  tables — an application that read any of them through `ITmLocalizer` now gets the raw key and
+  should copy the strings into its own decorator. `DemoResourceCompletenessTests` guards the
+  new tables (four-language parity, placeholder parity, every demo key visibly demo-named, and the
+  key sets of the two tables disjoint), and `MockTmLocalizer` no longer carries the moved keys.
+
+- **A `TmMobileActionBar` in-flow bar is one label line shorter (C11).** Tiles of the default
+  `StickyContainer` and `Inline` bars floor at ONE label line (a ≈61px bar instead of 71px with
+  one-line labels); a wrapping label grows the bar and `align-items: stretch` keeps every tile
+  equal. `Placement="FixedViewport"` keeps the two-line floor its published
+  `--tm-mobile-action-bar-reserve-block-size` reserve derives from, so the reserve still equals
+  the real bar box.
+
+- **The `TmMobileActionBar` tile icon is a token-driven chip box (C13, off by default).**
+  `.tm-mobile-action-bar__icon` sizes itself from the new `--tm-mobile-action-bar-icon-box`
+  (default `1rem`, the `IconSize.Sm` icon — no visual change) and paints
+  `--tm-mobile-action-bar-icon-chip-bg` (default `transparent`) with `--tm-mobile-action-bar-icon-chip-fg`
+  ink (default `currentColor`). The tile floor, the bar height and the FixedViewport reserve
+  derive the icon term from that token, so a host that turns the chip on grows them together and
+  the reserve stays exact — but only while the chip tokens are set on `:root`, because the
+  published reserve is evaluated with the `:root` values. A scoped opt-in (a class on one bar)
+  must re-declare `--tm-mobile-action-bar-reserve-block-size` in that scope as
+  `calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px))`; the demo's
+  `FixedViewport` tile opts in that way as the working example.
+
+- **The `TmSignatureCapture` overlay clear becomes a compact icon-only tile below 640px of the
+  component's own width.** The overlay button (a labelled one covered ≈14% of the pad at 320,
+  where no stroke can start under it or pass beneath it) shrinks to exactly the 44px touch
+  target at `--tm-space-1` insets and now shows the ✕ icon followed by the label (the icon is
+  new — the button was text-only before). Below 640px of the component's own width the label is
+  visually hidden but kept in the DOM with the full screen-reader clip (`clip-path: inset(50%)`
+  alongside `clip`), so the accessible name is unchanged at every width; the overlay root pins
+  `inline-size: 100%` so the container query measures the pad's real width, and the compact pad
+  grows to 2.5 touch targets so the corner tile stays well under its ~10% ceiling of the pad.
+  At a container 640px or wider the button shows icon + label as before.
+
+- **Escape during a bottom-sheet drag cancels the drag first (internal change, no API surface).**
+  The sheet gesture (`tm-sheet.js`) now runs on the shared `pointer-drag.js` helper instead of its
+  own pointer handlers: the flick/snap/`SwipeToDismiss` behaviour is unchanged, but Escape mid-drag
+  rolls the inline height back and restores the snap C# owns without closing the sheet (the Escape
+  is consumed by the drag; a second Escape closes the sheet), a second finger can no longer hijack
+  an active drag, and `lostpointercapture` / a missed mouse-up cancel silently.
+
+- **`TmCalendarView` colours come from `--tm-calendar-view-*` tokens.** The today background
+  and ink, the event fill/border/ink and the highlighted-date dot read six new tokens
+  declared in `tokens.css` with their dark pairs in `tokens-dark.css`; the component's two
+  `[data-theme="dark"]` dark blocks and ten hex fallbacks are gone. A host that restyled the
+  dark calendar view must override the tokens instead of `[data-theme="dark"]
+  .tm-calendar-view__event`. The highlighted-date dot moves `primary-400` → `primary-500`
+  in light: 400 measured 2.54:1 (indigo 2.98:1) on the light surface, under the 3:1 floor
+  for a non-text indicator; the dark dot stays `primary-400`. The selected day now paints
+  `--tm-cal-selected-bg`/`--tm-cal-selected-fg` (same values, no white-on-primary literal).
+
+- **`TmLightbox` chrome comes from `--tm-lightbox-*` tokens.** The backdrop scrim, the round
+  control fills (idle + hover), the control ink and the loading-line ink read five new
+  `tokens.css` tokens, replacing the last colour literals in `_lightbox.css` (the recorded
+  CSS-audit debt: the `rgba(0,0,0,.85)` backdrop, the `rgba(0,0,0,.5/.8)` button fills, the
+  white ink and the `rgba(255,255,255,.7)` loading text). Rendered values are unchanged —
+  the scrim stays near-black by design (an image reads against an almost-black field; it is
+  deliberately deeper than the `--tm-bg-overlay` TmModal dimmer, same pure-black hue), and
+  the chrome ink stays white in BOTH themes, because the controls ride the scrim over an
+  arbitrary image where a themed ink would flip dark and sink into its own fill. Worst-case
+  contrast (a pure-white image under the whole stack) is pinned by `TokenContrastTests`:
+  ink ≥ 3:1 on the idle and hover fills (icons), loading ≥ 4.5:1 on the scrim (text). A host
+  can now retheme the lightbox (e.g. a lighter scrim) by overriding the tokens.
+  The 390/1440 light/dark presentation was re-evaluated with screenshots over landscape,
+  portrait and panorama sources, with new geometric E2E assertions for the invariants
+  (image inside the viewport, close/delete never covering the image, arrows overlaying only
+  the image edges on phones and sitting strictly beside it on desktop, the counter pill
+  inside the viewport).
+
+- **On a tablet layout an expanded `TmEditorShell` panel now shrinks so the canvas keeps
+  `MinCanvasWidth` (C9).** Previously `MinCanvasWidth` only bounded user resizes: at 768 with the
+  inspector expanded the canvas could measure ~278px. Now the expanded panel gives up the measured
+  canvas deficit below `MinCanvasWidth` (clamped to `MinLeftWidth` / `MinRightWidth`), converging
+  in one extra render and relaxing back towards the host width when the container grows. The fit
+  stops at the panel minimum: at 768 the default 320px inspector parks at `MinRightWidth` (240) and
+  the canvas keeps ~358px — everything the parked minimum allows — so it can still land below
+  `MinCanvasWidth` when even the panel minimum does not leave it (freeing more width means
+  collapsing the other panel to its rail). The fit width is a layout decision, not a user choice:
+  it is **not** persisted under `PersistWidthsKey` and **not** reported through
+  `LeftWidthChanged` / `RightWidthChanged`; `aria-valuenow` on the separator reports the rendered
+  width (before: the parameter width). Visual change at 768: the inspector renders at ~240–300px
+  instead of 320px.
+
+- **The shell's mobile panels sheet full snap now reaches the top of the stage.** The sheet was
+  clamped to the drawer's default `MaxHeight` (0.85), so the "full" snap covered 85% of the stage;
+  as an inline sheet it now passes `MaxHeight="1"` and the full snap covers the whole stage.
+
+- **A `TmDropdown` or `TmSplitButton` inside a `TmToolbar` is now one stop of the toolbar's roving
+  tab stop instead of its own Tab stop (F14/C6).** The trigger (and, for a split button, the primary
+  action too) carries `data-tm-toolbar-control` automatically (through the cascade) when it sits in
+  a toolbar, so ArrowLeft/ArrowRight/Home/End reach it and Tab walks the toolbar as one stop — two
+  arrow stops for a split button, still one Tab stop. Before, a dropdown in a toolbar was a second
+  Tab stop the arrow keys never reached — a host had to discover and mark the hook by hand. A
+  text-entry control (a native `select`/`input`) keeps its own Tab stop by design.
+
+- **A `TmToolbarButton` with `aria-pressed="true"` (including one splatted by a host through
+  `AdditionalAttributes`) now paints the pressed look** — subtle primary fill, primary ink and an
+  inset primary ring. Previously the attribute was announced by assistive technology but painted
+  nothing (F12/C2). Existing toolbars without `aria-pressed` are unchanged.
+
+- **Editor caret/selection survives the rich-editor dialogs.** Opening a link/image/table/video/
+  find dialog bookmarks the caret and replays it when the dialog closes — before the insertion on
+  confirm, alone on cancel. The bookmark in `richEditor.js` is a NON-MUTATING Range record now (a
+  `WeakMap` keyed by the editor element, the same shape `markdownEditor.js` already shipped): the
+  old implementation inserted a hidden `#tm-cursor-marker` span into the edited document — it
+  leaked into `getHtml()`/saved `Value`, and restoring collapsed every selection to a caret.
+  `getHtml` strips any legacy marker left by an older build. `TmMarkdownEditor`'s bookmark helpers
+  in `markdownEditor.js` are real Range bookmarks too (they were no-op stubs, so a dialog
+  round-trip used to lose the caret entirely there).
+
+  The replay happens strictly AFTER the dialog unmounts (close-then-insert): the dialog's focus
+  trap owns inert/focus while it is rendered, so the confirm/cancel handlers only close the dialog
+  and stash the pending action; `OnAfterRenderAsync` replays the bookmark and runs the insert
+  (passing the editor element to `insertLink`/`insertImage`/`insertTable`/`insertVideo`) once the
+  render without the dialog completed. While a dialog is open the editors still skip their
+  `getHtml`/`setHtml` value sync — `TmMarkdownEditor` got the same guard it was missing.
+
+- **Enter submits the rich-editor dialogs; find & replace reports real counts.** Every dialog's
+  fields now sit in a real `<form>` (novalidate): the primary footer button is its `type="submit"`
+  (owned via the `form` attribute), Cancel is `type="button"`, and the submit handler re-validates —
+  an invalid URL shows the error instead of confirming. Footers use `TmButton` (Ghost Cancel,
+  Primary submit) instead of raw `tm-btn-sm` buttons. Find & replace is anchored to the TOP of the
+  viewport and immune to overlay clicks; Enter runs Replace (single) — Replace All is the only
+  primary action and is click-only. `OnReplace`/`OnReplaceAll` return the REAL replacement count
+  from `tmRichEditor.findAndReplace` (the unused `OnFind` parameter was removed); the result line
+  reports the true count, and 0 renders the new localized "No matches found" message
+  (`TmRichEditor_FindReplace_NoMatches`). The replace itself operates on text nodes only — it can
+  no longer match inside tags or attribute values and corrupt the markup. Known limitation:
+  matches are per text node; text split across inline formatting (e.g. `foo<b>bar</b>`) is not
+  matched. The table dialog's grid
+  preview is `aria-hidden` (pointer-only) with the chosen size announced via `aria-live="polite"`,
+  and the URL placeholders are localized keys
+  (`TmRichEditor_LinkDialog_UrlPlaceholder`, `TmRichEditor_ImageDialog_UrlPlaceholder`,
+  `TmRichEditor_VideoDialog_UrlPlaceholder`).
 
 - **Anchored panels present as a bottom sheet on mobile only where a component opts in.**
   `MobilePresentation` (new `PanelPresentation` enum: `Popover | Sheet | Auto`) follows the same
@@ -24,6 +2404,42 @@
   `.tm-overlay-panel-sheet` (or the unchanged trigger) instead. See
   [docs/overlays.md](docs/overlays.md).
 
+- **`TmToolbar` is now a real toolbar: `toolbar` role + roving tabindex, a measuring container,
+  and `Labels="Auto"` by default.** The root gains the `toolbar` role with an accessible name
+  (`AriaLabel`, else `Title`, else a localized "Toolbar"); its buttons become **one tab stop**
+  (ArrowLeft/ArrowRight, Home, End move between them; Tab leaves the toolbar); and the root is a
+  layout container (`container-type: inline-size; container-name: tm-toolbar; position: relative`)
+  because the labels and the overflow resolve from the toolbar's own width. The default
+  `Labels="Auto"` drops the text of **icon + text buttons** when the toolbar is narrower than 640px
+  (the text stays the `aria-label`); text-only buttons keep their text. Pass
+  `Labels="ToolbarLabels.IconsWithText"` for the old always-visible text. Nothing collapses unless
+  you opt in with `Overflow="ToolbarOverflow.Menu"`. A host that styled `.tm-toolbar` with its
+  own `position` / `container-type` or relied on every button being in the tab order must adjust.
+  A `TmToolbarButton` used **outside** a `TmToolbar` (`TmDiagramEditor`,
+  `TmModelingDiagramPreview`) is unchanged: the toolbar-scoped rules below (`flex-shrink: 0`, the 44px
+  coarse-pointer target) apply to `.tm-toolbar .tm-toolbar-btn` only.
+
+  **Zero intrinsic width.** Because the root is now a size container (`container-type: inline-size`) it has no
+  intrinsic inline size: in a shrink-to-fit context (a flex item without basis/grow in a `space-between` row, an
+  `inline-block`, a float, an absolutely positioned box, an `auto` grid column, `fit-content`) it collapses to zero
+  width. *Before:* the toolbar sized itself to its buttons. *After:* give the host room —
+  `.page-header > .tm-toolbar { flex: 1 1 auto; min-width: 0; }` (or `width: 100%`). Inside a toolbar
+  `.tm-toolbar-btn` is `flex-shrink: 0` (a button keeps its natural width and leaves the bar into More). See
+  [docs/toolbar.md](docs/toolbar.md#layout-contract-breaking-since-f4).
+
+  ```razor
+  @* before: every button was a tab stop, text always visible *@
+  <TmToolbar Title="Orders">
+      <TmToolbarButton Icon="@IconNames.Plus" Text="New" />
+  </TmToolbar>
+
+  @* after: same markup keeps working (one tab stop, labels drop below 640px of toolbar width);
+     opt in to the old always-visible text and to overflow explicitly *@
+  <TmToolbar Title="Orders" Labels="ToolbarLabels.IconsWithText" Overflow="ToolbarOverflow.Menu">
+      <TmToolbarButton Icon="@IconNames.Plus" Text="New" />
+      <TmToolbarButton Icon="@IconNames.Trash" Text="Delete" Priority="ToolbarButtonPriority.OverflowOnly" />
+  </TmToolbar>
+  ```
 - **`TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` popup panels are now
   `TmFocusScope` roots** (`TrapFocus="true"`): the calendar popup traps Tab, marks the background
   `inert` and re-claims `aria-modal="true"` — the modality the `role="dialog"` popup always
@@ -41,11 +2457,10 @@
 - **`TmButton` wraps its content in `span.tm-btn-label`, and the span is geometry-neutral by
   default.** The span exists so a context that shrinks the button (a 320px sheet footer) can
   truncate the text with an ellipsis instead of overflowing the panel. It renders only when there
-  is content — an icon-only button no longer grows by one gap because of an empty flex child — and
-  ships as `display: contents`, so a button lays out exactly as if its content were a direct
-  child. Only the sheet-footer rule in `_modal.css` opts into truncation: it blockifies the span
-  (`display: block; min-width: 0`) next to the existing `overflow/ellipsis`. A host that wants the
-  same in its own shrinking container targets the span, never restyles `.tm-btn`:
+  is content and ships as `display: contents`, so a button lays out exactly as if its content were
+  a direct child. Only the sheet-footer rule in `_modal.css` opts into truncation: it blockifies
+  the span (`display: block; min-width: 0`) next to the existing `overflow/ellipsis`. A host that
+  wants the same in its own shrinking container targets the span, never restyles `.tm-btn`:
 
   ```html
   <!-- before -->
@@ -55,9 +2470,10 @@
   ```
 
   Consumer markup snapshots and selectors that assume the content is a direct child of the button
-  are affected: a child selector (`button > svg` still matches, but `svg + *` now matches the
-  span, not the text) or styling that relied on bare text inside `.tm-btn` must key on
-  `.tm-btn-label` instead.
+  are affected: a child selector `button > svg` still matches the `Icon` parameter's icon (rendered
+  directly in the button, `TmButton.razor`), but no longer an icon placed in the button's content,
+  which now sits inside `.tm-btn-label`; `svg + *` now matches the span, not the text — and styling
+  that relied on bare text inside `.tm-btn` must key on `.tm-btn-label` instead.
 
 - **`ModalPosition.Bottom` anchors the panel flush with the bottom edge.** It used to sit a margin
   above the edge (`align-self: flex-end` plus the overlay padding), so a bottom modal read as a
@@ -341,6 +2757,28 @@
   :root, [data-theme="dark"], .tm-dark { --tm-focus-ring: var(--tm-shadow-focus); }
   ```
 
+- **The rest of the core focus rules paint `--tm-focus-ring` too.** The date picker and
+  date-range triggers, the multiselect (root, filter input, confirm button and open state),
+  the filterable dropdown filter input, the entity picker and masked text box inputs, the
+  time input, the pagination page-size and column-filter inputs, the code/markdown/rich-text
+  editors and their find/replace, image, link and video dialog inputs, the pivot field
+  editor inputs and the import-wizard map select used to paint `var(--tm-shadow-focus)` and
+  now paint `var(--tm-focus-ring)`. Focus rules that removed the outline for the ring keep a
+  transparent 2px outline (`outline: 2px solid transparent`), and so do the focus rules
+  migrated earlier (`.tm-btn`, `.tm-input`, `.tm-select`, `.tm-search-input`, the editor-shell
+  panel toggle/resizer/tab, the search clear button, the overlay-panel Done button and the
+  side-panel close button): under Windows High Contrast (`forced-colors: active`) the UA
+  forces `box-shadow: none`, and the transparent outline is then painted in the system
+  colour, so focus stays visible. The calendar heatmap cell (12px, 4px gap) cannot host the
+  4px ring — it drops the glow and keeps its 2px outline as the only indicator. The same
+  restore override applies.
+
+- **In the dark theme the in-range days of a date-range picker fill with `primary-900`.**
+  `--tm-cal-range-bg` used to keep the light `primary-100` in the dark theme, so dark day
+  text sat on a light fill at 1.1:1 (indigo 1.12:1). `primary-900` holds 9.45:1 (indigo
+  10.43:1) for `--tm-text-primary` and is already the dark convention for a primary-tinted
+  fill (`--tm-control-hover-fill`). Light is unchanged.
+
 - **A scheduler event without its own colour now fills with `--tm-scheduler-event-bg`.** In the dark
   theme that token is `primary-600`, where it used to be `primary-400`. White event text holds AA on
   `primary-600` and did not on `primary-400` (2.54:1 default, 2.98:1 indigo). Light is unchanged,
@@ -401,76 +2839,172 @@
   </div>
   ```
 
-### Added
+- **Counted texts are grammatical now: `Loc.Plural`, and the B16 stop-gap wording is gone.** Czech
+  counts used to read "Čekající změny: 3" (F0 neutral wording) or, before that, the wrong "1 čekajících
+  změn". Counted resources are now plural families (`Key_One` / `Key_Few` / `Key_Many` / `Key_Other`,
+  resolved by `TmPluralRules` from the localizer's culture): "1 čekající změna", "2 čekající změny",
+  "5 čekajících změn". The affected keys no longer exist as a single plain key —
+  `TmDocumentEditor_ReviewSummaryRevisions`, `…ReviewSummaryComments`, `TmDocumentEditor_CommentCount`,
+  `TmModelingIssuePanel_Count`, `TmModelingModelTree_Count`, `TmWireframeProps_ElementsCount`,
+  `TmNotificationBell_NewCount`, `TmNotionPageComment_BadgeLabel`,
+  `TmNotionPageHeader_UnresolvedComments`, `TmScreeningResultPanel_PendingCount`,
+  `TmChat_ReplyCount`, `TmAuditLogViewer_EventsCount`, `TmDataImport_MoreErrors` — and
+  `TmDocumentEditor_ReviewSummaryText` is now a two-slot joiner `"{0}, {1}"` over the new
+  `TmDocumentEditor_ReviewSummaryOpenComments_*` family. **Migration:** a host that *replaces*
+  `ITmLocalizer` and overrides these keys must override the family keys (`_One` / `_Other`, plus
+  `_Few` / `_Many` where its language needs them). Overriding only the plain key is **not** enough
+  for the documented delegating pattern (`PartialOverrideLocalizer` / `MyPartialLocalizer`): the
+  default `TryGetString` reads `Key_One` through the indexer, the inner localizer returns the shipped
+  family, and the plain-key override is never consulted. The plain key is used only when no family
+  exists anywhere. A host class that already has its own public `Culture` or `TryGetString` now
+  implicitly implements the new interface members — a name match, not a behaviour change, but it will
+  not compile if the signature differs.
 
-- `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
-  `TmPopover`, with `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` forwarded by the two
-  components. `TmOverlayPanel.TrapFocus` for dialog popups that must enforce their modality, and
-  `Title` for the sheet header. `TmDrawer.AriaLabel` names a drawer whose header is rendered
-  through `HeaderContent`.
-- `overlay.js` positions panels against the *visible* viewport: `positionFloating` +
-  `readViewport` read `visualViewport`, so an on-screen keyboard opening flips/clamps an open panel
-  into view, and `visualViewport` resize/scroll re-place open panels.
-- `docs/overlays.md`: when to use popover vs modal vs sheet, and the migration path for packages
-  carrying local clamp/focus-trap copies (NotionEditor's ~5 clamp copies, DocumentEditor's four
-  focus traps).
-- Semantic tokens for the redesign, in both `tokens.css` and `tokens-dark.css`: `--tm-bg-workspace`,
-  `--tm-radius-card`, `--tm-radius-control`, `--tm-shadow-card`, `--tm-shadow-popover`,
-  `--tm-touch-target`, `--tm-focus-ring`, `--tm-border-color-strong`, the `--tm-status-*` chip
-  pairs and the `--tm-priority-*` glyphs. Existing components do not reference them yet, so the
-  default appearance is unchanged.
-- Opt-in indigo theme (`theme-indigo.css`, activated with `data-tm-theme="indigo"`). The blue
-  scale stays the default. The demo exposes a switch that persists the choice in `localStorage`.
-- Shared keys `Tm_Ok`, `Tm_Done` and `Tm_More` in en/cs/fr.
-- `TmFocusScope`, the public focus-trap root. `TmSheetHandle`, the shared grabber.
-  `MobilePresentation`, `FooterLayout` and `DialogLayout`. `InitialFocusTargetId` on the scope.
-  [docs/bottom-sheet.md](docs/bottom-sheet.md).
-- `scripts/audit-css-strict.mjs` with a shrink-only baseline, gated by `CssTokenAuditTests`, and
-  `ScopedCssOwnershipTests` with its own shrink-only baseline. The audit now also flags the named
-  colours `white` and `black`, and judges white-on-primary per rule rather than per line. See
-  `docs/css-token-aliases.md` and `docs/scoped-css-ownership.md`.
-- `TmOverlayPanel.AriaLabel` / `TmOverlayPanel.AriaLabelledBy` parameters for giving the panel an
-  accessible name. Every `Role="dialog"` panel ships one; `AriaLabelledBy` is preferred when the
-  panel renders a visible title.
-- `OverlayPanelRules_Inventory_*` tests pin the exact `.tm-overlay-panel` rule set of the bundled
-  CSS (the `:where()` reset, the fallback closed-state hide, the `:where()` open display) so a
-  new or re-weighted global rule on the shared element fails as a finding (CF03c).
-- `TmOverlayPanel.SheetDoneEnabled` gates the sheet header's Done action (sheet mode only): a
-  consumer mid-task keeps Done disabled until its input is complete — the date-range picker
-  disables it until BOTH dates are picked.
-- `TmOverlayPanel.OnOpened` fires after the panel is actually displayed — the popover's
-  `showPopover()` has run, or the opening sheet render batch completed — so consumers that move
-  focus (a filter input) no longer land on a hidden element.
-- `InitialFocusSelector` on `TmFocusScope` and `TmDrawer` resolves the initial-focus target
-  inside the scope from a CSS selector (e.g. the first menuitem of a menu sheet); an explicit
-  `InitialFocusTarget`/`InitialFocusTargetId` still wins.
-- `TmMobileActionBar` and the shared `TmActionItem` model (F5): a component-scoped mobile action
-  bar rendering up to `MaxVisible` actions with the overflow in a "More" menu that composes
-  `TmOverlayPanel` (anchored popover on desktop, the shared bottom sheet on a mobile viewport —
-  never a local copy of sheet/gesture/focus logic). `Placement` defaults to `StickyContainer`
-  (`position: sticky` inside the component's own container — never `position: fixed` like
-  `TmBottomNavigation`, which stays application chrome); `FixedViewport` is a deliberate opt-in
-  anchoring to the viewport with the bottom safe area, and `Inline` renders the bar statically.
-  With the default `Auto` visibility the bar exists only below the mobile breakpoint, resolved
-  from the container (or from the viewport scope for `FixedViewport`); `LayoutMode` forces a mode
-  for hosts and bUnit tests. The `ChildContent` region renders above the bar at every layout —
-  only the bar hides above the breakpoint — and, unlike `TmToolbar`'s free-form fragments, it is
-  the content the bar belongs to: the bar reserves nothing for it except the FixedViewport
-  placement, where the region's bottom padding equals the bar height (the published
-  `--tm-mobile-action-bar-reserve-block-size` token) so nothing is covered at 320 or 390.
-  Bar actions are the bar's own tile buttons (icon over a two-line label), not `TmButton`, and
-  `Priority` is only an overflow rank — the bar and the menu render in `Items` order. The public
-  `CloseMoreAsync()` lets a host close the "More" menu after a confirmed `KeepMenuOpen` action.
-  `docs/responsive-conventions.md` documents the
-  bottom-navigation-vs-action-bar split; the demo page is `/mobile-action-bar`; the wireframe
-  stencil registers the `action-bar` role. Reference usage: `TmDashboard` edit mode on mobile
-  renders Add/Save/Cancel through the bar instead of the wrapping toolbar.
+  ```csharp
+  // before - a delegating localizer overriding only the plain key. Plural never sees it:
+  // TryGetString("TmModelingIssuePanel_Count_One") reads the shipped family through the indexer.
+  public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
+  {
+      public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.GetCultureInfo("cs");
+      public string this[string key] => key == "TmModelingIssuePanel_Count" ? "Nálezy: {0}" : inner[key];
+      public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
+  }
+  // after - override the family. _Few/_Many too, where the language needs them (Czech does).
+  public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
+  {
+      private static readonly Dictionary<string, string> Mine = new()
+      {
+          ["TmModelingIssuePanel_Count_One"]   = "{0} nález",
+          ["TmModelingIssuePanel_Count_Few"]   = "{0} nálezy",
+          ["TmModelingIssuePanel_Count_Many"]  = "{0} nálezu",
+          ["TmModelingIssuePanel_Count_Other"] = "{0} nálezů",
+      };
+      public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.GetCultureInfo("cs");
+      public string this[string key] => Mine.TryGetValue(key, out var mine) ? mine : inner[key];
+      public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
+  }
+  ```
 
-### Changed
+  See [docs/localization-plurals.md](docs/localization-plurals.md).
+
+- **Relative time is one shared formatter; the `TmTimeline_*Ago` keys are no longer read.**
+  `TmTimeline`, `TmActivityTimeline` and `TmActivityComments` ask `ITmRelativeTimeFormatter`
+  (registered by `AddTempoBlazor()`), which also says "yesterday at 4:20 PM", handles the future
+  ("in 3 h", "tomorrow at 9:00") and prints an absolute date from a week on. The strings are
+  `Tm_Time_*`; `TmTimeline_JustNow`, `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`,
+  `TmTimeline_DaysAgo` and `TmTimeline_DateFormat` are not used by the library any more — and they
+  are now removed from the resources entirely (see the removal entry under Breaking / Migration
+  above). **Migration:** override
+  `Tm_Time_*` (or register your own `ITmRelativeTimeFormatter`) instead of `TmTimeline_*Ago`:
+
+  ```csharp
+  // before
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "TmTimeline_MinutesAgo"
+  // after
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "Tm_Time_MinutesAgo"
+  services.AddScoped<ITmRelativeTimeFormatter, MyFormatter>();   // scoped, like the built-in one
+  ```
+
+  Timestamps older than a week now show the absolute date in the culture format (`Tm_Time_DateFormat`)
+  instead of `TmTimeline_DateFormat`; a timestamp between one and six days old reads "2 days ago"
+  (it used to be a date after 24 hours). `TmActivityTimeline` and `TmActivityComments` now show that
+  absolute date after 7 days; before, both kept saying "N days ago" forever.
+
+  The formatter is registered **scoped** (it reads the scope's `ITmLocalizer` and `TimeProvider`).
+  Calendar days are judged in `TimeProvider.LocalTimeZone`. On Server and prerender that zone is the
+  server's, so the host registers a scoped `ITmRelativeTimeFormatter` over a user `TimeProvider` that
+  reads the zone lazily (user decision Q1=A). Never replace the app-wide `TimeProvider`: the host's
+  singletons consume it, and a scoped replacement fails startup under `ValidateScopes`. A shared
+  `ITmUserTimeZone` is a recorded follow-up, not a component parameter.
+
+- **`scheduler.js` resizes with Pointer Events and loads `pointer-drag.js`.** The document-level
+  `mousedown`/`mousemove`/`mouseup` listeners are replaced by the shared helper, so a finger or pen can
+  resize an event (B13) and Escape or a browser takeover (`pointercancel`) rolls the resize back without
+  calling .NET. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the
+  `NotifyResizeComplete` callback are unchanged. **Migration:** the script now `import()`s
+  `pointer-drag.js` from the folder `scheduler.js` itself was served from, so both files must be
+  reachable from the same `_content/Tempo.Blazor/js/` path (no change for the standard static-asset
+  setup). Before, scheduler.js was a classic script and needed nothing else; after, a bundler or a Content-Security-Policy that restricts `script-src` must allow pointer-drag.js the same way it allows
+  `scheduler.js`. `window.TempoBlazor.Scheduler.ready` is a new promise that resolves when the helper
+  is attached.
+
+- **`TmKeyboardShortcutsHelp` names its dialog.** Before, the dialog root carried `role="dialog"` and
+  no accessible name, and the title was a bare `<h2 class="tm-keyboard-shortcuts-title">` directly
+  inside `.tm-keyboard-shortcuts-header`. After, the title carries a stable `id` and the dialog's
+  `aria-labelledby` points at it. The element order is unchanged when `Description` is null: the `h2`
+  stays a direct child of the header. A description adds a `.tm-keyboard-shortcuts-heading` wrapper
+  around the title and the subtitle.
+
+- **`TmCopyButton` localizes its accessible name.** Before, the button's `aria-label` was the fixed
+  English "Copy to clipboard", and it never changed after a copy. After, it reads
+  `TmCopyButton_CopyToClipboard` ("Copy to clipboard" / "Kopírovat do schránky" / "Copier dans le
+  presse-papiers") and switches to `TmCopyButton_Copied` ("Copied") once the copy succeeds, so the
+  announced name follows the visible state.
+
+- **`TmCommandPalette` names its result list.** Before, `<ul class="tm-command-palette-list" role="listbox">`
+  had no accessible name (axe `aria-input-field-name`). After, it carries
+  `aria-label="@Loc["TmCommandPalette_Aria"]"` ("Command palette" / "Paleta příkazů" / "Palette de
+  commandes"). No other default markup of the palette changes.
+
+- **`TmImageGallery` items are `<button type="button" class="tm-gallery-item">` (was a `div`
+  with `role="button"`/`tabindex="0"`).** A native button activates itself — Enter and Space
+  work in every browser through the browser's own click, no emulated key handlers — and gives
+  the lightbox's focus restore something focusable to return to. Items carry per-instance ids
+  (`tm-gallery-{uid}-item-{index}`), the accessible name is the image `Title` or a localized
+  "Open image {0} of {1}", the `<img>` is `alt=""`, and the visible title is
+  `<span class="tm-gallery-item-title">` (was a `div`).
+
+  ```razor
+  @* before *@
+  <div class="tm-gallery-item" tabindex="0" role="button">…</div>
+  @* after *@
+  <button type="button" class="tm-gallery-item" id="tm-gallery-…-item-0">…</button>
+  ```
+
+  **Migration:** host CSS that styled `div.tm-gallery-item` or relied on block children must
+  target the class (the library's own reset turns the UA button face back into the card);
+  selectors or tests keyed on `div.tm-gallery-item` / `[role=button]` must target
+  `button.tm-gallery-item`. Closing the lightbox now returns focus to the thumbnail of the
+  image on screen (after browsing, that is the image being shown, not the original opener) —
+  see `TmLightbox.RestoreFocusTargetId` under Added. The wireframe gallery stencil is
+  unchanged (same visual).
+
+- **The demo API allows any loopback origin in Development.** The CORS default policy no longer
+  hard-codes `localhost:5010`/`localhost:7106`: the launch-profile origins stay allowed as hard
+  defaults in `DemoCorsPolicy.DefaultOrigins`, `Cors:AllowedOrigins` (env
+  `Cors__AllowedOrigins__0=…`) is purely additive on top of them (`appsettings.json` ships an
+  empty list; configured entries are trimmed and a trailing slash is stripped), and in the
+  Development environment any http(s) origin on a loopback host (`localhost`, `127.0.0.1`,
+  `[::1]`) on ANY port is accepted — so a demo/E2E WASM host started on a nonstandard port
+  (e.g. 7116) can call the API without editing it. Production answers only the defaults plus the
+  configured list. Credentials stay enabled for the SignalR WebSocket handshake
+  (`SetIsOriginAllowed` echoes the origin; the policy lives in `DemoCorsPolicy`).
+- **The repository enforces LF.** `.gitattributes` now carries `* text=auto eol=lf` (every text
+  file is LF in the index and in every working copy, whatever `core.autocrlf` says) with
+  `eng/release-evidence/** -text` kept byte-verbatim. Before, a Windows checkout made under
+  `core.autocrlf=true` produced CRLF working copies that broke the workflow-reading packaging
+  guards and the frozen `TmTabs` markup baseline; those tests now also normalise CRLF→LF at the
+  reader, so they pass on any checkout. Existing Windows working copies keep their CRLF files
+  until refreshed: re-clone, or — on a clean tree — plain `git checkout -- .` re-checks out every
+  text file as LF (the index is already LF, so no renormalization commit is needed).
+
+- **`TmDropdown`, `TmSplitButton` and `TmContextMenu` now move focus to their first enabled item when the menu
+  opens** (`tm-menu-nav.js` `focusFirst`, once per open, best-effort without JS). *Before:* focus stayed on the
+  trigger and the roving keys — which listen on the menu — were unreachable from the keyboard until a Tab. *After:*
+  Enter/Space on the trigger lands on the first item; Escape/selection return focus to the trigger. Tests that
+  asserted the trigger keeps focus after opening must adjust.
+- **`TmDrawer` and `TmModal` bodies that overflow gain a tab stop.** Both now run the shared
+  `syncScrollRegion` (`tm-focus-trap.js`), exactly like `TmDialog` already did: while the body
+  overflows it becomes `role="region"` with `tabindex="0"` (named by the title when there is one) so
+  a keyboard user can scroll it; a body that fits grows no extra tab stop and the region never takes
+  initial focus. *Before:* the overflowing body was not focusable, so keyboard users could not scroll
+  it and Tab went straight from the header to the first control. *After:* one extra Tab stop on the
+  scroller, only while it overflows. Tests that count tab stops inside a long drawer or modal body,
+  or that snapshot the body element, will see the `tabindex` / `role` attributes.
 
 - Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
   `{0} čekajících změn`, `{0} řádků`) now use a neutral phrasing (`Počet: {0}`, `Komentáře: {0}`,
-  `Čekající změny: {0}`), so a count of one no longer reads as a plural.
+  `Čekající změny: {0}`), so a count of one no longer reads as a plural. (a stop-gap step, superseded by the `Loc.Plural` families in the counted-texts entry above)
 - Czech count strings for a further 30 keys now use the same neutral phrasing (`Nálezy: {0}`,
   `Stránky: {0}`, `Prvky: {0}`, and the rest listed in the review of B16). `Tm_More` is `Více`.
 - Scheduler event text on a consumer-supplied fill uses `--tm-scheduler-event-fg`, and the
@@ -480,8 +3014,520 @@
   dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 
+- **Documentation — the generated JSON documentation now lists expression-bodied properties as
+  `Property` members and includes positional record parameters.** The doc generator's member
+  scanner only recognised `{ get;` properties and read every other line up to its first `=`, so
+  members like `public bool IsMobile => …;` were mis-kinded as `"kind": "Field"` (272 member
+  entries flip from `Field` to `Property` in the regenerated `tempo-blazor-all.json`) and
+  everything whose body wrapped — `=> Resolved switch …`, `{ get => …; init => …; }` — was
+  missing entirely, as were the generated properties of positional records (`TmLayoutContext`
+  listed 3 of its 6 members). The bundles are regenerated; consumers that filtered members by
+  `kind == "Field"` must match on `"Property"` instead, and types modelled as positional records
+  gained member entries. Overlay member descriptions take precedence over generated ones — the
+  overlays under `JsonDocumentation/` stay the editable source, so regeneration no longer blanks
+  a hand-written member description. Declarations whose signature wraps across lines, and
+  tuple-typed expression-bodied properties, are not yet extracted.
+
+- **`TmCommandPalette` is a real combobox, its options carry stable ids, and a click on the
+  backdrop closes it.** The search input is now the `role="combobox"` owning the result listbox:
+  it gained `aria-controls` (pointing at the listbox id — which also takes the scrolling list out
+  of axe's `scrollable-region-focusable` matcher), `aria-expanded`, `aria-autocomplete="list"` and
+  `aria-activedescendant`, which follows the ArrowUp/ArrowDown highlight so a screen reader
+  announces the row the arrows moved to. Every `role="option"` row now renders a stable `id`.
+  Grouped markup changed: `group` is not an allowed role for `li` (axe `aria-allowed-role`), so
+  each category is now a presentational row hosting a named group div — selectors keyed on
+  `li.tm-command-palette-group` must move to `div.tm-command-palette-group` (the divider between
+  categories stays a CSS border, now on `.tm-command-palette-group-item +
+  .tm-command-palette-group-item`):
+
+  ```html
+  <!-- before -->
+  <ul role="listbox" class="tm-command-palette-list">
+    <li class="tm-command-palette-group" role="group" aria-labelledby="…">…</li>
+  </ul>
+
+  <!-- after -->
+  <ul role="listbox" class="tm-command-palette-list" id="…">
+    <li role="none" class="tm-command-palette-group-item">
+      <div class="tm-command-palette-group" role="group" aria-labelledby="…">…</div>
+    </li>
+  </ul>
+  ```
+
+  The backdrop also became a click-to-dismiss surface — a click outside the panel closes the
+  palette (no opt-out parameter, matching `TmModal` and `TmKeyboardShortcutsHelp`); the dismissal
+  requires the press to START on the backdrop, so a drag-select that begins on the input and ends
+  over the backdrop (only the click lands there) keeps the palette open; clicks inside the panel
+  are fenced off and never reach the backdrop's handler. Grouped lists no longer render a group
+  for a null/empty category — a `role=group` must be named, so those options render without the
+  wrapper — and the combobox drops `aria-controls` when the listbox is gone (no results).
+  Consumers that asserted "the palette stays open after any click" must adjust.
+
+- **The lightbox stylesheet lost its never-rendered legacy section.** `_lightbox.css` carried a
+  first block for `.tm-lightbox-overlay`, `-container`, `-nav`, `-image-wrapper`, `-image` and
+  `-error` — classes no component has ever rendered — plus a 768px media block and legacy rules
+  that leaked onto the live `-close`/`-prev`/`-next`/`-counter` classes through the shared names
+  (the counter pill's ≤768px `bottom: 0.5rem` offset included). The pill was re-homed into the
+  live section with its styling tokenized. Only a host that rendered its OWN markup with those
+  legacy classes loses the styles.
+
 ### Fixed
 
+- **`TmOverlayPanel` dismissal focus restore no longer runs through `eval`.** The restore rides the
+  overlay.js module export `focusById(id, { preventScroll: true })` — the id travels as a typed JS
+  argument instead of an executed script string — with `preventScroll` still guaranteeing that
+  Escape/outside-pointer dismissal leaves the page scrolled where the user left it.
+
+- **DiagramEditor: edge labels and cardinalities use the theme-invariant diagram ink on a paper
+  halo** (`.tm-diagram-edge-label__text`, painted via the new `--tm-paper*` tokens), so they no
+  longer collide with the edge stroke or disappear on the white page in dark themes. Host CSS on
+  `.tm-diagram-edge-label { color }` keeps working (inherited by the new span).
+
+- **DiagramEditor honours `prefers-reduced-motion`.** The search-match pulse, hover lifts/scales,
+  layers-panel width and chevron transitions are suppressed by an explicit enumeration block in
+  `_diagram-editor.css` (the layers panel owns its rule in its scoped stylesheet), guarded for
+  split packages by `ReducedMotionSelectorTests` against a frozen uncovered-subject baseline.
+
+- **TmDiagramEditor context menu / mobile actions sheet: *Paste style* no longer shows the desktop
+  shortcut in its label; *Delete* stays visible at the bottom of the mobile actions sheet** (sticky
+  last row, U5/X7).
+
+- **TmDiagramSearchPanel wraps on narrow editors (320 px) and its icon buttons meet the 44 px touch
+  target on coarse pointers (U11).** The non-wrapping 200 px input row (~800 px of chrome) clipped
+  "All pages", the regex toggle and the nav buttons at 320 px.
+
+- **Core `pointer-gesture.js`: a failed capture re-assert cancels the pinch instead of committing a
+  half-captured gesture.** `capture()` now reports success; when the re-assert after `onStart`
+  throws (an engine that fires `lostpointercapture` synchronously on release leaves the pointer
+  uncapturable) the pinch cancels itself with `lostpointercapture`. After `onStart` the pinch owns
+  both fingers' capture — a host that must keep a finger elsewhere cancels the pinch from `onStart`.
+  Documented in `docs/touch-interaction.md` ("Coexistence with `attach()`").
+
+- **`TmDiagramEditor` touch review batch (phase 3 review fixes).** The context menu dismisses on a
+  `pointerdown` capture anywhere outside (a touch tap on the canvas closes it, as does starting a
+  pan, a pinch or an edge draw). The release-click guard is armed per hold and scoped to this
+  editor's menu (`closest('.tm-diagram-editor')`), so a long hold no longer swallows unrelated
+  clicks and the lift click of an unrelated tap passes. Touch contacts are tracked as a
+  `pointerId` set (lifts on the document, `lostpointercapture`, mouse/pen clears) and the native
+  touch `contextmenu` is only swallowed while the touch stack is attached. The touch-press ring
+  grows under the finger after ~150 ms (static under `prefers-reduced-motion`) with a
+  `navigator.vibrate(10)` tick on open. Zoom limits are a single source on every path: `zoomToRect`
+  clamps through `_clampScale` (the ad-hoc 0.25 floor is gone), the empty-document `fitToView`
+  branch clamps, and a wheel tick already outside the range only moves toward the range — never
+  jumps; the zoom-in/zoom-out buttons (mobile overlay pill and status bar) disable at
+  `DiagramZoomLimits.MaxScale`/`MinScale`. `init()` destroys a stale instance registered for the
+  same container id first, and the context menu/table-inserter containing block is probed from the
+  popover's own parent.
+
+- **`TmDiagramEditor` context menu is finger-friendly and keyboard-operable on a tablet.** Opened
+  by a touch long-press it carries `data-anchor="touch"` (the pointer type rides
+  `touchOpenContextMenu` → the C# handler) and parks above the finger, flipping below at the top
+  edge, offset `x + 16`, then clamped; on a coarse pointer the items are at least
+  `--tm-touch-target` tall. After placement the first enabled item is focused (no page scroll) and
+  ArrowUp/ArrowDown/Home/End rove between the native `role="menuitem"` buttons (no Enter/Space
+  emulation); closing returns the focus to the canvas.
+
+- **Core `pointer-gesture.js`: a pinch whose host cancels a pointer-drag attached to the SAME
+  element in `onStart` no longer rolls itself back (`lostpointercapture`) when the first finger
+  moved before the second landed.** Fixes the two-finger zoom from an empty canvas in
+  `TmDiagramEditor` and `TmWorkflowDesignerCanvas`. No API change.
+
+- **`TmDiagramEditor` context menu: coordinates render culture-invariant (`cs`/`sk`/`fr` produced
+  `left:123,5px`), and re-opening at the same point no longer shifts the menu by the editor
+  offset.** The anchored menu now carries its viewport point in `data-screen-x`/`data-screen-y`
+  (invariant format) and the JS placement re-reads those attributes on every open instead of its
+  own `style.left`/`style.top`, resets a stale `max-height` cap and clamps through the same
+  measured containing block as the table-inserter popover.
+
+- **`TmDiagramEditor` search: Replace / Replace all respect read-only and notify the host.** In the effective read-only state the search panel is search-only (new `TmDiagramSearchPanel.ReadOnly`; Ctrl+H opens plain search). A plain (non-regex) query is replaced literally (`a.b` no longer matches `axb`), `$` in a plain replacement is literal text (`$0x` replaces to `$0x`, not group 0 + `x`), and every replacement raises `DocumentChanged`. The find/replace inputs no longer show the literal texts "Query"/"ReplaceQuery"/"_regexError", an invalid regex is announced through a localized `role="alert"` message tied to the query input (`aria-invalid` / `aria-describedby`), the result counter is a polite live region, and the layers panel marks the active layer again.
+
+- **`TmDropdown` disabled trigger renders as a real disabled control.** `Disabled` now puts the native `disabled` attribute on the trigger button (and omits `aria-expanded`, which is meaningless while disabled), so the browser blocks the click in every context; the wrapper already carried the `tm-dropdown-disabled` class and now also greys the trigger out via `--tm-opacity-disabled`. Becoming disabled while the menu is open now closes the menu (`OnParametersSet`), so a disabled dropdown can no longer leave an open menu behind that its dead trigger could never close.
+
+- **`TmDiagramEditor` context menu stays inside the editor box (DiagramEditor redesign phase 8).**
+  The editor is an inline-size container, so the fixed-position context menu resolves against the
+  EDITOR box while `openContextMenu` clamped it to the VIEWPORT: a menu clamped to the viewport
+  top translated to a negative editor-box top and painted above the editor's clip — on a hosted
+  editor shorter than the window (the Modeling preview, any split layout) the edge context menu's
+  upper half, including the routing previews, was unreachable. `diagram-editor.js` now detects the
+  effective containing block at runtime (a zero-size fixed probe), caps the menu's height to the
+  editor box and clamps the positioned box into it; under plain viewport semantics it clamps to
+  the viewport. Not breaking; no markup or class changes.
+
+- **`TmDiagramEditor`: pressing a port that carries an attached edge starts edge drawing again
+  (DiagramEditor redesign phase 8).** Edges paint over nodes, so the fat invisible
+  `.tm-diagram-edge-hit-path` is the TOP element at a port's position; the whole-edge drag branch
+  (added after the port branch in the phase-5/6 edge work) consumed the press whenever the
+  pointer rested on an edge corridor — drawing a new edge FROM a port of an already-connected
+  node was impossible (the Workflow-phase "drop a dependency stencil, drag port to port" flow
+  hung). `_onMouseDown` now yields the whole-edge drag to a port or connection point found under
+  the pointer (x-ray via `document.elementsFromPoint`), and the port branch resolves the port
+  through the same stack when the hit path owns the event. Whole-edge dragging still works from
+  anywhere on the corridor away from the ports.
+
+- **DiagramEditor wave 0 fixes: SQL/CSV import dialogs, layers panel, template gallery,
+  minimap tokens, editor icons (DiagramEditor redesign phase 2).**
+  The SQL import dialog now shows a live preview ("Tables: N / Relations: N") while typing
+  (`@bind-Value:after` on an `Immediate` textarea) and disables **Importovat** while the parsed
+  DDL has zero tables. Layout direction choices are localized (reusing
+  `TmDiagram_LayoutHierarchicalTopDown` / `…LeftRight`). The CSV import dialog localizes the
+  diagram-type options (`TmDiagramCsvImportDialog_Type_*`) and the semantic mapping fields
+  (`TmDiagramCsvImportDialog_Field_*`), and parses the preview on every keystroke. Both dialogs
+  give their fields per-instance ids (`sql-ddl-{id}`, `csv-data-{id}`, `diagram-type-{id}`,
+  `csv-map-{field}-{id}`) with matching `label for` — two dialogs on one page no longer share
+  ids. A new layer is named through `TmDiagramLayers_NewLayerName` ("New layer {0}") instead of a
+  hardcoded "Layer {n}".
+
+  `TmDiagramLayersPanel` derives from `TmComponentBase`, so it now accepts `DataTestId` /
+  `TestIdPrefix` and renders `data-testid="diagram-layers"` by default; every parameter has an
+  XML doc. The active row carries `tm-diagram-layers__item--active`, the drop target
+  `--drag-over`; the layer selector is a `role="radiogroup"` with `role="radio"` +
+  `aria-checked` buttons; the layer name is focusable (`tabindex="0"`, `role="button"`) and
+  rename starts from the keyboard (Enter / F2 / Space, one activation per press per
+  docs/keyboard-activation-convention.md). Template gallery filter chips are `type="button"`
+  with `aria-pressed`, and `TmDiagramTemplateCard` renders lowercase `aria-pressed` values
+  (`"true"`/`"false"`, previously invalid `"True"`/`"False"`).
+
+  The page-tab buttons replaced the raw `⧉` / `✕` / `+` glyphs with `TmIcon`, and the duplicate
+  action uses its own `tm-diagram-editor__page-tab-duplicate` class (the shared
+  `__page-tab-close` class no longer matches the duplicate button — see migration below).
+  Duplicate toolbar icons were disambiguated: Duplicate uses the two-pages glyph, Paste style
+  uses `IconNames.Paintbrush`, Rulers use `IconNames.Ruler`, and vertical align items no longer
+  reuse the horizontal align icons. Import/export error banners render as a real `TmAlert`
+  (`tm-diagram-editor__banner`) instead of a hand-rolled `tm-pivot-btn` + inline-style banner.
+  The minimap viewport rectangle uses `--tm-color-primary` / `--tm-color-primary-subtle`
+  instead of hardcoded `#3b82f6` / `rgba(59,130,246,0.08)`. Missing keys
+  `TmDiagramEditor_PasteHere` and `TmDiagramCanvas_AriaLabel` were added to all four resource
+  tables (they rendered as raw keys in the UI), and the Czech toolbox placeholder is now
+  "Hledat tvary…".
+
+  ```razor
+  @* before: duplicate page button carried the close-button class *@
+  <button class="tm-diagram-editor__page-tab-close" ...>⧉</button>
+  @* CSS targeting .tm-diagram-editor__page-tab-close also styled duplicate *@
+
+  @* after: the duplicate action has its own class (close keeps the danger-red hover) *@
+  <button class="tm-diagram-editor__page-tab-duplicate" ...><TmIcon Name="files" /></button>
+  <button class="tm-diagram-editor__page-tab-close" ...><TmIcon Name="x" /></button>
+  ```
+
+- **`TmDataTable` / `TmViewManager` / `TmMultiViewList` / `TmFilterBuilder` wave 0 accessibility.**
+  Group toggles announce expand/collapse (`TmDataTable_ExpandGroup` / `TmDataTable_CollapseGroup`)
+  and use a chevron icon instead of a glyph. Group chips remove with a labeled icon button.
+  `+ Group` is a `TmDropdown` of groupable columns and calls `AddGroupColumn` without a drag.
+  The view panel is a `TmOverlayPanel` (no private `.tm-overlay`); view rows are buttons; edit
+  and delete stay inline with an accessible name. The multi-view switcher is a radiogroup with
+  arrow keys. The group picker is an overlay. Filter add opens the field picker and Escape
+  returns focus to Add filter. Select-all sets `indeterminate` from `OnAfterRenderAsync` via
+  `tmDataTable.setIndeterminate`. Inline edit errors use `role="alert"`.
+
+- **`TmViewManager` / `TmDataTable` / `TmMultiViewList` wave 0 (no visual redesign).**
+  Saving the current view names the copy with `TmViewManager_CopySuffix` (`(copy)` / `(kopie)` /
+  `(kópia)` / `(copie)`) instead of a hardcoded `(Copy)`. The visibility radios use a per-instance
+  `tm-view-scope-{id}` name, so two managers on one page no longer share a group. Empty view
+  sections use the `tm-view-empty` class instead of an inline style. Integrated tables and
+  multi-view lists pass groupable columns into the view dialog, so the Grouping section shows
+  when a column or `GroupableFields` entry exists. `TmColumnFilter` accepts an additive
+  `ColumnTitle`, a controlled `Value`, and `FilterOperator` (null keeps `contains`); the clear
+  button is also on select filters, and `TmDataTable` feeds the input from `_activeFilters`, so
+  Clear filters empties the inputs. A multi-view card keeps its avatar when selection is on, and
+  a view that turns the Avatar column on renders that column in the table (empty cell when the
+  URL is missing). Orphan keys `TmDataTable_SaveView`, `TmDataTable_ViewName` and
+  `TmDataTable_DefaultView` stay: they are public override keys, not unused leftovers.
+
+- **`TmDashboard`: every remaining user-facing string is localized and cancelling an unsaved new
+  dashboard restores the previous one.** Seven hardcoded strings moved onto resource keys
+  (`TmDashboard_NamePlaceholder`, `TmDashboard_DefaultName`, `TmDashboard_NewDashboardName`,
+  `TmDashboard_UnknownWidget`, `TmDashboard_WidgetPlaceholder`, `TmDashboard_Expand`,
+  `TmDashboard_Collapse`), so the widget title/content placeholder, the collapse control, the
+  name editor's placeholder and the empty-dashboard name all follow the UI culture (previously a
+  Czech UI still showed "Dashboard", "New Dashboard", "Unknown Widget", "Widget: …",
+  "Expand"/"Collapse"). The Czech terminology is unified on „nástěnka" across every `TmDashboard_*`
+  and `TmWidgetSelector_*` key (previously mixed: „Moje dashboady", „Vytvořit nový dashboard",
+  „Přejmenovat nástěnku"). Additionally, creating a dashboard through the dialog now remembers the
+  dashboard on screen: **Cancel in edit mode brings the previous dashboard (with its widgets)
+  back without touching the provider** — previously the cancel left the empty, unsaved new
+  dashboard displayed with no way back. Saving ("Uložit změny") commits the new dashboard and
+  clears the restore. The "Create new dashboard" dialog also submits on Enter (the field sits in
+  a `<form>`, so implicit submission runs the same handler as the footer button) and auto-focuses
+  the name field on open.
+
+- **`TmDashboard` delete-confirmation buttons stay in the UI language.** The dialog now passes the
+  localized `CancelButtonText` explicitly alongside `OkButtonText`, so a host with a custom
+  `ITmLocalizer` sees „Zrušit"/"Cancel" on both footer buttons, not a default English label.
+
+- **Signing `TmDocumentCommentThreadPanel`: the reply composer is now bound internally and the
+  reply text is cleared when the thread selection changes** (no visible behaviour change
+  otherwise). The composer previously seeded from a parameter without a binding, so a reply draft
+  typed for one thread could resurface when another thread was selected; the panel now owns the
+  text and resets it whenever the reply composer unmounts — selection change, clear selection or
+  starting an edit — which also keeps the draft-guard surface honest (the reply slot counts only
+  while the reply composer is mounted).
+
+- **`TmActivityComments`: starting an edit now closes the new-comment editor (before, it reopened
+  empty after the edit ended).** Both editors share the same draft content, so `StartEdit` now
+  clears `_showEditor` — only one draft can be open at a time — and the cancel paths
+  (`CancelEdit`/`CancelEditor`) reset `_editorOriginalContent` together with the rest of the
+  editor state, so no stale edit baseline survives between drafts.
+
+- **`TmActivityComments`: the Add comment button is hidden while an existing comment is being
+  edited; previously clicking it silently discarded the edit draft.** The button rendered
+  whenever no new-comment editor was open — including during an inline edit — so clicking it
+  cleared the shared `_editorContent`/`_editorOriginalContent` without opening any editor and the
+  edit draft was gone. The button is now hidden while `_editingCommentId` is set, and
+  `ShowEditor` ends any active edit first (the mirror of `StartEdit` closing the new-comment
+  editor) before opening the new-comment editor, bridging the two draft states with exactly one
+  deduped `OnDraftChanged` notification.
+
+- **`TmActivityComments`: a new comment consisting only of empty editor markup (`<br>`,
+  `<div><br></div>`, `<p><br></p>`) is no longer submitted — the submit guard now uses the same
+  effectively-empty check as the draft flag (the edit-submit guard is unchanged).** The
+  new-comment submit invoked `OnCommentAdded` whenever the editor content was not
+  `IsNullOrWhiteSpace`, so clicking Submit with the placeholder-visible markup a browser leaves
+  behind after emptying the editor submitted that markup as a "comment" — and the dirty-guard
+  panel reported nothing unsaved, because the draft flag already uses the effectively-empty
+  check. Submitting such markup is now a no-op: nothing fires and the editor stays open. The
+  edit-submit guard keeps its plain `IsNullOrWhiteSpace` check, so editing behaviour is
+  unchanged.
+
+- **Six `TmDiagramEditor_*` toolbar keys ship in English instead of raw key names, and the
+  `Tm_Time_TimeFormat` clock-format resource exists in all four languages.** `TmDiagramEditor`
+  used `TmDiagramEditor_ShowGrid` / `HideGrid` / `ShowPageView` / `HidePageView` / `EnableSnap` /
+  `DisableSnap` (toolbar tooltips and the context menu), but only the Czech table contained them —
+  English, Slovak and French users saw the raw resource keys. All four tables now carry the six
+  keys. `Tm_Time_TimeFormat` (the clock pattern inside "yesterday at …") existed only in the Czech
+  and French tables; the English table now ships `"t"` — the .NET short-time pattern, byte-identical
+  to the previous fallback, so no English output changes (`en-US` stays 12-hour, `en-GB` stays
+  24-hour) — and Slovak ships `"H:mm"` (see docs/localization-plurals.md).
+
+- **A modal/dialog close returns the focus to its opener — pointer or keyboard, first open or
+  later — and can no longer land on an element inside the closing overlay.** The focus trap
+  (`TmModal`, `TmDialog`, `TmDrawer`, `TmFocusScope` — the shared `tm-focus-trap.js` module)
+  captured its return target only when the lazily imported module finished loading. A form modal
+  whose content autofocuses its first field during the open therefore captured that field as
+  "the opener": closing the dialog focused the dying field, and the focus fell to `<body>` the
+  moment the overlay left the DOM. When the OK handler settled the focus on its post-close action
+  button before the close render ran, the unconditional restore also yanked it back to the dying
+  overlay. The contract is now:
+
+  - A gated owner's scope notes the opener in its FIRST parameter-set phase — the mount render,
+    before the overlay's content can autofocus (`NoteOpenerOnMount`); TmModal, TmDialog, TmDrawer,
+    TmLightbox, TmCommandPalette, TmKeyboardShortcutsHelp and TmGanttImportDialog do, so closing
+    a form modal that autofocuses its field returns the focus to the trigger on every open, on
+    both render modes.
+  - Every gated owner pre-imports the module on its first render while still closed
+    (`ensureLoaded`), so even the first open of a browser session opens with the opener records
+    (the pointerdown record, the focus history) already in place — previously that open loaded
+    the module with it and its close landed on `<body>`.
+  - A capture that lies INSIDE the surface is never used as the return target — restoring to it
+    would focus an element the close is about to remove. The module keeps a short focus history
+    (and the last document-level pointerdown, now expiring after ~2 s and cleared by a keydown,
+    recording nothing when the press had no focusable ancestor), so a surface whose capture was
+    poisoned still restores to the element the user actually engaged — clicked OR focused (the
+    history covers keyboard-opened surfaces, which no pointerdown can name).
+  - A deactivation restores focus only while its own surface still holds it (or the focus fell to
+    `<body>`): a focus the app placed on a live element outside the overlay is never stolen. This
+    guard now covers modal surfaces as well (it previously existed only for non-modal inline
+    sheets), and a restore target that is disconnected or inside the closing surface is skipped
+    (an explicit `RestoreFocusTarget`/`RestoreFocusTargetId` inside the overlay degrades to the
+    opener instead of stranding the focus). The only `<body>` fallback left is the honest one: no
+    live candidate outside the surface existed (for example the opener was removed from the DOM
+    while the surface was open).
+
+  An app focus issued while the modal is still open is dropped by the browser anyway (the open
+  modal holds the page `inert`): settle the post-close focus AFTER the overlay is gone, which is
+  what the old `requestAnimationFrame` workarounds effectively did and can now be removed.
+
+- **`TmSelect` with a nullable `TValue` now really displays and selects the empty (null) option.**
+  A null-valued `SelectOption<TValue>` (e.g. a "Root (no parent)" entry in `Options`) rendered as a
+  value-less `<option>` — whose value silently became its text content — and a bound `Value` of
+  `null` never pinned the preselection, so the dropdown showed the first option by accident and
+  picking the null entry round-tripped through the label text. Null-valued options now render as
+  real `<option value="">` elements (marked `selected` when the bound value is null), and the
+  `<select>` pins the preselection with `value=""` — for nullable value types (`decimal?`, `int?`,
+  `Guid?`, `enum?`, …) whenever an empty-valued option exists, and for `TmSelect<string>` when
+  `Options` contains a null-valued entry — so the displayed selection finally matches the model.
+  Nullable selects with a `Placeholder` now also pin `value=""` (visually identical — the
+  placeholder was already the selected option); nullable selects with neither a placeholder nor an
+  empty-valued option keep the old no-attribute behaviour, since a literal `value=""` would leave
+  nothing selected. A null-valued and an `""`-valued `string` option share the single empty wire
+  value and must not be mixed. Selecting the empty option fires `ValueChanged(null)` and the
+  value → null → value switch repeats indefinitely. **Required caveat:** with `Required="true"`,
+  picking the empty/null option (or a selectable placeholder) submits the empty value, so native
+  validation counts the field as missing — that is the intended "please choose" behaviour, not a
+  regression.
+
+- **The `TmWorkflowDesignerCanvas` context menu is localized.** Its items ("Edit properties",
+  "Delete state", "Delete transition", "Add initial state", "Add state", "Add final state") were
+  hardcoded English inside the component; they now use the `TmWorkflowDesignerCanvas_*` resource
+  keys in all three languages (en/cs/fr) and answer to `ITmLocalizer`, like every other
+  user-visible string in the library.
+
+- **Cancelling a `TmDataTable` column resize no longer saves the width, and the drag runs on the
+  shared pointer-drag helper.** The resize gesture moved out of `data-table.js`'s own document
+  listeners into `attachColumnResize(root, dotNetRef)` over `pointer-drag.js`: the start width is
+  MEASURED from the `<th>` (a column without a pixel width used to jump to 160 on the first move),
+  the listeners are attached once per table on the first render (the old press-then-`startColumnResize`
+  round trip lost the first moves on Server), `pointercancel` / Escape / a lost capture / a
+  mid-drag unmount restore the start width and commit NOTHING — they used to commit like a real
+  release — and the pointer is captured by id, so a second finger can neither move nor end the drag
+  and the drag follows the pointer outside the table. `window.tmDataTable.startColumnResize` stays
+  exported (deprecated) for hosts that still call it. The gesture is delegated
+  (`.tm-col-resize-handle`), so `touch-action: none` sits on the handle only in CSS and the table
+  around it keeps scrolling; `document.body` is no longer touched (`user-select` is the helper's
+  `.tm-pointer-dragging` class). The horizontal delta inverts in RTL, read live from the computed
+  direction. The old pointer-press handler is gone from the markup.
+
+- **`TmColorGradient` drags on the shared pointer-drag helper, with pointer capture and real
+  element maths.** The six Blazor pointer handlers are replaced by the new
+  `_content/Tempo.Blazor/js/tm-color-gradient.js` ES module: the position is a fraction of the
+  element's real bounding box (the old code divided the event offset by hardcoded 200×150, so the
+  value jumped when the pointer crossed the thumb child and broke at any other size), the pointer
+  is captured (dragging off the element keeps tracking instead of stopping silently), the preview
+  streams through rAF-throttled `OnGradientDrag` calls, and the release commits exactly once
+  through `OnGradientCommit`. Escape, `pointercancel` and a mid-drag unmount report
+  `OnGradientCancel` and restore the state the press started from — nothing is committed on a
+  cancelled gesture. A tap (press + release without moving) sets the colour through the same
+  commit. The RGBA number inputs remain the non-drag alternative.
+
+  **CSP:** `data-table.js` now dynamically imports `pointer-drag.js`, and the new
+  `tm-color-gradient.js` imports it statically — a `script-src` policy that allows those scripts
+  must also allow the helper (same `_content/Tempo.Blazor/js/` origin, so the host-wide nonce or
+  hash that covers `scheduler.js` covers all of them; a per-file hash must list `pointer-drag.js`
+  too). In exchange neither component carries its own pointer gesture any more.
+
+- **A cancelled `TmColorGradient` gesture restores the exact colour it started from, and ten
+  1° hue steps no longer drift.** Two lossy conversions compounded: the cancel path re-derived
+  R/G/B from the restored HSV — `#3B82F6` came back as `#3A82F6` — so the snapshot now captures
+  R/G/B and restores them verbatim (only the gradient's hue colour is re-derived); and
+  `OnParametersSet` re-parsed the value the component itself had just committed on every bind
+  round trip, while `ColorHelper.HsvToRgb` truncated each channel a unit low — together a
+  keyboard-stepped hue crept up ~0.2° per step. The component now remembers its last emitted
+  value and skips the echo re-parse (case-insensitive), and `HsvToRgb` rounds instead of
+  truncates, so RGB → HSV → RGB returns to its input.
+
+- **A cancelled `TmDataTable` resize on a column without a width no longer leaves one behind.**
+  The cancel used to replay the press-time start measurement through the live `OnColumnResized`
+  path, which converted an auto-layout column's measured width into a user-set one — the
+  cancelled drag persisted something after all. The component now snapshots the column's state
+  before the FIRST live update of a gesture and `OnColumnResizeCancelled` (new `[JSInvokable]`)
+  restores the snapshot width or removes the width entry entirely; the commit clears the
+  snapshot, so a stray late cancel cannot roll a committed width back.
+
+- **A user-set `TmDataTable` column width now survives the auto table layout.** The table renders
+  `table-layout: auto`, where `width` is a suggestion the algorithm may shrink when columns
+  compete for space — a +48px touch drag at 768px rendered ~1px wider. A user-set pixel width is
+  now repeated as `min-width` (the column's own `MinWidth`, if any, keeps priority), and the
+  keyboard resize measures the real rendered `<th>` through the new
+  `tmDataTable.measureColumn(table, key)` instead of starting from the 160 default. Under
+  `(pointer: coarse)` the resize handle widens to a 24px target, the last column's handle stays
+  inside the table edge, and the pin button slides inward so the two targets do not overlap.
+
+- **`TmSidePanel` without a viewport scope now opens the sheet the viewport measured (C7).** With
+  no `TmLayoutScopes.Viewport` cascade the container used to decide the sheet geometry
+  (side vs bottom) entirely: a narrow container on a desktop viewport opened a bottom sheet, a
+  desktop container on a phone opened a side sheet. The panel's own sheet now reads the position
+  from its drawer's internal viewport probe (through `ResolvedLayoutChanged` + `InitialMode`; the
+  container is only the first-frame guess), so a 500px column at 1440 opens a right side sheet and
+  a phone viewport opens a bottom sheet. A host with a viewport scope, or a forced `LayoutMode`,
+  is unchanged.
+
+- **The toolbar's fit measurement no longer ignores a group wrapper's margins and its own gap
+  (F14/C5).** `tm-toolbar.js` counted only a flattened wrapper's padding and border, so a wrapper
+  with a horizontal margin — or a column gap wider than the bar's — over-committed the row and the
+  next control could overlap the pinned one (the I6 bug class). Now the margin counts as fixed width
+  and a wider gap is reserved per adjacency between the wrapper's direct items, conservatively (as
+  if all of them stayed); a narrower gap was already over-reserved by the bar gap and changes
+  nothing, and the start/actions containers share the bar gap (their margins are not double-counted).
+
+- **A `TmDialog` prompt no longer submits on an IME's commit-Enter.** Typing with an input-method
+  editor (Chinese, Japanese, Korean…) commits the composed text with Enter; that press neither
+  arms the prompt submit nor fires it, so committing composed text no longer submits the dialog
+  mid-composition. The guard reads `KeyboardEventArgs.IsComposing`, which does not exist in the
+  .NET 8 framework assemblies — there the guard is a no-op and the commit-Enter submits as before
+  (accepted: the flag is not available). Safari's keyCode-229 commit-Enter (`isComposing=false`)
+  is not detectable through Blazor on any target and is likewise accepted.
+
+- **The dialog/modal/drawer scroll region stays correct for its whole open life.** Three defects
+  fixed together in `ScrollRegionInterop` and `tm-focus-trap.js syncScrollRegion`: (1) a close
+  that landed while the lazy module import was still in flight was dropped by an `!_attached`
+  early return, leaving the `ResizeObserver` attached to the removed node — attaches are now
+  generation-checked, so a detach wins over an in-flight attach and the stale attach stops itself
+  unless a newer attach owns the region (both share one region id, so a blind stop would tear the
+  newer region down; the module import is cached, so a re-attach never imports twice); (2) content
+  growing INSIDE the scroller (rows appended under a `max-height` cap) never resized the scroller
+  and was never re-evaluated — the children are now observed too and a childList MutationObserver
+  re-observes added children and re-runs the overflow decision, coalesced into one frame; (3) a
+  title that rendered or changed after the attach never named the region — `TmModal`, `TmDialog`
+  and `TmDrawer` re-point it through the new `updateScrollRegionLabel` whenever the computed
+  `aria-labelledby`/`aria-label` changes while attached — including an update that lands while the
+  attach is still in flight, reconciled once the attach completes — so the region's name always
+  tracks the title. The wrapper no longer swallows `NullReferenceException`.
+
+- **Overlay focus traps activate only after their root is promoted to the top layer.**
+  `TmModal`, `TmDialog`, every modal `TmDrawer`, `TmLightbox`, `TmCommandPalette`,
+  `TmKeyboardShortcutsHelp` and `TmGanttImportDialog` activated their `TmFocusScope` on the same
+  render that inserted the `popover="manual"` root — before `showPopover` ran. An unpromoted
+  popover root is `display:none` by the UA rule `[popover]:not(:popover-open)`, so whenever a root
+  lost its own author `display` (a consumer class or stylesheet), the trap's initial-focus move
+  landed on `<body>` and the page behind the overlay was inert. All seven now go through a shared
+  promote gate that promotes the root first and only then activates the trap; a promote that
+  completes after its owner closed is dropped, so closing during the in-flight promotion can no
+  longer make the *next* open activate before its own promotion. `role`/`aria-modal` now appear one
+  render after the overlay's first paint (selectors on the rendered markup are unchanged once the
+  overlay is open). In the same pass the overflow scroll region of a dialog/modal/sheet body can
+  never take the initial focus: `tm-focus-trap.js` marks an overflowing scroller with
+  `data-tm-scroll-region` and both the initial-focus fallback and the toast focus recovery skip it
+  (a Custom `TmDialog`'s first control used to lose the focus to its own scroller whenever the
+  content overflowed).
+
+- **F6 focus-trap follow-up: phone sheet Tab cycle, modal Escape ownership, toast focus recovery.**
+  Three focus-trap defects fixed in `tm-focus-trap.js` and its consumers. (1) The bottom-sheet More
+  menu is a roving group (item `tabindex="-1"`), and the trap's Tab cycle counted those items — Tab
+  on the real last tab stop was "not last", the browser's native Tab skipped the `-1` items, found
+  nothing tabbable left (the page is inert) and focus dropped to `<body>`, out of the sheet. The
+  cycle now runs over **tab stops only** (a negative tabindex is not one), and Tab from a focused
+  `-1` item walks the next/previous tab stop in DOM order; this covers every modal trap with a
+  roving group (menus in sheets, a `TmToolbar` roving group inside `TmModal`/`TmDrawer`). (2) A
+  modal dialog's Escape was gated on registration order alone (`isTopmost`): a non-modal inline
+  sheet activated after the dialog blocked the dialog's Escape entirely — nothing closed. The
+  modal gate is now `modalOwnsEscape`, which ignores later **non-modal** traps that do not hold
+  focus or cannot close at all (no Escape handler); an inline sheet nested in the dialog that holds
+  focus still closes first, and a dialog over a dialog still closes only the top one. (3) A toast
+  dismissed under an open sheet or dialog — by click, by keyboard or by expiry while focused —
+  removed the focused dismiss button and stranded focus on `<body>` (the next Tab landed on the
+  sheet's drag handle). The trap now remembers the element last focused inside it (`focusin`) and
+  both `TmToastContainer` and `TmNotificationToastContainer` ask it to recover the focus whenever
+  the set of visible toasts drops an id — not only when the count shrinks, so a replacement at the
+  `MaxVisible` cap, a notification queue refill and an expire+push in one render are covered too.
+  `restoreTrapFocusIfLost` moves focus only when a toast actually held it (a capture-phase
+  `focusin` records the last focus inside an inert-exempt container and the recovery requires that
+  element to be gone): **timer expiry moves focus only when the toast held it** — a toast expiring
+  while focus sat in the sheet (screen-reader browse mode, a mouse click) changes nothing, per
+  WCAG 3.2.1/APG. The recovery never steals from a live element, prefers tab stops over roving
+  `-1` items, and the modal Tab cycle now skips unchecked radios of a same-name group that has a
+  checked member (one tab stop per radio group, APG).
+
+- **A toast stays above any popup opened after it.** `overlay.js` promoted every
+  `TmOverlayPanel` popover (date pickers, dropdowns, menus, the notification bell) by
+  calling `showPopover()` directly, so a toast already on screen slipped behind it. It
+  now promotes through the shared top-layer helper, which re-raises pinned toasts; the
+  set of promoted surfaces is unchanged.
+
+- **F6 review round 2.** `TmEditorShell`: the tablet rail the shell imposes itself can be expanded
+  even when the host binds no `CollapsedPanels`; with `Breakpoints` the internal `TmMobileActionBar`
+  follows the shell's resolved mode (the actions stay reachable on a custom-threshold mobile shell),
+  and `TmLayoutObserver` rejects `Breakpoints` on the viewport-scope observer; Escape closes the
+  inline sheet that holds focus (non-modal focus traps close by focus ownership, not registration
+  order — two inline sheets on one page); focus no longer drops to `<body>` when the shell reopens
+  the sheet from its closed bar, when a host switches the Tabs panel, or when a desktop → tablet
+  flip rails the focused panel; restored widths are reported through `LeftWidthChanged` /
+  `RightWidthChanged`, a late or changed `PersistWidthsKey` loads, resizing back to the host width
+  clears the stored override, `aria-valuemax` is the reachable width and the resizer hit area is
+  wider under a coarse pointer; the resizer releases its pointer capture by pointer id and a
+  mid-drag detach restores the live width; an overflowing inline sheet body is named by its
+  `aria-label`; closing one of two sheet panels no longer remounts the other's content and a host
+  close that moves the sheet tab raises `ActiveMobilePanelChanged`; the `TmMobileActionBar` "More"
+  trigger omits `aria-controls` while its menu panel is not rendered.
 - **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
   content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
   menus and listboxes opened as sheets take initial focus on the first item, not Done;
@@ -870,6 +3916,290 @@
   the whole NotionEditor tree so the next inline band value cannot hide in
   markup again.
 
+- `TmImageGallery` thumbnails are keyboard-operable native `<button type="button">` items (per
+  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md): the browser
+  delivers the activation, no emulated key handlers), carry an accessible name, and the lightbox
+  returns focus to the thumbnail of the image on screen when it closes.
+
+- **The command palette's keyboard highlight is visible in every theme.** The focused row painted
+  `--tm-color-gray-50`, which in dark mode IS `--tm-bg-surface` (1:1 — the highlight vanished
+  exactly where keyboard users need it) and about 1.04:1 on white in light. The row now paints
+  `--tm-bg-muted` plus a 2px `--tm-color-primary` outline, the `TmMultiSelect` focused-option
+  precedent; a `TokenContrastTests` entry holds the outline at ≥3:1 (WCAG 1.4.11 non-text) against
+  the palette surface in light, dark, indigo and indigo-dark.
+
+- **A More menu opened mid-scroll lands its initial focus when the anchor comes back.** A
+  popover that opened while its trigger was scrolled out of the viewport was parked
+  `visibility:hidden` by `overlay.js`, so the post-open `focus()` on the first enabled
+  `menuitem` silently no-op'd — and the pending-focus flag was consumed on that first attempt,
+  leaving keyboard users on `<body>` even after the anchor scrolled back into view (the More
+  menu of `TmMobileActionBar` / the `TmToolbar` overflow, `TmDropdown`, `TmSplitButton`,
+  `TmContextMenu` — every anchored panel that moves initial focus from `OnOpened`). `overlay.js`
+  now reports a parked panel's first real visibility exactly once per open
+  (`NotifyPanelVisibleAsync`), `TmOverlayPanel` raises `OnOpened` again, and the pending initial
+  focus lands for real. A panel that opened on-screen never re-fires, and a report that lands
+  after the panel closed is ignored. Regression coverage: the `overlay-lifecycle.test.mjs`
+  park/first-visibility cases plus `PanelVisibleAfterParkedOpen_RunsThePendingInitialFocusAgain`.
+
+- **A click inside the keyboard-shortcuts dialog no longer closes it.** `TmKeyboardShortcutsHelp`
+  carried `@onclick:stopPropagation` on the `<TmFocusScope>` component tag — routed through a
+  component's parameters the renderer treats it as a plain splatted attribute and ignores it (a
+  runtime no-op), so the fence never existed and any click inside the dialog bubbled to the
+  backdrop's close handler. The fence is now a real element wrapper around the scope — the
+  `TmCommandPalette` pattern from phase 7 — so clicks inside stay off the backdrop while the
+  close button and the Escape path keep working. The backdrop close also tracks the PRESS origin
+  (m7): a drag that starts inside the panel and releases over the backdrop delivers only the
+  click there, so the dialog closes only when the press started on the backdrop itself.
+  Browser-proofed by `Shortcuts_ClickInsideTheDialog_DoesNotClose_BackdropClickDoes`.
+
+- **`TmLightbox` mirrors in RTL.** The strip used to ignore the writing direction: in RTL the
+  chevrons still pointed physically and ArrowLeft/Right kept their LTR mapping. The chevron
+  glyphs now flip (`scaleX(-1)`) and the arrow keys swap with the reading direction (ArrowLeft is
+  next, ArrowRight is previous), read live from the computed direction through the shared
+  `tm-rtl.js` helper — "ltr" wherever JS is unavailable. Below 640px a panorama's content row
+  also floors at one touch target: on a shorter row the centred arrows reached up into the
+  close/delete band (-3rem) and overlapped the delete button. Guarded by the lightbox CSS guard
+  tests and `TmLightboxRtlTests`.
+
+- **The `TmLightbox` delete button clears the navigation arrows below 640px.** The delete used to
+  sit in the top-end chrome band (top: -3rem, beside the close) — exactly the corner the
+  overlaid arrows' upper ends reach on a short (panorama) row. It now sits in the footer flex
+  row under the counter pill (still a 44px touch target), and the footer drops by one
+  `--tm-space-2`, so the arrows keep ≥ 8px of real clearance from it at every image height.
+  Desktop keeps the delete beside the close. Proven by
+  `Gallery_Lightbox_390_DeleteMode_ArrowsStayClearOfTheDeleteButton` with the demo's Delete Mode
+  on (next in LTR, prev in RTL).
+
+- **The chevron mirror keys off the element's own resolved direction.** The RTL rule matched a
+  hardcoded ancestor `[dir="rtl"]` attribute and missed hosts that flip direction through CSS;
+  `.tm-lightbox-prev:dir(rtl) svg, .tm-lightbox-next:dir(rtl) svg` reads the same live resolved
+  direction the `tm-rtl.js` probe reports, so the glyphs and the arrow-key semantics cannot
+  disagree (m4).
+
+- **`overlay.js` re-runs a parked panel's pending initial focus only when focus is free, and
+  stale reports are dropped.** The first-visibility report now fires only when focus went
+  nowhere (the parked panel's focus move dropped it to `<body>`) or still sits on the anchor
+  trigger — a user who tabbed elsewhere while the panel was parked is not yanked back (the flag
+  is still consumed). Each open carries a sequence number that rides on the report, and
+  `TmOverlayPanel.NotifyPanelVisibleAsync` compares it against its own open sequence, so a
+  report already in flight while the panel was closed and reopened can never fire the NEW open's
+  `OnOpened` (m1/m2).
+
+- **One `directionOf` for every RTL-aware component.** `tm-splitter.js` and `data-table.js` no
+  longer carry private copies of the writing-direction probe: both reuse the shared
+  `js/tm-rtl.js` helper (the splitter imports and re-exports it, the classic-script data table
+  loads it by URL like `pointer-drag.js`), so the ltr fallback contract cannot drift. The
+  `TmLightbox` also reads the direction once per open (on the opening render) instead of on
+  every arrow-key press (m3).
+
+- **The Czech table covers every English key again.** 53 keys had shipped English-only under cs —
+  the `TmViewManager_*` view CRUD/scopes/visibility set (21 keys), the Notion block context menu
+  (`TmNotionBlockContextMenu_Color*` and `_TurnInto*`, 22 keys), `TmNotionBlock_Copied` /
+  `_CopyCode` / `_DragHandle` / `_HeadingPlaceholder` / `_MediaUrlPlaceholder` / `_Unsupported`,
+  the Spreadsheet slash-menu entry, `TmNotionPage_NoComments` and `TmDataTable_CurrentViewName` —
+  and now carry Czech translations. A new `TmResourceCompletenessTests` guard keeps all four
+  tables honest from now on: every English key must exist in cs/sk/fr with the same `{0}`-style
+  placeholders, the Slovak table must read as Slovak (no Czech-only ě/ř/ů), and every plural
+  family must provide the forms each language's grammar needs.
+
+- **The French comment-rail counter keeps its total.** `TmDocumentEditor_CommentCountVisible` had
+  shipped as "{0} commentaires visibles" — the English string's `{1}` (the total comment count)
+  was dropped, so the document editor's comment rail could not say how many comments exist. The
+  value is now "{0} sur {1} commentaires"; the placeholder parity half of the new
+  `TmResourceCompletenessTests` guard catches exactly this class of drift — a translation losing a
+  `{0}`-style placeholder — in every shipped table.
+
+### Accessibility
+
+- **TmDiagramEditor: the header *Tools* toggle reports `aria-pressed="true"` while the palette is
+  expanded, like the other panel toggles (it was inverted).** On tablet the toggle and the rail
+  button collapse the palette to its rail instead of hiding it.
+
+- **`TmWidgetSelector` is a real modal surface and the `TmDashboard` switcher is a WAI-ARIA menu.**
+  The widget selector previously rendered its own `position: fixed` overlay — no `role="dialog"`,
+  no `aria-modal`, no focus trap, no Escape handling and an unnamed close control. It now renders
+  on `TmModal` (extra-large): `role="dialog"` + `aria-modal` + `aria-labelledby` named by the
+  visible title, the shared focus trap with Escape close and scroll lock, a named close button,
+  and the bottom-sheet presentation on a narrow viewport. Inside it, widget cards are native
+  `<button>` elements whose children are phrasing content (the description span is referenced by
+  `aria-describedby`, so the announced name stays the widget's name and the "3×2" size token is
+  `aria-hidden`), a card that cannot be added again stays focusable and announces
+  `aria-disabled="true"` instead of disappearing from the tab order, and the category filters are
+  toggle buttons with `aria-pressed`. The dashboard switcher renders through `TmOverlayPanel` —
+  a top-layer popover positioned by `overlay.js`, which owns the Escape/outside/Tab-out dismissal
+  and the focus restore to the trigger, and attaches the shared `tm-menu-nav` module to the
+  `role="menu"` panel, so the roving arrow keys, Home/End and the typeahead are actually wired;
+  opening hands focus to the first item. Each dashboard row is a `role="none"` wrapper around a
+  native `role="menuitem"` select button (Enter/Space activate natively — exactly one activation
+  per press) and sibling `role="menuitem"` action buttons carrying the dashboard's NAME
+  ("Delete dashboard {0}" / "Set {0} as default"); the current dashboard is marked with
+  `aria-current`, the default-star badge carries the localized "Default dashboard" text through
+  `role="img"` + `aria-label`, and every icon-only button in the dashboard toolbar/widget headers
+  (apply/cancel rename, rename, remove widget, collapse/expand) has an `aria-label`; the collapse
+  control also exposes `aria-expanded` + `aria-controls` pointing at the widget content region it
+  toggles. Focus is never stranded: creating a dashboard moves focus to the "Add widget" button,
+  leaving edit mode (save or cancel) returns to the switcher trigger, and the inline rename is a
+  `<form>` whose Escape cancels and whose save/cancel return focus to the rename button.
+
+- **The input-family error messages can opt out of the assertive `role="alert"` announcement.**
+  Every input component with an `Error` parameter — `TmTextInput`, `TmTextArea`, `TmSelect`,
+  `TmNumberInput`, `TmDecimalInput`, `TmMultiSelect`, `TmEntityPicker`, `TmCodeEditor` and
+  `TmExpressionEditor` — announced its own error through `role="alert"` unconditionally. When the
+  host also moves focus to the invalid field after a failed submit (e.g. a modal form whose submit
+  focuses the first invalid field), the screen reader read the error twice: once from the live
+  region, once through `aria-describedby` on the focused control. The new `AnnounceError`
+  parameter (default `true`, so the current output is unchanged) drops only the `role` attribute
+  when set to `false` — the message still renders, keeps its error styling and stays referenced
+  by `aria-describedby`/`aria-invalid`:
+
+  ```razor
+  <!-- default: role="alert" announces the error the moment it appears -->
+  <TmTextInput @bind-Value="model.Name" Label="Name" Error="@_nameError" />
+
+  <!-- the host focuses the field itself, aria-describedby reads the error: no live region -->
+  <TmTextInput @bind-Value="model.Amount" Label="Amount" Error="@_amountError" AnnounceError="false" />
+  ```
+
+  **Scope:** the opt-out covers only the input's own `Error` message. `TmFormValidationMessage` and
+  the range pickers' own field errors (`TmTimeRangePicker`, `TmDateTimeRangePicker` invalid-range
+  messages) keep their `role="alert"`, so EditContext-driven and cross-field validation keep
+  announcing; `TmFormField` now exposes its own `AnnounceError` with identical semantics (see
+  below), so a host that opts out mutes the wrapper and the input independently.
+  **Only safe when the same render that shows the error also moves focus to this control.** Keep
+  the default for validation on blur or on input, async/server validation, or when focus stays on
+  the submit button — otherwise the error is not announced at all. With several invalid fields,
+  pair it with a summary (e.g. `TmValidationSummary`) or focus the first invalid field.
+
+- **`TmFormField` errors get a stable id and the same `AnnounceError` opt-out, and the id reaches
+  the wrapped control's `aria-describedby`.** The field-level error `<p>` (from `ErrorMessage` or
+  EditContext validation) had no id, so a screen reader that focus-navigates into the wrapped input
+  read only the control's own message — a field-level EditContext error was announced once by the
+  live region and then unreachable from the control. The error paragraph now renders
+  `id="{Id}-field-error"` (new optional `Id` parameter, defaulting to a per-instance generated id;
+  the suffix deliberately differs from the inputs' `{Id}-error` so a field and its wrapped input
+  can share the same `Id` without the two error ids colliding), exposed as `TmFormField.ErrorId`.
+  While the paragraph renders, the id is cascaded to the wrapped content (`TmFormFieldErrorId`) —
+  the cascade reaches every Tm input inside the field's content, and each input with no own `Error`
+  — the nine inputs above plus `TmRadioGroup` — adds it to its own `aria-describedby` (after the
+  input's help text), so the field-level message is readable from the control in every state:
+
+  ```razor
+  <TmFormField Label="Email" Id="email" ValidationFor="@(() => model.Email)" For="email">
+      <TmTextInput id="email" @bind-Value="model.Email" />
+  </TmFormField>
+  <!-- on a validation error the input renders aria-describedby="email-field-error" pointing at the field's error <p> -->
+  ```
+
+  The field also accepts `AnnounceError` (default `true`) with exactly the semantics of the inputs:
+  `false` drops only the `role="alert"` attribute — the message still renders, keeps its error
+  styling and its stable id, and stays cascaded and referenced. The default DOM is unchanged except
+  for the added `id` attribute (frozen by full-markup snapshots in
+  `TmFormFieldErrorAnnouncementTests`).
+
+- **`TmRadioGroup` errors are announced, linked and marked invalid like the input family.** The
+  error `<span>` under the radiogroup rendered as plain styled text — no `role`, no id, no
+  `aria-invalid`, no `aria-describedby` — so a screen reader never announced it and focus on the
+  group read nothing. It now renders `role="alert"` with a stable id
+  (`tm-radio-error-{guid}`, exposed as `TmRadioGroup.ErrorId`), the radiogroup container links it
+  through `aria-describedby` and sets `aria-invalid="true"` while the error shows, and the new
+  `AnnounceError` parameter (default `true`) drops only the `role` attribute under the same
+  conditions as the inputs. Inside a `TmFormField` whose field-level error is showing, the group
+  additionally describes that message through the cascaded `TmFormFieldErrorId` when it has no own
+  `Error`.
+
+- **A `TmNotificationBell` unread entry announces its state.** The blue dot was `aria-hidden`
+  decoration, so a read and an unread entry were indistinguishable to a screen reader. Unread
+  entries now carry a localized screen-reader-only text alternative (`tm-sr-only`,
+  `TmNotificationBell_Unread` — en/cs/fr); read entries announce nothing (m6).
+
+- **The `TmNotificationBell` focus indicator draws inside the entry row.** The rows sit flush
+  with the panel edge and the dropdown clips overflow, so the old outside box-shadow ring was
+  invisible on the first and last row — exactly where a keyboard user lands. The
+  `:focus-visible` indicator is now an inset 2px `--tm-color-primary` outline (offset -2px,
+  `box-shadow: none`), guarded by `NotificationBellCssGuardTests` (M1).
+
+- **The `TmWorkflowDesignerCanvas` states are named, focusable buttons on a labelled canvas.** The
+  svg root dropped `role="img"` for `role="group"` (see Breaking/Migration), every state node is a
+  `role="button"` with a localized `aria-label` (`TmWorkflowDesignerCanvas_StateLabel` —
+  "{name} ({type})", the type word localized too) and a roving tabindex (one tab stop for the
+  group; the arrows move the focus, their page-scroll default is cancelled in `workflow-designer.js`).
+  The `:focus-visible` ring works on the SVG shapes, with a `forced-colors` variant; the temporary
+  transition line lost its hardcoded hex for the `--tm-color-primary` token (Highlight under
+  forced colors), and the connection ports are always visible with a ≥24 px coarse-pointer target
+  (touch has no hover to reveal them).
+
+- **The `TmDataTable` resize handle is a keyboard-operable separator.** The handle renders
+  `role="separator"` with `tabindex="0"`, `aria-orientation="vertical"`, always-emitted
+  `aria-valuenow` / `aria-valuemin` (60) / `aria-valuemax` (1200, raised to track the width when
+  a column grows past it) and a localized
+  `aria-label` (`TmDataTable_ResizeColumn` — "Resize column {0}"). Arrows resize by 8 px
+  (Shift by 32 px, inverted in RTL like the drag), `Home` jumps to the minimum, `End` to the
+  announced maximum — every key commits through `SetColumnWidthAsync`, the single persisting path
+  (WCAG 2.5.7 non-drag alternative). The keys that would scroll the table are cancelled in
+  `data-table.js`, not with a Blazor `:preventDefault`; the handle's keydown and click are fenced
+  from the header's sort handler. Under `(pointer: coarse)` the handle widens to a real target,
+  and it paints the shared focus ring with a `forced-colors` variant.
+
+- **The three `TmColorGradient` sliders are keyboard-operable.** The saturation/value area, the
+  hue track and the alpha track are `tabindex="0"` sliders with arrows (1 % / 1° per step,
+  Shift ×10; the area's arrows move saturation horizontally and brightness vertically),
+  `Home`/`End` at the bounds, and a localized `aria-valuetext` on the area
+  (`TmColorGradient_AreaValue` — "Saturation {0}%, brightness {1}%"); every key commits through
+  `ValueChanged`, the same path as the RGBA inputs, and the hue slider announces its own
+  localized `aria-valuetext` (`TmColorGradient_HueValue` — "{0}°"). The axis keys' scroll default is cancelled in
+  `tm-color-gradient.js`. The sliders paint the shared focus ring (with a `forced-colors`
+  variant) and the thumbs grow on a coarse pointer.
+
+- **Every `TmColorPalette` swatch announces its own color.** Every swatch and the grid carried
+  the same generic `aria-label` "Select color", and the color value was never passed to the
+  localizer, so a screen reader read an indistinguishable "Select color, button" for all 64
+  default swatches (WCAG 1.1.1/4.1.2). The grid is now a labelled `role="radiogroup"` and each
+  swatch is a native `<button role="radio">` with `aria-checked` for the selection, the existing
+  roving tabindex, and a per-swatch accessible name: the new optional
+  `ColorNames` parameter (`IReadOnlyDictionary<string, string>`, keyed by the color string as it
+  appears in `Colors`, matched case-insensitively — a key spelled exactly like the palette color
+  wins over a case-variant duplicate) names its swatch with the localized
+  `TmColorPalette_SelectColorNamed` template ("Select color {0}" / "Vybrat barvu {0}" /
+  "Sélectionner la couleur {0}", en/cs/fr), and a color without a — non-empty — entry falls back
+  to announcing its raw value ("Select color #2E7D32"), so the swatches are always tellable
+  apart even without `ColorNames`. The name lookup is cached per `ColorNames`/`Colors` reference
+  in `OnParametersSet` instead of a linear scan per swatch per render. Custom `ITmLocalizer`
+  implementations that predate the `TmColorPalette_SelectColorNamed` key stay supported: when
+  the template is missing the label falls back to the plain `TmColorPalette_SelectColor` text
+  plus the name/value ("Select color #FF0000") instead of a raw `[key]` placeholder.
+  The `TmFlatColorPicker` / `TmColorPicker` palettes inherit the fix through their embedded
+  `TmColorPalette`, and can now be named directly through their new `PaletteColorNames`
+  parameter (see below).
+
+- **`TmColorPalette` keyboard navigation moves focus only — selection follows Enter/Space.**
+  The arrow keys, `Home` and `End` move the roving tabindex without committing a selection
+  (selection does not follow focus), so keyboard users can explore a palette embedded in a
+  `TmFlatColorPicker` / `TmColorPicker` without committing a color or closing the picker on
+  every stroke; Enter/Space select through the native button activation. The keyboard-focus
+  state now also clears on `focusout` (the ring used to survive focus having left the palette,
+  and the stale roving tabindex blocked `OnParametersSet` from returning it to the selected
+  swatch). Documented in the class XML docs and the component JSON documentation.
+
+- **The `TmColorPalette` focus ring no longer paints onto neighbouring swatches, and survives
+  forced-colors mode.** The old indicator was a 2px `--tm-color-primary` outline with a 2px
+  offset — outward, exactly across the 2px grid gap onto the adjacent swatch, where a primary
+  ring over a blue swatch measured ~1:1 (WCAG 1.4.11). The ring is now two-tone and inward:
+  `outline: 2px solid var(--tm-color-primary); outline-offset: -2px;` plus an inset
+  `var(--tm-surface)` band (`box-shadow: inset 0 0 0 4px var(--tm-surface)`) that separates the
+  ring from the swatch fill — independent of the neighbours, ≥3:1 in both themes
+  (`ColorPaletteFocusRingContrastTests`). A focused-and-selected swatch keeps its selection
+  border under the inward ring, so the two states stay distinguishable. Under
+  `(forced-colors: active)` the swatches opt out of the system override
+  (`forced-color-adjust: none`) so the authored colors stay visible and the selection is marked
+  with a 3px `Highlight` outline (system colors are allowed there).
+
+- **`TmFlatColorPicker` and `TmColorPicker` accept `PaletteColorNames`.** Hosts of the embedded
+  palettes previously had no way to name their colors — a screen reader read raw hex values
+  unless they switched to a standalone `TmColorPalette`. The new optional
+  `PaletteColorNames` (`IReadOnlyDictionary<string, string>`) is forwarded to the embedded
+  `TmColorPalette`'s `ColorNames` exactly like `PaletteColors`/`PaletteColumns`, so
+  `TmColorPicker` → `TmFlatColorPicker` → `TmColorPalette` all announce the localized
+  "Select color {name}" (see `TmColorPalette.ColorNames` for the matching and fallback rules).
 - **Card-mode `TmDataTable` cells wrap their content.** A card-mode cell is a
   flex row of `label ::before + content`, but the content side had no line
   breaking, so a single unbroken token (an id, a hash, a long name without

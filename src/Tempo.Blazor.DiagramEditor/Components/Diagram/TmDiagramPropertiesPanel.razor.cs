@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Diagram.Commands;
 using Tempo.Blazor.Components.Diagram.Models;
@@ -16,26 +17,43 @@ namespace Tempo.Blazor.Components.Diagram;
 /// </summary>
 public partial class TmDiagramPropertiesPanel : ComponentBase
 {
+    /// <summary>Document whose selected elements (or page, when nothing is selected) the panel edits.</summary>
     [Parameter, EditorRequired] public DiagramDocument? Document { get; set; }
+    /// <summary>Ids of the selected nodes and edges; drives single, multi and mixed editing modes.</summary>
     [Parameter] public string[] SelectedIds { get; set; } = [];
+    /// <summary>Undo stack every edit is pushed to; edits are ignored when absent.</summary>
     [CascadingParameter] public DiagramCommandStack? CommandStack { get; set; }
+    /// <summary>When true, every field is disabled and no command is pushed.</summary>
     [Parameter] public bool ReadOnly { get; set; }
+    /// <summary>Additional CSS class applied to the panel root.</summary>
     [Parameter] public string? Class { get; set; }
+    /// <summary>Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true.</summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
+    /// <summary>Raised after an edit mutated the document so the host can persist it.</summary>
     [Parameter] public EventCallback<DiagramDocument> DocumentChanged { get; set; }
+    /// <summary>Raised when an edge's routing style changes, with the edge id and the old and new routing values.</summary>
     [Parameter] public EventCallback<(string EdgeId, string OldRouting, string NewRouting)> OnEdgeRoutingChanged { get; set; }
     /// <summary>Raised when the "Manual routing" checkbox is toggled for an edge. The editor
     /// listens so it can seed an empty Waypoints list from the auto-router when the user flips
     /// to manual on an orthogonal-like edge — otherwise the edge would collapse to a straight
     /// line at the moment of toggle.</summary>
     [Parameter] public EventCallback<(string EdgeId, bool Value)> OnEdgeManualRoutingChanged { get; set; }
+    /// <summary>Raised by Arrange → Auto layout with the algorithm and direction to run.</summary>
     [Parameter] public EventCallback<(string Algorithm, string Direction)> OnApplyLayout { get; set; }
+    /// <summary>Raised after the page size or orientation changed so the canvas can re-measure.</summary>
     [Parameter] public EventCallback OnPageSizeChanged { get; set; }
+    /// <summary>Raised by the Actions section's Delete button. The editor wires it to the same
+    /// delete path as the toolbar command, so the selection delete stays undoable.</summary>
+    [Parameter] public EventCallback OnDeleteRequested { get; set; }
+    /// <summary>Selected cells (row, column) of the selected table node; edited by the table cell section.</summary>
     [Parameter] public List<(int Row, int Column)> SelectedTableCells { get; set; } = [];
+    /// <summary>Raised when the table cell selection changes inside the panel.</summary>
     [Parameter] public EventCallback<List<(int Row, int Column)>> SelectedTableCellsChanged { get; set; }
     [Inject] private DiagramStencilRegistry StencilRegistry { get; set; } = default!;
 
     private bool _collapsed;
-    private readonly HashSet<string> _expandedSections = new() { "style", "text", "arrange", "page", "edgeStyle" };
+    private readonly HashSet<string> _expandedSections = new() { "style", "text", "arrange", "page", "edgeStyle", "actions" };
+    private readonly string _idPrefix = $"tm-dp-{Guid.NewGuid():N}";
 
     private bool IsSingleNode => SelectedNodes.Count == 1 && SelectedEdges.Count == 0;
     private bool IsSingleEdge => SelectedNodes.Count == 0 && SelectedEdges.Count == 1;
@@ -96,6 +114,8 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
     private void OnReplaceShapeCollapsedChanged(bool collapsed) => SetSectionExpanded("replaceShape", !collapsed);
     private void OnTextCollapsedChanged(bool collapsed) => SetSectionExpanded("text", !collapsed);
     private void OnArrangeCollapsedChanged(bool collapsed) => SetSectionExpanded("arrange", !collapsed);
+
+    private void OnActionsCollapsedChanged(bool collapsed) => SetSectionExpanded("actions", !collapsed);
     private void OnSwimlaneCollapsedChanged(bool collapsed) => SetSectionExpanded("swimlane", !collapsed);
     private void OnTableCollapsedChanged(bool collapsed) => SetSectionExpanded("table", !collapsed);
     private void OnEdgeStyleCollapsedChanged(bool collapsed) => SetSectionExpanded("edgeStyle", !collapsed);
@@ -133,6 +153,26 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
         return list.All(v => v == first) ? first : null;
     }
 
+    /// <summary>
+    /// Comparer-driven common value producing BOTH the shared value and the mixed flag in one
+    /// pass, so the displayed value and the "Mixed" label can never disagree (review fix:
+    /// previously the value compared case-sensitively while the flag ignored case, so
+    /// "#FF0000" + "#ff0000" showed a non-mixed field carrying the fallback colour).
+    /// </summary>
+    private static (string? Value, bool Mixed) GetCommonValue(IEnumerable<string?> values, StringComparer comparer)
+    {
+        var list = values.ToList();
+        if (list.Count == 0) return (null, false);
+        var first = list[0];
+        var common = list.All(v => comparer.Compare(v, first) == 0);
+        return common ? (first, false) : (null, true);
+    }
+
+    /// <summary>Case-insensitive variant for colour fields: "#FF0000" and "#ff0000" are the
+    /// same fill, so a case-only difference is not a mixed selection.</summary>
+    private static (string? Value, bool Mixed) GetCommonColor(IEnumerable<string?> values)
+        => GetCommonValue(values, StringComparer.OrdinalIgnoreCase);
+
     private static double? GetCommonDouble(IEnumerable<double?> values)
     {
         var list = values.ToList();
@@ -166,6 +206,21 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
     }
 
     private string GetNodeDataText(string dataKey) => FirstSelectedNode?.Data.GetValueOrDefault(dataKey)?.ToString() ?? "";
+
+    /// <summary>Read-only summary (review L): a one-line plain-text value — list values collapse
+    /// their newlines so a <c>&lt;dd&gt;</c> stays a single inline row.</summary>
+    private static string PlainText(string? value)
+        => (value ?? string.Empty)
+            .Replace("\r\n", " / ", StringComparison.Ordinal)
+            .Replace('\n', ' ')
+            .Replace('\r', ' ');
+
+    /// <summary>Read-only summary (review L): the stencil's display name, or a dash when the
+    /// element hangs free (a dangling edge end).</summary>
+    private string GetReadOnlyStencilName(string? stencilId)
+        => StencilRegistry.GetStencil(stencilId ?? string.Empty) is { } stencil
+            ? GetStencilDisplayName(stencil)
+            : "—";
 
     private string GetNodeDataListText(string dataKey)
     {
@@ -209,13 +264,61 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
 
     // ── Node Style properties (single + multi) ───────────────────────────────
 
-    private string GetNodeFill() => GetCommonString(SelectedNodes.Select(n => n.Style.Fill)) ?? "#ffffff";
-    private string GetNodeStroke() => GetCommonString(SelectedNodes.Select(n => n.Style.Stroke)) ?? "#111827";
+    /// <summary>
+    /// Shared markup for the Fill / Stroke / Text colour / edge Stroke colour fields — one
+    /// fragment keeps the swatch (hatched when mixed), the readable value text and the colour
+    /// input identical everywhere. <paramref name="value"/> always carries a valid hex (the
+    /// common value or the fallback), so the input stays operable on a mixed selection.
+    /// Known limitation: with a mixed selection the input holds the FALLBACK colour — picking
+    /// exactly that colour fires no change event, so the selection stays mixed (accepted; the
+    /// same dead-pick exists on any colour input whose value already equals the pick).
+    /// </summary>
+    private RenderFragment ColorField(string labelKey, string value, bool mixed, Func<ChangeEventArgs, Task> onChange) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "tm-diagram-properties__color-wrap");
+
+        builder.OpenElement(2, "div");
+        builder.AddAttribute(3, "class", mixed
+            ? "tm-diagram-properties__color-swatch tm-diagram-properties__color-swatch--mixed"
+            : "tm-diagram-properties__color-swatch");
+        if (!mixed)
+            builder.AddAttribute(4, "style", $"background-color:{value}");
+
+        builder.OpenElement(5, "input");
+        builder.AddAttribute(6, "type", "color");
+        builder.AddAttribute(7, "value", value);
+        builder.AddAttribute(8, "onchange", onChange);
+        builder.AddAttribute(9, "aria-label",
+            mixed ? Loc["TmDiagramProperties_MixedValueLabel", Loc[labelKey]] : Loc[labelKey]);
+        builder.CloseElement();
+
+        builder.CloseElement();
+
+        builder.OpenElement(10, "span");
+        builder.AddAttribute(11, "class", "tm-diagram-properties__color-value");
+        builder.AddContent(12, mixed ? Loc["TmDiagramProperties_Mixed"] : FormatHex(value));
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    private string GetNodeFill() => GetCommonColor(SelectedNodes.Select(n => n.Style.Fill)).Value ?? "#ffffff";
+    private string GetNodeStroke() => GetCommonColor(SelectedNodes.Select(n => n.Style.Stroke)).Value ?? "#111827";
+
+    /// <summary>Uppercase form of a hex colour for the read-only value next to a swatch
+    /// (mockup shows "#DBEAFE", not "#dbeafe"). Non-hex values pass through unchanged.</summary>
+    private static string FormatHex(string value) =>
+        value.StartsWith('#') ? value.ToUpperInvariant() : value;
+
     private double GetNodeStrokeWidth() => GetCommonDouble(SelectedNodes.Select(n => n.Style.StrokeWidth)) ?? 1.5;
     private double GetNodeOpacity() => (GetCommonDouble(SelectedNodes.Select(n => n.Style.Opacity)) ?? 1.0) * 100;
     private double GetNodeRadius() => GetCommonDouble(SelectedNodes.Select(n => n.Style.Radius)) ?? 0;
     private bool GetNodeShadow() => GetCommonBool(SelectedNodes.Select(n => n.Style.HasShadow)) ?? false;
-    private bool IsMixedFill => GetCommonString(SelectedNodes.Select(n => n.Style.Fill)) is null && SelectedNodes.Count > 1;
+    private bool IsMixedNodeFill => GetCommonColor(SelectedNodes.Select(n => n.Style.Fill)).Mixed;
+    private bool IsMixedNodeStroke => GetCommonColor(SelectedNodes.Select(n => n.Style.Stroke)).Mixed;
+    private bool IsMixedNodeColor => GetCommonColor(SelectedNodes.Select(n => n.Style.Color)).Mixed;
+    private bool IsMixedEdgeStroke => GetCommonColor(SelectedEdges.Select(e => e.Style.Stroke)).Mixed;
 
     private async Task OnNodeFillChanged(ChangeEventArgs e)
     {
@@ -256,7 +359,7 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
 
     private string GetNodeFontFamily() => GetCommonString(SelectedNodes.Select(n => n.Style.FontFamily)) ?? "inherit";
     private double GetNodeFontSize() => GetCommonDouble(SelectedNodes.Select(n => n.Style.FontSize)) ?? 14;
-    private string GetNodeColor() => GetCommonString(SelectedNodes.Select(n => n.Style.Color)) ?? "#111827";
+    private string GetNodeColor() => GetCommonColor(SelectedNodes.Select(n => n.Style.Color)).Value ?? "#111827";
     private bool GetNodeBold() => GetCommonBool(SelectedNodes.Select(n => n.Style.IsBold)) ?? false;
     private bool GetNodeItalic() => GetCommonBool(SelectedNodes.Select(n => n.Style.IsItalic)) ?? false;
     private bool GetNodeUnderline() => GetCommonBool(SelectedNodes.Select(n => n.Style.IsUnderline)) ?? false;
@@ -777,7 +880,7 @@ public partial class TmDiagramPropertiesPanel : ComponentBase
         var arrow = GetCommonString(SelectedEdges.Select(e => e.EndArrow)) ?? "classic";
         return DiagramArrowheadRegistry.CanToggleFill(arrow);
     }
-    private string GetEdgeStrokeColor() => GetCommonString(SelectedEdges.Select(e => e.Style.Stroke)) ?? "#111827";
+    private string GetEdgeStrokeColor() => GetCommonColor(SelectedEdges.Select(e => e.Style.Stroke)).Value ?? "#111827";
     private double GetEdgeStrokeWidth() => GetCommonDouble(SelectedEdges.Select(e => e.Style.StrokeWidth)) ?? 1.5;
     private double GetEdgeOpacity() => (GetCommonDouble(SelectedEdges.Select(e => e.Style.Opacity)) ?? 1.0) * 100;
     private double GetEdgeJumpSize() => GetCommonDouble(SelectedEdges.Select(e => e.JumpSize)) ?? 10;

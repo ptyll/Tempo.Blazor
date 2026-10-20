@@ -19,7 +19,7 @@ public class NotionTableE2ETests : WasmTestBase
 
     private async Task<IPage> OpenNotionEditorAsync()
     {
-        using var http = new HttpClient();
+        using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* API may not be running; ignore */ }
 
@@ -46,7 +46,7 @@ public class NotionTableE2ETests : WasmTestBase
 
     private async Task SeedTablePageAsync(IPage page)
     {
-        using var http = new HttpClient();
+        using var http = DemoApiTestHttp.CreateClient();
         using var response = await http.PostAsync(TablePageSeedEndpoint, null);
         response.EnsureSuccessStatusCode();
 

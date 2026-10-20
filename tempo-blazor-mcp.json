@@ -1504,6 +1504,11 @@
               "type": "WireframeSchemaRegistry"
             }
           ]
+        },
+        {
+          "name": "wireframe_get_authoring_guide",
+          "kind": "McpTool",
+          "description": "Returns the authoring guide. Use compact=true plus category, types, roles, scopeAppId, targetPackIds, skip, and take to keep responses small and focused."
         }
       ]
     },
@@ -1603,6 +1608,16 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "wireframe_list_components",
+          "kind": "McpTool",
+          "description": "Lists available components. Start with compact=true; optionally filter by category, scopeAppId, targetPackIds, skip, and take."
+        },
+        {
+          "name": "wireframe_get_component_schema",
+          "kind": "McpTool",
+          "description": "Returns the full property contract for a component type, including default size, props, roles, and container metadata. Unknown types return a suggestion when possible."
         }
       ]
     },
@@ -1680,17 +1695,20 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ElementId",
-          "type": "string",
-          "description": "Id of the element the warning concerns."
-        },
-        {
           "name": "Code",
+          "kind": "Property",
           "type": "string",
           "description": "Stable machine-readable warning code."
         },
         {
+          "name": "ElementId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Id of the element the warning concerns."
+        },
+        {
           "name": "Hint",
+          "kind": "Property",
           "type": "string",
           "description": "Human-readable suggestion for fixing the problem."
         }
@@ -1771,7 +1789,18 @@
               "name": "schema",
               "type": "WireframeComponentSchema"
             }
-          ]
+          ],
+          "description": "Suggests the closest known prop name for a misspelled key, or null when nothing is close enough."
+        },
+        {
+          "name": "Lint",
+          "type": "static IReadOnlyList<WireframeLintWarning> Lint(WireframeElement el, WireframeComponentSchema schema)",
+          "description": "Reports problems without changing the element."
+        },
+        {
+          "name": "LintAndNormalize",
+          "type": "static IReadOnlyList<WireframeLintWarning> LintAndNormalize(WireframeElement el, WireframeComponentSchema schema)",
+          "description": "Reports problems and normalises enum values on the element in place."
         }
       ],
       "examples": [

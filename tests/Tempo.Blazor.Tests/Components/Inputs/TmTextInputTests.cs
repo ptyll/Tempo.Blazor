@@ -239,4 +239,103 @@ public class TmTextInputTests : LocalizationTestBase
         cut.Find("input").HasAttribute("aria-required").Should().BeFalse();
         cut.Find("label").ClassList.Should().NotContain("tm-input-label-required");
     }
+
+    // ── Fáze 5: optional error announcement (no double announcement) ─────────────
+
+    /// <summary>
+    /// Fáze 5 (SpravaFinanci P04-CF F6): a host that moves focus to the invalid field already gets
+    /// the error read through <c>aria-describedby</c>; with <c>AnnounceError="false"</c> the message
+    /// keeps rendering (styled, linked, <c>aria-invalid</c>) but WITHOUT <c>role="alert"</c>, so the
+    /// screen reader does not announce the same error twice.
+    /// </summary>
+    [Fact]
+    public void TmTextInput_AnnounceError_False_OmitsRoleAlert_KeepsAriaInvalidAndDescribedBy()
+    {
+        var cut = Render<TmTextInput>(p => p
+            .Add(c => c.Id, "email")
+            .Add(c => c.Error, "Required")
+            .Add(c => c.AnnounceError, false));
+
+        var err = cut.Find("[data-testid='error-message']");
+        err.HasAttribute("role").Should().BeFalse(
+            "focus moved to the field lets aria-describedby read the error; role=alert would announce it a second time");
+        err.TextContent.Should().Contain("Required", "the message itself must still render");
+
+        var input = cut.Find("input");
+        input.GetAttribute("aria-invalid").Should().Be("true");
+        input.GetAttribute("aria-describedby").Should().Be("email-error");
+    }
+
+    /// <summary>Default (no parameter set) keeps the current output: the message is an assertive live region.</summary>
+    [Fact]
+    public void TmTextInput_AnnounceError_Default_RendersRoleAlert()
+    {
+        var cut = Render<TmTextInput>(p => p
+            .Add(c => c.Id, "email")
+            .Add(c => c.Error, "Required"));
+
+        cut.Find("[data-testid='error-message']").GetAttribute("role").Should().Be("alert");
+    }
+
+    /// <summary>
+    /// Freezes the unchanged default error DOM (full markup): the opt-out must not shift anything
+    /// for hosts that do not set <see cref="TmTextInput.AnnounceError"/>.
+    /// </summary>
+    [Fact]
+    public void TmTextInput_Error_DefaultAnnounce_FullMarkupMatches()
+    {
+        var cut = Render<TmTextInput>(p => p
+            .Add(c => c.Id, "snap-err")
+            .Add(c => c.Label, "Amount")
+            .Add(c => c.Value, "bad")
+            .Add(c => c.Error, "Enter a number"));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-input-wrapper"">
+                <label for=""snap-err"" class=""tm-input-label "">Amount</label>
+                <div class=""tm-input-container"">
+                    <input id=""snap-err"" type=""text"" value=""bad"" tabindex=""0""
+                           aria-invalid=""true"" aria-describedby=""snap-err-error""
+                           class=""tm-input tm-input-error"" />
+                </div>
+                <div id=""snap-err-error"" data-testid=""error-message"" class=""tm-input-error-message"" role=""alert"">
+                    <svg class=""tm-icon tm-icon-xs tm-icon-current"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"" focusable=""false"">
+                        <circle cx=""12"" cy=""12"" r=""10"" />
+                        <line x1=""12"" y1=""8"" x2=""12"" y2=""12"" />
+                        <line x1=""12"" y1=""16"" x2=""12.01"" y2=""16"" />
+                    </svg>
+                    <span>Enter a number</span>
+                </div>
+            </div>");
+    }
+
+    /// <summary>With the announcement off, the same DOM holds except the role attribute disappears.</summary>
+    [Fact]
+    public void TmTextInput_AnnounceError_False_FullMarkupMatchesExceptRole()
+    {
+        var cut = Render<TmTextInput>(p => p
+            .Add(c => c.Id, "snap-mute")
+            .Add(c => c.Label, "Amount")
+            .Add(c => c.Value, "bad")
+            .Add(c => c.Error, "Enter a number")
+            .Add(c => c.AnnounceError, false));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-input-wrapper"">
+                <label for=""snap-mute"" class=""tm-input-label "">Amount</label>
+                <div class=""tm-input-container"">
+                    <input id=""snap-mute"" type=""text"" value=""bad"" tabindex=""0""
+                           aria-invalid=""true"" aria-describedby=""snap-mute-error""
+                           class=""tm-input tm-input-error"" />
+                </div>
+                <div id=""snap-mute-error"" data-testid=""error-message"" class=""tm-input-error-message"">
+                    <svg class=""tm-icon tm-icon-xs tm-icon-current"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round"" aria-hidden=""true"" focusable=""false"">
+                        <circle cx=""12"" cy=""12"" r=""10"" />
+                        <line x1=""12"" y1=""8"" x2=""12"" y2=""12"" />
+                        <line x1=""12"" y1=""16"" x2=""12.01"" y2=""16"" />
+                    </svg>
+                    <span>Enter a number</span>
+                </div>
+            </div>");
+    }
 }

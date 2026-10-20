@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.DocumentEditor
 @inherits Tempo.Blazor.Components.TmComponentBase
+@implements Tempo.Blazor.Abstractions.Shared.ITmDraftGuard
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.DocumentEditor.Models
 @using Tempo.Blazor.DocumentEditor.Services
@@ -91,11 +92,13 @@
         {
             <section class="tm-document-comment-rail__composer" data-testid="@TestId("document-comment-new-composer")">
                 <span class="tm-document-comment-rail__anchor">@GetAnchorLabel(DraftAnchor)</span>
-                <TmDocumentCommentComposer CanComment="@CanComment"
+                <TmDocumentCommentComposer @ref="_newCommentComposer"
+                                           CanComment="@CanComment"
                                            IsBusy="@IsBusy"
                                            MentionProvider="@MentionProvider"
                                            Placeholder="@Loc["TmDocumentEditor_CommentPlaceholder"]"
                                            SubmitLabel="@Loc["TmDocumentEditor_AddComment"]"
+                                           OnDraftChanged="_ => NotifyDraftChangedAsync()"
                                            OnSubmit="CreateAsync"
                                            OnCancel="OnCancelComment" />
             </section>
@@ -112,7 +115,9 @@
             <div class="tm-document-comment-rail__list" data-testid="@TestId("document-comment-list")">
                 @foreach (var comment in VisibleComments)
                 {
-                    <TmDocumentCommentThread Comment="@comment"
+                    <TmDocumentCommentThread @key="comment.Id"
+                                             @ref="_threadRefs[comment.Id]"
+                                             Comment="@comment"
                                              Participants="@Participants"
                                              IsSelected="@(comment.Id == SelectedCommentId)"
                                              CanComment="@CanComment"
@@ -126,7 +131,8 @@
                                              OnEdit="OnEditComment"
                                              OnResolve="OnResolveComment"
                                              OnReopen="OnReopenComment"
-                                             OnDelete="OnDeleteComment" />
+                                             OnDelete="OnDeleteComment"
+                                             OnDraftChanged="state => HandleThreadDraftChangedAsync(comment.Id, state)" />
                 }
             </div>
         }
@@ -228,6 +234,165 @@
 
     /// <summary>Raised when a comment is selected.</summary>
     [Parameter] public EventCallback<string> OnSelectComment { get; set; }
+
+    /// <summary>
+    /// Notifies the parent that the rail's comment draft state changed. The new-comment composer
+    /// and every thread's reply/edit composers hold their text in private fields, so the rail host
+    /// cannot observe them through parameters — this callback (together with
+    /// <see cref="HasUnsavedDraft"/> and <see cref="DiscardDraftAsync"/>) is the AGGREGATE
+    /// draft-guard surface of the rail: it MERGES the rail's own new-comment composer with the
+    /// draft states of all rendered <see cref="TmDocumentCommentThread"/>s and fires ONLY when the
+    /// <see cref="TmCommentDraftState"/> value actually changes (value-equality dedup), never on
+    /// every keystroke. <see cref="TmCommentDraftState.IsEditorOpen"/> is
+    /// <see langword="true"/> while the new-comment composer is mounted (not
+    /// <see cref="IsLoading"/>, <see cref="ComposerOpen"/> with a <see cref="DraftAnchor"/>) or
+    /// any thread has its reply composer mounted or an entry edit open;
+    /// <see cref="TmCommentDraftState.EditingCommentId"/> carries the entry id of the first
+    /// thread reporting an edit (<see langword="null"/> otherwise);
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> is
+    /// <see langword="true"/> when the composer OR any thread holds unsaved text.
+    /// </summary>
+    [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
+
+    private TmDocumentCommentComposer? _newCommentComposer;
+
+    /// <summary>Rendered threads by comment id — used to reach each thread's discard.</summary>
+    private readonly Dictionary<string, TmDocumentCommentThread> _threadRefs = new();
+
+    /// <summary>
+    /// Latest draft state reported by each rendered thread through its OnDraftChanged callback.
+    /// Stored from the callbacks (not read off the refs) so the aggregate never depends on the
+    /// refs being current.
+    /// </summary>
+    private readonly Dictionary<string, TmCommentDraftState> _threadStates = new();
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmCommentDraftState _lastDraftState = new(false, null, false);
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        // Threads removed by the host (deleted elsewhere, filtered out) unmount without an event
+        // from them — prune their stored state so the aggregate stays honest. ComposerOpen and
+        // DraftAnchor mount the composer — a parameter-driven transition the consumer must see;
+        // the dedup keeps repeated parameter sets silent.
+        PruneRemovedThreads();
+        await NotifyDraftChangedAsync();
+    }
+
+    /// <summary>Drops the stored state and @ref of threads no longer rendered. While
+    /// <see cref="IsLoading"/> the whole thread list is unmounted — clear everything so a stale
+    /// draft cannot survive into the reloaded rail.</summary>
+    private void PruneRemovedThreads()
+    {
+        if (IsLoading)
+        {
+            _threadStates.Clear();
+            _threadRefs.Clear();
+            return;
+        }
+
+        var visibleIds = new HashSet<string>(VisibleComments.Select(comment => comment.Id), StringComparer.Ordinal);
+        foreach (var staleId in _threadStates.Keys.Where(id => !visibleIds.Contains(id)).ToArray())
+        {
+            _threadStates.Remove(staleId);
+        }
+
+        foreach (var staleId in _threadRefs.Keys.Where(id => !visibleIds.Contains(id)).ToArray())
+        {
+            _threadRefs.Remove(staleId);
+        }
+    }
+
+    /// <summary>Stores a thread's reported draft state and re-reports the merged aggregate.</summary>
+    private async Task HandleThreadDraftChangedAsync(string threadId, TmCommentDraftState state)
+    {
+        _threadStates[threadId] = state;
+        await NotifyDraftChangedAsync();
+    }
+
+    /// <summary>
+    /// Whether the rail's new-comment composer holds unsaved text — the SAME value carried by
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> that <see cref="OnDraftChanged"/>
+    /// reports; read live from the composer, so it can be polled at any time.
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Clears every draft the rail aggregates: the new-comment composer's text (the composer
+    /// stays mounted until the host closes <see cref="ComposerOpen"/>) and the drafts inside
+    /// every rendered thread (reply text, open entry edit). Intended for the consumer AFTER the
+    /// user confirmed the discard in the consumer's OWN confirmation dialog — the component never
+    /// shows a confirmation itself; that is deliberately the consumer's responsibility.
+    /// <para>
+    /// When no draft exists the call is a no-op — the state does not change and the
+    /// value-equality dedup suppresses any <see cref="OnDraftChanged"/> notification. Safe to
+    /// call from outside the render cycle; the work is dispatched through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            if (_newCommentComposer is not null)
+            {
+                await _newCommentComposer.DiscardDraftAsync();
+            }
+
+            foreach (var thread in _threadRefs.Values)
+            {
+                await thread.DiscardDraftAsync();
+            }
+
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>
+    /// Builds the rail's aggregate draft snapshot. The rail's own new-comment composer
+    /// contributes while not loading with <see cref="ComposerOpen"/> and a
+    /// <see cref="DraftAnchor"/> (never editing an existing comment); every rendered thread
+    /// contributes through its last reported state:
+    /// <see cref="TmCommentDraftState.IsEditorOpen"/> is the composer OR any thread's editor,
+    /// <see cref="TmCommentDraftState.EditingCommentId"/> is the FIRST thread's editing id and
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> is the OR over all slots. The
+    /// composer's contribution is gated by the mount condition and threads removed by the host
+    /// are pruned (loading clears them all), so a parameter-driven close reports the
+    /// POST-transition state.
+    /// </summary>
+    private TmCommentDraftState BuildDraftState()
+    {
+        var isComposerOpen = !IsLoading && ComposerOpen && DraftAnchor is not null;
+        var threadStates = _threadStates.Values;
+        var isThreadEditorOpen = threadStates.Any(state => state.IsEditorOpen);
+        var editingCommentId = threadStates.FirstOrDefault(state => state.EditingCommentId is not null)?.EditingCommentId;
+        var hasOwnDraft = isComposerOpen && (_newCommentComposer?.HasUnsavedDraft ?? false);
+
+        return new TmCommentDraftState(
+            isComposerOpen || isThreadEditorOpen,
+            editingCommentId,
+            hasOwnDraft || threadStates.Any(state => state.HasUnsavedContent));
+    }
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed — the
+    /// composer reports every keystroke into this path and the value-equality check keeps the
+    /// parent from re-rendering without a real transition.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
+    }
 
     private IReadOnlyList<DocumentComment> VisibleComments
         => DocumentCommentComparer.Apply(Comments, Filter, SortMode, CurrentAuthorId);

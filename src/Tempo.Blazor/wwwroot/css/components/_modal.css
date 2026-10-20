@@ -293,8 +293,8 @@
   overscroll-behavior: contain;
 }
 
-/* The scroller is tabindex="0" (a keyboard-only user must be able to reach a scrollable message,
-   WCAG 2.1.1), so its focus has to be visible. */
+/* The scroller gains tabindex="0" only while it overflows (tm-focus-trap.js syncScrollRegion), so
+   its focus has to be visible. */
 .tm-dialog-content:focus-visible {
   outline: 2px solid var(--tm-color-primary-500);
   outline-offset: -2px;

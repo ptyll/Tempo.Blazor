@@ -1,9 +1,14 @@
 @namespace Tempo.Blazor.Components.Activity
 @inject ITmLocalizer Loc
 
+@* FZE-10: preventing mousedown's default keeps the editor's focus and selection intact when a
+   toolbar button is clicked — the caret bookmark the dialogs replay is taken in the button's
+   click handler, so the click itself must not have collapsed the selection first. Activation
+   itself is untouched: a <button> still fires click on Enter/Space/click. *@
 <div class="tm-mde-toolbar @(IsDisabled ? "tm-mde-toolbar-disabled" : "")"
      role="group"
-     aria-label="@Loc["MarkdownToolbar_Aria"]">
+     aria-label="@Loc["MarkdownToolbar_Aria"]"
+     @onmousedown:preventDefault="true">
 
     @* ── Headings ─────────────────────────────────────────────────────── *@
     <button class="tm-mde-btn @(IsActive("h1") ? "tm-mde-btn-active" : "")"

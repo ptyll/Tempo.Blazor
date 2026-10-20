@@ -7,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
@@ -253,6 +255,45 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                         .Add(x => x.Top, 100)
                         .Add(x => x.Left, 200)));
                 return host.Find("[role='dialog']");
+            },
+            // N326 follow-up: the group-by picker and the saved-views manager migrated onto the
+            // shared panel with Role="dialog" — both name the panel through Title (the extractor's
+            // denominator), so each needs a renderer that opens it and returns the panel element.
+            ["TmMultiViewList"] = () =>
+            {
+                var cut = Render<TmMultiViewList<string>>(p => p
+                    .Add(c => c.Items, new[] { "item" })
+                    .Add(c => c.GroupableFields, new[]
+                    {
+                        new GroupFieldDefinition<string> { FieldName = "Name", Label = "Name" },
+                    }));
+                cut.Find(".tm-mvl-group-btn").Click();
+                return cut.Find("[role='dialog']");
+            },
+            ["TmViewManager"] = () =>
+            {
+                var provider = Substitute.For<IDataTableViewProvider>();
+                provider.GetViewsAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                    .Returns(new List<DataTableView>());
+                provider.GetDefaultViewAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                    .Returns((DataTableView?)null);
+                var cut = Render<TmViewManager>(p => p
+                    .Add(c => c.Provider, provider)
+                    .Add(c => c.ViewContext, "naming-sweep"));
+                cut.Find(".tm-view-manager-toggle").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // FilterBuilderPresentation.Popover opens the field picker in a named dialog.
+            ["TmFilterBuilder"] = () =>
+            {
+                var cut = Render<TmFilterBuilder>(p => p
+                    .Add(c => c.Presentation, FilterBuilderPresentation.Popover)
+                    .Add(c => c.FilterDefinitions, new[]
+                    {
+                        new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+                    }));
+                cut.Find(".tm-filter-builder-add").Click();
+                return cut.Find("[role='dialog']");
             },
         };
 

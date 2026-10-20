@@ -92,6 +92,94 @@ public class DiagramTemplateRegistryTests
         registry.GetTemplate("p1")!.Name.Should().Be("Provider T1");
     }
 
+    [Fact]
+    public async Task ParallelInitializeAsync_YieldsTheFullCatalog_ExactlyOnce()
+    {
+        var registry = new DiagramTemplateRegistry();
+        registry.RegisterProvider(new SlowTemplateProvider());
+
+        // Sixteen concurrent initializers: Lazy<Task> (ExecutionAndPublication) makes every
+        // caller await the SAME single load — no partial catalog is ever observable.
+        await Task.WhenAll(Enumerable.Range(0, 16).Select(_ => registry.InitializeAsync()));
+
+        registry.Count.Should().Be(2, "every concurrent caller must see the complete catalog");
+        registry.GetTemplate("p1")!.Name.Should().Be("Slow T1");
+        registry.GetTemplate("p2")!.Name.Should().Be("Slow T2");
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenTheProviderThrowsOnce_TheNextCallRetries()
+    {
+        var registry = new DiagramTemplateRegistry();
+        var provider = new FlakyOnceTemplateProvider();
+        registry.RegisterProvider(provider);
+
+        // The first load fails: a Lazy<Task> would replay the exception forever — the registry
+        // must reset the faulted cache under its lock so the next call starts a fresh load.
+        var act = () => registry.InitializeAsync();
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        registry.Count.Should().Be(0, "the failed load registered nothing");
+
+        await registry.InitializeAsync();
+
+        registry.Count.Should().Be(2, "the retry re-ran the provider and loaded the catalog");
+        registry.GetTemplate("p1")!.Name.Should().Be("Flaky T1");
+
+        await registry.InitializeAsync();
+        provider.Calls.Should().Be(2, "the successful load is cached again — no third provider call");
+    }
+
+    private sealed class FlakyOnceTemplateProvider : IDiagramTemplateProvider
+    {
+        private int _calls;
+
+        public int Priority => 0;
+
+        public int Calls => _calls;
+
+        public Task<IEnumerable<DiagramTemplateCategory>> GetTemplateCategoriesAsync()
+        {
+            if (Interlocked.Increment(ref _calls) == 1)
+                return Task.FromException<IEnumerable<DiagramTemplateCategory>>(
+                    new InvalidOperationException("catalog source temporarily unavailable"));
+
+            return Task.FromResult<IEnumerable<DiagramTemplateCategory>>(new List<DiagramTemplateCategory>
+            {
+                new()
+                {
+                    Name = "Cat1",
+                    Templates =
+                    [
+                        new DiagramTemplate { Id = "p1", Name = "Flaky T1", Category = "Cat1" },
+                        new DiagramTemplate { Id = "p2", Name = "Flaky T2", Category = "Cat1" }
+                    ]
+                }
+            });
+        }
+    }
+
+    private sealed class SlowTemplateProvider : IDiagramTemplateProvider
+    {
+        public int Priority => 0;
+
+        public async Task<IEnumerable<DiagramTemplateCategory>> GetTemplateCategoriesAsync()
+        {
+            await Task.Delay(50);
+            return new List<DiagramTemplateCategory>
+            {
+                new()
+                {
+                    Name = "Cat1",
+                    Templates =
+                    [
+                        new DiagramTemplate { Id = "p1", Name = "Slow T1", Category = "Cat1" },
+                        new DiagramTemplate { Id = "p2", Name = "Slow T2", Category = "Cat1" }
+                    ]
+                }
+            };
+        }
+    }
+
     private sealed class TestTemplateProvider : IDiagramTemplateProvider
     {
         public int Priority => 0;

@@ -192,6 +192,32 @@
     </div>
 </section>
 
+<!-- Stretched-link cards: the title is the only tab stop; one key press raises OnItemClick once. -->
+<section class="demo-section" data-testid="mvl-stretched-link">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Stretched-link cards</h2>
+    <div class="showcase-card">
+        <TmMultiViewList TItem="DemoMvlItem"
+                         Items="@_mvlItems"
+                         ViewContext="demo-mvl-stretched"
+                         ViewMode="ListViewMode.Card"
+                         ShowViewSwitcher="false"
+                         CardActivation="CardActivation.StretchedLink"
+                         OnItemClick="@(item => _stretchedClicks++)" />
+        <p data-testid="mvl-stretched-clicks">@_stretchedClicks</p>
+    </div>
+    <div class="showcase-card mt-4">
+        <TmMultiViewList TItem="DemoMvlItem"
+                         Items="@_mvlItems"
+                         ViewContext="demo-mvl-stretched-href"
+                         ViewMode="ListViewMode.Card"
+                         ShowViewSwitcher="false"
+                         CardActivation="CardActivation.StretchedLink"
+                         ItemHref="@(item => $"/data-display#person-{item.Id}")"
+                         OnItemClick="@(item => _stretchedHrefClicks++)" />
+        <p data-testid="mvl-stretched-href-clicks">@_stretchedHrefClicks</p>
+    </div>
+</section>
+
 <!-- Multi-View List with Grouping -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -305,6 +331,9 @@
         _changeCounter = 0;
         Toast.ShowInfo("Changes cleared");
     }
+
+    private int _stretchedClicks;
+    private int _stretchedHrefClicks;
 
     private readonly IReadOnlyList<DemoMvlItem> _mvlItems = new[]
     {

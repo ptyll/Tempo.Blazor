@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Inputs;
 
@@ -74,6 +75,40 @@ public class TmRadioGroupTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmRadioGroup_DefaultAppearance_RendersRadios_WithoutSegmentClass()
+    {
+        // Frozen default: a radio group stays radios. Segmented is opt-in.
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit"));
+
+        cut.Find(".tm-radio-group").ClassList.Should().NotContain("tm-radio-group--segmented");
+        cut.FindAll("input[type='radio']").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void TmRadioGroup_SegmentedAppearance_RendersButtonsInAGroup()
+    {
+        string? captured = null;
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit")
+            .Add(c => c.Value, "banana")
+            .Add(c => c.Appearance, RadioAppearance.Segmented)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
+
+        var group = cut.Find(".tm-radio-group--segmented");
+        // A value, not content: a radiogroup whose pressed option is the checked native radio.
+        group.GetAttribute("role").Should().Be("radiogroup");
+        var segments = cut.FindAll(".tm-radio-segment");
+        segments.Count.Should().Be(3);
+        segments.Single(s => s.ClassList.Contains("tm-radio-segment--checked")).TextContent.Should().Contain("Banana");
+
+        cut.FindAll(".tm-radio-segment input[type='radio']")[0].Change(true);
+        captured.Should().Be("apple");
+    }
+
+    [Fact]
     public void TmRadioGroup_Default_Layout_Is_Vertical()
     {
         var cut = Render<TmRadioGroup<string>>(p => p
@@ -134,5 +169,149 @@ public class TmRadioGroupTests : LocalizationTestBase
             .Add(c => c.Options, SampleOptions));
         cut.Find("[role='radiogroup']").HasAttribute("aria-required").Should().BeFalse();
         cut.Find(".tm-radio-group-label").ClassList.Should().NotContain("tm-input-label-required");
+    }
+
+    [Fact]
+    public void TmRadioGroup_Segmented_UsesNativeRadiosSharingTheGroupName()
+    {
+        // L2: a segment is a label wrapping a visually hidden native radio, not a button. Native
+        // radios give arrow keys, one tab stop and one activation, and they submit under Name.
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit")
+            .Add(c => c.Value, "banana")
+            .Add(c => c.Appearance, RadioAppearance.Segmented));
+
+        cut.FindAll("button.tm-radio-segment").Should().BeEmpty();
+        cut.FindAll(".tm-radio-segment").Should().OnlyContain(s => s.TagName == "LABEL");
+        var inputs = cut.FindAll(".tm-radio-segment input[type='radio']");
+        inputs.Should().HaveCount(3);
+        inputs.Should().OnlyContain(i => i.GetAttribute("name") == "fruit");
+        inputs.Count(i => i.HasAttribute("checked")).Should().Be(1);
+    }
+
+    [Fact]
+    public void TmRadioGroup_Segmented_HomeAndEndJumpToTheEnds()
+    {
+        // Arrows are the browser's; Home/End are not, so the group handles them itself.
+        string? captured = "banana";
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit")
+            .Add(c => c.Value, "banana")
+            .Add(c => c.Appearance, RadioAppearance.Segmented)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
+
+        // The key lands on the focused radio, which is where the handler lives.
+        var radios = cut.FindAll(".tm-radio-segment input[type='radio']");
+        radios[1].KeyDown("End");
+        captured.Should().Be("cherry");
+
+        radios[0].KeyDown("Home");
+        captured.Should().Be("apple");
+    }
+
+    [Fact]
+    public void TmRadioGroup_Label_NamesTheRadiogroup()
+    {
+        // L3: the visible label is not associated with the group, so the radiogroup has no
+        // accessible name. aria-labelledby must point at the label.
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Label, "Pick a fruit")
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Appearance, RadioAppearance.Segmented));
+
+        var labelId = cut.Find(".tm-radio-group-label").GetAttribute("id");
+        labelId.Should().NotBeNullOrEmpty();
+        cut.Find("[role='radiogroup']").GetAttribute("aria-labelledby").Should().Be(labelId);
+    }
+
+    [Fact]
+    public void TmRadioGroup_WithoutLabel_HasNoAriaLabelledBy()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions));
+
+        cut.Find("[role='radiogroup']").HasAttribute("aria-labelledby").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Segmented_ReservesTheTouchTarget_OnlyForACoarsePointer()
+    {
+        // L11: 44px is a touch requirement. A mouse keeps the control height the other inputs use,
+        // and the touch target appears only inside the coarse-pointer query.
+        ThemeCss.Property("_radio-group.css", ".tm-radio-segment", "min-height")
+            .Should().Be("var(--tm-input-height-md)");
+
+        var css = ThemeCss.ComponentCss("_radio-group.css");
+        var coarse = System.Text.RegularExpressions.Regex.Match(
+            css, @"@media\s*\(pointer:\s*coarse\)\s*\{(?<body>.*)\}",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        coarse.Success.Should().BeTrue("the touch target must be gated on a coarse pointer");
+        coarse.Groups["body"].Value.Should().Contain("min-height: var(--tm-touch-target)");
+    }
+
+    // ── error announcement (same contract as the input family) ──
+
+    [Fact]
+    public void TmRadioGroup_Error_DefaultAnnouncesViaRoleAlert()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Error, "Pick one"));
+
+        var message = cut.Find(".tm-radio-group-error");
+        message.GetAttribute("role").Should().Be("alert");
+        message.GetAttribute("id").Should().Be(cut.Instance.ErrorId,
+            "the error span has a stable id exposed on the component");
+
+        var group = cut.Find("[role='radiogroup']");
+        group.GetAttribute("aria-describedby").Should().Be(message.GetAttribute("id"));
+        group.GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void TmRadioGroup_AnnounceError_False_DropsOnlyTheRole()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Error, "Pick one")
+            .Add(c => c.AnnounceError, false));
+
+        var message = cut.Find(".tm-radio-group-error");
+        message.HasAttribute("role").Should().BeFalse(
+            "focus moved to the group lets aria-describedby read the error; role=alert would announce it a second time");
+        message.TextContent.Should().Contain("Pick one", "the message itself must still render");
+
+        var group = cut.Find("[role='radiogroup']");
+        group.GetAttribute("aria-describedby").Should().Be(message.GetAttribute("id"),
+            "aria-describedby must stay so focus reads the error");
+        group.GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void TmRadioGroup_WithoutError_HasNoAriaInvalidAndNoDescribedBy()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions));
+
+        var group = cut.Find("[role='radiogroup']");
+        group.HasAttribute("aria-invalid").Should().BeFalse();
+        group.HasAttribute("aria-describedby").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmRadioGroup_InsideFormFieldError_DescribesTheFieldError()
+    {
+        var cut = Render<Tempo.Blazor.Components.Forms.TmFormField>(p => p
+            .Add(c => c.Id, "plan")
+            .Add(c => c.ErrorMessage, "Choose a plan")
+            .AddChildContent<TmRadioGroup<string>>(child => child
+                .Add(c => c.Options, SampleOptions)));
+
+        cut.Find("[role='radiogroup']").GetAttribute("aria-describedby").Should().Be("plan-field-error",
+            "the group has no own Error, so it describes the field-level message");
+        cut.Find("[role='radiogroup']").HasAttribute("aria-invalid").Should().BeFalse(
+            "aria-invalid follows the group's own Error only, like the other inputs");
     }
 }

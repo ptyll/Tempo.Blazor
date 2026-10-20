@@ -1,0 +1,352 @@
+@namespace Tempo.Blazor.Components.Diagram
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Diagram.Stencils
+@using Tempo.Blazor.Abstractions.Layout
+@using Microsoft.JSInterop
+@inject DiagramStencilRegistry StencilRegistry
+@inject IJSRuntime JSRuntime
+
+@* DI4: the connect picker offers the source node's own stencil set by default — never the whole
+   ~158-stencil library. "Show all" is the explicit opt-in, the search narrows the current offer,
+   and the tiles form a roving-focus grid (arrows move the tab stop, nothing is preselected). *@
+<TmModal Show="@Show"
+         OnClose="OnClose"
+         Title="@DialogTitle"
+         ShowDefaultFooterButtons="false"
+         Size="ModalSize.Medium"
+         MobilePresentation="MobilePresentation.Auto"
+         FooterLayout="FooterLayout.Inline"
+         LayoutMode="@LayoutMode"
+         ResolvedLayoutChanged="OnResolvedLayoutChanged"
+         CloseOnOverlayClick="true"
+         CloseOnEscape="true"
+         RestoreFocusTarget="@RestoreFocusTarget">
+    <ChildContent>
+        <div class="tm-diagram-connect-modal">
+            <div class="tm-diagram-connect-modal__toolbar">
+                <TmTextInput @bind-Value="_search"
+                             Type="search"
+                             LeftIcon="@IconNames.Search"
+                             Placeholder="@Loc["TmDiagramConnectDialog_SearchPlaceholder"]"
+                             aria-label="@Loc["TmDiagramConnectDialog_SearchAriaLabel"]"
+                             OnKeyDown="OnSearchKeyDown"
+                             Class="tm-diagram-connect-modal__search" />
+                <button type="button"
+                        class="tm-diagram-connect-modal__show-all"
+                        aria-pressed="@(_showAll ? "true" : "false")"
+                        @onclick="() => _showAll = !_showAll">
+                    <TmIcon Name="@(_showAll ? IconNames.Check : IconNames.List)" Size="IconSize.Sm" />
+                    <span>@Loc["TmDiagramConnectDialog_ShowAll"]</span>
+                </button>
+            </div>
+
+            <div class="tm-diagram-connect-modal__grid @(IsListLayout ? "tm-diagram-connect-modal__grid--list" : null)"
+                 role="group"
+                 aria-label="@Loc["TmDiagramConnectDialog_GridAriaLabel"]"
+                 style="--tm-connect-cols:@Columns"
+                 @onkeydown="OnGridKeyDown">
+                @{
+                    var offer = OfferList;
+                    _renderedOffer = offer;
+                    var focusedIndex = GetFocusedIndex(offer);
+                }
+                @for (var index = 0; index < offer.Count; index++)
+                {
+                    var stencil = offer[index];
+                    var tabIndex = index == focusedIndex ? "0" : "-1";
+                    <button type="button"
+                            @key="stencil.Id"
+                            @ref="_tileRefs[stencil.Id]"
+                            data-stencil-id="@stencil.Id"
+                            class="tm-diagram-connect-modal__item"
+                            tabindex="@tabIndex"
+                            title="@GetStencilDisplayName(stencil)"
+                            @onfocus="() => _focusedStencilId = stencil.Id"
+                            @onclick="() => SelectStencil(stencil.Id)">
+                        <div class="tm-diagram-connect-modal__icon">
+                            @if (!string.IsNullOrEmpty(stencil.IconSvg))
+                            {
+                                <svg viewBox="0 0 32 32" aria-hidden="true">
+                                    @((MarkupString)DiagramStencilIconMarkup.ForPreview(stencil.IconSvg))
+                                </svg>
+                            }
+                            else
+                            {
+                                <svg viewBox="0 0 32 32" aria-hidden="true">
+                                    <rect x="2" y="8" width="28" height="16" rx="2"
+                                          fill="var(--tm-color-surface-elevated)"
+                                          stroke="var(--tm-color-text)" stroke-width="2" />
+                                </svg>
+                            }
+                        </div>
+                        <span class="tm-diagram-connect-modal__label">@GetStencilDisplayName(stencil)</span>
+                    </button>
+                }
+            </div>
+
+            @* Escape hatch when the narrowed palette has no match: widen the scope to the whole
+               library with one tap. Rendered OUTSIDE the live region (an actionable button must
+               not ride inside role=status). *@
+            @if (!_showAll && !string.IsNullOrWhiteSpace(_search) && _renderedOffer.Count == 0)
+            {
+                <div class="tm-diagram-connect-modal__empty-actions">
+                    <button type="button"
+                            class="tm-diagram-connect-modal__search-all"
+                            @onclick="() => _showAll = true">
+                        @Loc["TmDiagramConnectDialog_SearchAllShapes"]
+                    </button>
+                </div>
+            }
+
+            @* Live region (D12): always in the DOM so screen readers announce the empty state when
+               it appears; the text is the dialog's own stencil wording, not the gallery's. *@
+            <div class="tm-diagram-connect-modal__status" role="status" aria-live="polite" aria-atomic="true">
+                @if (_renderedOffer.Count == 0)
+                {
+                    <p class="tm-diagram-connect-modal__empty">@Loc["TmDiagramConnectDialog_NoResults"]</p>
+                }
+            </div>
+        </div>
+    </ChildContent>
+    <Footer>
+        @* Mobile sheet affordance: the sheet has a thumb-sized Close target in the sticky footer.
+           On the desktop dialog the chrome ✕ in the header is the close affordance, so the footer
+           collapses away through the component stylesheet (the bar stays out of the tab order
+           because its only control is display:none there). *@
+        <button type="button"
+                class="tm-diagram-connect-modal__close tm-btn tm-btn--ghost"
+                @onclick="() => OnClose.InvokeAsync()">
+            @Loc["TmDiagramConnectDialog_Close"]
+        </button>
+    </Footer>
+</TmModal>
+
+@code {
+    /// <summary>Whether the dialog is visible.</summary>
+    [Parameter] public bool Show { get; set; }
+
+    /// <summary>Stencil id of the source node. Its set defines the default palette (DI4).</summary>
+    [Parameter] public string? SourceStencilId { get; set; }
+
+    /// <summary>
+    /// Stencil ids offered first, newest first. Owned by the host editor (one list per
+    /// <see cref="TmDiagramEditor"/> instance); the dialog only reads it.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> RecentStencilIds { get; set; } = [];
+
+    /// <summary>Display label of the source node (its text or stencil name). When set, the title reads
+    /// "Connect from {label}"; otherwise the generic "Select shape to connect".</summary>
+    [Parameter] public string? SourceLabel { get; set; }
+
+    /// <summary>Raised when the user cancels or closes the dialog.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised when the user picks the stencil to connect as a new node.</summary>
+    [Parameter] public EventCallback<string> OnStencilSelected { get; set; }
+
+    /// <summary>
+    /// The layout the modal renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value never measures, so a test can render the mobile sheet without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The element (typically the canvas) focus returns to when the dialog closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
+
+    private string _search = string.Empty;
+    private bool _showAll;
+
+    private readonly Dictionary<string, ElementReference> _tileRefs = new(StringComparer.Ordinal);
+    private IReadOnlyList<DiagramStencil> _renderedOffer = [];
+    private string? _focusedStencilId;
+    private bool _focusTileAfterRender;
+    private TmLayoutMode? _reportedLayout;
+
+    /// <summary>A hidden dialog forgets its search, scope and roving stop (same pattern as the SQL/CSV/template dialogs).
+    /// The tile element references go too — a reopened dialog renders fresh tiles, and stale
+    /// references would FocusAsync into detached elements. The editor-owned recents (D1) are not touched.</summary>
+    protected override void OnParametersSet()
+    {
+        if (!Show)
+        {
+            _search = string.Empty;
+            _showAll = false;
+            _focusedStencilId = null;
+            _focusTileAfterRender = false;
+            _tileRefs.Clear();
+        }
+    }
+
+    /// <summary>Forced layout wins; Auto follows what the modal reported (Desktop before the first report).</summary>
+    private TmLayoutMode EffectiveLayout =>
+        LayoutMode != TmLayoutMode.Auto ? LayoutMode : (_reportedLayout ?? TmLayoutMode.Desktop);
+
+    /// <summary>The mobile sheet lists the stencils one per row; dialog layouts use a 3-column grid.</summary>
+    private bool IsListLayout => EffectiveLayout == TmLayoutMode.Mobile;
+
+    /// <summary>Column count of the rendered grid — the SAME source the CSS modifier uses.</summary>
+    private int Columns => IsListLayout ? 1 : 3;
+
+    private void OnResolvedLayoutChanged(TmLayoutMode mode) => _reportedLayout = mode;
+
+    private string DialogTitle => string.IsNullOrWhiteSpace(SourceLabel)
+        ? Loc["TmDiagramEditor_SelectStencilTitle"]
+        : Loc["TmDiagramConnectDialog_TitleFrom", SourceLabel];
+
+    /// <summary>Index of the roving tab stop in <paramref name="offer"/>; the first tile when unset or filtered out.</summary>
+    private int GetFocusedIndex(IReadOnlyList<DiagramStencil> offer)
+    {
+        if (offer.Count == 0 || _focusedStencilId is null) return 0;
+        for (var i = 0; i < offer.Count; i++)
+            if (string.Equals(offer[i].Id, _focusedStencilId, StringComparison.Ordinal)) return i;
+        return 0;
+    }
+
+    /// <summary>
+    /// The default palette (DI4): the node stencils of the source stencil's own set — edge
+    /// stencils style relationships and are never connectable shapes. "Show all" widens the
+    /// offer to every node stencil in the registry. A stencil's set is its explicit
+    /// <see cref="DiagramStencil.SetId"/> when the provider declares one (uml25, bpmn2,
+    /// archimate3), otherwise the family prefix of its id ("general.rectangle" → "general").
+    /// </summary>
+    private IEnumerable<DiagramStencil> PaletteStencils
+    {
+        get
+        {
+            var source = string.IsNullOrEmpty(SourceStencilId) ? null : StencilRegistry.GetStencil(SourceStencilId);
+            var all = DiagramStencilDisplayNames.GetConnectableStencils(StencilRegistry).ToList();
+            if (source is null)
+                return all;
+
+            var setScope = GetStencilSetScope(source);
+            var palette = all.Where(s => string.Equals(GetStencilSetScope(s), setScope, StringComparison.Ordinal)).ToList();
+            return palette.Count > 0 ? palette : all;
+        }
+    }
+
+    /// <summary>The set grouping key of a stencil: declared SetId, else the id's family prefix.</summary>
+    private static string GetStencilSetScope(DiagramStencil stencil)
+    {
+        if (!string.IsNullOrEmpty(stencil.SetId))
+            return stencil.SetId;
+
+        var dot = stencil.Id.IndexOf('.');
+        return dot > 0 ? stencil.Id[..dot] : stencil.Id;
+    }
+
+    /// <summary>
+    /// The offered stencils: the current scope (palette or "show all") narrowed by the search
+    /// through the registry's own search, then ordered recently-used first. Pure — the render
+    /// loop evaluates it once per pass.
+    /// </summary>
+    private IReadOnlyList<DiagramStencil> OfferList
+    {
+        get
+        {
+            var scope = _showAll
+                ? DiagramStencilDisplayNames.GetConnectableStencils(StencilRegistry)
+                : PaletteStencils;
+
+            var query = _search.Trim();
+            if (query.Length > 0)
+            {
+                // Registry search covers tags/keywords/set ids; the localized display name and the
+                // raw name are matched diacritic-insensitively on top, so the visible label is
+                // always searchable (D7).
+                var registryHits = new HashSet<string>(
+                    StencilRegistry.Search(query).Select(s => s.Id),
+                    StringComparer.Ordinal);
+                scope = scope.Where(s => registryHits.Contains(s.Id)
+                    || DiagramSearchText.MatchesAny(query, GetStencilDisplayName(s), s.Name));
+            }
+
+            return OrderRecentFirst(scope.ToList()).ToList();
+        }
+    }
+
+    private IEnumerable<DiagramStencil> OrderRecentFirst(List<DiagramStencil> stencils)
+    {
+        var recents = RecentStencilIds ?? [];
+        if (recents.Count == 0)
+            return stencils;
+
+        return stencils
+            .Select((stencil, index) => (Stencil: stencil, Rank: IndexOfRecent(recents, stencil.Id), Index: index))
+            .OrderBy(entry => entry.Rank < 0 ? int.MaxValue : entry.Rank)
+            .ThenBy(entry => entry.Index)
+            .Select(entry => entry.Stencil);
+    }
+
+    private static int IndexOfRecent(IReadOnlyList<string> recents, string stencilId)
+    {
+        for (var i = 0; i < recents.Count; i++)
+            if (string.Equals(recents[i], stencilId, StringComparison.Ordinal)) return i;
+        return -1;
+    }
+
+    private string GetStencilDisplayName(DiagramStencil stencil) =>
+        DiagramStencilDisplayNames.GetStencilDisplayName(stencil, Loc);
+
+    /// <summary>
+    /// Roving focus: Left/Right one tile, Up/Down one ROW (<see cref="Columns"/>), Home/End first/last,
+    /// no wrap. DOM focus moves in <see cref="OnAfterRenderAsync"/>; keys are not prevented
+    /// (docs/keyboard-activation-convention.md) — FocusAsync scrolls the tile into view.
+    /// </summary>
+    private void OnGridKeyDown(KeyboardEventArgs e)
+    {
+        var offer = _renderedOffer;
+        if (offer.Count == 0) return;
+
+        var current = GetFocusedIndex(offer);
+        var last = offer.Count - 1;
+        var next = e.Key switch
+        {
+            "ArrowRight" => Math.Min(current + 1, last),
+            "ArrowLeft" => Math.Max(current - 1, 0),
+            "ArrowDown" => current + Columns <= last ? current + Columns : current,
+            "ArrowUp" => current - Columns >= 0 ? current - Columns : current,
+            "Home" => 0,
+            "End" => last,
+            _ => current
+        };
+
+        if (next == current) return;
+        _focusedStencilId = offer[next].Id;
+        _focusTileAfterRender = true;
+    }
+
+    /// <summary>
+    /// ArrowDown from the search field moves the focus into the grid (roving tab stop), so a
+    /// keyboard user never has to Tab through "Show all". Keys are not prevented
+    /// (docs/keyboard-activation-convention.md).
+    /// </summary>
+    private void OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key != "ArrowDown" || _renderedOffer.Count == 0) return;
+        _focusedStencilId ??= _renderedOffer[GetFocusedIndex(_renderedOffer)].Id;
+        _focusTileAfterRender = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusTileAfterRender) return;
+        _focusTileAfterRender = false;
+        if (_focusedStencilId is not null && _tileRefs.TryGetValue(_focusedStencilId, out var tile))
+        {
+            try
+            {
+                // preventScroll keeps the PAGE from jumping; the tile's own scrollable
+                // ancestor then scrolls just enough to reveal it (block: 'nearest').
+                await tile.FocusAsync(preventScroll: true);
+                await JSRuntime.InvokeVoidAsync("tmDiagramEditor.scrollNearest", tile);
+            }
+            catch (InvalidOperationException) { }
+            catch (JSException) { }
+        }
+    }
+
+    private Task SelectStencil(string stencilId) => OnStencilSelected.InvokeAsync(stencilId);
+}

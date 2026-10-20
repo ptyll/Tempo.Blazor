@@ -3,9 +3,10 @@
 
 <div class="tm-color-palette @Class" @ref="_rootElement" @attributes="AdditionalAttributes">
     <div class="tm-color-palette-grid"
-         role="grid"
+         role="radiogroup"
          aria-label="@Loc["TmColorPalette_SelectColor"]"
-         style="grid-template-columns: repeat(@Columns, 1fr);">
+         style="grid-template-columns: repeat(@Columns, 1fr);"
+         @onfocusout="HandleSwatchFocusOut">
         @for (var index = 0; index < _effectiveColors.Count; index++)
         {
             var color = _effectiveColors[index];
@@ -13,9 +14,9 @@
             <button type="button"
                     class="@GetSwatchClass(color, swatchIndex)"
                     style="background-color: @color;"
-                    role="gridcell"
-                    aria-label="@Loc["TmColorPalette_SelectColor"]"
-                    aria-selected="@AriaBool(IsSelected(color))"
+                    role="radio"
+                    aria-label="@GetSwatchAriaLabel(color)"
+                    aria-checked="@AriaBool(IsSelected(color))"
                     tabindex="@GetSwatchTabIndex(swatchIndex)"
                     data-palette-index="@swatchIndex"
                     @onclick="() => SelectColorAsync(color)"

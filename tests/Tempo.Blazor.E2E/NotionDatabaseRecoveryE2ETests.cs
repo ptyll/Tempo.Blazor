@@ -110,14 +110,7 @@ public sealed class NotionDatabaseRecoveryE2ETests : NotionE2ETestBase
 
     private static async Task ResetNotionDemoAsync()
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://localhost:5100")
-        };
+        using var http = DemoApiTestHttp.CreateClient();
 
         using var response = await http.PostAsync("/api/notion/reset", null);
         response.EnsureSuccessStatusCode();

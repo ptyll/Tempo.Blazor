@@ -1097,3 +1097,39 @@
     justify-content: flex-end;
     gap: var(--tm-space-2);
 }
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every Tempo.Blazor.Spreadsheet animated subject (mirrors the core block in
+   animations.css and the DiagramEditor package block, never a universal selector).
+   Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-border-picker__item,
+  .tm-fcd__btn,
+  .tm-fcd__tab,
+  .tm-spreadsheet-autofill-handle,
+  .tm-spreadsheet-cell,
+  .tm-spreadsheet-col-resizer,
+  .tm-spreadsheet-context-menu__item,
+  .tm-spreadsheet-corner,
+  .tm-spreadsheet-dialog__input,
+  .tm-spreadsheet-find__btn,
+  .tm-spreadsheet-formula-bar__display,
+  .tm-spreadsheet-formula-bar__input,
+  .tm-spreadsheet-formula-bar__ref,
+  .tm-spreadsheet-header-cell,
+  .tm-spreadsheet-resize-dialog__btn,
+  .tm-spreadsheet-row-resizer,
+  .tm-spreadsheet-sheet-tab,
+  .tm-spreadsheet-sheet-tab__close,
+  .tm-spreadsheet-sheet-tab__input,
+  .tm-spreadsheet-sheet-tabs__add,
+  .tm-spreadsheet-sheet-tabs__context-item,
+  .tm-spreadsheet-statusbar__zoom-btn,
+  .tm-spreadsheet-toolbar__button,
+  .tm-spreadsheet-toolbar__tab {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
+}

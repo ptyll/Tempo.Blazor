@@ -96,7 +96,7 @@
 
 .tm-overlay-panel-sheet__done:focus-visible {
     box-shadow: var(--tm-focus-ring);
-    outline: none;
+    outline: 2px solid transparent;
 }
 
 /* T14: the popover arrow points at the anchor edge; a sheet has no anchor, so a TmPopover body

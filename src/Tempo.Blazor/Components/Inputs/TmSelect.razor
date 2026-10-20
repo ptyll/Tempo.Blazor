@@ -21,11 +21,11 @@
                 aria-required="@(Required ? "true" : null)"
                 aria-invalid="@(IsInvalid ? "true" : null)"
                 aria-describedby="@DescribedBy"
-                aria-label="@(string.IsNullOrEmpty(Label) && !string.IsNullOrEmpty(Placeholder) ? Placeholder : null)"
+                aria-label="@(string.IsNullOrEmpty(Label) && !string.IsNullOrEmpty(Placeholder) && !PlaceholderSelectable ? Placeholder : null)"
                 @onchange="HandleChangeAsync">
             @if (!string.IsNullOrEmpty(Placeholder))
             {
-                <option value="" disabled selected="@(Value is null || Value.Equals(default(TValue)))">@Placeholder</option>
+                <option value="" disabled="@(!PlaceholderSelectable)" selected="@IsDefaultSelection">@Placeholder</option>
             }
             @if (Options is not null)
             {
@@ -45,7 +45,7 @@
     </div>
     @if (!string.IsNullOrEmpty(Error))
     {
-        <div id="@ErrorId" data-testid="@TestId("select-error")" class="tm-select-error-message" role="alert">@Error</div>
+        <div id="@ErrorId" data-testid="@TestId("select-error")" class="tm-select-error-message" role="@(AnnounceError ? "alert" : null)">@Error</div>
     }
     @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(Error))
     {
@@ -63,11 +63,42 @@
     /// <summary>Label shown above the select.</summary>
     [Parameter] public string? Label { get; set; }
 
-    /// <summary>Placeholder option shown when no value is selected.</summary>
+    /// <summary>Placeholder option shown when no value is selected. Rendered as <c>&lt;option value=""&gt;</c> mapped to <c>default(TValue)</c> when picked — for a non-nullable TValue that is <c>0</c>/<c>Guid.Empty</c>/..., which can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound <see cref="Value"/> may be null should include a null-valued option or set a Placeholder, otherwise the browser shows the first option.</summary>
     [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>
+    /// When <c>true</c> and <see cref="Placeholder"/> is set, the placeholder is rendered as a selectable
+    /// (not disabled) <c>&lt;option value=""&gt;</c> mapped to <c>default(TValue)</c> — typically
+    /// <c>null</c> for nullable types — so the user can explicitly clear the selection back to empty.
+    /// When <c>false</c> (default), the placeholder is a disabled, purely decorative option.
+    /// Accessibility: a selectable placeholder is a real empty choice, not a name for the control, so it
+    /// is NOT used as the <c>&lt;select&gt;</c> aria-label. Set <see cref="Label"/> whenever this is
+    /// <c>true</c> so the control keeps an accessible name.
+    /// Validation: with <see cref="Required"/> set, picking the selectable placeholder submits the empty
+    /// value, so native validation reports the field as missing ("please choose").
+    /// </summary>
+    [Parameter] public bool PlaceholderSelectable { get; set; }
 
     /// <summary>Validation error message.</summary>
     [Parameter] public string? Error { get; set; }
+
+    /// <summary>
+    /// When <c>true</c> (default), the rendered <see cref="Error"/> message carries
+    /// <c>role="alert"</c> so screen readers announce it assertively the moment it appears.
+    /// Set <c>false</c> when the host moves focus to the invalid field itself (typically a modal
+    /// submit that focuses the first invalid control): the error is then read through
+    /// <c>aria-describedby</c> on the select, and the live region would announce the same text a
+    /// second time. With <c>false</c> the message still renders, keeps its error styling and stays
+    /// referenced by <c>aria-describedby</c>; only the <c>role</c> attribute is dropped.
+    /// <para>
+    /// Only safe when the same render that shows the error also moves focus to this control. Keep
+    /// the default for validation on blur or on input, async/server validation, or when focus
+    /// stays on the submit button — otherwise the error is not announced at all. With several
+    /// invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first
+    /// invalid field.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool AnnounceError { get; set; } = true;
 
     /// <summary>Help text shown below the select when no error is present.</summary>
     [Parameter] public string? HelpText { get; set; }
@@ -81,7 +112,7 @@
     /// <summary>Disables the select.</summary>
     [Parameter] public bool Disabled { get; set; }
 
-    /// <summary>Marks the select as required. Shows a required marker on the label and sets aria-required on the &lt;select&gt; element.</summary>
+    /// <summary>Marks the select as required. Shows a required marker on the label and sets aria-required on the &lt;select&gt; element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as "no selection" and native validation reports the field as missing.</summary>
     [Parameter] public bool Required { get; set; }
 
     /// <summary>Additional attributes applied to the root element.</summary>
@@ -97,38 +128,101 @@
     private bool IsInvalid => !string.IsNullOrEmpty(Error);
     private string ErrorId => $"{Id}-error";
     private string HelpId => $"{Id}-help";
-    private string? DescribedBy =>
-        !string.IsNullOrEmpty(Error) ? ErrorId
-        : !string.IsNullOrEmpty(HelpText) ? HelpId
-        : null;
+
+    /// <summary>
+    /// Id of the error message a surrounding <c>TmFormField</c> currently renders (cascaded as
+    /// <c>TmFormField.ErrorIdCascadingName</c>; null when the field shows no error). With no own
+    /// <see cref="Error"/> the control describes the field-level message (after its help text),
+    /// so a single <c>TmFormField</c> error is reachable from the wrapped control too.
+    /// </summary>
+    [CascadingParameter(Name = Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName)]
+    private string? FormFieldErrorId { get; set; }
+
+    private string? DescribedBy
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(Error)) return ErrorId;
+            if (FormFieldErrorId is { Length: > 0 } fieldError)
+                return !string.IsNullOrEmpty(HelpText) ? $"{HelpId} {fieldError}" : fieldError;
+            return !string.IsNullOrEmpty(HelpText) ? HelpId : null;
+        }
+    }
 
     private bool IsSelected(TValue? optValue) =>
         EqualityComparer<TValue?>.Default.Equals(optValue, Value);
 
+    /// <summary>True when <see cref="Value"/> is the type's default (null for reference and nullable types) and the empty option should carry the selection.</summary>
+    private bool IsDefaultSelection =>
+        Value is null || EqualityComparer<TValue?>.Default.Equals(Value, default);
+
+    /// <summary>True when <c>TValue</c> is a nullable value type (<c>int?</c>, <c>decimal?</c>, <c>Guid?</c>, <c>enum?</c>, ...).</summary>
+    private static bool IsNullableValueType => Nullable.GetUnderlyingType(typeof(TValue)) is not null;
+
+    /// <summary>True when <see cref="Options"/> contains a null-valued entry — the empty option for reference types such as <c>string</c> as well.</summary>
+    private bool HasNullValuedOption => Options?.Any(o => o.Value is null) ?? false;
+
+    /// <summary>
+    /// True when the rendered option list contains an <c>&lt;option value=""&gt;</c> the
+    /// <c>&lt;select value=""&gt;</c> preselection can land on: the placeholder, a null-valued
+    /// option from <see cref="Options"/>, or — for a nullable <c>TValue</c> — hand-written options
+    /// from <see cref="ChildContent"/> (the component cannot mark raw options selected itself, so
+    /// the <c>value=""</c> pin is what lands the preselection on the empty option there).
+    /// </summary>
+    private bool HasEmptyOptionValue =>
+        !string.IsNullOrEmpty(Placeholder)
+        || (Options?.Any(o => o.Value is null) ?? false)
+        || (IsNullableValueType && ChildContent is not null);
+
     /// <summary>
     /// String form of <see cref="Value"/> for the <c>value</c> attribute on <c>&lt;select&gt;</c>. When the
-    /// value is empty/default, returns <c>null</c> (not rendered) so the browser shows the first option
-    /// (placeholder). Must match how <c>&lt;option&gt;</c> values are rendered (<see cref="FormatOptionValue"/>)
+    /// value is empty/default:
+    /// <list type="bullet">
+    /// <item>nullable value types (<c>int?</c>, <c>decimal?</c>, <c>Guid?</c>, <c>enum?</c>, ...) return
+    /// <c>""</c> when an empty-valued option exists (placeholder, null-valued <see cref="Options"/> entry,
+    /// or <see cref="ChildContent"/> options), so the preselection pins to that <c>&lt;option value=""&gt;</c>
+    /// instead of drifting to the first option;</item>
+    /// <item>reference types (<c>string</c>) return <c>""</c> only when <see cref="Options"/> contains a
+    /// null-valued option — a bound null then pins to that <c>&lt;option value=""&gt;</c>; a null and an
+    /// <c>""</c> option share the single empty wire value and must not be mixed;</item>
+    /// <item>otherwise the attribute stays omitted — an empty string with nothing to land on would leave
+    /// nothing selected (<c>selectedIndex = -1</c>), so the browser shows the first option or the option
+    /// carrying the <c>selected</c> marker, exactly as before.</item>
+    /// </list>
+    /// Must match how <c>&lt;option&gt;</c> values are rendered (<see cref="FormatOptionValue"/>)
     /// or the preselection will not land on the matching option.
     /// </summary>
-    private string? SelectedValueString =>
-        Value is null || EqualityComparer<TValue?>.Default.Equals(Value, default)
-            ? null
-            : FormatOptionValue(Value);
+    private string? SelectedValueString
+    {
+        get
+        {
+            if (!IsDefaultSelection)
+            {
+                return FormatOptionValue(Value);
+            }
+
+            return (IsNullableValueType && HasEmptyOptionValue)
+                || (!typeof(TValue).IsValueType && HasNullValuedOption)
+                ? string.Empty
+                : null;
+        }
+    }
 
     /// <summary>
     /// Culture-invariant string form of an option/selected value, used both for the rendered
-    /// <c>&lt;option value&gt;</c> attribute and the <c>&lt;select value&gt;</c> preselection. <see cref="IFormattable"/>
+    /// <c>&lt;option value&gt;</c> attribute and the <c>&lt;select value&gt;</c> preselection. A null value
+    /// (the empty option) renders as <c>""</c> — never as a value-less <c>&lt;option&gt;</c>, whose value
+    /// would silently become its text content. <see cref="IFormattable"/>
     /// types (numerics, <see cref="decimal"/>, ...) are formatted with <see cref="CultureInfo.InvariantCulture"/> so the
     /// rendered value never depends on the ambient thread culture (e.g. "1.5", never "1,5"); this must stay symmetric
     /// with the invariant parsing in <see cref="HandleChangeAsync"/>.
     /// </summary>
-    private static string? FormatOptionValue(TValue? value) =>
+    private static string FormatOptionValue(TValue? value) =>
         value switch
         {
-            null => null,
+            null => string.Empty,
             IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-            _ => value.ToString(),
+            _ => value.ToString() ?? string.Empty,
         };
 
     private string SelectCssClass =>
@@ -137,6 +231,9 @@
     private async Task HandleChangeAsync(ChangeEventArgs e)
     {
         var raw = e.Value?.ToString();
+
+        // An empty selection (the placeholder or a null-valued <option value="">) maps to
+        // default(TValue) — null for nullable types (decimal?, int?, Guid?, enum?, string?).
         TValue? value = default;
         if (!string.IsNullOrEmpty(raw))
         {

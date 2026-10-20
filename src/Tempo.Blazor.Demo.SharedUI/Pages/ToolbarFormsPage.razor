@@ -1,4 +1,8 @@
 @page "/toolbar-forms"
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Toolbar
+@inject ITmLocalizer Loc
+@inject IJSRuntime JS
 <PageTitle>Toolbar & Forms – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -61,6 +65,336 @@
     </div>
 </section>
 
+<!-- Overflow toolbar (F4) -->
+<section class="demo-section" data-testid="toolbar-overflow-demo">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmToolbarDemo_OverflowTitle"]</h2>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmToolbarDemo_OverflowIntro"]</p>
+
+    <div class="space-y-6">
+        @foreach (var width in _toolbarWidths)
+        {
+            <div class="showcase-card p-0 overflow-hidden" data-testid="@($"toolbar-overflow-card-{width}")">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                    <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@string.Format(Loc["TmToolbarDemo_WidthLabel"], width)</h3>
+                </div>
+                <div class="p-4">
+                    <div style="width: @(width)px; max-width: 100%;">
+                        <TmToolbar Overflow="ToolbarOverflow.Menu"
+                                   Labels="ToolbarLabels.IconsWithText"
+                                   AriaLabel="@Loc["TmToolbarDemo_AriaLabel"]"
+                                   data-testid="@($"toolbar-overflow-{width}")">
+                            <ChildContent>
+                                <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                                <TmToolbarButton Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                                <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                                <TmToolbarDivider />
+                                <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                                <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                                <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                                <TmToolbarButton Icon="@IconNames.Trash" Text="@Loc["TmToolbarDemo_Delete"]" Variant="ButtonVariant.Danger" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Delete"])" />
+                            </ChildContent>
+                        </TmToolbar>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-ribbon-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_RibbonTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_RibbonDescription"]</p>
+            </div>
+            <div class="p-4">
+                <TmToolbar Overflow="ToolbarOverflow.Menu"
+                           Labels="ToolbarLabels.IconsWithText"
+                           AriaLabel="@Loc["TmToolbarDemo_RibbonTitle"]"
+                           data-testid="toolbar-ribbon">
+                    <ChildContent>
+                        <TmToolbarButton Icon="@IconNames.MousePointer" Text="@Loc["TmToolbarDemo_Select"]" LabelPosition="ToolbarLabelPosition.Below" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Select"])" />
+                        <TmToolbarButton Icon="@IconNames.Hand" Text="@Loc["TmToolbarDemo_Pan"]" LabelPosition="ToolbarLabelPosition.Below" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Pan"])" />
+                        <TmToolbarDivider />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                        <TmToolbarDivider />
+                        <TmToolbarButton Icon="@IconNames.Layout" Text="@Loc["TmToolbarDemo_Layout"]" LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Layout"])" />
+                        <TmToolbarButton Icon="@IconNames.Search" Text="@Loc["TmToolbarDemo_Find"]" LabelPosition="ToolbarLabelPosition.Below" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Find"])" />
+                    </ChildContent>
+                    <Actions>
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                    </Actions>
+                </TmToolbar>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-pressed-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_PressedTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_PressedDescription"]</p>
+            </div>
+            <div class="p-4">
+                <div style="width: 300px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_PressedTitle"]"
+                               data-testid="toolbar-pressed">
+                        <ChildContent>
+                            @* C2: a toggle ON the bar — aria-pressed and the pressed look. *@
+                            <TmToolbarButton Icon="@IconNames.MousePointer" Text="@Loc["TmToolbarDemo_Select"]"
+                                             Pressed="@_selectPressed" OnClick="@(() => _selectPressed = !_selectPressed)" />
+                            @* C2: a toggle collapsed into More — a checkable menu entry with the same state.
+                               OverflowOnly keeps the E2E deterministic at every width. *@
+                            <TmToolbarButton Icon="@IconNames.Hand" Text="@Loc["TmToolbarDemo_Pan"]"
+                                             Pressed="@_panPressed" Priority="ToolbarButtonPriority.OverflowOnly"
+                                             OnClick="@(() => _panPressed = !_panPressed)" />
+                            <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        </ChildContent>
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-group-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_GroupTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_GroupDescription"]</p>
+            </div>
+            <div class="p-4">
+                <div style="width: 1100px; max-width: 100%;" data-testid="toolbar-group-host">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_GroupTitle"]"
+                               data-testid="toolbar-group">
+                        <TmToolbarGroup Label="@Loc["TmToolbarDemo_GroupEdit"]">
+                            <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                            <TmToolbarButton Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                            <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                            <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                        </TmToolbarGroup>
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-group-menu-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_GroupMenuTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_GroupMenuDescription"]</p>
+            </div>
+            <div class="p-4">
+                @* F13/C3: a narrow toolbar whose grouped buttons leave for More — the menu shows the
+                   group as a labelled section (role=group + header) divided from the ungrouped run by
+                   a separator, and the arrow keys cross both without stopping on the heading. *@
+                <div style="width: 420px; max-width: 100%;" data-testid="toolbar-group-menu-host">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_GroupMenuTitle"]"
+                               data-testid="toolbar-group-menu">
+                        <TmToolbarGroup Label="@Loc["TmToolbarDemo_GroupEdit"]">
+                            <TmToolbarButton Icon="@IconNames.Undo2" Text="@Loc["TmToolbarDemo_Undo"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Undo"])" />
+                            <TmToolbarButton Icon="@IconNames.Redo2" Text="@Loc["TmToolbarDemo_Redo"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Redo"])" />
+                            <TmToolbarButton Icon="@IconNames.Scissors" Text="@Loc["TmToolbarDemo_Cut"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Cut"])" />
+                        </TmToolbarGroup>
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-items-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ItemsTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_ItemsIntro"]</p>
+            </div>
+            <div class="p-4">
+                @* F14/C1: non-button controls leave the bar like buttons — the wrapper is one measured
+                   item, collapses whole, and in More is a plain entry or a labelled group. The
+                   TmDropdown trigger joins the roving tab stop automatically (C6). *@
+                <div style="width: 760px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_ItemsTitle"]"
+                               data-testid="toolbar-items">
+                        <ChildContent>
+                            <TmToolbarItem MenuLabel="@Loc["TmToolbarDemo_FontSize"]"
+                                           Priority="ToolbarButtonPriority.Secondary"
+                                           MenuItems="@_fontSizeMenuItems"
+                                           data-testid="toolbar-items-fontsize">
+                                <TmSelect TValue="string"
+                                          Value="@_fontSize"
+                                          ValueChanged="OnFontSizeChanged"
+                                          Options="@_fontSizeOptions"
+                                          Placeholder="@Loc["TmToolbarDemo_FontSize"]"
+                                          data-testid="toolbar-items-fontsize-select" />
+                            </TmToolbarItem>
+                            <TmToolbarItem MenuLabel="@Loc["TmToolbarDemo_TextColor"]"
+                                           Priority="ToolbarButtonPriority.Secondary"
+                                           OnMenuInvoke="@(() => _colorDialogOpen = true)"
+                                           MenuKeepOpen="true"
+                                           data-testid="toolbar-items-color">
+                                <TmColorPicker @bind-Value="_textColor"
+                                               Placeholder="@Loc["TmToolbarDemo_TextColor"]"
+                                               data-testid="toolbar-items-color-picker" />
+                            </TmToolbarItem>
+                            <TmToolbarItem MenuLabel="@Loc["TmToolbarDemo_ShowGrid"]"
+                                           Priority="ToolbarButtonPriority.Secondary"
+                                           MenuItems="@_showGridMenuItems"
+                                           data-testid="toolbar-items-grid">
+                                <TmToggle Value="@_showGrid" ValueChanged="OnShowGridChanged"
+                                          Label="@Loc["TmToolbarDemo_ShowGrid"]"
+                                          data-testid="toolbar-items-grid-toggle" />
+                            </TmToolbarItem>
+                            <TmToolbarDivider />
+                            <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                            <TmToolbarButton Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                            <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                            <TmDropdown Text="@Loc["TmToolbarDemo_Export"]" OnSelect="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" data-testid="toolbar-items-export">
+                                <TmDropdownItem Value="pdf">PDF</TmDropdownItem>
+                                <TmDropdownItem Value="csv">CSV</TmDropdownItem>
+                            </TmDropdown>
+                        </ChildContent>
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <TmModal Show="@_colorDialogOpen"
+                 OnClose="@(() => _colorDialogOpen = false)"
+                 Title="@Loc["TmToolbarDemo_ItemsColorDialogTitle"]"
+                 ShowFooter="false"
+                 data-testid="toolbar-items-color-dialog">
+            <div class="space-y-3">
+                <p class="text-sm text-slate-600 dark:text-slate-400">@Loc["TmToolbarDemo_ItemsColorDialogBody"]</p>
+                @* The full colour picker lives in the dialog (the menu entry opens it with the menu
+                   kept open under it); the bar only shows the compact trigger. *@
+                <TmColorPicker @bind-Value="_textColor"
+                               Placeholder="@Loc["TmToolbarDemo_TextColor"]"
+                               data-testid="toolbar-items-color-dialog-picker" />
+            </div>
+        </TmModal>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-preservefocus-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_PreserveFocusTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_PreserveFocusDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                @* F14/C4-a: PreserveFocus keeps the text selection while a formatting command runs. *@
+                <TmTextInput Value="@_preserveText" ValueChanged="v => _preserveText = v"
+                             data-testid="toolbar-preservefocus-input" />
+                <TmToolbar AriaLabel="@Loc["TmToolbarDemo_PreserveFocusTitle"]" data-testid="toolbar-preservefocus">
+                    <TmToolbarButton Icon="@IconNames.Bold" Text="@Loc["TmToolbarDemo_Bold"]" PreserveFocus="true"
+                                     OnClick="@(() => OnPreserveFocusActionAsync(Loc["TmToolbarDemo_Bold"]))" />
+                    <TmToolbarButton Icon="@IconNames.Italic" Text="@Loc["TmToolbarDemo_Italic"]" PreserveFocus="true"
+                                     OnClick="@(() => OnPreserveFocusActionAsync(Loc["TmToolbarDemo_Italic"]))" />
+                </TmToolbar>
+                <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="toolbar-preservefocus-log">
+                    @Loc["TmToolbarDemo_LastAction"]: <span class="font-medium text-primary-600 dark:text-primary-400">@_preserveFocusLog</span>
+                    · @Loc["TmToolbarDemo_Selection"]: <span class="font-medium text-primary-600 dark:text-primary-400">@_preserveFocusSelection</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-conditional-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ConditionalTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_ConditionalDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="@(() => _showConditional = !_showConditional)" data-testid="toolbar-conditional-toggle">@Loc["TmToolbarDemo_ConditionalToggle"]</TmButton>
+                <div style="width: 380px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_ConditionalTitle"]"
+                               data-testid="toolbar-conditional">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                        @if (_showConditional)
+                        {
+                            <TmToolbarButton @key="@("conditional-open")" Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                        }
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-overflowonly-mid-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_OverflowOnlyMidTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_OverflowOnlyMidDescription"]</p>
+            </div>
+            <div class="p-4">
+                <div style="width: 1100px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_OverflowOnlyMidTitle"]"
+                               data-testid="toolbar-overflowonly-mid">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-shrink-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ShrinkTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_ShrinkDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                <div style="display: flex; justify-content: space-between; gap: 1rem; width: 100%;">
+                    <span class="text-sm">@Loc["TmToolbarDemo_ShrinkPlain"]</span>
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_ShrinkPlain"]" data-testid="toolbar-shrink-plain">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                    </TmToolbar>
+                </div>
+                <div style="display: flex; justify-content: space-between; gap: 1rem; width: 100%;">
+                    <span class="text-sm">@Loc["TmToolbarDemo_ShrinkFixed"]</span>
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_ShrinkFixed"]" style="flex: 1 1 auto; min-width: 0;" data-testid="toolbar-shrink-fixed">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-labels-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_LabelsTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_LabelsDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                <div style="width: 360px; max-width: 100%;">
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_LabelsAuto"]" data-testid="toolbar-labels-auto">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" />
+                    </TmToolbar>
+                </div>
+                <div style="width: 720px; max-width: 100%;">
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_LabelsAuto"]" data-testid="toolbar-labels-auto-wide">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        @if (_overflowLog is not null)
+        {
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="toolbar-overflow-log">
+                @Loc["TmToolbarDemo_LastAction"]: <span class="font-medium text-primary-600 dark:text-primary-400">@_overflowLog</span>
+            </p>
+        }
+    </div>
+</section>
 <!-- Form Layout -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -197,6 +531,95 @@
 
 @code {
     private string? _log;
+    private string? _overflowLog;
+    private bool _showConditional;
+    private bool _selectPressed;
+    private bool _panPressed = true;
+    private bool _colorDialogOpen;
+    private bool _showGrid;
+    private string _fontSize = "12";
+    private string _textColor = "#1f2933";
+    private string _preserveText = string.Empty;
+    private string? _preserveFocusLog;
+    private string _preserveFocusSelection = "–";
+    private static readonly int[] _toolbarWidths = [1100, 380, 300];
+
+    // F14/C1: the MenuItems lists are compared STRUCTURALLY by the item's change snapshot — rebuild
+    // them only when the selection actually changes, never per render.
+    private IReadOnlyList<TmActionItem> _fontSizeMenuItems = [];
+    private IReadOnlyList<TmActionItem> _showGridMenuItems = [];
+
+    private readonly IReadOnlyList<SelectOption<string>> _fontSizeOptions = new[]
+    {
+        new SelectOption<string>("8", "8"),
+        new SelectOption<string>("10", "10"),
+        new SelectOption<string>("12", "12"),
+        new SelectOption<string>("14", "14"),
+        new SelectOption<string>("18", "18"),
+        new SelectOption<string>("24", "24"),
+        new SelectOption<string>("36", "36"),
+    };
+
+    protected override void OnInitialized()
+    {
+        _preserveText = Loc["TmToolbarDemo_PreserveFocusSample"];
+        RebuildFontSizeMenuItems();
+        RebuildShowGridMenuItems();
+    }
+
+    private void OnFontSizeChanged(string? value)
+    {
+        _fontSize = value ?? "12";
+        RebuildFontSizeMenuItems();
+    }
+
+    private void OnShowGridChanged(bool value)
+    {
+        _showGrid = value;
+        RebuildShowGridMenuItems();
+    }
+
+    private void RebuildFontSizeMenuItems()
+    {
+        _fontSizeMenuItems = _fontSizeOptions
+            .Select(o => new TmActionItem
+            {
+                Label = o.Label,
+                Checked = _fontSize == o.Value,
+                OnClick = EventCallback.Factory.Create(this, () => OnFontSizeChanged(o.Value)),
+            })
+            .ToList();
+    }
+
+    private void RebuildShowGridMenuItems()
+    {
+        // One checkable entry that mirrors the toggle — rebuilt only when the state flips.
+        _showGridMenuItems =
+        [
+            new TmActionItem
+            {
+                Label = Loc["TmToolbarDemo_ShowGrid"],
+                Checked = _showGrid,
+                OnClick = EventCallback.Factory.Create(this, () => OnShowGridChanged(!_showGrid)),
+            },
+        ];
+    }
+
+    // F14/C4-a: PreserveFocus keeps the focus (and the selection) in the input, so the range the
+    // command applied to is read back live for the log line under the toolbar.
+    private async Task OnPreserveFocusActionAsync(string action)
+    {
+        _preserveFocusLog = action;
+        try
+        {
+            _preserveFocusSelection = await JS.InvokeAsync<string>("eval",
+                "() => { const a = document.activeElement; return a && a.selectionStart != null ? a.selectionStart + ' – ' + a.selectionEnd : '–'; }");
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop unavailable (prerendering): the log shows the action alone.
+        }
+    }
 
     // Form fields
     private string _firstName = string.Empty;

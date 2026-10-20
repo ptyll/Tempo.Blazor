@@ -2,7 +2,7 @@
   "itemName": "TmDiagramEditor",
   "kind": "Component",
   "category": "Diagram",
-  "description": "Top-level diagram editor component. Composes the canvas, toolbox, properties panel, and toolbar into a fully working editor.",
+  "description": "Top-level diagram editor component. Renders through the core editor shell: a header (document title, named panel toggles, view-settings menu), a single command toolbar built on TmToolbar with Priority overflow, a status bar with the zoom controls, and an inspector with Properties | Layers tabs. The toolbar is a stable public contract: every toolbar group carries a data-tm-group attribute (history|clipboard|tools|format|insert|arrange|search|panels|zoom|view|canvas-size|layout|export|templates|import|readonly) and visibility is decided by ToolbarPreset/ToolbarGroups in C# — never target the toolbar's internal DOM with positional CSS.",
   "packageId": "Tempo.Blazor.DiagramEditor",
   "namespace": "Tempo.Blazor.Components.Diagram",
   "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramEditor.razor",
@@ -50,10 +50,95 @@
       "description": "Raised when selected diagram item identifiers change."
     },
     {
+      "name": "RecentStencilIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Stencil ids the connect dialog offers first (newest first, at most 8). Optional: when null the editor keeps its own per-instance list. Bind it together with RecentStencilIdsChanged to persist recents per user. The list is never shared between editor instances."
+    },
+    {
+      "name": "RecentStencilIdsChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "description": "Prevent all editing interactions."
+      "description": "Host-pinned read-only mode: prevents all editing interactions and hides the built-in Read-only/Edit toggle. The component never assigns this parameter — the toggle flips the internal user state exposed by IsReadOnly, so a hosted read-only preview cannot be unlocked from the UI."
+    },
+    {
+      "name": "ToolbarPreset",
+      "type": "DiagramToolbarPreset",
+      "isRequired": false,
+      "default": "DiagramToolbarPreset.Full",
+      "description": "Toolbar layout preset. Full renders every toolbar group (the set of groups, not a historical order — since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar); Viewer renders only the zoom, view, search and export groups for read-only preview surfaces. Stable public API: the group set and the data-tm-group attribute values must survive toolbar regrouping unchanged."
+    },
+    {
+      "name": "ToolbarGroups",
+      "type": "DiagramToolbarGroups?",
+      "isRequired": false,
+      "description": "Explicit toolbar group selection (flags). When set it overrides ToolbarPreset; null (the default) resolves the visible groups from the preset. The built-in Read-only toggle additionally requires the host not to pin ReadOnly and the ReadOnly flag to be set. Stable public API."
+    },
+    {
+      "name": "InspectorLayout",
+      "type": "DiagramInspectorLayout",
+      "isRequired": false,
+      "default": "DiagramInspectorLayout.Tabs",
+      "description": "How the inspector column presents the properties and layers panels. Tabs (the default) renders \"Properties | Layers\" tabs; Stacked is the opt-in legacy column with both panels stacked above each other."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "How the editor resolves its layout. Auto (the default) measures the editor's own container width against LayoutBreakpoints — tablet 768-1199, desktop from 1200; a forced Tablet/Desktop/Mobile pins the presentation (tablet: docked panels with at most one expanded, the palette as a 44px rail, the minimap as a canvas overlay, full touch editing)."
+    },
+    {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Per-instance layout thresholds for the editor container. Null uses the editor default (tablet from 768px, desktop from 1200px). Pass new TmLayoutBreakpoints(640, 1024) to follow the shared TmBreakpoints instead."
+    },
+    {
+      "name": "MinimapPlacement",
+      "type": "DiagramMinimapPlacement",
+      "isRequired": false,
+      "default": "DiagramMinimapPlacement.Auto",
+      "description": "Where the minimap renders. Auto shows the right-column card on a desktop layout and floats the minimap over the canvas corner from tablet down (DI3); Panel and Overlay force the choice for every layout."
+    },
+    {
+      "name": "MobileSheetInitiallyOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the mobile panels sheet starts open (peek) on the first mobile render. Defaults to false: the canvas gets the whole stage and the action bar (Shapes / Properties) or a selection opens the sheet (X1). Pass true to restore the pre-2.9.1 open-on-load behaviour."
+    },
+    {
+      "name": "ShowStatusBar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show the status bar below the canvas (zoom controls, read-only toggle)."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show the editable document title in the header. Hosts hide it through this parameter — never through CSS selectors (the title is deliberately outside the toolbar group contract)."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered at the very start of the header bar, before the document title (G9 host slot)."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content rendered at the very end of the header bar, after the built-in controls (G9 host slot)."
     },
     {
       "name": "ShowGrid",
@@ -74,7 +159,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Show the minimap at the bottom of the right sidebar."
+      "description": "Show the minimap (a card in the right column on desktop, an overlay over the canvas corner from tablet down — see MinimapPlacement)."
     },
     {
       "name": "ShowPageView",
@@ -95,7 +180,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Show the top toolbar."
+      "description": "Show the editor chrome around the canvas: the header bar's built-in controls (document title, mobile undo/redo, search and panel toggles, \"⋯\" view menu), the command toolbar row and the status bar (zoom, Read-only toggle); on a mobile layout also the floating zoom pill and the action bar. false leaves the page tabs, canvas, docked panels and minimap (the pre-redesign meaning: everything that lived in the old toolbar). The host slots HeaderStart / HeaderActions still render. Default true."
     },
     {
       "name": "ShowToolbox",
@@ -103,6 +188,45 @@
       "isRequired": false,
       "default": "true",
       "description": "Show the component toolbox panel on the left."
+    }
+  ],
+  "cssClasses": [
+    "tm-diagram-editor",
+    "tm-diagram-editor--readonly",
+    "tm-diagram-editor__header-bar",
+    "tm-diagram-editor__panel-toggle",
+    "tm-diagram-editor__view-menu",
+    "tm-diagram-editor__toolbar",
+    "tm-diagram-editor__toolbar-group[data-tm-group]",
+    "tm-diagram-editor__statusbar",
+    "tm-diagram-editor__inspector",
+    "tm-diagram-editor__minimap-card",
+    "tm-diagram-editor__minimap-overlay",
+    "tm-diagram-editor__rail-btn",
+    "tm-diagram-editor__header-start",
+    "tm-diagram-editor__header-actions",
+    "tm-diagram-editor__zoom-label",
+    "tm-diagram-editor__canvas-wrap--rulers",
+    "tm-diagram-editor__canvas-size-input",
+    "tm-diagram-editor__canvas-size-sep",
+    "tm-diagram-editor__import-file-label"
+  ],
+  "examples": [
+    {
+      "title": "Viewer toolbar for a read-only preview surface",
+      "code": "<TmDiagramEditor Document=\"@document\" ReadOnly=\"true\" ToolbarPreset=\"DiagramToolbarPreset.Viewer\" ShowToolbox=\"false\" ShowPropertiesPanel=\"false\" />"
+    },
+    {
+      "title": "Custom group selection with host header slots",
+      "code": "<TmDiagramEditor Document=\"@document\" ToolbarGroups=\"DiagramToolbarGroups.Zoom | DiagramToolbarGroups.Export\" HeaderStart=\"<span>My app</span>\"><HeaderActions><TmButton OnClick=\"Save\">Save</TmButton></HeaderActions></TmDiagramEditor>"
+    },
+    {
+      "title": "Legacy stacked inspector (opt-in)",
+      "code": "<TmDiagramEditor Document=\"@document\" InspectorLayout=\"DiagramInspectorLayout.Stacked\" />"
+    },
+    {
+      "title": "Tablet layout in a fixed-width host pane",
+      "code": "<div style=\"width: 1100px\"><TmDiagramEditor Document=\"@document\" /></div>"
     }
   ]
 }

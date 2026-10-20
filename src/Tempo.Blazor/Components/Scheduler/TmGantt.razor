@@ -373,7 +373,8 @@
     @if (View == GanttView.Workload)
     {
         <TmGanttWorkloadView Tasks="Data" WorkingSchedule="WorkingSchedule"
-                             DisplayMode="WorkloadDisplayMode" />
+                             DisplayMode="WorkloadDisplayMode"
+                             Today="TodayInZone()" />
     }
     else if (View == GanttView.Calendar)
     {

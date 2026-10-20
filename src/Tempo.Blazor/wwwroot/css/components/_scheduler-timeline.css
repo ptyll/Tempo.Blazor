@@ -118,6 +118,8 @@
 /* ── Resize handles ── */
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle {
     position: absolute;
+    /* A mouse or pen resizes immediately, so the handle must not start a pan. */
+    touch-action: none;
     top: 0;
     bottom: 0;
     width: 8px;
@@ -128,6 +130,30 @@
 
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle:hover {
     background: rgba(255, 255, 255, 0.35);
+}
+
+/* A finger needs a larger target than a mouse (B13), but never so wide that the two handles cover
+   the event. A quick swipe pans the timeline; the 400ms long-press in scheduler.js starts the resize. */
+@media (pointer: coarse) {
+    .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle {
+        width: min(var(--tm-space-4), 25%);
+        touch-action: pan-x;
+    }
+}
+
+/* No hover on a touch screen: the grip has to be visible without it. */
+@media (hover: none) {
+    .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 4px;
+        height: 24px;
+        transform: translate(-50%, -50%);
+        border-radius: var(--tm-radius-full, 999px);
+        background: var(--tm-border-color-strong);
+    }
 }
 
 /* Left resize handle (start time) */

@@ -64,7 +64,9 @@
 
     private ElementReference _root;
     private TopLayerInterop? _topLayer;
+    private FocusIfLostInterop? _focusIfLost;
     private string? _lastNewestId;
+    private HashSet<string> _lastIds = new();
     private bool _promoted;
     private bool _pinned;
     private bool _disposed;
@@ -120,6 +122,21 @@
                 }
             }
         }
+
+        // F6 follow-up (c51ddf81 #4), review round: the ask is keyed on the VISIBLE ID SET, not the
+        // count — a count comparison misses every removal that does not shrink the set: a
+        // replacement at the MaxVisible cap, a queue refill, an expire+push in one render. The id
+        // set drops the replaced card, so the container asks the trap to recover the focus the
+        // removed card may have held. restoreTrapFocusIfLost itself acts only when an
+        // inert-exempt surface actually held focus, so an ask for a card nobody focused is a
+        // harmless no-op; a push (pure id addition) never asks.
+        var ids = new HashSet<string>(VisibleToasts.Select(t => t.Id));
+        if (_lastIds.Any(id => !ids.Contains(id)))
+        {
+            _focusIfLost ??= new FocusIfLostInterop(JS);
+            await _focusIfLost.RestoreTrapFocusIfLostAsync();
+        }
+        _lastIds = ids;
     }
 
     private void Dismiss(string id)
@@ -141,6 +158,11 @@
         if (_disposed) return;
         _disposed = true;
         ToastService.OnChange -= HandleChange;
+        if (_focusIfLost is not null)
+        {
+            await _focusIfLost.DisposeAsync();
+            _focusIfLost = null;
+        }
         if (_topLayer is not null)
         {
             if (_pinned)

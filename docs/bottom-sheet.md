@@ -21,8 +21,8 @@ between the press and the release, not the tail of the last 80ms — from the sn
 on: a downward flick from the lowest snap dismisses, a downward flick from a higher snap steps one
 snap down, and an upward flick steps one snap up, whatever the tail velocity says. Only a release
 faster than about 2 px/ms closes the sheet from any snap, and only while `SwipeToDismiss` is on:
-with the flag off, a downward flick from the lowest snap clamps to it and a fast flick settles
-there. A sheet with one
+with the flag off, a fast flick steps one snap down like any flick and clamps at the lowest snap;
+it never dismisses. A sheet with one
 snap dismisses only past a quarter of the height it started at, or on that same downward flick — a
 10px drag does not close it. The flick is the travel over the last 80ms of the drag, not the gap
 between the last move and `pointerup`: a real release lands on that last move, so a velocity taken
@@ -31,7 +31,10 @@ it started at, or on a flick. A tap never dismisses, and an upward drag never di
 
 The gesture writes only an inline `height` and `transition`, and clears both on release, cancel and
 a vetoed dismiss. `--tm-sheet-height` stays Blazor-owned. Deleting it collapses a snap whose index
-did not change, because Blazor will not rewrite a style it still considers current.
+did not change, because Blazor will not rewrite a style it still considers current. The gesture runs
+on the shared `pointer-drag.js` helper: a second finger cannot take over an active drag, and Escape
+during a drag cancels the drag first — the inline height is rolled back, the snap C# owns stays, the
+Escape is consumed and does not reach the dialog — so it takes a second Escape to close the sheet.
 
 ## Modal and inline
 

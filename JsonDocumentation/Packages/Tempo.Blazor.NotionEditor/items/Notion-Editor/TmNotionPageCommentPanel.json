@@ -36,6 +36,12 @@
       "name": "OnMentionClicked",
       "type": "EventCallback<string>",
       "isRequired": false
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmNotionCommentDraftState>",
+      "isRequired": false,
+      "description": "Fires whenever the TmNotionCommentDraftState value changes — any of the panel's composers (new comment, thread reply, inline reply, entry edit) gained/lost content. Value-equality deduped, so it does NOT fire on every keystroke. No composer text is observable through a parameter; use TmNotionCommentDraftState to build a dirty-guard before a navigation that would silently discard an in-progress comment. Opening an edit or an inline reply reports its id/state immediately while HasUnsavedContent stays false until real user content exists (an edit differing from the entry body, a reply beyond the auto-inserted quote). Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the consumer's own confirmation."
     }
   ],
   "subcategory": "UI"

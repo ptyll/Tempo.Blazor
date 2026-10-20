@@ -11,7 +11,7 @@
     <PackageId>Tempo.Blazor</PackageId>
 <Version>2.9.1</Version>
     <Authors>ptyll</Authors>
-    <Description>Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation.</Description>
+    <Description>Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS/SK/FR), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation.</Description>
     <PackageTags>blazor;components;ui;server;wasm;interactive-auto;localization</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -69,7 +69,7 @@
   <ItemGroup>
     <!-- WithCulture=false stops the SDK inferring a culture from the ".cs."/".fr." in the file name
          (which would route them into satellite assemblies — exactly what breaks under WASM). All
-         three embed into the main Tempo.Blazor.dll. -->
+         four embed into the main Tempo.Blazor.dll. -->
     <EmbeddedResource Include="Resources/TmResources.json">
       <WithCulture>false</WithCulture>
       <LogicalName>Tempo.Blazor.Resources.TmResources.json</LogicalName>
@@ -81,6 +81,11 @@
     <EmbeddedResource Include="Resources/TmResources.fr.json">
       <WithCulture>false</WithCulture>
       <LogicalName>Tempo.Blazor.Resources.TmResources.fr.json</LogicalName>
+    </EmbeddedResource>
+    <!-- ".sk." also carries a culture suffix; keep the same WithCulture=false treatment. -->
+    <EmbeddedResource Include="Resources/TmResources.sk.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.Resources.TmResources.sk.json</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

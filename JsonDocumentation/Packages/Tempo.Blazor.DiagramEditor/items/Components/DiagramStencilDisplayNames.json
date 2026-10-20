@@ -1,0 +1,60 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "description": "Shared display-name helpers for diagram stencils: resolves a stencil's localized display name (resource key with a fallback to the raw name) and lists the stencils that are connectable shapes (nodes only — edge stencils style relationships and must not appear in shape-picking surfaces such as the connect modal).",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramStencilDisplayNames.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "GetStencilDisplayName",
+      "kind": "Method",
+      "type": "string",
+      "description": "Returns the localized display name for a stencil: the translation of its NameResourceKey when the key resolves, otherwise the stencil's raw name.",
+      "parameters": [
+        {
+          "name": "stencil",
+          "type": "DiagramStencil"
+        },
+        {
+          "name": "localizer",
+          "type": "ITmLocalizer"
+        }
+      ]
+    },
+    {
+      "name": "GetLocalizedText",
+      "kind": "Method",
+      "type": "string",
+      "description": "Resolves a localized text for a resource key, falling back to the provided value when the key is empty or untranslated (localizers echoing [key] are treated as missing).",
+      "parameters": [
+        {
+          "name": "resourceKey",
+          "type": "string?"
+        },
+        {
+          "name": "fallback",
+          "type": "string"
+        },
+        {
+          "name": "localizer",
+          "type": "ITmLocalizer"
+        }
+      ]
+    },
+    {
+      "name": "GetConnectableStencils",
+      "kind": "Method",
+      "type": "IEnumerable<DiagramStencil>",
+      "description": "Returns the connectable stencils from the registry — node stencils only, in the registry's display order.",
+      "parameters": [
+        {
+          "name": "registry",
+          "type": "DiagramStencilRegistry"
+        }
+      ]
+    }
+  ],
+  "itemName": "DiagramStencilDisplayNames"
+}

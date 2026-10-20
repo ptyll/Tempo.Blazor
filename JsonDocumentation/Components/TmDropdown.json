@@ -91,6 +91,13 @@
       "type": "bool",
       "isRequired": false,
       "description": "Disables the dropdown."
+    },
+    {
+      "name": "OutlineTrigger",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the trigger as an outline button (tm-btn tm-btn-outline). Default false."
     }
   ],
   "cssClasses": [

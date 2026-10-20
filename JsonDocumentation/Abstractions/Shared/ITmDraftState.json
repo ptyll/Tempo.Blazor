@@ -1,0 +1,18 @@
+{
+  "kind": "Interface",
+  "category": "Shared",
+  "namespace": "Tempo.Blazor.Abstractions.Shared",
+  "description": "Aggregate dirty flag shared by every draft-state record the library reports through an OnDraftChanged parameter (TmCommentDraftState, TmChatDraftState, TmNotionCommentDraftState). Lets a consumer read the one dirty decision — 'would a reload, a navigation or a panel close throw something away?' — without caring which concrete record a component reports. The draft text itself is never carried; it reaches the consumer through the component's submit callbacks on commit.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftState.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "HasUnsavedContent",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether any draft slot currently holds content that would be lost on discard. Always false before the first user input; for an open edit it means the edited text differs from the original as it was when the edit started."
+    }
+  ],
+  "itemName": "ITmDraftState"
+}

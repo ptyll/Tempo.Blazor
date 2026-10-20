@@ -90,7 +90,7 @@
     <div class="tm-wd-props__header">
         @if (_isMulti)
         {
-            <span class="tm-wd-props__type-badge">@Loc["TmWireframeProps_ElementsCount", _elements.Count]</span>
+            <span class="tm-wd-props__type-badge">@Loc.Plural("TmWireframeProps_ElementsCount", _elements.Count)</span>
             <span class="tm-wd-props__subtitle">
                 @(_sameType ? _elements[0].Type : Loc["TmWireframeProps_MixedTypes"])
             </span>

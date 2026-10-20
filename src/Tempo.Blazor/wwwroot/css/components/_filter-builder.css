@@ -1,4 +1,13 @@
 .tm-filter-builder { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tm-space-2); }
+/* Popover/Auto open the picker through TmOverlayPanel. The panel owns position and stacking;
+   this class owns only the surface, so the zero-specificity overlay reset cannot win it. */
+.tm-filter-builder-panel {
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-md);
+  padding: var(--tm-space-3);
+}
 .tm-filter-chips   { display: flex; flex-wrap: wrap; gap: var(--tm-space-2); align-items: center; }
 .tm-filter-builder-add {
   padding: var(--tm-space-1) var(--tm-space-3);
@@ -46,3 +55,14 @@
   white-space: nowrap;
 }
 .tm-filter-clear-all:hover { color: var(--tm-color-danger); }
+.tm-filter-result-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+  min-block-size: 1.5em;
+}
+.tm-filter-result-preview .tm-stretched-link {
+  color: var(--tm-color-primary);
+}

@@ -1,5 +1,5 @@
-/* Demo-only layout for the responsive conventions page. Colours come from the library tokens, so
-   the page follows data-theme and data-tm-theme without a second palette. Do not re-declare the
+/* Demo-only styles for the shared demo pages. Colours come from the library tokens, so the
+   pages follow data-theme and data-tm-theme without a second palette. Do not re-declare the
    gray scale here: dark mode inverts it, and a var() substitutes where it is declared. */
 
 .rc-page {
@@ -165,4 +165,31 @@
   .rc-page * {
     transition: none;
   }
+}
+
+/* ── Dashboard demo page (/dashboard, Demo.SharedUI/Pages/DashboardPage.razor) ──────────────
+   The widget card is the library's surface; the demo only fills its body. KPI content is a flat
+   bold value + one muted line — never a nested card, whose border and padding clipped the value
+   inside the widget slot. Colours and sizes come from the library tokens only. */
+.tm-demo-kpi {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--tm-space-1);
+  height: 100%;
+}
+
+.tm-demo-kpi-value {
+  font-size: var(--tm-font-size-2xl);
+  font-weight: var(--tm-font-weight-bold);
+  line-height: var(--tm-line-height-tight);
+  color: var(--tm-text-primary);
+  /* A KPI number must never clip: no ellipsis, the slot grows with it. */
+  white-space: nowrap;
+}
+
+.tm-demo-kpi-hint {
+  font-size: var(--tm-font-size-sm);
+  line-height: var(--tm-line-height-normal);
+  color: var(--tm-text-secondary);
 }

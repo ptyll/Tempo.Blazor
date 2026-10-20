@@ -161,8 +161,8 @@
         {
             <button class="tm-notion-header-comment-badge"
                     type="button"
-                    title="@string.Format(Loc["TmNotionPageHeader_UnresolvedComments"], UnresolvedCommentCount)"
-                    aria-label="@string.Format(Loc["TmNotionPageHeader_UnresolvedComments"], UnresolvedCommentCount)"
+                    title="@Loc.Plural("TmNotionPageHeader_UnresolvedComments", UnresolvedCommentCount)"
+                    aria-label="@Loc.Plural("TmNotionPageHeader_UnresolvedComments", UnresolvedCommentCount)"
                     @onclick="OnCommentBadgeClicked"
                     @onclick:stopPropagation="true">
                 @UnresolvedCommentCount

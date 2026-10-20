@@ -3,9 +3,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Decides WHERE a captured screenshot lands. Without an explicit opt-in it lands in the run's
-/// TestResults directory; only with <see cref="BaselineGeneratorTestBase.WritesAllowed"/> does it
-/// land under the baseline root at <c>artifacts/baseline/</c>.
+/// Decides WHERE a captured screenshot lands. Without an explicit opt-in it lands in a durable
+/// scratch root under the OS temp folder; only with <see cref="BaselineGeneratorTestBase.WritesAllowed"/>
+/// does it land under the baseline root at <c>artifacts/baseline/</c>.
+/// <para>
+/// The non-opt-in root is deliberately NOT the run's <c>TestResultsDirectory</c> (an earlier
+/// version used it): the MSTest runner deletes the deployment directory when the run ends, so
+/// captures written there vanished together with a green run (recorded learning). The temp scratch
+/// root survives the run, which is what run-evidence captures need.
+/// </para>
 /// <para>
 /// This is the same shape as <c>Demo__DiagramsDbPath</c>: REDIRECT the target, do not skip the
 /// test. The Notion captures are not generators — the tests around them assert behaviour, and
@@ -35,17 +41,18 @@ internal static class BaselineOutput
     public static string Root { get; } = Path.Combine(FindRepositoryRoot(), "artifacts", "baseline");
 
     /// <summary>
-    /// The directory a capture should be written to, created if missing.
-    /// <paramref name="segments"/> are appended below the baseline root (e.g. <c>notion</c>,
-    /// <c>comments</c>).
+    /// The directory a capture should be written to, created if missing. With the write opt-in
+    /// this is under the baseline root; otherwise under the durable temp scratch root (never the
+    /// run's deployment directory, which the runner deletes when the run ends).
+    /// <paramref name="segments"/> are appended below the chosen root (e.g. <c>notion</c>,
+    /// <c>comments</c>). The <paramref name="context"/> parameter is kept for the existing call
+    /// sites; the fallback root no longer depends on it.
     /// </summary>
     public static string DirectoryFor(TestContext? context, params string[] segments)
     {
         var root = BaselineGeneratorTestBase.WritesAllowed
             ? Root
-            : Path.Combine(
-                context?.TestResultsDirectory ?? Path.GetTempPath(),
-                "baseline-sandbox");
+            : Path.Combine(Path.GetTempPath(), "tempo-blazor-e2e", "baseline-sandbox");
 
         var directory = Path.GetFullPath(Path.Combine(new[] { root }.Concat(segments).ToArray()));
         Directory.CreateDirectory(directory);

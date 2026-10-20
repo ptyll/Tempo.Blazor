@@ -117,6 +117,7 @@
   --tm-category-7: #9ca3af; /* System — gray-400 */
   --tm-category-8: #2dd4bf; /* Custom — teal-400 */
   --tm-category-fallback: #818cf8; /* indigo-400 */
+  --tm-category-tint: 20%;
 
   /* Neutral scale — inverted for dark mode */
   --tm-color-gray-50:        #1e293b;
@@ -156,6 +157,10 @@
      declared, so a dark theme switched on a parent element would otherwise keep the
      light value. Same convention as --tm-text-placeholder above. */
   --tm-bg-workspace:           var(--tm-bg-page);
+  /* The paper tokens (--tm-paper*) are the exception to "re-declare everything here":
+     they are theme-invariant by design and stay literal light values declared ONLY in
+     tokens.css, so a descendant-scoped dark theme keeps the paper white. Do NOT add
+     dark re-declarations for them — that would undo the guarantee. */
   --tm-radius-card:            var(--tm-radius-lg);
   --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);
@@ -192,9 +197,17 @@
   --tm-focus-ring-danger:      0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-danger);
   --tm-focus-ring-success:     0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-success-strong);
   --tm-picker-border-radius:   var(--tm-radius-md);
-  --tm-cal-range-bg:           var(--tm-color-primary-100);
+  /* Dark in-range fill: primary-900 holds 9.45:1 (indigo 10.43:1) for --tm-text-primary;
+     the light primary-100 measured 1.1:1. Same step as --tm-control-hover-fill. */
+  --tm-cal-range-bg:           var(--tm-color-primary-900);
   --tm-cal-selected-bg:        var(--tm-color-primary-600);
   --tm-cal-selected-fg:        var(--tm-color-white);
+  --tm-calendar-view-today-bg:     var(--tm-color-primary-900);
+  --tm-calendar-view-today-fg:     var(--tm-color-primary-300);
+  --tm-calendar-view-event-bg:     var(--tm-color-primary-900);
+  --tm-calendar-view-event-fg:     var(--tm-color-primary-200);
+  --tm-calendar-view-event-border: var(--tm-color-primary-400);
+  --tm-calendar-view-highlight:    var(--tm-color-primary-400);
   --tm-scheduler-event-bg:     var(--tm-color-primary-600);
   --tm-scheduler-event-fg:     var(--tm-color-white);
 
@@ -237,4 +250,8 @@
   --tm-surface-secondary:          var(--tm-bg-surface-secondary);
   --tm-text-link:                  var(--tm-color-primary);
   --tm-text-muted:                 var(--tm-text-secondary);
+
+  /* Literal shadow; re-declared so a dark tree that does not inherit :root still paints the pin. */
+  --tm-data-table-pin-shadow:      2px 0 3px -2px rgba(0, 0, 0, 0.18);
+  --tm-data-table-pin-shadow-end:  -2px 0 3px -2px rgba(0, 0, 0, 0.18);
 }

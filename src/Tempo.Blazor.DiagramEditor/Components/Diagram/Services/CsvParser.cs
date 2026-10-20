@@ -11,25 +11,35 @@ public static class CsvParser
     private static readonly char[] DelimiterCandidates = [',', ';', '\t'];
     private const int MaxRows = 5000;
 
+    /// <summary>Maximum accepted input length (512 KB); a larger paste is rejected up front.</summary>
+    internal const int MaxInputLength = 512 * 1024;
+
     /// <summary>
     /// Parses CSV text and returns headers + rows.
-    /// Throws <see cref="InvalidOperationException"/> if no valid delimiter is found or validation fails.
+    /// Throws <see cref="DiagramImportException"/> if the input is empty, has no data rows or
+    /// fewer than two columns, or exceeds <see cref="MaxInputLength"/> (too complex to import).
+    /// The exception messages are English developer text — UIs map
+    /// <see cref="DiagramImportException.Error"/> to a localized message, never <see cref="Exception.Message"/>.
     /// </summary>
     public static CsvParseResult Parse(string csvText)
     {
         if (string.IsNullOrWhiteSpace(csvText))
-            throw new InvalidOperationException("CsvImportDialog_ErrorEmpty");
+            throw new DiagramImportException(DiagramImportError.CsvEmpty, "The CSV input is empty.");
+
+        if (csvText.Length > MaxInputLength)
+            throw new DiagramImportException(DiagramImportError.InputTooComplex,
+                $"The CSV input exceeds the maximum length of {MaxInputLength / 1024} KB.");
 
         var trimmed = csvText.Trim();
         var delimiter = DetectDelimiter(trimmed);
         var records = ReadRecords(trimmed, delimiter);
 
         if (records.Count < 2)
-            throw new InvalidOperationException("CsvImportDialog_ErrorNoData");
+            throw new DiagramImportException(DiagramImportError.CsvNoData, "The CSV input has a header but no data rows.");
 
         var headers = records[0];
         if (headers.Count < 2)
-            throw new InvalidOperationException("CsvImportDialog_ErrorMinColumns");
+            throw new DiagramImportException(DiagramImportError.CsvMinColumns, "The CSV header has fewer than two columns.");
 
         var rows = records.Skip(1).Take(MaxRows).ToList();
 

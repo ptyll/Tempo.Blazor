@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "description": "Where TmSignatureCapture renders its clear button: Actions (the row under the surface, the default) or Overlay (the top-end corner of the surface).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmSignatureClearButtonPlacement.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmSignatureClearButtonPlacement"
+}

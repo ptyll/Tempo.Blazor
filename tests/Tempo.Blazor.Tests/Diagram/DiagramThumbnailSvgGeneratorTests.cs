@@ -125,4 +125,43 @@ public class DiagramThumbnailSvgGeneratorTests
         svg.Should().NotContain("A & B <C>");
         svg.Should().Contain("A &amp; B &lt;C&gt;");
     }
+
+    [Theory]
+    [InlineData(0, 200)]
+    [InlineData(-10, 200)]
+    [InlineData(320, 0)]
+    [InlineData(320, -1)]
+    public void Generate_Rejects_NonPositive_Viewport(int width, int height)
+    {
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+
+        var options = new DiagramThumbnailOptions { Width = width, Height = height };
+        var act = () => DiagramThumbnailSvgGenerator.Generate(doc, options);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Generate_WithOptions_Uses_The_Requested_Viewport()
+    {
+        var doc = new DiagramDocument();
+        doc.EnsurePages();
+        doc.Pages[0].Nodes.Add(new DiagramNode
+        {
+            StencilId = "general.rectangle",
+            X = 100,
+            Y = 100,
+            W = 120,
+            H = 60
+        });
+
+        var svg = DiagramThumbnailSvgGenerator.Generate(doc,
+            new DiagramThumbnailOptions { Width = 320, Height = 200, IncludeLabels = false, OpaqueBackground = false });
+
+        svg.Should().Contain("width=\"320\"");
+        svg.Should().Contain("height=\"200\"");
+        svg.Should().NotContain("fill=\"#ffffff\"",
+            "template card previews pass OpaqueBackground=false — the card provides the surface");
+    }
 }

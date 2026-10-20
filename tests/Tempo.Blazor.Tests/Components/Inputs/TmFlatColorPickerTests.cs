@@ -78,4 +78,22 @@ public class TmFlatColorPickerTests : LocalizationTestBase
         var valueText = cut.Find(".tm-flat-color-picker-value-text").TextContent;
         valueText.Should().Contain("rgba");
     }
+
+    [Fact]
+    public void TmFlatColorPicker_PaletteColorNames_NameTheSwatches()
+    {
+        var cut = Render<TmFlatColorPicker>(p => p
+            .Add(c => c.Value, "#2E7D32")
+            .Add(c => c.PaletteColors, new[] { "#C62828", "#2E7D32" })
+            .Add(c => c.PaletteColorNames, new Dictionary<string, string>
+            {
+                ["#C62828"] = "Crimson",
+                ["#2E7D32"] = "Forest green",
+            }));
+
+        var swatches = cut.FindAll(".tm-color-palette-swatch");
+        swatches.Should().HaveCount(2);
+        swatches[0].GetAttribute("aria-label").Should().Be("Select color Crimson");
+        swatches[1].GetAttribute("aria-label").Should().Be("Select color Forest green");
+    }
 }

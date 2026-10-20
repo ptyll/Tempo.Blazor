@@ -1,72 +1,96 @@
 @namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
 
-@if (IsVisible)
-{
-    <div class="tm-rte-image-dialog tm-rte-dialog">
-        <div class="tm-rte-image-backdrop" @onclick="OnBackdropClick"></div>
-        <div class="tm-rte-image-content">
-            <div class="tm-rte-image-header">
-                <h5>@Loc["TmRichEditor_ImageDialog_Title"]</h5>
-                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
-            </div>
-            <div class="tm-rte-image-body">
-                <div class="tm-rte-form-group">
-                    <label for="image-url-input">@Loc["TmRichEditor_ImageDialog_Url"]</label>
-                    <input type="text"
-                           id="image-url-input"
-                           class="tm-rte-image-url-input"
-                           placeholder="https://example.com/image.jpg"
-                           @bind="_url"
-                           @bind:event="oninput" />
-                </div>
-                <div class="tm-rte-form-group">
-                    <label for="image-alt-input">@Loc["TmRichEditor_ImageDialog_Alt"]</label>
-                    <input type="text"
-                           id="image-alt-input"
-                           class="tm-rte-image-alt-input"
-                           placeholder="@Loc["TmRichEditor_ImageDialog_AltPlaceholder"]"
-                           @bind="_alt"
-                           @bind:event="oninput" />
-                </div>
-            </div>
-            <div class="tm-rte-image-footer">
-                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
-                    @Loc["Tm_Cancel"]
-                </button>
-                <button type="button" 
-                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
-                        disabled="@(!IsValidUrl())"
-                        @onclick="InsertImage">
-                    @Loc["TmRichEditor_ImageDialog_Insert"]
-                </button>
-            </div>
+@* FZE-10: rendered on the core TmModal primitive — top layer, role="dialog", named title,
+   Escape and the shared focus trap. The fields sit in a real <form>: Enter in any field
+   submits it through the footer's type=submit button and the handler re-validates. *@
+<TmModal Show="@IsVisible"
+         Title="@Loc["TmRichEditor_ImageDialog_Title"]"
+         Size="ModalSize.Small"
+         Class="tm-rte-image-dialog tm-rte-dialog"
+         CloseOnOverlayClick="@CloseOnBackdropClick"
+         CloseOnEscape="true"
+         ShowCloseButton="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         InitialFocusTargetId="@_urlInputId"
+         OnClose="HandleClose">
+
+    <ChildContent>
+    <form id="@_formId" @onsubmit="InsertImage" @onsubmit:preventDefault novalidate>
+        <div class="tm-rte-form-group">
+            <label for="@_urlInputId">@Loc["TmRichEditor_ImageDialog_Url"]</label>
+            <input type="text"
+                   id="@_urlInputId"
+                   class="tm-rte-image-url-input"
+                   placeholder="@Loc["TmRichEditor_ImageDialog_UrlPlaceholder"]"
+                   @bind="_url"
+                   @bind:event="oninput" />
         </div>
-    </div>
-}
+        <div class="tm-rte-form-group">
+            <label for="@_altInputId">@Loc["TmRichEditor_ImageDialog_Alt"]</label>
+            <input type="text"
+                   id="@_altInputId"
+                   class="tm-rte-image-alt-input"
+                   placeholder="@Loc["TmRichEditor_ImageDialog_AltPlaceholder"]"
+                   @bind="_alt"
+                   @bind:event="oninput" />
+        </div>
+    </form>
+
+    </ChildContent>
+
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost"
+                  OnClick="HandleClose"
+                  Class="tm-rte-btn-cancel">
+            @Loc["Tm_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  Type="ButtonType.Submit"
+                  Disabled="@(!IsValidUrl())"
+                  Class="tm-rte-btn-insert"
+                  AdditionalAttributes="@(new Dictionary<string, object> { ["form"] = _formId })">
+            @Loc["TmRichEditor_ImageDialog_Insert"]
+        </TmButton>
+    </Footer>
+</TmModal>
 
 @code {
     /// <summary>
     /// Whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
-    
+
     /// <summary>
     /// Whether to close on backdrop click.
     /// </summary>
     [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
-    
+
     /// <summary>
     /// Callback when image is confirmed.
     /// </summary>
     [Parameter] public EventCallback<(string Url, string Alt)> OnConfirm { get; set; }
-    
+
     /// <summary>
-    /// Callback when dialog is cancelled.
+    /// Callback when dialog is cancelled (Escape, backdrop, close or cancel button).
     /// </summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes — the host editor's
+    /// content surface, so the caret that opened the dialog is not lost.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     private string _url = string.Empty;
     private string _alt = string.Empty;
+
+    // Per-instance ids: the input ids stay unique when a page hosts several editors.
+    private string _idSuffix { get; } = Guid.NewGuid().ToString("N")[..8];
+    private string _urlInputId => $"tm-rte-image-url-{_idSuffix}";
+    private string _altInputId => $"tm-rte-image-alt-{_idSuffix}";
+    private string _formId => $"tm-rte-image-form-{_idSuffix}";
 
     private bool IsValidUrl()
     {
@@ -78,21 +102,14 @@
 
     private async Task InsertImage()
     {
+        // Re-validate on submit: Enter in a field runs this path too.
         if (!IsValidUrl()) return;
 
         await OnConfirm.InvokeAsync((_url, _alt));
         Reset();
     }
 
-    private async Task OnBackdropClick()
-    {
-        if (CloseOnBackdropClick)
-        {
-            await OnCancel.InvokeAsync();
-        }
-    }
-
-    private async Task OnCancelClick()
+    private async Task HandleClose()
     {
         await OnCancel.InvokeAsync();
     }

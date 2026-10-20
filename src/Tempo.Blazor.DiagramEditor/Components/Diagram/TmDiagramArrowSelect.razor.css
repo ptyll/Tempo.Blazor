@@ -6,15 +6,11 @@
 }
 
 .tm-diagram-arrow-select__trigger:hover {
-    border-color: var(--tm-color-primary, #3b82f6) !important;
+    border-color: var(--tm-color-primary) !important;
 }
 
 .tm-diagram-arrow-select__trigger:focus-visible {
     outline: none;
-    border-color: var(--tm-color-primary, #3b82f6) !important;
-    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle, #dbeafe);
-}
-
-.tm-diagram-arrow-select__option:hover {
-    background: var(--tm-color-surface-hover, #f3f4f6) !important;
+    border-color: var(--tm-color-primary) !important;
+    box-shadow: 0 0 0 2px var(--tm-color-primary-subtle);
 }

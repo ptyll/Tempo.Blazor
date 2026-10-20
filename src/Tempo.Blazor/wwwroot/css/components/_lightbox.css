@@ -1,123 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
-   TmImageLightbox (Section 24)
-   ═══════════════════════════════════════════════════════════════ */
-
-.tm-lightbox-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0,0,0,0.9);
-  z-index: var(--tm-z-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  outline: none;
-  animation: tm-fade-in var(--tm-transition-fast);
-}
-.tm-lightbox-container {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.tm-lightbox-close {
-  position: absolute;
-  top: -3rem;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  color: var(--tm-color-white);
-  background: none;
-  border: none;
-  border-radius: var(--tm-radius-md);
-  cursor: pointer;
-  transition: background-color var(--tm-transition-fast);
-  font-size: 1.5rem;
-}
-.tm-lightbox-close:hover { background-color: rgba(255,255,255,0.15); }
-.tm-lightbox-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  color: var(--tm-color-white);
-  background: rgba(255,255,255,0.1);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 2rem;
-  z-index: 2;
-  transition: background-color var(--tm-transition-fast);
-}
-.tm-lightbox-nav:hover:not(:disabled) { background: rgba(255,255,255,0.3); }
-.tm-lightbox-nav:disabled { opacity: 0.2; cursor: not-allowed; }
-.tm-lightbox-prev { left: -4rem; }
-.tm-lightbox-next { right: -4rem; }
-.tm-lightbox-image-wrapper {
-  position: relative;
-  max-width: 100%;
-  max-height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 12rem;
-  min-height: 12rem;
-}
-.tm-lightbox-image {
-  max-width: 100%;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: var(--tm-radius-md);
-  box-shadow: 0 0 40px rgba(0,0,0,0.5);
-}
-.tm-lightbox-counter {
-  position: absolute;
-  bottom: -2.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--tm-color-white);
-  font-size: var(--tm-font-size-sm);
-  background: rgba(255,255,255,0.15);
-  padding: var(--tm-space-1) var(--tm-space-4);
-  border-radius: var(--tm-radius-full);
-  backdrop-filter: blur(4px);
-  white-space: nowrap;
-}
-.tm-lightbox-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--tm-space-2);
-  color: var(--tm-color-gray-400);
-  font-size: var(--tm-font-size-sm);
-  width: 16rem;
-  height: 12rem;
-}
-
-/* Responsive lightbox */
-@media (max-width: 768px) {
-  .tm-lightbox-prev { left: 0.5rem; background: rgba(0,0,0,0.4); }
-  .tm-lightbox-next { right: 0.5rem; background: rgba(0,0,0,0.4); }
-  .tm-lightbox-close { top: 0.5rem; right: 0.5rem; }
-  .tm-lightbox-counter { bottom: 0.5rem; }
-}
-
-/* ═══════════════════════════════════════════════════════════════
    TmLightbox (Section 42)
    ═══════════════════════════════════════════════════════════════ */
 
 .tm-lightbox {
-  /* Overlay tier: must paint above sticky chrome (--tm-z-sticky 1020) and modals (--tm-z-modal 1040),
-     matching .tm-lightbox-overlay. A hardcoded 1000 left the close/nav buttons under TmTopBar. */
+  /* Overlay tier: must paint above sticky chrome (--tm-z-sticky 1020) and modals (--tm-z-modal 1040).
+     A hardcoded 1000 left the close/nav buttons under TmTopBar. */
   position: fixed; inset: 0; z-index: var(--tm-z-overlay, 1060);
   display: flex; align-items: center; justify-content: center; outline: none;
 }
@@ -139,7 +26,7 @@
   color: inherit;
   overflow: visible;
 }
-.tm-lightbox-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); }
+.tm-lightbox-backdrop { position: absolute; inset: 0; background: var(--tm-lightbox-scrim); }
 .tm-lightbox-content {
   position: relative; z-index: 1;
   display: flex; align-items: center; gap: var(--tm-space-2);
@@ -148,22 +35,93 @@
 .tm-lightbox-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
 .tm-lightbox-img { max-width: 80vw; max-height: 85vh; object-fit: contain; border-radius: var(--tm-radius-md); }
 .tm-lightbox-close, .tm-lightbox-prev, .tm-lightbox-next, .tm-lightbox-delete {
-  background: rgba(0,0,0,0.5); border: none; border-radius: 50%;
-  color: white; cursor: pointer; width: 2.5rem; height: 2.5rem;
+  background: var(--tm-lightbox-control-bg); border: none; border-radius: 50%;
+  color: var(--tm-lightbox-control-fg); cursor: pointer; width: 2.5rem; height: 2.5rem;
   display: flex; align-items: center; justify-content: center;
   transition: background var(--tm-transition-fast); flex-shrink: 0;
 }
 .tm-lightbox-close, .tm-lightbox-delete { position: absolute; }
-.tm-lightbox-close  { top: -3rem; right: 0; }
-.tm-lightbox-delete { top: -3rem; right: 3rem; }
+.tm-lightbox-close  { top: -3rem; inset-inline-end: 0; }
+/* The delete lives in the top-end chrome band beside the close on desktop. Below 640px it moves
+   into the footer flex row — see the media query at the end of the file. */
+.tm-lightbox-delete { top: -3rem; inset-inline-end: 3rem; }
 .tm-lightbox-close:hover,
 .tm-lightbox-prev:hover,
-.tm-lightbox-next:hover  { background: rgba(0,0,0,0.8); }
+.tm-lightbox-next:hover  { background: var(--tm-lightbox-control-bg-hover); }
 .tm-lightbox-delete:hover { background: var(--tm-color-danger); }
 .tm-lightbox-prev:disabled, .tm-lightbox-next:disabled { opacity: 0.3; cursor: not-allowed; }
+/* Keyboard focus ring, two-tone: a white outline over the dark chrome plus a dark outer ring,
+   so the indicator also reads where a light image edge passes underneath. There is no
+   --tm-color-black token, so the outer tone is the overlay dimmer — the existing contrast
+   token that paints black over arbitrary content in BOTH themes. Forced colors keeps working:
+   it forces box-shadow:none and paints the outline in the system color. */
+.tm-lightbox-close:focus-visible,
+.tm-lightbox-prev:focus-visible,
+.tm-lightbox-next:focus-visible,
+.tm-lightbox-delete:focus-visible {
+  outline: 2px solid var(--tm-color-white);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--tm-bg-overlay);
+}
 .tm-lightbox-footer {
   position: absolute; bottom: -2.5rem; left: 0; right: 0;
   display: flex; align-items: center; justify-content: center; gap: var(--tm-space-2);
 }
-.tm-lightbox-counter { color: rgba(255,255,255,0.8); font-size: var(--tm-font-size-sm); }
-.tm-lightbox-loading { color: rgba(255,255,255,0.7); font-size: var(--tm-font-size-sm); }
+/* The "1 of 8" pill. The footer centres it absolutely at bottom: -2.5rem; the pill itself only
+   paints (moved here from the removed legacy section, fill tokenized). */
+.tm-lightbox-counter {
+  color: var(--tm-color-white);
+  font-size: var(--tm-font-size-sm);
+  background: color-mix(in srgb, var(--tm-color-white) 15%, transparent);
+  padding: var(--tm-space-1) var(--tm-space-4);
+  border-radius: var(--tm-radius-full);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+.tm-lightbox-loading { color: var(--tm-lightbox-loading-fg); font-size: var(--tm-font-size-sm); }
+
+/* In RTL the strip mirrors: the next image lies to the LEFT — the buttons' logical insets below
+   already place prev at the right edge and next at the left, and the code swaps ArrowLeft/Right
+   with the direction — so the chevron glyphs flip to keep pointing where the action goes. The
+   :dir() pseudo-class reads the element's OWN resolved direction (inherited or set at any level
+   above it), not a hardcoded ancestor attribute — the same live probe the tm-rtl.js helper uses,
+   so a host that flips direction through CSS instead of the dir attribute mirrors too (m4). */
+.tm-lightbox-prev:dir(rtl) svg,
+.tm-lightbox-next:dir(rtl) svg {
+  transform: scaleX(-1);
+}
+
+/* Below 640px the image takes the whole row and the arrows sit over its edges, inside the
+   viewport (d49c9776). From 640px up the arrows sit beside the image as before. */
+@media (width < 640px) {
+  .tm-lightbox-content { width: calc(100vw - 2 * var(--tm-space-2)); max-width: none; }
+  /* A panorama's row can be SHORTER than the 44px arrows: the arrows centre on the row and their
+     tops reached up into the top-end chrome band (close/delete at -3rem), overlapping the delete
+     button. The row keeps one touch target of height, so the arrows never leave the image band. */
+  .tm-lightbox-content { min-height: var(--tm-touch-target); }
+  .tm-lightbox-image-wrap { min-width: 0; }
+  .tm-lightbox-img { max-width: 100%; max-height: 75vh; }
+  .tm-lightbox-prev,
+  .tm-lightbox-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+  .tm-lightbox-prev { inset-inline-start: var(--tm-space-2); }
+  .tm-lightbox-next { inset-inline-end: var(--tm-space-2); }
+  /* The top-end close grows to a touch target too. The DELETE moves out of the chrome band
+     altogether: it sat at -3rem next to the close, on the same corner the arrows' upper ends
+     can reach on a short (panorama) row. In the footer flex row (below the counter pill) it
+     keeps its 44px target in the bottom band, a full --tm-space-2 clear of the content row the
+     arrows live in — the clearance below moves the footer down by that same space (M2). */
+  .tm-lightbox-close { width: var(--tm-touch-target); height: var(--tm-touch-target); }
+  .tm-lightbox-footer .tm-lightbox-delete {
+    position: static;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+  .tm-lightbox-footer { bottom: calc(-2.5rem - var(--tm-space-2)); }
+}

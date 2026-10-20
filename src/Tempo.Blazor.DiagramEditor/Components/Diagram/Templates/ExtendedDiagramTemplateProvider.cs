@@ -6,12 +6,34 @@ namespace Tempo.Blazor.Components.Diagram.Templates;
 /// <summary>Provides Tempo-original templates for extended stencil libraries.</summary>
 public sealed class ExtendedDiagramTemplateProvider : IDiagramTemplateProvider
 {
+    private Lazy<Task<IEnumerable<DiagramTemplateCategory>>> _categories =
+        new(LoadCategoriesAsync, LazyThreadSafetyMode.ExecutionAndPublication);
+
     /// <inheritdoc />
     public int Priority => 10;
 
     /// <inheritdoc />
     public Task<IEnumerable<DiagramTemplateCategory>> GetTemplateCategoriesAsync()
     {
+        var lazy = Volatile.Read(ref _categories);
+        try
+        {
+            return lazy.Value;
+        }
+        catch
+        {
+            // A faulted Lazy stays faulted forever: swap in a fresh one (only if the cached
+            // value is still the one that faulted) so the next call retries the build.
+            Interlocked.CompareExchange(ref _categories,
+                new Lazy<Task<IEnumerable<DiagramTemplateCategory>>>(LoadCategoriesAsync, LazyThreadSafetyMode.ExecutionAndPublication),
+                lazy);
+            throw;
+        }
+    }
+
+    private static Task<IEnumerable<DiagramTemplateCategory>> LoadCategoriesAsync()
+    {
+        // Documents are built (and thumbnails generated) once, on first use, thread-safely.
         IEnumerable<DiagramTemplateCategory> categories =
         [
             new()
@@ -78,7 +100,8 @@ public sealed class ExtendedDiagramTemplateProvider : IDiagramTemplateProvider
             Name = name,
             Category = category,
             Tags = tags,
-            DocumentJson = documentJson
+            DocumentJson = documentJson,
+            ThumbnailUrl = DiagramTemplateThumbnails.FromDocumentJson(documentJson)
         };
 
     private static string BuildUml25ClassDocument()

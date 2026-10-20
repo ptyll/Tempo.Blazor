@@ -48,6 +48,42 @@ public class TmCopyButtonTests : LocalizationTestBase
     }
 
     [Fact]
+    public void CopyButton_Default_ShowsNoVisibleLabel()
+    {
+        // Frozen default: the button stays icon-only. The label is the accessible name.
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me"));
+
+        cut.FindAll(".tm-copy-button-label").Should().BeEmpty();
+        cut.Find(".tm-copy-button").GetAttribute("aria-label").Should().Be("Copy to clipboard");
+    }
+
+    [Fact]
+    public void CopyButton_ShowLabel_RendersTheLocalizedLabel_AndSwapsItWhenCopied()
+    {
+        JSInterop.SetupVoid("navigator.clipboard.writeText", "copy me").SetVoidResult();
+
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me")
+            .Add(x => x.ShowLabel, true));
+
+        VisibleLabel(cut).Should().Be("Copy");
+        cut.Find(".tm-copy-button").ClassList.Should().Contain("tm-copy-button--labelled");
+
+        cut.Find(".tm-copy-button").Click();
+
+        VisibleLabel(cut).Should().Be("Copied");
+        // The accessible name keeps the historical long form until the action completes.
+        cut.Find(".tm-copy-button").GetAttribute("aria-label").Should().Be("Copied");
+
+        // L10: the swap is visible, but a screen reader needs it announced. A polite live region
+        // carries "Copied" and is visually hidden so it never changes the layout.
+        var status = cut.Find("[role='status']");
+        status.TextContent.Trim().Should().Be("Copied");
+        status.ClassList.Should().Contain("tm-sr-only");
+    }
+
+    [Fact]
     public void CopyButton_Click_ShowsSuccessState()
     {
         // Use bUnit's JSInterop to mock clipboard call
@@ -61,4 +97,27 @@ public class TmCopyButtonTests : LocalizationTestBase
         // After click, should show success state
         cut.Find(".tm-copy-button").ClassList.Should().Contain("tm-copy-button--copied");
     }
+
+    [Fact]
+    public void ShowLabel_InactiveLabel_StaysInLayout_SoTheButtonDoesNotJump()
+    {
+        // tm-sr-only is position:absolute and would drop the inactive label out of the shared grid
+        // cell; the inactive label must stay in flow (visibility:hidden) to reserve its width.
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me")
+            .Add(x => x.ShowLabel, true));
+
+        var labels = cut.FindAll(".tm-copy-button-label");
+        labels.Should().HaveCount(2);
+        labels.Should().NotContain(label => label.ClassList.Contains("tm-sr-only"));
+        var hidden = labels.Single(label => label.ClassList.Contains("tm-copy-button-label--hidden"));
+        hidden.GetAttribute("aria-hidden").Should().Be("true");
+    }
+
+    // The labelled button renders both states so the wider one reserves the width; the visible label
+    // is the one that is not hidden.
+    private static string VisibleLabel(IRenderedComponent<TmCopyButton> cut) =>
+        cut.FindAll(".tm-copy-button-label")
+            .Single(label => !label.ClassList.Contains("tm-copy-button-label--hidden"))
+            .TextContent.Trim();
 }

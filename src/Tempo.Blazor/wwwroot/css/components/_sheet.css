@@ -57,6 +57,7 @@
 }
 
 .tm-sheet__handle:focus-visible .tm-sheet__handle-bar {
+    outline: 2px solid transparent;
     box-shadow: var(--tm-focus-ring);
 }
 

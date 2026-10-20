@@ -30,8 +30,10 @@ Anchored panels carry `MobilePresentation` (`PanelPresentation`):
   popover otherwise. The choice resolves from the **viewport** (the `TmLayoutScopes.Viewport`
   cascade or the internal probe), because the sheet is positioned against the viewport; the
   popover's *size* still follows the **trigger's container**. `TmDropdown` and `TmPopover` keep
-  `Auto` as their wrapper default; the column picker and the date/time pickers opt into `Auto`
-  explicitly.
+  `Auto` as their wrapper default; the column picker, the date/time pickers and — since F11 —
+  the deliberate `TmContextMenu` / `TmSplitButton` / `TmNotificationBell` opt-ins
+  (`MobilePresentation="Auto"`, sheet title from `SheetTitle` or a per-component localized
+  default) opt into `Auto` explicitly.
 - `Sheet` — forced, renders without measurement (testable in bUnit without a DOM).
 
 **A surface whose anchor keeps focus never presents as a sheet.** A typeahead
@@ -41,12 +43,15 @@ lost. Those consumers stay on the `Popover` default — enforced by a source swe
 `TmOverlayPanelDefaultPresentationTests`. If a combobox ever wants a sheet, it needs a
 search-in-sheet design: the input moves into the sheet header and is autofocused there.
 
-> **F4 note — editor and formatting-toolbar overflow menus.** An overflow menu opened from an
-> editor or formatting toolbar counts as "the anchor keeps focus/selection": the user's text
-> selection lives in the anchor surface and a modal sheet would move focus to the sheet header,
-> collapsing the selection and any half-typed formatting command. Such menus stay on the
-> `Popover` presentation — or, if a host genuinely needs the sheet, they must restore the
-> selection when the sheet closes. Do not opt them into `Auto` in the F4 pass.
+> **F4 decision — toolbar overflow menus.** The core `TmToolbar` is an *action* toolbar: its "More"
+> menu holds commands (Export, Delete, …) and the toolbar owns no text selection, so its menu
+> follows the F3 default and is `Auto` — a bottom sheet on a phone-sized viewport
+> (`TmToolbar.OverflowPresentation="Auto"`). An **editor or formatting toolbar** is different:
+> the user's text selection lives in the surface the toolbar belongs to, and a modal sheet moves
+> focus to its header, collapsing the selection and any half-typed formatting command. Such a host
+> sets `OverflowPresentation="Popover"` — or, if it genuinely needs the sheet, restores the
+> selection when the sheet closes. `TmToolbar` cannot tell the two apart, so the choice is
+> explicit and documented here rather than guessed.
 
 In sheet mode the panel **composes `TmDrawer Position=Bottom`** (content height, `Modal`) — it
 never copies sheet, gesture or focus logic. The sheet header shows `Title` (fall back:
@@ -71,8 +76,9 @@ focus on the first `menuitem`/`option`, not on Done.
 
 ### The action-surface overflow menu (F5)
 
-`TmMobileActionBar` (and F4's toolbar overflow, which reuses the same contract) opens its
-"More" menu through `TmOverlayPanel` — the anchored popover on a desktop viewport, the shared
+`TmMobileActionBar` and the F4 `TmToolbar` overflow share ONE menu host (the internal
+`ActionOverflowMenu`, opened from C# because a Razor tag cannot bind an internal component) and
+open their "More" menu through `TmOverlayPanel` — the anchored popover on a desktop viewport, the shared
 bottom sheet on a mobile one. The host contract every action surface must honour:
 
 - The trigger is a real element passed as the panel's explicit `Anchor` (never a virtual
@@ -80,11 +86,25 @@ bottom sheet on a mobile one. The host contract every action surface must honour
   panel's stable `Id`, and the menu renders `role="menu"` / `role="menuitem"`.
 - The initial focus moves to the first **enabled** menuitem (never a disabled one — `focus()`
   on a disabled button is a no-op and would leave focus on `<body>`); when every overflow item
-  is disabled, the trigger renders disabled instead of opening an inert menu.
+  is disabled, the trigger renders disabled instead of opening an inert menu. A menu that OPENED
+  while its anchor was scrolled out of the viewport is parked `visibility:hidden` and the first
+  `focus()` no-ops — overlay.js reports the panel's first real visibility once per open (only
+  when focus is free — nowhere, or still on the anchor trigger — and stamped with the open's
+  sequence, so a report of an earlier open that lands after a close-and-reopen is dropped) and
+  `TmOverlayPanel` re-raises `OnOpened`, so the pending initial focus lands when the anchor
+  scrolls back into view.
 - The default invocation closes the menu **before** running the action, and focus returns to
   the trigger on every close path — Escape, outside pointer, Done and selection — in the
   popover presentation too (a light popover close does not restore focus by itself; the
   surface restores it, the `TmDropdown.SelectItemAsync` pattern).
+- The menu **keyboard** belongs to the panel, not to each host: `TmOverlayPanel` attaches
+  `tm-menu-nav.js` to every `Role="menu"` panel (the popover element or the sheet's content
+  wrapper) once per open — ArrowDown/ArrowUp rove through the enabled items and wrap, Home/End
+  jump to the ends, typeahead focuses the next label that starts with the typed characters
+  (diacritics and case ignored), and the focused item is the only tab stop. Disabled and hidden
+  items are skipped; Enter/Space stay with the native `<button>` (one activation per press) and
+  Escape stays with the overlay. `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both
+  overflow menus get it from the one owner of the role.
 - `KeepMenuOpen="true"` is for actions that open another surface (a confirm dialog): the menu
   stays, the surface promotes *after* it (rule 8), and the host closes the menu afterwards
   through `CloseMoreAsync()` — focus then returns to the trigger.
@@ -148,7 +168,7 @@ editor) keeps focus.
    `TmCommandPalette` backdrop, the `TmKeyboardShortcutsHelp` overlay, the `TmLightbox`
    focus-scope root, the `TmGanttImportDialog` overlay and the two toast containers
    (`TmToastContainer`, `TmNotificationToastContainer`) carry `popover="manual"` and promote
-   themselves at open through the shared promote helper (`TopLayerInterop` → `tm-sheet.js`). A
+   themselves at open through the shared promote helper (`TopLayerInterop` → `tm-top-layer.js`; `tm-sheet.js` re-exports the same functions, so there is one pinned-root registry). Modal overlay roots promoted through `TopLayerInterop` activate their focus scope through `PromotedScopeGate`: promote first, then flip `TmFocusScope.Active` — the trap's initial-focus move can never run against a still-unpromoted (UA `display:none`) popover root, and a promote that completes after its owner closed is dropped (`TmOverlayPanel`'s `TrapFocus` gates on overlay.js `open()` instead). A
    surface opened from inside one (a dialog from a sheet, a toast from a dialog) promotes *after*
    it, so it always paints above — DOM stays in place and the trap/inert/Escape order are
    untouched. A host cannot cover an open modal surface with a z-index band anymore; only another
@@ -172,19 +192,25 @@ editor) keeps focus.
      layout-level siblings, outside `@Body` wrappers.** The walk inerts every sibling of the
      trap's ancestors; a container nested inside a `@Body` wrapper is inerted with the wrapper
      and the exemption on the container never gets to act.
-   - **Non-modal anchored popovers are intentionally NOT promoted.** A dropdown, menu or picker
-     popup (`TmOverlayPanel` with `TrapFocus` off) is a light surface and stays in the z-index
-     band by design — promoting it would hand every light popup top-layer membership and the
-     stacking contract above would no longer say anything. Consequence, stated rather than
-     discovered: a toast already pinned on top can paint OVER a dropdown opened after it (the
-     toast re-raises on every promotion; the dropdown never promotes). That trade is accepted
-     for light surfaces; a popup that must paint above a toast is a modal surface and promotes
-     like one.
+    - **A panel overlay.js opens promotes itself, and that promotion re-raises pinned toasts.**
+      showPopover() puts the panel in the top layer but does not know about the pinned-root
+      registry, so overlay.js promotes through the shared helper instead of calling it directly.
+      That covers the modal popups which never reach TopLayerInterop: a date, date-time or
+      date-range picker sets TrapFocus, so its calendar is a dialog promoted from here. A toast
+      already on screen therefore stays above a popup opened after it, modal or not.
 9. **Known non-promoted surfaces (recorded exceptions).** Dialogs living in the extension
-   packages still paint in their z-index band and were NOT promoted in this pass: the rich-text
-   editor link/image/table/video/find dialogs, the Notion editor package surfaces, the
-   spreadsheet package dialogs, the document-editor package dialogs, the signing package dialogs
-   and the dashboard widget-selector layer (`_dashboard.css`). Opened while a core promoted
+   packages still paint in their z-index band and were NOT promoted in this pass: the
+   Notion editor package surfaces, the spreadsheet package dialogs, the document-editor
+   package dialogs and the dashboard widget-selector layer (`_dashboard.css`). (The
+   rich-text editor link/image/table/video/find dialogs migrated onto `TmModal` in 2.9.1
+   and promote themselves; the signing package has no dialogs.) Opened while a core promoted
    surface is up they can paint under it — migrate them onto `TmModal`/`TmDialog` (which promote
    themselves) one surface at a time, and never cover them from package CSS with a z-index arms
    race. Any NEW modal surface must promote through `TopLayerInterop`.
+
+10. **A menu that migrates onto `TmOverlayPanel Role="menu"` deletes its own arrow handlers.** The panel attaches
+    `tm-menu-nav.js` (ArrowUp/ArrowDown/Home/End, typeahead, roving tabindex, Tab-out dismissal of a popover
+    menu); a second `@onkeydown` arrow handler on the host moves focus twice per press. A host also owns the initial
+    focus (first enabled item through `OnOpened` -> `focusFirst`, as `TmDropdown`, `TmSplitButton` and
+    `TmContextMenu` do through `MenuNavInterop`) and the focus return to its trigger on an item activation
+    (rule 4).

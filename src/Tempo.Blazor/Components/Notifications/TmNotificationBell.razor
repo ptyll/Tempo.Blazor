@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Notifications
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Overlay
 @implements IDisposable
 
 <div class="tm-notification-bell @Class @(_hasNew ? "tm-notification-bell--pulse" : "")"
@@ -23,7 +24,12 @@
        ancestor's overflow/transform can no longer clip it. Bottom + End + 8px replaces the old
        top:calc(100%+0.5rem);right:0; the fixed 360px width stays in CSS. The anchor is the BUTTON
        (Align.End keeps the dropdown's right edge identical to the old root anchor) so overlay.js's
-       Escape focus restore lands on a natively focusable element — the wrapper div cannot take it. *@
+       Escape focus restore lands on a natively focusable element — the wrapper div cannot take it.
+       F11: the panel opts into the shared bottom sheet on a mobile viewport through
+       MobilePresentation (default Popover keeps the anchored popover at every width); the sheet
+       header is titled with SheetTitle or the localized TmNotificationBell_SheetTitle default,
+       and the in-panel title (which would duplicate the sheet header) is dropped by the
+       sheet-context rule in _notification-bell.css. *@
     <TmOverlayPanel Anchor="_buttonRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenFromJsAsync"
@@ -32,6 +38,8 @@
                     Offset="8"
                     Role="dialog"
                     AriaLabelledBy="@_titleId"
+                    Title="@EffectiveSheetTitle"
+                    MobilePresentation="MobilePresentation"
                     Class="tm-notification-bell__dropdown">
             <div class="tm-notification-bell__header">
                 <span id="@_titleId" class="tm-notification-bell__title">@Loc["TmNotificationBell_AriaLabel"]</span>
@@ -57,9 +65,16 @@
                 {
                     @foreach (var n in VisibleNotifications)
                     {
-                        <div class="tm-notification-bell__item @(n.IsRead ? "" : "tm-notification-bell__item--unread")"
-                             @onclick="() => OnItemClickAsync(n)">
-                            <div class="tm-notification-bell__avatar">
+                        @* 2.9.1: the entry is a native <button> — a div @onclick was a keyboard trap
+                           (WCAG 2.1.1). The item holds no nested interactive element (avatar, message,
+                           time and dot are all presentation), so the whole entry is ONE button; the
+                           inner wrappers are spans because a button's content model is phrasing
+                           content — the class selectors keep the previous styling. The button keeps
+                           the native Enter/Space activation: no @onkeydown emulation here. *@
+                        <button type="button"
+                                class="tm-notification-bell__item @(n.IsRead ? "" : "tm-notification-bell__item--unread")"
+                                @onclick="() => OnItemClickAsync(n)">
+                            <span class="tm-notification-bell__avatar">
                                 @if (!string.IsNullOrEmpty(n.Actor?.AvatarUrl))
                                 {
                                     <img src="@n.Actor.AvatarUrl" alt="" />
@@ -68,16 +83,20 @@
                                 {
                                     <TmIcon Name="@TypeIcon(n.Type)" Size="IconSize.Sm" />
                                 }
-                            </div>
-                            <div class="tm-notification-bell__content">
+                            </span>
+                            <span class="tm-notification-bell__content">
                                 <span class="tm-notification-bell__message">@n.Title</span>
-                                <span class="tm-notification-bell__time">@FormatTime(n.CreatedAt)</span>
-                            </div>
+                                <time class="tm-notification-bell__time" datetime="@n.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
+                            </span>
                             @if (!n.IsRead)
                             {
+                                @* m6 (review): the unread dot is aria-hidden decoration — without a
+                                   text alternative a screen reader hears two identical entries. The
+                                   sr-only span names the unread state. *@
+                                <span class="tm-sr-only">@Loc["TmNotificationBell_Unread"]</span>
                                 <span class="tm-notification-bell__dot" aria-hidden="true"></span>
                             }
-                        </div>
+                        </button>
                     }
                 }
                 else
@@ -96,6 +115,24 @@
     [Parameter] public string? Class { get; set; }
     [Parameter] public string CurrentUserId { get; set; } = "demo";
     [Parameter] public EventCallback<bool> OnDropdownOpenChanged { get; set; }
+
+    /// <summary>
+    /// How the notification panel presents on a narrow viewport. Default
+    /// <see cref="PanelPresentation.Popover"/>: the anchored popover at every width.
+    /// <see cref="PanelPresentation.Auto"/> opts into the shared bottom sheet on a mobile
+    /// viewport (the anchored popover otherwise) — the choice resolves from the viewport scope.
+    /// A forced value renders that presentation without measuring.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
+
+    /// <summary>
+    /// Title of the sheet header when the panel presents as a bottom sheet. When
+    /// <see langword="null"/> (default), the localized <c>TmNotificationBell_SheetTitle</c>
+    /// default is used. Has no effect on the popover presentation, which stays named by the
+    /// visible in-panel title (aria-labelledby, N326).
+    /// </summary>
+    [Parameter] public string? SheetTitle { get; set; }
+
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
@@ -110,8 +147,12 @@
 
     private int UnreadCount => _serviceUnreadCount;
 
+    // SheetTitle=null falls back to the localized per-component default. AriaLabelledBy still
+    // points at the visible in-panel title, so the popover contract (N326) is untouched.
+    private string EffectiveSheetTitle => string.IsNullOrEmpty(SheetTitle) ? Loc["TmNotificationBell_SheetTitle"] : SheetTitle!;
+
     private string AriaLabelText => UnreadCount > 0
-        ? Loc["TmNotificationBell_NewCount", UnreadCount]
+        ? Loc.Plural("TmNotificationBell_NewCount", UnreadCount)
         : Loc["TmNotificationBell_AriaLabel"];
 
     private IEnumerable<TmNotification> VisibleNotifications =>
@@ -121,6 +162,25 @@
     {
         NotificationService.OnChanged += OnNotificationsChanged;
         await LoadUnreadCountAsync();
+    }
+
+    /// <summary>Re-renders the stamps once the user zone arrives (the default registration via AddTempoBlazor()).</summary>
+    private TmUserZoneObserver? _userZoneObserver;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // After the first INTERACTIVE render: prerender has no JS interop, and the probe runs once
+        // per circuit. No-op unless the host registered ITmUserTimeZone (AddTempoBlazor does).
+        _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, () => InvokeAsync(StateHasChanged));
+        if (_userZoneObserver is not null)
+        {
+            await _userZoneObserver.ProbeAsync();
+        }
     }
 
     private async void OnNotificationsChanged()
@@ -203,15 +263,16 @@
         await LoadNotificationsAsync();
     }
 
-    private static string FormatTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt.ToUniversalTime();
-        if (diff.TotalMinutes < 1) return "just now";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
-        return dt.ToLocalTime().ToString("MMM d");
-    }
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>The shared formatter (B19). The bell used to carry a private English copy ("5m ago").</summary>
+    private string FormatTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
+
+    private string AbsoluteTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(dt);
 
     private static string TypeIcon(string type) => type switch
     {
@@ -226,5 +287,6 @@
     public void Dispose()
     {
         NotificationService.OnChanged -= OnNotificationsChanged;
+        _userZoneObserver?.Dispose();
     }
 }

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Diagram.Services",
+  "description": "Machine-readable reason a CSV/SQL import failed; UIs map it to a localized message. Explicit numeric values: the enum ships in the same (unreleased) version that introduced it, so the values may be pinned; Unknown reserves 0 for a reason outside the list.",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Services/DiagramImportException.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiagramImportError"
+}

@@ -82,7 +82,7 @@
     "packages": [
       {
         "name": "Tempo.Blazor",
-        "description": "Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation."
+        "description": "Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS/SK/FR), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation."
       },
       {
         "name": "Tempo.Blazor.PdfViewer",
@@ -709,7 +709,19 @@
       "description": "Parameter change raised by TmReportParameterPanel.",
       "packageId": "Tempo.Blazor.Reporting",
       "sourcePath": "src/Tempo.Blazor.Reporting/Models/ReportParameterChangedEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Parameter",
+          "kind": "Property",
+          "type": "ReportParameterDefinition"
+        },
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, ReportParameterValue>"
+        }
+      ]
     },
     {
       "itemName": "ReportParameterSubmitEventArgs",
@@ -719,7 +731,14 @@
       "description": "Parameter submit event raised by TmReportParameterPanel.",
       "packageId": "Tempo.Blazor.Reporting",
       "sourcePath": "src/Tempo.Blazor.Reporting/Models/ReportParameterSubmitEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, ReportParameterValue>"
+        }
+      ]
     },
     {
       "itemName": "ReportViewerExportResult",

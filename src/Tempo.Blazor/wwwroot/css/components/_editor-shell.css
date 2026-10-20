@@ -1,0 +1,376 @@
+/* ═══════════════════════════════════════════════════════
+   TmEditorShell — the responsive three-region editor frame
+   ═══════════════════════════════════════════════════════ */
+
+/* The shell root IS the layout-observer root (the Class is forwarded). It lays out its regions as
+   a column and fills the height the host gives it. The compound selector outranks the observer's
+   own `.tm-layout { display: block }`, whatever the stylesheet order. */
+.tm-layout.tm-editor-shell {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+    background: var(--tm-bg-workspace);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__header {
+    flex-shrink: 0;
+    padding: var(--tm-space-3) var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__toolbar {
+    flex-shrink: 0;
+    padding: var(--tm-space-2) var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__main {
+    flex: 1;
+    display: flex;
+    min-block-size: 0;
+    min-inline-size: 0;
+}
+
+.tm-editor-shell__canvas {
+    flex: 1;
+    min-inline-size: 0;
+    overflow: auto;
+    padding: var(--tm-space-4);
+}
+
+.tm-editor-shell__panel {
+    inline-size: var(--tm-editor-shell-panel-width, 280px);
+    flex-shrink: 0;
+    overflow: auto;
+    background: var(--tm-bg-surface);
+    border-inline-end: 1px solid var(--tm-color-border-subtle);
+}
+
+/* The first tablet frames render at the host width and jump once the C9 fit lands: until the
+   first fit computation the docked panels stay invisible (visibility, not display, so the layout
+   the fit measures is the final one). */
+.tm-editor-shell--fitting .tm-editor-shell__panel {
+    visibility: hidden;
+}
+
+.tm-editor-shell__panel--right {
+    border-inline-end: none;
+    border-inline-start: 1px solid var(--tm-color-border-subtle);
+}
+
+/* The single strip affordance between the canvas and a panel edge: shows a hidden panel, collapses
+   an expanded one. Stretches to the full region height so the hit area is generous. */
+.tm-editor-shell__panel-toggle {
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-6);
+    flex-shrink: 0;
+    padding: 0;
+    background: var(--tm-bg-surface);
+    color: var(--tm-color-text-muted);
+    border: none;
+    border-inline-end: 1px solid var(--tm-color-border-subtle);
+    cursor: pointer;
+}
+
+.tm-editor-shell__panel-toggle--right {
+    border-inline-end: none;
+    border-inline-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__panel-toggle:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__panel-toggle:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+/* The resize separator on a docked panel's inner edge. A 6px grabber (the pointer-capture drag lives
+   in tm-editor-shell.js; the arrow keys are handled in Blazor). Wider hit area on touch devices. */
+.tm-editor-shell__resizer {
+    align-self: stretch;
+    flex-shrink: 0;
+    inline-size: var(--tm-space-1-5);
+    margin-inline: calc(-0.5 * var(--tm-space-1-5));
+    position: relative;
+    z-index: 1;
+    cursor: col-resize;
+    touch-action: none;
+    background: transparent;
+}
+
+.tm-editor-shell__resizer:hover,
+.tm-editor-shell__resizer--dragging {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-editor-shell__resizer:focus-visible {
+    outline: 2px solid transparent;
+    background: var(--tm-color-primary-subtle);
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+/* Under a coarse pointer the 6px strip is a poor target: an invisible ::before widens the hit area
+   (the strip stays the visual affordance and the ARIA element). */
+@media (pointer: coarse) {
+    .tm-editor-shell__resizer::before {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 50%;
+        inline-size: var(--tm-space-6);
+        margin-inline-start: calc(-0.5 * var(--tm-space-6));
+    }
+}
+
+/* A collapsed panel: a slim rail carrying only the expand button (and the optional rail slot). */
+.tm-editor-shell__rail {
+    align-self: stretch;
+    inline-size: var(--tm-touch-target);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-2);
+    overflow-y: auto;
+    padding-block-start: var(--tm-space-2);
+    background: var(--tm-bg-surface);
+    border-inline-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__rail--right {
+    border-inline-end: none;
+    border-inline-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__rail .tm-editor-shell__panel-toggle {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    align-self: auto;
+    border: none;
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-editor-shell__status {
+    flex-shrink: 0;
+    padding: var(--tm-space-1) var(--tm-space-4);
+    font-size: var(--tm-text-xs, 0.75rem);
+    color: var(--tm-color-text-muted);
+    background: var(--tm-bg-surface);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
+/* ── Mobile ─────────────────────────────────────────────── */
+
+.tm-editor-shell__main--mobile {
+    flex-direction: column;
+}
+
+/* Tabs presentation: the strip, the regions, the status bar and the action bar stack in one column. */
+.tm-editor-shell__main--tabs {
+    gap: 0;
+}
+
+/* The stage is the positioned host of the inline (non-modal) panels sheet: the sheet fills it and
+   anchors to its bottom edge, and its snaps are fractions of this box. A size container so the
+   canvas can reserve the sheet's half-height snap in container units. The inline drawer root is
+   click-through (pointer-events:none, only its panel is interactive), so the canvas outside the
+   sheet panel keeps the pointer (F1). */
+.tm-editor-shell__stage {
+    position: relative;
+    flex: 1 1 0;
+    /* container-type:size sizes the stage from its parent only; an auto-height host would collapse
+       it to 0, so the stage keeps a floor that still shows the canvas and the sheet (F11). */
+    min-block-size: 15rem;
+    /* The sheet panel floor (whole panel, capped at the stage height where it is used); the host
+       overrides the token, the canvas reserve and the panel min-block read it (C8). */
+    --tm-editor-shell-sheet-min-block: 14rem;
+    display: flex;
+    flex-direction: column;
+    container-type: size;
+}
+
+.tm-editor-shell__main--mobile .tm-editor-shell__canvas {
+    flex: 1 1 0;
+    min-block-size: 0;
+}
+
+/* While the sheet sits at its first snap the lower part of the canvas is covered: reserve the
+   LOWEST snap fraction (the host-configurable --tm-editor-shell-sheet-reserve, set inline on the
+   stage; default 0.5) so the last block stays scrollable into view. The reserve never drops
+   below the sheet panel floor (the whole panel: header + tabs + body, C8) and never exceeds the
+   stage itself; both are host-overridable tokens. */
+.tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
+    padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
+}
+
+.tm-editor-shell__main--mobile > .tm-mobile-action-bar,
+.tm-editor-shell__main--mobile > .tm-editor-shell__status {
+    flex-shrink: 0;
+}
+
+/* The closed-state affordance of the mobile sheet: a labelled bar ("Blocks · Properties"). */
+.tm-editor-shell__panel-toggle--mobile {
+    inline-size: auto;
+    min-block-size: var(--tm-touch-target);
+    align-self: stretch;
+    gap: var(--tm-space-2);
+    padding-inline: var(--tm-space-3);
+    border: none;
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__panel-toggle-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The sheet surface itself (the class rides on the TmDrawer root). */
+.tm-editor-shell__sheet {
+    border-start-start-radius: var(--tm-radius-card);
+    border-start-end-radius: var(--tm-radius-card);
+}
+
+/* C8 panel floor: on a short stage the half snap can leave less than a usable panel under the
+   header and tabs, so the whole sheet PANEL (header + tabs + body) never shrinks below the token
+   height — and never past the stage itself. The sheet module measures fractions from rects, so
+   the floor stays consistent with the snaps. */
+.tm-editor-shell__sheet .tm-drawer__panel.tm-sheet__panel {
+    min-block-size: min(100%, var(--tm-editor-shell-sheet-min-block, 14rem));
+}
+
+.tm-editor-shell__sheet .tm-drawer__header {
+    gap: var(--tm-space-2);
+}
+
+.tm-editor-shell__sheet-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    margin: calc(-1 * var(--tm-space-1));
+    padding: 0;
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-editor-shell__sheet-close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__panel-heading {
+    margin: 0 0 var(--tm-space-2);
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__stacked-panel + .tm-editor-shell__panel-heading {
+    margin-block-start: var(--tm-space-4);
+}
+
+/* The tab strip inside the mobile sheet header. */
+.tm-editor-shell__tabs {
+    display: flex;
+    gap: var(--tm-space-1);
+    flex: 1;
+    min-inline-size: 0;
+}
+
+.tm-editor-shell__tab {
+    flex: 1;
+    min-inline-size: 0;
+    padding: var(--tm-space-2) var(--tm-space-1);
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: none;
+    border-block-end: 2px solid transparent;
+    cursor: pointer;
+    /* A tab label never breaks mid-word (fr "Propriétés" at 320): it stays on one line, and only
+       when a very long translation still does not fit does it ellipsise. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-editor-shell__tab:hover {
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__tab[aria-selected="true"] {
+    color: var(--tm-color-primary);
+    border-block-end-color: var(--tm-color-primary);
+}
+
+.tm-editor-shell__tab:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+.tm-editor-shell__tabpanel {
+    min-block-size: 0;
+}
+
+.tm-editor-shell__tabpanel[hidden] {
+    display: none;
+}
+
+/* Tabs presentation (Left | Canvas | Right): the strip is a one-row bar above the full-height
+   regions, never a stretched flex child (the base .tm-editor-shell__tabs flex:1 would give it the
+   height of the whole region). */
+.tm-editor-shell__tabs--region {
+    flex: 0 0 auto;
+    background: var(--tm-bg-surface);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__tabpanels {
+    flex: 1 1 0;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-editor-shell__tabpanels > .tm-editor-shell__tabpanel:not([hidden]) {
+    flex: 1 1 0;
+    overflow: auto;
+}
+
+.tm-editor-shell__sheet-panel {
+    min-block-size: 0;
+}
+
+/* ── Touch ──────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-editor-shell__panel-toggle {
+        inline-size: var(--tm-touch-target);
+    }
+
+    /* The mobile closed-state bar is a labelled, full-width bar: the 44px touch width of the
+       strip toggles must not clip its label. */
+    .tm-editor-shell__panel-toggle.tm-editor-shell__panel-toggle--mobile {
+        inline-size: auto;
+    }
+}

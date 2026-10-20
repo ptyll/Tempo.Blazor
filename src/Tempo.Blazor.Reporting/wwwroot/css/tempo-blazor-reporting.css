@@ -831,6 +831,16 @@
 }
 
 .tm-report-designer__page {
+    /* The design page is physical paper, theme-invariant like the diagram canvas
+       (core --tm-paper*, X10): re-point the surface/ink tokens so the page, its
+       bands and elements stay white with dark ink in a descendant-scoped dark
+       theme. Re-declared, not inherited — a var() substitutes where declared. */
+    --tm-bg-surface: var(--tm-paper);
+    --tm-bg-surface-secondary: var(--tm-paper-backdrop);
+    --tm-border-color: var(--tm-paper-border);
+    --tm-text-primary: var(--tm-paper-ink);
+    --tm-text-secondary: var(--tm-paper-ink-muted);
+    --tm-text-muted: var(--tm-paper-ink-muted);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     box-shadow: var(--tm-shadow-lg);
@@ -1054,12 +1064,18 @@
 }
 
 .tm-report-designer__preview {
-    background: var(--tm-bg-surface-secondary);
+    background: var(--tm-paper-backdrop);
     overflow: auto;
     padding: var(--tm-space-6);
 }
 
 .tm-report-designer__preview-page {
+    /* Same physical-paper contract as the design page (see __page). */
+    --tm-bg-surface: var(--tm-paper);
+    --tm-border-color: var(--tm-paper-border);
+    --tm-text-primary: var(--tm-paper-ink);
+    --tm-text-secondary: var(--tm-paper-ink-muted);
+    --tm-text-muted: var(--tm-paper-ink-muted);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     box-shadow: var(--tm-shadow-md);
@@ -1121,4 +1137,17 @@
     .tm-report-designer__save-panel {
         border-top: 1px solid var(--tm-border-color);
     }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Explicit enumeration of every Tempo.Blazor.Reporting animated subject (mirrors the core block in
+   animations.css and the DiagramEditor package block, never a universal selector).
+   Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline
+   (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
+@media (prefers-reduced-motion: reduce) {
+  .tm-report-viewer__drillthrough {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+}
 }

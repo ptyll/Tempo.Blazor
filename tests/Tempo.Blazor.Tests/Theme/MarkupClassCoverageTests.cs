@@ -115,10 +115,15 @@ public sealed class MarkupClassCoverageTests
         "tm-currency-input__manual-rate",
         "tm-currency-input__row",
         "tm-currency-input__spinner",
-        "tm-dashboard-menu-item--action",
+        // Fáze 1 review: the switcher's create-new entry became a native styled button —
+        // .tm-dashboard-menu-item--action gained its rule in _dashboard.css and left the
+        // population.
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
+        // AllowExportSelected: the scope choice reuses .tm-data-table__export-item; the extra
+        // class only marks the choice, and the selected state has its own rule.
+        "tm-data-table__export-scope",
         "tm-date-today-btn",
         "tm-datetime-range-end",
         "tm-datetime-range-start",
@@ -129,7 +134,16 @@ public sealed class MarkupClassCoverageTests
         "tm-dod-mode-link",
         "tm-dod-new-folder-confirm",
         "tm-dod-rename-confirm",
-        "tm-dropdown-trigger",
+        // DiagramEditor redesign phase 1 (755cd593): the disabled-dropdown rule
+        // (.tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger in _dropdown.css) now
+        // covers the trigger — the entry left the unstyled population, struck off.
+        // F4 dashboard reorder: the live region is visually carried by the shared .tm-sr-only,
+        // and the compact move buttons reuse .tm-widget-btn (the compound compact-edit rules in
+        // _dashboard.css size them); the classes themselves stay intentionally rule-free.
+        "tm-dashboard-live-region",
+        "tm-widget-move-btn",
+        "tm-widget-move-btn--down",
+        "tm-widget-move-btn--up",
         "tm-entity-picker__recent-item",
         "tm-export-options-section",
         "tm-fab__item-label",
@@ -153,7 +167,6 @@ public sealed class MarkupClassCoverageTests
         "tm-gantt-task-panel__section-label",
         "tm-gantt__notification-settings",
         "tm-gantt__sidebar-drawer-title",
-        "tm-icon-columns",
         "tm-import-wizard__upload-input",
         "tm-input--readonly",
         "tm-keyboard-shortcuts-category",
@@ -170,7 +183,8 @@ public sealed class MarkupClassCoverageTests
         "tm-mvl-list-subtitle",
         "tm-mvl-list-title",
         "tm-mvl-loading",
-        "tm-overlay",
+        // ("tm-overlay" left the markup with the overlay migration — TmModal's overlay is
+        // .tm-modal-overlay, TmOverlayPanel's is .tm-overlay-panel — so its entry is struck off.)
         // F3 review round 1: the sheet content wrapper (T2) is a semantics/ARIA hook — it carries
         // role/id/aria-labelledby and the consumer's AdditionalAttributes — and needs no paint.
         "tm-overlay-panel-sheet__content",
@@ -179,9 +193,13 @@ public sealed class MarkupClassCoverageTests
         "tm-pagination-prev",
         "tm-query-input__overlay-text",
         "tm-rating__star--empty",
-        "tm-rte-btn-cancel",
-        "tm-rte-btn-insert",
+        // F10 moved the RTE dialogs onto TmModal: the footer buttons became TmButtons whose
+        // Class="tm-rte-btn-cancel" / Class="tm-rte-btn-insert" (capital-C component parameters)
+        // the sweep's class="…" derivation no longer collects, so the entries left the
+        // population (2.9.1).
         "tm-rte-emoji-btn",
+        // F10's table dialog emits this label hook with no rule (2.9.1).
+        "tm-rte-table-preview-label",
         "tm-rte-token-loading",
         "tm-scheduler-event",
         "tm-scheduler-event-dot",
@@ -371,7 +389,25 @@ public sealed class MarkupClassCoverageTests
     [
         new Scope("Tempo.Blazor", "Tempo.Blazor", UnstyledMarkupClasses,
             MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false,
-            ExpectedUnmeasurableStems: 36),
+            // F11 (2.9.1): TmRichEditorFull's @code moved to a .razor.cs, so its quoted
+            // id-prefix literal ("tm-rte-editor-{Guid…}") joined the scanned population
+            // (the same literal in TmRichEditorSimple stays inside the .razor @code, which
+            // the sweep does not read) — 38 → 39.
+            // F2 dashboard redesign: TmDashboard's @code moved to a .razor.cs for the 1200-line
+            // ceiling, so its id-prefix literals joined the scanned population — the three
+            // pre-existing ids ("tm-dashboard-views-", "tm-dashboard-name-", "tm-widget-content-")
+            // and the three new chrome ids ("tm-dashboard-title-", "tm-widget-title-",
+            // "tm-widget-desc-") — 39 → 45.
+            // F4 dashboard reorder: the drag-handle keyboard instructions id
+            // ("tm-dashboard-drag-instructions-{Guid…}") joined the scanned population — 45 → 46.
+            // DiagramEditor redesign phase 6 (X2): TmEditorShell's extra sheet tabpanel id prefix
+            // ("tm-editor-shell-extra-panel-{Guid…}") lives in the new TmEditorShell.Extra.razor.cs
+            // partial — 47 → 48.
+            // AllowExportSelected: the empty-selection explanation id is per table
+            // ("tm-data-table-export-scope-empty-" + Guid), so two tables on one page do not share
+            // an id. The sweep counts the prefix — 48 → 49. (The 50th stem,
+            // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
+            ExpectedUnmeasurableStems: 50),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

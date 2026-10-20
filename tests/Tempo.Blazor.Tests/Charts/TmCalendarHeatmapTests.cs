@@ -31,7 +31,7 @@ public class TmCalendarHeatmapTests : LocalizationTestBase
         string expectedColumn,
         string expectedRow)
     {
-        using var _ = UseCulture(cultureName);
+        using var _ = CultureScope.Use(cultureName);
 
         var cut = Render<TmCalendarHeatmap>(parameters => parameters
             .Add(component => component.Values, NoValues)
@@ -331,20 +331,5 @@ public class TmCalendarHeatmapTests : LocalizationTestBase
     }
 
     private static IDisposable UseCulture(string name)
-    {
-        var previousCulture = CultureInfo.CurrentCulture;
-        var previousUiCulture = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(name);
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(name);
-        return new CultureRestore(previousCulture, previousUiCulture);
-    }
-
-    private sealed class CultureRestore(CultureInfo culture, CultureInfo uiCulture) : IDisposable
-    {
-        public void Dispose()
-        {
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = uiCulture;
-        }
-    }
+        => CultureScope.Use(name);
 }

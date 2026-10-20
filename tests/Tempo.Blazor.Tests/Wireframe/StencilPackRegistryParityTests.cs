@@ -23,7 +23,6 @@ public class StencilPackRegistryParityTests
         "TmShareLinkPanel",
         "TmSankeyChart",
         "TmSparkline",
-        "TmDashboard",
         "TmScheduler"
     ];
 
@@ -160,6 +159,65 @@ public class StencilPackRegistryParityTests
     }
 
     [Fact]
+    public void RadioGroupSchema_ExposesSegmentedAppearance()
+    {
+        // L12 (rule 13): the segmented appearance is a real rendering, so the wireframe schema must
+        // offer it. The built-in pack takes its props from this schema, so the two cannot drift.
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmRadioGroup");
+
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "appearance" &&
+            prop.Type == PropType.Enum &&
+            Equals(prop.Default, "Radio") &&
+            prop.Options!.SequenceEqual(new[] { "Radio", "Segmented" }) &&
+            prop.Category == "Appearance");
+    }
+
+    [Fact]
+    public void RadioGroupPack_RendersTheSegmentedAppearanceAsATray()
+    {
+        // The pack takes its props from the schema, so the parity that matters is the render: it must
+        // branch on the same appearance prop the schema declares, drawing the tray only when segmented.
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmRadioGroup\""));
+
+        entry.Should().Contain("appearance == \\\"Segmented\\\"");
+        entry.Should().Contain("appearance != \\\"Segmented\\\"");
+    }
+
+    [Fact]
+    public void ToolbarButtonSchema_ExposesPressedToggle()
+    {
+        // F12/C2: the toolbar button has a pressed (toggle) state, so the wireframe schema must offer
+        // it. The built-in pack takes its props from this schema, so the two cannot drift.
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmToolbarButton");
+
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "pressed" &&
+            prop.Type == PropType.Bool &&
+            Equals(prop.Default, false) &&
+            prop.Category == "Behavior");
+    }
+
+    [Fact]
+    public void ToolbarButtonPack_RendersThePressedStateAsAHighlight()
+    {
+        // Parity in the render: a pressed toolbar button draws highlighted (the subtle primary fill
+        // with the primary border), unpressed keeps the plain outline.
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmToolbarButton\""));
+
+        entry.Should().Contain("pressed ? token(\\\"color.primary.subtle\\\"");
+        entry.Should().Contain("pressed ? token(\\\"color.primary.border\\\"");
+    }
+
+    [Fact]
     public void BuiltInPack_MarksKnownLayoutContainers()
     {
         var pack = StencilPackSerializer.Deserialize(BuiltInStencilPackProvider.ReadPackJson());
@@ -170,6 +228,19 @@ public class StencilPackRegistryParityTests
             .Should().Contain(["TmCard", "TmSection", "TmModal", "TmDialog", "TmDrawer", "TmFormSection"]);
     }
 
+
+    [Fact]
+    public void DashboardPackEntry_MapsToSameNamedNativeRenderer()
+    {
+        // 2ee91e41: like the diagram editor (U18/X11), the dashboard stencil honors layoutMode,
+        // which needs the native renderer — the pack entry must delegate to it by name.
+        var registry = Registry();
+        var def = registry.GetDef("TmDashboard");
+
+        def.Should().NotBeNull();
+        def!.PackId.Should().Be("tempo");
+        def.NativeType.Should().Be("TmDashboard");
+    }
 
     [Theory]
     [MemberData(nameof(GoldenDeclarativeTypeData))]

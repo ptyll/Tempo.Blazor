@@ -29,6 +29,13 @@
       "isRequired": false
     },
     {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the panel renders its own heading. Hosts that already label the panel (a tab, a sheet tab) pass false. Defaults to true."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false
@@ -58,6 +65,12 @@
       "name": "OnPageSizeChanged",
       "type": "EventCallback",
       "isRequired": false
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Actions section's Delete button. The editor wires it to the same delete path as the toolbar command, so the selection delete stays undoable."
     },
     {
       "name": "SelectedTableCells",

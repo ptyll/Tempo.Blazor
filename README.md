@@ -38,6 +38,13 @@ dotnet add package Tempo.Reporting.Engine          # Processing, layout, PDF/PNG
 dotnet add package Tempo.Blazor.Reporting          # Blazor report viewer/designer/explorer components
 ```
 
+## Redesign foundation
+
+The responsive primitives the component redesign builds on — layout modes, the bottom
+sheet, the overlay top layer, the editor shell, toolbar overflow, the shared pointer
+drag — are mapped in [docs/redesign-foundation.md](docs/redesign-foundation.md). Each
+contract has its own document; that page links them.
+
 ## Document Editor Cutover
 
 `TmDocumentEditor` defaults to the canvas engine after the phase 25 cutover. Rollback and migration notes are in [docs/document-editor-canvas-cutover.md](docs/document-editor-canvas-cutover.md).
@@ -213,6 +220,8 @@ public sealed class MyStencilProvider : IDiagramStencilProvider
     <TmDataTableColumn TItem="Person" Title="Email" Field="p => p.Email" />
 </TmDataTable>
 ```
+
+For opt-in responsive layouts, card roles, keyboard navigation, and preserved defaults, see [the data-table redesign guide](docs/data-table-redesign.md).
 
 ## Embedding do vaší aplikace
 
@@ -503,7 +512,7 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 | Component | Description |
 |-----------|-------------|
 | `TmChart` | SVG charts (Bar, Line, Pie, Donut, HorizontalBar) |
-| `TmDashboard` | Widget dashboard with drag/resize grid |
+| `TmDashboard` | Widget dashboard with drag/resize grid ([docs/dashboard.md](docs/dashboard.md)) |
 | `TmTreeView` | Hierarchical tree with lazy loading |
 | `TmStepper` | Step-by-step wizard/progress stepper |
 | `TmWorkflowDesignerCanvas` | Visual workflow editor (drag nodes, draw transitions, zoom/pan) |
@@ -511,7 +520,7 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 
 ## Localization
 
-Built-in support for English and Czech. Override with your own `ITmLocalizer`:
+Built-in support for English, Czech, Slovak and French. Override with your own `ITmLocalizer`:
 
 ```csharp
 builder.Services.AddTempoBlazor();

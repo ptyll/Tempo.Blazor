@@ -41,6 +41,12 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Raised when a user mention inside a comment is activated."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmNotionCommentDraftState>",
+      "isRequired": false,
+      "description": "Pass-through of the embedded panel's OnDraftChanged: forwards the panel's deduped TmNotionCommentDraftState transitions so a host rendering the section gets the same draft-guard visibility as the bare panel. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the host's own confirmation."
     }
   ],
   "subcategory": "UI"

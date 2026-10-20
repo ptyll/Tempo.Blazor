@@ -103,3 +103,135 @@ public enum DataToolbarMode
     /// </summary>
     ContentOnly
 }
+
+/// <summary>Column-menu affordance mode for a data table.</summary>
+public enum ColumnMenuMode
+{
+    /// <summary>Render no extra column menu button.</summary>
+    None,
+    /// <summary>
+    /// Render a kebab menu in each data column header, offering sort, pin, group, hide and filter
+    /// according to the column's own capabilities. Replaces the standalone pin button.
+    /// </summary>
+    Menu
+}
+
+/// <summary>Presentation of inline row edit actions.</summary>
+public enum EditActionsMode
+{
+    /// <summary>Icon actions in the edited row. The default; preserves current markup.</summary>
+    Icons,
+    /// <summary>Localized text buttons in the edited row. Mobile cards always use this.</summary>
+    Text,
+    /// <summary>Save and Cancel in the following row, spanning every rendered column.</summary>
+    Footer
+}
+
+/// <summary>Activation semantics for multi-view list cards.</summary>
+public enum CardActivation
+{
+    /// <summary>Cards retain button semantics.</summary>
+    Button,
+    /// <summary>Cards use an inner stretched link.</summary>
+    StretchedLink
+}
+
+/// <summary>Cell content layout for multi-view lists.</summary>
+public enum TableCellLayout
+{
+    /// <summary>Title and subtitle each keep their own table column. The default.</summary>
+    Inline,
+    /// <summary>The subtitle column is dropped and its value renders under the title in the same cell.</summary>
+    Stacked
+}
+
+/// <summary>Surface style of a data table or multi-view list.</summary>
+public enum DataTableAppearance
+{
+    /// <summary>Today's flat surface of a data table or multi-view list. No card class.</summary>
+    Plain,
+
+    /// <summary>Card surface. Adds <c>tm-data-table-wrapper--card-surface</c>.</summary>
+    Card
+}
+
+/// <summary>
+/// How <see cref="TmDataTable{TItem}"/> moves keyboard focus.
+/// <see cref="Rows"/> is the default and keeps today's row Tab stops.
+/// <see cref="Grid"/> is opt-in ARIA grid roving tabindex.
+/// </summary>
+public enum DataTableKeyboardNavigation
+{
+    /// <summary>Each data row is a Tab stop. Enter and Space activate the row. Arrow keys do not move cells.</summary>
+    Rows,
+
+    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell; Enter activates the row once and Space toggles selection.</summary>
+    Grid
+}
+
+/// <summary>Semantic role of a column when a data table or multi-view list is rendered as cards.</summary>
+public enum DataTableCardRole
+{
+    /// <summary>Regular card field.</summary>
+    Field,
+    /// <summary>Primary title shown for the card.</summary>
+    Title,
+    /// <summary>Badge-style value.</summary>
+    Badge,
+    /// <summary>Media content.</summary>
+    Media,
+    /// <summary>Omit this column from cards.</summary>
+    Hidden
+}
+
+/// <summary>Responsive presentation of a data table on mobile viewports.</summary>
+public enum DataTableMobileLayout
+{
+    /// <summary>Keep today's table markup unchanged. This is the default.</summary>
+    None,
+
+    /// <summary>Allow horizontal scrolling for the table on mobile viewports.</summary>
+    Scroll,
+
+    /// <summary>Render table rows as cards on mobile viewports.</summary>
+    Cards
+}
+
+/// <summary>
+/// Where <see cref="Filters.TmFilterBuilder"/> opens the field picker and editor.
+/// <see cref="Inline"/> is the default and keeps today's layout, including PickersPage.
+/// </summary>
+public enum FilterBuilderPresentation
+{
+    /// <summary>The picker and editor render in the document flow.</summary>
+    Inline,
+
+    /// <summary>The picker and editor open in a <c>TmOverlayPanel</c> anchored to Add filter, as a popover at every width.</summary>
+    Popover,
+
+    /// <summary>Same anchored panel as <see cref="Popover"/>, becoming a sheet on a narrow viewport.</summary>
+    Auto
+}
+
+/// <summary>
+/// Labels on the <c>TmMultiViewList</c> view switcher.
+/// <see cref="IconsOnly"/> is the default and keeps today's buttons.
+/// </summary>
+public enum ViewSwitcherLabels
+{
+    /// <summary>Icon only. The accessible name stays on <c>aria-label</c>.</summary>
+    IconsOnly,
+
+    /// <summary>Icon plus the localized view name.</summary>
+    IconsAndText
+}
+
+/// <summary>Fallback rendered in a multi-view list avatar slot when an item has no avatar URL.</summary>
+public enum AvatarFallback
+{
+    /// <summary>Render no avatar when the item has no avatar URL. This is the default.</summary>
+    None,
+
+    /// <summary>Render initials derived from the item's title when the item has no avatar URL.</summary>
+    Initials
+}

@@ -56,6 +56,12 @@
       "description": "When true, shows a delete button."
     },
     {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the element that receives focus when the lightbox closes. Null restores the element that held focus when it opened. TmImageGallery passes the thumbnail of the image on screen, so closing after browsing returns to where the user visually is."
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,

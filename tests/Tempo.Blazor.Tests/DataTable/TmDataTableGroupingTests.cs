@@ -27,12 +27,14 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     private IRenderedComponent<TmDataTable<GroupPerson>> RenderGroupableTable(
         bool showGrouping = true,
         bool groupsCollapsedByDefault = true,
-        EventCallback<IReadOnlyList<string>>? onGroupingChanged = null)
+        EventCallback<IReadOnlyList<string>>? onGroupingChanged = null,
+        DataTableAppearance appearance = DataTableAppearance.Plain)
     {
         return Render<TmDataTable<GroupPerson>>(p =>
         {
             p.Add(c => c.Items, People);
             p.Add(c => c.ShowGrouping, showGrouping);
+            p.Add(c => c.Appearance, appearance);
             p.Add(c => c.GroupsCollapsedByDefault, groupsCollapsedByDefault);
             if (onGroupingChanged.HasValue)
                 p.Add(c => c.OnGroupingChanged, onGroupingChanged.Value);
@@ -70,10 +72,13 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     // --- Drop Zone ---
 
     [Fact]
-    public void DataTable_ShowGrouping_RendersDropZone()
+    public void DataTable_ShowGrouping_RendersLocalizedLabel()
     {
-        var cut = RenderGroupableTable(showGrouping: true);
-        cut.FindAll(".tm-data-table-group-zone").Should().HaveCount(1);
+        var cut = RenderGroupableTable(showGrouping: true, appearance: DataTableAppearance.Card);
+
+        cut.FindAll(".tm-data-table-group-zone").Count.Should().Be(1);
+        cut.Find(".tm-data-table-group-label-prefix").TextContent.Should().Be("Group by");
+        cut.FindAll(".tm-data-table-group-placeholder").Should().HaveCount(1);
     }
 
     [Fact]
@@ -280,11 +285,15 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     [Fact]
     public async Task DataTable_GroupZone_ShowsChipsForGroupedColumns()
     {
-        var cut = RenderGroupableTable();
+        var cut = RenderGroupableTable(appearance: DataTableAppearance.Card);
 
         await cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Department"));
 
+        var chip = cut.Find(".tm-data-table-group-chip");
+        chip.ClassList.Should().Contain("tm-data-table-group-chip");
         cut.FindAll(".tm-data-table-group-chip").Should().HaveCount(1);
+        cut.Find(".tm-data-table-group-expand-all").ClassList.Should().Contain("tm-link-button");
+        cut.Find(".tm-data-table-group-collapse-all").ClassList.Should().Contain("tm-link-button");
     }
 
     [Fact]

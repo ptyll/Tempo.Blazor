@@ -11,14 +11,24 @@
     </button>
 
     <div class="tm-diagram-toolbox__inner">
-        <h3 class="tm-diagram-toolbox__title">@Loc["TmDiagramToolbox_Title"]</h3>
+        @if (ShowTitle)
+        {
+            <h3 class="tm-diagram-toolbox__title">@Loc["TmDiagramToolbox_Title"]</h3>
+        }
+
+        @* Read-only (D9/R1 review): the tiles stay visible and focusable but inert; one
+           visually-hidden hint, referenced by aria-describedby from every tile, tells screen
+           readers why — per-tile text would repeat it once per stencil. *@
+        @if (ReadOnly)
+        {
+            <span id="@ReadOnlyHintId" class="tm-diagram-toolbox__sr-hint">@Loc["TmDiagramToolbox_ReadOnlyHint"]</span>
+        }
 
         <div class="tm-diagram-toolbox__search">
             <TmSearchInput Value="@_searchQuery"
                            ValueChanged="OnSearchChanged"
                            Placeholder="@Loc["TmDiagramToolbox_SearchPlaceholder"]"
-                           aria-label="@Loc["TmDiagramToolbox_SearchAriaLabel"]"
-                           Clearable="true" />
+                           aria-label="@Loc["TmDiagramToolbox_SearchAriaLabel"]" />
         </div>
 
         @if (_filteredLibraries.Count == 0)
@@ -42,12 +52,13 @@
                         <div class="tm-diagram-toolbox__category" data-palette-id="@palette.Id">
                             <button type="button" class="tm-diagram-toolbox__category-header"
                                     @onclick="() => TogglePalette(palette.Id)"
-                                    aria-expanded="@((!_collapsedPalettes.Contains(palette.Id)).ToString().ToLowerInvariant())">
-                                <TmIcon Name="@(_collapsedPalettes.Contains(palette.Id) ? IconNames.ChevronRight : IconNames.ChevronDown)" />
+                                    aria-expanded="@(IsPaletteExpanded(palette.Id).ToString().ToLowerInvariant())">
+                                @* Mockup: label first, chevron on the far right (margin-left: auto). *@
                                 <span>@GetLocalizedText(palette.NameResourceKey, palette.FallbackName)</span>
+                                <TmIcon Name="@(IsPaletteExpanded(palette.Id) ? IconNames.ChevronDown : IconNames.ChevronRight)" />
                             </button>
 
-                            @if (!_collapsedPalettes.Contains(palette.Id))
+                            @if (IsPaletteExpanded(palette.Id))
                             {
                                 <div class="tm-diagram-toolbox__category-body">
                                     @foreach (var stencil in palette.Stencils)
@@ -58,18 +69,22 @@
                                         <div class="@GetStencilItemCssClass(stencil)"
                                              data-stencil-id="@stencil.Id"
                                              data-stencil-kind="@GetStencilKindValue(stencil)"
-                                             draggable="true"
+                                             draggable="@(ReadOnly ? "false" : "true")"
                                              tabindex="0"
                                              role="button"
+                                             aria-disabled="@(ReadOnly ? "true" : null)"
                                              aria-label="@stencilAriaLabel"
                                              @ondragstart="e => OnDragStart(e, stencil.Id)"
                                              @onkeydown="e => OnStencilKeyDown(e, stencil.Id)"
-                                             title="@stencilTooltip">
+                                             @onkeyup="e => OnStencilKeyUp(e, stencil.Id)"
+                                             @onclick="() => OnStencilActivated(stencil.Id)"
+                                             title="@(ReadOnly ? GetReadOnlyHint() : stencilTooltip)"
+                                             aria-describedby="@(ReadOnly ? ReadOnlyHintId : null)">
                                             <div class="tm-diagram-toolbox__preview @(stencil.Kind == DiagramStencilKind.Edge ? "tm-diagram-toolbox__edge-preview" : "")">
                                                 @if (!string.IsNullOrEmpty(stencil.IconSvg))
                                                 {
                                                     <svg viewBox="0 0 32 32" aria-hidden="true" style="width:32px;height:32px;">
-                                                        @((MarkupString)stencil.IconSvg)
+                                                        @((MarkupString)DiagramStencilIconMarkup.ForPreview(stencil.IconSvg))
                                                     </svg>
                                                 }
                                                 else if (stencil.Kind == DiagramStencilKind.Edge)

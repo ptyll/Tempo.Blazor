@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Workflow",
+  "description": "The viewBox (plus the matching zoom scale) a JS zoom helper reports back to the TmWorkflowDesignerCanvas — the return shape of tmWorkflowDesigner.zoomTo and tmWorkflowDesigner.fitToView, so the component can assign its viewBox fields from the result BEFORE StateHasChanged (JS and the Blazor-rendered attribute never disagree).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Workflow/WorkflowCanvasModels.cs",
+  "documentationStatus": "generated",
+  "itemName": "WorkflowViewBox"
+}

@@ -92,12 +92,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Number of commands in the batch."
-        },
-        {
           "name": "Add",
           "kind": "Method",
           "type": "void",
@@ -118,6 +112,12 @@
           "name": "UndoAsync",
           "kind": "Method",
           "type": "Task"
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of commands in the batch."
         },
         {
           "name": "Description",
@@ -659,18 +659,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "DefaultGroups",
-          "kind": "Field",
-          "type": "IReadOnlyList<DocumentToolbarGroup>",
-          "description": "Built-in toolbar groups in their default order."
-        },
-        {
-          "name": "DefaultItems",
-          "kind": "Field",
-          "type": "IReadOnlyList<DocumentToolbarItem>",
-          "description": "Built-in toolbar items in their default metadata form."
-        },
-        {
           "name": "CreateRegistry",
           "kind": "Method",
           "type": "DocumentEditorToolbarRegistry",
@@ -706,6 +694,18 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "DefaultGroups",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentToolbarGroup>",
+          "description": "Built-in toolbar groups in their default order."
+        },
+        {
+          "name": "DefaultItems",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentToolbarItem>",
+          "description": "Built-in toolbar items in their default metadata form."
         }
       ]
     },
@@ -827,12 +827,6 @@
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Registry/DocumentEditorCommandRegistry.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "CurrentState",
-          "kind": "Field",
-          "type": "IReadOnlyDictionary<string, DocumentEditorCommandState>",
-          "description": "Read-only view of the last computed state for every registered command."
-        },
         {
           "name": "AddForceDisableReason",
           "kind": "Method",
@@ -956,6 +950,12 @@
           ]
         },
         {
+          "name": "CurrentState",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, DocumentEditorCommandState>",
+          "description": "Read-only view of the last computed state for every registered command."
+        },
+        {
           "name": "Version",
           "kind": "Property",
           "type": "int",
@@ -973,36 +973,6 @@
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Commands/DocumentEditorCommandStack.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "CanRedo",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether there is a command to redo."
-        },
-        {
-          "name": "CanUndo",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether there is a command to undo."
-        },
-        {
-          "name": "IsInBatch",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether a batch is currently collecting commands."
-        },
-        {
-          "name": "NextRedoDescription",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Description of the next command to redo."
-        },
-        {
-          "name": "NextUndoDescription",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Description of the next command to undo."
-        },
         {
           "name": "BeginBatch",
           "kind": "Method",
@@ -1056,6 +1026,36 @@
           "kind": "Method",
           "type": "Task",
           "description": "Undoes the last command when available."
+        },
+        {
+          "name": "CanRedo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether there is a command to redo."
+        },
+        {
+          "name": "CanUndo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether there is a command to undo."
+        },
+        {
+          "name": "IsInBatch",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a batch is currently collecting commands."
+        },
+        {
+          "name": "NextRedoDescription",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Description of the next command to redo."
+        },
+        {
+          "name": "NextUndoDescription",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Description of the next command to undo."
         }
       ]
     },
@@ -1579,11 +1579,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -1593,6 +1588,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -1607,11 +1607,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -1621,6 +1616,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -1689,11 +1689,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -1703,6 +1698,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -1759,12 +1759,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "EffectiveGroup",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Resolved group identifier."
-        },
-        {
           "name": "IsVisible",
           "kind": "Method",
           "type": "bool",
@@ -1805,6 +1799,12 @@
           "kind": "Property",
           "type": "string?",
           "description": "Optional command registry name executed by this toolbar item."
+        },
+        {
+          "name": "EffectiveGroup",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Resolved group identifier."
         },
         {
           "name": "Group",
@@ -1896,9 +1896,21 @@
       "members": [
         {
           "name": "EffectiveLabel",
-          "kind": "Field",
+          "kind": "Property",
           "type": "string",
           "description": "Label shown in the select; falls back to the raw value."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Display label; falls back to Value when null."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "string",
+          "description": "Value submitted to the command payload when selected."
         }
       ]
     },
@@ -1913,11 +1925,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -1927,6 +1934,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -1948,7 +1960,24 @@
       "description": "Represents one grouped section in the document editor toolbar overflow menu.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentToolbarOverflowMenuGroup.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "GroupId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Items",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentToolbarOverflowMenuItem>"
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "DocumentToolbarOverflowMenuItem",
@@ -1958,7 +1987,29 @@
       "description": "Represents one command rendered in the document editor toolbar overflow menu.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/DocumentToolbarOverflowMenuItem.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CommandName",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "IsEnabled",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Metadata",
+          "kind": "Property",
+          "type": "DocumentToolbarItem"
+        }
+      ]
     },
     {
       "itemName": "DocumentToolbarRenderContext",
@@ -1968,7 +2019,33 @@
       "description": "Context passed to a document toolbar item renderer.",
       "packageId": "Tempo.Blazor.DocumentEditor",
       "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/Registry/DocumentToolbarRenderContext.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CommandState",
+          "kind": "Property",
+          "type": "DocumentEditorCommandState?",
+          "description": "Current registry state of the item's command — drives value/enabled/aria-pressed (Fáze 17; additive, default null)."
+        },
+        {
+          "name": "Execute",
+          "kind": "Property",
+          "type": "EventCallback<object?>",
+          "description": "Callback invoked with the command payload (selected value, color, or null for toggles)."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "DocumentToolbarItem",
+          "description": "Toolbar item metadata being rendered."
+        },
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, object?>?",
+          "description": "Optional well-known state bag (SelectionToken, FormattingState, UndoState)."
+        }
+      ]
     },
     {
       "itemName": "DocumentToolbarSelectRenderer",
@@ -1981,11 +2058,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -1995,6 +2067,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -2009,11 +2086,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -2023,6 +2095,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -2037,11 +2114,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -2051,6 +2123,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -2075,11 +2152,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Kind",
-          "kind": "Field",
-          "type": "DocumentToolbarItemKind"
-        },
-        {
           "name": "Render",
           "kind": "Method",
           "type": "RenderFragment",
@@ -2089,6 +2161,11 @@
               "type": "DocumentToolbarRenderContext"
             }
           ]
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "DocumentToolbarItemKind"
         }
       ]
     },
@@ -2191,11 +2268,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "CanHandle",
           "kind": "Method",
           "type": "bool",
@@ -2216,6 +2288,11 @@
               "type": "DocumentClipboardInput"
             }
           ]
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -2230,11 +2307,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "CanHandle",
           "kind": "Method",
           "type": "bool",
@@ -2255,6 +2327,11 @@
               "type": "DocumentClipboardInput"
             }
           ]
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -2449,36 +2526,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "AfterZIndex",
-          "kind": "Field",
-          "type": "int?",
-          "description": "Z-index after the command, available after execution."
-        },
-        {
-          "name": "BeforeZIndex",
-          "kind": "Field",
-          "type": "int",
-          "description": "Z-index before the command."
-        },
-        {
-          "name": "InvalidatedBlockIds",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "Block ids whose layout depends on this command."
-        },
-        {
-          "name": "InvalidatesLayout",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether the document layout must be recomputed after applying the command."
-        },
-        {
-          "name": "ObjectId",
-          "kind": "Field",
-          "type": "string",
-          "description": "Image object id affected by the command."
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -2489,9 +2536,39 @@
           "type": "Task"
         },
         {
+          "name": "AfterZIndex",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Z-index after the command, available after execution."
+        },
+        {
+          "name": "BeforeZIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "Z-index before the command."
+        },
+        {
           "name": "Description",
           "kind": "Property",
           "type": "string"
+        },
+        {
+          "name": "InvalidatedBlockIds",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Block ids whose layout depends on this command."
+        },
+        {
+          "name": "InvalidatesLayout",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the document layout must be recomputed after applying the command."
+        },
+        {
+          "name": "ObjectId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Image object id affected by the command."
         }
       ]
     },
@@ -2620,36 +2697,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "EndPosition",
-          "kind": "Field",
-          "type": "DocumentObjectPosition",
-          "description": "Position after the move."
-        },
-        {
-          "name": "InvalidatedBlockIds",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "Block ids whose layout depends on this command."
-        },
-        {
-          "name": "InvalidatesLayout",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether the document layout must be recomputed after applying the command."
-        },
-        {
-          "name": "ObjectId",
-          "kind": "Field",
-          "type": "string",
-          "description": "Image object id affected by the command."
-        },
-        {
-          "name": "StartPosition",
-          "kind": "Field",
-          "type": "DocumentObjectPosition",
-          "description": "Position before the move."
-        },
-        {
           "name": "ExecuteAsync",
           "kind": "Method",
           "type": "Task"
@@ -2663,6 +2710,36 @@
           "name": "Description",
           "kind": "Property",
           "type": "string"
+        },
+        {
+          "name": "EndPosition",
+          "kind": "Property",
+          "type": "DocumentObjectPosition",
+          "description": "Position after the move."
+        },
+        {
+          "name": "InvalidatedBlockIds",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Block ids whose layout depends on this command."
+        },
+        {
+          "name": "InvalidatesLayout",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the document layout must be recomputed after applying the command."
+        },
+        {
+          "name": "ObjectId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Image object id affected by the command."
+        },
+        {
+          "name": "StartPosition",
+          "kind": "Property",
+          "type": "DocumentObjectPosition",
+          "description": "Position before the move."
         }
       ]
     },
@@ -2747,11 +2824,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "CanHandle",
           "kind": "Method",
           "type": "bool",
@@ -2772,6 +2844,11 @@
               "type": "DocumentClipboardInput"
             }
           ]
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -3381,11 +3458,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "CanHandle",
           "kind": "Method",
           "type": "bool",
@@ -3406,6 +3478,11 @@
               "type": "DocumentClipboardInput"
             }
           ]
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -3420,11 +3497,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "CanHandle",
           "kind": "Method",
           "type": "bool",
@@ -3445,6 +3517,11 @@
               "type": "DocumentClipboardInput"
             }
           ]
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -3543,7 +3620,7 @@
           "name": "AddTempoBlazorDocumentEditor",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the document editor component group.",
+          "description": "Registers the services required by the document editor component group. Also calls AddTempoBlazor().",
           "parameters": [
             {
               "name": "services",
@@ -4062,6 +4139,12 @@
           "description": "Raised when text is submitted."
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmCommentDraftState>",
+          "isRequired": false,
+          "description": "Notifies the parent that the composer's draft state changed. The composer holds its text in a private field - no host can observe it through a parameter - so this callback is the only push channel. Fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. The state always reports IsEditorOpen=true and EditingCommentId=null; HasUnsavedContent is true once the text differs from the seeded InitialText and is not empty - a freshly seeded edit composer does not report an unsaved draft until the user actually types. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
+        },
+        {
           "name": "OnSubmit",
           "type": "EventCallback<string>",
           "isRequired": false,
@@ -4216,6 +4299,12 @@
           "description": "Raised when a comment should be reopened."
         },
         {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmCommentDraftState>",
+          "isRequired": false,
+          "description": "Notifies the parent that the rail's aggregate comment draft state changed. The new-comment composer and every thread's reply/edit composers hold their text in private fields, so the rail host cannot observe them. The rail MERGES its own new-comment composer with the states all rendered TmDocumentCommentThreads report and fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. IsEditorOpen is true while the new-comment composer is mounted (not loading, ComposerOpen with a DraftAnchor) or any thread shows a composer; EditingCommentId carries the first thread's editing id; HasUnsavedContent is true when the composer OR any thread holds unsaved text. Threads the host removes are pruned and loading clears them all, and DiscardDraftAsync reaches the composer and every thread."
+        },
+        {
           "name": "OnEditComment",
           "type": "EventCallback<DocumentEditorCommentEditRequest>",
           "isRequired": false,
@@ -4347,6 +4436,12 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Raised when the thread should be reopened."
+        },
+        {
+          "name": "OnDraftChanged",
+          "type": "EventCallback<TmCommentDraftState>",
+          "isRequired": false,
+          "description": "Notifies the parent that the thread's comment draft state changed. The reply and edit composers hold their text in private fields, so the thread host cannot observe it. Fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. IsEditorOpen is true while the reply composer is mounted or an entry edit is open on the expanded thread; EditingCommentId carries the id of the ENTRY under edit; HasUnsavedContent aggregates both composers - each slot is gated by its mount condition, so a resolved thread (it collapses), a withdrawn CanComment or a stale edit slot report the closed, empty state instead of a stale composer's text, and a freshly seeded edit is not an unsaved draft. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
         },
         {
           "name": "OnEdit",
@@ -7325,7 +7420,8 @@
               "type": "CancellationToken",
               "default": "default"
             }
-          ]
+          ],
+          "description": "Removes a draft, typically after it has been synced to the server."
         },
         {
           "name": "LoadDraftAsync",
@@ -7341,7 +7437,8 @@
               "type": "CancellationToken",
               "default": "default"
             }
-          ]
+          ],
+          "description": "Reads a single draft, or null when it is not stored."
         },
         {
           "name": "SaveDraftAsync",
@@ -7357,7 +7454,18 @@
               "type": "CancellationToken",
               "default": "default"
             }
-          ]
+          ],
+          "description": "Writes or overwrites a draft."
+        },
+        {
+          "name": "IndexedDbDocumentOfflineStore",
+          "type": "IndexedDbDocumentOfflineStore(IJSRuntime jsRuntime)",
+          "description": "Creates the store on top of the browser's IndexedDB via JS interop."
+        },
+        {
+          "name": "ListPendingDraftsAsync",
+          "type": "Task<IReadOnlyList<DocumentOfflineDraft>> ListPendingDraftsAsync(CancellationToken cancellationToken = default)",
+          "description": "Lists every draft still awaiting synchronisation."
         }
       ],
       "examples": [

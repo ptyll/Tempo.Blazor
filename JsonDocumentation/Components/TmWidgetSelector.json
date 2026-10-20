@@ -2,7 +2,7 @@
   "itemName": "TmWidgetSelector",
   "kind": "Component",
   "category": "Dashboard",
-  "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry.",
+  "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry. Renders on TmModal (dialog role, focus trap, Escape, bottom sheet on mobile).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dashboard"
   ],
@@ -10,30 +10,45 @@
     {
       "name": "WidgetRegistry",
       "type": "IWidgetRegistry?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Registry of the widgets the host offers; null renders an empty selector."
     },
     {
       "name": "ExistingWidgets",
       "type": "List<string>",
       "isRequired": false,
-      "default": "[]"
+      "default": "[]",
+      "description": "Ids of the widgets already on the dashboard — single-instance ones among them cannot be added again."
     },
     {
       "name": "OnSelect",
       "type": "EventCallback<WidgetDefinition>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised when the user activates an addable widget card."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised when the selector should close (Escape, close button, Done, backdrop)."
+    },
+    {
+      "name": "CloseOnSelect",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether selecting a widget closes the selector. With false the selector stays open: the added card flips to the green Added state, a multiple-instance widget grows an added counter, and a polite live region announces the addition."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the selector renders. Auto follows the viewport scope; a forced value pins the presentation — including the mobile chip row and the bottom sheet — for tests and embedded hosts. Never a viewport media query."
     }
   ],
   "cssClasses": [
-    "tm-widget-selector-overlay",
     "tm-widget-selector-modal",
-    "tm-widget-selector-header",
-    "tm-widget-selector-close",
     "tm-widget-selector-search",
     "tm-widget-selector-content",
     "tm-widget-selector-sidebar",
@@ -41,15 +56,24 @@
     "tm-widget-selector-category",
     "tm-widget-selector-category--active",
     "tm-widget-selector-count",
+    "tm-widget-selector-chips",
+    "tm-widget-selector-chip",
+    "tm-widget-selector-chip-count",
     "tm-widget-selector-widgets",
     "tm-widget-selector-grid",
     "tm-widget-card",
     "tm-widget-card--disabled",
     "tm-widget-card-icon",
     "tm-widget-card-info",
+    "tm-widget-card-title",
+    "tm-widget-card-desc",
+    "tm-widget-card-size",
     "tm-widget-card-meta",
+    "tm-widget-card-badge",
+    "tm-widget-card-badge--added",
     "tm-widget-card-add",
     "tm-widget-selector-empty",
+    "tm-widget-selector-live",
     "tm-widget-selector-footer",
     "tm-widget-selector-hint"
   ],

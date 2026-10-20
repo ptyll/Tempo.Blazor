@@ -8,68 +8,230 @@
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Abstractions.Layout
 @using System.Text.Json
 @using Microsoft.JSInterop
+@using Tempo.Blazor.Helpers
 @implements IAsyncDisposable
 
 <TmLayoutObserver LayoutMode="LayoutMode" InitialMode="InitialMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false" Class="tm-dashboard-layout">
 <LayoutContent Context="mode">
-<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") tm-dashboard--@mode.CssModifier @Class"
+@* A named region (F3): several dashboards on one page stay distinguishable. The h2 names it
+   through aria-labelledby whenever it renders (even tm-sr-only); without a heading the resolved
+   title falls back to aria-label. *@
+<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") @(IsCompactEditMode(mode) ? "tm-dashboard--compact-edit" : "") @AppearanceClass tm-dashboard--@mode.CssModifier @Class"
      data-layout="@mode.CssModifier"
+     role="region"
+     aria-labelledby="@(HasHeading ? _titleElementId : null)"
+     aria-label="@(HasHeading ? null : HeaderTitle)"
      @ref="_dashboardElement">
     
     @* ── Toolbar ─────────────────────────────────────────────── *@
-    <div class="tm-dashboard-toolbar">
+    @* ShowHeader=false hides the chrome in view mode; in edit mode the toolbar renders anyway —
+       it is the only surface that carries Save/Cancel (edit mode is reachable through the empty
+       state's CTA even with the header hidden). *@
+    @if (ShowHeader || _isEditMode)
+    {
+    <div class="tm-dashboard-toolbar @ToolbarModifiers">
         <div class="tm-dashboard-toolbar-left">
+            @if (HeaderStart is not null)
+            {
+                <div class="tm-dashboard-header-start">@HeaderStart</div>
+            }
             @if (_isEditMode && _isEditingName)
             {
-                @* Inline edit mode - always show name input *@
-                <div class="tm-dashboard-name-edit">
+                @* Inline edit mode - always show name input. The form is the Enter-to-apply
+                   contract (implicit submission, docs/keyboard-activation-convention.md) and Escape
+                   is the container-level dismiss: it cancels the edit wherever focus sits inside. *@
+                <form class="tm-dashboard-name-edit" @onsubmit="SaveNameEdit" @onsubmit:preventDefault
+                      @onkeydown="HandleNameEditKeyDown">
                     <TmTextInput @bind-Value="_editingName"
-                                 Placeholder="Dashboard name"
-                                 Class="tm-dashboard-name-input" />
-                    <button type="button" class="tm-btn tm-btn-primary tm-btn-sm" @onclick="SaveNameEdit">
+                                 Placeholder="@Loc["TmDashboard_NamePlaceholder"]"
+                                 Class="tm-dashboard-name-input"
+                                 AutoFocus="true" />
+                    <button type="submit" class="tm-btn tm-btn-primary tm-btn-sm"
+                            title="@Loc["TmDashboard_ApplyName"]"
+                            aria-label="@Loc["TmDashboard_ApplyName"]">
                         <TmIcon Name="check" Size="IconSize.Sm" />
                     </button>
-                    <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" @onclick="CancelNameEdit">
+                    <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" @onclick="CancelNameEdit"
+                            title="@Loc["Tm_Cancel"]"
+                            aria-label="@Loc["Tm_Cancel"]">
                         <TmIcon Name="x" Size="IconSize.Sm" />
                     </button>
-                </div>
+                </form>
             }
             else if (_isEditMode)
             {
-                @* Edit mode - always show name with edit button *@
+                @* Edit mode: the heading is always visible (the user must see what they rename).
+                   With a host Title the h2 names the page and the dashboard's own name moves into
+                   a secondary span next to it, so the rename pencil always sits by the text it edits. *@
                 <div class="tm-dashboard-title-wrapper">
-                    <h2 class="tm-dashboard-title">@(_currentDashboard?.Name ?? "Dashboard")</h2>
+                    <h2 class="tm-dashboard-title" id="@_titleElementId">@HeaderTitle</h2>
+                    @if (Title is not null)
+                    {
+                        <span class="tm-dashboard-name">@(_currentDashboard?.Name ?? Loc["TmDashboard_DefaultName"])</span>
+                    }
                     <button type="button" class="tm-btn tm-btn-ghost tm-btn-icon tm-btn-sm"
+                            @ref="_renameButton"
                             @onclick="StartNameEdit"
-                            title="@Loc["TmDashboard_Rename"]">
+                            title="@Loc["TmDashboard_Rename"]"
+                            aria-label="@Loc["TmDashboard_Rename"]">
                         <TmIcon Name="edit" Size="IconSize.Sm" />
                     </button>
                 </div>
+                <span class="tm-dashboard-edit-badge">@Loc["TmDashboard_EditMode"]</span>
             }
             else if (ShowTitle)
             {
-                @* View mode - show name only if ShowTitle is true *@
-                <div class="tm-dashboard-title-wrapper">
-                    <h2 class="tm-dashboard-title">@(_currentDashboard?.Name ?? "Dashboard")</h2>
+                @* View mode: the heading names the page. Without a host Title the name already
+                   shows in the switcher trigger, so the h2 stays in the DOM (screen readers and
+                   existing selectors) but is visually hidden. *@
+                var titleHidden = Title is null && DashboardProvider is not null;
+                <div class="tm-dashboard-heading">
+                    <h2 class="tm-dashboard-title @(titleHidden ? "tm-sr-only" : "")" id="@_titleElementId">@HeaderTitle</h2>
+                    @if (!string.IsNullOrEmpty(Subtitle))
+                    {
+                        <p class="tm-dashboard-subtitle">@Subtitle</p>
+                    }
                 </div>
             }
-            @if (_isEditMode)
+            @if (!_isEditMode && DashboardProvider is not null)
             {
-                <span class="tm-dashboard-edit-badge">@Loc["TmDashboard_EditMode"]</span>
-            }
+                <div class="tm-dashboard-views" @ref="_viewsElement">
+                    @* Select-like trigger (F2): it shows the CURRENT dashboard's name, so the
+                       accessible name must contain that visible text (WCAG 2.5.3) — hence the
+                       formatted SwitcherAriaLabel instead of the bare word "Dashboards". *@
+                    <button type="button" class="tm-dashboard-switcher"
+                            @ref="_dashboardsButton"
+                            id="@_dashboardsButtonId"
+                            @onclick="ToggleDashboardMenu"
+                            aria-haspopup="menu"
+                            aria-expanded="@(_showDashboardMenu ? "true" : "false")"
+                            aria-label="@string.Format(Loc["TmDashboard_SwitcherAriaLabel"], SwitcherName)">
+                        <TmIcon Name="@IconNames.Grid" Size="IconSize.Sm" class="tm-dashboard-switcher__icon" />
+                        <span class="tm-dashboard-switcher__label">@SwitcherName</span>
+                        <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" class="tm-dashboard-switcher__chevron" />
+                    </button>
+                    @if (_showDashboardMenu)
+                    {
+                            @* The menu is a TmOverlayPanel (the TmDropdown pattern): overlay.js puts
+                               it in the browser top layer, positions it against the trigger and owns
+                               the Escape/outside/Tab-out dismissal (focus returns to the anchor);
+                               TmOverlayPanel attaches the shared tm-menu-nav module to this
+                               Role="menu" panel, and OnOpened hands focus to the first item. Each
+                               dashboard row is a role="none" wrapper around a NATIVE select button
+                               and native per-row action buttons — Enter/Space activate natively,
+                               exactly once per press (docs/keyboard-activation-convention.md).
+                               Align=Start + MatchAnchorWidth: the trigger now sits on the LEFT of
+                               the header and the menu at least spans it. MobilePresentation=Auto
+                               (F3): the anchored popover on desktop/tablet, a bottom sheet with
+                               the "Dashboards" title on a phone. *@
+                            <TmOverlayPanel Anchor="_dashboardsButton"
+                                            IsOpen="_showDashboardMenu"
+                                            IsOpenChanged="SetDashboardMenuOpen"
+                                            OnOpened="FocusFirstMenuItemAsync"
+                                            Placement="OverlayPlacement.Bottom"
+                                            Align="OverlayAlign.Start"
+                                            MatchAnchorWidth="true"
+                                            Role="menu"
+                                            AriaLabelledBy="@_dashboardsButtonId"
+                                            Title="@Loc["TmDashboard_Dashboards"]"
+                                            MobilePresentation="PanelPresentation.Auto"
+                                            Class="tm-dashboard-menu">
+                                <div class="tm-dashboard-menu-header" role="presentation">
+                                    <span>@Loc["TmDashboard_MyDashboards"]</span>
+                                </div>
+                                @foreach (var dash in _availableDashboards)
+                                {
+                                    var isCurrent = _currentDashboard?.Id == dash.Id;
+                                    @* role="none": the row is layout only — its interactive children
+                                       are real buttons the menu keyboard roves across. *@
+                                    <div class="tm-dashboard-menu-item @(isCurrent ? "tm-dashboard-menu-item--active" : "")"
+                                         role="none">
+                                        <button type="button" role="menuitem" tabindex="-1"
+                                                class="tm-dashboard-menu-item__select"
+                                                aria-current="@(isCurrent ? "true" : null)"
+                                                aria-describedby="@(dash.IsDefault ? $"{_dashboardsButtonId}-default-hint" : null)"
+                                                @onclick="() => LoadDashboard(dash.Id)">
+                                            <TmIcon Name="layout" Size="IconSize.Sm" />
+                                            <span>@dash.Name</span>
+                                        </button>
+                                        <span class="tm-dashboard-menu-actions" role="presentation">
+                                            @if (dash.IsDefault)
+                                            {
+                                                @* A visible text label marks the default dashboard:
+                                                   the meaning ("default") is readable and the
+                                                   absence of delete is explained by the hint row
+                                                   below, not just a bare starred icon (Fáze 7). *@
+                                                <span class="tm-dashboard-menu-default">
+                                                    <TmIcon Name="star" Size="IconSize.Sm" />
+                                                    @Loc["TmDashboard_Default"]
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                @if (isCurrent)
+                                                {
+                                                    @* The actions carry the dashboard NAME (the row
+                                                       no longer does), so a screen reader announces
+                                                       which dashboard they target. *@
+                                                    <button type="button" role="menuitem" tabindex="-1"
+                                                            class="tm-dashboard-menu-action"
+                                                            title="@string.Format(Loc["TmDashboard_SetAsDefaultNamed"], dash.Name)"
+                                                            aria-label="@string.Format(Loc["TmDashboard_SetAsDefaultNamed"], dash.Name)"
+                                                            @onclick="() => SetAsDefault(dash.Id)">
+                                                        <TmIcon Name="star" Size="IconSize.Sm" />
+                                                    </button>
+                                                }
+                                                <button type="button" role="menuitem" tabindex="-1"
+                                                        class="tm-dashboard-menu-action tm-dashboard-menu-action--danger"
+                                                        title="@string.Format(Loc["TmDashboard_DeleteNamed"], dash.Name)"
+                                                        aria-label="@string.Format(Loc["TmDashboard_DeleteNamed"], dash.Name)"
+                                                        @onclick="() => DeleteDashboard(dash.Id)">
+                                                    <TmIcon Name="trash" Size="IconSize.Sm" />
+                                                </button>
+                                            }
+                                        </span>
+                                        @if (dash.IsDefault)
+                                        {
+                                            @* The hint is the LAST child of the row, not a child
+                                               of the inline actions span: inside the actions it
+                                               competes for the row width and squeezes the name to
+                                               zero (ellipsised away). As a full-width second line
+                                               it wraps under the name — and aria-describedby on
+                                               the select button links it to the menuitem so
+                                               screen readers hear it (Fáze 7). *@
+                                            <span class="tm-dashboard-menu-default-hint"
+                                                  id="@($"{_dashboardsButtonId}-default-hint")">@Loc["TmDashboard_DefaultCannotDelete"]</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="tm-dashboard-menu-divider" role="separator"></div>
+                                <button type="button" role="menuitem" tabindex="-1"
+                                        class="tm-dashboard-menu-item tm-dashboard-menu-item--action"
+                                        @onclick="() => CreateNewDashboard()">
+                                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                                    <span>@Loc["TmDashboard_CreateNewDashboard"]</span>
+                                </button>
+                            </TmOverlayPanel>
+                        }
+                    </div>
+                }
         </div>
-        
+
         <div class="tm-dashboard-toolbar-right">
             @if (_isEditMode)
             {
-                <button type="button" class="tm-btn tm-btn-primary" data-testid="@TestId("dashboard-add-widget")" @onclick="OpenWidgetSelector">
+                @* One primary element per region (F2 UX §2.4): "Save changes" is THE primary
+                   action of edit mode; "Add widget" is secondary, "Cancel" ghost. *@
+                <button type="button" class="tm-btn tm-btn-secondary" data-testid="@TestId("dashboard-add-widget")"
+                        @ref="_addWidgetButton" @onclick="OpenWidgetSelector">
                     <TmIcon Name="plus" Size="IconSize.Sm" />
                     <span>@Loc["TmDashboard_AddWidget"]</span>
                 </button>
-                <button type="button" class="tm-btn tm-btn-secondary" @onclick="SaveLayout">
+                <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveLayout">
                     <TmIcon Name="save" Size="IconSize.Sm" />
                     <span>@Loc["TmDashboard_SaveChanges"]</span>
                 </button>
@@ -80,90 +242,72 @@
             }
             else
             {
-                @if (DashboardProvider is not null)
+                @* Host actions render BEFORE the Edit button: DOM order = tab order. *@
+                @if (HeaderActions is not null)
                 {
-                    <div class="tm-dashboard-views">
-                        <button type="button" class="tm-btn tm-btn-ghost"
-                                @ref="_dashboardsButton"
-                                id="@_dashboardsButtonId"
-                                @onclick="ToggleDashboardMenu"
-                                title="@Loc["TmDashboard_Dashboards"]">
-                            <TmIcon Name="layout" Size="IconSize.Sm" />
-                            <span>@Loc["TmDashboard_Dashboards"]</span>
-                            <TmIcon Name="chevron-down" Size="IconSize.Sm" />
-                        </button>
-                        @if (_showDashboardMenu)
-                        {
-                            <div class="tm-dashboard-menu">
-                                <div class="tm-dashboard-menu-header">
-                                    <span>@Loc["TmDashboard_MyDashboards"]</span>
-                                </div>
-                                @foreach (var dash in _availableDashboards)
-                                {
-                                    <div class="tm-dashboard-menu-item @(_currentDashboard?.Id == dash.Id ? "tm-dashboard-menu-item--active" : "")"
-                                         @onclick="() => LoadDashboard(dash.Id)">
-                                        <TmIcon Name="layout" Size="IconSize.Sm" />
-                                        <span>@dash.Name</span>
-                                        <div class="tm-dashboard-menu-actions">
-                                            @if (dash.IsDefault)
-                                            {
-                                                <span class="tm-dashboard-menu-badge" title="@Loc["TmDashboard_DefaultDashboard"]">★</span>
-                                            }
-                                            else
-                                            {
-                                                @if (_currentDashboard?.Id == dash.Id)
-                                                {
-                                                    <button type="button"
-                                                            class="tm-dashboard-menu-action"
-                                                            @onclick:stopPropagation
-                                                            @onclick="() => SetAsDefault(dash.Id)"
-                                                            title="@Loc["TmDashboard_SetAsDefault"]">
-                                                        <TmIcon Name="star" Size="IconSize.Sm" />
-                                                    </button>
-                                                }
-                                                <button type="button"
-                                                        class="tm-dashboard-menu-action tm-dashboard-menu-action--danger"
-                                                        @onclick:stopPropagation
-                                                        @onclick="() => DeleteDashboard(dash.Id)"
-                                                        title="@Loc["TmDashboard_Delete"]">
-                                                    <TmIcon Name="trash" Size="IconSize.Sm" />
-                                                </button>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                                <div class="tm-dashboard-menu-divider"></div>
-                                <button type="button"
-                                        class="tm-dashboard-menu-item tm-dashboard-menu-item--action"
-                                        @onclick:preventDefault
-                                        @onclick="async () => await CreateNewDashboard()">
-                                    <TmIcon Name="plus" Size="IconSize.Sm" />
-                                    <span>@Loc["TmDashboard_CreateNewDashboard"]</span>
-                                </button>
-                            </div>
-                            <div class="tm-overlay" @onclick="() => _showDashboardMenu = false"></div>
-                        }
-                    </div>
+                    <div class="tm-dashboard-header-actions">@HeaderActions</div>
                 }
-                
-                <button type="button" class="tm-btn tm-btn-secondary"
-                        data-testid="@TestId("dashboard-edit")"
-                        @onclick="() => EnterEditMode()"
-                        title="@Loc["TmDashboard_Edit"]">
-                    <TmIcon Name="edit" Size="IconSize.Sm" />
-                    <span>@Loc["TmDashboard_Edit"]</span>
-                </button>
+                @if (AllowEdit)
+                {
+                    @* A native button because the focus return after edit mode needs @ref
+                       (TmButton does not expose its ElementReference). The Edit entry is the
+                       primary action of the view header, so no title on top of the visible text. *@
+                    <button type="button" class="tm-btn tm-btn-primary"
+                            @ref="_editButton"
+                            data-testid="@TestId("dashboard-edit")"
+                            @onclick="() => EnterEditMode()">
+                        <TmIcon Name="@IconNames.Edit" Size="IconSize.Sm" />
+                        <span>@Loc["TmDashboard_Edit"]</span>
+                    </button>
+                }
             }
         </div>
     </div>
+    }
+
+    @* ── Error alert (F7b, UX §5.8) ───────────────────────────── *@
+    @* Provider failures (load or save) surface above the grid with a localized "Try again"
+       that re-runs the failed operation; they never crash the host application. *@
+    @if (_loadError || _saveError)
+    {
+        <TmAlert Severity="AlertSeverity.Error"
+                 Variant="AlertVariant.Soft"
+                 Title="@(_saveError ? Loc["TmDashboard_SaveError"] : Loc["TmDashboard_LoadError"])"
+                 Class="tm-dashboard-error">
+            <Actions>
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" @onclick="RetryFailedOperation">
+                    @Loc["TmDashboard_Retry"]
+                </button>
+            </Actions>
+        </TmAlert>
+    }
 
     @* ── Grid Container ───────────────────────────────────────── *@
-    <div class="tm-dashboard-grid-container">
+    @if (_isEditMode && mode.IsDesktop)
+    {
+        @* F4: shared keyboard contract of every drag handle, referenced through aria-describedby. *@
+        <p class="tm-sr-only" id="@_dragInstructionsId">@Loc["TmDashboard_DragHandleInstructions"]</p>
+    }
+    <div class="tm-dashboard-grid-container" aria-busy="@(!_dataLoaded ? "true" : null)">
         <div class="tm-dashboard-grid"
              style="--grid-columns: @(_currentDashboard?.Grid.Columns ?? 12);
                     --row-height: @(_currentDashboard?.Grid.RowHeight ?? 60)px;
                     --grid-gap: @(_currentDashboard?.Grid.Gap ?? 16)px;">
-            
+
+            @* Loading skeletons (F7b, UX §5.7): until the provider's first load answers, the
+               grid shows two card-shaped placeholders and aria-busy on the container — never
+               the empty state, which would falsely claim there are no widgets. *@
+            @if (!_dataLoaded)
+            {
+                <p class="tm-sr-only" role="status">@Loc["TmDashboard_Loading"]</p>
+                <div class="tm-dashboard-skeleton-card">
+                    <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="100%" />
+                </div>
+                <div class="tm-dashboard-skeleton-card">
+                    <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="100%" />
+                </div>
+            }
+
             @* Grid Background (visible in edit mode) *@
             @if (_isEditMode && mode.IsDesktop)
             {
@@ -176,46 +320,140 @@
             }
             
             @* Widgets ───────────────────────────────────────────── *@
-            @{ var order = BuildOrder(); }
-            @foreach (var widget in _widgets)
+            @{
+                // One sort per render drives both the DOM order below and the --tm-w-order values:
+                // Tab and the screen reader follow the visual (Y, X) order in every mode (F3, M-2).
+                // Positions change only at drop/resize end, which re-render right after — so no DOM
+                // node moves under an active pointer, and @key preserves focus and child state.
+                var (orderedWidgets, widgetOrder) = WidgetLayout();
+            }
+            @foreach (var widget in orderedWidgets)
             {
+                var definition = WidgetRegistry?.GetWidget(widget.WidgetId);
+                // Fáze 5: the JS resize clamps through these data-* attributes (grid cells,
+                // emitted from the WidgetDefinition / GridConfig; max 0 = unlimited). The
+                // authoritative clamp stays in C# — the values mirror it for the live preview.
+                var minWidth = Math.Max(1, definition?.MinWidth ?? 1);
+                var maxWidth = definition is { MaxWidth: > 0 } ? Math.Min(definition.MaxWidth, Columns) : Columns;
+                var minHeight = Math.Max(1, definition?.MinHeight ?? 1);
+                var maxHeight = definition is { MaxHeight: > 0 } ? definition.MaxHeight : 0;
                 <div class="tm-widget @GetWidgetClasses(widget)"
-                     style="@GetWidgetStyles(widget, order)"
+                     style="@GetWidgetStyles(widget, widgetOrder)"
                      @key="widget.InstanceId"
-                     data-instance-id="@widget.InstanceId">
-                    
+                     data-instance-id="@widget.InstanceId"
+                     data-min-w="@minWidth"
+                     data-max-w="@maxWidth"
+                     data-min-h="@minHeight"
+                     data-max-h="@maxHeight">
+
                     @* Widget Header ───────────────────────────────── *@
-                    <div class="tm-widget-header"
-                         @ondragstart="(e) => OnDragStart(e, widget)"
-                         @ondragend="OnDragEnd"
-                         draggable="@(_isEditMode && CanDrag(widget, mode) ? "true" : "false")">
-                        
+                    @* Fáze 5: no @ondragstart/@ondragend here any more — the move gesture is the
+                       shared pointer-drag.js helper attached by dashboard.js on the drag handle
+                       (mouse, touch and pen). The handle button keeps the keyboard grab mode. *@
+                    <div class="tm-widget-header">
+
                         <div class="tm-widget-header-left">
                             @if (_isEditMode && CanDrag(widget, mode))
                             {
-                                <span class="tm-widget-drag-handle" title="@Loc["TmDashboard_DragToMove"]">
+                                @* F4: the drag handle is a real button — keyboard reachable, with a
+                                   grab mode (Enter/Space, arrows, Shift+arrows, Escape) announced
+                                   through the live region below. Enter/Space activate NATIVELY
+                                   (onclick — never emulated, so the onkeydown arm keeps its hands
+                                   off them); the onkeydown arm only emulates the NON-native keys
+                                   (arrows/Shift+arrows/Escape) per the container-emulation half of
+                                   docs/keyboard-activation-convention.md. Arrow keys may scroll the
+                                   page while grabbed — the widget follows the announcement, and
+                                   fencing the button would suppress the native Enter/Space click. *@
+                                <button type="button"
+                                        class="tm-widget-drag-handle"
+                                        title="@Loc["TmDashboard_DragToMove"]"
+                                        aria-label="@Loc["TmDashboard_DragToMove"]"
+                                        aria-describedby="@_dragInstructionsId"
+                                        aria-pressed="@(_grabbedWidget == widget ? "true" : "false")"
+                                        data-instance-id="@widget.InstanceId"
+                                        @onclick="() => ToggleGrab(widget)"
+                                        @onkeydown="e => HandleHandleKeyDown(e, widget)">
                                     <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
+                                </button>
+                            }
+                            @if (IsCompactEditMode(mode) && IsDraggable(widget))
+                            {
+                                @* F4 compact edit mode (tablet portrait, mobile): reorder WITHOUT
+                                    drag — Move up / Move down swap the card with its (Y, X)
+                                    neighbour. The buttons are named for the widget they act on via
+                                    aria-describedby (the title), like the collapse chevron. *@
+                                <span class="tm-widget-move-group" role="group" aria-label="@GetWidgetName(widget)">
+                                    <button type="button"
+                                            class="tm-widget-btn tm-widget-move-btn tm-widget-move-btn--up"
+                                            disabled="@(!CanMoveUp(widget))"
+                                            aria-label="@Loc["TmDashboard_MoveUp"]"
+                                            aria-describedby="@GetWidgetTitleId(widget)"
+                                            title="@Loc["TmDashboard_MoveUp"]"
+                                            @onclick="() => MoveWidgetUp(widget)">
+                                        <TmIcon Name="chevron-up" Size="IconSize.Sm" />
+                                    </button>
+                                    <button type="button"
+                                            class="tm-widget-btn tm-widget-move-btn tm-widget-move-btn--down"
+                                            disabled="@(!CanMoveDown(widget))"
+                                            aria-label="@Loc["TmDashboard_MoveDown"]"
+                                            aria-describedby="@GetWidgetTitleId(widget)"
+                                            title="@Loc["TmDashboard_MoveDown"]"
+                                            @onclick="() => MoveWidgetDown(widget)">
+                                        <TmIcon Name="chevron-down" Size="IconSize.Sm" />
+                                    </button>
                                 </span>
                             }
-                            <span class="tm-widget-title">@(widget.CustomTitle ?? GetWidgetName(widget))</span>
+                            @if (ShowWidgetIcons)
+                            {
+                                @* 40px category tile (F2): the colour rides the shared
+                                   tm-dashboard-category--{id} class (built-ins) or the inline
+                                   --category-color (host categories), tinted with
+                                   --tm-dashboard-category-tint over the surface. *@
+                                <span class="tm-widget-icon @(definition is null ? "" : DashboardCategoryStyles.GetColorClass(definition.Category))"
+                                      style="@(definition is null ? "" : DashboardCategoryStyles.GetColorStyle(definition.Category, GetCategories()))"
+                                      aria-hidden="true">
+                                    <TmIcon Name="@GetWidgetIcon(definition)" Size="IconSize.Md" />
+                                </span>
+                            }
+                            <div class="tm-widget-heading">
+                                <h3 class="tm-widget-title" id="@GetWidgetTitleId(widget)">@(widget.CustomTitle ?? GetWidgetName(widget))</h3>
+                                @if (ShowWidgetDescriptions && !string.IsNullOrEmpty(definition?.Description))
+                                {
+                                    <p class="tm-widget-description" id="@GetWidgetDescriptionId(widget)">@definition!.Description</p>
+                                }
+                            </div>
                         </div>
-                        
+
                         <div class="tm-widget-header-actions">
                             @if (!_isEditMode)
                             {
+                                @* Host slot before the chevron: DOM order = tab order; view mode
+                                   only, because edit mode owns the header. *@
+                                @if (WidgetHeaderActions is not null)
+                                {
+                                    <div class="tm-widget-host-actions">@WidgetHeaderActions(widget)</div>
+                                }
                                 @if (CanCollapse(widget))
                                 {
+                                    @* aria-describedby points at the widget title, so N identical
+                                       "Collapse" controls are announced with the widget they act on. *@
                                     <button type="button" class="tm-widget-btn" @onclick="() => ToggleCollapse(widget)"
-                                            title="@(widget.IsCollapsed ? "Expand" : "Collapse")">
+                                            aria-expanded="@(widget.IsCollapsed ? "false" : "true")"
+                                            aria-controls="@(widget.IsCollapsed ? null : GetWidgetContentId(widget))"
+                                            aria-describedby="@GetWidgetTitleId(widget)"
+                                            title="@(widget.IsCollapsed ? Loc["TmDashboard_Expand"] : Loc["TmDashboard_Collapse"])"
+                                            aria-label="@(widget.IsCollapsed ? Loc["TmDashboard_Expand"] : Loc["TmDashboard_Collapse"])">
                                         <TmIcon Name="@(widget.IsCollapsed ? "chevron-down" : "chevron-up")" Size="IconSize.Sm" />
                                     </button>
                                 }
                             }
                             else
                             {
-                                <button type="button" class="tm-widget-btn tm-widget-btn--danger" 
+                                <button type="button" class="tm-widget-btn tm-widget-btn--danger"
                                         @onclick="() => RemoveWidget(widget)"
-                                        title="@Loc["TmDashboard_RemoveWidget"]">
+                                        aria-describedby="@GetWidgetTitleId(widget)"
+                                        title="@Loc["TmDashboard_RemoveWidget"]"
+                                        aria-label="@Loc["TmDashboard_RemoveWidget"]">
                                     <TmIcon Name="trash" Size="IconSize.Sm" />
                                 </button>
                             }
@@ -225,47 +463,35 @@
                     @* Widget Content ──────────────────────────────── *@
                     @if (!widget.IsCollapsed)
                     {
-                        <div class="tm-widget-content">
+                        <div class="tm-widget-content" id="@GetWidgetContentId(widget)">
                             @RenderWidgetContent(widget)
                         </div>
                     }
                     
                     @* Resize Handles (edit mode only) ─────────────── *@
+                    @* Fáze 5: no @onmousedown — the resize gesture is the shared pointer-drag.js
+                       helper attached by dashboard.js (threshold 0, so every press on a handle
+                       is a resize; Escape/pointercancel roll the widget back). *@
                     @if (_isEditMode && CanResize(widget, mode))
                     {
-                        <div class="tm-widget-resize-handle tm-widget-resize-se"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "se"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-sw"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "sw"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-ne"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "ne"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-nw"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "nw"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-e"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "e"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-w"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "w"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-s"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "s"))"></div>
-                        <div class="tm-widget-resize-handle tm-widget-resize-n"
-                             @onmousedown="@(e => OnResizeStart(e, widget, "n"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-se"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-sw"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-ne"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-nw"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-e"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-w"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-s"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-n"></div>
                     }
                 </div>
             }
-            
-            @* Drop Zone (visible during drag) ───────────────────── *@
-            @if (_isDragging && _dropTarget is not null)
-            {
-                <div class="tm-widget-drop-preview"
-                     style="grid-column: @(_dropTarget.X + 1) / span @(_dropTarget.Width);
-                             grid-row: @(_dropTarget.Y + 1) / span @(_dropTarget.Height);">
-                </div>
-            }
+
         </div>
     </div>
     
     @* ── Empty State ─────────────────────────────────────────── *@
-    @if (!_widgets.Any())
+    @* Only after the load answered (F7b, UX §5.7): while loading the skeletons speak instead. *@
+    @if (_dataLoaded && !_widgets.Any())
     {
         <div class="tm-dashboard-empty">
             <div class="tm-dashboard-empty-icon">
@@ -273,7 +499,10 @@
             </div>
             <h3>@Loc["TmDashboard_NoWidgets"]</h3>
             <p>@Loc["TmDashboard_AddWidgets"]</p>
-            @if (!_isEditMode)
+            @* The CTA is the empty state's main task, so it stays primary (a deliberate second
+               primary beside the header Edit) — but only when editing is allowed at all; without
+               AllowEdit the entry point would silently do nothing (F2 UX §5.6/§5.9). *@
+            @if (!_isEditMode && AllowEdit)
             {
                 <button type="button" class="tm-btn tm-btn-primary" @onclick="() => EnterEditMode()">
                     <TmIcon Name="plus" Size="IconSize.Sm" />
@@ -281,6 +510,12 @@
                 </button>
             }
         </div>
+    }
+
+    @* ── Live region (edit mode): grabs, moves, resizes, drops and cancels ── *@
+    @if (_isEditMode)
+    {
+        <div class="tm-dashboard-live-region tm-sr-only" aria-live="polite" role="status">@_moveAnnouncement</div>
     }
 
     @* ── Mobile action bar (edit mode, mobile layout only) ────── *@
@@ -298,9 +533,10 @@
 @* ── Widget Selector Modal ───────────────────────────────────── *@
 @if (_showWidgetSelector)
 {
-    <TmWidgetSelector 
+    <TmWidgetSelector
         WidgetRegistry="WidgetRegistry"
         ExistingWidgets="_widgets.Select(w => w.WidgetId).ToList()"
+        CloseOnSelect="CloseOnSelect"
         OnSelect="OnWidgetSelected"
         OnClose="() => _showWidgetSelector = false" />
 }
@@ -315,19 +551,57 @@
          InitialFocusTargetId="@_newDashboardNameId"
          ShowFooter="true"
          ShowDefaultFooterButtons="false"
-         MobilePresentation="MobilePresentation.Auto">
+         MobilePresentation="MobilePresentation.Auto"
+         Class="tm-dashboard-create-modal">
     <ChildContent>
-        <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
-            <TmTextInput Id="@_newDashboardNameId"
-                         @bind-Value="_newDashboardName"
-                         Placeholder="@Loc["TmDashboard_DashboardName"]" />
-        </TmFormField>
+        @* The form is the Enter-to-create contract: implicit submission runs the same handler as
+           the footer button (docs/keyboard-activation-convention.md — no emulated Enter on the input). *@
+        <form @onsubmit="ConfirmCreateDashboard" @onsubmit:preventDefault>
+            <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
+                <TmTextInput Id="@_newDashboardNameId"
+                             @bind-Value="_newDashboardName"
+                             AutoFocus="true"
+                             Placeholder="@Loc["TmDashboard_NameExample"]" />
+            </TmFormField>
+        </form>
     </ChildContent>
     <Footer>
-        <TmButton Variant="ButtonVariant.Ghost" OnClick="CancelNewDashboard">@Loc["Tm_Cancel"]</TmButton>
+        @* Footer convention of the F2 foundation: Cancel secondary/outlined, Create primary —
+           the sheet presentation splits the inline footer 50/50 with ≥48px touch targets. *@
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelNewDashboard">@Loc["Tm_Cancel"]</TmButton>
         <TmButton Variant="ButtonVariant.Primary"
                   OnClick="ConfirmCreateDashboard"
                   Disabled="string.IsNullOrWhiteSpace(_newDashboardName)">@Loc["Tm_Create"]</TmButton>
+    </Footer>
+</TmModal>
+
+@* ── Mobile Rename Dialog (F7b) ──────────────────────────────── *@
+@* On a mobile layout the desktop toolbar (the inline editor's host) is hidden, so rename
+   moves here through the action bar's Rename entry. The form is the Enter-to-apply contract
+   (docs/keyboard-activation-convention.md); Auto presents it as a sheet on a phone. *@
+<TmModal Show="_showMobileRenameDialog"
+         Title="@Loc["TmDashboard_Rename"]"
+         OnClose="CancelMobileRename"
+         InitialFocusTargetId="@_mobileRenameInputId"
+         ShowFooter="true"
+         ShowDefaultFooterButtons="false"
+         MobilePresentation="MobilePresentation.Auto"
+         Class="tm-dashboard-rename-modal">
+    <ChildContent>
+        <form @onsubmit="ConfirmMobileRename" @onsubmit:preventDefault>
+            <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
+                <TmTextInput Id="@_mobileRenameInputId"
+                             @bind-Value="_editingName"
+                             AutoFocus="true"
+                             Placeholder="@Loc["TmDashboard_NamePlaceholder"]" />
+            </TmFormField>
+        </form>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelMobileRename">@Loc["Tm_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  OnClick="ConfirmMobileRename"
+                  Disabled="string.IsNullOrWhiteSpace(_editingName)">@Loc["TmDashboard_ApplyName"]</TmButton>
     </Footer>
 </TmModal>
 
@@ -341,624 +615,10 @@
           Message="@string.Format(Loc["TmDashboard_DeleteDashboardConfirm"], _dashboardToDeleteName)"
           OnResult="HandleDeleteDialogResult"
           OkButtonText="@Loc["Tm_Delete"]"
+          CancelButtonText="@Loc["Tm_Cancel"]"
           IsDangerous="true"
+          Icon="@IconNames.Trash2"
           MobilePresentation="MobilePresentation.Auto"
           FooterLayout="FooterLayout.Stacked" />
 </LayoutContent>
 </TmLayoutObserver>
-
-@code {
-    [Parameter] public string? DashboardId { get; set; }
-    [Parameter] public string? UserId { get; set; }
-    [Parameter] public string? Class { get; set; }
-    [Parameter] public bool ShowTitle { get; set; } = true;
-    [Parameter] public bool AllowEdit { get; set; } = true;
-    [Parameter] public EventCallback<DashboardConfig> OnDashboardChanged { get; set; }
-    [Parameter] public RenderFragment<WidgetInstance>? WidgetTemplate { get; set; }
-
-    /// <summary>
-    /// The layout the dashboard renders. <see cref="TmLayoutMode.Auto"/> measures the dashboard's own
-    /// width; a forced value never measures, so a test can render a mode without a DOM. The grid
-    /// follows the resolved mode (12 columns on desktop, six on tablet, one on mobile), and the
-    /// two-column step inside tablet follows the container.
-    /// </summary>
-    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
-
-    /// <summary>
-    /// The layout rendered before the first measurement. Desktop unless the host says otherwise,
-    /// forwarded to the observer so an owner can start from tablet or mobile.
-    /// </summary>
-    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
-
-    /// <summary>
-    /// Raised when the rendered layout changes. Never pair <see cref="LayoutMode"/> with this
-    /// callback: it reports the resolved mode, and a two-way bind would pin that mode.
-    /// </summary>
-    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
-
-    private Task OnResolvedLayoutChanged(TmLayoutMode mode) => ResolvedLayoutChanged.InvokeAsync(mode);
-
-    [Inject] public IDashboardProvider? DashboardProvider { get; set; }
-    [Inject] public IWidgetRegistry? WidgetRegistry { get; set; }
-    [Inject] public IJSRuntime JS { get; set; } = default!;
-    
-    private ElementReference _dashboardElement;
-    private DotNetObjectReference<TmDashboard>? _dotNetRef;
-    private bool _jsInitialized;
-    private DashboardConfig? _currentDashboard;
-    private List<WidgetInstance> _widgets = [];
-    private List<DashboardConfig> _availableDashboards = [];
-    private bool _isEditMode;
-    private bool _showWidgetSelector;
-    private bool _showDashboardMenu;
-    private bool _isDragging;
-    private WidgetInstance? _draggedWidget;
-    private WidgetInstance? _dropTarget;
-    private string? _resizeDirection;
-    
-    // Name editing
-    private bool _isEditingName;
-    private string _editingName = "";
-    
-    // New dashboard dialog
-    private bool _showNewDashboardDialog;
-    private ElementReference _dashboardsButton;
-    private readonly string _dashboardsButtonId = $"tm-dashboard-views-{Guid.NewGuid():N}";
-    private readonly string _newDashboardNameId = $"tm-dashboard-name-{Guid.NewGuid():N}";
-    private string _newDashboardName = "";
-    
-    // Delete dashboard dialog
-    private bool _showDeleteDialog;
-    private string? _dashboardToDeleteId;
-    private string? _dashboardToDeleteName;
-    
-    private bool _dataLoaded;
-    private IReadOnlyList<TmActionItem> _editModeActions = [];
-
-    // X14: the edit actions are rebuilt per parameter set (not once in OnInitialized), so a
-    // culture change re-renders the labels in the new language.
-    protected override void OnParametersSet() => BuildEditModeActions();
-
-    private void BuildEditModeActions()
-    {
-        // The mobile edit-mode action bar (F5) renders the same three actions as the desktop
-        // toolbar. The EventCallback receiver is the dashboard, so its own markup re-renders on
-        // activation; Priority is only an overflow rank — the bar renders in Items order.
-        _editModeActions =
-        [
-            new TmActionItem
-            {
-                Id = "add-widget",
-                Label = Loc["TmDashboard_AddWidget"],
-                Icon = IconNames.Plus,
-                Priority = 100,
-                OnClick = EventCallback.Factory.Create(this, OpenWidgetSelector),
-            },
-            new TmActionItem
-            {
-                Id = "save-layout",
-                // Y11: the bar tile gets the SHORT mobile label — "Enregistrer les modifications"
-                // clamped illegibly at 320 fr (review round 2, m2). The desktop toolbar keeps the
-                // full wording.
-                Label = Loc["TmDashboard_SaveChangesShort"],
-                Icon = IconNames.Save,
-                Priority = 90,
-                OnClick = EventCallback.Factory.Create(this, SaveLayout),
-            },
-            new TmActionItem
-            {
-                Id = "cancel-edit",
-                Label = Loc["TmDashboard_CancelEdit"],
-                Icon = IconNames.X,
-                Priority = 80,
-                OnClick = EventCallback.Factory.Create(this, CancelEdit),
-            },
-        ];
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (_dataLoaded) return;
-
-        await LoadDashboardsList();
-
-        if (!string.IsNullOrEmpty(DashboardId))
-        {
-            await LoadDashboard(DashboardId);
-        }
-        else
-        {
-            await LoadDefaultDashboard();
-        }
-
-        _dataLoaded = true;
-    }
-    
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _dotNetRef = DotNetObjectReference.Create(this);
-            try
-            {
-                await JS.InvokeVoidAsync("tempoDashboard.init", _dashboardElement, _dotNetRef);
-                _jsInitialized = true;
-            }
-            catch (JSDisconnectedException) { }
-            catch (InvalidOperationException) { }
-        }
-    }
-    
-    private async Task LoadDashboardsList()
-    {
-        if (DashboardProvider is null) return;
-        _availableDashboards = (await DashboardProvider.GetDashboardsAsync(UserId)).ToList();
-    }
-    
-    private async Task LoadDefaultDashboard()
-    {
-        if (DashboardProvider is null) return;
-        var defaultDash = await DashboardProvider.GetDefaultDashboardAsync(UserId);
-        if (defaultDash is not null)
-        {
-            await LoadDashboard(defaultDash.Id);
-        }
-        else
-        {
-            CreateEmptyDashboard();
-        }
-    }
-    
-    private async Task LoadDashboard(string dashboardId)
-    {
-        if (DashboardProvider is null) return;
-        
-        _currentDashboard = await DashboardProvider.GetDashboardAsync(dashboardId);
-        if (_currentDashboard is not null)
-        {
-            _widgets = _currentDashboard.Widgets.ToList();
-            _showDashboardMenu = false;
-            await OnDashboardChanged.InvokeAsync(_currentDashboard);
-            StateHasChanged();
-        }
-    }
-    
-    private void CreateEmptyDashboard()
-    {
-        _currentDashboard = new DashboardConfig
-        {
-            Name = "New Dashboard",
-            CreatedBy = UserId ?? "anonymous",
-            Grid = new GridConfig { Columns = 12, RowHeight = 60, Gap = 16, AllowOverlap = false }
-        };
-        _widgets = [];
-    }
-    
-    private void EnterEditMode()
-    {
-        if (!AllowEdit) return;
-        _isEditMode = true;
-        StateHasChanged();
-    }
-    
-    private async Task SaveLayout()
-    {
-        if (_currentDashboard is null || DashboardProvider is null) return;
-        
-        _currentDashboard.Widgets = _widgets.ToList();
-        _currentDashboard.ModifiedAt = DateTime.UtcNow;
-        
-        _currentDashboard = await DashboardProvider.SaveDashboardAsync(_currentDashboard);
-        _isEditMode = false;
-        _isEditingName = false;
-        
-        await LoadDashboardsList();
-        await OnDashboardChanged.InvokeAsync(_currentDashboard);
-        StateHasChanged();
-    }
-    
-    private void CancelEdit()
-    {
-        if (_currentDashboard is not null)
-        {
-            _widgets = _currentDashboard.Widgets.ToList();
-        }
-        _isEditMode = false;
-        _isEditingName = false;
-        StateHasChanged();
-    }
-    
-    private void OpenWidgetSelector()
-    {
-        _showWidgetSelector = true;
-        StateHasChanged();
-    }
-    
-    private void OnWidgetSelected(WidgetDefinition widget)
-    {
-        var instance = new WidgetInstance
-        {
-            WidgetId = widget.Id,
-            Width = widget.DefaultWidth,
-            Height = widget.DefaultHeight,
-            X = 0,
-            Y = 0
-        };
-        
-        // Find non-overlapping position
-        var position = FindNonOverlappingPosition(instance);
-        instance.X = position.X;
-        instance.Y = position.Y;
-        
-        _widgets.Add(instance);
-        _showWidgetSelector = false;
-        StateHasChanged();
-    }
-    
-    private (int X, int Y) FindNonOverlappingPosition(WidgetInstance newWidget)
-    {
-        if (_widgets.Count == 0) return (0, 0);
-        
-        var grid = _currentDashboard?.Grid ?? new GridConfig();
-        int maxColumns = grid.Columns;
-        
-        // Try to find a position starting from top-left
-        for (int y = 0; y < 100; y++)
-        {
-            for (int x = 0; x <= maxColumns - newWidget.Width; x++)
-            {
-                newWidget.X = x;
-                newWidget.Y = y;
-                
-                if (!WouldOverlap(newWidget))
-                {
-                    return (x, y);
-                }
-            }
-        }
-        
-        // Fallback: place below all widgets
-        int maxY = _widgets.Any() ? _widgets.Max(w => w.Y + w.Height) : 0;
-        return (0, maxY);
-    }
-    
-    private bool WouldOverlap(WidgetInstance widget)
-    {
-        foreach (var existing in _widgets.Where(w => w.InstanceId != widget.InstanceId))
-        {
-            if (HasOverlap(widget, existing))
-                return true;
-        }
-        return false;
-    }
-    
-    private void PushOverlappingWidgets(WidgetInstance movedWidget)
-    {
-        var widgetsToPush = _widgets
-            .Where(w => w.InstanceId != movedWidget.InstanceId && HasOverlap(movedWidget, w))
-            .ToList();
-        
-        foreach (var widget in widgetsToPush)
-        {
-            int pushAmount = movedWidget.Y + movedWidget.Height - widget.Y;
-            widget.Y += pushAmount;
-            
-            // Recursively push widgets that this one now overlaps
-            PushOverlappingWidgets(widget);
-        }
-    }
-    
-    private void RemoveWidget(WidgetInstance widget)
-    {
-        _widgets.Remove(widget);
-        StateHasChanged();
-    }
-    
-    private void ToggleCollapse(WidgetInstance widget)
-    {
-        widget.IsCollapsed = !widget.IsCollapsed;
-        StateHasChanged();
-    }
-    
-    private void OnDragStart(DragEventArgs e, WidgetInstance widget)
-    {
-        if (!_isEditMode) return;
-        _isDragging = true;
-        _draggedWidget = widget;
-    }
-    
-    private void OnDragEnd(DragEventArgs e)
-    {
-        if (_draggedWidget is not null && _dropTarget is not null)
-        {
-            // Apply the drop position
-            _draggedWidget.X = _dropTarget.X;
-            _draggedWidget.Y = _dropTarget.Y;
-            
-            // Push any widgets that would overlap
-            if (_currentDashboard?.Grid.AllowOverlap == false)
-            {
-                PushOverlappingWidgets(_draggedWidget);
-            }
-        }
-        
-        _isDragging = false;
-        _draggedWidget = null;
-        _dropTarget = null;
-        StateHasChanged();
-    }
-    
-    private void OnResizeStart(MouseEventArgs e, WidgetInstance widget, string direction)
-    {
-        if (!_isEditMode) return;
-        _resizeDirection = direction;
-        _draggedWidget = widget;
-    }
-    
-    private string GetWidgetClasses(WidgetInstance widget)
-    {
-        var classes = new List<string>();
-        if (widget.IsCollapsed) classes.Add("tm-widget--collapsed");
-        if (widget.IsMinimized) classes.Add("tm-widget--minimized");
-        if (_isDragging && _draggedWidget == widget) classes.Add("tm-widget--dragging");
-        // Wider than half the desktop grid: the compact container query gives it the full row.
-        if (widget.Width > Columns / 2) classes.Add("tm-widget--wide");
-        return string.Join(" ", classes);
-    }
-
-    private int Columns => _currentDashboard?.Grid.Columns ?? 12;
-
-    private string GetWidgetStyles(WidgetInstance widget, Dictionary<string, int> order)
-    {
-        // Variables, not grid-column: an inline grid-column beats every @container rule, so the
-        // container query in _dashboard.css is what turns these into 12, 2 or 1 column.
-        var position = order[widget.InstanceId];
-        // Tablet span: wider than half the desktop grid takes the whole row, a quarter or wider
-        // takes half, anything narrower takes a third. A width of three and four both take half, so
-        // the demo's second row fills the six tablet tracks instead of leaving a one-track hole.
-        var spanMd = widget.Width > Columns / 2 ? 6 : widget.Width >= Columns / 4 ? 3 : 2;
-        return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-span-md: {spanMd}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {position}; z-index: {widget.ZIndex};";
-    }
-
-    /// <summary>1-based visual order, row then column, built once per render from the widgets as they are now.</summary>
-    private Dictionary<string, int> BuildOrder() => _widgets
-        .OrderBy(widget => widget.Y)
-        .ThenBy(widget => widget.X)
-        .ThenBy(widget => widget.InstanceId, StringComparer.Ordinal)
-        .Select((widget, index) => (widget.InstanceId, index + 1))
-        .ToDictionary(item => item.InstanceId, item => item.Item2, StringComparer.Ordinal);
-    
-    private string GetWidgetName(WidgetInstance widget)
-    {
-        return WidgetRegistry?.GetWidget(widget.WidgetId)?.Name ?? "Unknown Widget";
-    }
-    
-    private bool IsDraggable(WidgetInstance widget)
-    {
-        return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsDraggable ?? true;
-    }
-
-    /// <summary>Drag is a desktop gesture. Below desktop the grid has restacked and the coordinates no longer match.</summary>
-    private bool CanDrag(WidgetInstance widget, TmLayoutContext layout) => IsDraggable(widget) && layout.IsDesktop;
-    
-    private bool IsResizable(WidgetInstance widget)
-    {
-        return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsResizable ?? true;
-    }
-
-    /// <summary>Resize handles follow the desktop grid. Below desktop they would resize a track that is no longer there.</summary>
-    private bool CanResize(WidgetInstance widget, TmLayoutContext layout) => IsResizable(widget) && layout.IsDesktop;
-    
-    private bool CanCollapse(WidgetInstance widget)
-    {
-        return true;
-    }
-    
-    private bool HasOverlap(WidgetInstance a, WidgetInstance b)
-    {
-        return a.X < b.X + b.Width &&
-               a.X + a.Width > b.X &&
-               a.Y < b.Y + b.Height &&
-               a.Y + a.Height > b.Y;
-    }
-    
-    private RenderFragment RenderWidgetContent(WidgetInstance widget)
-    {
-        if (WidgetTemplate is not null)
-        {
-            return WidgetTemplate(widget);
-        }
-
-        return builder =>
-        {
-            builder.AddContent(0, $"Widget: {GetWidgetName(widget)}");
-        };
-    }
-    
-    private void ToggleDashboardMenu()
-    {
-        _showDashboardMenu = !_showDashboardMenu;
-        StateHasChanged();
-    }
-    
-    private async Task CreateNewDashboard()
-    {
-        _showDashboardMenu = false;
-        _newDashboardName = "";
-        _showNewDashboardDialog = true;
-        await InvokeAsync(StateHasChanged);
-    }
-    
-    private void ConfirmCreateDashboard()
-    {
-        if (string.IsNullOrWhiteSpace(_newDashboardName)) return;
-        
-        _currentDashboard = new DashboardConfig
-        {
-            Name = _newDashboardName.Trim(),
-            CreatedBy = UserId ?? "anonymous",
-            Grid = new GridConfig { Columns = 12, RowHeight = 60, Gap = 16, AllowOverlap = false }
-        };
-        _widgets = [];
-        _showNewDashboardDialog = false;
-        _isEditMode = true;
-        StateHasChanged();
-    }
-    
-    private void CancelNewDashboard()
-    {
-        _showNewDashboardDialog = false;
-        _newDashboardName = "";
-        StateHasChanged();
-    }
-    
-    private void HandleNewDashboardKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newDashboardName))
-        {
-            ConfirmCreateDashboard();
-        }
-        else if (e.Key == "Escape")
-        {
-            CancelNewDashboard();
-        }
-    }
-    
-    private async Task SetAsDefault(string dashboardId)
-    {
-        if (DashboardProvider is null) return;
-        
-        await DashboardProvider.SetDefaultDashboardAsync(dashboardId, UserId);
-        await LoadDashboardsList();
-        StateHasChanged();
-    }
-    
-    private void DeleteDashboard(string dashboardId)
-    {
-        // Don't allow deleting the default dashboard
-        var dashboard = _availableDashboards.FirstOrDefault(d => d.Id == dashboardId);
-        if (dashboard?.IsDefault == true)
-        {
-            return;
-        }
-        
-        _dashboardToDeleteId = dashboardId;
-        _dashboardToDeleteName = dashboard?.Name;
-        _showDeleteDialog = true;
-        _showDashboardMenu = false;
-        StateHasChanged();
-    }
-    
-    private async Task HandleDeleteDialogResult(bool? result)
-    {
-        if (result == true)
-        {
-            await ConfirmDeleteDashboard();
-        }
-        else
-        {
-            CancelDeleteDashboard();
-        }
-    }
-    
-    private async Task ConfirmDeleteDashboard()
-    {
-        if (DashboardProvider is null || string.IsNullOrEmpty(_dashboardToDeleteId)) return;
-        
-        await DashboardProvider.DeleteDashboardAsync(_dashboardToDeleteId);
-        
-        // If we deleted the current dashboard, load the default one
-        if (_currentDashboard?.Id == _dashboardToDeleteId)
-        {
-            await LoadDefaultDashboard();
-        }
-        
-        await LoadDashboardsList();
-        CancelDeleteDashboard();
-    }
-    
-    private void CancelDeleteDashboard()
-    {
-        _showDeleteDialog = false;
-        _dashboardToDeleteId = null;
-        _dashboardToDeleteName = null;
-        StateHasChanged();
-    }
-    
-    private void StartNameEdit()
-    {
-        _editingName = _currentDashboard?.Name ?? "";
-        _isEditingName = true;
-        StateHasChanged();
-    }
-    
-    private void SaveNameEdit()
-    {
-        if (_currentDashboard is not null && !string.IsNullOrWhiteSpace(_editingName))
-        {
-            _currentDashboard.Name = _editingName.Trim();
-        }
-        _isEditingName = false;
-        StateHasChanged();
-    }
-    
-    private void CancelNameEdit()
-    {
-        _isEditingName = false;
-        _editingName = "";
-        StateHasChanged();
-    }
-    
-    [JSInvokable]
-    public void OnGridPositionChanged(string instanceId, int x, int y)
-    {
-        var widget = _widgets.FirstOrDefault(w => w.InstanceId == instanceId);
-        if (widget is not null)
-        {
-            widget.X = x;
-            widget.Y = y;
-            
-            // Push overlapping widgets
-            if (_currentDashboard?.Grid.AllowOverlap == false)
-            {
-                PushOverlappingWidgets(widget);
-            }
-            
-            StateHasChanged();
-        }
-    }
-    
-    [JSInvokable]
-    public void OnWidgetResized(string instanceId, int width, int height)
-    {
-        var widget = _widgets.FirstOrDefault(w => w.InstanceId == instanceId);
-        if (widget is not null)
-        {
-            widget.Width = width;
-            widget.Height = height;
-            
-            // Push overlapping widgets after resize
-            if (_currentDashboard?.Grid.AllowOverlap == false)
-            {
-                PushOverlappingWidgets(widget);
-            }
-            
-            StateHasChanged();
-        }
-    }
-    
-    public async ValueTask DisposeAsync()
-    {
-        if (_jsInitialized)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("tempoDashboard.destroy", _dashboardElement);
-            }
-            catch (JSDisconnectedException) { }
-            catch (InvalidOperationException) { }
-            catch (TaskCanceledException) { }
-        }
-        _dotNetRef?.Dispose();
-    }
-}

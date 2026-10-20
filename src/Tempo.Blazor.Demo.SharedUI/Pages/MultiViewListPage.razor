@@ -1,5 +1,6 @@
 @page "/multi-view-list"
 @using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.DataTable
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Demo.Shared
@@ -44,6 +45,7 @@
                      ViewFilterDefinitions="_filterDefs"
                      ExternalFilterDefinitions="_filterDefs"
                      ShowExternalFilterBuilder="true"
+                     TableCellLayout="TableCellLayout.Stacked"
                      ViewCanCreateTenantViews="true"
                      CurrentUserId="CurrentUserId"
                      CurrentTenantId="CurrentTenantId"

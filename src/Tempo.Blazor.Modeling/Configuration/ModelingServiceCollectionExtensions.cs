@@ -19,6 +19,10 @@ public static class ModelingServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.AddTempoBlazorDiagramEditor();
 
+        // The loading delays run on an injectable clock so tests advance a FakeTimeProvider
+        // instead of sleeping. TryAdd: a host that already pinned its own TimeProvider keeps it.
+        services.TryAddSingleton(TimeProvider.System);
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingNotationProfile, BpmnNotationProfile>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingNotationProfile, BpmnLegacyModelingNotationProfile>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingNotationProfile, UmlNotationProfile>());

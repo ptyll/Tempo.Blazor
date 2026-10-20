@@ -1,6 +1,8 @@
 @namespace Tempo.Blazor.Components.Signing
 @inherits Tempo.Blazor.Components.TmComponentBase
+@implements Tempo.Blazor.Abstractions.Shared.ITmDraftGuard
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Abstractions.Shared
 
 <aside class="@RootClass"
        aria-label="@Loc["TmDocumentComments_PanelLabel"]"
@@ -63,7 +65,7 @@
                                            Disabled="@Disabled"
                                            PickerOpen="@(_reactionPickerCommentId == comment.Id)"
                                            PickerOpenChanged="open => SetReactionPicker(comment.Id, open)"
-                                           OnEditRequested="BeginEdit"
+                                           OnEditRequested="BeginEditAsync"
                                            OnDeleteRequested="DeleteCommentAsync"
                                            OnReactionToggled="ToggleReactionAsync" />
                 }
@@ -71,8 +73,8 @@
 
             @if (_editingComment is not null)
             {
-                <TmCommentComposer Value="@_editText"
-                                   ValueChanged="value => _editText = value"
+                <TmCommentComposer @bind-Value="_editText"
+                                   @bind-Value:after="NotifyDraftChangedAsync"
                                    Placeholder="@Loc["TmDocumentComments_EditPlaceholder"]"
                                    AriaLabel="@Loc["TmDocumentComments_EditLabel"]"
                                    SubmitText="@Loc["TmDocumentComments_Save"]"
@@ -83,7 +85,9 @@
             }
             else if (SelectedThread.Status == DocumentCommentThreadStatus.Open || AllowReplyToResolved)
             {
-                <TmCommentComposer Placeholder="@Loc["TmDocumentComments_ReplyPlaceholder"]"
+                <TmCommentComposer @bind-Value="_replyText"
+                                   @bind-Value:after="NotifyDraftChangedAsync"
+                                   Placeholder="@Loc["TmDocumentComments_ReplyPlaceholder"]"
                                    AriaLabel="@Loc["TmDocumentComments_ReplyLabel"]"
                                    SubmitText="@Loc["TmDocumentComments_Reply"]"
                                    MentionUsers="@MentionUsers"
@@ -132,6 +136,16 @@
     private string? _reactionPickerCommentId;
     private DocumentComment? _editingComment;
     private string _editText = string.Empty;
+    private string _replyText = string.Empty;
+
+    /// <summary>Body of the comment as it was when its edit started — the differs-from-original baseline for the edit slot.</summary>
+    private string _editOriginalBody = string.Empty;
+
+    /// <summary>Thread id the composer state was last seeded for — a change resets the draft slots.</summary>
+    private string? _lastSelectedThreadId;
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmCommentDraftState _lastDraftState = new(false, null, false);
 
     /// <summary>Comment threads to render.</summary>
     [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
@@ -178,6 +192,132 @@
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Notifies the parent that the panel's comment draft state changed. The reply and edit
+    /// composers hold their text in private fields the host cannot observe through a parameter —
+    /// this callback (together with <see cref="HasUnsavedDraft"/> and
+    /// <see cref="DiscardDraftAsync"/>) is the draft-guard surface. Fires ONLY when the
+    /// <see cref="TmCommentDraftState"/> value actually changes (value-equality dedup), never on
+    /// every keystroke. <see cref="TmCommentDraftState.IsEditorOpen"/> is
+    /// <see langword="true"/> while the reply composer is mounted (a thread is selected) or an
+    /// edit is open; <see cref="TmCommentDraftState.EditingCommentId"/> carries the id of the
+    /// comment under edit; <see cref="TmCommentDraftState.HasUnsavedContent"/> aggregates both —
+    /// for an edit it means the text differs from the comment body as it was when the edit
+    /// started, so opening an edit without changing anything is not an unsaved draft.
+    /// </summary>
+    [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        // The reply composer is bound to the SELECTED thread: a selection change (or a thread
+        // that stopped being reply-eligible) unmounts it parameter-driven — reset the draft
+        // slots so the stale text cannot leak into the next thread's composer or into the state.
+        if (!string.Equals(SelectedThreadId, _lastSelectedThreadId, StringComparison.Ordinal))
+        {
+            _lastSelectedThreadId = SelectedThreadId;
+            _replyText = string.Empty;
+            _editingComment = null;
+            _editText = string.Empty;
+            _editOriginalBody = string.Empty;
+        }
+        else if (!IsReplyComposerMounted)
+        {
+            _replyText = string.Empty;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        // Host-driven selection changes mount/unmount the reply composer — a transition the
+        // consumer must see; the dedup keeps repeated parameter sets silent.
+        await NotifyDraftChangedAsync();
+    }
+
+    /// <summary>
+    /// Whether the panel currently holds an unsaved comment draft — text in the reply composer or
+    /// an open edit whose text differs from the comment body as it was when the edit started. The
+    /// SAME value carried by <see cref="TmCommentDraftState.HasUnsavedContent"/> that
+    /// <see cref="OnDraftChanged"/> reports; read live from the composer state, so it can be
+    /// polled at any time.
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Discards every draft in the panel: clears the reply composer text and closes the open edit
+    /// (its text is cleared with it). Intended for the consumer AFTER the user confirmed the
+    /// discard in the consumer's OWN confirmation dialog — the component never shows a
+    /// confirmation itself; that is deliberately the consumer's responsibility.
+    /// <para>
+    /// A no-op (no notification) when no editor is open and no draft exists. Safe to
+    /// call from outside the render cycle; the reset, re-render and notification are dispatched
+    /// through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            _replyText = string.Empty;
+            _editingComment = null;
+            _editText = string.Empty;
+            _editOriginalBody = string.Empty;
+            StateHasChanged();
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>
+    /// Whether the reply composer is currently mounted: a thread is selected, no edit is open and
+    /// the thread accepts replies (open, or resolved with <see cref="AllowReplyToResolved"/>).
+    /// </summary>
+    private bool IsReplyComposerMounted => !IsEditOpen && SelectedThread is not null
+        && (SelectedThread.Status == DocumentCommentThreadStatus.Open || AllowReplyToResolved);
+
+    private bool IsEditOpen => _editingComment is not null;
+
+    /// <summary>
+    /// Builds the panel's draft snapshot: the reply composer is open while a thread is selected
+    /// and no edit is running; the edit slot reports the edited comment id; the aggregate counts
+    /// the reply text (only while the reply composer is mounted) plus an edit that moved beyond
+    /// its original body.
+    /// </summary>
+    private TmCommentDraftState BuildDraftState()
+    {
+        var isEditOpen = IsEditOpen;
+        var isReplyOpen = IsReplyComposerMounted;
+        var hasEditDraft = isEditOpen
+            && !string.Equals(_editText, _editOriginalBody, StringComparison.Ordinal);
+        var hasReplyDraft = isReplyOpen && !string.IsNullOrWhiteSpace(_replyText);
+
+        return new TmCommentDraftState(
+            isReplyOpen || isEditOpen,
+            _editingComment?.Id,
+            hasReplyDraft || hasEditDraft);
+    }
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed — the
+    /// composers report every keystroke into this path and the value-equality check keeps the
+    /// parent from re-rendering without a real transition.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
+    }
+
     private string RootClass => string.Join(" ", new[] { "tm-document-comments-panel", Class }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     private DocumentCommentThread? SelectedThread => Threads.FirstOrDefault(thread => thread.Id == SelectedThreadId);
@@ -216,7 +356,16 @@
 
     private async Task ClearSelectionAsync()
     {
+        // The reply composer unmounts with the selection — drop its draft (and any open edit)
+        // here, so the immediate notification already reports the closed, empty state before the
+        // host's parameter round-trip lands.
         _editingComment = null;
+        _editText = string.Empty;
+        _editOriginalBody = string.Empty;
+        _replyText = string.Empty;
+        _lastSelectedThreadId = null;
+        StateHasChanged();
+        await NotifyDraftChangedAsync();
         await SelectedThreadIdChanged.InvokeAsync(null);
     }
 
@@ -290,10 +439,16 @@
         return OnReopenRequested.InvokeAsync(new DocumentCommentThreadStatusRequest { ThreadId = threadId });
     }
 
-    private void BeginEdit(DocumentComment comment)
+    private async Task BeginEditAsync(DocumentComment comment)
     {
+        // The edit composer replaces the reply composer — its draft would otherwise survive the
+        // swap and reappear in the reply composer once the edit ends.
+        _replyText = string.Empty;
         _editingComment = comment;
         _editText = comment.Body;
+        _editOriginalBody = comment.Body;
+        StateHasChanged();
+        await NotifyDraftChangedAsync();
     }
 
     private async Task SaveEditAsync(DocumentCommentComposerSubmitEventArgs args)
@@ -312,13 +467,18 @@
         });
         _editingComment = null;
         _editText = string.Empty;
+        _editOriginalBody = string.Empty;
+        // The edit closed (and the reply composer remounts) — report the cleared state.
+        await NotifyDraftChangedAsync();
     }
 
-    private Task CancelEditAsync()
+    private async Task CancelEditAsync()
     {
         _editingComment = null;
         _editText = string.Empty;
-        return Task.CompletedTask;
+        _editOriginalBody = string.Empty;
+        StateHasChanged();
+        await NotifyDraftChangedAsync();
     }
 
     private Task DeleteCommentAsync(DocumentCommentDeleteRequest request)

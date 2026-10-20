@@ -1,6 +1,10 @@
 @namespace Tempo.Blazor.Components.Filters
+@using Microsoft.JSInterop
+@using Tempo.Blazor.Localization
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Pickers
+@implements IDisposable
 
 <div class="tm-filter-builder @Class">
     @* Active filter chips *@
@@ -21,22 +25,58 @@
         }
     </div>
 
-    @* Add filter button *@
-    @if (!_showFieldPicker)
+    @* Add filter button. Anchored presentations keep it visible: it is the overlay anchor. *@
+    @if (UsesOverlay || !_showFieldPicker)
     {
-        <button type="button" class="tm-filter-builder-add" @onclick="OpenFieldPicker">
+        <button type="button" @ref="_addButton" id="@(UsesOverlay ? _addButtonId : null)" class="tm-filter-builder-add" aria-expanded="@(UsesOverlay ? ((_showFieldPicker || _selectedDefinition is not null) ? "true" : "false") : null)" aria-haspopup="@(UsesOverlay ? "dialog" : null)" @onclick="OpenFieldPicker">
             @Loc["TmFilterBuilder_AddFilter"]
         </button>
     }
 
-    @* Field picker *@
-    @if (_showFieldPicker && _editingFilter is null)
+    @if (ShowResultPreview && ResultCountProvider is not null)
     {
-        <div class="tm-filter-field-picker">
-            @foreach (var def in FilterDefinitions)
+        <div class="tm-filter-result-preview" role="status" aria-live="polite" aria-busy="@(_resultCountRefreshing ? "true" : null)">
+            @if (_resultCountPending)
             {
-                var d = def;
-                <button type="button" class="tm-filter-field-option" @onclick="() => SelectField(d)">
+                <TmSpinner Size="SpinnerSize.Xs" />
+                @Loc["TmFilterBuilder_ResultPreviewLoading"]
+            }
+            else if (_resultCount is int count)
+            {
+                @Loc.Plural("TmFilterBuilder_ResultPreview", count)
+            }
+        </div>
+    }
+
+    @* Field picker. Popover/Auto render it inside an overlay anchored to Add filter. *@
+    @if (UsesOverlay && (_showFieldPicker || _selectedDefinition is not null))
+    {
+        <TmOverlayPanel Anchor="_addButton"
+                        IsOpen="true"
+                        IsOpenChanged="OnOverlayOpenChanged"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Role="dialog"
+                        Title="@Loc["TmFilterBuilder_AddFilter"]"
+                        MobilePresentation="@(Presentation == FilterBuilderPresentation.Auto ? PanelPresentation.Auto : PanelPresentation.Popover)"
+                        Class="tm-filter-builder-panel">
+            @if (_showFieldPicker && _editingFilter is null && _selectedDefinition is null)
+            {
+                @PickerContent
+            }
+            else if (_selectedDefinition is not null)
+            {
+                @EditorContent
+            }
+        </TmOverlayPanel>
+    }
+    else if (_showFieldPicker && _editingFilter is null)
+    {
+        <div class="tm-filter-field-picker" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
+            @for (var i = 0; i < FilterDefinitions.Count; i++)
+            {
+                var d = FilterDefinitions[i];
+                <button type="button" class="tm-filter-field-option" @ref="_fieldOption" @onclick="() => SelectField(d)">
                     @ResolveFieldLabel(d)
                 </button>
             }
@@ -46,70 +86,10 @@
         </div>
     }
 
-    @* Filter editor *@
-    @if (_selectedDefinition is not null)
+    @* Filter editor. Overlay presentations render the same fragment inside the panel. *@
+    @if (!UsesOverlay && _selectedDefinition is not null)
     {
-        <div class="tm-filter-editor">
-            <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition)</span>
-
-            <select class="tm-filter-operator-select"
-                    value="@_selectedOperator"
-                    @onchange="e => _selectedOperator = Enum.Parse<FilterOperator>(e.Value!.ToString()!)">
-                @foreach (var op in GetOperatorsFor(_selectedDefinition.FieldType))
-                {
-                    <option value="@op">@FormatOperator(op)</option>
-                }
-            </select>
-
-            @if (!IsEmptyOperator(_selectedOperator))
-            {
-                @if (_selectedDefinition.FieldType == FilterFieldType.Date)
-                {
-                    <TmDatePicker Value="_dateValue"
-                                  ValueChanged="d => _dateValue = d"
-                                  Class="tm-filter-value-input" />
-                }
-                else if (_selectedDefinition.FieldType == FilterFieldType.Select
-                      || _selectedDefinition.FieldType == FilterFieldType.MultiSelect)
-                {
-                    <select class="tm-filter-select tm-filter-value-input"
-                            value="@_textValue"
-                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
-                        <option value="">@Loc["Tm_Select"]</option>
-                        @if (_selectedDefinition.Options is not null)
-                        {
-                            @foreach (var opt in _selectedDefinition.Options)
-                            {
-                                <option value="@opt.Value">@ResolveValueLabel(_selectedDefinition.FieldName, opt.Value, opt.Label)</option>
-                            }
-                        }
-                    </select>
-                }
-                else if (_selectedDefinition.FieldType == FilterFieldType.Boolean)
-                {
-                    <select class="tm-filter-select tm-filter-value-input"
-                            value="@_textValue"
-                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
-                        <option value="true">@Loc["Tm_Yes"]</option>
-                        <option value="false">@Loc["Tm_No"]</option>
-                    </select>
-                }
-                else
-                {
-                    <input type="@GetInputType(_selectedDefinition.FieldType)"
-                           class="tm-filter-value-input"
-                           value="@_textValue"
-                           @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty" />
-                }
-            }
-
-            <button type="button" class="tm-filter-apply" @onclick="ApplyFilter">
-                @Loc["Tm_Apply"]
-            </button>
-            <button type="button" class="tm-filter-cancel" @onclick="Cancel">
-                @Loc["Tm_Cancel"]
-            </button>
-        </div>
+        @EditorContent
     }
 </div>
 
@@ -123,6 +103,25 @@
     /// <summary>Fires whenever the filter list changes.</summary>
     [Parameter] public EventCallback<IReadOnlyList<ActiveFilter>> OnFiltersChanged { get; set; }
 
+    /// <summary>
+    /// Shows a live count of the records matching the filters, including a valid in-progress editor
+    /// filter. Renders only while <see cref="ResultCountProvider"/> is also set.
+    /// </summary>
+    [Parameter] public bool ShowResultPreview { get; set; }
+
+    /// <summary>
+    /// Returns the number of records matching the given filters, or null when unknown. Called with a
+    /// 300 ms debounce while <see cref="ShowResultPreview"/> is true. A thrown exception shows nothing
+    /// and never takes the builder down. An existing <c>Func</c> variable binds directly.
+    /// </summary>
+    [Parameter] public Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider { get; set; }
+
+    /// <summary>
+    /// How long a burst of filter changes waits before the count is asked for. Not a parameter —
+    /// tests set it through <c>InternalsVisibleTo</c>. Defaults to 300 ms.
+    /// </summary>
+    internal int ResultCountDebounceMs { get; set; } = 300;
+
     /// <summary>Show the "Clear all" button when filters are active.</summary>
     [Parameter] public bool ShowClearAll { get; set; } = true;
 
@@ -135,8 +134,154 @@
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Picker placement. <see cref="FilterBuilderPresentation.Inline"/> (default) keeps today's layout,
+    /// including PickersPage. <see cref="FilterBuilderPresentation.Popover"/> and
+    /// <see cref="FilterBuilderPresentation.Auto"/> open the field picker and editor through
+    /// <c>TmOverlayPanel</c> anchored to the Add filter button — Popover stays a popover at every
+    /// width, Auto lets the panel become a sheet on a narrow viewport. Hosts must opt in.
+    /// </summary>
+    [Parameter] public FilterBuilderPresentation Presentation { get; set; } = FilterBuilderPresentation.Inline;
+
+    /// <summary>True when the picker and editor render in an overlay instead of the document flow.</summary>
+    private bool UsesOverlay => Presentation is FilterBuilderPresentation.Popover or FilterBuilderPresentation.Auto;
+
+    // Per instance, so a page with two builders never shares an anchor id.
+    private readonly string _addButtonId = $"tm-filter-add-{Guid.NewGuid():N}"[..20];
+
+    /// <summary>The picker and editor, shared by the in-flow markup and the overlay.</summary>
+    private RenderFragment PickerContent => __builder =>
+    {
+        if (_showFieldPicker && _editingFilter is null)
+        {
+            <div class="tm-filter-field-picker" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
+                @for (var i = 0; i < FilterDefinitions.Count; i++)
+                {
+                    var d = FilterDefinitions[i];
+                    <button type="button" class="tm-filter-field-option" @ref="_fieldOption" @onclick="() => SelectField(d)">
+                        @ResolveFieldLabel(d)
+                    </button>
+                }
+                <button type="button" class="tm-filter-cancel" @onclick="Cancel">
+                    @Loc["Tm_Cancel"]
+                </button>
+            </div>
+        }
+    };
+
+    /// <summary>The operator and value editor, shared by the in-flow markup and the overlay.</summary>
+    private RenderFragment EditorContent => __builder =>
+    {
+        <div class="tm-filter-editor" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
+            <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition!)</span>
+
+            <select class="tm-filter-operator-select" aria-label="@Loc["TmFilterBuilder_Operator"]"
+                    value="@_selectedOperator"
+                    @onchange="OnOperatorChanged">
+                @foreach (var op in GetOperatorsFor(_selectedDefinition!.FieldType))
+                {
+                    <option value="@op">@FormatOperator(op)</option>
+                }
+            </select>
+
+            @if (!IsEmptyOperator(_selectedOperator))
+            {
+                @if (_selectedDefinition!.FieldType == FilterFieldType.Date)
+                {
+                    <TmDatePicker Label="@Loc["TmFilterBuilder_Value"]"
+                                  Value="_dateValue"
+                                  ValueChanged="OnDateValueChanged"
+                                  Class="tm-filter-value-input" />
+                }
+                else if (_selectedDefinition.FieldType == FilterFieldType.Select
+                      || _selectedDefinition.FieldType == FilterFieldType.MultiSelect)
+                {
+                    <select class="tm-filter-select tm-filter-value-input" aria-label="@Loc["TmFilterBuilder_Value"]"
+                            value="@_textValue"
+                            @onchange="OnTextValueChanged">
+                        <option value="">@Loc["Tm_Select"]</option>
+                        @if (_selectedDefinition.Options is not null)
+                        {
+                            @foreach (var opt in _selectedDefinition.Options)
+                            {
+                                <option value="@opt.Value">@ResolveValueLabel(_selectedDefinition.FieldName, opt.Value, opt.Label)</option>
+                            }
+                        }
+                    </select>
+                }
+                else if (_selectedDefinition.FieldType == FilterFieldType.Boolean)
+                {
+                    <select class="tm-filter-select tm-filter-value-input" aria-label="@Loc["TmFilterBuilder_Value"]"
+                            value="@_textValue"
+                            @onchange="OnTextValueChanged">
+                        <option value="true">@Loc["Tm_Yes"]</option>
+                        <option value="false">@Loc["Tm_No"]</option>
+                    </select>
+                }
+                else
+                {
+                    <input type="@GetInputType(_selectedDefinition.FieldType)"
+                           aria-label="@Loc["TmFilterBuilder_Value"]"
+                           class="tm-filter-value-input"
+                           value="@_textValue"
+                           @oninput="OnTextValueInput"
+                           @onchange="OnTextValueChanged" />
+                }
+            }
+
+            <button type="button" class="tm-filter-apply" @onclick="ApplyFilter">
+                @Loc["Tm_Apply"]
+            </button>
+            <button type="button" class="tm-filter-cancel" @onclick="Cancel">
+                @Loc["Tm_Cancel"]
+            </button>
+        </div>
+    };
+
+    private Task OnOverlayOpenChanged(bool open)
+    {
+        if (!open)
+            Cancel();
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPicker)
+        {
+            _focusPicker = false;
+            // The setter keeps the first option. A page-wide querySelector would land in a sibling
+            // builder rendered above this one.
+            try { await _firstFieldOption.FocusAsync(); }
+            catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or JSException or InvalidOperationException) { }
+        }
+        else if (_restoreAddFocus)
+        {
+            _restoreAddFocus = false;
+            try { await _addButton.FocusAsync(); }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        }
+    }
+
+    private ElementReference _addButton;
+    private ElementReference _firstFieldOption;
+    private ElementReference _fieldOption
+    {
+        get => _firstFieldOption;
+        set => _firstFieldOption = _firstFieldOption.Context is null ? value : _firstFieldOption;
+    }
+    private bool _focusPicker;
+    private bool _restoreAddFocus;
     private List<ActiveFilter>   _filters          = [];
     private IReadOnlyList<ActiveFilter> _lastActiveFilters = [];
+    private Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? _lastResultCountProvider;
+    private bool _sawResultCountInputs;
+    private bool _lastShowResultPreview;
+    private int? _resultCount;
+    private bool _resultCountPending;
+    private bool _resultCountRefreshing;
+    private bool _disposed;
+    private CancellationTokenSource? _resultCountCts;
     private bool                 _showFieldPicker;
     private FilterDefinition?    _selectedDefinition;
     private ActiveFilter?        _editingFilter;
@@ -146,20 +291,190 @@
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(_lastActiveFilters, ActiveFilters))
+        var filtersChanged = !ReferenceEquals(_lastActiveFilters, ActiveFilters);
+        if (filtersChanged)
         {
             _filters = [.. ActiveFilters];
             _lastActiveFilters = ActiveFilters;
         }
+
+        // A new provider has never counted, so a count left by the previous one must not survive it.
+        var providerChanged = !ReferenceEquals(_lastResultCountProvider, ResultCountProvider);
+        if (providerChanged)
+        {
+            _lastResultCountProvider = ResultCountProvider;
+            _resultCount = null;
+        }
+
+        var previewChanged = _lastShowResultPreview != ShowResultPreview;
+        _lastShowResultPreview = ShowResultPreview;
+
+        // A parent re-render with the same inputs must not clear the count or ask again.
+        if (!_sawResultCountInputs || filtersChanged || providerChanged || previewChanged)
+        {
+            _sawResultCountInputs = true;
+            ScheduleResultCount();
+        }
+    }
+
+    /// <summary>
+    /// Collapses a burst of filter changes into one count. Each call cancels the previous wait, so
+    /// three changes inside the window produce exactly one call, made with the latest filters.
+    /// </summary>
+    private void ScheduleResultCount()
+    {
+        _resultCountCts?.Cancel();
+        _resultCountCts?.Dispose();
+        _resultCountCts = null;
+
+        if (!ShowResultPreview || ResultCountProvider is null)
+        {
+            _resultCount = null;
+            _resultCountPending = false;
+            _resultCountRefreshing = false;
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _resultCountCts = cts;
+        // "Counting…" only until the first count arrives. A refresh keeps the previous number.
+        _resultCountRefreshing = true;
+        _resultCountPending = _resultCount is null;
+        _ = CountAfterDebounceAsync(cts);
+    }
+
+    private async Task CountAfterDebounceAsync(CancellationTokenSource cts)
+    {
+        try
+        {
+            await Task.Delay(ResultCountDebounceMs, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (_disposed || !ReferenceEquals(_resultCountCts, cts)) return;
+
+        var provider = ResultCountProvider;
+        var filters = FiltersToCount();
+        int? count = null;
+        var failed = false;
+        try
+        {
+            if (provider is not null)
+                count = await provider(filters, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch
+        {
+            // The preview is advisory. A failing count must never take the builder down with it.
+            failed = true;
+        }
+
+        if (_disposed || !ReferenceEquals(_resultCountCts, cts)) return;
+
+        _resultCountPending = false;
+        _resultCountRefreshing = false;
+        if (failed)
+            _resultCount = null;
+        else
+            _resultCount = count;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _disposed = true;
+        _resultCountCts?.Cancel();
+        _resultCountCts?.Dispose();
+        _resultCountCts = null;
+    }
+
+    /// <summary>The applied filters plus the editor filter, once it has a value (or needs none).</summary>
+    private IReadOnlyList<ActiveFilter> FiltersToCount()
+    {
+        var counted = _filters.ToList();
+        var draft = DraftFilter();
+        if (draft is null)
+            return counted;
+
+        // Editing replaces the filter being edited rather than counting it twice.
+        if (_editingFilter is not null)
+            counted.Remove(_editingFilter);
+        counted.Add(draft);
+        return counted;
+    }
+
+    /// <summary>The filter the editor is building, or null until it is complete enough to count.</summary>
+    private ActiveFilter? DraftFilter()
+    {
+        if (_selectedDefinition is null)
+            return null;
+
+        if (!IsEmptyOperator(_selectedOperator))
+        {
+            var hasValue = _selectedDefinition.FieldType == FilterFieldType.Date
+                ? _dateValue is not null
+                : !string.IsNullOrWhiteSpace(_textValue);
+            if (!hasValue)
+                return null;
+        }
+
+        object? value = _selectedDefinition.FieldType == FilterFieldType.Date ? _dateValue : _textValue;
+        var display = _selectedDefinition.FieldType == FilterFieldType.Date
+            ? _dateValue?.ToString("d") ?? string.Empty
+            : _textValue;
+
+        return new ActiveFilter(
+            _selectedDefinition.FieldName,
+            ResolveFieldLabel(_selectedDefinition),
+            _selectedOperator,
+            value,
+            display);
+    }
+
+    private void OnEditorChanged()
+    {
+        ScheduleResultCount();
+        StateHasChanged();
+    }
+
+    private void OnOperatorChanged(ChangeEventArgs e)
+    {
+        _selectedOperator = Enum.Parse<FilterOperator>(e.Value!.ToString()!);
+        OnEditorChanged();
+    }
+
+    private void OnTextValueChanged(ChangeEventArgs e)
+    {
+        _textValue = e.Value?.ToString() ?? string.Empty;
+        OnEditorChanged();
+    }
+
+    private void OnTextValueInput(ChangeEventArgs e) => OnTextValueChanged(e);
+
+    private void OnDateValueChanged(DateOnly? date)
+    {
+        _dateValue = date;
+        OnEditorChanged();
     }
 
     private void OpenFieldPicker()
     {
         _showFieldPicker    = true;
+        _focusPicker        = true;
+        _firstFieldOption   = default;
         _selectedDefinition = null;
         _editingFilter      = null;
         _textValue          = string.Empty;
         _dateValue          = null;
+        OnEditorChanged();
     }
 
     private void SelectField(FilterDefinition def)
@@ -168,6 +483,7 @@
         _selectedOperator   = GetOperatorsFor(def.FieldType).First();
         _textValue          = string.Empty;
         _dateValue          = null;
+        OnEditorChanged();
     }
 
     private void EditFilter(ActiveFilter filter)
@@ -185,6 +501,7 @@
         _selectedOperator   = filter.Operator;
         _textValue          = filter.Value?.ToString() ?? string.Empty;
         _showFieldPicker    = true;
+        OnEditorChanged();
     }
 
     private async Task ApplyFilter()
@@ -228,13 +545,21 @@
         await NotifyChanged();
     }
 
+    private void OnPickerKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            Cancel();
+    }
+
     private void Cancel()
     {
+        _restoreAddFocus    = true;
         _showFieldPicker    = false;
         _selectedDefinition = null;
         _editingFilter      = null;
         _textValue          = string.Empty;
         _dateValue          = null;
+        OnEditorChanged();
     }
 
     private Task NotifyChanged() => OnFiltersChanged.InvokeAsync(_filters.AsReadOnly());

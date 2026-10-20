@@ -93,6 +93,9 @@
   --tm-category-8: #14b8a6; /* Custom */
   /* Fallback for unknown/custom categories that supply no .Color (was hardcoded #6366f1). */
   --tm-category-fallback: #6366f1;
+  /* Subtle tint share for category surfaces (dashboard widget icon tiles). Dark raises it —
+     the 400-tones need a stronger mix against #1e293b to read as a tint (tokens-dark.css). */
+  --tm-category-tint: 12%;
 
   /* ── Neutrals ───────────────────────────────────────────────── */
   --tm-color-white:            #ffffff;
@@ -277,14 +280,41 @@
   --tm-mobile-action-bar-reserve-block-size:
       calc(var(--tm-space-2) + var(--tm-space-2) + var(--tm-border-width)
            + max(var(--tm-touch-target),
-                 calc(1rem + var(--tm-space-1)
+                 calc(var(--tm-mobile-action-bar-icon-box) + var(--tm-space-1)
                       + (2 * var(--tm-font-size-xs) * var(--tm-line-height-tight))
                       + var(--tm-space-1)))
            + env(safe-area-inset-bottom, 0px));
 
+  /* C13: the tile icon's box and the icon-chip paint, token-only — a host turns the chip on by
+     enlarging the box and giving it a fill (the tile, the bar height and the reserve above all
+     derive from --tm-mobile-action-bar-icon-box, so they grow together and the reserve stays
+     exact). That holds ONLY while the chip tokens are set here on :root: this reserve is
+     evaluated with the :root values, so a SCOPED opt-in (a class on one bar) enlarges the box
+     in its own scope while this token keeps the default one — such a scope must re-declare
+     --tm-mobile-action-bar-reserve-block-size from its own
+     calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px)), or its body
+     padding stays at the chip-off height while the bar grows. Defaults are today's look: the
+     box is the IconSize.Sm icon itself and the chip is transparent. No dark override — the box
+     is a length and an enabled chip reads the themed
+     --tm-color-primary-subtle/--tm-color-primary pair, which tokens-dark.css already re-declares. */
+  --tm-mobile-action-bar-icon-box: 1rem;
+  --tm-mobile-action-bar-icon-chip-bg: transparent;
+  --tm-mobile-action-bar-icon-chip-fg: currentColor;
+
   /* ── Alias Tokens (used by components) ──────────────────────── */
   --tm-surface:                var(--tm-bg-surface);
   --tm-surface-secondary:      var(--tm-bg-surface-secondary);
+
+  /* Sticky pin shadow. A structural elevation, not a colour a host themes — a shadow token
+     rather than a raw rgba in the component stylesheet. Literal, so dark does not recompute it. */
+  --tm-data-table-pin-shadow:        2px 0 3px -2px rgba(0, 0, 0, 0.18);
+  --tm-data-table-pin-shadow-end:    -2px 0 3px -2px rgba(0, 0, 0, 0.18);
+
+  /* Cell density. Declared on :root so a host override here (or on a wrapper) reaches the
+     table. Do not redeclare these on .tm-data-table-wrapper — that scope would win over :root
+     and silently ignore the documented contract. --tm-data-table-row-height stays inline. */
+  --tm-data-table-cell-py: var(--tm-space-3);
+  --tm-data-table-cell-px: var(--tm-space-4);
   --tm-color-surface:          var(--tm-bg-surface);
   --tm-color-surface-secondary: var(--tm-bg-surface-secondary);
   --tm-color-surface-elevated: var(--tm-color-white);
@@ -362,15 +392,34 @@
   --tm-sidebar-width:    16rem;
   --tm-sidebar-collapsed: 3.5rem;
   --tm-topbar-height:    3.5rem;
+  /* Minimum height of the TmDashboard workspace (G-6, F7b): the old literal 600px floor,
+     expressed once here so hosts can raise or drop it. */
+  --tm-dashboard-min-height: 37.5rem;
 
   /* ── Charts ── */
   --tm-chart-area-fill-opacity: 0.25;
+  /* Font size of the tick/value/label text inside a dashboard widget chart (20 units default,
+     which renders ≈ 10 px at the widget chart's viewBox scale). Declared so the strict token
+     audit no longer counts the alias as undefined; the value matches the stylesheet fallback. */
+  --tm-widget-chart-font-size: 20px;
 
   /* ── Redesign surfaces (F0) ─────────────────────────────────── */
   /* The canvas behind cards. The default theme keeps the page white (decision G4);
      theme-indigo.css is what paints the off-white workspace. Re-declared in
      tokens-dark.css because a :root-only alias computes with the light value. */
   --tm-bg-workspace:           var(--tm-bg-page);
+  /* ── Paper surfaces (theme-invariant) ─────────────────────────
+     Content that represents a printed/exported page (diagram pages, document pages,
+     report previews) stays paper-white with dark ink in EVERY theme, so these are
+     LITERAL light values: they are declared ONLY here and deliberately NOT
+     re-declared in tokens-dark.css — a descendant-scoped dark theme then keeps the
+     paper exactly because nothing overrides it. Hosts may rebrand them (e.g. sepia)
+     by targeting :root, [data-theme="dark"] and .tm-dark together. */
+  --tm-paper:                  #ffffff;
+  --tm-paper-ink:              #1f2937;  /* gray-800, 14.7:1 on white */
+  --tm-paper-ink-muted:        #4b5563;  /* gray-600, 7.6:1 on white (today's diagram ink) */
+  --tm-paper-border:           #d1d5db;  /* gray-300, page edge */
+  --tm-paper-backdrop:         #f3f4f6;  /* gray-100, area outside the page */
   /* Equal to the radii components use today, so consuming them changes nothing
      until a theme overrides them. Cards take the lg step, controls the md step. */
   --tm-radius-card:            var(--tm-radius-lg);
@@ -432,6 +481,35 @@
   --tm-cal-selected-bg:        var(--tm-color-primary-600);
   --tm-cal-selected-fg:        var(--tm-color-white);
   --tm-cal-disabled-opacity:   0.35;
+  /* TmCalendarView. Light/dark pairs live here, not in a component dark block; the
+     component stylesheet is theme-agnostic. The highlighted-date dot is a non-text
+     indicator: -500, not -400, because 400 measures 2.54:1 (indigo 2.98:1) on the
+     light surface, under the 1.4.11 floor. */
+  --tm-calendar-view-today-bg:     var(--tm-color-primary-50);
+  --tm-calendar-view-today-fg:     var(--tm-color-primary-600);
+  --tm-calendar-view-event-bg:     var(--tm-color-primary-100);
+  --tm-calendar-view-event-fg:     var(--tm-text-primary);
+  --tm-calendar-view-event-border: var(--tm-color-primary-500);
+  --tm-calendar-view-highlight:    var(--tm-color-primary-500);
+
+  /* ── TmLightbox ─────────────────────────────────────────────── */
+  /* The lightbox is the library's topmost full-screen surface (b32847d0). Its scrim is
+     DEEPER than --tm-bg-overlay (the TmModal dimmer, 0.5 light / 0.7 dark) on purpose:
+     an image has to read against an almost-black field, not a half-dimmed page — every
+     photo viewer's scrim sits near-black. Hue still matches the modal family: pure black,
+     no tint. The control chrome rides ON that scrim over an ARBITRARY image, so there is
+     no themed surface to derive the fills from — they stay literal black washes, and the
+     ink is pinned white in BOTH themes (a themed ink would go dark in dark mode and sink
+     into the same-black scrim). The values resolve identically in dark, so the dark file
+     re-declares nothing (the convention for literals — see the SemanticTokens note).
+     Worst-case contrast (a pure white image under the whole stack) is pinned by
+     TokenContrastTests: ink on the idle and hover fills ≥3:1 (icons), the loading line
+     on the scrim ≥4.5:1 (text). Modern space syntax, so the alpha is machine-readable. */
+  --tm-lightbox-scrim:            rgb(0 0 0 / 0.85);
+  --tm-lightbox-control-bg:       rgb(0 0 0 / 0.5);
+  --tm-lightbox-control-bg-hover: rgb(0 0 0 / 0.8);
+  --tm-lightbox-control-fg:       var(--tm-color-white);
+  --tm-lightbox-loading-fg:       rgb(255 255 255 / 0.7);
 }
 
 /* Pod 768 px se `__inner` láme do sloupce (viz TmFormActionBar.razor.css), takže se k rezervě

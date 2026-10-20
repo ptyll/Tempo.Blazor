@@ -2,13 +2,13 @@
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-column-picker @Class @(Disabled ? "tm-column-picker-disabled" : "")" @attributes="AdditionalAttributes">
-    <button class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
+    <button id="@(_open ? _toggleId : null)" class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
             type="button"
             @ref="_toggleRef"
             aria-haspopup="true"
             aria-expanded="@_open.ToString().ToLowerInvariant()"
             @onclick="ToggleOpen">
-        <span class="tm-icon-columns"></span>
+        <span class="tm-icon-columns"><TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" /></span>
         @Loc["TmDataTable_ColumnPicker"]
     </button>
 
@@ -56,8 +56,11 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    private readonly string _toggleId = $"tm-column-picker-{Guid.NewGuid():N}";
     private bool _open;
     private ElementReference _toggleRef;
+
+    public void Open() => _open = true;
 
     private void ToggleOpen() => _open = !_open;
 

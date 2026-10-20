@@ -55,10 +55,13 @@ JS engine unit tests run separately and are cheap enough for every commit:
   expansion), so a stale glob can never silently skip tests again — the runner
   fails when a root is missing or matches no files.
 - `npm run test:reporting-modules` — reporting JS modules via the same runner.
-- `npm run test:overlay` — `TmOverlayPanel` placement JS (`src/Tempo.Blazor/wwwroot/js`,
-  flip/shift/clamp math + fallback-path branches) via the same runner. The overlay
-  primitive underpins 15 floating-surface components, so this lane runs on every
-  commit too.
+- `npm run test:overlay` — every `*.test.mjs` under `src/Tempo.Blazor/wwwroot/js` (overlay
+  placement, pointer-drag, pointer-gesture, workflow/scheduler/dashboard pointer).
+- `npm run test:diagram-editor` — `src/Tempo.Blazor.DiagramEditor/wwwroot/js` (touch session
+  stack over the real core helpers, plus the engine tests that load `diagram-editor.js` in a
+  `node:vm` context).
+
+CI: `.github/workflows/js-node-tests.yml` runs all four lanes on every push and pull request.
 
 ## Baseline policy
 
@@ -157,6 +160,23 @@ What the three test-side ones raced, for anyone writing a similar test:
   Kill stale listeners on those ports before a clean run — a stale host whose
   `bin/obj` was rebuilt serves broken static assets and every test times out on
   its first locator.
+- **A WASM host on any other port works out of the box.** The Development demo
+  API allows any http(s) origin on a loopback host (`localhost`, `127.0.0.1`,
+  `[::1]`) regardless of port — the CORS list (`DemoCorsPolicy`,
+  `Cors:AllowedOrigins`) is purely additive, it only extends the hard defaults
+  and never replaces them, and is never needed for a lane. An API run as a
+  non-Development environment answers ONLY the hard defaults plus configured
+  origins, so such a deployment must set `Cors__AllowedOrigins__N` for every
+  extra host port.
+- **No trusted developer certificate is needed for any lane.** Browsers load
+  every host with `IgnoreHTTPSErrors`. The Blazor Server and InteractiveAuto
+  hosts additionally make SERVER-side `HttpClient` calls to the demo API (the
+  shared-layout notification bell on `/feedback` fires during prerender, as do
+  the data providers on their pages), so both hosts register a Development-only
+  primary handler that accepts untrusted certificates on loopback API addresses
+  only (Development) (`DemoApiHttpHandler`); without it an untrusted dev cert
+  turns every such page into a prerender 500. Outside Development the default
+  validation applies.
 - Delete `tests/Tempo.Blazor.E2E/TestResults` between long runs to keep disk
   usage bounded.
 - **Host resurrections are evidence, not noise (N209):** `PlaywrightTestBase`

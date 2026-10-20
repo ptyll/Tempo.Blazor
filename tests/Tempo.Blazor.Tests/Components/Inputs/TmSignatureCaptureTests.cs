@@ -18,6 +18,61 @@ public class TmSignatureCaptureTests : LocalizationTestBase
         root.GetAttribute("data-mode").Should().Be("Draw");
         cut.Find("svg.tm-signature-capture__canvas").Should().NotBeNull();
         cut.Find(".tm-signature-capture__clear").TextContent.Should().Contain("Clear");
+        // Frozen default: the clear button lives in the actions row, not over the surface.
+        cut.Find(".tm-signature-capture__actions").InnerHtml.Should().Contain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture__surface").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+        // cluster-D §6: the compact icon-only tile is an overlay-mode change — the actions-row
+        // button stays text-only (no icon, no label span) so the default markup is frozen.
+        cut.Find(".tm-signature-capture__actions .tm-signature-capture__clear")
+            .QuerySelector("svg").Should().BeNull("the actions-row clear carries no icon");
+        cut.FindAll(".tm-signature-capture__clear-label").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Render_ClearButtonPlacementOverlay_MovesTheSameButtonOverTheSurface()
+    {
+        var cut = Render<TmSignatureCapture>(parameters =>
+            parameters.Add(p => p.ClearButtonPlacement, TmSignatureClearButtonPlacement.Overlay));
+
+        // One button, moved — not a second copy. It stays a native button so Enter/Space activate once.
+        cut.FindAll(".tm-signature-capture__clear").Count.Should().Be(1);
+        cut.Find(".tm-signature-capture__surface").InnerHtml.Should().Contain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture__actions").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture").ClassList.Should().Contain("tm-signature-capture--overlay-clear");
+    }
+
+    [Fact]
+    public void Render_OverlayClear_HasAnIconAndAnAccessibleLabel()
+    {
+        // cluster-D §6: the overlay tile becomes a compact icon-only button below the 640px
+        // container width. The icon ships in the markup at every width (CSS shrinks the tile);
+        // the label span keeps the accessible name — it is visually hidden under the container
+        // query, never display:none.
+        var cut = Render<TmSignatureCapture>(parameters =>
+            parameters.Add(p => p.ClearButtonPlacement, TmSignatureClearButtonPlacement.Overlay));
+
+        var overlayClear = cut.Find(".tm-signature-capture__surface .tm-signature-capture__clear");
+        overlayClear.QuerySelector("svg").Should().NotBeNull("the compact tile is icon-led");
+        var label = overlayClear.QuerySelector(".tm-signature-capture__clear-label");
+        label.Should().NotBeNull("the label span carries the accessible name");
+        label!.TextContent.Should().Be("Clear");
+    }
+
+    [Theory]
+    [InlineData(TmSignatureCaptureMode.Typed)]
+    [InlineData(TmSignatureCaptureMode.Upload)]
+    public void Render_OverlayClear_FallsBackToTheActionsRow_OutsideDrawMode(TmSignatureCaptureMode mode)
+    {
+        // L4: the overlay clear covers the typed-name input and the upload drop zone. It belongs
+        // over the pad only; Type and Upload keep the button in the actions row.
+        var cut = Render<TmSignatureCapture>(parameters =>
+            parameters.Add(p => p.ClearButtonPlacement, TmSignatureClearButtonPlacement.Overlay)
+                      .Add(p => p.Mode, mode));
+
+        cut.FindAll(".tm-signature-capture__clear").Should().ContainSingle();
+        cut.Find(".tm-signature-capture__surface").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture__actions").InnerHtml.Should().Contain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture").ClassList.Should().NotContain("tm-signature-capture--overlay-clear");
     }
 
     [Fact]

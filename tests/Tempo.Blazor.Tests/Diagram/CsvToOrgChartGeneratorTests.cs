@@ -74,4 +74,25 @@ public class CsvToOrgChartGeneratorTests
         var act = () => CsvToOrgChartGenerator.Generate(parseResult, mappings);
         act.Should().Throw<InvalidOperationException>().WithMessage("*Name*");
     }
+
+    [Fact]
+    public void MissingColumn_ThrowsTypedImportError()
+    {
+        var parseResult = new CsvParseResult
+        {
+            Headers = ["Name", "Manager"],
+            Rows = [["Alice", "Bob"]],
+            DetectedDelimiter = ','
+        };
+
+        var mappings = new List<CsvColumnMapping>
+        {
+            new() { SemanticField = "Name", SelectedColumn = "ghost", IsRequired = true },
+            new() { SemanticField = "Manager", SelectedColumn = "Manager", IsRequired = true }
+        };
+
+        var act = () => CsvToOrgChartGenerator.Generate(parseResult, mappings);
+        act.Should().Throw<DiagramImportException>()
+            .Which.Error.Should().Be(DiagramImportError.ColumnNotFound);
+    }
 }

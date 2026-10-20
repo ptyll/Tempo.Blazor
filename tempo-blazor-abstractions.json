@@ -1886,16 +1886,16 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether the library has no validation errors."
-        },
-        {
           "name": "Errors",
           "kind": "Property",
           "type": "List<DiagramStencilLibraryValidationError>",
           "description": "Validation errors. Empty means the library is valid."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the library has no validation errors."
         }
       ]
     },
@@ -2424,6 +2424,38 @@
           "kind": "Property",
           "type": "List<DiagramTemplate>",
           "description": "Templates belonging to this category."
+        }
+      ]
+    },
+    {
+      "itemName": "DiagramThumbnailOptions",
+      "kind": "Class",
+      "category": "Diagram",
+      "namespace": "Tempo.Blazor.Components.Diagram.Services",
+      "description": "Options for DiagramThumbnailSvgGenerator: thumbnail size, whether edge/node labels render, and whether the thumbnail paints an opaque paper background (false keeps transparent for hosts that compose thumbnails over their own surface).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Services/DiagramThumbnailSvgGenerator.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IncludeLabels",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "OpaqueBackground",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Width",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Height",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -3624,6 +3656,12 @@
           "kind": "Method",
           "type": "DocumentAutosaveState",
           "description": "Marks the current save as successful."
+        },
+        {
+          "name": "State",
+          "kind": "Property",
+          "type": "DocumentAutosaveState",
+          "description": "Current immutable autosave state snapshot."
         }
       ]
     },
@@ -3872,12 +3910,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Session",
-          "kind": "Field",
-          "type": "DocumentCollaborationSession?",
-          "description": "Joined collaboration session."
-        },
-        {
           "name": "ApplyRemoteBatch",
           "kind": "Method",
           "type": "DocumentOperationValidationResult",
@@ -3993,6 +4025,12 @@
           "kind": "Property",
           "type": "IReadOnlyList<DocumentCollaborationCursor>",
           "description": "Remote cursors currently known to the sync coordinator."
+        },
+        {
+          "name": "Session",
+          "kind": "Property",
+          "type": "DocumentCollaborationSession?",
+          "description": "Joined collaboration session."
         }
       ]
     },
@@ -6385,12 +6423,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Batches",
-          "kind": "Field",
-          "type": "IReadOnlyList<DocumentOperationBatch>",
-          "description": "Appended operation batches."
-        },
-        {
           "name": "Append",
           "kind": "Method",
           "type": "DocumentOperationValidationResult",
@@ -6430,6 +6462,12 @@
               "type": "DocumentOperationBatch"
             }
           ]
+        },
+        {
+          "name": "Batches",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentOperationBatch>",
+          "description": "Appended operation batches."
         }
       ]
     },
@@ -6704,30 +6742,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Number of currently pending actions."
-        },
-        {
-          "name": "FirstMessage",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Message of the first registered pending action, or null when none are pending."
-        },
-        {
-          "name": "HasAny",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether any actions are currently pending."
-        },
-        {
-          "name": "Messages",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "All pending action messages in registration order."
-        },
-        {
           "name": "Add",
           "kind": "Method",
           "type": "void",
@@ -6772,6 +6786,30 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of currently pending actions."
+        },
+        {
+          "name": "FirstMessage",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Message of the first registered pending action, or null when none are pending."
+        },
+        {
+          "name": "HasAny",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether any actions are currently pending."
+        },
+        {
+          "name": "Messages",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "All pending action messages in registration order."
         }
       ]
     },
@@ -7110,12 +7148,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Markers",
-          "kind": "Field",
-          "type": "IReadOnlyList<DocumentRestrictedMarker>",
-          "description": "All currently registered markers (snapshot)."
-        },
-        {
           "name": "AddMarker",
           "kind": "Method",
           "type": "void",
@@ -7194,6 +7226,12 @@
               "type": "int"
             }
           ]
+        },
+        {
+          "name": "Markers",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentRestrictedMarker>",
+          "description": "All currently registered markers (snapshot)."
         }
       ]
     },
@@ -8224,12 +8262,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ActivityEntries",
-          "kind": "Field",
-          "type": "IReadOnlyList<TmActivityEntry>",
-          "description": "Recorded activity entries."
-        },
-        {
           "name": "CanvasSearchOutlineTocDocumentId",
           "kind": "Field",
           "type": "string",
@@ -8338,6 +8370,28 @@
               "name": "documentId",
               "type": "string",
               "default": "Recovery20260523DocumentId"
+            }
+          ]
+        },
+        {
+          "name": "ActivityEntries",
+          "kind": "Property",
+          "type": "IReadOnlyList<TmActivityEntry>",
+          "description": "Recorded activity entries."
+        },
+        {
+          "name": "RecordAsync",
+          "kind": "Method",
+          "type": "Task",
+          "parameters": [
+            {
+              "name": "auditEvent",
+              "type": "DocumentEditorAuditEvent"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken",
+              "default": "default"
             }
           ]
         }
@@ -11074,16 +11128,28 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "HasHeaderRow",
+          "name": "AutoDetectDelimiter",
           "kind": "Property",
           "type": "bool",
-          "description": "When true (default) the first record supplies the column names and is not returned as a data row; when false, columns are named positionally and every record is treated as data."
+          "description": "When true, delimited parsers sniff the dominant separator (comma, semicolon, tab, or pipe) from the first record instead of using Delimiter. Defaults to false."
         },
         {
           "name": "Delimiter",
           "kind": "Property",
           "type": "char",
           "description": "Field delimiter for delimited formats such as CSV. Defaults to a comma."
+        },
+        {
+          "name": "EncodingName",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Text encoding of the source (e.g. \"utf-8\", \"windows-1250\"). Null (default) reads UTF-8 with byte-order-mark detection; an unknown name falls back to UTF-8."
+        },
+        {
+          "name": "HasHeaderRow",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true (default) the first record supplies the column names and is not returned as a data row; when false, columns are named positionally and every record is treated as data."
         }
       ]
     },
@@ -11179,7 +11245,8 @@
               "type": "CancellationToken",
               "default": "default"
             }
-          ]
+          ],
+          "description": "Looks up the rate to convert one unit of fromCurrency into toCurrency. Returns 1 for a same-currency conversion when identity is enabled, the seeded rate when the (from, to) pair is present, or null otherwise."
         }
       ]
     },
@@ -11666,13 +11733,13 @@
           "name": "Items",
           "kind": "Property",
           "type": "IReadOnlyList<ITimelineEntry>",
-          "description": "Entries in this slice — already filtered, ordered, and windowed by the provider."
+          "description": "Entries in this slice, already filtered, ordered, and windowed by the provider."
         },
         {
           "name": "TotalCount",
           "kind": "Property",
           "type": "int",
-          "description": "Total number of entries matching the query across all pages (before windowing)."
+          "description": "Total number of entries matching the query across all pages, before windowing."
         }
       ]
     },
@@ -11702,7 +11769,7 @@
           "name": "SearchText",
           "kind": "Property",
           "type": "string?",
-          "description": "Optional free-text filter. Providers should match it against the author name, entry content, and entry type (case-insensitive). Null/empty means \"no text filter\"."
+          "description": "Optional free-text filter. Providers should match it case-insensitively against the author name, entry content, and entry type. Null/empty means no text filter."
         },
         {
           "name": "Skip",
@@ -11714,7 +11781,7 @@
           "name": "Take",
           "kind": "Property",
           "type": "int",
-          "description": "Maximum number of matching entries to return. MaxValue means \"return everything that matches\" (used when no page size is configured)."
+          "description": "Maximum number of matching entries to return. int.MaxValue means return everything that matches (used when no page size is configured)."
         }
       ]
     },
@@ -11783,6 +11850,48 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "TmLayoutBreakpoints",
+      "kind": "Record",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "The two widths that decide a container's TmLayoutMode: below Sm it is mobile, from Lg up it is desktop, in between it is tablet. Default is TmBreakpoints.Sm / Lg (640 / 1024). A component that owns a layout observer (TmEditorShell.Breakpoints) can pass its own pair; stylesheets keep the shared literals.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutBreakpoints.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Classify",
+          "kind": "Method",
+          "type": "TmLayoutMode",
+          "description": "The layout a measured container width resolves to under these thresholds (half-open, like Classify).",
+          "parameters": [
+            {
+              "name": "widthPx",
+              "type": "double"
+            }
+          ]
+        },
+        {
+          "name": "Default",
+          "kind": "Property",
+          "type": "static TmLayoutBreakpoints",
+          "description": "The thresholds every component shares: 640 / 1024."
+        },
+        {
+          "name": "Lg",
+          "kind": "Property",
+          "type": "int",
+          "description": "From this width up a container is Desktop."
+        },
+        {
+          "name": "Sm",
+          "kind": "Property",
+          "type": "int",
+          "description": "Below this width a container is Mobile."
+        }
+      ]
+    },
+    {
       "itemName": "TmLayoutContext",
       "kind": "Record",
       "category": "Layout",
@@ -11793,22 +11902,40 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "CssModifier",
+          "kind": "Property",
+          "type": "string",
+          "description": "The BEM modifier for Resolved: desktop, tablet or mobile."
+        },
+        {
           "name": "IsDesktop",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "True when the rendered layout is the wide one."
         },
         {
           "name": "IsMobile",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "True when the rendered layout is the narrow one."
         },
         {
           "name": "IsTablet",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "True when the rendered layout is the compact one."
+        },
+        {
+          "name": "Mode",
+          "kind": "Property",
+          "type": "TmLayoutMode",
+          "description": "The mode the host asked for. Auto while the container is being measured."
+        },
+        {
+          "name": "Resolved",
+          "kind": "Property",
+          "type": "TmLayoutMode",
+          "description": "A resolved layout is desktop, tablet or mobile. Auto means \"not resolved yet\"."
         }
       ]
     },
@@ -11845,13 +11972,13 @@
       "kind": "Interface",
       "category": "Localization",
       "namespace": "Tempo.Blazor.Localization",
-      "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library includes default implementations for English and Czech.",
+      "description": "Localization service interface for Tempo.Blazor components. Provides translated strings by indexer. The library ships English, Czech, Slovak and French. Counted texts use Loc.Plural (Key_One/_Few/_Many/_Other, see TmLocalizerPluralExtensions). Culture is the UI culture that picks plural rules and resource patterns; a null Culture falls back to CurrentUICulture. TryGetString looks a key up without falling back to the key text. Both are default interface members.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmLocalizer.cs",
       "documentationStatus": "merged",
       "methods": [
         {
-          "name": "GetString",
+          "name": "this[string]",
           "returnType": "string",
           "description": "Gets the localized string for the specified key.",
           "parameters": [
@@ -11863,9 +11990,9 @@
           ]
         },
         {
-          "name": "GetString",
+          "name": "this[string, object[]]",
           "returnType": "string",
-          "description": "Gets the localized string with format arguments.",
+          "description": "Gets the formatted localized string with arguments.",
           "parameters": [
             {
               "name": "key",
@@ -11873,17 +12000,34 @@
               "description": "Resource key to look up."
             },
             {
-              "name": "args",
-              "type": "params object?[]",
+              "name": "arguments",
+              "type": "params object[]",
               "description": "Format arguments."
             }
           ]
         },
         {
-          "name": "CurrentCulture",
+          "name": "Culture",
           "returnType": "CultureInfo",
-          "description": "Gets the current culture.",
+          "description": "The UI culture whose string table this localizer serves, and whose plural rules apply. Defaults to CurrentUICulture.",
           "isProperty": true
+        },
+        {
+          "name": "TryGetString",
+          "returnType": "bool",
+          "description": "Looks a key up without falling back to the key text.",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string",
+              "description": "Resource key to look up."
+            },
+            {
+              "name": "value",
+              "type": "out string",
+              "description": "The unformatted resource text when found."
+            }
+          ]
         }
       ],
       "usedInComponents": [
@@ -11892,7 +12036,7 @@
       "examples": [
         {
           "title": "Custom localizer implementation",
-          "code": "public class CustomLocalizer : ITmLocalizer\n{\n    private readonly IStringLocalizer<Resources> _localizer;\n\n    public CustomLocalizer(IStringLocalizer<Resources> localizer)\n    {\n        _localizer = localizer;\n    }\n\n    public string GetString(string key) => _localizer[key];\n\n    public string GetString(string key, params object?[] args) => \n        string.Format(_localizer[key], args);\n\n    public CultureInfo CurrentCulture => CultureInfo.CurrentUICulture;\n}"
+          "code": "public sealed class CustomLocalizer(IStringLocalizer<Resources> localizer) : ITmLocalizer\n{\n    public CultureInfo Culture => CultureInfo.CurrentUICulture;\n\n    public string this[string key] => localizer[key];\n\n    public string this[string key, params object[] arguments]\n        => string.Format(Culture, this[key], arguments);\n\n    public bool TryGetString(string key, out string value)\n    {\n        var found = localizer[key];\n        value = found.ResourceNotFound ? string.Empty : found.Value;\n        return !found.ResourceNotFound;\n    }\n}"
         },
         {
           "title": "Registration",
@@ -11901,6 +12045,144 @@
         {
           "title": "Usage in component",
           "code": "@inject ITmLocalizer Loc\n\n<button>@Loc[\"TmButton_Submit\"]</button>"
+        },
+        {
+          "title": "Reword shipped translations with a decorator (registered after AddTempoBlazor())",
+          "code": "// Program.cs — the LAST ITmLocalizer registration wins, because AddTempoBlazor() uses TryAddSingleton.\nbuilder.Services.AddTempoBlazor();\nbuilder.Services.AddSingleton<ITmLocalizer, AppTranslationOverrideLocalizer>();\n\n// AppTranslationOverrideLocalizer.cs\nusing System.Globalization;\nusing Microsoft.Extensions.Localization;\nusing Tempo.Blazor.Localization;\nusing Tempo.Blazor.Resources;\n\n/// <summary>\n/// Wraps the built-in localizer and rewords only the keys the application cares about;\n/// everything else falls through to the shipped resources (en/cs/sk/fr) untouched.\n/// </summary>\npublic sealed class AppTranslationOverrideLocalizer(IStringLocalizer<TmResources> builtIn) : ITmLocalizer\n{\n    private readonly Dictionary<string, string> _overrides = new()\n    {\n        [\"TmDataTable_SaveView\"] = \"Uložit pohled jako…\",\n        [\"Tm_Search\"] = \"Hledat…\",\n        [\"TmModelingIssuePanel_Count_One\"] = \"Celkem {0} nález\",\n    };\n\n    public CultureInfo Culture => CultureInfo.CurrentUICulture;\n\n    public string this[string key] =>\n        _overrides.TryGetValue(key, out var value) ? value : builtIn[key].Value;\n\n    public string this[string key, params object[] arguments] =>\n        _overrides.TryGetValue(key, out var value)\n            ? string.Format(Culture, value, arguments)\n            : builtIn[key, arguments].Value;\n}",
+          "setupNote": "Register the decorator AFTER AddTempoBlazor() — TryAddSingleton skips the built-in DefaultTmLocalizer when the application registered ITmLocalizer first, and the last registration wins in .NET DI. The decorator injects the built-in IStringLocalizer<TmResources> (registered by AddTempoBlazor()) so every key it does not list keeps the shipped translation. Caveat: counted texts resolve the plural family (Key_One/_Few/_Many/_Other), not the plain key — to reword them, list the family keys (e.g. TmModelingIssuePanel_Count_One, as the map above does) in the override map; overriding the plain key alone is bypassed by Loc.Plural. This exact class is compiled and exercised by the test suite (tests/Tempo.Blazor.Tests/Localization/DocumentedTranslationOverrideLocalizer.cs)."
+        },
+        {
+          "title": "Replace the whole language table instead of single keys",
+          "code": "// Ship a complete own language by implementing ITmLocalizer fully, or edit the per-culture JSON\n// inside the library: src/Tempo.Blazor/Resources/TmResources[.cs|.sk|.fr].json — embedded into\n// Tempo.Blazor.dll by Tempo.Blazor.csproj and read by the internal JsonStringLocalizer under both\n// Blazor Server and WebAssembly. Every English key must exist in cs, sk and fr\n// (TmResourceCompletenessTests guards this).",
+          "setupNote": "A new built-in language is a new TmResources.<culture>.json embedded with WithCulture=false and LogicalName Tempo.Blazor.Resources.TmResources.<culture>.json; the JsonStringLocalizer resolves it by naming convention from CultureInfo.CurrentUICulture. Slovak plural rules (one/few/many/other) are already built into TmPluralRules."
+        }
+      ]
+    },
+    {
+      "itemName": "ITmRelativeTimeFormatter",
+      "kind": "Interface",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "Formats a moment relative to now in the user's language: 'just now', '5 min ago', 'yesterday at 4:20 PM', 'in 3 days', and an absolute date from a week on. AddTempoBlazor() registers the default TmRelativeTimeFormatter over ITmLocalizer (Tm_Time_* strings) and the registered TimeProvider; register your own after it to replace it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmRelativeTimeFormatter.cs",
+      "documentationStatus": "merged",
+      "usedInComponents": [
+        "TmTimeline",
+        "TmActivityTimeline",
+        "TmActivityComments",
+        "TmNotificationBell"
+      ],
+      "examples": [
+        {
+          "title": "Deterministic formatting in a test",
+          "code": "var formatter = new TmRelativeTimeFormatter(localizer, fakeTimeProvider);\nformatter.Format(DateTimeOffset.UtcNow.AddMinutes(-5)); // \"5 min ago\""
+        }
+      ]
+    },
+    {
+      "itemName": "ITmUserTimeZone",
+      "kind": "Interface",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "The end user's time zone, resolved once per circuit. AddTempoBlazor() registers it (scoped) and the relative-time formatter, the Scheduler and the Gantt read it by default — on Blazor Server the zone starts as UTC and becomes the browser's zone once the probe reports after the first interactive render; on WebAssembly it is the runtime's zone, which already is the browser's zone. The scoped instance is shared by every consumer, so the browser is read only once per circuit. SetZone lets a host profile setting win over the browser value. The former AddTempoUserTimeZone() opt-in is an obsolete no-op alias since the 2.9.1 default flip.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmUserTimeZone.cs",
+      "documentationStatus": "merged",
+      "usedInComponents": [
+        "TmTimeline",
+        "TmActivityTimeline",
+        "TmActivityComments",
+        "TmNotificationBell"
+      ],
+      "examples": [
+        {
+          "title": "The default already reads the browser zone (2.9.1)",
+          "code": "builder.Services.AddTempoBlazor();"
+        },
+        {
+          "title": "Host profile setting wins over the browser value",
+          "code": "@inject ITmUserTimeZone UserTimeZone\n\n@code {\n    protected override void OnInitialized()\n        => UserTimeZone.SetZone(TimeZoneInfo.FindSystemTimeZoneById(\"Europe/Prague\"));\n}"
+        }
+      ]
+    },
+    {
+      "itemName": "TmLocalizerPluralExtensions",
+      "kind": "Class",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "Loc.Plural(key, count, ...extra): resolves Key_One/_Few/_Many/_Other from the localizer culture's plural rules, falling back to Key_Other and then the plain Key, and formats it with the count as {0}.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmLocalizerPluralExtensions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Plural",
+          "kind": "Method",
+          "type": "string",
+          "description": "Resolves the plural form of key for an integer count.",
+          "parameters": [
+            {
+              "name": "localizer",
+              "type": "this ITmLocalizer"
+            },
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "count",
+              "type": "int"
+            },
+            {
+              "name": "extraArguments",
+              "type": "params object[]"
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "title": "A counted text",
+          "code": "<span>@Loc.Plural(\"TmModelingIssuePanel_Count\", Issues.Count)</span> @* 1 nález · 3 nálezy · 7 nálezů *@"
+        }
+      ]
+    },
+    {
+      "itemName": "TmPluralCategory",
+      "kind": "Enum",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "The CLDR plural categories resource keys are written for; each maps to a key suffix (Key_One, Key_Few, Key_Many, Key_Other).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralCategory.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmPluralRules",
+      "kind": "Class",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "Selects the plural category (One, Few, Many, Other) of a number for a culture from the CLDR rules Tempo.Blazor ships strings for: cs/sk (1, 2-4, fractions, 5+), pl, fr (0-1, millions) and English/default (1, other). A region uses its language.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralRules.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Select",
+          "kind": "Method",
+          "type": "TmPluralCategory",
+          "description": "The category of count in culture.",
+          "parameters": [
+            {
+              "name": "culture",
+              "type": "CultureInfo"
+            },
+            {
+              "name": "count",
+              "type": "double"
+            }
+          ]
         }
       ]
     },
@@ -12622,12 +12904,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Number of users who reacted with this emoji."
-        },
-        {
           "name": "ReactedBy",
           "kind": "Method",
           "type": "bool",
@@ -12638,6 +12914,12 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of users who reacted with this emoji."
         },
         {
           "name": "Emoji",
@@ -12963,6 +13245,16 @@
       "documentationStatus": "merged"
     },
     {
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "Which rows a data-table export includes.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DataTableExport.cs",
+      "documentationStatus": "generated",
+      "itemName": "DataTableExportScope"
+    },
+    {
       "itemName": "DataTableFilter",
       "kind": "Record",
       "category": "Models",
@@ -13148,7 +13440,19 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DateRange.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "End",
+          "kind": "Property",
+          "type": "DateTime"
+        },
+        {
+          "name": "Start",
+          "kind": "Property",
+          "type": "DateTime"
+        }
+      ]
     },
     {
       "itemName": "DateRangePreset",
@@ -13991,12 +14295,6 @@
       ],
       "members": [
         {
-          "name": "HasMore",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True if there are more items beyond the current page."
-        },
-        {
           "name": "Empty",
           "kind": "Method",
           "type": "DropdownDataResult<TItem>",
@@ -14029,6 +14327,12 @@
               "type": "int"
             }
           ]
+        },
+        {
+          "name": "HasMore",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True if there are more items beyond the current page."
         },
         {
           "name": "Items",
@@ -14664,7 +14968,24 @@
       "description": "Immutable snapshot of a single task's schedule at baseline creation time.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttBaselineTask.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "End",
+          "kind": "Property",
+          "type": "DateTime"
+        },
+        {
+          "name": "Start",
+          "kind": "Property",
+          "type": "DateTime"
+        },
+        {
+          "name": "TaskId",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "GanttCircularDependencyException",
@@ -14857,7 +15178,49 @@
       "description": "Options controlling a Gantt chart export operation.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttExportOptions.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Columns",
+          "kind": "Property",
+          "type": "IReadOnlyList<GanttColumnKey>?"
+        },
+        {
+          "name": "Format",
+          "kind": "Property",
+          "type": "GanttExportFormat"
+        },
+        {
+          "name": "IncludeCriticalPath",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IncludeToday",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IncludeWorkload",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Landscape",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "PaperSize",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "ZoomLevel",
+          "kind": "Property",
+          "type": "int?"
+        }
+      ]
     },
     {
       "itemName": "GanttFilter",
@@ -14867,7 +15230,24 @@
       "description": "Immutable filter specification for narrowing displayed Gantt tasks. Field names: standard properties (e.g. \"Status\", \"Title\") or custom field IDs prefixed with \"custom:\" (e.g. \"custom:priority\").",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/GanttFilter.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Field",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Operator",
+          "kind": "Property",
+          "type": "GanttFilterOperator"
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "string?"
+        }
+      ]
     },
     {
       "itemName": "GanttFilterOperator",
@@ -15907,7 +16287,39 @@
       "description": "A server-side aggregated cluster rendered on a TmMap as a count bubble. Produced by grid/tile aggregation on the backend, so the client never has to hold the individual points. A cluster with Count = 1 renders as a plain marker.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Maps/MapClusterPoint.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of aggregated points. A cluster with Count = 1 renders as a plain marker."
+        },
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Host-defined cluster key (e.g. an encoded grid cell) reported back by cluster click events."
+        },
+        {
+          "name": "Latitude",
+          "kind": "Property",
+          "type": "double",
+          "description": "Latitude of the cluster centroid in decimal degrees (WGS84)."
+        },
+        {
+          "name": "Longitude",
+          "kind": "Property",
+          "type": "double",
+          "description": "Longitude of the cluster centroid in decimal degrees (WGS84)."
+        },
+        {
+          "name": "Tooltip",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional tooltip text shown on hover (e.g. an aggregated average). Null renders without a tooltip."
+        }
+      ]
     },
     {
       "itemName": "MapDataResult",
@@ -15920,10 +16332,22 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Clusters",
+          "kind": "Property",
+          "type": "IReadOnlyList<MapClusterPoint>?",
+          "description": "Server-side aggregated cluster points, or null/empty when the zoom level serves markers."
+        },
+        {
           "name": "Empty",
           "kind": "Property",
           "type": "static MapDataResult",
           "description": "An empty result — nothing to render for the requested viewport."
+        },
+        {
+          "name": "Markers",
+          "kind": "Property",
+          "type": "IReadOnlyList<MapMarker>?",
+          "description": "Individual markers to render, or null/empty when the zoom level serves clusters."
         }
       ]
     },
@@ -15935,7 +16359,33 @@
       "description": "A single point rendered on a TmMap. Batches of markers are drawn with a Canvas renderer, so instances stay lightweight data records without any UI dependencies.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Maps/MapMarker.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Host-defined identifier reported back by marker click events. May be null for non-interactive points."
+        },
+        {
+          "name": "Latitude",
+          "kind": "Property",
+          "type": "double",
+          "description": "Latitude in decimal degrees (WGS84)."
+        },
+        {
+          "name": "Longitude",
+          "kind": "Property",
+          "type": "double",
+          "description": "Longitude in decimal degrees (WGS84)."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional tooltip text shown on hover. Null renders the marker without a tooltip."
+        }
+      ]
     },
     {
       "itemName": "MapViewport",
@@ -15945,7 +16395,27 @@
       "description": "The visible area of a TmMap: the map center and the current zoom level. Reported by viewport-changing events (zoom, pan) and accepted by SetViewAsync.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Maps/MapViewport.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Latitude",
+          "kind": "Property",
+          "type": "double",
+          "description": "Latitude of the map center in decimal degrees (WGS84)."
+        },
+        {
+          "name": "Longitude",
+          "kind": "Property",
+          "type": "double",
+          "description": "Longitude of the map center in decimal degrees (WGS84)."
+        },
+        {
+          "name": "Zoom",
+          "kind": "Property",
+          "type": "double",
+          "description": "Leaflet zoom level. Fractional values are supported (e.g. 7.5)."
+        }
+      ]
     },
     {
       "itemName": "MoneyMath",
@@ -17217,12 +17687,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether the formula has no validation errors."
-        },
-        {
           "name": "Errors",
           "kind": "Property",
           "type": "IReadOnlyList<string>",
@@ -17233,6 +17697,12 @@
           "kind": "Property",
           "type": "string",
           "description": "Normalized formula text. Field tokens use stable field UUIDs."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the formula has no validation errors."
         }
       ]
     },
@@ -17726,15 +18196,39 @@
       "members": [
         {
           "name": "Bottom",
-          "kind": "Field",
+          "kind": "Property",
           "type": "double",
           "description": "Vertical end position."
         },
         {
+          "name": "Height",
+          "kind": "Property",
+          "type": "double",
+          "description": "Rectangle height."
+        },
+        {
           "name": "Right",
-          "kind": "Field",
+          "kind": "Property",
           "type": "double",
           "description": "Horizontal end position."
+        },
+        {
+          "name": "Width",
+          "kind": "Property",
+          "type": "double",
+          "description": "Rectangle width."
+        },
+        {
+          "name": "X",
+          "kind": "Property",
+          "type": "double",
+          "description": "Horizontal position."
+        },
+        {
+          "name": "Y",
+          "kind": "Property",
+          "type": "double",
+          "description": "Vertical position."
         }
       ]
     },
@@ -18094,21 +18588,15 @@
       "members": [
         {
           "name": "HasNextPage",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "True when a next page exists."
         },
         {
           "name": "HasPreviousPage",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "True when a previous page exists."
-        },
-        {
-          "name": "TotalPages",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of pages."
         },
         {
           "name": "Items",
@@ -18133,6 +18621,12 @@
           "kind": "Property",
           "type": "int",
           "description": "Total number of items across all pages (after filtering)."
+        },
+        {
+          "name": "TotalPages",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of pages."
         }
       ]
     },
@@ -18154,7 +18648,60 @@
       "description": "Represents a single property change with old and new values.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmChangeInfo.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "NewValue",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "OldValue",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "Property",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "itemName": "TmChatDraftState",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "Immutable snapshot of the unsaved-draft state in TmChat (composer, thread reply, message edit). Consumers build a dirty-guard from it (confirmation before a reload or navigation discards an in-progress message). Carries state flags only — never the draft text itself; the text is delivered in OnSendMessage/OnSend/OnEditMessage on commit. HasUnsavedContent aggregates the slots; for an open message edit it means the text differs from the message as it was when the edit started.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmChatDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EditingMessageId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the message whose inline edit is open; null when no edit is in progress."
+        },
+        {
+          "name": "HasComposerDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the main composer input holds text that is not whitespace-only."
+        },
+        {
+          "name": "HasThreadReplyDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open thread panel's reply input holds text that is not whitespace-only. The input exists only while a thread panel is open; closing the panel clears its reply draft."
+        },
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Aggregate draft flag: true when any slot holds content that would be lost on discard. For the two composer slots that means text that is not whitespace-only; for an open message edit it means the edit text differs from the message text as it was when the edit started — opening an edit without changing anything must not report an unsaved draft."
+        }
+      ]
     },
     {
       "itemName": "TmCommentProviderPdfAnnotationAdapter",
@@ -18201,7 +18748,7 @@
       "kind": "Record",
       "category": "Models",
       "namespace": "Tempo.Blazor.Models",
-      "description": "Represents a keyboard shortcut with key combination and description.",
+      "description": "A keyboard shortcut. Keys is split on KeySeparator (default '+', a chord) into one kbd per part; pass ' / ' so alternatives are not rendered as a chord.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmShortcutCategory.cs",
       "documentationStatus": "merged"
@@ -18806,7 +19353,29 @@
       "description": "Represents the workload allocation for one assignee on one day.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/WorkloadEntry.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AllocatedHours",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "AssigneeId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "CapacityHours",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "Date",
+          "kind": "Property",
+          "type": "DateTime"
+        }
+      ]
     },
     {
       "itemName": "AiCompletionRequest",
@@ -18938,7 +19507,29 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/BlockChange.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Block",
+          "kind": "Property",
+          "type": "IPageBlock?"
+        },
+        {
+          "name": "BlockId",
+          "kind": "Property",
+          "type": "Guid"
+        },
+        {
+          "name": "ChangeType",
+          "kind": "Property",
+          "type": "BlockChangeType"
+        },
+        {
+          "name": "UserId",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "BlockChangeType",
@@ -19021,14 +19612,34 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "After",
+          "kind": "Property",
+          "type": "PageBlock?"
+        },
+        {
           "name": "AfterOrder",
-          "kind": "Field",
+          "kind": "Property",
           "type": "int?"
         },
         {
+          "name": "Before",
+          "kind": "Property",
+          "type": "PageBlock?"
+        },
+        {
           "name": "BeforeOrder",
-          "kind": "Field",
+          "kind": "Property",
           "type": "int?"
+        },
+        {
+          "name": "BlockId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "DiffType",
+          "kind": "Property",
+          "type": "BlockDiffType"
         }
       ]
     },
@@ -19139,7 +19750,14 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/BookmarkResolveRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Url",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "BreadcrumbBlockContent",
@@ -19159,7 +19777,14 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/BulkDeletePagesRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "PageIds",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>"
+        }
+      ]
     },
     {
       "itemName": "BulkMovePagesRequest",
@@ -19169,7 +19794,19 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/BulkMovePagesRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "NewParentId",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "PageIds",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>"
+        }
+      ]
     },
     {
       "itemName": "CalendarViewConfig",
@@ -19307,7 +19944,39 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/CollaboratorCursor.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AvatarUrl",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "BlockId",
+          "kind": "Property",
+          "type": "Guid"
+        },
+        {
+          "name": "Color",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "DisplayName",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Offset",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "UserId",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "ColumnBlockContent",
@@ -19529,7 +20198,14 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/CopyPageTreeRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "NewParentId",
+          "kind": "Property",
+          "type": "string?"
+        }
+      ]
     },
     {
       "itemName": "CoverFit",
@@ -19585,7 +20261,19 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/CreateSyncRefRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AfterBlockId",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "TargetPageId",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "DatabaseField",
@@ -19704,7 +20392,34 @@
       "description": "Request body for querying Notion-style database records.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/DatabaseRecordsQueryRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Filter",
+          "kind": "Property",
+          "type": "NotionDatabaseFilter?"
+        },
+        {
+          "name": "Grouping",
+          "kind": "Property",
+          "type": "NotionDatabaseGrouping?"
+        },
+        {
+          "name": "Page",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "PageSize",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Sorts",
+          "kind": "Property",
+          "type": "IReadOnlyList<NotionDatabaseSort>?"
+        }
+      ]
     },
     {
       "itemName": "DatabaseRecordTemplate",
@@ -20095,6 +20810,24 @@
               "type": "NotionPageSnapshot"
             }
           ]
+        },
+        {
+          "name": "LastSaveRequest",
+          "kind": "Property",
+          "type": "NotionAggregateSaveRequest?",
+          "description": "Gets a defensive copy of the most recent save request."
+        },
+        {
+          "name": "LoadCallCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Gets the number of aggregate load calls observed by this instance."
+        },
+        {
+          "name": "SaveCallCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Gets the number of atomic save calls observed by this instance."
         }
       ]
     },
@@ -22652,7 +23385,27 @@
       "description": "Result of MarkdownShortcutDetector.Detect.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/MarkdownShortcutResult.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsChecked",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Meaningful only for TodoItem — carries the initial checked state."
+        },
+        {
+          "name": "SuggestedType",
+          "kind": "Property",
+          "type": "BlockType",
+          "description": "Block type the current block should be converted to."
+        },
+        {
+          "name": "TextAfterTrigger",
+          "kind": "Property",
+          "type": "string",
+          "description": "Plain-text content that follows the matched prefix (may be empty)."
+        }
+      ]
     },
     {
       "itemName": "MediaAlignment",
@@ -22759,7 +23512,34 @@
       "description": "Request for moving an existing Notion block within a page block tree.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/MoveNotionBlockRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BlockId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "SourceParentBlockId",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "TargetIndex",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "TargetPageId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "TargetParentBlockId",
+          "kind": "Property",
+          "type": "string?"
+        }
+      ]
     },
     {
       "itemName": "MovePageRequest",
@@ -22769,7 +23549,15 @@
       "description": "Request payload for moving a Notion page under another page or to the root.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/MovePageRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "NewParentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The target parent page identifier, or null for a root page."
+        }
+      ]
     },
     {
       "itemName": "MovePageToSpaceRequest",
@@ -22779,7 +23567,14 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/MovePageToSpaceRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "SpaceId",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "NotionAggregateIssue",
@@ -23193,7 +23988,24 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionDatabaseGrouping.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FieldId",
+          "kind": "Property",
+          "type": "Guid"
+        },
+        {
+          "name": "HideEmptyGroups",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "SortDirection",
+          "kind": "Property",
+          "type": "SortDirection"
+        }
+      ]
     },
     {
       "itemName": "NotionDatabaseSort",
@@ -23203,7 +24015,19 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionDatabaseSort.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Direction",
+          "kind": "Property",
+          "type": "SortDirection"
+        },
+        {
+          "name": "FieldId",
+          "kind": "Property",
+          "type": "Guid"
+        }
+      ]
     },
     {
       "itemName": "NotionDataProviderBulkExtensions",
@@ -23243,7 +24067,24 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionFilterCondition.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FieldId",
+          "kind": "Property",
+          "type": "Guid"
+        },
+        {
+          "name": "Operator",
+          "kind": "Property",
+          "type": "NotionFilterOperator"
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "object?"
+        }
+      ]
     },
     {
       "itemName": "NotionFilterOperator",
@@ -23722,7 +24563,19 @@
       "description": "Public recordstruct defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionSearchHighlightRange.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "End",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Start",
+          "kind": "Property",
+          "type": "int"
+        }
+      ]
     },
     {
       "itemName": "NotionSearchRequest",
@@ -24658,6 +25511,16 @@
           "kind": "Property",
           "type": "static PageStats",
           "description": "Returns zero page statistics."
+        },
+        {
+          "name": "ReadingTimeMinutes",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "WordCount",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -24934,7 +25797,24 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/SelectFieldOption.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Color",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "SetPageLabelsRequest",
@@ -24944,7 +25824,14 @@
       "description": "Request body for replacing all labels assigned to a Notion page.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/SetPageLabelsRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Labels",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>"
+        }
+      ]
     },
     {
       "itemName": "SmartLinkDisplay",
@@ -24964,7 +25851,39 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/SmartLinkDto.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "FaviconUrl",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "ImageUrl",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "ProviderName",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Url",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "SmartLinkResolveRequest",
@@ -24974,7 +25893,14 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/SmartLinkResolveRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Url",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "SortDirection",
@@ -25043,7 +25969,24 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/StatusGroup.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Color",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Options",
+          "kind": "Property",
+          "type": "IReadOnlyList<SelectFieldOption>"
+        }
+      ]
     },
     {
       "itemName": "StatusParser",
@@ -25121,7 +26064,19 @@
       "description": "Public record defined by Tempo.Blazor.Abstractions.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/SyncedBlockRefLocation.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BlockId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "PageId",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "TableOfContentsBlockContent",
@@ -25154,6 +26109,11 @@
           "name": "RichCells",
           "kind": "Property",
           "type": "IReadOnlyList<NotionTableCell>"
+        },
+        {
+          "name": "Cells",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>"
         }
       ]
     },
@@ -25397,18 +26357,13 @@
       "members": [
         {
           "name": "HasNextPage",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool"
         },
         {
           "name": "HasPreviousPage",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool"
-        },
-        {
-          "name": "TotalPages",
-          "kind": "Field",
-          "type": "int"
         },
         {
           "name": "Items",
@@ -25427,6 +26382,11 @@
         },
         {
           "name": "TotalCount",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "TotalPages",
           "kind": "Property",
           "type": "int"
         }
@@ -25573,6 +26533,48 @@
       ]
     },
     {
+      "itemName": "TmNotionCommentDraftState",
+      "kind": "Record",
+      "category": "Notion Editor",
+      "namespace": "Tempo.Blazor.NotionEditor.Models",
+      "description": "Immutable snapshot of the unsaved-draft state in TmNotionPageCommentPanel (new comment, thread reply, inline reply, entry edit). Consumers build a dirty-guard from it (confirmation before a navigation discards an in-progress comment). Carries state flags only — never the draft text itself; the text reaches the comment provider on submit. HasUnsavedContent aggregates the slots; the inline reply's auto-inserted quote and an edit without changes are not user content and do not raise it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/TmNotionCommentDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EditingEntryId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the comment entry whose inline edit is open; null when no edit is in progress."
+        },
+        {
+          "name": "HasInlineReplyDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open inline reply holds user content beyond the quote the panel auto-inserts when the reply opens — the auto-generated quote alone is not user content and must not report an unsaved draft."
+        },
+        {
+          "name": "HasNewCommentDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the new-comment input holds text that is not whitespace-only."
+        },
+        {
+          "name": "HasThreadReplyDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open thread reply input holds text that is not whitespace-only."
+        },
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Aggregate draft flag: true when any slot holds content that would be lost on discard. For the composer slots that means user content beyond effectively-empty text (and, for the inline reply, beyond the auto-inserted quote); for an open entry edit it means the edit text differs from the entry body as it was when the edit started — opening an edit without changing anything must not report an unsaved draft."
+        }
+      ]
+    },
+    {
       "itemName": "TodoBlockContent",
       "kind": "Class",
       "category": "Notion Editor",
@@ -25679,7 +26681,59 @@
       "description": "Request body for updating Notion page metadata.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/UpdateNotionPageRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CoverImagePositionY",
+          "kind": "Property",
+          "type": "double?"
+        },
+        {
+          "name": "CoverImageUrl",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "IconEmoji",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "IconImageUrl",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "IsFullWidth",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IsLocked",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IsSmallText",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Labels",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>?"
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "UserMention",
@@ -25852,6 +26906,11 @@
         },
         {
           "name": "SourceKey",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "ProviderKey",
           "kind": "Property",
           "type": "string"
         }
@@ -26058,12 +27117,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsLeaf",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when this node has no children."
-        },
-        {
           "name": "Children",
           "kind": "Property",
           "type": "List<PivotColumnNode>",
@@ -26086,6 +27139,12 @@
           "kind": "Property",
           "type": "string",
           "description": "The display text for this column node."
+        },
+        {
+          "name": "IsLeaf",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when this node has no children."
         },
         {
           "name": "Key",
@@ -26350,12 +27409,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsLeaf",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when this node has no children."
-        },
-        {
           "name": "Children",
           "kind": "Property",
           "type": "List<PivotRowNode>",
@@ -26366,6 +27419,12 @@
           "kind": "Property",
           "type": "string",
           "description": "The display text for this row node."
+        },
+        {
+          "name": "IsLeaf",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when this node has no children."
         },
         {
           "name": "Key",
@@ -27108,6 +28167,48 @@
       ]
     },
     {
+      "itemName": "ITmDraftGuard",
+      "kind": "Interface",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmNotionPageCommentSection, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftGuard.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "HasUnsavedDraft",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the component currently holds an unsaved draft that a reload, a navigation or a panel close would silently discard. The same aggregate value OnDraftChanged reports; read it on the component's dispatcher (an event handler or InvokeAsync) from background threads."
+        },
+        {
+          "name": "DiscardDraftAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Clears every draft slot (composer texts, open replies, open edits). A no-op — without any OnDraftChanged notification — when no editor is open and no draft exists. Call it AFTER the user confirmed the discard in the consumer's own confirmation dialog."
+        }
+      ]
+    },
+    {
+      "itemName": "ITmDraftState",
+      "kind": "Interface",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Aggregate dirty flag shared by every draft-state record the library reports through an OnDraftChanged parameter (TmCommentDraftState, TmChatDraftState, TmNotionCommentDraftState). Lets a consumer read the one dirty decision — 'would a reload, a navigation or a panel close throw something away?' — without caring which concrete record a component reports. The draft text itself is never carried; it reaches the consumer through the component's submit callbacks on commit.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether any draft slot currently holds content that would be lost on discard. Always false before the first user input; for an open edit it means the edited text differs from the original as it was when the edit started."
+        }
+      ]
+    },
+    {
       "itemName": "ITmFileProvider",
       "kind": "Interface",
       "category": "Shared",
@@ -27629,6 +28730,11 @@
           "kind": "Property",
           "type": "TmUserRef?",
           "description": "User requesting the action, or null for an anonymous caller."
+        },
+        {
+          "name": "Create",
+          "type": "static TmAuthorizationRequest Create()",
+          "description": "Creates a normalized authorization request."
         }
       ]
     },
@@ -27709,6 +28815,11 @@
               "type": "this IServiceCollection"
             }
           ]
+        },
+        {
+          "name": "AddTmAuthorizationProvider",
+          "type": "static IServiceCollection AddTmAuthorizationProvider()",
+          "description": "Registers an ITmAuthorizationProvider instance."
         }
       ]
     },
@@ -28021,6 +29132,36 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "TmCommentDraftState",
+      "kind": "Record",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentDraftState.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EditingCommentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Id of the comment being edited while its inline editor is open; null when no existing comment is being edited (including the new-comment editor case)."
+        },
+        {
+          "name": "HasUnsavedContent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the open editor holds content that would be lost on discard. Two semantics apply: for a NEW comment it means the content is not empty; for an EDIT of an existing comment it means the content differs from the comment's original body — opening an edit without changing anything must not report an unsaved draft."
+        },
+        {
+          "name": "IsEditorOpen",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when a comment editor is visible — either the new-comment editor or the inline editor of an existing comment."
+        }
+      ]
+    },
+    {
       "itemName": "TmCommentEntry",
       "kind": "Class",
       "category": "Shared",
@@ -28180,7 +29321,7 @@
       "members": [
         {
           "name": "IsValid",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "Returns true when the reaction has a value."
         },
@@ -28331,18 +29472,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Anonymous",
-          "kind": "Field",
-          "type": "TmCurrentUserState",
-          "description": "Anonymous current-user state."
-        },
-        {
-          "name": "IsAuthenticated",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when a valid current user is available."
-        },
-        {
           "name": "FromUser",
           "kind": "Method",
           "type": "TmCurrentUserState",
@@ -28360,10 +29489,22 @@
           ]
         },
         {
+          "name": "Anonymous",
+          "kind": "Property",
+          "type": "TmCurrentUserState",
+          "description": "Anonymous current-user state."
+        },
+        {
           "name": "GroupIds",
           "kind": "Property",
           "type": "IReadOnlyList<string>",
           "description": "Group identifiers associated with the current user."
+        },
+        {
+          "name": "IsAuthenticated",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when a valid current user is available."
         },
         {
           "name": "User",
@@ -28627,12 +29768,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsLast",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when this is the final chunk."
-        },
-        {
           "name": "ChunkIndex",
           "kind": "Property",
           "type": "int",
@@ -28661,6 +29796,12 @@
           "kind": "Property",
           "type": "string",
           "description": "Original or display file name."
+        },
+        {
+          "name": "IsLast",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when this is the final chunk."
         },
         {
           "name": "Metadata",
@@ -29137,18 +30278,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsDelivered",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the notification has been delivered to the recipient's client."
-        },
-        {
-          "name": "IsRead",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the notification has been read."
-        },
-        {
           "name": "ActionUrl",
           "kind": "Property",
           "type": "string?",
@@ -29195,6 +30324,18 @@
           "kind": "Property",
           "type": "string",
           "description": "Stable notification identifier."
+        },
+        {
+          "name": "IsDelivered",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the notification has been delivered to the recipient's client."
+        },
+        {
+          "name": "IsRead",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the notification has been read."
         },
         {
           "name": "Metadata",
@@ -29251,18 +30392,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "RecipientEmail",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Best available recipient email address."
-        },
-        {
-          "name": "TotalCount",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of notifications in the digest."
-        },
-        {
           "name": "GeneratedAt",
           "kind": "Property",
           "type": "DateTimeOffset",
@@ -29293,10 +30422,22 @@
           "description": "Recipient snapshot, when available (used for the email address / display name)."
         },
         {
+          "name": "RecipientEmail",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Best available recipient email address."
+        },
+        {
           "name": "RecipientUserId",
           "kind": "Property",
           "type": "string",
           "description": "Recipient user id."
+        },
+        {
+          "name": "TotalCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of notifications in the digest."
         }
       ]
     },
@@ -29603,11 +30744,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Capabilities",
-          "kind": "Field",
-          "type": "virtual TmPeopleProviderCapabilities"
-        },
-        {
           "name": "GetByIdAsync",
           "kind": "Method",
           "type": "Task<TmUser?>",
@@ -29621,7 +30757,26 @@
               "type": "CancellationToken",
               "default": "default"
             }
-          ]
+          ],
+          "description": "Resolves a single user through GetByIdsAsync."
+        },
+        {
+          "name": "Capabilities",
+          "kind": "Property",
+          "type": "TmPeopleProviderCapabilities",
+          "description": "Supported people provider operations."
+        },
+        {
+          "name": "SearchAsync",
+          "kind": "Method",
+          "type": "Task<IReadOnlyList<TmUser>>",
+          "description": "Searches users matching the query. Derived providers implement this method."
+        },
+        {
+          "name": "GetByIdsAsync",
+          "kind": "Method",
+          "type": "Task<IReadOnlyList<TmUser>>",
+          "description": "Resolves distinct ids through SearchAsync and preserves the requested order."
         }
       ]
     },
@@ -29719,6 +30874,18 @@
               "type": "this IServiceCollection"
             }
           ]
+        },
+        {
+          "name": "AddTmPeopleProvider",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "description": "Registers an ITmPeopleProvider implementation or instance."
+        },
+        {
+          "name": "AddTmCurrentUser",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "description": "Registers an ITmCurrentUser implementation if none is registered yet."
         }
       ]
     },
@@ -29791,12 +30958,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the required identity fields are populated."
-        },
-        {
           "name": "Equals",
           "kind": "Method",
           "type": "bool",
@@ -29855,6 +31016,12 @@
           "description": "Stable resource identifier within the source and tenant scope."
         },
         {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the required identity fields are populated."
+        },
+        {
           "name": "Metadata",
           "kind": "Property",
           "type": "Dictionary<string, object>?",
@@ -29896,12 +31063,6 @@
       "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmResourceRef.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the required identity fields are populated."
-        },
         {
           "name": "Equals",
           "kind": "Method",
@@ -29947,6 +31108,12 @@
           "kind": "Property",
           "type": "string",
           "description": "Stable resource identifier within the source and tenant scope."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the required identity fields are populated."
         },
         {
           "name": "ResourceType",
@@ -30127,6 +31294,12 @@
           "description": "True once the final chunk has been acknowledged."
         },
         {
+          "name": "Percent",
+          "kind": "Property",
+          "type": "int",
+          "description": "Completion percentage in the range 0–100."
+        },
+        {
           "name": "TotalBytes",
           "kind": "Property",
           "type": "long",
@@ -30156,12 +31329,6 @@
       "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmUser.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the required identity fields are populated."
-        },
         {
           "name": "Equals",
           "kind": "Method",
@@ -30227,6 +31394,12 @@
           "description": "Stable user identifier within the source and tenant scope."
         },
         {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the required identity fields are populated."
+        },
+        {
           "name": "IsVirtual",
           "kind": "Property",
           "type": "bool",
@@ -30262,12 +31435,6 @@
       "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmUserRef.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Returns true when the required identity fields are populated."
-        },
         {
           "name": "Equals",
           "kind": "Method",
@@ -30325,6 +31492,12 @@
           "kind": "Property",
           "type": "string",
           "description": "Stable user identifier within the source and tenant scope."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Returns true when the required identity fields are populated."
         },
         {
           "name": "IsVirtual",
@@ -30429,12 +31602,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsExpired",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when the subscription is gone (404/410) and the caller should remove it from the IPushSubscriptionStore."
-        },
-        {
           "name": "Failed",
           "kind": "Method",
           "type": "TmWebPushResult",
@@ -30469,6 +31636,12 @@
           "kind": "Property",
           "type": "string?",
           "description": "Error detail when Success is false."
+        },
+        {
+          "name": "IsExpired",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the subscription is gone (404/410) and the caller should remove it from the IPushSubscriptionStore."
         },
         {
           "name": "StatusCode",
@@ -31379,12 +32552,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsNumeric",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when the cell carries a numeric (or date) value."
-        },
-        {
           "name": "Classified",
           "kind": "Method",
           "type": "readonly record struct",
@@ -31503,6 +32670,12 @@
               "type": "out double"
             }
           ]
+        },
+        {
+          "name": "IsNumeric",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the cell carries a numeric (or date) value."
         }
       ]
     },
@@ -31720,7 +32893,19 @@
       "description": "Response returned after creating a persisted spreadsheet document.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Models/SpreadsheetDocumentCreateResult.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "Guid"
+        },
+        {
+          "name": "Workbook",
+          "kind": "Property",
+          "type": "SpreadsheetWorkbook"
+        }
+      ]
     },
     {
       "itemName": "SpreadsheetDownloadEventArgs",
@@ -32113,24 +33298,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "CellCount",
-          "kind": "Field",
-          "type": "int",
-          "description": "The total number of cells in the range."
-        },
-        {
-          "name": "ColumnCount",
-          "kind": "Field",
-          "type": "int",
-          "description": "The number of columns in the range."
-        },
-        {
-          "name": "RowCount",
-          "kind": "Field",
-          "type": "int",
-          "description": "The number of rows in the range."
-        },
-        {
           "name": "ColumnIndexToLetters",
           "kind": "Method",
           "type": "string",
@@ -32189,6 +33356,18 @@
           "description": "Returns the A1 notation string for this range."
         },
         {
+          "name": "CellCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "The total number of cells in the range."
+        },
+        {
+          "name": "ColumnCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "The number of columns in the range."
+        },
+        {
           "name": "EndCol",
           "kind": "Property",
           "type": "int",
@@ -32199,6 +33378,12 @@
           "kind": "Property",
           "type": "int",
           "description": "The zero-based ending row index (inclusive)."
+        },
+        {
+          "name": "RowCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "The number of rows in the range."
         },
         {
           "name": "StartCol",
@@ -32284,7 +33469,39 @@
       "description": "A single search match within a workbook.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Spreadsheet/Data/SpreadsheetSearchHit.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CellRef",
+          "kind": "Property",
+          "type": "string",
+          "description": "A1 reference of the matched cell."
+        },
+        {
+          "name": "MatchLength",
+          "kind": "Property",
+          "type": "int",
+          "description": "Length of the matched substring."
+        },
+        {
+          "name": "MatchStart",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based start offset of the match within the searchable cell text."
+        },
+        {
+          "name": "SheetIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based index of the sheet containing the match."
+        },
+        {
+          "name": "SheetName",
+          "kind": "Property",
+          "type": "string",
+          "description": "Name of the sheet containing the match."
+        }
+      ]
     },
     {
       "itemName": "SpreadsheetSearchIn",
@@ -32863,6 +34080,12 @@
           ]
         },
         {
+          "name": "ActiveSheet",
+          "kind": "Property",
+          "type": "SpreadsheetSheet?",
+          "description": "The sheet currently being displayed or edited."
+        },
+        {
           "name": "ActiveSheetIndex",
           "kind": "Property",
           "type": "int",
@@ -32933,19 +34156,19 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "GetSchemas",
+          "kind": "Method",
+          "type": "IEnumerable<WireframeComponentSchema>"
+        },
+        {
           "name": "Priority",
-          "kind": "Field",
+          "kind": "Property",
           "type": "int"
         },
         {
           "name": "SourceId",
-          "kind": "Field",
+          "kind": "Property",
           "type": "string"
-        },
-        {
-          "name": "GetSchemas",
-          "kind": "Method",
-          "type": "IEnumerable<WireframeComponentSchema>"
         }
       ]
     },
@@ -32960,19 +34183,19 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "GetRoles",
+          "kind": "Method",
+          "type": "IEnumerable<UiRoleDefinition>"
+        },
+        {
           "name": "Priority",
-          "kind": "Field",
+          "kind": "Property",
           "type": "int"
         },
         {
           "name": "SourceId",
-          "kind": "Field",
+          "kind": "Property",
           "type": "string"
-        },
-        {
-          "name": "GetRoles",
-          "kind": "Method",
-          "type": "IEnumerable<UiRoleDefinition>"
         }
       ]
     },
@@ -33630,12 +34853,24 @@
         {
           "name": "Height",
           "kind": "Property",
-          "type": "double"
+          "type": "double",
+          "description": "Height in pixels."
         },
         {
           "name": "Width",
           "kind": "Property",
-          "type": "double"
+          "type": "double",
+          "description": "Width in pixels."
+        },
+        {
+          "name": "StencilSize",
+          "type": "StencilSize()",
+          "description": "Creates a zero-sized instance."
+        },
+        {
+          "name": "StencilSize",
+          "type": "StencilSize(double width, double height)",
+          "description": "Creates an instance with the given dimensions."
         }
       ],
       "examples": [
@@ -33737,6 +34972,11 @@
           "kind": "Property",
           "type": "IReadOnlyList<string>",
           "description": "Known English, Czech, legacy, and historically incorrect names for the role."
+        },
+        {
+          "name": "UiRoleDefinition",
+          "type": "public UiRoleDefinition()",
+          "description": "Creates a validated UI role definition."
         }
       ]
     },
@@ -33787,6 +35027,11 @@
           "name": "ToDefinition",
           "kind": "Method",
           "type": "UiRoleDefinition"
+        },
+        {
+          "name": "UiRoleVocabulary",
+          "type": "public UiRoleVocabulary()",
+          "description": "Builds a deterministic vocabulary from all supplied sources."
         }
       ]
     },
@@ -34031,12 +35276,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "TypePrefix",
-          "kind": "Field",
-          "type": "string",
-          "description": "Type prefix used for custom components in this scope."
-        },
-        {
           "name": "AppPackId",
           "kind": "Method",
           "type": "string",
@@ -34158,6 +35397,17 @@
           "kind": "Property",
           "type": "string",
           "description": "Application id for this component scope."
+        },
+        {
+          "name": "TypePrefix",
+          "kind": "Property",
+          "type": "string",
+          "description": "Type prefix used for custom components in this scope."
+        },
+        {
+          "name": "IsVisibleInTargetPacks",
+          "type": "static bool IsVisibleInTargetPacks()",
+          "description": "Returns true when a schema/definition is visible for the supplied document target packs. Null or empty target lists preserve legacy visibility; built-ins are always visible."
         }
       ]
     },
@@ -34286,6 +35536,12 @@
           "kind": "Method",
           "type": "void",
           "description": "Ensures the document has at least one page and a valid ActivePageId. Creates a default page when the list is empty."
+        },
+        {
+          "name": "ActivePage",
+          "kind": "Property",
+          "type": "WireframePage?",
+          "description": "Returns the active page, or the first page if ActivePageId is not set. Returns null when there are no pages."
         },
         {
           "name": "ActivePageId",
@@ -35055,7 +36311,7 @@
           "name": "AddWireframeSchemas",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers BuiltInComponentSchemas and WireframeSchemaRegistry plus the built-in UI role vocabulary so both registries can be injected anywhere.",
+          "description": "Registers and so that can be injected anywhere.",
           "parameters": [
             {
               "name": "services",
@@ -35231,24 +36487,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Duration",
-          "kind": "Field",
-          "type": "TimeSpan",
-          "description": "Computed duration (End − Start)."
-        },
-        {
-          "name": "HasParent",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether this item has a parent."
-        },
-        {
-          "name": "TagLabels",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "Returns tag labels for consumers that only need a simple string view."
-        },
-        {
           "name": "SetTagLabels",
           "kind": "Method",
           "type": "void",
@@ -35321,6 +36559,12 @@
           "description": "Optional due date / deadline."
         },
         {
+          "name": "Duration",
+          "kind": "Property",
+          "type": "TimeSpan",
+          "description": "Computed duration (End − Start)."
+        },
+        {
           "name": "End",
           "kind": "Property",
           "type": "DateTime",
@@ -35343,6 +36587,12 @@
           "kind": "Property",
           "type": "Dictionary<string, string>",
           "description": "Opaque provider-specific fields shown only by consumers that understand them."
+        },
+        {
+          "name": "HasParent",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether this item has a parent."
         },
         {
           "name": "Id",
@@ -35445,6 +36695,12 @@
           "kind": "Property",
           "type": "string?",
           "description": "Provider-native status label, when richer than the unified enum."
+        },
+        {
+          "name": "TagLabels",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Returns tag labels for consumers that only need a simple string view."
         },
         {
           "name": "Tags",
@@ -35674,11 +36930,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Capabilities",
-          "kind": "Field",
-          "type": "virtual TmWorkItemCapabilities"
-        },
-        {
           "name": "AddDependencyAsync",
           "kind": "Method",
           "type": "Task<TmWorkItemDependency>",
@@ -35811,6 +37062,11 @@
           ]
         },
         {
+          "name": "Capabilities",
+          "kind": "Property",
+          "type": "TmWorkItemCapabilities"
+        },
+        {
           "name": "DisplayName",
           "kind": "Property",
           "type": "abstract string"
@@ -35832,12 +37088,6 @@
       "sourcePath": "src/Tempo.Blazor.Abstractions/WorkItems/TmWorkItemProviderRegistry.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of usable providers."
-        },
         {
           "name": "GetAll",
           "kind": "Method",
@@ -35861,6 +37111,12 @@
               "type": "string?"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of usable providers."
         }
       ]
     },
@@ -36051,11 +37307,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1477,
-    "manualItemCount": 1477,
-    "generatedItemCount": 1460,
-    "generatedOnlyItemCount": 0,
+    "itemCount": 1490,
+    "manualItemCount": 1489,
+    "generatedItemCount": 1473,
+    "generatedOnlyItemCount": 1,
     "componentCount": 0,
-    "publicApiTypeCount": 1460
+    "publicApiTypeCount": 1473
   }
 }

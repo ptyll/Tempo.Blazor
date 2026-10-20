@@ -76,11 +76,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ProviderKey",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "ProviderKeyValue",
           "kind": "Field",
           "type": "string",
@@ -100,6 +95,11 @@
               "type": "CancellationToken"
             }
           ]
+        },
+        {
+          "name": "ProviderKey",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -177,7 +177,7 @@
           "name": "AddTempoBlazorModeling",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the modeling editor component group.",
+          "description": "Registers the services required by the modeling component group. Also calls AddTempoBlazorDiagramEditor(), because modeling builds on the diagram editor.",
           "parameters": [
             {
               "name": "services",

@@ -156,6 +156,7 @@
                                                       rows="3"
                                                       @bind="_editText"
                                                       @bind:event="oninput"
+                                                      @bind:after="NotifyDraftChangedAsync"
                                                       @onkeydown="HandleEditKeyDownAsync"
                                                       aria-label="@Loc["TmNotionTextComment_EditLabel"]"></textarea>
                                             <div class="tm-ntcp__edit-actions">
@@ -233,6 +234,7 @@
                                                       placeholder="@Loc["TmNotionTextComment_ReplyPlaceholder"]"
                                                       @bind="_inlineReplyText"
                                                       @bind:event="oninput"
+                                                      @bind:after="NotifyDraftChangedAsync"
                                                       @onkeydown="HandleInlineReplyKeyDownAsync"
                                                       aria-label="@Loc["TmNotionTextComment_ReplyLabel"]"></textarea>
                                             <div class="tm-ntcp__reply-actions">
@@ -270,6 +272,7 @@
                           placeholder="@Loc[_comment is null ? "TmNotionTextComment_NewPlaceholder" : "TmNotionTextComment_ReplyPlaceholder"]"
                           @bind="_replyText"
                           @bind:event="oninput"
+                          @bind:after="NotifyDraftChangedAsync"
                           @onkeydown="HandleReplyKeyDownAsync"
                           aria-label="@Loc["TmNotionTextComment_ReplyLabel"]"></textarea>
                 <div class="tm-ntcp__reply-actions">

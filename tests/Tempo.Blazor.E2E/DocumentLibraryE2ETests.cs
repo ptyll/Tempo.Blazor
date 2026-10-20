@@ -102,7 +102,7 @@ public class DocumentLibraryE2ETests : WasmTestBase
         // the seeded "Old prototype" row is consumed by this very test — on a warm API /Archive can
         // already be empty and the .tm-dod-row wait below would time out.
         var sacrificial = "Sacrificial-" + Guid.NewGuid().ToString("N")[..6];
-        using (var http = new HttpClient())
+        using (var http = DemoApiTestHttp.CreateClient())
         {
             var resp = await http.PostAsJsonAsync(
                 "https://localhost:5100/api/document-library/wireframe/documents",

@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "How a TmSidePanel presents itself at a given container width. Distinct from the F3 PanelPresentation (the anchored popover vs sheet choice): a side panel docks in-flow or composes TmDrawer as a sheet — it is never an anchored popover.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/SidePanelPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "SidePanelPresentation",
+  "members": [
+    {
+      "name": "Auto",
+      "description": "Docks in-flow when the container resolves Desktop (1024px and up by default); otherwise a modal sheet whose geometry follows the viewport — a side sheet on a tablet or desktop viewport, a bottom sheet on a mobile viewport."
+    },
+    {
+      "name": "Docked",
+      "description": "The panel renders docked in-flow at every width. Open controls whether it renders at all."
+    },
+    {
+      "name": "Sheet",
+      "description": "The panel renders as a modal sheet at every width: a side sheet on desktop and tablet containers, a bottom sheet on a mobile container."
+    }
+  ],
+  "usageExample": "<TmSidePanel Presentation=\"SidePanelPresentation.Auto\" @bind-Open=\"open\" Title=\"Event detail\">…</TmSidePanel>"
+}

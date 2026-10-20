@@ -134,9 +134,9 @@
 }
 
 .tm-import-wizard__map-select:focus {
-    outline: none;
-    border-color: var(--tm-border-color-focus, #6366f1);
-    box-shadow: var(--tm-shadow-focus);
+    outline: 2px solid transparent;
+    border-color: var(--tm-border-color-focus);
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-import-wizard__mapping-actions {

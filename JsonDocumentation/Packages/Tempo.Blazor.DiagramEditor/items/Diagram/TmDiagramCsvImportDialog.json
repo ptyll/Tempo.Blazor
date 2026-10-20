@@ -2,7 +2,7 @@
   "itemName": "TmDiagramCsvImportDialog",
   "kind": "Component",
   "category": "Diagram",
-  "description": "Modal dialog that builds a diagram from pasted CSV data. The user selects a target diagram type, maps CSV columns onto the required semantic fields, and sees a live table preview plus the resulting node/edge counts before importing.",
+  "description": "Modal dialog that builds a diagram from pasted CSV data. The user selects a target diagram type, maps CSV columns onto the required semantic fields through two-column label/select rows, and sees a sticky-header preview (first column pinned) plus the resulting node/edge stat chips before importing. Presents as a bottom sheet on narrow viewports.",
   "packageId": "Tempo.Blazor.DiagramEditor",
   "namespace": "Tempo.Blazor.Components.Diagram",
   "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramCsvImportDialog.razor",
@@ -25,6 +25,18 @@
       "name": "OnImport",
       "type": "EventCallback<CsvImportResult>",
       "isRequired": false
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "Auto follows the viewport (bottom sheet under 640px); a forced value never measures, so tests can render the sheet without a DOM."
+    },
+    {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "Element focus returns to when the dialog closes — typically the diagram canvas."
     }
   ]
 }

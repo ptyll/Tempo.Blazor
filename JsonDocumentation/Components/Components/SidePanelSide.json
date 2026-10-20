@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "The edge a TmSidePanel belongs to: a right-hand inspector (the default) or a left-hand navigation / task panel. It decides which edge the side sheet slides in from.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/SidePanelSide.cs",
+  "documentationStatus": "documented",
+  "itemName": "SidePanelSide",
+  "members": [
+    {
+      "name": "Left",
+      "description": "The panel sits on the left edge of its host; its side sheet slides in from the left."
+    },
+    {
+      "name": "Right",
+      "description": "The panel sits on the right edge of its host; its side sheet slides in from the right."
+    }
+  ],
+  "usageExample": "<TmSidePanel Side=\"SidePanelSide.Left\" @bind-Open=\"open\" Title=\"Task\">…</TmSidePanel>"
+}

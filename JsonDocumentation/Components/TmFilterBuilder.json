@@ -2,7 +2,7 @@
   "itemName": "TmFilterBuilder",
   "kind": "Component",
   "category": "Filters",
-  "description": "Interactive filter builder UI that lets users add, edit, and remove filters using field definitions. Renders active filters as TmFilterChip components with a field picker, operator selector, and value input. Supports text, number, date, boolean, select, and multi-select field types. The add button and clear-all labels are localized via TmFilterBuilder_AddFilter and TmFilterBuilder_ClearAll keys; both buttons keep their text on a single line with white-space: nowrap.",
+  "description": "Interactive filter builder UI that lets users add, edit, and remove filters using field definitions. Renders active filters as TmFilterChip components with a field picker, operator selector, and value input. Supports text, number, date, boolean, select, and multi-select field types. The add button and clear-all labels are localized via TmFilterBuilder_AddFilter and TmFilterBuilder_ClearAll keys; both buttons keep their text on a single line with white-space: nowrap. When ShowResultPreview is true and ResultCountProvider is set, a debounced (300 ms) preview shows how many records match the applied filters plus a valid in-progress editor filter, pluralized through TmFilterBuilder_ResultPreview and announced in a role=\"status\" region with aria-live=\"polite\". The region is in the document as soon as both are set. While the first count is in flight it shows a spinner and TmFilterBuilder_ResultPreviewLoading; a later refresh keeps the previous count and sets aria-busy. A null count or a thrown exception leaves the region empty.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Filters"
   ],
@@ -40,10 +40,30 @@
       "isRequired": false
     },
     {
+      "name": "Presentation",
+      "type": "FilterBuilderPresentation",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "Inline (default) keeps the field picker and editor in the document flow, including PickersPage. Popover and Auto open both through TmOverlayPanel anchored to Add filter: Popover stays a popover at every width, Auto becomes a sheet on a narrow viewport. Hosts must opt in."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "ShowResultPreview",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows a live count of the records matching the filters, including a valid in-progress editor filter. Renders only while ResultCountProvider is also set."
+    },
+    {
+      "name": "ResultCountProvider",
+      "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
+      "isRequired": false,
+      "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down."
     }
   ],
   "cssClasses": [
@@ -59,7 +79,8 @@
     "tm-filter-select",
     "tm-filter-apply",
     "tm-filter-cancel",
-    "tm-filter-clear-all"
+    "tm-filter-clear-all",
+    "tm-filter-result-preview"
   ],
   "examples": [
     {

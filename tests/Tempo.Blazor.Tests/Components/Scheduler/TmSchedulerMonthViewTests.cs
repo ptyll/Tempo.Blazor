@@ -51,6 +51,30 @@ public class TmSchedulerMonthViewTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Today_Parameter_Drives_The_Highlighted_Cell()
+    {
+        // Fáze 25b: the Scheduler passes today in the display zone; the month view must highlight
+        // THAT date, not the machine's DateTime.Today (they differ when the zones disagree).
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 15))
+            .Add(c => c.Today, new DateTime(2025, 6, 20)));
+
+        cut.FindAll(".tm-scheduler-month-day--today").Count.Should().Be(1);
+        cut.Find(".tm-scheduler-month-day--today .tm-scheduler-month-day-number").TextContent
+            .Should().Be("20");
+    }
+
+    [Fact]
+    public void Today_Parameter_Defaults_To_Machine_Today()
+    {
+        var cut = Render<TmSchedulerMonthView>(p => p
+            .Add(c => c.CurrentDate, DateTime.Today));
+
+        cut.Instance.Today.Should().Be(DateTime.Today);
+        cut.FindAll(".tm-scheduler-month-day--today").Count.Should().Be(1);
+    }
+
+    [Fact]
     public void Other_Month_Days_Have_Other_Class()
     {
         var cut = Render<TmSchedulerMonthView>(p => p

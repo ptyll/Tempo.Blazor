@@ -86,7 +86,7 @@
     "packages": [
       {
         "name": "Tempo.Blazor",
-        "description": "Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation."
+        "description": "Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS/SK/FR), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation."
       },
       {
         "name": "Tempo.Blazor.PdfViewer",
@@ -383,6 +383,26 @@
               "type": "params object?[]"
             }
           ]
+        },
+        {
+          "name": "Code",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Column",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Line",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -652,7 +672,19 @@
       "description": "Unicode code-point pair for kerning adjustment lookup.",
       "packageId": "Tempo.Reporting.Engine",
       "sourcePath": "src/Tempo.Reporting.Engine/Fonts/FontKerningPair.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "LeftCodePoint",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "RightCodePoint",
+          "kind": "Property",
+          "type": "int"
+        }
+      ]
     },
     {
       "itemName": "FontMetricFace",
@@ -664,30 +696,6 @@
       "sourcePath": "src/Tempo.Reporting.Engine/Fonts/FontMetricFace.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "AdvanceWidths",
-          "kind": "Field",
-          "type": "IReadOnlyDictionary<int, ushort>",
-          "description": "Unicode advance width table."
-        },
-        {
-          "name": "HintedAdvanceWidths",
-          "kind": "Field",
-          "type": "IReadOnlyDictionary<int, IReadOnlyDictionary<int, ushort>>",
-          "description": "Hinted Unicode advance widths keyed by CSS pixels per em."
-        },
-        {
-          "name": "KerningPairs",
-          "kind": "Field",
-          "type": "IReadOnlyDictionary<FontKerningPair, short>",
-          "description": "Unicode kerning table."
-        },
-        {
-          "name": "MissingGlyphHintedAdvanceWidths",
-          "kind": "Field",
-          "type": "IReadOnlyDictionary<int, ushort>",
-          "description": "Hinted missing-glyph advance widths keyed by CSS pixels per em."
-        },
         {
           "name": "ContainsCodePoint",
           "kind": "Method",
@@ -765,6 +773,12 @@
           ]
         },
         {
+          "name": "AdvanceWidths",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<int, ushort>",
+          "description": "Unicode advance width table."
+        },
+        {
           "name": "Ascent",
           "kind": "Property",
           "type": "short",
@@ -783,6 +797,18 @@
           "description": "Font family name."
         },
         {
+          "name": "HintedAdvanceWidths",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<int, IReadOnlyDictionary<int, ushort>>",
+          "description": "Hinted Unicode advance widths keyed by CSS pixels per em."
+        },
+        {
+          "name": "KerningPairs",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<FontKerningPair, short>",
+          "description": "Unicode kerning table."
+        },
+        {
           "name": "LineGap",
           "kind": "Property",
           "type": "short",
@@ -793,6 +819,12 @@
           "kind": "Property",
           "type": "ushort",
           "description": "Advance width used when no glyph is available."
+        },
+        {
+          "name": "MissingGlyphHintedAdvanceWidths",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<int, ushort>",
+          "description": "Hinted missing-glyph advance widths keyed by CSS pixels per em."
         },
         {
           "name": "StyleKey",
@@ -818,18 +850,6 @@
       "sourcePath": "src/Tempo.Reporting.Engine/Fonts/FontMetricTable.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Faces",
-          "kind": "Field",
-          "type": "IReadOnlyList<FontMetricFace>",
-          "description": "All metric faces."
-        },
-        {
-          "name": "FallbackFamilyNames",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "Fallback family names in lookup order."
-        },
         {
           "name": "FindFallbackFace",
           "kind": "Method",
@@ -871,6 +891,18 @@
           "kind": "Property",
           "type": "string",
           "description": "Default family used when a request cannot resolve its family."
+        },
+        {
+          "name": "Faces",
+          "kind": "Property",
+          "type": "IReadOnlyList<FontMetricFace>",
+          "description": "All metric faces."
+        },
+        {
+          "name": "FallbackFamilyNames",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Fallback family names in lookup order."
         }
       ]
     },
@@ -947,10 +979,20 @@
           "description": "Bold 700 normal style."
         },
         {
+          "name": "Italic",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
           "name": "Regular",
           "kind": "Property",
           "type": "static FontStyleKey",
           "description": "Regular 400 normal style."
+        },
+        {
+          "name": "Weight",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -1001,7 +1043,49 @@
       "description": "Measured text run geometry.",
       "packageId": "Tempo.Reporting.Engine",
       "sourcePath": "src/Tempo.Reporting.Engine/Fonts/TextMeasurement.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Ascent",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "Descent",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "FallbackGlyphCount",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "GlyphCount",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "LineGap",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "LineHeight",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "MissingGlyphCount",
+          "kind": "Property",
+          "type": "int"
+        },
+        {
+          "name": "Width",
+          "kind": "Property",
+          "type": "double"
+        }
+      ]
     },
     {
       "itemName": "TextMeasureRequest",
@@ -1011,7 +1095,44 @@
       "description": "Text run measurement request.",
       "packageId": "Tempo.Reporting.Engine",
       "sourcePath": "src/Tempo.Reporting.Engine/Fonts/TextMeasureRequest.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Bold",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "FontFamily",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "FontSize",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "Italic",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Kerning",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "LetterSpacing",
+          "kind": "Property",
+          "type": "double"
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "TrueTypeFontMetricReader",

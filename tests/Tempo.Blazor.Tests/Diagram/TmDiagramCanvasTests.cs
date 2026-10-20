@@ -93,4 +93,86 @@ public class TmDiagramCanvasTests : DiagramTestBase
         nodes.Count.Should().Be(1);
         nodes[0].GetAttribute("data-node-id").Should().Be("n2");
     }
+
+    // ── Phase 6 (tablet and touch): the resize / rotate handles ──────────────
+
+    private static DiagramDocument CreateSelectedNodeDocument()
+        => new()
+        {
+            Title = "Test",
+            Width = 1000,
+            Height = 1000,
+            Nodes = { new DiagramNode { Id = "n1", StencilId = "rect", X = 100, Y = 100, W = 120, H = 80 } }
+        };
+
+    private IRenderedComponent<TmDiagramCanvas> RenderSelectedNode()
+    {
+        var cut = Render<TmDiagramCanvas>(parameters => parameters
+            .Add(p => p.Document, CreateSelectedNodeDocument())
+            .Add(p => p.ReadOnly, false));
+        cut.InvokeAsync(async () => await cut.Instance.SetSelection("n1"));
+        return cut;
+    }
+
+    [Fact]
+    public void ResizeHandles_UsePointerEvents_AndHitAreaClass()
+    {
+        var cut = RenderSelectedNode();
+
+        // bUnit does not render event-handler attributes into the DOM: a handler's presence is
+        // proven by dispatching through it (an unhandled event throws). Each dispatch re-renders
+        // (the mouse pointerdown arms the resize state), so the hits are re-found every round.
+        for (var i = 0; i < 8; i++)
+        {
+            var hits = cut.FindAll(".tm-diagram-resize-handle-hit").ToList();
+            hits.Should().HaveCount(8, "every resize handle carries an enlarged invisible hit area");
+            hits[i].Invoking(h => h.TriggerEvent("onpointerdown",
+                    new Microsoft.AspNetCore.Components.Web.PointerEventArgs { PointerType = "mouse" }))
+                .Should().NotThrow("the resize gesture starts from Pointer Events so a finger can drive it");
+        }
+
+        // The visible 8x8 squares stay decorative; the hit rect carries the gesture.
+        cut.FindAll(".tm-diagram-resize-handle").Should().HaveCount(8);
+
+        var rotateHit = cut.Find(".tm-diagram-rotate-handle-hit");
+        rotateHit.Invoking(h => h.TriggerEvent("onpointerdown",
+                new Microsoft.AspNetCore.Components.Web.PointerEventArgs { PointerType = "touch" }))
+            .Should().NotThrow("the rotate gesture starts from Pointer Events too");
+    }
+
+    [Fact]
+    public void RotateHandle_TouchPress_DoesNotUseTheMousePath()
+    {
+        var cut = RenderSelectedNode();
+
+        cut.Find(".tm-diagram-rotate-handle-hit").TriggerEvent("onpointerdown",
+            new Microsoft.AspNetCore.Components.Web.PointerEventArgs
+            {
+                PointerType = "touch",
+                ClientX = 160,
+                ClientY = 30,
+            });
+
+        JSInterop.Invocations
+            .Where(i => i.Identifier == "tmDiagramEditor.startRotate")
+            .Should().BeEmpty("a finger rotation is driven by the pointer-drag session, not the mouse path");
+    }
+
+    [Fact]
+    public void RotateHandle_MousePress_StartsRotationThroughJS()
+    {
+        var cut = RenderSelectedNode();
+
+        cut.Find(".tm-diagram-rotate-handle-hit").TriggerEvent("onpointerdown",
+            new Microsoft.AspNetCore.Components.Web.PointerEventArgs
+            {
+                PointerType = "mouse",
+                ClientX = 160,
+                ClientY = 30,
+            });
+
+        JSInterop.Invocations
+            .Where(i => i.Identifier == "tmDiagramEditor.startRotate")
+            .Should().ContainSingle("the mouse keeps its direct rotation path");
+    }
 }

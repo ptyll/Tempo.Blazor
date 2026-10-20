@@ -1,10 +1,12 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
 
 namespace Tempo.Blazor.Components.Scheduler;
@@ -25,6 +27,8 @@ public partial class TmGantt : IDisposable
     private double _totalTimelineWidth;
     private int _zoomLevel = 100;
     private double _todayOffset;
+    /// <summary>Today in the display zone, recomputed once per <see cref="RefreshVisibleData"/>.</summary>
+    private DateTime _today = DateTime.Today;
     private double _currentTimeOffset;
 
     // Phase 3 state
@@ -95,6 +99,9 @@ public partial class TmGantt : IDisposable
     private int RowHeight => ViewSettings.ViewDensity == GanttViewDensity.Compact ? CompactRowHeight : ComfortableRowHeight;
 
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    /// <summary>Service provider for the optional user-zone lookups (never a required dependency).</summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
 
     // ── Parameters ───────────────────────────────────────────────
 
@@ -275,6 +282,54 @@ public partial class TmGantt : IDisposable
 
     // ── Lifecycle ────────────────────────────────────────────────
 
+    private TmUserZoneObserver? _userZoneObserver;
+
+    /// <summary>The circuit's user zone, resolved once in <see cref="OnInitialized"/> (null in a bare test context).</summary>
+    private ITmUserTimeZone? _userZone;
+
+    /// <summary>
+    /// Today's date in the circuit's user zone — the browser's zone (UTC on Blazor Server until the
+    /// probe reports after the first interactive render, the runtime's zone on WebAssembly) — and
+    /// the machine-local date only when no <see cref="ITmUserTimeZone"/> is registered (a bare test
+    /// context). Drives the today marker, new-task defaults, the overdue highlight and the
+    /// embedded calendar.
+    /// </summary>
+    internal DateTime TodayInZone()
+    {
+        var zone = _userZone?.Zone;
+        return zone is null || zone.Equals(TimeZoneInfo.Local)
+            ? DateTime.Today
+            : TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).Date;
+    }
+
+    protected override void OnInitialized()
+    {
+        // DI is available here: pin the zone service and the calendar start in one place. The zone
+        // event (RefreshAfterZoneChange) re-pins both once the browser probe reports.
+        _userZone = Services.GetService<ITmUserTimeZone>();
+        _calendarDate = TodayInZone();
+    }
+
+    /// <summary>Re-renders once the user zone arrives (the browser probe is Server-only and one-shot).</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, RefreshAfterZoneChange);
+            if (_userZoneObserver is not null)
+            {
+                await _userZoneObserver.ProbeAsync();
+            }
+        }
+    }
+
+    private Task RefreshAfterZoneChange() => InvokeAsync(() =>
+    {
+        _calendarDate = TodayInZone();
+        RefreshVisibleData();
+        StateHasChanged();
+    });
+
     protected override void OnParametersSet()
     {
         if (WorkItemSource is null)
@@ -439,6 +494,7 @@ public partial class TmGantt : IDisposable
 
     public void Dispose()
     {
+        _userZoneObserver?.Dispose();
         if (_subscribedConnection is not null)
         {
             _subscribedConnection.OnTaskUpdated -= HandleRealtimeTaskUpdated;
@@ -603,12 +659,13 @@ public partial class TmGantt : IDisposable
         if (SelectedTask is not null)
             parentId = SelectedTask.ParentId;
 
+        var today = TodayInZone();
         var newTask = new TmWorkItem
         {
             Id = Guid.NewGuid().ToString(),
             Title = Loc["TmGantt_NewTaskTitle"],
-            Start = DateTime.Today,
-            End = DateTime.Today.AddDays(1),
+            Start = today,
+            End = today.AddDays(1),
             PercentComplete = 0,
             ParentId = parentId
         };
@@ -637,12 +694,13 @@ public partial class TmGantt : IDisposable
     {
         if (_contextMenuTask is null) return;
 
+        var today = TodayInZone();
         var newTask = new TmWorkItem
         {
             Id = Guid.NewGuid().ToString(),
             Title = Loc["TmGantt_NewTaskTitle"],
-            Start = DateTime.Today,
-            End = DateTime.Today.AddDays(1),
+            Start = today,
+            End = today.AddDays(1),
             PercentComplete = 0,
             ParentId = position == GanttInsertPosition.Child ? _contextMenuTask.Id : _contextMenuTask.ParentId
         };
@@ -757,6 +815,9 @@ public partial class TmGantt : IDisposable
     // Click on event → opens task panel
 
     private TmScheduleViewType _calendarView = TmScheduleViewType.Month;
+
+    // OnInitialized pins this to the user-zone today (DI is available there); the zone event
+    // re-pins it when the browser probe reports.
     private DateTime _calendarDate = DateTime.Today;
 
     private async Task OnCalendarEventChangedAsync(TmScheduleEvent e)
@@ -1072,7 +1133,10 @@ public partial class TmGantt : IDisposable
         var totalDays = (timelineEnd - timelineStart).TotalDays;
         _totalTimelineWidth = Math.Max(1, totalDays * pixelPerDay);
 
-        _todayOffset = GanttHelper.GetTodayOffset(timelineStart, pixelPerDay);
+        // One today per refresh: the marker and the overdue highlight must agree, and the zone
+        // (plus the clock) is read once instead of per row.
+        _today = TodayInZone();
+        _todayOffset = GanttHelper.GetTodayOffset(timelineStart, pixelPerDay, _today);
 
         // Two-row headers via zoom preset
         var rows = GanttHelper.BuildTimelineHeaderRows(GetEffectiveZoomPreset(), timelineStart, timelineEnd, pixelPerDay);
@@ -1252,8 +1316,8 @@ public partial class TmGantt : IDisposable
         return string.Join(" ", classes);
     }
 
-    private static bool IsOverdue(TmWorkItem task) =>
-        task.End < DateTime.Today &&
+    private bool IsOverdue(TmWorkItem task) =>
+        task.End < _today &&
         task.Status is not TmWorkItemStatus.Done and not TmWorkItemStatus.Closed;
 
     private string GetDragClass(GanttTaskNode node)

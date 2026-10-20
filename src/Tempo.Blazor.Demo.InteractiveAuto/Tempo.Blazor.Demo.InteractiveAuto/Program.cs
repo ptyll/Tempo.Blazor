@@ -1,6 +1,7 @@
 using System.Reflection;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Demo.Services;
+using Tempo.Blazor.Demo.SharedUI.Localization;
 using Tempo.Blazor.Demo.SharedUI.Services;
 using Tempo.Blazor.Demo.Validators;
 using Tempo.Blazor.DocumentEditor.Services;
@@ -22,14 +23,19 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-// HttpClient for API calls
-builder.Services.AddScoped(sp => new HttpClient
+// HttpClient for API calls. In Development the primary handler accepts the (typically untrusted)
+// ASP.NET Core developer certificate: these are SERVER-side calls where the browser-style
+// IgnoreHTTPSErrors does not apply, and a fresh machine would otherwise 500 every page whose
+// prerender touches the API. See DemoApiHttpHandler.
+var acceptDeveloperCertificate = builder.Environment.IsDevelopment();
+builder.Services.AddScoped(sp => new HttpClient(DemoApiHttpHandler.Create(acceptDeveloperCertificate))
 {
     BaseAddress = new Uri(builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100")
 });
 
 builder.Services.AddHttpClient("DemoApi", c =>
-    c.BaseAddress = new Uri(builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100"));
+    c.BaseAddress = new Uri(builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100"))
+    .ConfigurePrimaryHttpMessageHandler(() => DemoApiHttpHandler.Create(acceptDeveloperCertificate));
 
 // Register SharedUI services
 builder.Services.AddScoped<PersonHttpDataProvider>();
@@ -96,6 +102,10 @@ builder.Services.AddScoped<SignalRCollaborationProvider>();
 
 // Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
 builder.Services.AddTempoBlazor();
+// Demo-only strings (TmDemo_*, *Demo_* pages) come from SharedUI's DemoResources; everything
+// else falls through to the library's TmResources. The Client (WASM) side registers the same
+// decorator in its own Program.cs.
+builder.Services.AddTempoDemoLocalizer();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();
@@ -122,6 +132,18 @@ builder.Services.AddScoped<IDashboardProvider, InMemoryDashboardProvider>();
 builder.Services.AddTempoFluentValidation(typeof(PersonFormValidator).Assembly);
 
 var app = builder.Build();
+
+// The demo's default language is English — the neutral culture of both resource tables
+// (TmResources and DemoResources). Without an explicit default, .NET seeds request threads from the
+// ambient OS culture, so a machine whose regional format is not English (e.g. cs-CZ) prerenders (and
+// serves through the initial interactive-server leg) every string in that language, and E2E results
+// depend on the machine running the host (docs/e2e-test-lanes.md pins LANG=en_US.UTF-8 on Linux for
+// exactly this reason; Windows has no per-process equivalent). The WebAssembly leg is unaffected: it
+// picks its culture in the browser (localStorage preference → navigator language) via the Client
+// Program.cs.
+var demoDefaultCulture = new System.Globalization.CultureInfo("en");
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = demoDefaultCulture;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = demoDefaultCulture;
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

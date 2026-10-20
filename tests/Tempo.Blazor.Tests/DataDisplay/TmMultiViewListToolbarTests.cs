@@ -9,7 +9,6 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.DataDisplay;
 
-/// <summary>Tests for TmMultiViewList toolbar chrome visibility (ShowToolbar, ShowViewManager).</summary>
 public class TmMultiViewListToolbarTests : LocalizationTestBase
 {
     private record MvlToolbarItem(
@@ -30,6 +29,44 @@ public class TmMultiViewListToolbarTests : LocalizationTestBase
             .ToArray();
 
     private static IDataTableViewProvider CreateViewProvider() => Substitute.For<IDataTableViewProvider>();
+
+    [Fact]
+    public void ItemCount_IsHiddenByDefault()
+    {
+        var cut = Render<TmMultiViewList<string>>(p => p.Add(c => c.Items, new List<string> { "one", "two" }));
+
+        cut.FindAll(".tm-mvl-item-count").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ItemCount_RendersWhenEnabled()
+    {
+        var cut = Render<TmMultiViewList<string>>(p => p
+            .Add(c => c.Items, new List<string> { "one", "two" })
+            .Add(c => c.ShowItemCount, true));
+
+        cut.Find(".tm-mvl-item-count").TextContent.Should().Be("Items: 2");
+    }
+
+    [Fact]
+    public void IconsOnly_DoesNotRenderViewNames()
+    {
+        var cut = Render<TmMultiViewList<string>>(p => p.Add(c => c.Items, new List<string>()));
+        cut.Find(".tm-mvl-switch-table").TextContent.Should().NotContain("Table view");
+    }
+
+    [Fact]
+    public void IconsAndText_RendersViewNames()
+    {
+        var cut = Render<TmMultiViewList<string>>(p => p
+            .Add(c => c.Items, new List<string>())
+            .Add(c => c.ViewSwitcherLabels, ViewSwitcherLabels.IconsAndText));
+        cut.Find(".tm-mvl-switch-table").TextContent.Should().Contain("Table view");
+        cut.Find(".tm-mvl-switch-card").TextContent.Should().Contain("Card view");
+        cut.Find(".tm-mvl-switch-list").TextContent.Should().Contain("List view");
+    }
+
+    // Restored from 259f900a (commit ad20da83 rewrote this file and dropped the toolbar chrome tests).
 
     [Fact]
     public void MultiViewList_ShowToolbar_False_HidesToolbarAndControls()
@@ -157,5 +194,26 @@ public class TmMultiViewListToolbarTests : LocalizationTestBase
         cut.FindAll(".tm-mvl-group-picker").Should().ContainSingle();
         cut.FindAll(".tm-view-manager").Should().ContainSingle();
         cut.FindAll(".tm-mvl-external-filters").Should().ContainSingle();
+    }
+
+    /// <summary>Restored from 18cd0ad3. The save-view dialog grouping section was dropped with the toolbar rewrite.</summary>
+    [Fact]
+    public void ViewDialog_ShowsGroupingSection_WhenGroupableFieldExists()
+    {
+        var provider = CreateViewProvider();
+        provider.GetViewsAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IEnumerable<DataTableView>>([]));
+
+        var cut = Render<TmMultiViewList<MvlToolbarItem>>(p => p
+            .Add(c => c.Items, SampleItems())
+            .Add(c => c.ViewContext, "test-context")
+            .Add(c => c.ViewProvider, provider)
+            .Add(c => c.GroupableFields, [new GroupFieldDefinition<MvlToolbarItem> { FieldName = "Title", Label = "Title", FieldAccessor = i => i.Title }]));
+
+        cut.Find(".tm-view-manager-toggle").Click();
+        cut.Find(".tm-btn-primary").Click();
+
+        cut.FindAll(".tm-view-group-columns").Should().ContainSingle();
+        cut.Markup.Should().Contain("Title");
     }
 }

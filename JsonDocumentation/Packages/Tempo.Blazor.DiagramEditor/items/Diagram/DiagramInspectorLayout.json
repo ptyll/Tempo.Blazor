@@ -1,0 +1,28 @@
+{
+  "kind": "Enum",
+  "category": "Diagram",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "description": "How the inspector column of TmDiagramEditor presents the properties and layers panels (DI2, desktop redesign phase 4).",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramInspectorLayout.cs",
+  "documentationStatus": "generated",
+  "itemName": "DiagramInspectorLayout",
+  "values": [
+    {
+      "name": "Tabs",
+      "value": "0",
+      "description": "The properties and layers panels share one column behind \"Properties | Layers\" tabs. The default."
+    },
+    {
+      "name": "Stacked",
+      "value": "1",
+      "description": "Both panels render stacked in one scrollable column (the pre-redesign look), opt-in."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Legacy stacked inspector (opt-in)",
+      "code": "<TmDiagramEditor Document=\"@document\" InspectorLayout=\"DiagramInspectorLayout.Stacked\" />"
+    }
+  ]
+}

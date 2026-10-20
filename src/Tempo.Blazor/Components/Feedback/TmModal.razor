@@ -26,8 +26,12 @@
          @ref="_overlayElement">
         
         <div @ref="_panel" class="tm-modal-container @GetContainerClasses()" @onclick:stopPropagation>
+            @* Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
+               interop completed — an unpromoted popover root can be display:none and the
+               initial-focus move would land on <body>. *@
             <TmFocusScope @ref="_scope"
-                          Active="true"
+                          Active="@(_gate?.ScopeActive == true)"
+                          NoteOpenerOnMount="true"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
                           CloseOnEscape="CloseOnEscape"
@@ -73,7 +77,7 @@
                 </div>
                 
                 @* Body *@
-                <div class="tm-modal-body">
+                <div @ref="_body" class="tm-modal-body">
                     @ChildContent
                 </div>
                 
@@ -175,10 +179,19 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
     
-    /// <summary>The element focus returns to when the modal closes.</summary>
+    /// <summary>
+    /// The element focus returns to when the modal closes. A target that is disconnected or inside
+    /// this modal is skipped (it would die with the overlay): the restore then falls back to the
+    /// opener. A focus the app placed on a live element outside the modal before the close render
+    /// is never stolen.
+    /// </summary>
     [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
-    /// <summary>The id of the restore target, for a target rendered outside this modal.</summary>
+    /// <summary>
+    /// The id of the restore target, for a target rendered outside this modal. Same skip rules as
+    /// <see cref="RestoreFocusTarget"/>: a disconnected or inside-the-modal target falls back to
+    /// the opener.
+    /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
@@ -209,19 +222,20 @@
     private string _titleId = Guid.NewGuid().ToString("N");
     private bool _wasShown;
     private bool _gestureAttached;
-    private bool _promoted;
     private bool _disposed;
     private SheetInterop? _sheet;
-    private TopLayerInterop? _topLayer;
+    private PromotedScopeGate? _gate;
     private DotNetObjectReference<TmModal>? _dotNetRef;
     private TmFocusScope? _scope;
+    private ScrollRegionInterop? _scrollRegion;
+    private ElementReference _body;
     private readonly OverlayLayout _layout = new();
 
     private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -271,6 +285,15 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, while still closed, so the FIRST open of the session restores its
+            // opener — a module that loaded with the first activation opened with no opener
+            // record, and that close fell to <body>.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         // The sheet module tracks the on-screen keyboard so the footer stays visible. A modal sheet
         // has no snap points, so the module only ever applies the keyboard offset.
         if (Show && IsSheet && !_gestureAttached)
@@ -288,17 +311,43 @@
         // browser top layer right after the render that inserted it. A sheet a host opened before
         // the modal then cannot cover it (top-layer order equals open order). Closing unmounts
         // the subtree; a detached top-layer element hides itself — no demote call is needed.
-        if (Show && !_promoted)
+        // The gate also holds the trap back until the promote completed (c51ddf81 #1) and drops a
+        // promote that finished after the close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(Show, () => Show, _overlayElement))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_overlayElement);
+            StateHasChanged();
         }
-        else if (!Show && _promoted)
+
+        // A long body becomes a keyboard-reachable region only while it actually overflows (the
+        // TmDialog scroller contract); a short modal grows no extra tab stop. A title that renders
+        // or changes after the attach re-points the region's name (cluster-B 8.3).
+        if (Show && !_scrollRegionAttached)
         {
-            _promoted = false;
+            _scrollRegionAttached = true;
+            _regionLabel = string.IsNullOrEmpty(Title) ? null : _titleId;
+            _scrollRegion ??= new ScrollRegionInterop(JS);
+            await _scrollRegion.AttachAsync(_body, _regionLabel);
+        }
+        else if (!Show && _scrollRegionAttached)
+        {
+            _scrollRegionAttached = false;
+            _regionLabel = null;
+            if (_scrollRegion is not null) await _scrollRegion.DetachAsync();
+        }
+        else if (_scrollRegionAttached)
+        {
+            var labelledBy = string.IsNullOrEmpty(Title) ? null : _titleId;
+            if (labelledBy != _regionLabel)
+            {
+                _regionLabel = labelledBy;
+                await _scrollRegion!.UpdateLabelAsync(labelledBy, null);
+            }
         }
     }
+
+    private bool _scrollRegionAttached;
+    private string? _regionLabel;
 
     private async Task AttachGestureAsync()
     {
@@ -334,7 +383,8 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
+        if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }

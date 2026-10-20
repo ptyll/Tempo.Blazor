@@ -109,6 +109,12 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Optional mention provider reused by the reply composer."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback<TmCommentDraftState>",
+      "isRequired": false,
+      "description": "Notifies the parent that the thread's comment draft state changed. The reply and edit composers hold their text in private fields, so the thread host cannot observe it. Fires ONLY when the TmCommentDraftState value actually changes (value-equality dedup), never on every keystroke. IsEditorOpen is true while the reply composer is mounted or an entry edit is open on the expanded thread; EditingCommentId carries the id of the ENTRY under edit; HasUnsavedContent aggregates both composers - each slot is gated by its mount condition, so a resolved thread (it collapses), a withdrawn CanComment or a stale edit slot report the closed, empty state instead of a stale composer's text, and a freshly seeded edit is not an unsaved draft. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard."
     }
   ]
 }

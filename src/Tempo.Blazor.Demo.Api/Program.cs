@@ -29,13 +29,22 @@ Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 builder.Services.AddDbContext<DemoDiagramDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
+// Cors:AllowedOrigins (env: Cors__AllowedOrigins__0=https://host:port) is purely additive — the
+// hard defaults live only in DemoCorsPolicy.DefaultOrigins. In Development any loopback origin
+// is allowed so E2E/dev hosts on other ports can reach the API.
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+// Configured origins are matched verbatim by IsAllowed, so normalize them the way humans and env
+// vars spell them: trim surrounding whitespace and a trailing slash, and drop blank entries.
+configuredOrigins = configuredOrigins
+    .Select(o => o.Trim().TrimEnd('/'))
+    .Where(o => o.Length > 0)
+    .ToArray();
+var isDevelopment = builder.Environment.IsDevelopment();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins(
-        "http://localhost:5010",
-        "https://localhost:7106")
+    p.SetIsOriginAllowed(origin => DemoCorsPolicy.IsAllowed(origin, configuredOrigins, isDevelopment))
      .AllowAnyMethod()
      .AllowAnyHeader()
-     .AllowCredentials()));   // required for SignalR WebSocket handshake
+     .AllowCredentials()));   // required for SignalR WebSocket handshake; SetIsOriginAllowed echoes the origin, so credentials stay valid
 
 builder.Services.AddSignalR();
 

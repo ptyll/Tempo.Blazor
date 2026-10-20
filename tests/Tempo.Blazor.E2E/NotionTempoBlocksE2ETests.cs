@@ -16,7 +16,7 @@ public class NotionTempoBlocksE2ETests : WasmTestBase
 
     private async Task<IPage> OpenNotionEditorAsync()
     {
-        using var http = new HttpClient();
+        using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* ignore if API unavailable or cert untrusted */ }
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.Models;
 
@@ -8,7 +9,7 @@ namespace Tempo.Blazor.Components.Chat;
 /// <summary>
 /// A chat conversation component with message rendering, typing indicators, attachments, and send input.
 /// </summary>
-public partial class TmChat : TmComponentBase
+public partial class TmChat : TmComponentBase, ITmDraftGuard
 {
     /// <summary>The currently authenticated user.</summary>
     [Parameter] public ChatUser CurrentUser { get; set; } = new();
@@ -82,6 +83,32 @@ public partial class TmChat : TmComponentBase
     /// <summary>Emoji offered by the reaction picker.</summary>
     [Parameter] public IReadOnlyList<string> ReactionEmojis { get; set; } = ["👍", "❤️", "😂", "🎉", "😮", "😢"];
 
+    /// <summary>
+    /// Notifies the parent that the chat draft state changed. Fires ONLY when the
+    /// <see cref="TmChatDraftState"/> value actually changes (value-equality dedup), never on
+    /// every keystroke — the record carries flags only, and repeated identical states are
+    /// suppressed so parents are not re-rendered while the user types. Members:
+    /// <see cref="TmChatDraftState.HasComposerDraft"/> (main composer holds text),
+    /// <see cref="TmChatDraftState.HasThreadReplyDraft"/> (the open thread panel's reply input
+    /// holds text), <see cref="TmChatDraftState.EditingMessageId"/> (a message's inline edit is
+    /// open) and <see cref="TmChatDraftState.HasUnsavedContent"/> (the aggregate dirty flag).
+    /// <para>
+    /// The composer and thread inputs are plain <c>&lt;textarea&gt;</c>s whose text the host
+    /// cannot observe through any parameter — this callback is the only push channel; pair it
+    /// with <see cref="HasUnsavedDraft"/> for polling and <see cref="DiscardDraftAsync"/> for the
+    /// actual discard after the consumer's own confirmation.
+    /// </para>
+    /// <para>
+    /// Opening a message's inline edit reports the editing id immediately (so the consumer knows
+    /// an edit is in progress) with <see cref="TmChatDraftState.HasUnsavedContent"/> still
+    /// <see langword="false"/> — the flag rises only once the edit text differs from the message
+    /// text as it was when the edit started, mirroring the edit semantics of
+    /// <c>TmActivityComments</c>. Closing the thread panel clears its reply draft; sending clears
+    /// the sent slot.
+    /// </para>
+    /// </summary>
+    [Parameter] public EventCallback<TmChatDraftState> OnDraftChanged { get; set; }
+
     private string _inputText = string.Empty;
     private ElementReference _messagesContainer;
     private bool _isSubmitting;
@@ -94,11 +121,115 @@ public partial class TmChat : TmComponentBase
     private string _threadInput = string.Empty;
     private readonly HashSet<string> _reportedRead = [];
 
+    /// <summary>
+    /// Text of the message as it was when its edit started — the baseline for the
+    /// differs-from-original semantics of <see cref="TmChatDraftState.HasUnsavedContent"/> on the
+    /// edit path (opening an edit without changes is not an unsaved draft).
+    /// </summary>
+    private string _editOriginalText = string.Empty;
+
+    /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
+    private TmChatDraftState _lastDraftState = new(false, false, null, false);
+
     private string? EffectiveActiveThread => ActiveThreadRootId ?? _activeThread;
 
     private string PlaceholderText => Placeholder ?? Loc["TmChat_Placeholder"];
 
     private bool IsSendDisabled => Disabled || string.IsNullOrWhiteSpace(_inputText) || _isSubmitting;
+
+    /// <summary>
+    /// Whether the component currently holds an unsaved draft in ANY slot — main composer, open
+    /// thread panel's reply input, or a message edit whose text differs from the message as it
+    /// was when the edit started. The SAME value carried by the
+    /// <see cref="TmChatDraftState.HasUnsavedContent"/> flag that <see cref="OnDraftChanged"/>
+    /// reports. Read live from the current input state (not from the last notification), so
+    /// consumers can poll it at any time, for example before a conversation reload or a page
+    /// navigation that would silently discard the draft.
+    /// <para>
+    /// Read it on the component's dispatcher (e.g. from an event handler or via
+    /// <c>InvokeAsync</c>) when called from a background thread.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedDraft => BuildDraftState().HasUnsavedContent;
+
+    /// <summary>
+    /// Clears every draft slot: the main composer, the open thread panel's reply input and any
+    /// open message edit (the edit is cancelled, its text reset). The thread panel itself stays
+    /// open — its visibility is the host's business (<see cref="ActiveThreadRootId"/>), only the
+    /// unsaved text belongs to the draft. Intended for the consumer AFTER the user confirmed the
+    /// discard in the consumer's OWN confirmation dialog — the component never shows a
+    /// confirmation itself; that is deliberately the consumer's responsibility. Typical flow:
+    /// <see cref="HasUnsavedDraft"/> reports a draft, the consumer asks, and on confirmation
+    /// calls this method so the next reload does not ask again.
+    /// <para>
+    /// When no draft exists the call is a no-op — the state does not change and the
+    /// value-equality dedup suppresses any <see cref="OnDraftChanged"/> notification.
+    /// Safe to call from outside the render cycle; the reset, re-render and notification are
+    /// dispatched through <c>InvokeAsync</c>.
+    /// </para>
+    /// </summary>
+    public Task DiscardDraftAsync()
+        => InvokeAsync(async () =>
+        {
+            _inputText = string.Empty;
+            _threadInput = string.Empty;
+            _editingId = null;
+            _editText = string.Empty;
+            _editOriginalText = string.Empty;
+            StateHasChanged();
+            await NotifyDraftChangedAsync();
+        });
+
+    /// <summary>
+    /// Builds the current draft snapshot. <see cref="TmChatDraftState.HasComposerDraft"/> and
+    /// <see cref="TmChatDraftState.HasThreadReplyDraft"/> mean not-whitespace-only text — the
+    /// thread-reply slot only while the thread panel is actually mounted (its root message
+    /// exists), so a parameter-driven unmount clears the slot immediately;
+    /// <see cref="TmChatDraftState.EditingMessageId"/> identifies the message under edit;
+    /// <see cref="TmChatDraftState.HasUnsavedContent"/> aggregates the three — the edit counts
+    /// only once its text differs from the original message text (see the remarks on
+    /// <see cref="OnDraftChanged"/>).
+    /// </summary>
+    private TmChatDraftState BuildDraftState()
+    {
+        var hasComposerDraft = !string.IsNullOrWhiteSpace(_inputText);
+        var hasThreadReplyDraft = ActiveThreadRoot is not null && !string.IsNullOrWhiteSpace(_threadInput);
+        var hasEditDraft = _editingId is not null
+            && !string.Equals(_editText, _editOriginalText, StringComparison.Ordinal);
+
+        return new TmChatDraftState(
+            hasComposerDraft,
+            hasThreadReplyDraft,
+            _editingId,
+            hasComposerDraft || hasThreadReplyDraft || hasEditDraft);
+    }
+
+    /// <summary>
+    /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed. The dedup
+    /// is mandatory: all three inputs report content changes into this method (via the editors'
+    /// bind after-hook, i.e. per keystroke in real usage), and without the value-equality check
+    /// each keystroke would invoke the callback and re-render the parent; the record's value
+    /// equality makes the comparison cheap and exact.
+    /// </summary>
+    private async Task NotifyDraftChangedAsync()
+    {
+        var state = BuildDraftState();
+        if (state == _lastDraftState)
+        {
+            return;
+        }
+
+        _lastDraftState = state;
+        await OnDraftChanged.InvokeAsync(state);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        // Parameter-driven transitions (e.g. the thread panel unmounting because its root message
+        // left Messages) must be reported; the dedup keeps repeated parameter sets silent.
+        await NotifyDraftChangedAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -179,6 +310,8 @@ public partial class TmChat : TmComponentBase
         await OnSendMessage.InvokeAsync(text);
         await OnSend.InvokeAsync(new ChatSendRequest(text));
         _isSubmitting = false;
+        // The composer slot just cleared — report it exactly once through the shared notify.
+        await NotifyDraftChangedAsync();
     }
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
@@ -224,6 +357,8 @@ public partial class TmChat : TmComponentBase
         _activeThread = null;
         _threadInput = string.Empty;
         await ActiveThreadRootIdChanged.InvokeAsync(null);
+        // Closing the panel clears its reply draft — report the cleared slot.
+        await NotifyDraftChangedAsync();
     }
 
     private async Task SendThreadReplyAsync()
@@ -234,6 +369,7 @@ public partial class TmChat : TmComponentBase
         if (string.IsNullOrEmpty(text)) return;
         _threadInput = string.Empty;
         await OnSend.InvokeAsync(new ChatSendRequest(text, replyToId: root.Id, threadRootId: root.Id));
+        await NotifyDraftChangedAsync();
     }
 
     private async Task HandleThreadKeyDownAsync(KeyboardEventArgs e)
@@ -258,17 +394,23 @@ public partial class TmChat : TmComponentBase
     private bool HasMessageActions(ChatMessage m, bool inThread)
         => CanReact || (!inThread && CanReplyInThread) || CanEditMessage(m) || CanDeleteMessage(m);
 
-    private void StartEdit(ChatMessage m)
+    private async Task StartEdit(ChatMessage m)
     {
         _editingId = m.Id;
         _editText = m.Text;
+        _editOriginalText = m.Text;
         _pickerForId = null;
+        // The edit state itself is a transition the consumer must see (editing id set), even
+        // though HasUnsavedContent is still false until the text changes.
+        await NotifyDraftChangedAsync();
     }
 
-    private void CancelEdit()
+    private async Task CancelEdit()
     {
         _editingId = null;
         _editText = string.Empty;
+        _editOriginalText = string.Empty;
+        await NotifyDraftChangedAsync();
     }
 
     private async Task CommitEditAsync()
@@ -281,6 +423,8 @@ public partial class TmChat : TmComponentBase
         {
             await OnEditMessage.InvokeAsync(new ChatMessageEdit(id, text));
         }
+        // The edit closed (committed or discarded as empty) — report the cleared editing state.
+        await NotifyDraftChangedAsync();
     }
 
     private async Task HandleEditKeyDownAsync(KeyboardEventArgs e)
@@ -291,7 +435,7 @@ public partial class TmChat : TmComponentBase
         }
         else if (e.Key == "Escape")
         {
-            CancelEdit();
+            await CancelEdit();
         }
     }
 

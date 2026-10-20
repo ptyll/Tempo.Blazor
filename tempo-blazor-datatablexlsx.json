@@ -108,21 +108,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ContentType",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "FileExtension",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "Format",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Export",
           "kind": "Method",
           "type": "byte[]",
@@ -132,6 +117,21 @@
               "type": "DataTableExportData"
             }
           ]
+        },
+        {
+          "name": "ContentType",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "FileExtension",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Format",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -146,21 +146,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ContentType",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "FileExtension",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "Format",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Export",
           "kind": "Method",
           "type": "byte[]",
@@ -170,6 +155,21 @@
               "type": "DataTableExportData"
             }
           ]
+        },
+        {
+          "name": "ContentType",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "FileExtension",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Format",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },

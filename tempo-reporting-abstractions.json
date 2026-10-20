@@ -76,7 +76,7 @@
     "packages": [
       {
         "name": "Tempo.Blazor",
-        "description": "Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation."
+        "description": "Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS/SK/FR), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation."
       },
       {
         "name": "Tempo.Blazor.PdfViewer",
@@ -189,7 +189,19 @@
       "description": "Payload of the Blazor host's same-origin GET /auth/token hand-out endpoint: a short-lived access token plus its absolute expiry. The WebAssembly leg caches this in memory only and re-fetches when it nears expiry. The refresh token is never part of this payload — it stays in the server-side token store.",
       "packageId": "Tempo.Reporting.Abstractions",
       "sourcePath": "src/Tempo.Reporting.Abstractions/Auth/AccessTokenResponse.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AccessToken",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "ExpiresAt",
+          "kind": "Property",
+          "type": "DateTimeOffset"
+        }
+      ]
     },
     {
       "itemName": "ApiClientBase",

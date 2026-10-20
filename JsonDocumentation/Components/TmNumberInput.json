@@ -70,6 +70,13 @@
       "description": "Error message."
     },
     {
+      "name": "AnnounceError",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
+    },
+    {
       "name": "HelpText",
       "type": "string?",
       "isRequired": false,

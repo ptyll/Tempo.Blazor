@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Dashboard",
+  "description": "Chrome of the TmDashboard root surface. Plain (default) renders the dashboard directly on the workspace background so the widget cards are the only surfaces; Card wraps the dashboard in a rounded surface card (.tm-dashboard--framed) for hosts that embed it on a contrasting page.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Dashboard/DashboardAppearance.cs",
+  "documentationStatus": "generated",
+  "itemName": "DashboardAppearance"
+}
