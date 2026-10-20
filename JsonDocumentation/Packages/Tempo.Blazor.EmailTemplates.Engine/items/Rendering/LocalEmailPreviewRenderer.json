@@ -1,0 +1,27 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The default IEmailPreviewRenderer: renders locally through IEmailTemplateRenderer and projects the result onto the preview contract. Warnings keep the status Rendered (the HTML is complete), a real render error is RenderFailed with empty html/text/subject, an unexpected failure of the renderer itself is Unavailable so the editor offers a retry, and OperationCanceledException is never swallowed. SubstituteVariables = false renders the same pipeline without substituting, keeping the {{ }} tokens for an HTML export.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/LocalEmailPreviewRenderer.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "RenderAsync",
+      "kind": "Method",
+      "type": "Task<EmailPreviewResult>",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "EmailPreviewRequest"
+        },
+        {
+          "name": "cancellationToken",
+          "type": "CancellationToken"
+        }
+      ]
+    }
+  ],
+  "itemName": "LocalEmailPreviewRenderer"
+}

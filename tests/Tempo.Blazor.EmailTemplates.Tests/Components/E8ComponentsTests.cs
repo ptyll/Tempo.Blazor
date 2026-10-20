@@ -1,3 +1,4 @@
+using Tempo.Blazor.EmailTemplates.Abstractions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,8 @@ public class E8ComponentsTests : BunitContext
         Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
         Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         Services.AddHttpClient();
-        Services.AddTempoEmailTemplates();
+        Services.AddTempoEmailTemplateEditor();
+        Services.AddTempoEmailTemplateEngine();
     }
 
     private static EmailTemplateDocument DocWithText(string content)
@@ -63,9 +65,11 @@ public class E8ComponentsTests : BunitContext
         var cut = Render<TmEmailTemplatePreview>(p => p
             .Add(c => c.Document, DocWithText("Welcome aboard")));
 
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc")
+            .Should().Contain("Welcome aboard"));
         var frame = cut.Find("[data-tm-preview-frame]");
         frame.HasAttribute("sandbox").Should().BeTrue();
-        frame.GetAttribute("srcdoc").Should().Contain("Welcome aboard");
+        frame.GetAttribute("sandbox").Should().BeEmpty();
     }
 
     [Fact]
@@ -87,6 +91,7 @@ public class E8ComponentsTests : BunitContext
 
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, doc));
 
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-warnings]"));
         cut.FindAll("[data-tm-preview-errors]").Should().BeEmpty();
         var warnings = cut.Find("[data-tm-preview-warnings]");
         warnings.TextContent.Should().Contain("blocked URL scheme");
@@ -110,6 +115,7 @@ public class E8ComponentsTests : BunitContext
 
         var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, doc));
 
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-errors]"));
         cut.Find("[data-tm-preview-errors]").TextContent.Should().NotBeNullOrWhiteSpace();
         cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().BeEmpty();
     }
@@ -120,9 +126,10 @@ public class E8ComponentsTests : BunitContext
         var cut = Render<TmEmailTemplatePreview>(p => p
             .Add(c => c.Document, DocWithText("Plain content here")));
 
-        cut.Find("[data-tm-preview-view=\"text\"]").Click();
+        cut.WaitForAssertion(() => cut.Find("#tab-preview-view-text"));
+        cut.Find("#tab-preview-view-text").Click();
 
-        cut.Find("[data-tm-preview-text]").TextContent.Should().Contain("Plain content here");
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-text]").TextContent.Should().Contain("Plain content here"));
     }
 
     [Fact]
@@ -132,15 +139,14 @@ public class E8ComponentsTests : BunitContext
             .Add(c => c.Document, DocWithText("Hello {{ first_name }}"))
             .Add(c => c.VariablesJson, "{\"first_name\":\"Alice\"}"));
 
-        cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Alice");
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Alice"));
 
         // Parent (the send form) supplies fresh values as the user types — the live
         // preview must adopt them, not stay pinned to the first snapshot.
         cut.Render(p => p.Add(c => c.VariablesJson, "{\"first_name\":\"Bob\"}"));
 
-        var srcdoc = cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc");
-        srcdoc.Should().Contain("Bob");
-        srcdoc.Should().NotContain("Alice");
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Bob"));
+        cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().NotContain("Alice");
     }
 
     // ── MJML export (E8.5) ──────────────────────────────────────────────────────────────────

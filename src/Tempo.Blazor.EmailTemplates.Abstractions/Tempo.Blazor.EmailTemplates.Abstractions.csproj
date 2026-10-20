@@ -13,7 +13,7 @@
     <Version>2.9.1</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.EmailTemplates.Abstractions</Title>
-    <Description>Logic and contracts for the Tempo.Blazor email template editor: block model, MJML generation and import, Scriban templating sandbox, variable extraction, render pipeline, DTOs and validators. No Blazor dependency – safe to reference from API/service projects.</Description>
+    <Description>Logic and contracts for the Tempo.Blazor email template editor: block model, MJML generation and import, template/validation/preview contracts, variable extraction, DTOs and validators. No Blazor dependency, no Scriban/Mjml.Net/AngleSharp dependency (the local engine ships separately as Tempo.Blazor.EmailTemplates.Engine) – safe to reference from API/service projects and usable from Blazor WebAssembly.</Description>
     <PackageTags>blazor;email;mjml;templates;scriban</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/ptyll/Tempo.Blazor</PackageProjectUrl>
@@ -27,10 +27,13 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!-- ═══ Package boundary (D11, §3.0) ═══
+       Abstractions must stay free of Scriban, Mjml.Net and AngleSharp: the editor runs in Blazor
+       WebAssembly through these contracts plus the BCL-only ConservativeHtmlContentSanitizer. The three
+       dependencies live in Tempo.Blazor.EmailTemplates.Engine;
+       tests/Tempo.Blazor.EmailTemplates.Engine.Tests/PackageBoundaryTests guards this list (and the
+       compiled assembly, and the project closure of the editor package). -->
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.8.5" />
-    <PackageReference Include="Mjml.Net" Version="4.15.0" />
-    <PackageReference Include="Scriban" Version="7.5.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.0" />
@@ -41,7 +44,8 @@
        The request validators' messages live in
        Resources/EmailTemplateValidationResources[.<culture>].json — a flat { "Key": "Value" } map read
        by the CLOSED IStringLocalizer<EmailTemplateValidationResources> (JsonStringLocalizer<T>,
-       registered by AddTempoEmailTemplateEngine). They used to be .resx, which only resolves through
+       registered by AddTempoEmailTemplateModel — next to the validators that emit these messages, so the
+       editor works without the Engine package). They used to be .resx, which only resolves through
        the host's IStringLocalizerFactory: a host that replaces it got bare keys as validation
        messages, and a host that never calls AddLocalization() could not resolve the validator at all. -->
   <ItemGroup>
@@ -69,10 +73,18 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Tempo.Blazor.EmailTemplates.Abstractions.Tests</_Parameter1>
     </AssemblyAttribute>
-    <!-- Phase 6 (D11) moves the sandbox implementation into the Engine package; the moved types stay
-         internal, so the future assembly needs access to the current ones during the extraction. -->
+    <!-- Permanent, not a migration leftover: the sandbox implementation lives in the Engine package while
+         TemplateContentMasker / TemplateSpanPattern / HtmlTextEscaper / HtmlTagTokenizer / MarkupGuard keep
+         living here as internal shared helpers — both sanitizers must mask and escape identically. The IVT
+         is therefore bound to the assembly name (the assemblies are not strong-named), which is why the
+         Engine pins the exact Abstractions version instead of a range. -->
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Tempo.Blazor.EmailTemplates.Engine</_Parameter1>
+    </AssemblyAttribute>
+    <!-- The Engine tests exercise the shared internals (HtmlTextEscaper, HtmlTagTokenizer,
+         TemplateContentMasker, TemplateSecurityAuditor) from the AngleSharp side. -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Tempo.Blazor.EmailTemplates.Engine.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 

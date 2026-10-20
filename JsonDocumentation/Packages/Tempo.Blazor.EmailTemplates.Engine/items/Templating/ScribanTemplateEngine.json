@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "The sandboxed ITemplateEngine built on Scriban: fixed member policy, no evaluating or loader builtins, the TemplateSecurityOptions limits, an audit event for every refusal, wall-clock cancellation and per-pass HTML escaping with html.trusted as the only opt-out. Registered by AddTempoEmailTemplateEngine.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ScribanTemplateEngine.cs",
+  "documentationStatus": "generated",
+  "members": [],
+  "itemName": "ScribanTemplateEngine"
+}

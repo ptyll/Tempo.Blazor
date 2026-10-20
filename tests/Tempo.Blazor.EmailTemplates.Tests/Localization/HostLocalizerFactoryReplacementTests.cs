@@ -1,8 +1,13 @@
+using Tempo.Blazor.EmailTemplates.Abstractions;
 using System.Globalization;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
+using Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 using Tempo.Blazor.EmailTemplates.Components;
 using Tempo.Blazor.EmailTemplates.Localization;
 using Tempo.Blazor.EmailTemplates.Resources;
@@ -190,7 +195,8 @@ public class HostLocalizerFactoryReplacementTests
         using var ctx = new BunitContext();
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
-        ctx.Services.AddTempoEmailTemplates();
+        ctx.Services.AddTempoEmailTemplateEditor();
+        ctx.Services.AddTempoEmailTemplateEngine();
         ReplaceLocalizationWithHostFactory(ctx.Services);
 
         var previous = CultureInfo.CurrentUICulture;
@@ -205,6 +211,35 @@ public class HostLocalizerFactoryReplacementTests
         {
             CultureInfo.CurrentUICulture = previous;
         }
+    }
+
+    [Fact]
+    public void Editor_WithoutTheEngine_StillTranslatesValidationMessages()
+    {
+        // §3.0 "Sémantika registrací": the validators' closed JSON localizer lives with the validators in
+        // Abstractions and is registered by AddTempoEmailTemplateModel — which the editor calls — so an
+        // editor-only host (the WASM pattern, no Engine package at all) gets translated validation
+        // messages. Moving that registration into the Engine would silently downgrade this to raw keys.
+        var services = new ServiceCollection();
+        services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
+        services.AddTempoEmailTemplateEditor();
+        ReplaceLocalizationWithHostFactory(services);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        scope.ServiceProvider.GetService<IMjmlCompiler>().Should().BeNull("the editor registers no engine");
+        scope.ServiceProvider.GetService<ITemplateValidator>().Should().BeNull("no engine, no syntax validator");
+
+        var validator = scope.ServiceProvider
+            .GetRequiredService<IValidator<CreateEmailTemplateRequest>>();
+        var request = new CreateEmailTemplateRequest { Name = string.Empty, Language = "en", ContentJson = "{}" };
+
+        var message = InCulture("cs", () => validator.Validate(request)
+            .Errors.First(e => e.PropertyName == nameof(request.Name)).ErrorMessage);
+
+        message.Should().Be("Název šablony je povinný.");
+        message.Should().NotBe("Name_Required", "a raw key means the registration moved somewhere the editor cannot see");
     }
 
     /// <summary>A host factory with no idea what Tempo's keys mean — it answers every lookup with the key.</summary>

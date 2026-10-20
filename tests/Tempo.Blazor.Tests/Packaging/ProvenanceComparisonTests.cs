@@ -371,7 +371,7 @@ public class ProvenanceComparisonTests
             .Where(line => line.Length > 0 && !line.StartsWith('#'))
             .ToList();
 
-        rows.Should().HaveCount(26, "the manifest is the sweep's denominator — a count drift is a "
+        rows.Should().HaveCount(27, "the manifest is the sweep's denominator — a count drift is a "
             + "population drift, and this number is the record of what 'all' means");
 
         var unreadable = rows.Where(row =>

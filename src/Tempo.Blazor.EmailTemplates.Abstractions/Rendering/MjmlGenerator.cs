@@ -11,6 +11,30 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 /// </summary>
 public sealed class MjmlGenerator
 {
+    private readonly IHtmlContentSanitizer _sanitizer;
+
+    /// <summary>
+    /// Initializes the generator with the strict BCL sanitizer
+    /// (<see cref="ConservativeHtmlContentSanitizer"/>), so <c>new MjmlGenerator()</c> stays safe
+    /// without any DI container and the WASM export keeps working without the Engine package.
+    /// </summary>
+    public MjmlGenerator()
+        : this(ConservativeHtmlContentSanitizer.Instance)
+    {
+    }
+
+    /// <summary>
+    /// Initializes the generator with an explicit HTML sanitizer. The render pipeline takes the
+    /// registered <see cref="IHtmlContentSanitizer"/> from DI (the authoritative AngleSharp implementation
+    /// when the Engine package is registered), so text-block content is sanitized by the same policy the
+    /// rest of the render uses.
+    /// </summary>
+    public MjmlGenerator(IHtmlContentSanitizer sanitizer)
+    {
+        ArgumentNullException.ThrowIfNull(sanitizer);
+        _sanitizer = sanitizer;
+    }
+
     /// <summary>Generates MJML for the document using the given options (render-safe by default).</summary>
     public string Generate(EmailTemplateDocument document, MjmlGeneratorOptions? options = null)
     {
@@ -31,7 +55,7 @@ public sealed class MjmlGenerator
 
     // ── Head ────────────────────────────────────────────────────────────────────────────────────
 
-    private static void WriteHead(StringBuilder sb, EmailTemplateDocument document, MjmlGeneratorOptions options)
+    private void WriteHead(StringBuilder sb, EmailTemplateDocument document, MjmlGeneratorOptions options)
     {
         var styles = document.Styles;
         sb.Append("<mj-head>\n");
@@ -61,7 +85,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-head>\n");
     }
 
-    private static void WriteAttributes(StringBuilder sb, TemplateStyles styles)
+    private void WriteAttributes(StringBuilder sb, TemplateStyles styles)
     {
         // Apply the global font-family as an mj-all default unless the cascade already sets one.
         var all = new Dictionary<string, string>(styles.Attributes.All, StringComparer.Ordinal);
@@ -83,7 +107,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-attributes>\n");
     }
 
-    private static void WriteHtmlAttributes(StringBuilder sb, TemplateStyles styles)
+    private void WriteHtmlAttributes(StringBuilder sb, TemplateStyles styles)
     {
         sb.Append("<mj-html-attributes>\n");
         foreach (var selector in styles.HtmlAttributes)
@@ -107,7 +131,7 @@ public sealed class MjmlGenerator
 
     // ── Body / layout ─────────────────────────────────────────────────────────────────────────
 
-    private static void WriteBody(StringBuilder sb, EmailTemplateDocument document)
+    private void WriteBody(StringBuilder sb, EmailTemplateDocument document)
     {
         var width = document.Styles.ContentWidth;
         sb.Append("<mj-body");
@@ -120,7 +144,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-body>\n");
     }
 
-    private static void WriteSection(StringBuilder sb, EmailSection section)
+    private void WriteSection(StringBuilder sb, EmailSection section)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("background-color", section.BackgroundColor)
@@ -142,7 +166,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-section>\n");
     }
 
-    private static void WriteColumn(StringBuilder sb, EmailColumn column)
+    private void WriteColumn(StringBuilder sb, EmailColumn column)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("width", column.Width)
@@ -161,7 +185,7 @@ public sealed class MjmlGenerator
 
     // ── Blocks ──────────────────────────────────────────────────────────────────────────────────
 
-    private static void WriteBlock(StringBuilder sb, EmailBlockBase block)
+    private void WriteBlock(StringBuilder sb, EmailBlockBase block)
     {
         var hasCondition = !string.IsNullOrEmpty(block.VisibleWhen);
         if (hasCondition) sb.Append("{{ if ").Append(block.VisibleWhen).Append(" }}\n");
@@ -187,7 +211,7 @@ public sealed class MjmlGenerator
         if (hasCondition) sb.Append("{{ end }}\n");
     }
 
-    private static void WriteText(StringBuilder sb, EmailTextBlock t)
+    private void WriteText(StringBuilder sb, EmailTextBlock t)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("color", t.Color, "#000000")
@@ -202,10 +226,10 @@ public sealed class MjmlGenerator
             .Optional("text-transform", t.TextTransform)
             .Defaulted("align", t.Align, "left")
             .BlockCommon(t, "10px 25px");
-        sb.Append("<mj-text").Append(a).Append('>').Append(HtmlContentSanitizer.SanitizeTemplateContent(t.Content)).Append("</mj-text>\n");
+        sb.Append("<mj-text").Append(a).Append('>').Append(_sanitizer.SanitizeTemplateContent(t.Content)).Append("</mj-text>\n");
     }
 
-    private static void WriteButton(StringBuilder sb, EmailButtonBlock b)
+    private void WriteButton(StringBuilder sb, EmailButtonBlock b)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("href", b.Href)
@@ -233,7 +257,7 @@ public sealed class MjmlGenerator
         sb.Append("<mj-button").Append(a).Append('>').Append(MjmlEscape.Text(b.Text)).Append("</mj-button>\n");
     }
 
-    private static void WriteImage(StringBuilder sb, EmailImageBlock i)
+    private void WriteImage(StringBuilder sb, EmailImageBlock i)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("src", i.Src)
@@ -252,7 +276,7 @@ public sealed class MjmlGenerator
         sb.Append("<mj-image").Append(a).Append(" />\n");
     }
 
-    private static void WriteDivider(StringBuilder sb, EmailDividerBlock d)
+    private void WriteDivider(StringBuilder sb, EmailDividerBlock d)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("border-color", d.BorderColor, "#000000")
@@ -264,7 +288,7 @@ public sealed class MjmlGenerator
         sb.Append("<mj-divider").Append(a).Append(" />\n");
     }
 
-    private static void WriteSpacer(StringBuilder sb, EmailSpacerBlock s)
+    private void WriteSpacer(StringBuilder sb, EmailSpacerBlock s)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("height", s.Height, "20px")
@@ -272,10 +296,10 @@ public sealed class MjmlGenerator
         sb.Append("<mj-spacer").Append(a).Append(" />\n");
     }
 
-    private static void WriteRaw(StringBuilder sb, EmailRawBlock r)
+    private void WriteRaw(StringBuilder sb, EmailRawBlock r)
         => sb.Append("<mj-raw>").Append(r.Content).Append("</mj-raw>\n");
 
-    private static void WriteTable(StringBuilder sb, EmailTableBlock t)
+    private void WriteTable(StringBuilder sb, EmailTableBlock t)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("align", t.Align, "left")
@@ -307,7 +331,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-table>\n");
     }
 
-    private static void WriteSocial(StringBuilder sb, EmailSocialBlock s)
+    private void WriteSocial(StringBuilder sb, EmailSocialBlock s)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("mode", s.Mode, "horizontal")
@@ -337,7 +361,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-social>\n");
     }
 
-    private static void WriteNavbar(StringBuilder sb, EmailNavbarBlock n)
+    private void WriteNavbar(StringBuilder sb, EmailNavbarBlock n)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("align", n.Align, "center")
@@ -365,7 +389,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-navbar>\n");
     }
 
-    private static void WriteCarousel(StringBuilder sb, EmailCarouselBlock c)
+    private void WriteCarousel(StringBuilder sb, EmailCarouselBlock c)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("align", c.Align, "center")
@@ -392,7 +416,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-carousel>\n");
     }
 
-    private static void WriteAccordion(StringBuilder sb, EmailAccordionBlock ac)
+    private void WriteAccordion(StringBuilder sb, EmailAccordionBlock ac)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("border", ac.Border, "2px solid black")
@@ -412,13 +436,13 @@ public sealed class MjmlGenerator
             var ta = new MjmlAttributeBuffer().Optional("color", item.TitleColor);
             sb.Append("<mj-accordion-title").Append(ta).Append('>')
               .Append(MjmlEscape.Text(item.Title)).Append("</mj-accordion-title>\n");
-            sb.Append("<mj-accordion-text>").Append(HtmlContentSanitizer.SanitizeTemplateContent(item.Content)).Append("</mj-accordion-text>\n");
+            sb.Append("<mj-accordion-text>").Append(_sanitizer.SanitizeTemplateContent(item.Content)).Append("</mj-accordion-text>\n");
             sb.Append("</mj-accordion-element>\n");
         }
         sb.Append("</mj-accordion>\n");
     }
 
-    private static void WriteHero(StringBuilder sb, EmailHeroBlock h)
+    private void WriteHero(StringBuilder sb, EmailHeroBlock h)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("mode", h.Mode, "fluid-height")
@@ -436,7 +460,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-hero>\n");
     }
 
-    private static void WriteWrapper(StringBuilder sb, EmailWrapperBlock w)
+    private void WriteWrapper(StringBuilder sb, EmailWrapperBlock w)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("background-color", w.BackgroundColor)
@@ -452,7 +476,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-wrapper>\n");
     }
 
-    private static void WriteGroup(StringBuilder sb, EmailGroupBlock g)
+    private void WriteGroup(StringBuilder sb, EmailGroupBlock g)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("background-color", g.BackgroundColor)

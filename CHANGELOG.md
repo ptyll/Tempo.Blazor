@@ -236,6 +236,82 @@
       JsonStringLocalizer<TmEmailResources>>();
   ```
 
+- **New package `Tempo.Blazor.EmailTemplates.Engine` — the local render engine, split out of
+  Abstractions (B7, decision `EMAIL-ENGINE-PACKAGE-SPLIT`).** `Tempo.Blazor.EmailTemplates.Abstractions`
+  no longer carries `Scriban`, `Mjml.Net` or `AngleSharp`: the sandboxed Scriban engine, the Mjml.Net
+  compiler, the AngleSharp HTML sanitizer, the render pipeline and the local preview renderer live in the
+  new package, whose public types **keep their `…Abstractions.*` namespaces** (D21) — adding it is a
+  `PackageReference` plus one call, never a `using` rewrite. The editor
+  (`Tempo.Blazor.EmailTemplates`) references no engine at all and runs in Blazor WebAssembly.
+
+  ```csharp
+  // server (or any process that renders locally)
+  builder.Services
+      .AddTempoEmailTemplateEditor()    // UI + model: registry, generators, validators, import
+      .AddTempoEmailTemplateEngine();   // Scriban + Mjml.Net + AngleSharp, local preview renderer
+
+  // Blazor WebAssembly: the editor only, preview rendered by the host's server
+  builder.Services.AddTempoEmailTemplateEditor();
+  builder.Services.AddScoped<IEmailPreviewRenderer, MyApiPreviewRenderer>();
+  ```
+
+  Registrations are split and **order-independent**: `AddTempoEmailTemplateModel()` (Abstractions) installs
+  the baseline with `TryAdd` — the BCL `ConservativeHtmlContentSanitizer`,
+  `RegexTemplateVariableExtractor`, one shared `TemplateSecurityOptions` instance, the request validators
+  with their closed JSON localizer and `MjmlGenerator` — and `AddTempoEmailTemplateEngine()` **replaces**
+  the engine services (`AngleSharpHtmlContentSanitizer`, `ScribanTemplateVariableExtractor`,
+  `ScribanTemplateValidator`, `MjmlNetCompiler`, `EmailTemplateRenderer`, `LocalEmailPreviewRenderer`).
+  `AddTempoEmailTemplateEditor()` registers UI + model only, and `AddTempoEmailTemplates()` is the
+  `[Obsolete]` shortcut that delegates to it. A CI-guarded test (`PackageBoundaryTests`) fails if
+  Abstractions ever references Scriban/Mjml.Net/AngleSharp again, if the editor package references the
+  engine, or if the engine's exact `[$(Version)]` pin on Abstractions drifts.
+
+- **Replaceable preview renderer `IEmailPreviewRenderer` + `EmailPreviewRequest` / `EmailPreviewResult` /
+  `EmailPreviewStatus` (`Tempo.Blazor.EmailTemplates.Abstractions.Rendering`, contract §3.4).** The editor
+  gets its preview and HTML export through one seam, so the render may run on the server:
+
+  ```csharp
+  public interface IEmailPreviewRenderer
+  {
+      Task<EmailPreviewResult> RenderAsync(EmailPreviewRequest request, CancellationToken cancellationToken = default);
+  }
+
+  var request = new EmailPreviewRequest
+  {
+      Document = document,                 // travels as EmailTemplateSerializer JSON
+      VariablesJson = sampleDataJson,
+      SubstituteVariables = false,         // false keeps the {{ }} tokens (HTML export)
+      CultureName = "cs-CZ",
+  };
+  ```
+
+  `EmailPreviewResult` never returns `null` strings: a render error is `RenderFailed` with empty
+  html/text/subject, a template *warning* (blocked URL, removed event handler) keeps `Rendered` with the
+  complete HTML (D23), and a missing registration, a network error or a server failure is `Unavailable`
+  with a retry. `LocalEmailPreviewRenderer` (Engine) is the default; a host that renders elsewhere
+  registers its own. The preview cancels the previous render whenever a new one starts, so a stale answer
+  can never overwrite a newer one, and the HTML is untrusted even when the host's own server produced it —
+  it only ever lands in a `<iframe sandbox="" srcdoc>` (no `allow-scripts`, no `allow-same-origin`).
+
+- **`TmEmailTemplatePreview` redesign: device switch, substitution switch, sample-data editor and host
+  actions.** The toolbar is now three pill tab strips (Desktop / Tablet / Mobile with `monitor`, `tablet`
+  and `smartphone` icons; "With sample data" / "Without substitution"; HTML / plain text) plus a
+  "Refresh preview" action. The scene shows the email as paper on `--tm-color-surface-secondary` with
+  `--tm-shadow-md`, centred, at the document's own content width (Desktop), 768 px (Tablet) or 390 px
+  (Mobile) — the widths live in `EmailPreviewMetrics`. The sample-data editor uses `TmCodeEditor`
+  (`Language="json"`, `ValidateJson`) and sits behind an "Edit data" button instead of a `<details>`
+  element. New parameters: `VariablesJsonChanged`, `InitialDevice` (`EmailPreviewDevice`),
+  `ShowSampleDataEditor`, `ShowViewToggle`, `FooterActions`, `CultureName`.
+
+- **`ITemplateValidator` + `ITemplateVariableExtractor` (+ their Engine implementations).** The editor's
+  validation panel no longer needs `ITemplateEngine`: it takes `ITemplateValidator` and, with no validator
+  registered, shows a localized explanation that names the missing registration
+  ("register `ITemplateValidator`, e.g. `Tempo.Blazor.EmailTemplates.Engine`") while the structural
+  findings keep working. The variable picker and sample data fall back to
+  `RegexTemplateVariableExtractor` (pure BCL) and are replaced by `ScribanTemplateVariableExtractor` when
+  the engine is registered. `EmailDocumentVariableExtractor.Extract(document, ITemplateVariableExtractor)`
+  is the new overload; the existing `Extract(document)` keeps the baseline behaviour.
+
 ### Fixed
 
 - **Every key the packages hand to the localizer now resolves (en / cs / sk / fr) — previously the bare
@@ -290,6 +366,64 @@
   options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
 
 ### Breaking / Migration
+
+- **The local render engine moved into the new package `Tempo.Blazor.EmailTemplates.Engine` (B7).**
+  `AddTempoEmailTemplateEngine()` now lives in that assembly (namespace
+  `Tempo.Blazor.EmailTemplates.Abstractions`, D21), `Tempo.Blazor.EmailTemplates.Abstractions` no longer
+  depends on Scriban / Mjml.Net / AngleSharp, and the editor package references no engine. Public types
+  that moved: `ScribanTemplateEngine`, `ObjectToScriptObjectConverter`, `MjmlNetCompiler`,
+  `EmailTemplateRenderer`, `AngleSharpHtmlContentSanitizer` (formerly the static
+  `HtmlContentSanitizer`), `ScribanTemplateVariableExtractor` (formerly `TemplateVariableExtractor`) and
+  `ScribanTemplateValidator`. `HtmlContentSanitizer.Sanitize` (static) is now
+  `IHtmlContentSanitizer.Sanitize` (instance, resolved from DI; `ConservativeHtmlContentSanitizer` is the
+  baseline in Abstractions, `AngleSharpHtmlContentSanitizer` the engine implementation).
+
+  ```text
+  before  Tempo.Blazor.EmailTemplates.Abstractions → Scriban + Mjml.Net + AngleSharp (transitively into WASM)
+  after   Tempo.Blazor.EmailTemplates.Abstractions → BCL + FluentValidation + Microsoft.Extensions.*
+          Tempo.Blazor.EmailTemplates.Engine      → Scriban + Mjml.Net + AngleSharp
+  ```
+
+  ```csharp
+  // before — one call, engine included
+  builder.Services.AddTempoEmailTemplates();
+
+  // after — the editor, plus the engine only where a local render is wanted
+  builder.Services.AddTempoEmailTemplateEditor();
+  builder.Services.AddTempoEmailTemplateEngine();          // PackageReference Tempo.Blazor.EmailTemplates.Engine
+  ```
+
+  `AddTempoEmailTemplates()` still compiles — it is `[Obsolete]` and delegates to
+  `AddTempoEmailTemplateEditor(o => configure?.Invoke(o.Security))`, but it **does not register the
+  engine any more**: without an `IEmailPreviewRenderer` the preview shows an `Unavailable` state that
+  names the missing registration instead of an empty iframe. Migration for a host that rendered locally:
+  add the `PackageReference` and call `AddTempoEmailTemplateEngine()`. Migration for a WebAssembly host:
+  keep `AddTempoEmailTemplateEditor()` only and register a server-side `IEmailPreviewRenderer` (and,
+  optionally, a server-side `ITemplateValidator`). The engine's dependency on Abstractions is pinned to
+  the exact version (`[2.10.0]` at release) because it reaches internal members through
+  `InternalsVisibleTo`.
+
+- **`TmEmailTemplatePreview` now injects `IEmailPreviewRenderer` instead of `IEmailTemplateRenderer` (B2).**
+  A host that decorated `IEmailTemplateRenderer` keeps that decoration for a *local* render
+  (`AddTempoEmailTemplateEngine()` wraps it in `LocalEmailPreviewRenderer`), but the component itself only
+  talks to the preview seam.
+
+  ```csharp
+  // before — the component resolved the render pipeline directly
+  services.AddSingleton<IEmailTemplateRenderer>(sp => new MyRenderer(…));
+
+  // after — register the preview seam (or the engine, which registers LocalEmailPreviewRenderer)
+  services.AddSingleton<IEmailPreviewRenderer>(sp => new MyPreviewRenderer(…));
+  ```
+
+- **Sample-data editor and device/view switches changed DOM inside `TmEmailTemplatePreview`.** The device
+  and view switches are `TmTabs Variant="Pill"` strips, so their buttons are `#tab-preview-device-desktop`,
+  `#tab-preview-device-tablet`, `#tab-preview-device-mobile`, `#tab-preview-substitute-on|off` and
+  `#tab-preview-view-html|text` (the old `data-tm-preview-device` / `data-tm-preview-view` attributes are
+  gone) and the sample-data textarea is a `TmCodeEditor` behind the new `[data-tm-preview-edit-data]`
+  button. `data-tm-preview-frame`, `data-tm-preview-text`, `data-tm-preview-errors`,
+  `data-tm-preview-warnings` and the root `data-tm-preview` are unchanged; the unavailable state adds
+  `[data-tm-preview-unavailable]` and `[data-tm-preview-retry]`.
 
 - **Variable values are HTML-escaped in the body (B3).** The body used to substitute model values into
   the MJML *after* the content sanitizer had run, so `{{ name }}` carrying `<script>` (or any markup)

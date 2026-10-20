@@ -1,3 +1,4 @@
+using Tempo.Blazor.EmailTemplates.Abstractions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,8 @@ public class E7E8FollowupTests : BunitContext
         Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
         Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         Services.AddHttpClient();
-        Services.AddTempoEmailTemplates();
+        Services.AddTempoEmailTemplateEditor();
+        Services.AddTempoEmailTemplateEngine();
     }
 
     private static EmailTemplateDocument DocWith(EmailBlockBase block)
@@ -168,11 +170,13 @@ public class E7E8FollowupTests : BunitContext
         var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
         var cut = Render<TmEmailTemplatePreview>(p => p
             .Add(c => c.Document, doc).Add(c => c.TimeProvider, time));
-        cut.Find("[data-tm-preview-data]").Input("{\"name\":\"Ada\"}");
+        // The sample data editor is behind the "Edit data" button (not a <details> element any more).
+        cut.Find("[data-tm-preview-edit-data]").Click();
+        cut.Find("[data-tm-preview-data-editor] textarea").Input("{\"name\":\"Ada\"}");
 
         time.Advance(TimeSpan.FromMilliseconds(750)); // debounced re-render
 
-        cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Hi Ada");
+        cut.WaitForAssertion(() => cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().Contain("Hi Ada"));
     }
 
     // ── E7.11 mj-class definitions manager ──────────────────────────────────────────────────

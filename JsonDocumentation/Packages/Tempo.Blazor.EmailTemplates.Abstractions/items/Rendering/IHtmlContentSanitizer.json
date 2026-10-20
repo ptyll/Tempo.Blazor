@@ -1,0 +1,34 @@
+{
+  "kind": "Interface",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Sanitizes the inline HTML a text-bearing block may carry. Two implementations ship: ConservativeHtmlContentSanitizer in this package (pure BCL, the default when the Engine package is not registered) and AngleSharpHtmlContentSanitizer in Tempo.Blazor.EmailTemplates.Engine (authoritative parser, registered by AddTempoEmailTemplateEngine). Both read HtmlSanitizerPolicy and may only differ towards a stricter result.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/IHtmlContentSanitizer.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Sanitize",
+      "kind": "Method",
+      "type": "string",
+      "parameters": [
+        {
+          "name": "html",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "SanitizeTemplateContent",
+      "kind": "Method",
+      "type": "string",
+      "parameters": [
+        {
+          "name": "content",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "IHtmlContentSanitizer"
+}

@@ -28,4 +28,17 @@ public static class RenderKeys
     /// the render failed (<see cref="RenderErrorSeverity.Error"/>): unchecked markup is never returned.
     /// </summary>
     public const string MarkupTooComplex = "render.markup.too_complex";
+
+    /// <summary>
+    /// The preview renderer itself could not produce a result (a server or transport failure). The editor
+    /// shows this as <see cref="EmailPreviewStatus.Unavailable"/> with a retry, not as a template error.
+    /// </summary>
+    public const string PreviewUnavailable = "render.preview.unavailable";
+
+    /// <summary>
+    /// No <see cref="IEmailPreviewRenderer"/> is registered, so there is nothing that could render a
+    /// preview. The message names the missing registration
+    /// (<c>AddTempoEmailTemplateEngine()</c> or a host <see cref="IEmailPreviewRenderer"/>).
+    /// </summary>
+    public const string PreviewNotRegistered = "render.preview.not_registered";
 }

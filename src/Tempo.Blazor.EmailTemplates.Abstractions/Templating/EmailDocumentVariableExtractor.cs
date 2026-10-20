@@ -11,11 +11,24 @@ public static class EmailDocumentVariableExtractor
 {
     /// <summary>Returns the variables referenced across the whole document.</summary>
     public static IReadOnlyList<TemplateVariableInfo> Extract(EmailTemplateDocument document)
+        => Extract(document, RegexTemplateVariableExtractor.Instance);
+
+    /// <summary>
+    /// Returns the variables referenced across the whole document, extracted with
+    /// <paramref name="extractor"/>. The baseline <see cref="RegexTemplateVariableExtractor"/> keeps the
+    /// picker working in a WASM editor without the Engine package;
+    /// <c>ScribanTemplateVariableExtractor</c> (Engine) adds filters and loop-local variables.
+    /// </summary>
+    public static IReadOnlyList<TemplateVariableInfo> Extract(
+        EmailTemplateDocument document, ITemplateVariableExtractor extractor)
     {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(extractor);
+
         var merged = new Dictionary<string, VariableKind>(StringComparer.Ordinal);
 
         foreach (var text in EnumerateTemplateStrings(document))
-            foreach (var info in TemplateVariableExtractor.ExtractInfos(text))
+            foreach (var info in extractor.ExtractInfos(text))
             {
                 // Collection wins over scalar when the same path appears both ways.
                 if (info.Kind == VariableKind.Collection || !merged.ContainsKey(info.Path))

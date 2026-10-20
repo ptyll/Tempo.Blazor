@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Where the rendered preview came from: Rendered (possibly with warnings), RenderFailed (the template is at fault) or Unavailable (no registration, a network error or a server failure — retryable, not the author's bug).",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailPreviewStatus.cs",
+  "documentationStatus": "generated",
+  "members": [],
+  "itemName": "EmailPreviewStatus"
+}

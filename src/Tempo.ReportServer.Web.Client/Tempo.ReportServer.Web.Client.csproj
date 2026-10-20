@@ -25,6 +25,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor.Reporting\Tempo.Blazor.Reporting.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
+    <!-- Report delivery renders the email locally (IEmailTemplateRenderer), so it needs the engine. -->
+    <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Engine\Tempo.Blazor.EmailTemplates.Engine.csproj" />
   </ItemGroup>
 
 </Project>

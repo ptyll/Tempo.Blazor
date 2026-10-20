@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "Converts a host model into the sandboxed Scriban ScriptObject graph: readable fields and properties only, every member runs through the fixed member policy, and no reflection handle can reach a template.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ObjectToScriptObjectConverter.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "ToScriptObject",
+      "kind": "Method",
+      "type": "ScriptObject",
+      "description": "Builds a script object usable as the global scope for rendering.",
+      "parameters": [
+        {
+          "name": "model",
+          "type": "object?"
+        }
+      ]
+    }
+  ],
+  "itemName": "ObjectToScriptObjectConverter"
+}

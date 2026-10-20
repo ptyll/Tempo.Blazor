@@ -1,0 +1,51 @@
+/* The validation panel's passive note (a check that did not run) and its findings list. The note uses the
+   info tokens instead of a warning colour: nothing failed, so it must not look like a finding of its own. */
+
+.tm-email-validation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-validation__note {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-info-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-validation__ok {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-validation__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-email-validation__item {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface-secondary);
+    color: var(--tm-color-text);
+    cursor: pointer;
+}
+
+.tm-email-validation__item--warning {
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-warning);
+}
+
+.tm-email-validation__item--error {
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-danger);
+}

@@ -1,0 +1,23 @@
+{
+  "kind": "Interface",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "Validates template syntax without rendering — the only engine capability the editor's validation panel needs, so the editor no longer depends on ITemplateEngine. ScribanTemplateValidator (Engine) is the authoritative implementation; a host may register a server-side one; with nothing registered the panel shows a localized explanation that names the missing registration instead of pretending the template is fine.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateValidator.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Validate",
+      "kind": "Method",
+      "type": "TemplateValidationResult",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "ITemplateValidator"
+}

@@ -1,0 +1,33 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The local render pipeline: Scriban substitution on subject/preheader, MJML generation + substitution (resolving variables, VisibleWhen and HTML-escaping every expression result), MJML compilation and a substituted plain-text version. Every URL is checked against the scheme allow-list after substitution and event-handler attributes of raw markup are removed.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/EmailTemplateRenderer.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "RenderAsync",
+      "kind": "Method",
+      "type": "Task<RenderResult>",
+      "parameters": [
+        {
+          "name": "document",
+          "type": "EmailTemplateDocument"
+        },
+        {
+          "name": "model",
+          "type": "object?",
+          "default": "null"
+        },
+        {
+          "name": "cancellationToken",
+          "type": "CancellationToken",
+          "default": "default"
+        }
+      ]
+    }
+  ],
+  "itemName": "EmailTemplateRenderer"
+}

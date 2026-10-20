@@ -121,9 +121,14 @@ builder.Services.AddScoped<IDashboardProvider, InMemoryDashboardProvider>();
 // Register FluentValidation validators from Demo assembly
 builder.Services.AddTempoFluentValidation(typeof(PersonFormValidator).Assembly);
 
-// Email template editor demo: engine + localization, and the typed API client.
-builder.Services.AddTempoEmailTemplates();
+// Email template editor demo: the EDITOR only (no Scriban/Mjml.Net/AngleSharp in the browser) plus the
+// typed API client. The preview and the HTML export render on the demo API through IEmailPreviewRenderer —
+// the pattern a real WebAssembly host uses (contract §3.0/§3.5). Adding Tempo.Blazor.EmailTemplates.Engine
+// here would work too, but it would put the whole engine into the WASM download.
+builder.Services.AddTempoEmailTemplateEditor();
 builder.Services.AddScoped<Tempo.Blazor.Demo.Services.IEmailTemplateApiClient, Tempo.Blazor.Demo.Services.EmailTemplateApiClient>();
+builder.Services.AddScoped<Tempo.Blazor.EmailTemplates.Abstractions.Rendering.IEmailPreviewRenderer,
+    Tempo.Blazor.Demo.Services.HttpEmailPreviewRenderer>();
 builder.Services.AddScoped<DemoReportEmbeddingSourceFactory>();
 
 // The renderer captures its execution context, culture included, when the host is built. Reading

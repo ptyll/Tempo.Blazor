@@ -23,6 +23,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tempo.Blazor.EmailTemplates\Tempo.Blazor.EmailTemplates.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
+    <!-- The bUnit tests register the local engine explicitly (AddTempoEmailTemplateEditor +
+         AddTempoEmailTemplateEngine). The editor PACKAGE still must not reference it — PackageBoundaryTests
+         in the Engine test project guards that. -->
+    <ProjectReference Include="..\..\src\Tempo.Blazor.EmailTemplates.Engine\Tempo.Blazor.EmailTemplates.Engine.csproj" />
   </ItemGroup>
 
   <ItemGroup>

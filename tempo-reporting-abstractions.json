@@ -155,8 +155,12 @@
         "description": "Optional server-side DOCX and ODT import/export support for TmDocumentEditor."
       },
       {
+        "name": "Tempo.Blazor.EmailTemplates.Engine",
+        "description": "Local render engine for the Tempo.Blazor email template editor: the sandboxed Scriban template engine (member policy, escaping, audit, limits), the Mjml.Net compiler, the AngleSharp HTML sanitizer, the render pipeline and the local preview renderer. Reference this package on the server (or anywhere a local render is acceptable); the editor itself (Tempo.Blazor.EmailTemplates) runs without it, e.g. in Blazor WebAssembly with a server-side IEmailPreviewRenderer."
+      },
+      {
         "name": "Tempo.Blazor.EmailTemplates.Abstractions",
-        "description": "Logic and contracts for the Tempo.Blazor email template editor: block model, MJML generation and import, Scriban templating sandbox, variable extraction, render pipeline, DTOs and validators. No Blazor dependency – safe to reference from API/service projects."
+        "description": "Logic and contracts for the Tempo.Blazor email template editor: block model, MJML generation and import, template/validation/preview contracts, variable extraction, DTOs and validators. No Blazor dependency, no Scriban/Mjml.Net/AngleSharp dependency (the local engine ships separately as Tempo.Blazor.EmailTemplates.Engine) – safe to reference from API/service projects and usable from Blazor WebAssembly."
       },
       {
         "name": "Tempo.Blazor.EmailTemplates",

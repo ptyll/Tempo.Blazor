@@ -2,9 +2,26 @@
   "kind": "Class",
   "category": "General",
   "namespace": "Tempo.Blazor.EmailTemplates",
-  "description": "DI registration for the Tempo.Blazor email template editor UI.",
+  "description": "AddTempoEmailTemplateEditor — UI plus the model side, and NOT the local render engine. The host supplies IEmailPreviewRenderer (typically a server endpoint) and optionally ITemplateValidator; for a local render add the Tempo.Blazor.EmailTemplates.Engine package and call AddTempoEmailTemplateEngine. AddTempoEmailTemplates is the [Obsolete] pre-2.10 shortcut and delegates here without registering an engine.",
   "packageId": "Tempo.Blazor.EmailTemplates",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/ServiceCollectionExtensions.cs",
   "documentationStatus": "generated",
-  "itemName": "ServiceCollectionExtensions"
+  "itemName": "ServiceCollectionExtensions",
+  "members": [
+    {
+      "name": "AddTempoEmailTemplateEditor",
+      "kind": "Method",
+      "type": "IServiceCollection",
+      "parameters": [
+        {
+          "name": "services",
+          "type": "IServiceCollection"
+        },
+        {
+          "name": "configure",
+          "type": "Action<EmailTemplateEditorOptions>?"
+        }
+      ]
+    }
+  ]
 }

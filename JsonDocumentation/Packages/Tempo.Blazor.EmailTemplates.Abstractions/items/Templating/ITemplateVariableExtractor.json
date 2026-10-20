@@ -1,0 +1,34 @@
+{
+  "kind": "Interface",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "Extracts the variable paths a template references. RegexTemplateVariableExtractor (BCL, this package) keeps the picker and sample data working without the Engine package; ScribanTemplateVariableExtractor (Engine) is the authoritative implementation. The difference is only how many variables are detected — never a security decision.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateVariableExtractor.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Extract",
+      "kind": "Method",
+      "type": "IReadOnlyList<string>",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "ExtractInfos",
+      "kind": "Method",
+      "type": "IReadOnlyList<TemplateVariableInfo>",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "ITemplateVariableExtractor"
+}

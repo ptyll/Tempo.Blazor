@@ -16,6 +16,9 @@
     <ProjectReference Include="..\Tempo.Blazor.Collaboration\Tempo.Blazor.Collaboration.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.DocumentFormats\Tempo.Blazor.DocumentFormats.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
+    <!-- The demo API renders the preview for the WASM editor: that is exactly the server-side usage of
+         Tempo.Blazor.EmailTemplates.Engine (contract §3.0/§3.5). -->
+    <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Engine\Tempo.Blazor.EmailTemplates.Engine.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Mcp\Tempo.Blazor.Mcp.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Wireframe\Tempo.Blazor.Wireframe.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.WebPush\Tempo.Blazor.WebPush.csproj" />

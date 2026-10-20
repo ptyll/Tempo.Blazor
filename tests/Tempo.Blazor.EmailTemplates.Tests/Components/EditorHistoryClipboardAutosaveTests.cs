@@ -1,3 +1,4 @@
+using Tempo.Blazor.EmailTemplates.Abstractions;
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,8 @@ public class EditorHistoryClipboardAutosaveTests : BunitContext
         Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
         Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         Services.AddHttpClient();
-        Services.AddTempoEmailTemplates();
+        Services.AddTempoEmailTemplateEditor();
+        Services.AddTempoEmailTemplateEngine();
     }
 
     private static EmailTemplateDocument OneBlock(out Guid blockId)

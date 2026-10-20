@@ -18,7 +18,9 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Tests.Validation;
 /// <c>IStringLocalizerFactory</c> pipeline (PostrionCore's <c>AddJsonLocalization()</c> calls
 /// <c>RemoveAll&lt;IStringLocalizerFactory&gt;()</c>) used to get bare keys as validation messages;
 /// a host that never calls <c>AddLocalization()</c> got an unresolvable service. Both are fixed by the
-/// same thing: a CLOSED registration over embedded JSON, which <c>AddTempoEmailTemplateEngine</c> owns.
+/// same thing: a CLOSED registration over embedded JSON, which <c>AddTempoEmailTemplateModel</c> owns.
+/// It lives with the validators (Abstractions/Fáze 6), not in the Engine package, so an editor without the
+/// engine still translates its validation messages.
 /// </summary>
 public class HostLocalizerFactoryReplacementTests
 {
@@ -27,7 +29,7 @@ public class HostLocalizerFactoryReplacementTests
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         before?.Invoke(services);
-        services.AddTempoEmailTemplateEngine();
+        services.AddTempoEmailTemplateModel();
         return services.BuildServiceProvider();
     }
 
@@ -125,7 +127,7 @@ public class HostLocalizerFactoryReplacementTests
     }
 
     [Fact]
-    public void AddTempoEmailTemplateEngine_DoesNotRegisterAStringLocalizerFactory()
+    public void AddTempoEmailTemplateModel_DoesNotRegisterAStringLocalizerFactory()
     {
         using var provider = BuildProviderWithoutAnyHostLocalization();
 

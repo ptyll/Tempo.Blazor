@@ -66,9 +66,28 @@
 
 <TmEmailExportDialog Show="_showExport" Document="_document" OnClose="() => _showExport = false" />
 <TmEmailImportDialog Show="_showImport" OnImport="ApplyImportAsync" OnClose="() => _showImport = false" />
-<TmModal Show="_showPreview" Title="@Loc["EmailEditor_Toolbar_Preview"]" Size="ModalSize.Large"
+@* XLarge, because the Tablet scene is 768 px (EmailPreviewMetrics.TabletWidth): in a 680 px dialog the
+   scene would be clamped to the desktop width, so the device switch would be a label that changes
+   nothing. 900 px leaves room for the paper plus its stage margin at every device. *@
+<TmModal Show="_showPreview" Title="@Loc["EmailEditor_Toolbar_Preview"]" Size="ModalSize.XLarge"
          OnClose="() => _showPreview = false">
-    <TmEmailTemplatePreview Document="_document" />
+    <ChildContent>
+        <TmEmailTemplatePreview @ref="_preview" Document="_document" />
+    </ChildContent>
+    <Footer>
+        @* "Refresh preview" forces a new render and cancels the one in flight; the editor itself never
+           sends anything — FooterActions is the host's slot ("Send test email", …). *@
+        <div class="tm-email-editor__preview-footer" data-tm-preview-dialog-footer>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="@IconNames.RefreshCcw"
+                      data-tm-preview-dialog-refresh="true"
+                      OnClick="RefreshPreviewAsync">@Loc["EmailEditor_Preview_Refresh"]</TmButton>
+            <div class="tm-email-editor__preview-footer-end">
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" data-tm-preview-dialog-close="true"
+                          OnClick="ClosePreview">@Loc["EmailEditor_Preview_Close"]</TmButton>
+                @FooterActions
+            </div>
+        </div>
+    </Footer>
 </TmModal>
 <TmModal Show="_showValidation" Title="@Loc["EmailEditor_Validation_Title"]" Size="ModalSize.Medium"
          OnClose="() => _showValidation = false">
@@ -113,6 +132,7 @@
     private bool _showExport;
     private bool _showImport;
     private bool _showPreview;
+    private TmEmailTemplatePreview? _preview;
     private bool _showValidation;
     private bool _showShortcuts;
 
@@ -131,6 +151,18 @@
             new TmKeyboardShortcut("Escape", Loc["EmailEditor_Shortcut_Deselect"]),
         }),
     };
+
+    /// <summary>
+    /// Optional host actions rendered at the end of the preview dialog's footer — for example "Send test
+    /// email". The editor never sends anything itself; the host owns that action and its result.
+    /// </summary>
+    [Parameter] public RenderFragment? FooterActions { get; set; }
+
+    /// <summary>Forces a new preview render, cancelling the one that may still be in flight.</summary>
+    public Task RefreshPreviewAsync()
+        => _preview is null ? Task.CompletedTask : _preview.RefreshAsync();
+
+    private void ClosePreview() => _showPreview = false;
 
     /// <inheritdoc />
     protected override void OnInitialized() => _history.Initialize(_document);

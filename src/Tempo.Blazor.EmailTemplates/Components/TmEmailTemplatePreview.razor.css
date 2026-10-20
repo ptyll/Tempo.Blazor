@@ -1,0 +1,153 @@
+/* Preview scene (§3.4): the email is rendered as "paper" on the secondary surface, centred, with the
+   shadow token — no hardcoded colours, and the scene width comes from EmailPreviewMetrics through the
+   --tm-email-preview-scene-width custom property set by the component. The paper colour follows the
+   document's own background (--tm-email-preview-paper-bg, validated by the component) and falls back to
+   --tm-color-surface, which is what keeps the paper light in dark mode: a dark surface would paint the
+   white e-mail body on a dark sheet.
+
+   Local custom properties keep the two magic numbers of the scene in one place: the minimum height of the
+   stage/paper (5 × --tm-space-16 = 320px) and the opacity of stale HTML while a newer render runs. */
+
+.tm-email-preview {
+    --tm-email-preview-min-height: calc(var(--tm-space-16) * 5);
+    --tm-email-preview-busy-opacity: 0.55;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-email-preview__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-3);
+}
+
+.tm-email-preview__group {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.tm-email-preview__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-inline-start: auto;
+}
+
+.tm-email-preview__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-preview__status {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-preview__data {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+}
+
+/* The scene: the "desk" the paper lies on. The minimum height is what keeps the dialog from jumping when
+   the state changes between the placeholder, the paper, an empty state and the unavailable alert. */
+.tm-email-preview__stage {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: var(--tm-email-preview-min-height);
+    padding: var(--tm-space-4);
+    overflow-x: auto;
+    background: var(--tm-color-surface-secondary);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-email-preview__stage:focus-visible {
+    outline: var(--tm-focus-ring-width, 2px) solid var(--tm-color-focus-ring, var(--tm-color-primary));
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-email-preview__stage--busy .tm-email-preview__paper,
+.tm-email-preview__stage--busy .tm-email-preview__text {
+    opacity: var(--tm-email-preview-busy-opacity);
+}
+
+.tm-email-preview__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--tm-email-preview-min-height);
+}
+
+.tm-email-preview__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--tm-email-preview-min-height);
+}
+
+/* The email itself: centred paper with the shadow token. */
+.tm-email-preview__paper {
+    flex: 0 0 auto;
+    width: min(100%, var(--tm-email-preview-scene-width, 100%));
+    background: var(--tm-email-preview-paper-bg, var(--tm-color-surface));
+    box-shadow: var(--tm-shadow-md);
+    border-radius: var(--tm-radius-sm);
+    overflow: hidden;
+}
+
+.tm-email-preview__frame {
+    display: block;
+    width: 100%;
+    height: 60vh;
+    min-height: var(--tm-email-preview-min-height);
+    border: 0;
+    background: var(--tm-email-preview-paper-bg, var(--tm-color-surface));
+}
+
+.tm-email-preview__text {
+    width: 100%;
+    margin: 0;
+    padding: var(--tm-space-4);
+    overflow-x: auto;
+    background: var(--tm-email-preview-paper-bg, var(--tm-color-surface));
+    box-shadow: var(--tm-shadow-md);
+    border-radius: var(--tm-radius-sm);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-sm);
+    white-space: pre-wrap;
+    color: var(--tm-color-text);
+}
+
+/* The dimming of stale HTML is a transition only when the user did NOT ask for reduced motion; the
+   reduce block below keeps the reduced-motion coverage contract of the design system. */
+@media (prefers-reduced-motion: no-preference) {
+    .tm-email-preview__paper,
+    .tm-email-preview__text {
+        transition: opacity var(--tm-transition-fast);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-email-preview__paper,
+    .tm-email-preview__text {
+        transition: none;
+    }
+}

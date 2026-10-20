@@ -1,0 +1,17 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates",
+  "description": "Options of the editor-only registration (AddTempoEmailTemplateEditor): the sandbox limits shared with validation and variable extraction. They are the limits of the one TemplateSecurityOptions instance the model registration owns, so the editor and a local render always agree; the function namespaces of the registered ITemplateFunctionProviders are added automatically.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/EmailTemplateEditorOptions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Security",
+      "kind": "Property",
+      "type": "TemplateSecurityOptions"
+    }
+  ],
+  "itemName": "EmailTemplateEditorOptions"
+}

@@ -1,0 +1,23 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Default IMjmlCompiler backed by Mjml.Net. Validation errors are mapped to RenderErrors and parser exceptions (e.g. truncated MJML, see E0.9) are caught and reported instead of propagating.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/MjmlNetCompiler.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Compile",
+      "kind": "Method",
+      "type": "MjmlCompileResult",
+      "parameters": [
+        {
+          "name": "mjml",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "MjmlNetCompiler"
+}

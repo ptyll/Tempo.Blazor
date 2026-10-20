@@ -72,3 +72,24 @@
     padding: var(--tm-space-4, 1rem);
     background: var(--tm-color-surface-secondary, #eef0f3);
 }
+
+/* Preview dialog footer: "Refresh preview" on the left, "Close" + the host's FooterActions on the right.
+   The modal footer is already a flex row with justify-content:flex-end, so without these rules the two
+   wrapper divs stack vertically and both actions end up right-aligned in their own row. */
+.tm-email-editor__preview-footer {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+}
+
+.tm-email-editor__preview-footer-end {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-inline-start: auto;
+}

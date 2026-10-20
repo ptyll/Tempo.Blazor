@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "One preview request: the document, the variable data as JSON, whether variables are substituted (false keeps the {{ }} tokens for an HTML export) and the culture the server should format values in. It travels outside the process untouched by design — the document is serialized with EmailTemplateSerializer, the rest are plain strings.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailPreviewRequest.cs",
+  "documentationStatus": "generated",
+  "members": [],
+  "itemName": "EmailPreviewRequest"
+}

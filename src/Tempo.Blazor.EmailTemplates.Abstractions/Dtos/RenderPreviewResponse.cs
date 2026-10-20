@@ -1,3 +1,5 @@
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
+
 namespace Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
 
 /// <summary>The result of a preview render.</summary>
@@ -17,4 +19,11 @@ public sealed record RenderPreviewResponse
 
     /// <summary>Gets the render errors, if any.</summary>
     public IReadOnlyList<RenderErrorDto> Errors { get; init; } = Array.Empty<RenderErrorDto>();
+
+    /// <summary>
+    /// Gets where the preview came from: <see cref="EmailPreviewStatus.Rendered"/> (possibly with warnings),
+    /// <see cref="EmailPreviewStatus.RenderFailed"/> (the template is at fault) or
+    /// <see cref="EmailPreviewStatus.Unavailable"/> (the server could not render it — retryable).
+    /// </summary>
+    public EmailPreviewStatus Status { get; init; } = EmailPreviewStatus.Rendered;
 }

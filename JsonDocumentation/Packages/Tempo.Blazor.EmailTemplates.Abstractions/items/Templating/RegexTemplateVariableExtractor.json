@@ -1,0 +1,39 @@
+{
+  "kind": "Class",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "The BCL baseline ITemplateVariableExtractor: reads {{ path }}, {{ path.member }} and for … in <path> tokens without any Scriban dependency, so the variable picker and sample-data generator work in a WebAssembly editor that has no Engine package. A detection heuristic, not a parser — it under-reports rather than throwing.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/RegexTemplateVariableExtractor.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Instance",
+      "kind": "Property",
+      "type": "RegexTemplateVariableExtractor"
+    },
+    {
+      "name": "Extract",
+      "kind": "Method",
+      "type": "IReadOnlyList<string>",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "ExtractInfos",
+      "kind": "Method",
+      "type": "IReadOnlyList<TemplateVariableInfo>",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "RegexTemplateVariableExtractor"
+}

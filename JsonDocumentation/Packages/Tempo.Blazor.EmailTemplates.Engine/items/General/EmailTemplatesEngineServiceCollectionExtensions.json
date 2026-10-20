@@ -1,0 +1,27 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "description": "Registers the local render engine on top of AddTempoEmailTemplateModel: Scriban template engine, Mjml.Net compiler, AngleSharp HTML sanitizer, render pipeline and local preview renderer. Every engine service REPLACES the model baseline, so the result does not depend on the order of the two registrations and configure always applies to the one shared TemplateSecurityOptions instance. The type keeps the Abstractions namespace on purpose (D21): adding the package is a PackageReference plus one call, never a using rewrite.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/ServiceCollectionExtensions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "AddTempoEmailTemplateEngine",
+      "kind": "Method",
+      "type": "IServiceCollection",
+      "parameters": [
+        {
+          "name": "services",
+          "type": "IServiceCollection"
+        },
+        {
+          "name": "configure",
+          "type": "Action<TemplateSecurityOptions>?"
+        }
+      ]
+    }
+  ],
+  "itemName": "EmailTemplatesEngineServiceCollectionExtensions"
+}

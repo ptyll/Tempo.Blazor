@@ -1,0 +1,44 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The single source of the HTML allow-lists both IHtmlContentSanitizer implementations read: which tags survive, which attributes may stay, which elements are dropped with their content and which are void. The link allow-list is the same URL scheme policy the render pipeline applies, so the two sanitizers can differ in strictness but never in what they allow.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/HtmlSanitizerPolicy.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "AllowedTags",
+      "kind": "Property",
+      "type": "IReadOnlySet<string>"
+    },
+    {
+      "name": "AllowedAttributes",
+      "kind": "Property",
+      "type": "IReadOnlySet<string>"
+    },
+    {
+      "name": "IsHrefAllowed",
+      "kind": "Method",
+      "type": "bool",
+      "parameters": [
+        {
+          "name": "href",
+          "type": "string?"
+        }
+      ]
+    },
+    {
+      "name": "IsSafeStyle",
+      "kind": "Method",
+      "type": "bool",
+      "parameters": [
+        {
+          "name": "value",
+          "type": "string?"
+        }
+      ]
+    }
+  ],
+  "itemName": "HtmlSanitizerPolicy"
+}

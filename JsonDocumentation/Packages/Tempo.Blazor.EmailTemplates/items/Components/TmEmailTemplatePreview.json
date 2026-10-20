@@ -31,6 +31,37 @@
       "isRequired": true,
       "description": "Optional variable data (JSON). When null, sample data is generated from the template.",
       "editorRequired": true
+    },
+    {
+      "name": "VariablesJsonChanged",
+      "type": "EventCallback<string>",
+      "isEventCallback": true,
+      "description": "Raised with the edited sample data so the host can persist it (for example in the template SampleDataJson)."
+    },
+    {
+      "name": "InitialDevice",
+      "type": "EmailPreviewDevice",
+      "description": "Device the preview starts in: Desktop (the document content width), Tablet (768 px) or Mobile (390 px). The user can switch afterwards. Defaults to Desktop."
+    },
+    {
+      "name": "ShowSampleDataEditor",
+      "type": "bool",
+      "description": "When true (the default) the \"Edit data\" button opens the sample-data editor (TmCodeEditor with JSON validation). A send/preview-only page turns it off."
+    },
+    {
+      "name": "ShowViewToggle",
+      "type": "bool",
+      "description": "When true (the default) the toolbar offers the HTML / plain-text switch. A send page that shows only the HTML turns it off."
+    },
+    {
+      "name": "FooterActions",
+      "type": "RenderFragment?",
+      "description": "Optional host actions rendered at the end of the preview toolbar — for example \"Send test email\". The preview itself never sends anything."
+    },
+    {
+      "name": "CultureName",
+      "type": "string?",
+      "description": "Culture the preview should be rendered in (for example cs-CZ); null keeps the renderer default (the document language, otherwise the invariant culture)."
     }
   ]
 }

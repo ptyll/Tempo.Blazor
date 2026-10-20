@@ -1,3 +1,4 @@
+using Tempo.Blazor.EmailTemplates.Abstractions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +26,8 @@ public class EmailTemplatePagesTests : BunitContext
         Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
         Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         Services.AddHttpClient();
-        Services.AddTempoEmailTemplates();
+        Services.AddTempoEmailTemplateEditor();
+        Services.AddTempoEmailTemplateEngine();
         Services.AddSingleton(_api);
     }
 

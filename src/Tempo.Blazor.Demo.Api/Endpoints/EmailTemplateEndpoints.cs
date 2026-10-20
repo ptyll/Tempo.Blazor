@@ -48,21 +48,30 @@ public static class EmailTemplateEndpoints
         group.MapDelete("/{id:guid}", async (Guid id, IEmailTemplateStore store, CancellationToken ct) =>
             await store.DeleteAsync(id, ct) ? Results.NoContent() : Results.NotFound());
 
+        // The preview endpoint goes through the SAME seam the editor uses (IEmailPreviewRenderer), so the
+        // WASM demo renders on the server exactly like a real host would (contract §3.4).
         group.MapPost("/preview", async (
-            RenderPreviewRequest request, IEmailTemplateRenderer renderer, CancellationToken ct) =>
+            RenderPreviewRequest request, IEmailPreviewRenderer renderer, CancellationToken ct) =>
         {
             EmailTemplateDocumentOrError parsed = ParseDocument(request.ContentJson);
             if (parsed.Error is not null) return Results.BadRequest(parsed.Error);
 
-            var model = ParseVariables(request.VariablesJson);
-            var result = await renderer.RenderAsync(parsed.Document!, model, cancellationToken: ct);
+            var result = await renderer.RenderAsync(new EmailPreviewRequest
+            {
+                Document = parsed.Document!,
+                VariablesJson = request.VariablesJson,
+                SubstituteVariables = request.SubstituteVariables,
+                CultureName = request.CultureName,
+            }, ct);
+
             return Results.Ok(new RenderPreviewResponse
             {
                 Html = result.Html,
-                Text = result.TextVersion,
+                Text = result.Text,
                 Subject = result.Subject,
                 Preheader = result.Preheader,
                 Errors = result.Errors.Select(ToDto).ToList(),
+                Status = result.Status,
             });
         });
 

@@ -60,6 +60,11 @@
       "isRequired": false,
       "default": "Array.Empty<TemplateVariableInfo>()",
       "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
+    },
+    {
+      "name": "FooterActions",
+      "type": "RenderFragment?",
+      "description": "Optional host actions rendered at the end of the preview dialog footer — for example \"Send test email\". The editor never sends anything itself; the host owns that action and its result."
     }
   ]
 }

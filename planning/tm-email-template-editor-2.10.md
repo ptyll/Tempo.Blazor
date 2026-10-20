@@ -320,6 +320,16 @@ deleguje na `AddTempoEmailTemplateEditor`.
 - Test (Fáze 6): obě pořadí (`Model`→`Engine` i `Engine`→`Model`) dají v `IHtmlContentSanitizer`
   **`AngleSharpHtmlContentSanitizer`** a stejnou instanci `TemplateSecurityOptions`.
 
+**Výjimka z pravidla „WASM bez Enginu“ (rozhodnutí moderátora, Fáze 6 review):**
+`Tempo.ReportServer.Web.Client` (Blazor WebAssembly host dema report serveru, `IsPackable=false`,
+nepublikovaný) **vědomě referencuje Engine ve WASM** — lokální doručení v demo plánovači
+(`ReportEmailDeliveryService`/`ReportScheduleWorker` renderují e-mail přímo v klientovi, protože demo
+nemá serverový render endpoint). To není rozpor s D11: D11 chrání **publikované** balíčky (UI balíček
+Engine nereferencuje, WASM demo `Tempo.Blazor.Demo` ho netáhne), kdežto tohle je interní demo host.
+Hlídá to `PackageBoundaryTests.ReportServerWasmClient_IsTheOnlyWasmHostWithTheEngine` (jen tento jediný
+WASM host smí Engine mít) a `Target:ReportServerClient` v `plan_report_remaining` (přesun registrace
+enginu na serverový hostitel, mimo 2.10.0).
+
 **Rozhodnutí o namespacech:** přesouvané typy **zůstávají ve svých namespacech**
 (`…Abstractions.Templating`, `…Abstractions.Rendering`, `…Abstractions`), mění se jen assembly/balíček.
 Důvod: migrace hostitele je pak pouze „přidat `PackageReference Tempo.Blazor.EmailTemplates.Engine` +
@@ -597,6 +607,9 @@ public enum EmailPreviewDevice { Desktop, Tablet, Mobile }
 | `ShowSampleDataEditor` | ne (aditivní, default `true`) | 6 | Demo/send page používá `false`. |
 | `ShowViewToggle` | ne (aditivní, default `true`) | 6 | Stránka odeslání přepínač HTML/Text skryje. |
 | `FooterActions` | ne (aditivní) | 6 | `RenderFragment?` — editor sám nic neodesílá. |
+| `EmailPreviewResult.Unavailable(IReadOnlyList<RenderError> errors)` | ne (aditivní statická továrna) | 6 | Jediný doporučený způsob, jak renderer hlásí „síť/server není k dispozici“: `Html`/`Text`/`Subject` = `""`, `Preheader` = `null`, `Status = Unavailable`. Editor z toho pozná, že má nabídnout retry (rozdíl proti `RenderFailed` = chyba šablony). |
+| `TmEmailTemplatePreview.CultureName` | `[Parameter] public string? CultureName { get; set; }` | ne (aditivní) | 6 | Kultura renderu náhledu; `null` = výchozí kultura rendereru (jazyk dokumentu, jinak invariant). Předává se do `EmailPreviewRequest.CultureName`, je součástí klíče requestu. |
+| `IHtmlContentSanitizer.SanitizeTemplateContent` | `string SanitizeTemplateContent(string content)` | ne (aditivní člen rozhraní implementovaného v 2.10.0) | 6 | Sanitizace textového bloku, který může obsahovat `{{ … }}`/`{% … %}`: implementace musí code spany **zachovat verbatim** (jinak se rozbije šablona) a zbytek sanitizovat stejnou politikou jako `Sanitize`. Obě implementace sdílejí `TemplateContentMasker`; podvržený placeholder (PUA zapsaná entitou) se **nikdy neodstraňuje, ale označí obsah jako neplatný** a výsledek jde fail-closed cestou (`StripPua(sanitize(content))`, U+E000/U+E001 → U+FFFD). |
 
 ### 3.5 Registrace DI (Fáze 6)
 
@@ -1032,6 +1045,9 @@ public enum EmailItemEditingMode { Inline, Dialog }
 | Položka | Typ / signatura | Breaking | Fáze |
 |---|---|---|---|
 | `EmailPreviewDevice` | `enum { Desktop, Tablet, Mobile }` — nahrazuje `bool _mobile` v `InitialDevice` | ne (nikdy nevydaný `bool`) | 6 |
+| `TmEmailTemplatePreview.CultureName` | `[Parameter] public string? CultureName { get; set; }` | ne (aditivní) | 6 |
+| `EmailPreviewResult.Unavailable` | `public static EmailPreviewResult Unavailable(IReadOnlyList<RenderError> errors)` | ne (aditivní) | 6 |
+| `IHtmlContentSanitizer.SanitizeTemplateContent` | `public string SanitizeTemplateContent(string content)` | ne (aditivní) | 6 |
 | `ShowViewToggle` | `[Parameter] public bool ShowViewToggle { get; set; } = true;` | ne | 6 |
 | `FooterActions` | `[Parameter] public RenderFragment? FooterActions { get; set; }` | ne | 6 |
 | `TemplateVariableInfo.Description` + `Group` | `public sealed record TemplateVariableInfo(string Path, VariableKind Kind) { public string? Description { get; init; } public string? Group { get; init; } }` (bez `SampleValue`) | ne (aditivní `init` vlastnosti; **mění rovnost záznamu** — `Equals`/`GetHashCode` je zahrnují) | 7A |
@@ -1180,5 +1196,33 @@ neobsahuje žádné otevřené otázky.
 - **Fáze 11** musí parametrizovat E2E viewport (dnes pevně 1440×900 v `EmailTemplateE2ETestBase.cs:37`) a přidat
   1024/390/320 px + screenshoty podle referenčních `screen-id`. (Přepnutí WASM dema na
   `AddTempoEmailTemplateEditor()` + HTTP `IEmailPreviewRenderer` patří už do Fáze 6 — viz výše.)
+- **ReportServer (mimo 2.10.0):** `Tempo.ReportServer.Web.Client` dnes vědomě referencuje Engine ve WASM —
+  lokální doručení v demo plánovači. Při další práci na report serveru přesunout
+  `AddTempoEmailTemplateEngine` + `ReportEmailDeliveryService` + `ReportScheduleWorker` z `AddCommonServices`
+  do serverového hostitele a klientovi nechat jen `AddTempoEmailTemplateModel`; pak rozšířit
+  `PackageBoundaryTests`. Hlídá to `ReportServerWasmClient_IsTheOnlyWasmHostWithTheEngine` (jen tenhle
+  jediný WASM host smí Engine mít).
 - **Fáze 12**: release gate = základový plán `faf503eb` má Completed F0/F1/F2/F6; bez toho 2.10.0 nevychází.
   Do CHANGELOG patří i B7 s receptem na migraci balíčku.
+
+### 6.1 Měření velikosti publikovaného WASM dema (Fáze 6, D11)
+
+Měřeno na `src/Tempo.Blazor.Demo` (Blazor WebAssembly, `net10.0`, `dotnet publish -c Release`, výchozí
+Brotli komprese; `wasm-tools` workload není nainstalovaný, takže běží „publishing without optimizations").
+Čísla jsou velikosti souborů v `wwwroot/_framework` — `*.br` je to, co si prohlížeč skutečně stáhne.
+
+| Varianta | `_framework` raw | `_framework` Brotli | Assemblies enginu |
+|---|---|---|---|
+| `AddTempoEmailTemplateEditor()` + HTTP `IEmailPreviewRenderer` (dnešní stav dema) | 73,22 MB | **11,90 MB** | — (žádná) |
+| `AddTempoEmailTemplateEditor().AddTempoEmailTemplateEngine()` | 74,81 MB | **12,18 MB** | Scriban 147,4 KB br, Mjml.Net 69,4 KB br, `Tempo.Blazor.EmailTemplates.Engine` 34,1 KB br |
+
+**Závěr:** oddělení balíčku ušetří **~0,28 MB Brotli (~1,6 MB raw)** na každém WASM stažení.
+Scriban, Mjml.Net a `Tempo.Blazor.EmailTemplates.Engine` v editor-only buildu **prokazatelně nejsou**
+(v `_framework` se nevyskytují). Trimmer je neodstraní, když je engine zaregistrovaný — kód se reálně
+volá (`ITemplateEngine` → `ScribanTemplateEngine`, `IMjmlCompiler` → `MjmlNetCompiler`), takže „trimmed
+away" nepřipadá v úvahu; odstranění je dosaženo **nereferencováním balíčku**, ne trimmingem.
+
+**AngleSharp (271,5 KB br) zůstává v OBOU buildech** — ne kvůli e-mailům: `Tempo.Blazor.DocumentEditor`
+referencuje `AngleSharp` 1.5.2 vlastní `PackageReference`. E-mailové balíčky ho nepřinášejí:
+`Tempo.Blazor.EmailTemplates.Abstractions` na něj nemá ani `PackageReference`, ani assembly referenci
+(hlídá `PackageBoundaryTests.AbstractionsAssembly_ReferencesNoEngineDependency`).

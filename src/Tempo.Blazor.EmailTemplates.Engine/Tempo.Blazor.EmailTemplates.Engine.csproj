@@ -1,0 +1,75 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- NuGet Package Metadata -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Tempo.Blazor.EmailTemplates.Engine</PackageId>
+    <Version>2.9.1</Version>
+    <Authors>ptyll</Authors>
+    <Title>Tempo.Blazor.EmailTemplates.Engine</Title>
+    <Description>Local render engine for the Tempo.Blazor email template editor: the sandboxed Scriban template engine (member policy, escaping, audit, limits), the Mjml.Net compiler, the AngleSharp HTML sanitizer, the render pipeline and the local preview renderer. Reference this package on the server (or anywhere a local render is acceptable); the editor itself (Tempo.Blazor.EmailTemplates) runs without it, e.g. in Blazor WebAssembly with a server-side IEmailPreviewRenderer.</Description>
+    <PackageTags>blazor;email;mjml;templates;scriban;engine</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ptyll/Tempo.Blazor</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ptyll/Tempo.Blazor</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- ═══ The package boundary is part of the contract (D11, §3.0) ═══
+       Engine reaches internals of Abstractions (TemplateEscapeMode, IEscapingTemplateEngine,
+       HtmlTextEscaper, HtmlTagTokenizer, TemplateContentMasker, TemplateSecurityOptions.Clone/Validate)
+       through InternalsVisibleTo. That grant is bound ONLY to the assembly name (the assemblies are not
+       strong-named, so no key/version takes part in the check) — nothing in the runtime would stop a
+       package that ships an assembly with the same name. What the exact pin buys is the OTHER half: the
+       internal API these two assemblies share (TemplateContentMasker, TemplateSpanPattern, HtmlTextEscaper,
+       HtmlTagTokenizer, TemplateEscapeMode, IEscapingTemplateEngine) may change between versions, and a
+       ">=" range would happily restore an Abstractions whose internals no longer match, degrading the
+       pipeline to the custom-engine fallback (D24) instead of failing loudly. The dependency is therefore
+       pinned to the EXACT version, which resolves to [2.10.0] at release because the range is the
+       package's own version. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
+  </ItemGroup>
+
+  <!-- NuGet's pack task IGNORES a "Version" metadata on a ProjectReference (verified: the produced nuspec
+       said "2.9.1", a minimum range). The exact range is therefore written onto the very item the pack
+       task reads (PackTask.ProjectReferencesWithVersions), after NuGet computed the default versions and
+       before it generates the nuspec. Tempo.Blazor.EmailTemplates.Engine.Tests/PackageBoundaryTests pins
+       both halves of this: the target exists and both projects declare the same version. -->
+  <Target Name="PinAbstractionsToTheExactVersion"
+          AfterTargets="_GetProjectReferenceVersions">
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Condition="'%(Filename)' == 'Tempo.Blazor.EmailTemplates.Abstractions'">
+        <ProjectVersion>[$(Version)]</ProjectVersion>
+      </_ProjectReferencesWithVersions>
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" Version="1.8.5" />
+    <PackageReference Include="Mjml.Net" Version="4.15.0" />
+    <PackageReference Include="Scriban" Version="7.5.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Tempo.Blazor.EmailTemplates.Engine.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

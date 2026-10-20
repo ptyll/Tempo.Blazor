@@ -2026,9 +2026,17 @@ internal static class DefaultExamples
             "Tempo.Blazor.EmailTemplates.Abstractions" => PackageDocumentationComposer.ToArray([
                 new JsonObject
                 {
-                    ["title"] = "Render an email template",
+                    ["title"] = "Register the model side (no engine)",
+                    ["category"] = "Setup",
+                    ["code"] = "services.AddTempoEmailTemplateModel();\\n// compose generation, import and validation without Scriban/Mjml.Net/AngleSharp"
+                }
+            ]),
+            "Tempo.Blazor.EmailTemplates.Engine" => PackageDocumentationComposer.ToArray([
+                new JsonObject
+                {
+                    ["title"] = "Render email templates locally",
                     ["category"] = "Rendering",
-                    ["code"] = "services.AddTempoEmailTemplateEngine();\\nvar result = await renderer.RenderAsync(document, data, cancellationToken);"
+                    ["code"] = "services.AddTempoEmailTemplateEditor().AddTempoEmailTemplateEngine();\\nvar preview = await previewRenderer.RenderAsync(new EmailPreviewRequest { Document = document, VariablesJson = json }, cancellationToken);"
                 }
             ]),
             "Tempo.Blazor.EmailTemplates" => PackageDocumentationComposer.ToArray([

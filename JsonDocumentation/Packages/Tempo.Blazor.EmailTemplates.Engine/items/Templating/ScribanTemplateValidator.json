@@ -1,0 +1,23 @@
+{
+  "kind": "Class",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "The authoritative ITemplateValidator: validates a template with the same sandbox scanner and Scriban parser the render uses, so \"valid\" means \"this engine can render it\" — a template that reaches for a forbidden member fails validation before it is ever rendered.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ScribanTemplateValidator.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Validate",
+      "kind": "Method",
+      "type": "TemplateValidationResult",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "ScribanTemplateValidator"
+}

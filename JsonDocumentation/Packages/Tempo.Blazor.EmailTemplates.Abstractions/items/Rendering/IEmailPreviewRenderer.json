@@ -1,0 +1,27 @@
+{
+  "kind": "Interface",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Replaceable preview renderer: the one seam through which the editor gets a preview and an HTML export, so the render may run ON THE SERVER while the editor runs in Blazor WebAssembly without Scriban, Mjml.Net or AngleSharp. LocalEmailPreviewRenderer (Engine) is the default; a host that renders elsewhere registers its own. A missing registration is not a silent empty iframe — the editor shows Unavailable with a localized message naming the registration.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/IEmailPreviewRenderer.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "RenderAsync",
+      "kind": "Method",
+      "type": "Task<EmailPreviewResult>",
+      "parameters": [
+        {
+          "name": "request",
+          "type": "EmailPreviewRequest"
+        },
+        {
+          "name": "cancellationToken",
+          "type": "CancellationToken"
+        }
+      ]
+    }
+  ],
+  "itemName": "IEmailPreviewRenderer"
+}

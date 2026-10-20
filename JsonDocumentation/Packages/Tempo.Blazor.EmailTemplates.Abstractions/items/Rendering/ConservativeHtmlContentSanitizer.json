@@ -1,0 +1,39 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The BCL-only IHtmlContentSanitizer (D12/D22), the default whenever the Engine package is not registered — i.e. the editor in Blazor WebAssembly. A tokenizer with HTML-encode, never a regex strip: every <, >, &, \" and ' is encoded by default, only HtmlSanitizerPolicy allow-listed tags are re-emitted (without attributes, exception a[href] after the scheme check), unclosed elements are completed and orphan closing tags are encoded, so content can never inject </mj-text>, <mj-raw> or <!--. Unknown or invalid input degrades to escaped text, never to passthrough, and the output may only be stricter than the AngleSharp implementation.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/ConservativeHtmlContentSanitizer.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Instance",
+      "kind": "Property",
+      "type": "ConservativeHtmlContentSanitizer"
+    },
+    {
+      "name": "Sanitize",
+      "kind": "Method",
+      "type": "string",
+      "parameters": [
+        {
+          "name": "html",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "SanitizeTemplateContent",
+      "kind": "Method",
+      "type": "string",
+      "parameters": [
+        {
+          "name": "content",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "ConservativeHtmlContentSanitizer"
+}

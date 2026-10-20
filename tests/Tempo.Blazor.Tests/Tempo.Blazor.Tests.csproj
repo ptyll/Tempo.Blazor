@@ -39,6 +39,7 @@
     <ProjectReference Include="..\..\src\Tempo.Blazor.Spreadsheet\Tempo.Blazor.Spreadsheet.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Wireframe\Tempo.Blazor.Wireframe.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Demo.SharedUI\Tempo.Blazor.Demo.SharedUI.csproj" />
+    <ProjectReference Include="..\..\src\Tempo.Blazor.EmailTemplates.Engine\Tempo.Blazor.EmailTemplates.Engine.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.DataTableXlsx\Tempo.Blazor.DataTableXlsx.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.FluentValidation\Tempo.Blazor.FluentValidation.csproj" />
     <!-- Referenced so the documentation freshness guard can run the real generator in-process

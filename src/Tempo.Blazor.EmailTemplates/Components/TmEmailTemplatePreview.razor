@@ -1,26 +1,83 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
 @implements IDisposable
-@inject IEmailTemplateRenderer Renderer
+@using System.Security.Cryptography
+@using System.Text
+@using Microsoft.Extensions.Logging
+@using Microsoft.JSInterop
+@inject IServiceProvider Services
 
-<div class="tm-email-preview" data-tm-preview>
-    <div class="tm-email-preview__toolbar">
-        <div class="tm-email-preview__group" role="group">
-            <TmButton Size="ButtonSize.Sm" Variant="@DeviceVariant(false)" data-tm-preview-device="desktop"
-                      OnClick="() => SetDevice(false)">@Loc["EmailEditor_Preview_Desktop"]</TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="@DeviceVariant(true)" data-tm-preview-device="mobile"
-                      OnClick="() => SetDevice(true)">@Loc["EmailEditor_Preview_Mobile"]</TmButton>
+<div class="tm-email-preview" data-tm-preview data-tm-preview-root="true"
+     data-tm-preview-state="@StateName" aria-busy="@BusyAttribute">
+    <div class="tm-email-preview__toolbar" data-tm-preview-toolbar>
+        <div class="tm-email-preview__group" data-tm-preview-device-group>
+            <TmTabs Variant="TabVariant.Pill" ActiveTabId="@DeviceTabId" ActiveTabIdChanged="OnDeviceTabChanged"
+                    aria-label="@Loc["EmailEditor_Preview_Device"]">
+                <TmTabPanel Id="preview-device-desktop" Title="@Loc["EmailEditor_Preview_Desktop"]" Icon="@IconNames.Monitor" />
+                <TmTabPanel Id="preview-device-tablet" Title="@Loc["EmailEditor_Preview_Tablet"]" Icon="@IconNames.Tablet" />
+                <TmTabPanel Id="preview-device-mobile" Title="@Loc["EmailEditor_Preview_Mobile"]" Icon="@IconNames.Smartphone" />
+            </TmTabs>
         </div>
-        <div class="tm-email-preview__group" role="group">
-            <TmButton Size="ButtonSize.Sm" Variant="@ViewVariant(false)" data-tm-preview-view="html"
-                      OnClick="() => SetTextView(false)">@Loc["EmailEditor_Preview_Html"]</TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="@ViewVariant(true)" data-tm-preview-view="text"
-                      OnClick="() => SetTextView(true)">@Loc["EmailEditor_Preview_Text"]</TmButton>
+
+        <div class="tm-email-preview__group" data-tm-preview-substitution-group>
+            <TmTabs Variant="TabVariant.Pill" ActiveTabId="@SubstitutionTabId" ActiveTabIdChanged="OnSubstitutionTabChanged"
+                    aria-label="@Loc["EmailEditor_Preview_Substitution"]">
+                <TmTabPanel Id="preview-substitute-on" Title="@Loc["EmailEditor_Preview_WithSampleData"]" />
+                <TmTabPanel Id="preview-substitute-off" Title="@Loc["EmailEditor_Preview_WithoutSubstitution"]" />
+            </TmTabs>
         </div>
+
+        @if (ShowViewToggle)
+        {
+            <div class="tm-email-preview__group" data-tm-preview-view-group>
+                <TmTabs Variant="TabVariant.Pill" ActiveTabId="@ViewTabId" ActiveTabIdChanged="OnViewTabChanged"
+                        aria-label="@Loc["EmailEditor_Preview_View"]">
+                    <TmTabPanel Id="preview-view-html" Title="@Loc["EmailEditor_Preview_Html"]" />
+                    <TmTabPanel Id="preview-view-text" Title="@Loc["EmailEditor_Preview_Text"]" />
+                </TmTabs>
+            </div>
+        }
+
+        @* One refresh affordance only: inside the editor the dialog footer owns "Refresh preview"
+           (TmEmailTemplateEditor.Footer); a duplicate here would sit right next to it. *@
+        <div class="tm-email-preview__actions">
+            @if (ShowSampleDataEditor)
+            {
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" data-tm-preview-edit-data="true"
+                          OnClick="ToggleDataEditor">@(_dataEditorOpen ? Loc["EmailEditor_Preview_HideData"] : Loc["EmailEditor_Preview_EditData"])</TmButton>
+            }
+        </div>
+
+        @if (FooterActions is not null)
+        {
+            <div class="tm-email-preview__footer" data-tm-preview-footer>@FooterActions</div>
+        }
     </div>
+
+    @* ONE polite live region, and only for the passive states. The error, warning and unavailable
+       blocks are TmAlert (role="alert"), so repeating their text here would announce the same change
+       twice — a screen reader reads a polite region and an alert separately. "Preview is up to date"
+       is announced ONLY when the preview really is rendered: saying it while the state is still Idle
+       (nothing rendered yet) is a lie to a screen-reader user. *@
+    @if (_state == PreviewState.Loading)
+    {
+        <p class="tm-email-preview__status" data-tm-preview-status aria-live="polite">
+            <TmSpinner Size="SpinnerSize.Sm" /> @Loc["EmailEditor_Preview_Loading"]
+        </p>
+    }
+    else if (_state == PreviewState.Rendered)
+    {
+        <p class="tm-email-preview__status tm-sr-only" data-tm-preview-status aria-live="polite">
+            @Loc["EmailEditor_Preview_Rendered"]
+        </p>
+    }
 
     @if (_errors.Any(e => e.Severity == RenderErrorSeverity.Error))
     {
-        <TmAlert Severity="AlertSeverity.Error" Title="@Loc["EmailEditor_Preview_Errors"]" data-tm-preview-errors="true">
+        @* A failed render produces no HTML at all, so the alert names the outcome ("could not be
+           rendered"); a render that succeeded and only reported errors keeps the neutral title. *@
+        <TmAlert Severity="AlertSeverity.Error"
+                 Title="@(_state == PreviewState.Failed ? Loc["EmailEditor_Preview_Failed"] : Loc["EmailEditor_Preview_Errors"])"
+                 data-tm-preview-errors="true">
             <ul>
                 @foreach (var error in _errors.Where(e => e.Severity == RenderErrorSeverity.Error))
                 {
@@ -42,86 +99,490 @@
         </TmAlert>
     }
 
-    <details class="tm-email-preview__data" data-tm-preview-data-editor>
-        <summary>@Loc["EmailEditor_Preview_SampleData"]</summary>
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" data-tm-preview-generate="true"
-                  OnClick="GenerateSampleAsync">@Loc["EmailEditor_Preview_Generate"]</TmButton>
-        <textarea class="tm-email-preview__data-input" data-tm-preview-data rows="6"
-                  value="@_variablesJson" @oninput="OnSampleDataInput"></textarea>
-    </details>
+    @if (ShowSampleDataEditor && _dataEditorOpen)
+    {
+        <div class="tm-email-preview__data" data-tm-preview-data-editor>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" data-tm-preview-generate="true"
+                      OnClick="GenerateSampleAsync">@Loc["EmailEditor_Preview_Generate"]</TmButton>
+            <TmCodeEditor Id="tm-email-preview-sample-data" Language="json" ValidateJson="true" Rows="8"
+                          ShowFormatButton="true"
+                          Label="@Loc["EmailEditor_Preview_SampleData"]"
+                          Value="@_variablesJson" ValueChanged="OnSampleDataChanged" />
+        </div>
+    }
 
-    <div class="tm-email-preview__stage @(_mobile ? "tm-email-preview__stage--mobile" : string.Empty)">
-        @if (_textView)
+    @* The stage stays in the DOM in EVERY state — including Unavailable, where the alert renders inside
+       it — so the dialog does not jump between a message and the paper. `tabindex="-1"` makes it a
+       programmatic focus target (the retry moves focus here) without adding a tab stop. *@
+    <div class="tm-email-preview__stage@(BusyClass)" data-tm-preview-stage tabindex="-1" @ref="_stage"
+         data-tm-preview-stage-width="@EmailPreviewMetrics.WidthFor(_device, Document)"
+         style="@SceneStyle">
+        @if (_state == PreviewState.Unavailable)
+        {
+            <TmAlert Severity="AlertSeverity.Warning" Title="@Loc["EmailEditor_Preview_Unavailable"]"
+                     data-tm-preview-unavailable="true">
+                <p data-tm-preview-unavailable-message>@UnavailableHelp</p>
+                @if (_unavailableReason == UnavailableReason.Unreachable)
+                {
+                    @* Retry only where retrying can help: a missing registration is a host deployment
+                       decision, not a transient failure. A native <button> (not TmButton) because the
+                       component has to move focus to it, which needs its ElementReference. *@
+                    <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm" data-tm-preview-retry="true"
+                            @ref="_retry" @onclick="RetryAsync">@Loc["EmailEditor_Preview_Retry"]</button>
+                }
+            </TmAlert>
+        }
+        else if (IsEmptyDocument)
+        {
+            <div class="tm-email-preview__empty" data-tm-preview-empty="true">
+                <TmEmptyState Icon="@IconNames.Mail" Title="@Loc["EmailEditor_Preview_Empty"]" />
+            </div>
+        }
+        else if (_state == PreviewState.Loading && _html.Length == 0)
+        {
+            <div class="tm-email-preview__placeholder" data-tm-preview-loading>
+                <TmSpinner Size="SpinnerSize.Md" />
+            </div>
+        }
+        else if (_textView)
         {
             <pre class="tm-email-preview__text" data-tm-preview-text>@_text</pre>
         }
         else
         {
-            <iframe class="tm-email-preview__frame" title="@Loc["EmailEditor_Toolbar_Preview"]"
-                    sandbox="" data-tm-preview-frame srcdoc="@_html"></iframe>
+            <div class="tm-email-preview__paper">
+                <iframe class="tm-email-preview__frame" title="@FrameTitle"
+                        sandbox="" data-tm-preview-frame srcdoc="@_html"></iframe>
+            </div>
         }
     </div>
 </div>
 
 @code {
-    /// <summary>The document to preview.</summary>
-    [Parameter, EditorRequired] public EmailTemplateDocument Document { get; set; } = new();
+    private enum PreviewState
+    {
+        Idle,
+        Loading,
+        Rendered,
+        Failed,
+        Unavailable,
+    }
 
-    /// <summary>Optional variable data (JSON). When null, sample data is generated from the template.</summary>
-    [Parameter] public string? VariablesJson { get; set; }
+    /// <summary>
+    /// Why the preview cannot be shown. The two cases need different text and different affordances: a
+    /// missing registration is a configuration decision of the host (<c>NotConfigured</c> — retrying cannot
+    /// help, the user has to ask an administrator), a failed render/network call is transient
+    /// (<c>Unreachable</c> — offer the retry).
+    /// </summary>
+    private enum UnavailableReason
+    {
+        NotConfigured,
+        Unreachable,
+    }
 
-    /// <summary>Clock used for the debounced re-render (overridable in tests).</summary>
-    [Parameter] public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+    /// <summary>Where focus goes once the render that is in flight has been applied.</summary>
+    private enum FocusTarget
+    {
+        None,
+        Stage,
+        Retry,
+    }
 
     private static readonly TimeSpan DebounceDelay = TimeSpan.FromMilliseconds(750);
-    private ITimer? _debounce;
 
+    private readonly List<CancellationTokenSource> _liveRenders = [];
+    private PreviewState _state = PreviewState.Idle;
+    private UnavailableReason _unavailableReason = UnavailableReason.NotConfigured;
+    private IReadOnlyList<RenderError> _errors = Array.Empty<RenderError>();
     private string _html = string.Empty;
     private string _text = string.Empty;
     private string _variablesJson = string.Empty;
     private string? _lastExternalJson;
-    private bool _dataInitialized;
-    private IReadOnlyList<RenderError> _errors = Array.Empty<RenderError>();
-    private bool _mobile;
+    private string? _lastDocumentJson;
+    private string? _lastCulture;
+    private string? _lastRequestKey;
+    private bool _initialized;
+    private bool _missingRendererLogged;
     private bool _textView;
+    private bool _dataEditorOpen;
+    private bool _substitute = true;
+    private EmailPreviewDevice _device = EmailPreviewDevice.Desktop;
+    private ITimer? _debounce;
+    private ElementReference _stage;
+    private ElementReference _retry;
+    private FocusTarget _focusAfterRender;
+
+    /// <summary>The document to preview.</summary>
+    [Parameter, EditorRequired] public EmailTemplateDocument Document { get; set; } = new();
+
+    /// <summary>
+    /// Optional variable data (JSON). When null, sample data is generated from the template. An external
+    /// change is adopted as the new source of truth; between external changes the local edits are kept.
+    /// </summary>
+    [Parameter] public string? VariablesJson { get; set; }
+
+    /// <summary>
+    /// Raised with the edited sample data so the host can persist it (for example in the template's
+    /// <c>SampleDataJson</c>).
+    /// </summary>
+    [Parameter] public EventCallback<string> VariablesJsonChanged { get; set; }
+
+    /// <summary>Device the preview starts in. The user can switch afterwards; defaults to Desktop.</summary>
+    [Parameter] public EmailPreviewDevice InitialDevice { get; set; } = EmailPreviewDevice.Desktop;
+
+    /// <summary>
+    /// When <see langword="true"/> (the default) the "Edit data" button opens the sample-data editor. A
+    /// send/preview-only page turns it off.
+    /// </summary>
+    [Parameter] public bool ShowSampleDataEditor { get; set; } = true;
+
+    /// <summary>
+    /// When <see langword="true"/> (the default) the toolbar offers the HTML / plain-text switch. A send page
+    /// that shows only the HTML turns it off.
+    /// </summary>
+    [Parameter] public bool ShowViewToggle { get; set; } = true;
+
+    /// <summary>
+    /// Optional host actions rendered at the end of the preview toolbar — for example "Send test email".
+    /// The preview itself never sends anything.
+    /// </summary>
+    [Parameter] public RenderFragment? FooterActions { get; set; }
+
+    /// <summary>
+    /// The culture the preview should be rendered in; <see langword="null"/> keeps the renderer default
+    /// (the document language, otherwise the invariant culture).
+    /// </summary>
+    [Parameter] public string? CultureName { get; set; }
+
+    /// <summary>Clock used for the debounced re-render (overridable in tests).</summary>
+    [Parameter] public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
+    private string StateName => _state.ToString().ToLowerInvariant();
+
+    private string BusyAttribute => _state == PreviewState.Loading ? "true" : "false";
+
+    /// <summary>Dims stale HTML while a newer render is in flight (never the empty placeholder).</summary>
+    private string? BusyClass => _state == PreviewState.Loading && _html.Length > 0
+        ? " tm-email-preview__stage--busy"
+        : null;
+
+    private bool IsEmptyDocument => Document.Sections.Count == 0;
+
+    private string DeviceLabelKey => _device switch
+    {
+        EmailPreviewDevice.Tablet => "EmailEditor_Preview_Tablet",
+        EmailPreviewDevice.Mobile => "EmailEditor_Preview_Mobile",
+        _ => "EmailEditor_Preview_Desktop",
+    };
+
+    private string FrameTitle => Loc["EmailEditor_Preview_FrameTitle", Loc[DeviceLabelKey]];
+
+    /// <summary>
+    /// Why <see cref="_unavailableReason"/>: the help text of the concrete case. There is no fallback to the
+    /// title — an empty body under an alert title is exactly the vague state the review rejected.
+    /// </summary>
+    private string UnavailableHelp => Loc[_unavailableReason == UnavailableReason.NotConfigured
+        ? "EmailEditor_Preview_NotConfiguredHelp"
+        : "EmailEditor_Preview_UnreachableHelp"];
+
+    private string DeviceTabId => _device switch
+    {
+        EmailPreviewDevice.Tablet => "preview-device-tablet",
+        EmailPreviewDevice.Mobile => "preview-device-mobile",
+        _ => "preview-device-desktop",
+    };
+
+    private string SubstitutionTabId => _substitute ? "preview-substitute-on" : "preview-substitute-off";
+
+    private string ViewTabId => _textView ? "preview-view-text" : "preview-view-html";
+
+    /// <summary>
+    /// The scene style: the width custom property plus, when the document's background colour is a plain
+    /// <c>#hex</c>/<c>rgb(…)</c> value, the paper colour. Anything else is dropped instead of being written
+    /// into a style attribute — the value comes from an imported document, not from the component.
+    /// </summary>
+    private string SceneStyle
+    {
+        get
+        {
+            var width = EmailPreviewMetrics.WidthFor(_device, Document);
+            var style = $"--tm-email-preview-scene-width: {width}px";
+            return TryGetPaperBackground(Document.Styles.BackgroundColor, out var background)
+                ? $"{style}; --tm-email-preview-paper-bg: {background}"
+                : style;
+        }
+    }
 
     /// <inheritdoc />
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        if (!_dataInitialized)
+        var documentJson = SerializeDocumentForRequestKey();
+        var documentChanged = !string.Equals(_lastDocumentJson, documentJson, StringComparison.Ordinal);
+        var cultureChanged = !string.Equals(_lastCulture, CultureName, StringComparison.Ordinal);
+
+        if (!_initialized)
         {
+            _device = InitialDevice;
             _variablesJson = !string.IsNullOrWhiteSpace(VariablesJson) ? VariablesJson! : GenerateSampleJson();
             _lastExternalJson = VariablesJson;
-            _dataInitialized = true;
+            _lastDocumentJson = documentJson;
+            _lastCulture = CultureName;
+            _initialized = true;
+
+            // The first render is immediate: a spinner is honest, an empty stage is not.
+            _ = RenderPreviewAsync();
+            return;
         }
-        else if (VariablesJson != _lastExternalJson)
+
+        _lastDocumentJson = documentJson;
+        _lastCulture = CultureName;
+
+        if (!string.Equals(VariablesJson, _lastExternalJson, StringComparison.Ordinal))
         {
-            // The parent (e.g. the send form) supplied fresh values as the user types.
-            // Adopt them as the source of truth; between external changes the local
-            // sample-data textarea edits are still preserved.
+            // The parent (e.g. the send form) supplies fresh values as the user types: debounce them, or a
+            // server renderer would be called once per keystroke.
             _lastExternalJson = VariablesJson;
             if (!string.IsNullOrWhiteSpace(VariablesJson))
             {
                 _variablesJson = VariablesJson!;
             }
-        }
-        await RenderPreviewAsync();
-    }
 
-    private async Task RenderPreviewAsync()
-    {
-        var result = await Renderer.RenderAsync(Document, BuildModel());
-        _html = result.Html;
-        _text = result.TextVersion;
-        _errors = result.Errors;
+            ScheduleRender();
+            return;
+        }
+
+        if (documentChanged || cultureChanged)
+        {
+            // A document edit is already debounced by the editor's auto-save and the user expects to see the
+            // change on their next glance — render immediately, the request key still dedupes a no-op.
+            _ = RenderPreviewAsync();
+        }
     }
 
     /// <summary>
-    /// Localized text of a render diagnostic: a diagnostic that carries a localization key (for example
-    /// the blocked-URL warning from the scheme allow-list) is resolved through the editor resources; a
-    /// host that replaced the localizer with one that does not know the key still gets the engine's
-    /// English fallback instead of a raw key, and a message that comes straight from the MJML compiler is
-    /// shown as-is.
+    /// Renders the preview again, cancelling the render that is still in flight. This is what the toolbar's
+    /// "Refresh preview" button and the retry in the unavailable state call.
+    /// </summary>
+    public Task RefreshAsync()
+    {
+        _debounce?.Dispose();
+        _debounce = null;
+        return RenderPreviewAsync(force: true);
+    }
+
+    private async Task RetryAsync() => await RefreshAsync();
+
+    /// <summary>
+    /// Renders the preview unless <paramref name="force"/> is set and the request is identical to the last
+    /// one that is loading/rendered/failed. Every new render cancels the previous one (D17), so a slow
+    /// answer can never overwrite a newer one.
+    /// </summary>
+    private async Task RenderPreviewAsync(bool force = false)
+    {
+        var renderer = Services.GetService(typeof(IEmailPreviewRenderer)) as IEmailPreviewRenderer;
+        if (renderer is null)
+        {
+            // A missing registration is a HOST configuration error, not a template error: the UI explains it
+            // (localized, without service names — the user cannot register anything) and it is logged ONCE
+            // here, so a host sees it in its own log without the preview flooding it on every re-render.
+            if (!_missingRendererLogged)
+            {
+                _missingRendererLogged = true;
+                var logger = Services.GetService(typeof(ILogger<TmEmailTemplatePreview>)) as ILogger<TmEmailTemplatePreview>;
+                logger?.LogError(
+                    "No IEmailPreviewRenderer is registered, so the email preview cannot be rendered. Register a " +
+                    "renderer (typically an HTTP client calling a server endpoint) or add the " +
+                    "Tempo.Blazor.EmailTemplates.Engine package and call AddTempoEmailTemplateEngine().");
+            }
+
+            _liveRenders.Clear();
+            _errors = [];
+            _html = string.Empty;
+            _text = string.Empty;
+            _lastRequestKey = null;
+            _unavailableReason = UnavailableReason.NotConfigured;
+            _state = PreviewState.Unavailable;
+            return;
+        }
+
+        var requestKey = BuildRequestKey();
+        if (!force &&
+            string.Equals(requestKey, _lastRequestKey, StringComparison.Ordinal) &&
+            _state is PreviewState.Loading or PreviewState.Rendered or PreviewState.Failed)
+        {
+            // The identical request is already loading, rendered or failed — re-rendering it through the
+            // server on every parent re-render (every keystroke of the editor) would be pure traffic.
+            return;
+        }
+
+        var retrying = _state == PreviewState.Unavailable;
+        _lastRequestKey = requestKey;
+
+        foreach (var running in _liveRenders)
+        {
+            running.Cancel();
+        }
+
+        var cts = new CancellationTokenSource();
+        _liveRenders.Add(cts);
+        _state = PreviewState.Loading;
+
+        // Render the Loading state at once: aria-busy, the dimming of the stale HTML and the status line are
+        // what tells the user that work is happening. Waiting for the answer would only show them afterwards.
+        await InvokeAsync(StateHasChanged);
+
+        var request = new EmailPreviewRequest
+        {
+            Document = Document,
+            VariablesJson = _variablesJson,
+            SubstituteVariables = _substitute,
+            CultureName = CultureName,
+        };
+
+        EmailPreviewResult result;
+        try
+        {
+            result = await renderer.RenderAsync(request, cts.Token);
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // The editor cancelled a superseded render; the newer one owns the state.
+            return;
+        }
+        catch (OperationCanceledException ex)
+        {
+            // A cancellation that did NOT come from our token is a real failure — an HttpClient timeout is a
+            // TaskCanceledException. Swallowing it left the component in Loading forever.
+            Log(ex);
+            result = EmailPreviewResult.Unavailable([new RenderError(ex.Message, Key: RenderKeys.PreviewUnavailable)]);
+        }
+        catch (Exception ex)
+        {
+            Log(ex);
+            result = EmailPreviewResult.Unavailable([new RenderError(ex.Message, Key: RenderKeys.PreviewUnavailable)]);
+        }
+        finally
+        {
+            _liveRenders.Remove(cts);
+            cts.Dispose();
+        }
+
+        if (cts.IsCancellationRequested)
+        {
+            // Superseded: the newer render owns the state now.
+            return;
+        }
+
+        Apply(result);
+        if (retrying)
+        {
+            // The retry replaced the state the user was looking at: move focus to what replaces it, or back
+            // to the retry button when the retry failed again (never leave focus on a removed element).
+            _focusAfterRender = _state == PreviewState.Unavailable ? FocusTarget.Retry : FocusTarget.Stage;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void Apply(EmailPreviewResult result)
+    {
+        switch (result.Status)
+        {
+            case EmailPreviewStatus.Rendered:
+                _html = result.Html ?? string.Empty;
+                _text = result.Text ?? string.Empty;
+                _errors = result.Errors ?? [];
+                _state = PreviewState.Rendered;
+                break;
+            case EmailPreviewStatus.RenderFailed:
+                _html = string.Empty;
+                _text = string.Empty;
+                _errors = result.Errors ?? [];
+                _state = PreviewState.Failed;
+                break;
+            default:
+                _html = string.Empty;
+                _text = string.Empty;
+                _errors = [];
+                // Never dedupe an unavailable preview: the next parameter set has to be able to retry.
+                _lastRequestKey = null;
+                _unavailableReason = UnavailableReason.Unreachable;
+                _state = PreviewState.Unavailable;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The identity of one render request (SHA-256 of document + data + substitution + culture). Identical
+    /// inputs must not reach the renderer twice; anything else must.
+    /// </summary>
+    private string BuildRequestKey()
+    {
+        var payload = string.Concat(
+            SerializeDocumentForRequestKey(), "\u0001",
+            _variablesJson, "\u0001",
+            _substitute ? "true" : "false", "\u0001",
+            CultureName ?? string.Empty);
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
+
+    /// <summary>
+    /// The document part of the request key. A document the serializer refuses (nesting beyond its budget)
+    /// gets a unique marker instead of a stable id: the key then never matches, which renders — the safe
+    /// direction for a preview.
+    /// </summary>
+    private string SerializeDocumentForRequestKey()
+    {
+        try
+        {
+            return EmailTemplateSerializer.Serialize(Document);
+        }
+        catch (EmailTemplateSerializationException)
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+    }
+
+    /// <summary>
+    /// Accepts only a plain CSS colour a style attribute can carry safely: <c>#rgb</c>/<c>#rgba</c>/
+    /// <c>#rrggbb</c>/<c>#rrggbbaa</c> or <c>rgb(r, g, b)</c>. Anything else (including a <c>url(…)</c> or
+    /// an <c>expression(…)</c>) is dropped and the CSS fallback token applies.
+    /// </summary>
+    private static bool TryGetPaperBackground(string? value, out string background)
+    {
+        background = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var candidate = value.Trim();
+        if (!HexColorPattern.IsMatch(candidate) && !RgbColorPattern.IsMatch(candidate))
+        {
+            return false;
+        }
+
+        background = candidate;
+        return true;
+    }
+
+    /// <summary><c>#rgb</c>, <c>#rgba</c>, <c>#rrggbb</c> or <c>#rrggbbaa</c> — nothing else.</summary>
+    private static readonly System.Text.RegularExpressions.Regex HexColorPattern = new(
+        "^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+        TimeSpan.FromSeconds(1));
+
+    /// <summary><c>rgb(16, 32, 48)</c> with three decimal channels.</summary>
+    private static readonly System.Text.RegularExpressions.Regex RgbColorPattern = new(
+        @"^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+        TimeSpan.FromSeconds(1));
+
+    /// <summary>
+    /// Localized text of a render diagnostic: a diagnostic that carries a localization key is resolved
+    /// through the editor resources; a host localizer that does not know the key still gets the engine's
+    /// English fallback instead of a raw key, and an MJML compiler message is shown as-is.
     /// </summary>
     private string Describe(RenderError error)
     {
@@ -134,20 +595,41 @@
         return string.Equals(text, error.Key, StringComparison.Ordinal) ? error.Message : text;
     }
 
-    private object? BuildModel()
+    private void OnDeviceTabChanged(string tabId)
     {
-        if (!string.IsNullOrWhiteSpace(_variablesJson))
+        _device = tabId switch
         {
-            try
-            {
-                return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(_variablesJson);
-            }
-            catch (System.Text.Json.JsonException)
-            {
-                // Fall through to sample data on invalid JSON.
-            }
+            "preview-device-tablet" => EmailPreviewDevice.Tablet,
+            "preview-device-mobile" => EmailPreviewDevice.Mobile,
+            _ => EmailPreviewDevice.Desktop,
+        };
+
+        // The device changes the scene and the frame's accessible name, never the request: no re-render.
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSubstitutionTabChanged(string tabId)
+    {
+        var substitute = tabId != "preview-substitute-off";
+        if (substitute == _substitute)
+        {
+            return;
         }
-        return SampleDataGenerator.Generate(EmailDocumentVariableExtractor.Extract(Document));
+
+        _substitute = substitute;
+        _ = RenderPreviewAsync();
+    }
+
+    private void OnViewTabChanged(string tabId) => _textView = tabId == "preview-view-text";
+
+    private void ToggleDataEditor()
+    {
+        _dataEditorOpen = !_dataEditorOpen;
+        if (!_dataEditorOpen)
+        {
+            _debounce?.Dispose();
+            _debounce = null;
+        }
     }
 
     private string GenerateSampleJson()
@@ -157,34 +639,75 @@
             new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     }
 
-    private void OnSampleDataInput(ChangeEventArgs e)
-    {
-        _variablesJson = e.Value?.ToString() ?? string.Empty;
-        ScheduleRender();
-    }
-
     private async Task GenerateSampleAsync()
     {
         _variablesJson = GenerateSampleJson();
+        await VariablesJsonChanged.InvokeAsync(_variablesJson);
         await RenderPreviewAsync();
+    }
+
+    private async Task OnSampleDataChanged(string value)
+    {
+        _variablesJson = value;
+        await VariablesJsonChanged.InvokeAsync(value);
+        ScheduleRender();
     }
 
     private void ScheduleRender()
     {
         _debounce?.Dispose();
         _debounce = TimeProvider.CreateTimer(
-            _ => _ = InvokeAsync(async () => { await RenderPreviewAsync(); StateHasChanged(); }),
+            _ => _ = InvokeAsync(async () =>
+            {
+                await RenderPreviewAsync();
+                StateHasChanged();
+            }),
             state: null, dueTime: DebounceDelay, period: Timeout.InfiniteTimeSpan);
     }
 
     /// <inheritdoc />
-    public void Dispose() => _debounce?.Dispose();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusAfterRender == FocusTarget.None)
+        {
+            return;
+        }
 
-    private void SetDevice(bool mobile) => _mobile = mobile;
+        var target = _focusAfterRender;
+        _focusAfterRender = FocusTarget.None;
+        try
+        {
+            if (target == FocusTarget.Retry)
+            {
+                await _retry.FocusAsync();
+            }
+            else
+            {
+                await _stage.FocusAsync(preventScroll: true);
+            }
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or NotSupportedException)
+        {
+            // Focusing is an enhancement: a host without the DOM focus helper still gets the preview.
+        }
+    }
 
-    private void SetTextView(bool textView) => _textView = textView;
+    private void Log(Exception exception)
+    {
+        var logger = Services.GetService(typeof(ILogger<TmEmailTemplatePreview>)) as ILogger<TmEmailTemplatePreview>;
+        logger?.LogWarning(exception, "The email preview renderer failed; the preview is reported as unavailable.");
+    }
 
-    private ButtonVariant DeviceVariant(bool mobile) => _mobile == mobile ? ButtonVariant.Primary : ButtonVariant.Ghost;
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _debounce?.Dispose();
+        foreach (var running in _liveRenders)
+        {
+            running.Cancel();
+            running.Dispose();
+        }
 
-    private ButtonVariant ViewVariant(bool textView) => _textView == textView ? ButtonVariant.Primary : ButtonVariant.Ghost;
+        _liveRenders.Clear();
+    }
 }

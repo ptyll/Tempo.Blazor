@@ -1,3 +1,4 @@
+using Tempo.Blazor.EmailTemplates.Abstractions;
 using System.Globalization;
 using Bunit;
 using Microsoft.AspNetCore.Components.Forms;
@@ -20,7 +21,8 @@ public class BespokeEditorsAndLocalizationTests : BunitContext
         Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
         Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         Services.AddHttpClient();
-        Services.AddTempoEmailTemplates();
+        Services.AddTempoEmailTemplateEditor();
+        Services.AddTempoEmailTemplateEngine();
     }
 
     private static EmailTemplateDocument DocWith(EmailBlockBase block)

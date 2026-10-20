@@ -21,6 +21,7 @@ src/Tempo.Blazor.NotionEditor/Tempo.Blazor.NotionEditor.csproj
 src/Tempo.Blazor.Signing/Tempo.Blazor.Signing.csproj
 src/Tempo.Blazor.All/Tempo.Blazor.All.csproj
 src/Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj
+src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj
 src/Tempo.Blazor.EmailTemplates/Tempo.Blazor.EmailTemplates.csproj
 src/Tempo.Reporting.Engine/Tempo.Reporting.Engine.csproj
 src/Tempo.Blazor.Reporting/Tempo.Blazor.Reporting.csproj

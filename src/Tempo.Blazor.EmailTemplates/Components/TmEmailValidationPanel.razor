@@ -1,7 +1,19 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
-@inject ITemplateEngine Engine
+@using Microsoft.Extensions.Logging
+@using Tempo.Blazor.EmailTemplates.Abstractions.Templating
+@inject IServiceProvider Services
 
 <div class="tm-email-validation" data-tm-validation>
+    @if (_syntaxUnavailable)
+    {
+        @* Passive information, not an alert: nothing failed, one check simply did not run (role="note" so a
+           screen reader announces it without interrupting). The registration hint belongs in the log — an
+           end user cannot register an ITemplateValidator. *@
+        <div class="tm-email-validation__note" role="note" data-tm-validation-unavailable="true">
+            @Loc["EmailEditor_Validation_SyntaxUnavailable"]
+        </div>
+    }
+
     @if (_messages.Count == 0)
     {
         <p class="tm-email-validation__ok" data-tm-validation-ok>@Loc["EmailEditor_Validation_Valid"]</p>
@@ -30,19 +42,40 @@
 
     private static readonly EmailDocumentValidator Validator = new();
     private IReadOnlyList<DocumentValidationMessage> _messages = Array.Empty<DocumentValidationMessage>();
+    private bool _syntaxUnavailable;
+    private bool _missingValidatorLogged;
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
         var messages = new List<DocumentValidationMessage>(Validator.Validate(Document));
 
-        // Scriban syntax validation of every template-bearing string (E8.7).
-        foreach (var (template, path) in TemplateStrings())
+        // Template syntax validation of every template-bearing string (E8.7). The panel takes
+        // ITemplateValidator — not ITemplateEngine — so an editor without the Engine package can render a
+        // host-supplied server validator, or explain that the check is unavailable (§3.0). It must never
+        // pretend an unchecked template is fine, and it must never be a silent no-op.
+        var validator = Services.GetService(typeof(ITemplateValidator)) as ITemplateValidator;
+        _syntaxUnavailable = validator is null;
+        if (validator is null && !_missingValidatorLogged)
         {
-            if (string.IsNullOrEmpty(template)) continue;
-            if (!Engine.Validate(template).IsValid)
-                messages.Add(new DocumentValidationMessage(
-                    Abstractions.Layout.LayoutSeverity.Error, TemplateValidationResult.SyntaxErrorKey, path));
+            // Once per panel, not once per render: a host or a developer needs the hint, the user needs the
+            // sentence in the note above.
+            _missingValidatorLogged = true;
+            var logger = Services.GetService(typeof(ILogger<TmEmailValidationPanel>)) as ILogger<TmEmailValidationPanel>;
+            logger?.LogWarning(
+                "No ITemplateValidator is registered, so the template syntax is not validated. Register a " +
+                "validator or add the Tempo.Blazor.EmailTemplates.Engine package (register ITemplateValidator / Engine package).");
+        }
+
+        if (validator is not null)
+        {
+            foreach (var (template, path) in TemplateStrings())
+            {
+                if (string.IsNullOrEmpty(template)) continue;
+                if (!validator.Validate(template).IsValid)
+                    messages.Add(new DocumentValidationMessage(
+                        LayoutSeverity.Error, TemplateValidationResult.SyntaxErrorKey, path));
+            }
         }
 
         _messages = messages;

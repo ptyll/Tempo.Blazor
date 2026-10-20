@@ -1,0 +1,432 @@
+{
+  "package": {
+    "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+    "title": "Tempo.Blazor.EmailTemplates.Engine",
+    "description": "Local render engine for the Tempo.Blazor email template editor: the sandboxed Scriban template engine (member policy, escaping, audit, limits), the Mjml.Net compiler, the AngleSharp HTML sanitizer, the render pipeline and the local preview renderer. Reference this package on the server (or anywhere a local render is acceptable); the editor itself (Tempo.Blazor.EmailTemplates) runs without it, e.g. in Blazor WebAssembly with a server-side IEmailPreviewRenderer.",
+    "authors": "ptyll",
+    "targetFrameworks": [
+      "net10.0"
+    ],
+    "tags": "blazor;email;mjml;templates;scriban;engine",
+    "repositoryUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "projectUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.EmailTemplates.Engine"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "AngleSharp",
+        "version": "1.8.5"
+      },
+      {
+        "name": "Mjml.Net",
+        "version": "4.15.0"
+      },
+      {
+        "name": "Scriban",
+        "version": "7.5.1"
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "10.0.0"
+      },
+      {
+        "name": "Microsoft.Extensions.Localization.Abstractions",
+        "version": "10.0.0"
+      },
+      {
+        "name": "Microsoft.Extensions.Logging.Abstractions",
+        "version": "10.0.0"
+      }
+    ],
+    "projectReferences": [
+      "../Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj"
+    ],
+    "namespaces": [
+      "Tempo.Blazor.EmailTemplates.Abstractions",
+      "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "Tempo.Blazor.EmailTemplates.Abstractions.Templating"
+    ]
+  },
+  "gettingStarted": {
+    "title": "Tempo.Blazor.EmailTemplates.Engine",
+    "overview": "Local render engine for the Tempo.Blazor email template editor: the sandboxed Scriban template engine (member policy, escaping, audit, limits), the Mjml.Net compiler, the AngleSharp HTML sanitizer, the render pipeline and the local preview renderer. Reference this package on the server (or anywhere a local render is acceptable); the editor itself (Tempo.Blazor.EmailTemplates) runs without it, e.g. in Blazor WebAssembly with a server-side IEmailPreviewRenderer.",
+    "targetFramework": "net10.0",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.EmailTemplates.Engine"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "AngleSharp",
+        "version": "1.8.5"
+      },
+      {
+        "name": "Mjml.Net",
+        "version": "4.15.0"
+      },
+      {
+        "name": "Scriban",
+        "version": "7.5.1"
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "10.0.0"
+      },
+      {
+        "name": "Microsoft.Extensions.Localization.Abstractions",
+        "version": "10.0.0"
+      },
+      {
+        "name": "Microsoft.Extensions.Logging.Abstractions",
+        "version": "10.0.0"
+      }
+    ]
+  },
+  "items": [
+    {
+      "itemName": "EmailTemplatesEngineServiceCollectionExtensions",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "description": "Registers the local render engine on top of AddTempoEmailTemplateModel: Scriban template engine, Mjml.Net compiler, AngleSharp HTML sanitizer, render pipeline and local preview renderer. Every engine service REPLACES the model baseline, so the result does not depend on the order of the two registrations and configure always applies to the one shared TemplateSecurityOptions instance. The type keeps the Abstractions namespace on purpose (D21): adding the package is a PackageReference plus one call, never a using rewrite.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/ServiceCollectionExtensions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AddTempoEmailTemplateEngine",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "parameters": [
+            {
+              "name": "services",
+              "type": "IServiceCollection"
+            },
+            {
+              "name": "configure",
+              "type": "Action<TemplateSecurityOptions>?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "AngleSharpHtmlContentSanitizer",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "The authoritative IHtmlContentSanitizer: only the HtmlSanitizerPolicy allow-list survives, scripts/styles are dropped with their content, event handlers and anything outside the URL scheme allow-list are stripped. Built on AngleSharp and registered by AddTempoEmailTemplateEngine, which replaces the BCL ConservativeHtmlContentSanitizer.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/AngleSharpHtmlContentSanitizer.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Instance",
+          "kind": "Field",
+          "type": "QuoteSafeMarkupFormatter"
+        },
+        {
+          "name": "Sanitize",
+          "kind": "Method",
+          "type": "string",
+          "parameters": [
+            {
+              "name": "html",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "SanitizeTemplateContent",
+          "kind": "Method",
+          "type": "string",
+          "parameters": [
+            {
+              "name": "content",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "Text",
+          "kind": "Method",
+          "type": "string",
+          "parameters": [
+            {
+              "name": "text",
+              "type": "ICharacterData"
+            }
+          ]
+        },
+        {
+          "name": "Instance",
+          "kind": "Property",
+          "type": "static AngleSharpHtmlContentSanitizer",
+          "description": "The shared instance (AngleSharp's parser is stateless here and safe to reuse)."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailTemplateRenderer",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "The local render pipeline: Scriban substitution on subject/preheader, MJML generation + substitution (resolving variables, VisibleWhen and HTML-escaping every expression result), MJML compilation and a substituted plain-text version. Every URL is checked against the scheme allow-list after substitution and event-handler attributes of raw markup are removed.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/EmailTemplateRenderer.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "RenderAsync",
+          "kind": "Method",
+          "type": "Task<RenderResult>",
+          "parameters": [
+            {
+              "name": "document",
+              "type": "EmailTemplateDocument"
+            },
+            {
+              "name": "model",
+              "type": "object?",
+              "default": "null"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken",
+              "default": "default"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "LocalEmailPreviewRenderer",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "The default IEmailPreviewRenderer: renders locally through IEmailTemplateRenderer and projects the result onto the preview contract. Warnings keep the status Rendered (the HTML is complete), a real render error is RenderFailed with empty html/text/subject, an unexpected failure of the renderer itself is Unavailable so the editor offers a retry, and OperationCanceledException is never swallowed. SubstituteVariables = false renders the same pipeline without substituting, keeping the {{ }} tokens for an HTML export.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/LocalEmailPreviewRenderer.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "RenderAsync",
+          "kind": "Method",
+          "type": "Task<EmailPreviewResult>",
+          "parameters": [
+            {
+              "name": "request",
+              "type": "EmailPreviewRequest"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "MjmlNetCompiler",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "Default IMjmlCompiler backed by Mjml.Net. Validation errors are mapped to RenderErrors and parser exceptions (e.g. truncated MJML, see E0.9) are caught and reported instead of propagating.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/MjmlNetCompiler.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Compile",
+          "kind": "Method",
+          "type": "MjmlCompileResult",
+          "parameters": [
+            {
+              "name": "mjml",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "ObjectToScriptObjectConverter",
+      "kind": "Class",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "Converts a host model into the sandboxed Scriban ScriptObject graph: readable fields and properties only, every member runs through the fixed member policy, and no reflection handle can reach a template.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ObjectToScriptObjectConverter.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ToScriptObject",
+          "kind": "Method",
+          "type": "ScriptObject",
+          "description": "Builds a script object usable as the global scope for rendering.",
+          "parameters": [
+            {
+              "name": "model",
+              "type": "object?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "ScribanTemplateEngine",
+      "kind": "Class",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "The sandboxed ITemplateEngine built on Scriban: fixed member policy, no evaluating or loader builtins, the TemplateSecurityOptions limits, an audit event for every refusal, wall-clock cancellation and per-pass HTML escaping with html.trusted as the only opt-out. Registered by AddTempoEmailTemplateEngine.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ScribanTemplateEngine.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ExtractVariables",
+          "kind": "Method",
+          "type": "IReadOnlyList<string>",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "Render",
+          "kind": "Method",
+          "type": "Result<string>",
+          "description": "Renders a template, HTML-encoding every expression result. This is the safe default: a value a template prints can never open markup. Use the html.trusted filter for markup a template is trusted to emit (it is sanitized, never written verbatim); the escaping mode itself is not host-configurable (§3.7, D14).",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "string"
+            },
+            {
+              "name": "model",
+              "type": "object?"
+            },
+            {
+              "name": "options",
+              "type": "TemplateRenderOptions?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Validate",
+          "kind": "Method",
+          "type": "TemplateValidationResult",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "ScribanTemplateValidator",
+      "kind": "Class",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "The authoritative ITemplateValidator: validates a template with the same sandbox scanner and Scriban parser the render uses, so \"valid\" means \"this engine can render it\" — a template that reaches for a forbidden member fails validation before it is ever rendered.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ScribanTemplateValidator.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Validate",
+          "kind": "Method",
+          "type": "TemplateValidationResult",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "ScribanTemplateVariableExtractor",
+      "kind": "Class",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "The authoritative ITemplateVariableExtractor: extracts the variable paths referenced by a template by walking the parsed Scriban AST. Loop variables are excluded and a collection is reported as a collection. Registered by AddTempoEmailTemplateEngine, replacing the BCL RegexTemplateVariableExtractor baseline.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/ScribanTemplateVariableExtractor.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BuildInfos",
+          "kind": "Method",
+          "type": "IReadOnlyList<TemplateVariableInfo>"
+        },
+        {
+          "name": "Extract",
+          "kind": "Method",
+          "type": "IReadOnlyList<string>",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "string"
+            }
+          ],
+          "description": "Returns the distinct variable paths referenced by the template (empty when it has syntax errors)."
+        },
+        {
+          "name": "ExtractInfos",
+          "kind": "Method",
+          "type": "IReadOnlyList<TemplateVariableInfo>",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "string"
+            }
+          ],
+          "description": "Returns the distinct variables referenced by the template, each marked as a scalar or a collection (when used as a for iterator). Empty when the template has syntax errors."
+        },
+        {
+          "name": "Visit",
+          "kind": "Method",
+          "type": "void",
+          "parameters": [
+            {
+              "name": "node",
+              "type": "ScriptVariableGlobal"
+            }
+          ]
+        },
+        {
+          "name": "Instance",
+          "kind": "Property",
+          "type": "static ScribanTemplateVariableExtractor",
+          "description": "The shared, stateless instance."
+        }
+      ]
+    }
+  ],
+  "libraryExamples": [
+    {
+      "title": "Render email templates locally",
+      "category": "Rendering",
+      "code": "services.AddTempoEmailTemplateEditor().AddTempoEmailTemplateEngine();\\nvar preview = await previewRenderer.RenderAsync(new EmailPreviewRequest { Document = document, VariablesJson = json }, cancellationToken);"
+    }
+  ],
+  "summary": {
+    "itemCount": 9,
+    "manualItemCount": 9,
+    "generatedItemCount": 9,
+    "generatedOnlyItemCount": 0,
+    "componentCount": 0,
+    "publicApiTypeCount": 9
+  }
+}

@@ -42,6 +42,81 @@
   },
   "items": [
     {
+      "itemName": "EmailPreviewDevice",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "The device the preview is rendered for: Desktop (the document content width), Tablet (768 px) and Mobile (390 px). The widths live in EmailPreviewMetrics so the component, its CSS and its tests cannot drift apart.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailPreviewDevice.cs",
+      "documentationStatus": "merged",
+      "members": []
+    },
+    {
+      "itemName": "EmailPreviewMetrics",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "The ONE place the preview scene widths are defined: the tablet and mobile constants, the desktop stage margin, and the desktop width derived from the document's own ContentWidth. The component renders the number, its CSS frames it and the tests assert it — none of them repeats a magic number.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailPreviewMetrics.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultContentWidth",
+          "kind": "Field",
+          "type": "int",
+          "description": "The content width used when ContentWidth is missing or unparsable."
+        },
+        {
+          "name": "DesktopMargin",
+          "kind": "Field",
+          "type": "int",
+          "description": "The stage margin added around the desktop scene, in CSS pixels: the \"paper\" of the email sits on the secondary surface with a little breathing room on both sides."
+        },
+        {
+          "name": "MobileWidth",
+          "kind": "Field",
+          "type": "int",
+          "description": "Mobile preview width in CSS pixels."
+        },
+        {
+          "name": "TabletWidth",
+          "kind": "Field",
+          "type": "int",
+          "description": "Tablet preview width in CSS pixels."
+        },
+        {
+          "name": "ContentWidthOf",
+          "kind": "Method",
+          "type": "int",
+          "description": "Parses ContentWidth (600px) into CSS pixels.",
+          "parameters": [
+            {
+              "name": "document",
+              "type": "EmailTemplateDocument?"
+            }
+          ]
+        },
+        {
+          "name": "WidthFor",
+          "kind": "Method",
+          "type": "int",
+          "description": "Returns the scene width in CSS pixels for device.",
+          "parameters": [
+            {
+              "name": "device",
+              "type": "EmailPreviewDevice"
+            },
+            {
+              "name": "document",
+              "type": "EmailTemplateDocument?"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "PropertyField",
       "kind": "Class",
       "category": "Components",
@@ -479,6 +554,12 @@
           "description": "Raised when the document changes (for @bind-Document)."
         },
         {
+          "name": "FooterActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional host actions rendered at the end of the preview dialog footer — for example \"Send test email\". The editor never sends anything itself; the host owns that action and its result."
+        },
+        {
           "name": "OnAutoSave",
           "type": "EventCallback<EmailTemplateDocument>",
           "isRequired": false,
@@ -526,11 +607,44 @@
       ],
       "parameters": [
         {
+          "name": "CultureName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Culture the preview should be rendered in (for example cs-CZ); null keeps the renderer default (the document language, otherwise the invariant culture)."
+        },
+        {
           "name": "Document",
           "type": "EmailTemplateDocument",
           "isRequired": true,
           "description": "The document to preview.",
           "editorRequired": true
+        },
+        {
+          "name": "FooterActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Optional host actions rendered at the end of the preview toolbar — for example \"Send test email\". The preview itself never sends anything."
+        },
+        {
+          "name": "InitialDevice",
+          "type": "EmailPreviewDevice",
+          "isRequired": false,
+          "default": "EmailPreviewDevice.Desktop",
+          "description": "Device the preview starts in: Desktop (the document content width), Tablet (768 px) or Mobile (390 px). The user can switch afterwards. Defaults to Desktop."
+        },
+        {
+          "name": "ShowSampleDataEditor",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true (the default) the \"Edit data\" button opens the sample-data editor (TmCodeEditor with JSON validation). A send/preview-only page turns it off."
+        },
+        {
+          "name": "ShowViewToggle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true (the default) the toolbar offers the HTML / plain-text switch. A send page that shows only the HTML turns it off."
         },
         {
           "name": "TimeProvider",
@@ -545,6 +659,13 @@
           "isRequired": false,
           "description": "Optional variable data (JSON). When null, sample data is generated from the template.",
           "editorRequired": true
+        },
+        {
+          "name": "VariablesJsonChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the edited sample data so the host can persist it (for example in the template SampleDataJson).",
+          "isEventCallback": true
         }
       ]
     },
@@ -663,6 +784,24 @@
       ]
     },
     {
+      "itemName": "EmailTemplateEditorOptions",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.EmailTemplates",
+      "description": "Options of the editor-only registration (AddTempoEmailTemplateEditor): the sandbox limits shared with validation and variable extraction. They are the limits of the one TemplateSecurityOptions instance the model registration owns, so the editor and a local render always agree; the function namespaces of the registered ITemplateFunctionProviders are added automatically.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/EmailTemplateEditorOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Security",
+          "kind": "Property",
+          "type": "TemplateSecurityOptions",
+          "description": "Gets the sandbox limits shared with validation and variable extraction."
+        }
+      ]
+    },
+    {
       "itemName": "EmailTemplatesUI",
       "kind": "Class",
       "category": "General",
@@ -685,10 +824,27 @@
       "kind": "Class",
       "category": "General",
       "namespace": "Tempo.Blazor.EmailTemplates",
-      "description": "DI registration for the Tempo.Blazor email template editor UI.",
+      "description": "AddTempoEmailTemplateEditor — UI plus the model side, and NOT the local render engine. The host supplies IEmailPreviewRenderer (typically a server endpoint) and optionally ITemplateValidator; for a local render add the Tempo.Blazor.EmailTemplates.Engine package and call AddTempoEmailTemplateEngine. AddTempoEmailTemplates is the [Obsolete] pre-2.10 shortcut and delegates here without registering an engine.",
       "packageId": "Tempo.Blazor.EmailTemplates",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates/ServiceCollectionExtensions.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AddTempoEmailTemplateEditor",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "parameters": [
+            {
+              "name": "services",
+              "type": "IServiceCollection"
+            },
+            {
+              "name": "configure",
+              "type": "Action<EmailTemplateEditorOptions>?"
+            }
+          ]
+        }
+      ]
     },
     {
       "itemName": "ITmEmailLocalizer",
@@ -832,11 +988,11 @@
     }
   ],
   "summary": {
-    "itemCount": 25,
-    "manualItemCount": 25,
-    "generatedItemCount": 25,
+    "itemCount": 28,
+    "manualItemCount": 28,
+    "generatedItemCount": 28,
     "generatedOnlyItemCount": 0,
     "componentCount": 15,
-    "publicApiTypeCount": 10
+    "publicApiTypeCount": 13
   }
 }

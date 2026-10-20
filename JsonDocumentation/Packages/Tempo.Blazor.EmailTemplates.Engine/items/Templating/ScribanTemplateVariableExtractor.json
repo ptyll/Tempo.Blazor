@@ -1,0 +1,36 @@
+{
+  "kind": "Class",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "The authoritative ITemplateVariableExtractor: extracts the variable paths referenced by a template by walking the parsed Scriban AST. Loop variables are excluded and a collection is reported as a collection. Registered by AddTempoEmailTemplateEngine, replacing the BCL RegexTemplateVariableExtractor baseline.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Templating/TemplateVariableExtractor.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Extract",
+      "kind": "Method",
+      "type": "IReadOnlyList<string>",
+      "description": "Returns the distinct variable paths referenced by the template (empty when it has syntax errors).",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "ExtractInfos",
+      "kind": "Method",
+      "type": "IReadOnlyList<TemplateVariableInfo>",
+      "description": "Returns the distinct variables referenced by the template, each marked as a scalar or a collection (when used as a for iterator). Empty when the template has syntax errors.",
+      "parameters": [
+        {
+          "name": "template",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "itemName": "ScribanTemplateVariableExtractor"
+}

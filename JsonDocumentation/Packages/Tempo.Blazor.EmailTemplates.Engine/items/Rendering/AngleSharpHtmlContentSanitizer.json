@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The authoritative IHtmlContentSanitizer: only the HtmlSanitizerPolicy allow-list survives, scripts/styles are dropped with their content, event handlers and anything outside the URL scheme allow-list are stripped. Built on AngleSharp and registered by AddTempoEmailTemplateEngine, which replaces the BCL ConservativeHtmlContentSanitizer.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Engine/Rendering/HtmlContentSanitizer.cs",
+  "documentationStatus": "generated",
+  "members": [],
+  "itemName": "AngleSharpHtmlContentSanitizer"
+}

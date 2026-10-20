@@ -25,6 +25,12 @@
     <ProjectReference Include="..\..\src\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
   </ItemGroup>
 
+  <!-- The XSS/mutation-XSS vector set is shared by name with the Engine test project, which holds the
+       AngleSharp parity run: one list, two sanitizers, no drift. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\SanitizerXssVectors.cs" />
+  </ItemGroup>
+
   <!-- A deliberately malformed flat table (one entry is a number), embedded under the marker type's
        full name so JsonStringLocalizer<T> finds it: pins the parse failure mode of the localizer. -->
   <ItemGroup>

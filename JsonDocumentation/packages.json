@@ -277,6 +277,17 @@
       "includePublicTypes": true
     },
     {
+      "packageId": "Tempo.Blazor.EmailTemplates.Engine",
+      "sourceProject": "src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj",
+      "outputFile": "tempo-blazor-emailtemplates-engine.json",
+      "documentationRoots": [
+        "Packages/Tempo.Blazor.EmailTemplates.Engine/items"
+      ],
+      "includePatterns": [],
+      "excludePatterns": [],
+      "includePublicTypes": true
+    },
+    {
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourceProject": "src/Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj",
       "outputFile": "tempo-blazor-emailtemplates-abstractions.json",

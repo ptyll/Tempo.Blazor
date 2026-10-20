@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The rendered preview, or the reason it is missing. Html, Text and Subject are \"\" — never null — when the status is RenderFailed or Unavailable, so a host view never has to nil-check them. Warnings (a blocked URL, a removed event handler) keep the status Rendered: the HTML is complete.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailPreviewResult.cs",
+  "documentationStatus": "generated",
+  "members": [],
+  "itemName": "EmailPreviewResult"
+}

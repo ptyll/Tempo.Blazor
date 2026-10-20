@@ -8,4 +8,16 @@ public sealed record RenderPreviewRequest
 
     /// <summary>Gets the optional variable data as JSON.</summary>
     public string? VariablesJson { get; init; }
+
+    /// <summary>
+    /// Gets whether variables are substituted. <see langword="false"/> keeps the <c>{{ … }}</c> tokens in
+    /// the rendered markup, which is what an HTML export with unresolved placeholders needs.
+    /// </summary>
+    public bool SubstituteVariables { get; init; } = true;
+
+    /// <summary>
+    /// Gets the culture name (for example <c>cs-CZ</c>) the server should format values in;
+    /// <see langword="null"/> = the renderer default (the document language, otherwise invariant).
+    /// </summary>
+    public string? CultureName { get; init; }
 }

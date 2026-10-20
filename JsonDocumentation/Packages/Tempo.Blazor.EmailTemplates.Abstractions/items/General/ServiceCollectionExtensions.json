@@ -2,9 +2,26 @@
   "kind": "Class",
   "category": "General",
   "namespace": "Tempo.Blazor.EmailTemplates.Abstractions",
-  "description": "DI registration for the email template engine (model, generation, rendering, validation).",
+  "description": "AddTempoEmailTemplateModel — the model side of the email template editor: block registry, MJML and plain-text generators, the request validators with their closed JSON localizer, the conservative BCL HTML sanitizer, the regex variable extractor and the one shared TemplateSecurityOptions instance. Idempotent, and it never registers an engine type: no ITemplateEngine, IMjmlCompiler, ITemplateValidator, IEmailTemplateRenderer or IEmailPreviewRenderer. Add Tempo.Blazor.EmailTemplates.Engine (AddTempoEmailTemplateEngine) for the local pipeline, or supply a host IEmailPreviewRenderer / ITemplateValidator yourself.",
   "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/ServiceCollectionExtensions.cs",
   "documentationStatus": "generated",
-  "itemName": "ServiceCollectionExtensions"
+  "itemName": "ServiceCollectionExtensions",
+  "members": [
+    {
+      "name": "AddTempoEmailTemplateModel",
+      "kind": "Method",
+      "type": "IServiceCollection",
+      "parameters": [
+        {
+          "name": "services",
+          "type": "IServiceCollection"
+        },
+        {
+          "name": "configure",
+          "type": "Action<TemplateSecurityOptions>?"
+        }
+      ]
+    }
+  ]
 }

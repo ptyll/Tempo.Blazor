@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "The device the preview is rendered for: Desktop (the document content width), Tablet (768 px) and Mobile (390 px). The widths live in EmailPreviewMetrics so the component, its CSS and its tests cannot drift apart.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailPreviewDevice.cs",
+  "documentationStatus": "generated",
+  "members": [],
+  "itemName": "EmailPreviewDevice"
+}

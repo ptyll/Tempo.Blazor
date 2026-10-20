@@ -29,6 +29,7 @@
     <Project Path="src/Tempo.Blazor.Reporting/Tempo.Blazor.Reporting.csproj" />
     <Project Path="src/Tempo.Blazor.FluentValidation/Tempo.Blazor.FluentValidation.csproj" />
     <Project Path="src/Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
+    <Project Path="src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj" />
     <Project Path="src/Tempo.Blazor.EmailTemplates/Tempo.Blazor.EmailTemplates.csproj" />
     <Project Path="src/Tempo.Blazor.Mcp/Tempo.Blazor.Mcp.csproj" />
     <Project Path="src/Tempo.Reporting.Abstractions/Tempo.Reporting.Abstractions.csproj" />
@@ -45,6 +46,7 @@
     <Project Path="tests/Tempo.Blazor.DocumentFormats.Tests/Tempo.Blazor.DocumentFormats.Tests.csproj" />
     <Project Path="tests/Tempo.Blazor.FluentValidation.Tests/Tempo.Blazor.FluentValidation.Tests.csproj" />
     <Project Path="tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests.csproj" />
+    <Project Path="tests/Tempo.Blazor.EmailTemplates.Engine.Tests/Tempo.Blazor.EmailTemplates.Engine.Tests.csproj" />
     <Project Path="tests/Tempo.Blazor.EmailTemplates.Tests/Tempo.Blazor.EmailTemplates.Tests.csproj" />
     <Project Path="tests/Tempo.Blazor.Mcp.Tests/Tempo.Blazor.Mcp.Tests.csproj" />
     <Project Path="tests/Tempo.Reporting.Abstractions.Tests/Tempo.Reporting.Abstractions.Tests.csproj" />

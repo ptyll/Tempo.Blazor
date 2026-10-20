@@ -1,0 +1,37 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "The ONE place the preview scene widths are defined: the tablet and mobile constants, the desktop stage margin, and the desktop width derived from the document's own ContentWidth. The component renders the number, its CSS frames it and the tests assert it — none of them repeats a magic number.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailPreviewMetrics.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "TabletWidth",
+      "kind": "Property",
+      "type": "int"
+    },
+    {
+      "name": "MobileWidth",
+      "kind": "Property",
+      "type": "int"
+    },
+    {
+      "name": "WidthFor",
+      "kind": "Method",
+      "type": "int",
+      "parameters": [
+        {
+          "name": "device",
+          "type": "EmailPreviewDevice"
+        },
+        {
+          "name": "document",
+          "type": "EmailTemplateDocument?"
+        }
+      ]
+    }
+  ],
+  "itemName": "EmailPreviewMetrics"
+}
