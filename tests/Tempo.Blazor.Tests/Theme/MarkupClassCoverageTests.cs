@@ -189,8 +189,6 @@ public sealed class MarkupClassCoverageTests
         // role/id/aria-labelledby and the consumer's AdditionalAttributes — and needs no paint.
         "tm-overlay-panel-sheet__content",
         "tm-pagination-controls",
-        "tm-pagination-next",
-        "tm-pagination-prev",
         "tm-query-input__overlay-text",
         "tm-rating__star--empty",
         // F10 moved the RTE dialogs onto TmModal: the footer buttons became TmButtons whose

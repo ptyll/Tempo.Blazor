@@ -17,8 +17,18 @@ This guide describes the landed opt-in presentation and interaction parameters f
 | `TmMultiViewList.ShowItemCount` | `false` | Item count is hidden unless enabled. |
 | `TmMultiViewList.Responsive` | `false` | Responsive table/list behavior remains off. |
 | `TmMultiViewList.TableCellLayout` | `TableCellLayout.Inline` | Title and subtitle stay in their own table columns. |
+| `TmDataTable.ColumnMenuMode` | `ColumnMenuMode.None` | Header keeps the pin toggle. `Menu` replaces it with a kebab. |
 | `TmDataTable.EditActionsMode` | `EditActionsMode.Icons` | Save and Cancel are icon buttons in the edited row. |
+| `TmDataTable.AllowExportSelected` | `false` | The export menu lists formats only. |
 | `TmDataTable.ShowActiveViewName` / `AllowSetDefault` | `false` | The view toggle reads "Views"; no Set as default action. |
+| `TmDataTable.ShowFilterResultPreview` | `false` | The inline filter builder shows no match count. |
+| `TmDataTable.GroupHeaderTemplate` | `null` | Group headers use the built-in title, value and count. |
+| `TmMultiViewList.CardActivation` | `CardActivation.Button` | Cards are buttons. `StretchedLink` needs `ItemHref`. |
+| `TmMultiViewList.ItemHref` | `null` | No stretched link is rendered. |
+| `TmMultiViewList.MaxCardColumns` | `null` | The card grid is not capped. |
+| `TmMultiViewList.GroupHeaderTemplate` | `null` | Group headers use the built-in markup. |
+| `TmMultiViewList.StatusVariantField` | `null` | Every status badge uses the default variant. |
+| `TmFilterBuilder.ShowResultPreview` | `false` | No match count. Needs `ResultCountProvider` as well. |
 
 Do not change these defaults as part of consumer adoption. Set an opt-in only when the screen requires it.
 
@@ -165,3 +175,85 @@ Mobile cards always use `Text`, whatever was set.
 `TmMultiViewList` retains its existing defaults: card appearance, icon-only view-switcher labels, no avatar fallback, hidden item count, and non-responsive behavior. Opt into `ViewSwitcherLabels.IconsAndText`, `AvatarFallback.Initials`, `ShowItemCount="true"`, or `Responsive="true"` only where needed. Responsive behavior is controlled by `Responsive`; no additional mobile presentation parameter is provided for `TmColumnPicker` or `TmViewManager`.
 
 `TableCellLayout="TableCellLayout.Stacked"` drops the subtitle column in the table view and renders its value under the title in the same cell (an inner `.tm-mvl-cell-stack`, with `.tm-mvl-cell-secondary` for the subtitle). The `td` stays a table cell. `Inline` (the default) keeps the two columns. `StatusVariantField` maps an item to the status badge variant; omit it and every badge uses the default variant.
+
+`CardActivation="CardActivation.StretchedLink"` renders each card as an inner stretched link instead of a button. It needs `ItemHref`, which returns the URL for an item; without it the card stays a button. `MaxCardColumns` caps the card grid (`--tm-mvl-card-columns-max`); `null` leaves it uncapped.
+
+`GroupHeaderTemplate` replaces the built-in group header on both components. The context is `DataGroup<TItem>` (field name, key, display value, count, items). Omit it and the built-in header stays.
+
+## Appearance gate
+
+`Appearance` is the gate for the card surface, not for the other opt-ins. `DataTableAppearance.Card` adds `tm-data-table-wrapper--card-surface` (radius, shadow, border, surface background). `Plain` adds nothing, and it is the `TmDataTable` default, so an existing table does not gain a card surface by upgrading. `TmMultiViewList.Appearance` defaults to `Card` and keeps the surface it already had. Mobile layout, grid keyboard, the column menu, export scope, the filter summary and the saved-view actions all work on either surface — none of them flips `Appearance` for you.
+
+## Where to try it
+
+The demo pages render every opt-in behind a control that starts at the default, so the rest of the page is unchanged:
+
+- `/data-table` — Appearance, MobileLayout, KeyboardNavigation, ColumnMenuMode, EditActionsMode, AllowExportSelected, ShowFilterSummary, ShowActiveViewName, AllowSetDefault and ShowFilterResultPreview, plus a 24rem-wide container that shows `MobileLayout="Cards"` on a desktop.
+- `/multi-view-list` — ViewSwitcherLabels, AvatarFallback, TableCellLayout, CardActivation, ShowItemCount, Responsive, MaxCardColumns, ItemHref, StatusVariantField and GroupHeaderTemplate.
+
+## Mobile sheets
+
+Panels that open from a trigger go through `TmOverlayPanel` (see [overlays.md](overlays.md)). With `MobilePresentation.Auto` the panel becomes a content-height bottom sheet on a phone-sized viewport and stays an anchored popover elsewhere; the popover's size still follows the trigger's container.
+
+| Surface | Mobile presentation |
+|---|---|
+| `TmViewManager` panel (saved views, Set as default) | `Auto` — a sheet on a mobile viewport, a popover otherwise. |
+| `TmDataTable` column picker | `Auto`. |
+| `TmDataTable` export menu and column menu | `Auto` when `MobileLayout` is `Scroll` or `Cards`; a popover when it is `None`. |
+| `TmMultiViewList` grouping menu | `Auto` when `Responsive="true"`; a popover otherwise. The cards-sheet filter and sort panels are always `Auto`. |
+| `TmFilterBuilder` field picker and editor | `Auto` for `Presentation="Auto"`, a popover at every width for `Presentation="Popover"`. `Inline` renders no panel. |
+
+## Parameter reference
+
+Every opt-in parameter added for the redesign, with its default. A default is the value that keeps the pre-redesign markup, so none of these needs to be set for an existing screen to render as before.
+
+### TmDataTable
+
+| Parameter | Type | Default |
+|---|---|---|
+| `Appearance` | `DataTableAppearance` | `Plain` |
+| `MobileLayout` | `DataTableMobileLayout` | `None` |
+| `KeyboardNavigation` | `DataTableKeyboardNavigation` | `Rows` |
+| `ColumnMenuMode` | `ColumnMenuMode` | `None` |
+| `ShowColumnMenu` | `bool` | `true` |
+| `EditActionsMode` | `EditActionsMode` | `Icons` |
+| `AllowExportSelected` | `bool` | `false` |
+| `ShowFilterSummary` | `bool` | `false` |
+| `ShowFilterResultPreview` | `bool` | `false` |
+| `ShowActiveViewName` | `bool` | `false` |
+| `AllowSetDefault` / `OnSetDefault` | `bool` / `EventCallback<DataTableView>` | `false` / — |
+| `GroupHeaderTemplate` | `RenderFragment<DataGroup<TItem>>?` | `null` |
+| `ToolbarMode` | `DataToolbarMode` | `Full` |
+| `CardMode` (alias of `MobileLayout=Cards`) | `bool` | `false` |
+| `TmDataTableColumn.MobilePinned` | `bool` | `false` |
+| `TmDataTableColumn.CardRole` | `DataTableCardRole` | `Field` |
+
+### TmMultiViewList
+
+| Parameter | Type | Default |
+|---|---|---|
+| `Appearance` | `DataTableAppearance` | `Card` |
+| `ViewSwitcherLabels` | `ViewSwitcherLabels` | `IconsOnly` |
+| `AvatarFallback` | `AvatarFallback` | `None` |
+| `ShowItemCount` | `bool` | `false` |
+| `Responsive` | `bool` | `false` |
+| `TableCellLayout` | `TableCellLayout` | `Inline` |
+| `CardActivation` / `ItemHref` | `CardActivation` / `Func<TItem, string?>?` | `Button` / `null` |
+| `MaxCardColumns` | `int?` | `null` |
+| `StatusVariantField` | `Func<TItem, BadgeVariant>?` | `null` |
+| `GroupHeaderTemplate` | `RenderFragment<DataGroup<TItem>>?` | `null` |
+| `ShowFilterResultPreview` | `bool` | `false` |
+| `ToolbarMode` | `DataToolbarMode` | `Full` |
+
+### TmViewManager and TmFilterBuilder
+
+| Parameter | Type | Default |
+|---|---|---|
+| `TmViewManager.ShowActiveViewName` | `bool` | `false` |
+| `TmViewManager.AllowSetDefault` / `OnSetDefault` | `bool` / `EventCallback<DataTableView>` | `false` / — |
+| `TmViewManager.Compact` | `bool` | `false` |
+| `TmFilterBuilder.Presentation` | `FilterBuilderPresentation` | `Inline` |
+| `TmFilterBuilder.ShowResultPreview` | `bool` | `false` |
+| `TmFilterBuilder.ResultCountProvider` | `Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?` | `null` |
+
+The `Appearance` gate, grid keys, export scope and result preview are described in the sections above; the parameters with a landed-in-the-backlog origin (`ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` — formerly `ExportSelectedOnly` —, `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowFilterResultPreview`, `TableCellLayout`, `StatusVariantField`, `CardActivation`) are all opt-in with the defaults above.

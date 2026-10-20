@@ -1499,7 +1499,7 @@
    wrapper and only while that wrapper is narrow. A default table, a card cell
    and a cell being edited keep the wrapping they always had. */
 @container tm-data-table (width < 640px) {
-  .tm-data-table-wrapper--responsive .tm-data-table td:not(.tm-data-table-cell--card):not(.tm-data-table-cell--editing):not(.tm-col-wrap):not(:has(input, button, select, textarea)) {
+  .tm-data-table-wrapper--responsive .tm-data-table td:not(.tm-data-table-cell--card):not(.tm-data-table-cell--editing):not(.tm-col-wrap):not(:has(input)):not(:has(button)):not(:has(select)):not(:has(textarea)) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1565,9 +1565,7 @@
   .tm-page-btn,
   .tm-data-table-cards-toolbar__sort,
   .tm-data-table-cards-toolbar__filter,
-  .tm-data-table-cards-toolbar__sort .tm-dropdown-trigger,
-  .tm-mvl-cards-toolbar__sort,
-  .tm-mvl-cards-toolbar__filter {
+  .tm-data-table-cards-toolbar__sort .tm-dropdown-trigger {
     min-inline-size: var(--tm-touch-target);
     min-block-size: var(--tm-touch-target);
   }
@@ -1657,3 +1655,6 @@
   cursor: pointer;
   color: var(--tm-text-secondary);
 }
+
+/* Screen-reader-only live region announcing the visible row count; the hiding comes from .tm-sr-only (base.css). */
+.tm-data-table-live-count { white-space: nowrap; }

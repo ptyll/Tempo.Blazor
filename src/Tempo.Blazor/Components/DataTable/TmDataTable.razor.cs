@@ -1800,12 +1800,20 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// <c>--tm-pin-left: var(--tm-pin-left-N, &lt;fallback&gt;px)</c>. The wrapper owns the measured
+    /// <c>--tm-pin-left: var(--tm-pin-left-N, &lt;fallback&gt;px)</c> (and <c>--tm-pin-right: var(--tm-pin-right-N, &lt;fallback&gt;px)</c>
+    /// for a right-pinned column; both are component-local properties). The wrapper owns the measured
     /// value; the inline property is what the stylesheet reads, and the fallback keeps the column
     /// stuck before the first measurement (and in tests, where no script runs).
     /// </summary>
     private static string PinOffsetStyle(string edge, int index, int fallbackPx)
-        => $"--tm-pin-{edge}:var(--tm-pin-{edge}-{index.ToString(System.Globalization.CultureInfo.InvariantCulture)},{fallbackPx.ToString(System.Globalization.CultureInfo.InvariantCulture)}px)";
+    {
+        var i = index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var px = fallbackPx.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        // Literal property names (no {edge} interpolation) so the token audit sees both declarations.
+        return edge == "right"
+            ? $"--tm-pin-right:var(--tm-pin-right-{i},{px}px)"
+            : $"--tm-pin-left:var(--tm-pin-left-{i},{px}px)";
+    }
 
     private string GetPinClass(TmDataTableColumn<TItem> col)
         => GetPin(col) switch

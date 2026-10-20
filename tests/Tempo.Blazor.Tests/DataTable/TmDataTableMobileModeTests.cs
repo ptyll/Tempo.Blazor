@@ -255,7 +255,7 @@ public class TmDataTableMobileModeTests : LocalizationTestBase
         clip.Should().Contain(".tm-data-table-wrapper--responsive");
         clip.Should().Contain(":not(.tm-data-table-cell--card)");
         clip.Should().Contain(":not(.tm-data-table-cell--editing)");
-        clip.Should().Contain(":not(:has(input, button, select, textarea))");
+        clip.Should().Contain(":not(:has(input)):not(:has(button)):not(:has(select)):not(:has(textarea))");
     }
 
     [Fact]

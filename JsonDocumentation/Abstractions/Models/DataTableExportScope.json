@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "Which rows a data-table export includes. All (the default) exports every row matching the current filter and sort, paging bypassed. Selected exports only the checked rows and requires a selectable table. TmDataTable offers the choice only when AllowExportSelected is true.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DataTableExport.cs",
+  "documentationStatus": "manual",
+  "itemName": "DataTableExportScope"
+}

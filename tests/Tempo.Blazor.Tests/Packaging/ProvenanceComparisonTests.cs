@@ -222,10 +222,10 @@ public class ProvenanceComparisonTests
             + "'never read'");
         // js/__tests__/overlay.test.mjs + overlay-lifecycle.test.mjs + layout-observer.test.mjs +
         // tm-sheet.test.mjs + tm-focus-trap.test.mjs + tm-editor-shell.test.mjs + tm-menu-nav.test.mjs + tm-toolbar.test.mjs + pointer-drag.test.mjs + scheduler-pointer.test.mjs +
-        // rte-caret-bookmark.test.mjs + tm-user-zone.test.mjs + tm-splitter.test.mjs + data-table-resize.test.mjs + tm-color-gradient.test.mjs + pointer-gesture.test.mjs +
+        // rte-caret-bookmark.test.mjs + tm-user-zone.test.mjs + tm-splitter.test.mjs + data-table-resize.test.mjs + data-table-pin.test.mjs + tm-color-gradient.test.mjs + pointer-gesture.test.mjs +
         // workflow-designer-pointer.test.mjs + dashboard-pointer.test.mjs —
         // the Node tests ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(18);
+        denominator.PackExcludedFiles.Should().Be(19);
     }
 
     /// <summary>

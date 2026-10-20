@@ -42,12 +42,7 @@ public static class DefaultMarkupScenarios
     /// <summary>Renders one scenario under an en-US culture and returns its raw markup.</summary>
     public static string Render(BunitContext context, string name)
     {
-        var previousCulture = CultureInfo.CurrentCulture;
-        var previousUiCulture = CultureInfo.CurrentUICulture;
-        var enUs = CultureInfo.GetCultureInfo("en-US");
-        CultureInfo.CurrentCulture = enUs;
-        CultureInfo.CurrentUICulture = enUs;
-        try
+        using var culture = CultureScope.Use("en-US");
         {
             return name switch
             {
@@ -68,11 +63,6 @@ public static class DefaultMarkupScenarios
                 "pagination-default" => context.Render<TmPagination>().Markup,
                 _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown markup scenario."),
             };
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = previousCulture;
-            CultureInfo.CurrentUICulture = previousUiCulture;
         }
     }
 

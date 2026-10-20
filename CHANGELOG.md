@@ -29,6 +29,8 @@
 
 ### Added
 
+- **Demo: table/list redesign opt-ins.** `/data-table` gains a Redesign (opt-in) playground (every opt-in behind a control that starts at its default, fixed dates, row-activation counter), a 24rem Mobile cards container, a standalone `TmViewManager` with Set as default and `TmFilterBuilder` in `Popover`/`Auto` with `ResultCountProvider`; `/multi-view-list` gains a matching playground. Wireframe stencils for `TmDataTable`, `TmMultiViewList`, `TmViewManager` and `TmFilterBuilder` expose the same opt-ins as props (`appearance`, `mobileLayout`, `showItemCount`, `viewSwitcherLabels`, `columnMenu`, `exportSelected`, `presentation`, `open`). No default changes.
+
 - **Public tokens `--tm-color-primary-solid` and `--tm-color-on-primary-fixed`.**
   `--tm-color-primary-solid` is `var(--tm-color-primary-600)` in both themes (white on it is 5.17:1;
   the dark `--tm-color-primary` step is primary-400, and white on that is 2.54:1).
