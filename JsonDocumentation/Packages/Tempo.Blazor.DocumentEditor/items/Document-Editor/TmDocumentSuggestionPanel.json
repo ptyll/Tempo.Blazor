@@ -23,43 +23,43 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether a review action is running."
+      "description": "Whether the current user can accept or reject suggestions."
     },
     {
       "name": "IsBusy",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether suggestions are loading."
+      "description": "Whether a review action is running."
     },
     {
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,
-      "description": "Suggestions to display."
+      "description": "Whether suggestions are loading."
     },
     {
       "name": "OnAcceptSuggestion",
       "type": "EventCallback<DocumentSuggestion>",
       "isRequired": false,
-      "description": "Raised when a suggestion is selected."
+      "description": "Raised when a suggestion should be accepted."
     },
     {
       "name": "OnRejectSuggestion",
       "type": "EventCallback<DocumentSuggestion>",
       "isRequired": false,
-      "description": "Raised when a suggestion should be accepted."
+      "description": "Raised when a suggestion should be rejected."
     },
     {
       "name": "OnSelectSuggestion",
       "type": "EventCallback<DocumentSuggestion>",
       "isRequired": false,
-      "description": "Optional status text."
+      "description": "Raised when a suggestion is selected."
     },
     {
       "name": "StatusMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the current user can accept or reject suggestions."
+      "description": "Optional status text."
     }
   ]
 }

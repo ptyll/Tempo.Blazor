@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.Diagram.Templates",
-  "description": "Built-in provider that loads diagram templates from embedded resources (compiled from wwwroot/diagram-templates/*.json).",
+  "description": "Built-in provider that loads diagram templates from embedded resources (compiled from wwwroot/diagram-templates/*.json with explicit LogicalNames — the lookup is by exact name, never a manifest suffix scan). The catalog loads once per provider instance, thread-safely; a faulted cached load is forgotten so the next call retries instead of replaying the exception forever.",
   "packageId": "Tempo.Blazor.DiagramEditor",
   "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/BuiltInDiagramTemplateProvider.cs",
   "documentationStatus": "generated",

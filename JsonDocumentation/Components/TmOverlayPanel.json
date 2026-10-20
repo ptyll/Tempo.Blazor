@@ -11,7 +11,7 @@
       "name": "Id",
       "type": "string",
       "isRequired": false,
-      "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls)."
+      "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls). In sheet mode the id lands on the content wrapper inside the drawer body, so the reference resolves in both presentations."
     },
     {
       "name": "Anchor",
@@ -38,28 +38,28 @@
       "type": "int",
       "isRequired": false,
       "default": "4",
-      "description": "Gap in pixels between anchor and panel on the resolved side."
+      "description": "Gap in pixels between anchor and panel on the resolved side. Default 4."
     },
     {
       "name": "ViewportMargin",
       "type": "int",
       "isRequired": false,
       "default": "8",
-      "description": "Minimum distance in pixels the panel keeps from the viewport edges."
+      "description": "Minimum distance in pixels the panel keeps from the viewport edges. Default 8."
     },
     {
       "name": "Flip",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Flip to the opposite side when the preferred side does not have enough room."
+      "description": "Flip to the opposite side when the preferred side does not have enough room. Default true."
     },
     {
       "name": "Shift",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Slide the panel along the cross axis so it stays inside the viewport."
+      "description": "Slide the panel along the cross axis so it stays inside the viewport. Default true."
     },
     {
       "name": "MatchAnchorWidth",
@@ -87,7 +87,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Close when a pointerdown lands outside both the panel and the anchor."
+      "description": "Close when a pointerdown lands outside both the panel and the anchor. Default true. The anchor is exempt so clicking the trigger toggles instead of close-then-reopen races. In sheet mode this governs the backdrop click and the swipe-to-dismiss gesture."
     },
     {
       "name": "IsOpen",

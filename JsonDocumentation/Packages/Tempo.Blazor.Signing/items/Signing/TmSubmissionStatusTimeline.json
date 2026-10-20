@@ -22,7 +22,7 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Submission events to display."
+      "description": "Additional CSS classes for the root element."
     }
   ]
 }

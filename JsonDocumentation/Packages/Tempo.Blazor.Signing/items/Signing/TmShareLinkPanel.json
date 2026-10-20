@@ -22,39 +22,39 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether a QR code is rendered."
+      "description": "Additional CSS classes for the root element."
     },
     {
       "name": "EmbedCode",
       "type": "string?",
       "isRequired": false,
-      "description": "Public signing link."
+      "description": "Optional embed code for publishing the signing link."
     },
     {
       "name": "Enabled",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Optional embed code for publishing the signing link."
+      "description": "Whether sharing is enabled."
     },
     {
       "name": "EnabledChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Whether sharing is enabled."
+      "description": "Callback invoked when sharing is enabled or disabled."
     },
     {
       "name": "ExpiresAt",
       "type": "DateTimeOffset?",
       "isRequired": false,
-      "description": "Callback invoked when sharing is enabled or disabled."
+      "description": "Optional link expiration time."
     },
     {
       "name": "ShowQrCode",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Optional link expiration time."
+      "description": "Whether a QR code is rendered."
     }
   ]
 }

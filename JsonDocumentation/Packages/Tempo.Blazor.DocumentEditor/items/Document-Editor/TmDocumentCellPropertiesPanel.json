@@ -21,7 +21,7 @@
       "name": "CellChanged",
       "type": "EventCallback<TableCellContent>",
       "isRequired": false,
-      "description": "Current cell content."
+      "description": "Raised when cell properties change."
     },
     {
       "name": "TestIdRoot",

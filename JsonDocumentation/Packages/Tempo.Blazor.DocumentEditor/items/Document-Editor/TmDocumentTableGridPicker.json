@@ -21,7 +21,7 @@
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the user chooses a table size."
+      "description": "Raised when the picker should close without inserting a table."
     }
   ]
 }

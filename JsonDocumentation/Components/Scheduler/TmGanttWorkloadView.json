@@ -33,7 +33,7 @@
       "type": "DateTime",
       "isRequired": false,
       "default": "DateTime.Today",
-      "description": "Today's date in the display zone — caps the rolling window at (today − 7 days) and seeds it when no data exists. TmGantt passes the user-zone today."
+      "description": "Today's date in the display zone — caps the rolling window at (today − 7 days) and seeds it when no data exists. TmGantt passes the user-zone today; defaults to Today."
     }
   ]
 }

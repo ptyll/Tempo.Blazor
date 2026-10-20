@@ -107,7 +107,7 @@
       "name": "OnSelectionChange",
       "type": "EventCallback<IReadOnlySet<object>>",
       "isRequired": false,
-      "description": "Fires when a row is clicked (only when is true)."
+      "description": "Fires when the selection changes (multi-select mode)."
     },
     {
       "name": "PageSize",

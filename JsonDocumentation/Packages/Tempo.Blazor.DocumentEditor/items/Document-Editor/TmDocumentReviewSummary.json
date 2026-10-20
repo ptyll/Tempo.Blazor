@@ -21,19 +21,19 @@
       "name": "OpenCommentCount",
       "type": "int",
       "isRequired": false,
-      "description": "Number of pending tracked changes."
+      "description": "Number of open comment threads."
     },
     {
       "name": "OpenComments",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Number of open comment threads."
+      "description": "Raised when the comments panel should open."
     },
     {
       "name": "OpenRevisions",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the comments panel should open."
+      "description": "Raised when the revisions panel should open."
     }
   ]
 }

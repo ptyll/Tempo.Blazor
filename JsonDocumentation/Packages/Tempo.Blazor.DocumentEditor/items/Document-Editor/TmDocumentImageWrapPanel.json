@@ -22,109 +22,109 @@
       "name": "CurrentHorizontalPosition",
       "type": "DocumentImageHorizontalPosition?",
       "isRequired": false,
-      "description": "Current text wrapping mode for the selected image."
+      "description": "Current horizontal position for non-inline image wrapping."
     },
     {
       "name": "DistanceBottom",
       "type": "double",
       "isRequired": false,
-      "description": "Current top text distance around the image."
+      "description": "Current bottom text distance around the image."
     },
     {
       "name": "DistanceLeft",
       "type": "double",
       "isRequired": false,
-      "description": "Current horizontal position for non-inline image wrapping."
+      "description": "Current left text distance around the image."
     },
     {
       "name": "DistanceRight",
       "type": "double",
       "isRequired": false,
-      "description": "Current left text distance around the image."
+      "description": "Current right text distance around the image."
     },
     {
       "name": "DistanceTop",
       "type": "double",
       "isRequired": false,
-      "description": "Current right text distance around the image."
+      "description": "Current top text distance around the image."
     },
     {
       "name": "LockAnchor",
       "type": "bool",
       "isRequired": false,
-      "description": "Current bottom text distance around the image."
+      "description": "Whether the selected image anchor is locked."
     },
     {
       "name": "OnAltTextRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the image anchor lock changes."
+      "description": "Raised when the alt text action is requested."
     },
     {
       "name": "OnCaptionToggle",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the alt text action is requested."
+      "description": "Raised when the caption toggle is requested."
     },
     {
       "name": "OnDelete",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the replace image action is requested."
+      "description": "Raised when the delete image action is requested."
     },
     {
       "name": "OnDistanceBottomChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when the top text distance changes."
+      "description": "Raised when the bottom text distance changes."
     },
     {
       "name": "OnDistanceLeftChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when the image horizontal position changes."
+      "description": "Raised when the left text distance changes."
     },
     {
       "name": "OnDistanceRightChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when the left text distance changes."
+      "description": "Raised when the right text distance changes."
     },
     {
       "name": "OnDistanceTopChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when the right text distance changes."
+      "description": "Raised when the top text distance changes."
     },
     {
       "name": "OnHorizontalPositionChanged",
       "type": "EventCallback<DocumentImageHorizontalPosition>",
       "isRequired": false,
-      "description": "Raised when the image wrap mode changes."
+      "description": "Raised when the image horizontal position changes."
     },
     {
       "name": "OnLockAnchorChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Raised when the bottom text distance changes."
+      "description": "Raised when the image anchor lock changes."
     },
     {
       "name": "OnMoreOptionsRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the delete image action is requested."
+      "description": "Raised when more image options are requested."
     },
     {
       "name": "OnReplaceRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the caption toggle is requested."
+      "description": "Raised when the replace image action is requested."
     },
     {
       "name": "OnWrapModeChanged",
       "type": "EventCallback<DocumentWrapMode>",
       "isRequired": false,
-      "description": "Whether the selected image anchor is locked."
+      "description": "Raised when the image wrap mode changes."
     }
   ]
 }

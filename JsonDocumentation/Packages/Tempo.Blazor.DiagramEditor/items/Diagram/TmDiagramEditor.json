@@ -59,7 +59,7 @@
       "name": "RecentStencilIdsChanged",
       "type": "EventCallback<IReadOnlyList<string>>",
       "isRequired": false,
-      "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog."
+      "description": "Raised with the updated recents (newest first) after the user connects a shape through the connect dialog. In controlled usage the host feeds the value back through RecentStencilIds (a @bind does this automatically); the editor adopts it only when the reference changes, so a stale render can never clobber a just-added recent."
     },
     {
       "name": "ReadOnly",
@@ -119,14 +119,14 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Show the status bar below the canvas (zoom controls, read-only toggle)."
+      "description": "Show the status bar below the canvas (zoom controls, read-only toggle). Default true."
     },
     {
       "name": "ShowTitle",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Show the editable document title in the header. Hosts hide it through this parameter — never through CSS selectors (the title is deliberately outside the toolbar group contract)."
+      "description": "Show the editable document title in the header. Default true. Hosts hide it through this parameter — never through CSS selectors (the title is deliberately outside the toolbar group contract)."
     },
     {
       "name": "HeaderStart",

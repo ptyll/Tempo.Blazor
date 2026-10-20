@@ -63,7 +63,7 @@
       "name": "ResultCountProvider",
       "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
       "isRequired": false,
-      "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down."
+      "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down. An existing Func variable binds directly."
     }
   ],
   "cssClasses": [

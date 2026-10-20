@@ -23,49 +23,49 @@
       "type": "ColumnAlign",
       "isRequired": false,
       "default": "ColumnAlign.Left",
-      "description": "Column width CSS value (e.g. \"200px\", \"20%\")."
+      "description": "Horizontal text alignment in cells."
     },
     {
       "name": "CellTemplate",
       "type": "RenderFragment<TItem>?",
       "isRequired": false,
-      "description": "Field accessor that returns the cell value for a given row item."
+      "description": "Optional custom cell template. When set, overrides Field rendering."
     },
     {
       "name": "CssClass",
       "type": "string?",
       "isRequired": false,
-      "description": "Horizontal text alignment in cells."
+      "description": "Additional CSS class applied to each data cell in this column."
     },
     {
       "name": "Editable",
       "type": "bool",
       "isRequired": false,
-      "description": "Optional custom cell template. When set, overrides rendering."
+      "description": "Whether this column supports inline editing."
     },
     {
       "name": "EditTemplate",
       "type": "RenderFragment<TItem>?",
       "isRequired": false,
-      "description": "Whether this column supports inline editing."
+      "description": "Template rendered when the row is in edit mode. Replaces CellTemplate and Field."
     },
     {
       "name": "Field",
       "type": "Func<TItem, object?>?",
       "isRequired": false,
-      "description": "Column header text."
+      "description": "Field accessor that returns the cell value for a given row item."
     },
     {
       "name": "Format",
       "type": "string?",
       "isRequired": false,
-      "description": "Custom header render fragment (replaces plain text when set)."
+      "description": "Optional .NET format string applied to the cell value (e.g. \"{0:C0}\")."
     },
     {
       "name": "HeaderTemplate",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Additional CSS class applied to each data cell in this column."
+      "description": "Custom header render fragment (replaces plain Title text when set)."
     },
     {
       "name": "Width",

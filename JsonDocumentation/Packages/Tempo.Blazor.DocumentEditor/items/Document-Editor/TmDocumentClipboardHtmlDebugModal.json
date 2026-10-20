@@ -21,31 +21,31 @@
       "name": "Html",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the modal is open."
+      "description": "Legacy HTML content to display when no raw clipboard HTML is provided."
     },
     {
       "name": "NormalizedJson",
       "type": "string?",
       "isRequired": false,
-      "description": "Raw HTML captured from the last clipboard paste."
+      "description": "Normalized Tempo block JSON from the last clipboard paste."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Clipboard pipeline warnings from the last clipboard paste."
+      "description": "Raised when the modal should close."
     },
     {
       "name": "RawHtml",
       "type": "string?",
       "isRequired": false,
-      "description": "Legacy HTML content to display when no raw clipboard HTML is provided."
+      "description": "Raw HTML captured from the last clipboard paste."
     },
     {
       "name": "WarningsJson",
       "type": "string?",
       "isRequired": false,
-      "description": "Normalized Tempo block JSON from the last clipboard paste."
+      "description": "Clipboard pipeline warnings from the last clipboard paste."
     }
   ]
 }

@@ -22,88 +22,88 @@
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Placeholder text."
+      "description": "Accessible label for the textarea."
     },
     {
       "name": "AutoFocus",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to show a cancel button."
+      "description": "Whether the textarea should request focus when rendered."
     },
     {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback invoked when editing is canceled."
+      "description": "Additional CSS class."
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Textarea row count."
+      "description": "Whether the composer is disabled."
     },
     {
       "name": "MentionsChanged",
       "type": "EventCallback<IReadOnlyList<DocumentCommentMention>>",
       "isRequired": false,
-      "description": "Users available for mention suggestions."
+      "description": "Callback invoked when the selected mention list changes."
     },
     {
       "name": "MentionUsers",
       "type": "IReadOnlyList<DocumentCommentUser>",
       "isRequired": false,
       "default": "[]",
-      "description": "Whether Enter submits the composer when mention selection is not open. Defaults to false."
+      "description": "Users available for mention suggestions."
     },
     {
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Callback invoked when the text is submitted."
+      "description": "Callback invoked when editing is canceled."
     },
     {
       "name": "OnSubmit",
       "type": "EventCallback<DocumentCommentComposerSubmitEventArgs>",
       "isRequired": false,
-      "description": "Callback invoked when the selected mention list changes."
+      "description": "Callback invoked when the text is submitted."
     },
     {
       "name": "Placeholder",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback invoked when the text changes."
+      "description": "Placeholder text."
     },
     {
       "name": "Rows",
       "type": "int",
       "isRequired": false,
       "default": "3",
-      "description": "Submit button label."
+      "description": "Textarea row count."
     },
     {
       "name": "ShowCancel",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the composer is disabled."
+      "description": "Whether to show a cancel button."
     },
     {
       "name": "SubmitOnEnter",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the textarea should request focus when rendered."
+      "description": "Whether Enter submits the composer when mention selection is not open. Defaults to false."
     },
     {
       "name": "SubmitText",
       "type": "string?",
       "isRequired": false,
-      "description": "Accessible label for the textarea."
+      "description": "Submit button label."
     },
     {
       "name": "ValueChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Current text value."
+      "description": "Callback invoked when the text changes."
     }
   ]
 }

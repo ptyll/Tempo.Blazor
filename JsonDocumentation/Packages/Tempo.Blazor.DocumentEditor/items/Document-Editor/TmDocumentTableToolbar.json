@@ -21,55 +21,55 @@
       "name": "CellProperties",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when table properties should open."
+      "description": "Raised when cell properties should open."
     },
     {
       "name": "DeleteColumn",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the current row should be deleted."
+      "description": "Raised when the current column should be deleted."
     },
     {
       "name": "DeleteRow",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a column should be inserted after the current column."
+      "description": "Raised when the current row should be deleted."
     },
     {
       "name": "InsertColumnAfter",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a column should be inserted before the current column."
+      "description": "Raised when a column should be inserted after the current column."
     },
     {
       "name": "InsertColumnBefore",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a row should be inserted after the current row."
+      "description": "Raised when a column should be inserted before the current column."
     },
     {
       "name": "InsertRowAfter",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a row should be inserted before the current row."
+      "description": "Raised when a row should be inserted after the current row."
     },
     {
       "name": "MergeCells",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the current column should be deleted."
+      "description": "Raised when selected cells should merge."
     },
     {
       "name": "SplitCell",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when selected cells should merge."
+      "description": "Raised when the current merged cell should split."
     },
     {
       "name": "TableProperties",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the current merged cell should split."
+      "description": "Raised when table properties should open."
     }
   ]
 }

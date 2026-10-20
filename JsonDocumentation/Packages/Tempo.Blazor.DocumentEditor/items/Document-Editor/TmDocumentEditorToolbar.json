@@ -21,246 +21,246 @@
       "name": "ActiveHeaderFooterScopeLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Logical editor region currently holding the caret."
+      "description": "Human-readable label for the currently edited header/footer scope."
     },
     {
       "name": "ActiveRegion",
       "type": "string",
       "isRequired": false,
       "default": "\"Body\"",
-      "description": "Whether advanced canvas field and cross-reference controls are visible."
+      "description": "Logical editor region currently holding the caret."
     },
     {
       "name": "AllCapsState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current small caps formatting state for the selection."
+      "description": "Current all caps formatting state for the selection."
     },
     {
       "name": "BoldState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Whether debug tools (viewDocumentJson etc.) are available."
+      "description": "Current bold formatting state for the selection."
     },
     {
       "name": "BulletListActive",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether selected paragraphs have mixed spacing after values."
+      "description": "Whether the current paragraph is a bulleted list item."
     },
     {
       "name": "CanBrowseImageAssets",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether provider-backed image uploads are available."
+      "description": "Whether provider-backed image asset browsing is available."
     },
     {
       "name": "CanComment",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Current tracked-change display mode."
+      "description": "Whether comment actions are currently available."
     },
     {
       "name": "CanCompareDocuments",
       "type": "bool",
       "isRequired": false,
-      "description": "Feature names that should be hidden from this toolbar instance."
+      "description": "Whether arbitrary document comparison is available."
     },
     {
       "name": "CanExportDocx",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether DOCX import is available through a host format provider."
+      "description": "Whether DOCX export is available through a host format provider."
     },
     {
       "name": "CanExportPdf",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether template preview can be toggled."
+      "description": "Whether PDF export is available through a host provider."
     },
     {
       "name": "CanImportDocx",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether a PDF export request is running."
+      "description": "Whether DOCX import is available through a host format provider."
     },
     {
       "name": "CanPreviewTemplate",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether template preview is currently active."
+      "description": "Whether template preview can be toggled."
     },
     {
       "name": "CanRedo",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether undo is currently available."
+      "description": "Whether redo is currently available."
     },
     {
       "name": "CanTrackChanges",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether tracked changes are enabled."
+      "description": "Whether tracked changes can be toggled."
     },
     {
       "name": "CanUndo",
       "type": "bool",
       "isRequired": false,
-      "description": "Timestamp of the latest successful save."
+      "description": "Whether undo is currently available."
     },
     {
       "name": "CanUploadImages",
       "type": "bool",
       "isRequired": false,
-      "description": "Raised when the image insert flow should open."
+      "description": "Whether provider-backed image uploads are available."
     },
     {
       "name": "CurrentBlockStyle",
       "type": "string?",
       "isRequired": false,
-      "description": "R.4.8 — show the paragraph (block) style picker (core engine preview)."
+      "description": "R.4.8 — current paragraph style name (Normal/Title/Heading1…) for the picker."
     },
     {
       "name": "CurrentFontFamily",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether selected paragraphs have mixed alignment."
+      "description": "Current font family reported by the JS selection runtime."
     },
     {
       "name": "CurrentFontSize",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether selected text has mixed font families."
+      "description": "Current font size reported by the JS selection runtime."
     },
     {
       "name": "CurrentHighlightColor",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether selected text has mixed text colors."
+      "description": "Current highlight color reported by the JS selection runtime."
     },
     {
       "name": "CurrentLineSpacing",
       "type": "double",
       "isRequired": false,
       "default": "1",
-      "description": "Whether selected text has mixed highlight colors."
+      "description": "Current line spacing reported by the JS selection runtime."
     },
     {
       "name": "CurrentSpacingAfter",
       "type": "double",
       "isRequired": false,
-      "description": "Whether selected paragraphs have mixed spacing before values."
+      "description": "Current paragraph spacing after reported by the JS selection runtime."
     },
     {
       "name": "CurrentSpacingBefore",
       "type": "double",
       "isRequired": false,
-      "description": "Whether selected paragraphs have mixed line spacing."
+      "description": "Current paragraph spacing before reported by the JS selection runtime."
     },
     {
       "name": "CurrentTextColor",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether selected text has mixed font sizes."
+      "description": "Current text color reported by the JS selection runtime."
     },
     {
       "name": "DifferentFirstPage",
       "type": "bool",
       "isRequired": false,
-      "description": "Raised when combined page, column, or line-numbering setup changes through the inspector."
+      "description": "Whether the current section uses a different first-page header/footer."
     },
     {
       "name": "DifferentFirstPageChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Whether the current section uses a different first-page header/footer."
+      "description": "Raised when different first-page mode changes."
     },
     {
       "name": "DifferentOddAndEvenPages",
       "type": "bool",
       "isRequired": false,
-      "description": "Raised when different first-page mode changes."
+      "description": "Whether the current section uses different odd/even headers and footers."
     },
     {
       "name": "DifferentOddAndEvenPagesChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Whether the current section uses different odd/even headers and footers."
+      "description": "Raised when different odd/even mode changes."
     },
     {
       "name": "DisabledFeatures",
       "type": "IReadOnlyCollection<string>?",
       "isRequired": false,
-      "description": "Optional template preview status text."
+      "description": "Feature names that should be hidden from this toolbar instance."
     },
     {
       "name": "DoubleStrikethroughState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current all caps formatting state for the selection."
+      "description": "Current double strikethrough formatting state for the selection."
     },
     {
       "name": "FontFamilies",
       "type": "IReadOnlyList<DocumentFontFamily>",
       "isRequired": false,
       "default": "[]",
-      "description": "Whether selected paragraphs have mixed list states."
+      "description": "Font families available in the font selector."
     },
     {
       "name": "FontFamilyMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current font family reported by the JS selection runtime."
+      "description": "Whether selected text has mixed font families."
     },
     {
       "name": "FontSizeMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current font size reported by the JS selection runtime."
+      "description": "Whether selected text has mixed font sizes."
     },
     {
       "name": "HighlightColorMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current highlight color reported by the JS selection runtime."
+      "description": "Whether selected text has mixed highlight colors."
     },
     {
       "name": "IsDirty",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the editor is currently saving."
+      "description": "Whether the document has local unsaved changes."
     },
     {
       "name": "IsDocumentProtected",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether tracked changes can be toggled."
+      "description": "Whether the document is currently in protected (restricted-editing) mode."
     },
     {
       "name": "IsExportingDocx",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether a DOCX import request is running."
+      "description": "Whether a DOCX export request is running."
     },
     {
       "name": "IsExportingPdf",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether PDF export is available through a host provider."
+      "description": "Whether a PDF export request is running."
     },
     {
       "name": "IsFullscreen",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether non-printing characters are shown in the WYSIWYG view."
+      "description": "Whether the editor is in fullscreen mode."
     },
     {
       "name": "IsImportingDocx",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether DOCX export is available through a host format provider."
+      "description": "Whether a DOCX import request is running."
     },
     {
       "name": "IsSaving",
@@ -271,55 +271,55 @@
       "name": "ItalicState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current bold formatting state for the selection."
+      "description": "Current italic formatting state for the selection."
     },
     {
       "name": "LastSavedAt",
       "type": "DateTimeOffset?",
       "isRequired": false,
-      "description": "Optional save status text."
+      "description": "Timestamp of the latest successful save."
     },
     {
       "name": "LineNumbering",
       "type": "DocumentLineNumbering?",
       "isRequired": false,
-      "description": "Current section column settings for the page layout inspector."
+      "description": "Current section line numbering settings for the page layout inspector."
     },
     {
       "name": "LineSpacingMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current line spacing reported by the JS selection runtime."
+      "description": "Whether selected paragraphs have mixed line spacing."
     },
     {
       "name": "LinkInfoProvider",
       "type": "Func<Task<WysiwygLinkInfo?>>?",
       "isRequired": false,
-      "description": "Raised when the current link should be removed."
+      "description": "Optional callback used to load link metadata for the current selection."
     },
     {
       "name": "ListMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the current paragraph is a numbered list item."
+      "description": "Whether selected paragraphs have mixed list states."
     },
     {
       "name": "NextRedoDescription",
       "type": "string?",
       "isRequired": false,
-      "description": "Description of the next undo action."
+      "description": "Description of the next redo action."
     },
     {
       "name": "NextUndoDescription",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether redo is currently available."
+      "description": "Description of the next undo action."
     },
     {
       "name": "NumberedListActive",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the current paragraph is a bulleted list item."
+      "description": "Whether the current paragraph is a numbered list item."
     },
     {
       "name": "OnInsertImageUrl",
@@ -331,536 +331,536 @@
       "name": "OnAddComment",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the tracked-change display mode changes."
+      "description": "Raised when adding a comment is requested."
     },
     {
       "name": "OnAllCaps",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when small caps formatting is requested."
+      "description": "Raised when all caps formatting is requested."
     },
     {
       "name": "OnApplyHeaderFooterPreset",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when a document-author field should be inserted."
+      "description": "Raised when a header/footer preset should be inserted."
     },
     {
       "name": "OnBlockStyleChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "R.4.8 — current paragraph style name (Normal/Title/Heading1…) for the picker."
+      "description": "R.4.8 — raised when the block-style picker changes (style name)."
     },
     {
       "name": "OnBold",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when redo is requested."
+      "description": "Raised when bold formatting is requested."
     },
     {
       "name": "OnChangeCase",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when font size decrease is requested."
+      "description": "Raised when a change-case variant is selected."
     },
     {
       "name": "OnClearFormatting",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Optional callback used to load link metadata for the current selection."
+      "description": "Raised when clear formatting is requested."
     },
     {
       "name": "OnCloseHeaderFooter",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the versions side panel tab should open."
+      "description": "Raised when header/footer editing should close and focus should return to body."
     },
     {
       "name": "OnCompareDocuments",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the revisions side panel tab should open."
+      "description": "Raised when document comparison is requested."
     },
     {
       "name": "OnDecreaseFontSize",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when font size increase is requested."
+      "description": "Raised when font size decrease is requested."
     },
     {
       "name": "OnDecreaseIndent",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when paragraph indent should increase."
+      "description": "Raised when paragraph indent should decrease."
     },
     {
       "name": "OnDoubleStrikethrough",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when all caps formatting is requested."
+      "description": "Raised when double strikethrough formatting is requested."
     },
     {
       "name": "OnExportDocx",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a DOCX package is selected for import."
+      "description": "Raised when DOCX export is requested."
     },
     {
       "name": "OnExportPdf",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when template preview should be toggled."
+      "description": "Raised when PDF export is requested."
     },
     {
       "name": "OnFontFamilyChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when a change-case variant is selected."
+      "description": "Raised when the font family changes."
     },
     {
       "name": "OnFontSizeChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when the font family changes."
+      "description": "Raised when the font size changes."
     },
     {
       "name": "OnFullscreenToggle",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when non-printing characters should be toggled."
+      "description": "Raised when the fullscreen toggle is clicked."
     },
     {
       "name": "OnHighlightColorChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the text color changes."
+      "description": "Raised when the highlight color changes."
     },
     {
       "name": "OnImportDocx",
       "type": "EventCallback<InputFileChangeEventArgs>",
       "isRequired": false,
-      "description": "Raised when PDF export is requested."
+      "description": "Raised when a DOCX package is selected for import."
     },
     {
       "name": "OnIncreaseFontSize",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when double strikethrough formatting is requested."
+      "description": "Raised when font size increase is requested."
     },
     {
       "name": "OnIncreaseIndent",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when paragraph spacing after changes."
+      "description": "Raised when paragraph indent should increase."
     },
     {
       "name": "OnInsertAuthorField",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a document-title field should be inserted."
+      "description": "Raised when a document-author field should be inserted."
     },
     {
       "name": "OnInsertBibliography",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the user inserts a generated table of contents."
+      "description": "Raised when a generated bibliography should be inserted."
     },
     {
       "name": "OnInsertCaption",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a table should be inserted (legacy, 2×2 default)."
+      "description": "Raised when a generated caption should be inserted."
     },
     {
       "name": "OnInsertCrossReference",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a generated caption should be inserted."
+      "description": "Raised when a cross-reference should be inserted."
     },
     {
       "name": "OnInsertDateField",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a page X of Y field should be inserted."
+      "description": "Raised when a date field should be inserted."
     },
     {
       "name": "OnInsertDocumentTitleField",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a date field should be inserted."
+      "description": "Raised when a document-title field should be inserted."
     },
     {
       "name": "OnInsertEndnote",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a footnote should be inserted at the current selection."
+      "description": "Raised when an endnote should be inserted at the current selection."
     },
     {
       "name": "OnInsertEquation",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the signing-fields toolbar button inserts a signing field (plan S2.19)."
+      "description": "Raised when a predefined equation gallery item should be inserted."
     },
     {
       "name": "OnInsertFootnote",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a predefined symbol or emoji palette item should be inserted."
+      "description": "Raised when a footnote should be inserted at the current selection."
     },
     {
       "name": "OnInsertImage",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the grid picker selects dimensions for table insertion."
+      "description": "Raised when the image insert flow should open."
     },
     {
       "name": "OnInsertImageAsset",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when upload image insertion is requested from the split menu."
+      "description": "Raised when asset picker image insertion is requested from the split menu."
     },
     {
       "name": "OnInsertImageUpload",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when URL image insertion is requested from the split menu."
+      "description": "Raised when upload image insertion is requested from the split menu."
     },
     {
       "name": "OnInsertPageBreak",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when asset picker image insertion is requested from the split menu."
+      "description": "Raised when a page break should be inserted at the current selection."
     },
     {
       "name": "OnInsertPageCount",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a page-number field should be inserted."
+      "description": "Raised when a total-page-count field should be inserted."
     },
     {
       "name": "OnInsertPageNumber",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when an endnote should be inserted at the current selection."
+      "description": "Raised when a page-number field should be inserted."
     },
     {
       "name": "OnInsertPageXOfY",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a total-page-count field should be inserted."
+      "description": "Raised when a page X of Y field should be inserted."
     },
     {
       "name": "OnInsertSigningField",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a page break should be inserted at the current selection."
+      "description": "Raised when the signing-fields toolbar button inserts a signing field (plan S2.19)."
     },
     {
       "name": "OnInsertSymbol",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when a predefined equation gallery item should be inserted."
+      "description": "Raised when a predefined symbol or emoji palette item should be inserted."
     },
     {
       "name": "OnInsertTable",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the insert panel should be toggled."
+      "description": "Raised when a table should be inserted (legacy, 2×2 default)."
     },
     {
       "name": "OnInsertTableOfContents",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a generated table of figures should be inserted."
+      "description": "Raised when the user inserts a generated table of contents."
     },
     {
       "name": "OnInsertTableOfFigures",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a cross-reference should be inserted."
+      "description": "Raised when a generated table of figures should be inserted."
     },
     {
       "name": "OnInsertTableWithDimensions",
       "type": "EventCallback<(int Rows, int Columns)>",
       "isRequired": false,
-      "description": "Raised when all document fields should be refreshed."
+      "description": "Raised when the grid picker selects dimensions for table insertion."
     },
     {
       "name": "OnItalic",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when bold formatting is requested."
+      "description": "Raised when italic formatting is requested."
     },
     {
       "name": "OnLineSpacingChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when paragraph alignment changes."
+      "description": "Raised when line spacing changes."
     },
     {
       "name": "OnLink",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when numbered list formatting should be toggled."
+      "description": "Raised when a link URL is submitted."
     },
     {
       "name": "OnLinkApplied",
       "type": "EventCallback<WysiwygLinkPayload>",
       "isRequired": false,
-      "description": "Raised when a link URL is submitted."
+      "description": "Raised when a link URL and title are submitted."
     },
     {
       "name": "OnLinkRemoved",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a link URL and title are submitted."
+      "description": "Raised when the current link should be removed."
     },
     {
       "name": "OnMarkEditableRegion",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when document protection should be toggled."
+      "description": "Raised when the user wants to mark the current selection as an editable region."
     },
     {
       "name": "OnOpenComments",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when adding a comment is requested."
+      "description": "Raised when the comments side panel tab should open."
     },
     {
       "name": "OnOpenPrintPreview",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the fullscreen toggle is clicked."
+      "description": "Raised when canvas print preview should be opened."
     },
     {
       "name": "OnOpenRevisions",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the comments side panel tab should open."
+      "description": "Raised when the revisions side panel tab should open."
     },
     {
       "name": "OnOpenVersions",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when DOCX export is requested."
+      "description": "Raised when the versions side panel tab should open."
     },
     {
       "name": "OnParagraphAlignmentChanged",
       "type": "EventCallback<DocumentTextAlignment>",
       "isRequired": false,
-      "description": "Raised when the highlight color changes."
+      "description": "Raised when paragraph alignment changes."
     },
     {
       "name": "OnPrintDocument",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when canvas print preview should be opened."
+      "description": "Raised when the current canvas document should be sent to the browser print dialog."
     },
     {
       "name": "OnProtectDocument",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when document comparison is requested."
+      "description": "Raised when document protection should be toggled."
     },
     {
       "name": "OnRedo",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when undo is requested."
+      "description": "Raised when redo is requested."
     },
     {
       "name": "OnSave",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when page-width zoom is requested."
+      "description": "Raised when save is requested."
     },
     {
       "name": "OnShowBlocksToggle",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the user wants to mark the current selection as an editable region."
+      "description": "Raised when the show-blocks toggle is clicked."
     },
     {
       "name": "OnSmallCaps",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when subscript formatting is requested."
+      "description": "Raised when small caps formatting is requested."
     },
     {
       "name": "OnSpacingAfterChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when paragraph spacing before changes."
+      "description": "Raised when paragraph spacing after changes."
     },
     {
       "name": "OnSpacingBeforeChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Raised when line spacing changes."
+      "description": "Raised when paragraph spacing before changes."
     },
     {
       "name": "OnStrikethrough",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when underline formatting is requested."
+      "description": "Raised when strikethrough formatting is requested."
     },
     {
       "name": "OnStyleCreatedFromSelection",
       "type": "EventCallback<DocumentStyleDefinition>",
       "isRequired": false,
-      "description": "Raised when a document style definition should be created or updated."
+      "description": "Raised when a new paragraph style should be created from the current selection."
     },
     {
       "name": "OnStyleDefinitionChanged",
       "type": "EventCallback<DocumentStyleDefinition>",
       "isRequired": false,
-      "description": "Whether advanced character formatting controls are visible."
+      "description": "Raised when a document style definition should be created or updated."
     },
     {
       "name": "OnStyleDeleted",
       "type": "EventCallback<DocumentStyleDefinition>",
       "isRequired": false,
-      "description": "Raised when the current document style should be renamed."
+      "description": "Raised when the current document style should be deleted."
     },
     {
       "name": "OnStyleFormattingReset",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the current document style should be deleted."
+      "description": "Raised when direct paragraph formatting should be reset to the current style."
     },
     {
       "name": "OnStyleRenamed",
       "type": "EventCallback<DocumentStyleDefinition>",
       "isRequired": false,
-      "description": "Raised when a new paragraph style should be created from the current selection."
+      "description": "Raised when the current document style should be renamed."
     },
     {
       "name": "OnSubscript",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when superscript formatting is requested."
+      "description": "Raised when subscript formatting is requested."
     },
     {
       "name": "OnSuperscript",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when strikethrough formatting is requested."
+      "description": "Raised when superscript formatting is requested."
     },
     {
       "name": "OnTextColorChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the font size changes."
+      "description": "Raised when the text color changes."
     },
     {
       "name": "OnToggleBulletList",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when paragraph indent should decrease."
+      "description": "Raised when bulleted list formatting should be toggled."
     },
     {
       "name": "OnToggleInsert",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when clear formatting is requested."
+      "description": "Raised when the insert panel should be toggled."
     },
     {
       "name": "OnToggleNonPrintingCharacters",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the show-blocks toggle is clicked."
+      "description": "Raised when non-printing characters should be toggled."
     },
     {
       "name": "OnToggleNumberedList",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when bulleted list formatting should be toggled."
+      "description": "Raised when numbered list formatting should be toggled."
     },
     {
       "name": "OnToggleTemplatePreview",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the view clipboard HTML debug button is clicked."
+      "description": "Raised when template preview should be toggled."
     },
     {
       "name": "OnToggleTrackChanges",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a header/footer preset should be inserted."
+      "description": "Raised when tracked changes should be toggled."
     },
     {
       "name": "OnUnderline",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when italic formatting is requested."
+      "description": "Raised when underline formatting is requested."
     },
     {
       "name": "OnUndo",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when save is requested."
+      "description": "Raised when undo is requested."
     },
     {
       "name": "OnUpdateFields",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a generated bibliography should be inserted."
+      "description": "Raised when all document fields should be refreshed."
     },
     {
       "name": "OnViewClipboardHtml",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the view document JSON debug button is clicked."
+      "description": "Raised when the view clipboard HTML debug button is clicked."
     },
     {
       "name": "OnViewDocumentJson",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the current canvas document should be sent to the browser print dialog."
+      "description": "Raised when the view document JSON debug button is clicked."
     },
     {
       "name": "OnZoomPageWidth",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when zoom percent changes."
+      "description": "Raised when page-width zoom is requested."
     },
     {
       "name": "PageSettings",
       "type": "DocumentPageSettings?",
       "isRequired": false,
-      "description": "Human-readable label for the currently edited header/footer scope."
+      "description": "Current page layout settings for the active section or document."
     },
     {
       "name": "PageSettingsChanged",
       "type": "EventCallback<DocumentPageSettings>",
       "isRequired": false,
-      "description": "Current page layout settings for the active section or document."
+      "description": "Raised when page layout settings are changed through the inspector."
     },
     {
       "name": "PageSetupChanged",
       "type": "EventCallback<DocumentSectionPageSetup>",
       "isRequired": false,
-      "description": "Current section line numbering settings for the page layout inspector."
+      "description": "Raised when combined page, column, or line-numbering setup changes through the inspector."
     },
     {
       "name": "ParagraphAlignment",
       "type": "DocumentTextAlignment",
       "isRequired": false,
       "default": "DocumentTextAlignment.Left",
-      "description": "Current double strikethrough formatting state for the selection."
+      "description": "Current paragraph alignment for the selection."
     },
     {
       "name": "ParagraphAlignmentMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current paragraph alignment for the selection."
+      "description": "Whether selected paragraphs have mixed alignment."
     },
     {
       "name": "PrintPreviewActive",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether canvas print preview actions should be displayed in the View tab."
+      "description": "Whether canvas print preview is currently active."
     },
     {
       "name": "ReadOnly",
@@ -873,190 +873,190 @@
       "type": "DocumentReviewDisplayMode",
       "isRequired": false,
       "default": "DocumentReviewDisplayMode.AllMarkup",
-      "description": "Font families available in the font selector."
+      "description": "Current tracked-change display mode."
     },
     {
       "name": "ReviewDisplayModeChanged",
       "type": "EventCallback<DocumentReviewDisplayMode>",
       "isRequired": false,
-      "description": "Raised when tracked changes should be toggled."
+      "description": "Raised when the tracked-change display mode changes."
     },
     {
       "name": "SaveMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the document has local unsaved changes."
+      "description": "Optional save status text."
     },
     {
       "name": "SectionColumns",
       "type": "DocumentSectionColumns?",
       "isRequired": false,
-      "description": "Raised when page layout settings are changed through the inspector."
+      "description": "Current section column settings for the page layout inspector."
     },
     {
       "name": "ShowAdvancedCharacterFormatting",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether advanced paragraph style management controls are visible."
+      "description": "Whether advanced character formatting controls are visible."
     },
     {
       "name": "ShowAdvancedFields",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether arbitrary document comparison is available."
+      "description": "Whether advanced canvas field and cross-reference controls are visible."
     },
     {
       "name": "ShowBlocks",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the document is currently in protected (restricted-editing) mode."
+      "description": "Whether block boundaries are shown in the WYSIWYG view."
     },
     {
       "name": "ShowBlockStyle",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the canvas symbol and emoji palette should be shown in the Insert ribbon."
+      "description": "R.4.8 — show the paragraph (block) style picker (core engine preview)."
     },
     {
       "name": "ShowDebugTools",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the editor is in fullscreen mode."
+      "description": "Whether debug tools (viewDocumentJson etc.) are available."
     },
     {
       "name": "ShowEquationTools",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether provider-backed image asset browsing is available."
+      "description": "Whether the canvas equation gallery should be shown in the Insert ribbon."
     },
     {
       "name": "ShowNonPrintingCharacters",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether block boundaries are shown in the WYSIWYG view."
+      "description": "Whether non-printing characters are shown in the WYSIWYG view."
     },
     {
       "name": "ShowPrintPreviewTools",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether a DOCX export request is running."
+      "description": "Whether canvas print preview actions should be displayed in the View tab."
     },
     {
       "name": "ShowRuler",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Raised when different odd/even mode changes."
+      "description": "Whether the page ruler is visible."
     },
     {
       "name": "ShowRulerChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Whether the page ruler is visible."
+      "description": "Raised when ruler visibility changes."
     },
     {
       "name": "ShowStyleManagement",
       "type": "bool",
       "isRequired": false,
-      "description": "R.4.8 — raised when the block-style picker changes (style name)."
+      "description": "Whether advanced paragraph style management controls are visible."
     },
     {
       "name": "ShowSymbolTools",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the canvas equation gallery should be shown in the Insert ribbon."
+      "description": "Whether the canvas symbol and emoji palette should be shown in the Insert ribbon."
     },
     {
       "name": "SmallCapsState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current subscript formatting state for the selection."
+      "description": "Current small caps formatting state for the selection."
     },
     {
       "name": "SpacingAfterMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current paragraph spacing after reported by the JS selection runtime."
+      "description": "Whether selected paragraphs have mixed spacing after values."
     },
     {
       "name": "SpacingBeforeMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current paragraph spacing before reported by the JS selection runtime."
+      "description": "Whether selected paragraphs have mixed spacing before values."
     },
     {
       "name": "StrikethroughState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current underline formatting state for the selection."
+      "description": "Current strikethrough formatting state for the selection."
     },
     {
       "name": "SubscriptState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current superscript formatting state for the selection."
+      "description": "Current subscript formatting state for the selection."
     },
     {
       "name": "SuperscriptState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current strikethrough formatting state for the selection."
+      "description": "Current superscript formatting state for the selection."
     },
     {
       "name": "TemplatePreviewEnabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether comment actions are currently available."
+      "description": "Whether template preview is currently active."
     },
     {
       "name": "TemplatePreviewMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether canvas print preview is currently active."
+      "description": "Optional template preview status text."
     },
     {
       "name": "TextColorMixed",
       "type": "bool",
       "isRequired": false,
-      "description": "Current text color reported by the JS selection runtime."
+      "description": "Whether selected text has mixed text colors."
     },
     {
       "name": "ToolbarMode",
       "type": "DocumentToolbarMode",
       "isRequired": false,
       "default": "DocumentToolbarMode.Ribbon",
-      "description": "Whether toolbar commands should be disabled for read-only mode."
+      "description": "Visual mode used by the toolbar."
     },
     {
       "name": "TrackChangesEnabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Description of the next redo action."
+      "description": "Whether tracked changes are enabled."
     },
     {
       "name": "UnderlineState",
       "type": "WysiwygFormattingValue",
       "isRequired": true,
-      "description": "Current italic formatting state for the selection."
+      "description": "Current underline formatting state for the selection."
     },
     {
       "name": "ZoomPageWidth",
       "type": "bool",
       "isRequired": false,
-      "description": "Current document zoom percent."
+      "description": "Whether page-width zoom mode is active."
     },
     {
       "name": "ZoomPercent",
       "type": "int",
       "isRequired": false,
       "default": "100",
-      "description": "Raised when ruler visibility changes."
+      "description": "Current document zoom percent."
     },
     {
       "name": "ZoomPercentChanged",
       "type": "EventCallback<int>",
       "isRequired": false,
-      "description": "Whether page-width zoom mode is active."
+      "description": "Raised when zoom percent changes."
     }
   ]
 }

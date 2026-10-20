@@ -21,39 +21,39 @@
       "name": "HighlightedIndex",
       "type": "int",
       "isRequired": false,
-      "description": "Current search query."
+      "description": "Currently highlighted item index."
     },
     {
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,
-      "description": "Currently highlighted item index."
+      "description": "Whether the token provider is loading."
     },
     {
       "name": "OnHighlightedIndexChanged",
       "type": "EventCallback<int>",
       "isRequired": false,
-      "description": "Raised when a token is selected."
+      "description": "Raised when the highlighted item changes."
     },
     {
       "name": "OnTokenSelected",
       "type": "EventCallback<TokenItem>",
       "isRequired": false,
-      "description": "Whether the token provider is loading."
+      "description": "Raised when a token is selected."
     },
     {
       "name": "Query",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Tokens shown in the menu."
+      "description": "Current search query."
     },
     {
       "name": "Tokens",
       "type": "IEnumerable<TokenItem>",
       "isRequired": false,
       "default": "[]",
-      "description": "Whether the token menu is visible."
+      "description": "Tokens shown in the menu."
     }
   ]
 }

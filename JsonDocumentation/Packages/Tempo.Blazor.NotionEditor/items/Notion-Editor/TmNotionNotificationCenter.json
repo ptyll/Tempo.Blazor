@@ -22,20 +22,20 @@
       "type": "string",
       "isRequired": false,
       "default": "\"demo\"",
-      "description": "Additional CSS class on the notification center root."
+      "description": "User whose notifications should be shown in the center."
     },
     {
       "name": "OnDropdownOpenChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "User whose notifications should be shown in the center."
+      "description": "Raised whenever the dropdown is opened or closed."
     },
     {
       "name": "PollInterval",
       "type": "TimeSpan",
       "isRequired": false,
       "default": "TimeSpan.FromMilliseconds(2500)",
-      "description": "Raised whenever the dropdown is opened or closed."
+      "description": "Polling interval for server-backed notification services. Defaults to 2.5 seconds."
     }
   ],
   "subcategory": "UI"

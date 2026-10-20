@@ -142,7 +142,7 @@
       "type": "MobilePresentation",
       "isRequired": false,
       "default": "Auto",
-      "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring."
+      "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
     },
     {
       "name": "FooterLayout",

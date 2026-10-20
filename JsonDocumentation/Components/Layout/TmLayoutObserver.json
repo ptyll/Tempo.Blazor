@@ -49,7 +49,7 @@
       "name": "Style",
       "type": "string?",
       "isRequired": false,
-      "description": "Inline style appended to the root."
+      "description": "Inline style appended to the root. Use it to give the container a width in a demo."
     },
     {
       "name": "IsContainer",
@@ -63,7 +63,7 @@
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Desktop",
-      "description": "The mode rendered before the first measurement: static SSR, prerender and the first frame."
+      "description": "The mode rendered before the first measurement: static SSR, prerender, and the first frame. A cascaded app-level context beats it; see Resolve."
     },
     {
       "name": "Breakpoints",

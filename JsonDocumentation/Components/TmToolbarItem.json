@@ -24,19 +24,19 @@
       "name": "MenuLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "The label of the item's More entry (or, with MenuItems, the header and accessible name of its group). With an OnMenuInvoke handler it makes the item collapsible; without one (and without MenuItems) the item never leaves the bar."
+      "description": "The label of the item's \"More\" entry (or, with MenuItems, the header and accessible name of its group). With an OnMenuInvoke handler it makes the item collapsible; without one (and without MenuItems) the item never leaves the bar."
     },
     {
       "name": "MenuIcon",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional icon of the single More entry (an IconNames value). Ignored with MenuItems."
+      "description": "Optional icon of the single \"More\" entry (an IconNames value). Ignored with MenuItems."
     },
     {
       "name": "OnMenuInvoke",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Runs when the user picks the item's single More entry. Typically opens the full control in a dialog or sheet (then set MenuKeepOpen). Invoked exactly once per activation. Together with a non-empty MenuLabel it makes the item collapsible; a label without a handler (and without MenuItems) never leaves the bar. Ignored with MenuItems."
+      "description": "Runs when the user picks the item's single \"More\" entry. Typically opens the full control in a dialog or sheet (then set MenuKeepOpen). Invoked exactly once per activation. Together with a non-empty MenuLabel it makes the item collapsible; a label without a handler (and without MenuItems) never leaves the bar. Ignored with MenuItems."
     },
     {
       "name": "MenuKeepOpen",
@@ -56,7 +56,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Disables the More entry (or every MenuItems entry). The bar control's own disabled state stays the host's: set both."
+      "description": "Disables the \"More\" entry (or every MenuItems entry). The bar control's own disabled state stays the host's: set both."
     },
     {
       "name": "Class",

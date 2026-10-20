@@ -21,19 +21,19 @@
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the user confirms version creation."
+      "description": "Raised when the dialog should close without creating a version."
     },
     {
       "name": "OnCreate",
       "type": "EventCallback<DocumentVersionDialogResult>",
       "isRequired": false,
-      "description": "Whether major versions require a non-empty description."
+      "description": "Raised when the user confirms version creation."
     },
     {
       "name": "RequireMajorDescription",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether create action is currently running."
+      "description": "Whether major versions require a non-empty description."
     }
   ]
 }

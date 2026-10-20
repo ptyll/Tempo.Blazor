@@ -22,95 +22,95 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether to show the toolbar. Default is true."
+      "description": "Whether to allow downloading the PDF. Default is true."
     },
     {
       "name": "AllowRotation",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to allow downloading the PDF. Default is true."
+      "description": "Whether to allow rotation. Default is false."
     },
     {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback when the view mode changes."
+      "description": "Additional CSS classes for the root element."
     },
     {
       "name": "Height",
       "type": "string?",
       "isRequired": false,
-      "description": "Additional CSS classes for the root element."
+      "description": "Height of the viewer (CSS value). Default is \"600px\"."
     },
     {
       "name": "Page",
       "type": "int",
       "isRequired": false,
       "default": "1",
-      "description": "URL of the PDF document to display."
+      "description": "Current page number (1-based). Supports two-way binding."
     },
     {
       "name": "PageChanged",
       "type": "EventCallback<int>",
       "isRequired": false,
-      "description": "Current page number (1-based). Supports two-way binding."
+      "description": "Callback when the page changes."
     },
     {
       "name": "Scale",
       "type": "double",
       "isRequired": false,
       "default": "1.0",
-      "description": "Callback when the page changes."
+      "description": "Current zoom scale. Supports two-way binding."
     },
     {
       "name": "ScaleChanged",
       "type": "EventCallback<double>",
       "isRequired": false,
-      "description": "Current zoom scale. Supports two-way binding."
+      "description": "Callback when the scale changes."
     },
     {
       "name": "ShowSearch",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to show a thumbnails sidebar. Default is false."
+      "description": "Whether to show a search input. Default is false."
     },
     {
       "name": "ShowTextLayer",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to allow rotation. Default is false."
+      "description": "Whether to render a selectable text layer over the canvas. Default is false."
     },
     {
       "name": "ShowThumbnails",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to render a selectable text layer over the canvas. Default is false."
+      "description": "Whether to show a thumbnails sidebar. Default is false."
     },
     {
       "name": "ShowToolbar",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Callback when the scale changes."
+      "description": "Whether to show the toolbar. Default is true."
     },
     {
       "name": "ShowViewModeToggle",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to show a search input. Default is false."
+      "description": "Whether to show a view mode toggle (single/continuous). Default is false."
     },
     {
       "name": "ViewMode",
       "type": "PdfViewMode",
       "isRequired": false,
       "default": "PdfViewMode.SinglePage",
-      "description": "Whether to show a view mode toggle (single/continuous). Default is false."
+      "description": "Current view mode. Default is SinglePage."
     },
     {
       "name": "ViewModeChanged",
       "type": "EventCallback<PdfViewMode>",
       "isRequired": false,
-      "description": "Current view mode. Default is SinglePage."
+      "description": "Callback when the view mode changes."
     },
     {
       "name": "EnableAnnotations",

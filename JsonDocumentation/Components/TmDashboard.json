@@ -33,7 +33,7 @@
       "name": "Title",
       "type": "string?",
       "isRequired": false,
-      "description": "Heading text in view and edit mode, overriding the current dashboard's name. Without a Title (and with a provider) the heading is visually hidden in view mode, because the switcher trigger already shows the name."
+      "description": "Heading text in view and edit mode, overriding the current dashboard's name. Null keeps the dashboard name. Without a Title (and with a provider) the heading is visually hidden in view mode, because the switcher trigger already shows the name."
     },
     {
       "name": "Subtitle",
@@ -58,21 +58,21 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the header toolbar renders in view mode. Edit mode always renders the toolbar, because it is the only surface carrying Save/Cancel."
+      "description": "Whether the header toolbar renders in view mode. Edit mode always renders the toolbar, because it is the only surface carrying Save/Cancel. Defaults to true."
     },
     {
       "name": "ShowWidgetIcons",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the widget header renders the 40px category icon tile from the widget definition."
+      "description": "Whether the widget header renders the 40px category icon tile from the widget definition. Defaults to true."
     },
     {
       "name": "ShowWidgetDescriptions",
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Whether the widget header renders the definition's Description as a secondary line under the title."
+      "description": "Whether the widget header renders the definition's Description as a secondary line under the title. Defaults to false."
     },
     {
       "name": "WidgetHeaderActions",
@@ -128,7 +128,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether selecting a widget in the widget selector closes it. With false the selector stays open while the host keeps receiving additions; the freshly added widget still gets the highlight and the scroll-into-view once the selector closes."
+      "description": "Whether selecting a widget in the widget selector closes it. Defaults to true (the historical behaviour). With false the selector stays open while the host keeps receiving OnWidgetSelected's additions; the freshly added widget still gets the highlight and the scroll-into-view once the selector closes (DA1)."
     }
   ],
   "cssClasses": [

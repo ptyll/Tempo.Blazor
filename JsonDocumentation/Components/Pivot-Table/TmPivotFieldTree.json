@@ -23,40 +23,40 @@
       "type": "List<string>",
       "isRequired": false,
       "default": "[]",
-      "description": "Keys of fields currently in the row area."
+      "description": "Keys of fields currently in the column area."
     },
     {
       "name": "DataFieldKeys",
       "type": "List<string>",
       "isRequired": false,
       "default": "[]",
-      "description": "Keys of fields currently in the column area."
+      "description": "Keys of fields currently in the data area."
     },
     {
       "name": "FilterFields",
       "type": "Dictionary<string, List<object?>>",
       "isRequired": false,
       "default": "[]",
-      "description": "Keys of fields currently in the data area."
+      "description": "Keys of fields currently in the filter area."
     },
     {
       "name": "OnAddToArea",
       "type": "EventCallback<(string FieldKey, PivotArea Area)>",
       "isRequired": false,
-      "description": "Keys of fields currently in the filter area."
+      "description": "Fires when a field should be added/moved to a target area."
     },
     {
       "name": "OnRemove",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Fires when a field should be added/moved to a target area."
+      "description": "Fires when a field should be removed from all areas."
     },
     {
       "name": "RowFieldKeys",
       "type": "List<string>",
       "isRequired": false,
       "default": "[]",
-      "description": "All available field definitions."
+      "description": "Keys of fields currently in the row area."
     }
   ],
   "typeParameters": [

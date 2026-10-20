@@ -21,13 +21,13 @@
       "name": "ActivePageIndex",
       "type": "int",
       "isRequired": false,
-      "description": "Runtime page metrics reported by the WYSIWYG editor."
+      "description": "Zero-based active page index."
     },
     {
       "name": "OnNavigateToPage",
       "type": "EventCallback<int>",
       "isRequired": false,
-      "description": "Zero-based active page index."
+      "description": "Raised when a page thumbnail is selected."
     }
   ]
 }

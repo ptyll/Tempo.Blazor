@@ -23,51 +23,51 @@
       "name": "Comment",
       "type": "DocumentComment",
       "isRequired": true,
-      "description": "Parent thread id.",
+      "description": "Comment to render.",
       "editorRequired": true
     },
     {
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": true,
-      "description": "Comment to render.",
+      "description": "Current user id for permissions and active reaction styling.",
       "editorRequired": true
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Current user id for permissions and active reaction styling."
+      "description": "Whether item interaction is disabled."
     },
     {
       "name": "OnDeleteRequested",
       "type": "EventCallback<DocumentCommentDeleteRequest>",
       "isRequired": false,
-      "description": "Callback invoked when editing is requested."
+      "description": "Callback invoked when deleting is requested."
     },
     {
       "name": "OnEditRequested",
       "type": "EventCallback<DocumentComment>",
       "isRequired": false,
-      "description": "Callback invoked when picker open state changes."
+      "description": "Callback invoked when editing is requested."
     },
     {
       "name": "OnReactionToggled",
       "type": "EventCallback<DocumentCommentReactionToggleRequest>",
       "isRequired": false,
-      "description": "Callback invoked when deleting is requested."
+      "description": "Callback invoked when a reaction is toggled."
     },
     {
       "name": "PickerOpen",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether item interaction is disabled."
+      "description": "Whether this comment's reaction picker is open."
     },
     {
       "name": "PickerOpenChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Whether this comment's reaction picker is open."
+      "description": "Callback invoked when picker open state changes."
     }
   ]
 }

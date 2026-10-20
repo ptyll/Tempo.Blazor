@@ -21,7 +21,7 @@
       "name": "ApplyText",
       "type": "string?",
       "isRequired": false,
-      "description": "Shows a cancel button next to Apply when is true."
+      "description": "Optional apply button text."
     },
     {
       "name": "CancelText",

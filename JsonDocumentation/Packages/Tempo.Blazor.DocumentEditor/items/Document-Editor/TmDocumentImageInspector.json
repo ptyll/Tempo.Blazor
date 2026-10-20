@@ -21,73 +21,73 @@
       "name": "AlignmentChanged",
       "type": "EventCallback<DocumentImageAlignment>",
       "isRequired": false,
-      "description": "Raised when text wrapping mode changes."
+      "description": "Raised when alignment changes."
     },
     {
       "name": "AltTextChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Image content displayed by the inspector."
+      "description": "Raised when alternative text changes."
     },
     {
       "name": "BringForward",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the object anchor lock changes."
+      "description": "Raised when the image should move one layer forward."
     },
     {
       "name": "CaptionChanged",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the caption should be toggled."
+      "description": "Raised when the image caption text changes."
     },
     {
       "name": "DecorativeChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Raised when alternative text changes."
+      "description": "Raised when decorative image mode changes."
     },
     {
       "name": "LockAnchorChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "Raised when image object position offsets change."
+      "description": "Raised when the object anchor lock changes."
     },
     {
       "name": "PositionChanged",
       "type": "EventCallback<DocumentObjectPosition>",
       "isRequired": false,
-      "description": "Raised when image size changes."
+      "description": "Raised when image object position offsets change."
     },
     {
       "name": "SendBackward",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the image should move one layer forward."
+      "description": "Raised when the image should move one layer backward."
     },
     {
       "name": "SizeChanged",
       "type": "EventCallback<DocumentImageSize>",
       "isRequired": false,
-      "description": "Raised when alignment changes."
+      "description": "Raised when image size changes."
     },
     {
       "name": "ToggleCaption",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when decorative image mode changes."
+      "description": "Raised when the caption should be toggled."
     },
     {
       "name": "UrlChanged",
       "type": "EventCallback<string?>",
       "isRequired": false,
-      "description": "Raised when the image caption text changes."
+      "description": "Raised when the source URL of an URL-backed image changes."
     },
     {
       "name": "WrapModeChanged",
       "type": "EventCallback<DocumentWrapMode>",
       "isRequired": false,
-      "description": "Raised when the source URL of an URL-backed image changes."
+      "description": "Raised when text wrapping mode changes."
     }
   ]
 }

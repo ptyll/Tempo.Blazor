@@ -8,48 +8,274 @@
     "@using Tempo.Blazor.Components.Actions"
   ],
   "parameters": [
-    { "name": "Header", "type": "RenderFragment?", "isRequired": false, "description": "Content of the top header region (a title, breadcrumbs, the primary save action)." },
-    { "name": "Toolbar", "type": "RenderFragment?", "isRequired": false, "description": "Content of the toolbar region below the header. Receives the shell's cascaded TmLayoutContext, so content can adapt. Not rendered on a mobile layout when MobileActions is set." },
-    { "name": "Left", "type": "RenderFragment?", "isRequired": false, "description": "The left panel (a toolbox, a block list). A docked, resizable column on desktop and tablet (a rail when collapsed), part of the mobile panels sheet or tabs." },
-    { "name": "Canvas", "type": "RenderFragment?", "isRequired": false, "description": "The central canvas. Rendered at every layout." },
-    { "name": "Right", "type": "RenderFragment?", "isRequired": false, "description": "The right panel (an inspector, properties). A docked, resizable column on desktop and tablet (a rail when collapsed), part of the mobile panels sheet or tabs." },
-    { "name": "Extra", "type": "RenderFragment?", "isRequired": false, "description": "Optional extra content of the mobile panels sheet: a third tab after Right, so a host can present flat sheet tabs (e.g. Shapes | Properties | Layers) instead of nesting tabs inside the right panel. Opens and closes with the right panel (RightOpen), is selected through ActiveMobilePanel = EditorShellPanel.Extra and renders ONLY in the mobile Sheet presentation — desktop, tablet and the Tabs presentation ignore it. Null (default) keeps the two-panel sheet." },
-    { "name": "ExtraTitle", "type": "string?", "isRequired": false, "description": "The extra panel title — its mobile sheet tab label. Null uses the localized default." },
-    { "name": "StatusBar", "type": "RenderFragment?", "isRequired": false, "description": "Optional status bar content, rendered below the main region (inside it, above the panels sheet, on mobile)." },
-    { "name": "MobileActions", "type": "IReadOnlyList<TmActionItem>?", "isRequired": false, "description": "The shell's mobile actions, rendered through TmMobileActionBar at the bottom of a mobile layout. When set the Toolbar slot is not rendered on mobile (the actions replace it)." },
-    { "name": "LeftOpen", "type": "bool", "isRequired": false, "default": "true", "description": "Whether the left panel is open. Two-way with LeftOpenChanged." },
-    { "name": "LeftOpenChanged", "type": "EventCallback<bool>", "isRequired": false, "description": "Raised when the left panel should open or close (every close path funnels through here)." },
-    { "name": "RightOpen", "type": "bool", "isRequired": false, "default": "true", "description": "Whether the right panel is open. Two-way with RightOpenChanged." },
-    { "name": "RightOpenChanged", "type": "EventCallback<bool>", "isRequired": false, "description": "Raised when the right panel should open or close." },
-    { "name": "CollapsedPanels", "type": "EditorShellPanel", "isRequired": false, "default": "0", "description": "Panels rendered collapsed to a slim rail. Two-way with CollapsedPanelsChanged. On tablet at most one panel is expanded: the shell rails the other and raises the callback." },
-    { "name": "CollapsedPanelsChanged", "type": "EventCallback<EditorShellPanel>", "isRequired": false, "description": "Raised when a panel is collapsed to, or expanded from, its rail." },
-    { "name": "MobilePanelPresentation", "type": "MobilePanelPresentation", "isRequired": false, "default": "Sheet", "description": "How the open panels present on a mobile layout: Sheet (canvas + bottom sheet, with a Left/Right tab strip when both panels are open) or Tabs (a full-region Left | Canvas | Right tablist, no sheet)." },
-    { "name": "LeftTitle", "type": "string?", "isRequired": false, "description": "The left panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label." },
-    { "name": "RightTitle", "type": "string?", "isRequired": false, "description": "The right panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label." },
-    { "name": "LeftWidth", "type": "string", "isRequired": false, "default": "\"280px\"", "description": "Width of the left panel, a CSS pixel length. Two-way with LeftWidthChanged. A width the host sets after a user resize wins over a stored one." },
-    { "name": "LeftWidthChanged", "type": "EventCallback<string>", "isRequired": false, "description": "Raised with the new \"NNNpx\" width when the user resizes the left panel (pointer drag or keyboard on its separator) and when a persisted width is restored on load (a restore counts as a user value)." },
-    { "name": "RightWidth", "type": "string", "isRequired": false, "default": "\"320px\"", "description": "Width of the right panel, a CSS pixel length. Two-way with RightWidthChanged." },
-    { "name": "RightWidthChanged", "type": "EventCallback<string>", "isRequired": false, "description": "Raised with the new \"NNNpx\" width when the user resizes the right panel, and when a persisted width is restored on load." },
-    { "name": "MinLeftWidth", "type": "int", "isRequired": false, "default": "200", "description": "Smallest width in CSS pixels the left panel can be resized to." },
-    { "name": "MaxLeftWidth", "type": "int", "isRequired": false, "default": "480", "description": "Largest width in CSS pixels the left panel can be resized to." },
-    { "name": "MinRightWidth", "type": "int", "isRequired": false, "default": "240", "description": "Smallest width in CSS pixels the right panel can be resized to." },
-    { "name": "MaxRightWidth", "type": "int", "isRequired": false, "default": "560", "description": "Largest width in CSS pixels the right panel can be resized to." },
-    { "name": "MinCanvasWidth", "type": "int", "isRequired": false, "default": "400", "description": "The canvas width in CSS pixels a resize never takes away: a panel stops growing where the canvas would drop below it." },
-    { "name": "Breakpoints", "type": "TmLayoutBreakpoints?", "isRequired": false, "description": "Per-instance layout thresholds. Null uses TmLayoutBreakpoints.Default (mobile below 640, desktop from 1024). An e-mail editor that wants desktop from 1200 and mobile below 768 passes new TmLayoutBreakpoints(768, 1200)." },
-    { "name": "ActiveMobilePanel", "type": "EditorShellPanel", "isRequired": false, "default": "None", "description": "The panel a mobile layout shows: the selected sheet tab (Left or Right) or, in the Tabs presentation, the selected tab (None is the canvas). Two-way with ActiveMobilePanelChanged, so a host can switch to the properties on block selection." },
-    { "name": "ActiveMobilePanelChanged", "type": "EventCallback<EditorShellPanel>", "isRequired": false, "description": "Raised when the user selects another mobile tab." },
-    { "name": "MobileSheetSnapIndex", "type": "int", "isRequired": false, "default": "0", "description": "The snap of the mobile panels sheet: an index into MobileSheetSnapPoints (0 = the lowest snap). Two-way with MobileSheetSnapIndexChanged, so a host can collapse the sheet on an add-block action." },
-    { "name": "MobileSheetSnapIndexChanged", "type": "EventCallback<int>", "isRequired": false, "description": "Raised when a gesture or the keyboard moves the mobile sheet to another snap, and when a layout flip resets it." },
-    { "name": "MobileSheetSnapPoints", "type": "IReadOnlyList<double>?", "isRequired": false, "description": "Fractions (0-1] of the shell's stage the mobile panels sheet snaps to, ascending; MobileSheetSnapIndex indexes this list (0 = the lowest). Default [0.5, 1.0]. Invalid values are dropped and the list is sorted (the TmDrawer rules); an empty result falls back to the default. The lowest snap is also the fraction of the stage the canvas reserves while the sheet is open. On a short stage the 14rem floor applies to the whole sheet panel, capped at the stage height (--tm-editor-shell-sheet-min-block)." },
-    { "name": "CanvasTitle", "type": "string?", "isRequired": false, "description": "The label of the canvas tab in the Tabs presentation. Null uses the localized default." },
-    { "name": "ShowMobilePanelsToggle", "type": "bool", "isRequired": false, "default": "true", "description": "Whether the closed-state mobile panels toggle (the labelled bar naming the hidden panels) renders while the sheet is closed. A host that renders its own mobile action bar (its tiles reopen the panels) sets this to false so the sheet has exactly one reopen path and focus after a close lands on the host's bar." },
-    { "name": "LeftRail", "type": "RenderFragment?", "isRequired": false, "description": "Content of the left panel's collapsed rail, below the expand button (an icon strip of the toolbox for a tablet)." },
-    { "name": "RightRail", "type": "RenderFragment?", "isRequired": false, "description": "Content of the right panel's collapsed rail, below the expand button." },
-    { "name": "PersistWidthsKey", "type": "string?", "isRequired": false, "description": "When set, panel widths the USER resized persist to (and restore from) localStorage under this key. Only user-resized widths are stored (with the host width they were resized from); stored values are validated against the min/max widths and apply only while the host supplies that same width; a width the host supplies explicitly after a user resize wins. A restored width is reported through LeftWidthChanged/RightWidthChanged; a key set after the first render or changed later is loaded when it changes." },
-    { "name": "LayoutMode", "type": "TmLayoutMode", "isRequired": false, "default": "Auto", "description": "The layout the shell renders. Auto measures the shell's own root; a forced value renders that mode without a DOM." },
-    { "name": "InitialMode", "type": "TmLayoutMode", "isRequired": false, "default": "Desktop", "description": "The layout rendered before the first measurement." },
-    { "name": "ResolvedLayoutChanged", "type": "EventCallback<TmLayoutMode>", "isRequired": false, "description": "Raised when the rendered layout changes. The initial value is not a change." },
-    { "name": "Class", "type": "string?", "isRequired": false, "description": "Extra CSS classes for the shell root." }
+    {
+      "name": "Header",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content of the top header region (a title, breadcrumbs, the primary save action)."
+    },
+    {
+      "name": "Toolbar",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content of the toolbar region below the header. Receives the shell's cascaded TmLayoutContext, so content can adapt. Not rendered on a mobile layout when MobileActions is set."
+    },
+    {
+      "name": "Left",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The left panel (a toolbox, a block list). A docked, resizable column on desktop and tablet (a rail when collapsed), part of the mobile panels sheet or tabs."
+    },
+    {
+      "name": "Canvas",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The central canvas. Rendered at every layout."
+    },
+    {
+      "name": "Right",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The right panel (an inspector, properties). A docked, resizable column on desktop and tablet (a rail when collapsed), part of the mobile panels sheet or tabs."
+    },
+    {
+      "name": "Extra",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional extra content of the mobile panels sheet: a third tab after Right, so a host can present flat sheet tabs (e.g. Shapes | Properties | Layers) instead of nesting tabs inside the right panel. Opens and closes with the right panel (RightOpen), is selected through ActiveMobilePanel = EditorShellPanel.Extra and renders ONLY in the mobile Sheet presentation — desktop, tablet and the Tabs presentation ignore it. Null (default) keeps the two-panel sheet."
+    },
+    {
+      "name": "ExtraTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The extra panel title — its mobile sheet tab label. Null uses the localized default."
+    },
+    {
+      "name": "StatusBar",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional status bar content, rendered below the main region (inside it, above the panels sheet, on mobile)."
+    },
+    {
+      "name": "MobileActions",
+      "type": "IReadOnlyList<TmActionItem>?",
+      "isRequired": false,
+      "description": "The shell's mobile actions, rendered through TmMobileActionBar at the bottom of a mobile layout. When set the Toolbar slot is not rendered on mobile (the actions replace it)."
+    },
+    {
+      "name": "LeftOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the left panel is open. Two-way with LeftOpenChanged. Means the same on desktop and tablet; the mobile Tabs presentation ignores it."
+    },
+    {
+      "name": "LeftOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the left panel should open or close (every close path funnels through here)."
+    },
+    {
+      "name": "RightOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the right panel is open. Two-way with RightOpenChanged. Means the same on desktop and tablet; the mobile Tabs presentation ignores it."
+    },
+    {
+      "name": "RightOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the right panel should open or close."
+    },
+    {
+      "name": "CollapsedPanels",
+      "type": "EditorShellPanel",
+      "isRequired": false,
+      "default": "0",
+      "description": "Panels rendered collapsed to a slim rail. Two-way with CollapsedPanelsChanged. On tablet at most one panel is expanded: the shell rails the other and raises the callback."
+    },
+    {
+      "name": "CollapsedPanelsChanged",
+      "type": "EventCallback<EditorShellPanel>",
+      "isRequired": false,
+      "description": "Raised when a panel is collapsed to, or expanded from, its rail."
+    },
+    {
+      "name": "MobilePanelPresentation",
+      "type": "MobilePanelPresentation",
+      "isRequired": false,
+      "default": "Sheet",
+      "description": "How the open panels present on a mobile layout: Sheet (canvas + bottom sheet, with a Left/Right tab strip when both panels are open) or Tabs (a full-region Left | Canvas | Right tablist, no sheet)."
+    },
+    {
+      "name": "LeftTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The left panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label."
+    },
+    {
+      "name": "RightTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The right panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label."
+    },
+    {
+      "name": "LeftWidth",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"280px\"",
+      "description": "Width of the left panel, a CSS pixel length. Two-way with LeftWidthChanged. A width the host sets after a user resize wins over a stored one."
+    },
+    {
+      "name": "LeftWidthChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the new \"NNNpx\" width when the user resizes the left panel (pointer drag or keyboard on its separator) and when a persisted width is restored on load (a restore counts as a user value)."
+    },
+    {
+      "name": "RightWidth",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"320px\"",
+      "description": "Width of the right panel, a CSS pixel length. Two-way with RightWidthChanged."
+    },
+    {
+      "name": "RightWidthChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the new \"NNNpx\" width when the user resizes the right panel, and when a persisted width is restored on load."
+    },
+    {
+      "name": "MinLeftWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "200",
+      "description": "Smallest width, in CSS pixels, the left panel can be resized to. Default 200."
+    },
+    {
+      "name": "MaxLeftWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "480",
+      "description": "Largest width, in CSS pixels, the left panel can be resized to. Default 480."
+    },
+    {
+      "name": "MinRightWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "240",
+      "description": "Smallest width, in CSS pixels, the right panel can be resized to. Default 240."
+    },
+    {
+      "name": "MaxRightWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "560",
+      "description": "Largest width, in CSS pixels, the right panel can be resized to. Default 560."
+    },
+    {
+      "name": "MinCanvasWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "400",
+      "description": "The canvas width in CSS pixels a resize never takes away: a panel stops growing where the canvas would drop below it."
+    },
+    {
+      "name": "Breakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Per-instance layout thresholds. Null uses TmLayoutBreakpoints.Default (mobile below 640, desktop from 1024). An e-mail editor that wants desktop from 1200 and mobile below 768 passes new TmLayoutBreakpoints(768, 1200)."
+    },
+    {
+      "name": "ActiveMobilePanel",
+      "type": "EditorShellPanel",
+      "isRequired": false,
+      "default": "None",
+      "description": "The panel a mobile layout shows: the selected sheet tab (Left or Right) or, in the Tabs presentation, the selected tab (None is the canvas). Two-way with ActiveMobilePanelChanged, so a host can switch to the properties on block selection."
+    },
+    {
+      "name": "ActiveMobilePanelChanged",
+      "type": "EventCallback<EditorShellPanel>",
+      "isRequired": false,
+      "description": "Raised when the user selects another mobile tab."
+    },
+    {
+      "name": "MobileSheetSnapIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "The snap of the mobile panels sheet: an index into MobileSheetSnapPoints (0 = the lowest snap). Two-way with MobileSheetSnapIndexChanged, so a host can collapse the sheet on an add-block action."
+    },
+    {
+      "name": "MobileSheetSnapIndexChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when a gesture or the keyboard moves the mobile sheet to another snap, and when a layout flip resets it."
+    },
+    {
+      "name": "MobileSheetSnapPoints",
+      "type": "IReadOnlyList<double>?",
+      "isRequired": false,
+      "description": "Fractions (0-1] of the shell's stage the mobile panels sheet snaps to, ascending; MobileSheetSnapIndex indexes this list (0 = the lowest). Default [0.5, 1.0]. Invalid values are dropped and the list is sorted (the TmDrawer rules); an empty result falls back to the default. The lowest snap is also the fraction of the stage the canvas reserves while the sheet is open. On a short stage the 14rem floor applies to the whole sheet panel, capped at the stage height (--tm-editor-shell-sheet-min-block)."
+    },
+    {
+      "name": "CanvasTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The label of the canvas tab in the Tabs presentation. Null uses the localized default."
+    },
+    {
+      "name": "ShowMobilePanelsToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the closed-state mobile panels toggle (the labelled bar naming the hidden panels) renders while the sheet is closed. A host that renders its own mobile action bar (its tiles reopen the panels) sets this to false so the sheet has exactly one reopen path and focus after a close lands on the host's bar."
+    },
+    {
+      "name": "LeftRail",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content of the left panel's collapsed rail, below the expand button (an icon strip of the toolbox for a tablet)."
+    },
+    {
+      "name": "RightRail",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content of the right panel's collapsed rail, below the expand button."
+    },
+    {
+      "name": "PersistWidthsKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "When set, panel widths the USER resized persist to (and restore from) localStorage under this key. Only user-resized widths are stored (with the host width they were resized from); stored values are validated against the min/max widths and apply only while the host supplies that same width; a width the host supplies explicitly after a user resize wins. A restored width is reported through LeftWidthChanged/RightWidthChanged; a key set after the first render or changed later is loaded when it changes."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the shell renders. Auto measures the shell's own root; a forced value renders that mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the rendered layout changes. The initial value is not a change."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra CSS classes for the shell root."
+    }
   ],
   "cssClasses": [
     "tm-editor-shell",

@@ -27,7 +27,7 @@
       "name": "Items",
       "type": "List<DockPane>?",
       "isRequired": false,
-      "description": "Child definitions."
+      "description": "Optional data-bound pane list. When set, panes are rendered from this list instead of ChildContent."
     },
     {
       "name": "OnLayoutChanged",
@@ -39,7 +39,7 @@
       "name": "OnPaneClose",
       "type": "EventCallback<DockPane>",
       "isRequired": false,
-      "description": "Template used to render each when is set."
+      "description": "Fires when a pane is closed."
     },
     {
       "name": "OnPaneDock",

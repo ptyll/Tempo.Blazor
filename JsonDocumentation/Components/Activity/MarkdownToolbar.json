@@ -21,13 +21,13 @@
       "name": "ActiveFormats",
       "type": "List<string>",
       "isRequired": true,
-      "description": "Whether the toolbar is disabled."
+      "description": "List of currently active format names returned by tmMarkdownEditor.getActiveFormats() (e.g. \"bold\", \"h2\", \"ul\")."
     },
     {
       "name": "OnFormat",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "List of currently active format names returned by tmMarkdownEditor.getActiveFormats() (e.g. \"bold\", \"h2\", \"ul\")."
+      "description": "Callback fired when a toolbar button is clicked. Argument is the format name."
     }
   ]
 }

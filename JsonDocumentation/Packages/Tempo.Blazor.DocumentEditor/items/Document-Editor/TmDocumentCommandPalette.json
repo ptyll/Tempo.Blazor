@@ -21,19 +21,19 @@
       "name": "Commands",
       "type": "IReadOnlyDictionary<string, DocumentEditorCommandState>?",
       "isRequired": false,
-      "description": "Raised when the command palette should close."
+      "description": "Current command states."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Whether the command palette is visible."
+      "description": "Raised when the command palette should close."
     },
     {
       "name": "OnExecuteCommand",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Current command states."
+      "description": "Raised when a command is selected."
     }
   ]
 }

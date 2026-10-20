@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.Diagram.Templates",
-  "description": "Central registry of all diagram templates. Registered as a singleton DI service.",
+  "description": "Central registry of all diagram templates. Registered as a singleton DI service. Thread-safe: InitializeAsync runs the catalog load once through a Lazy<Task> (ExecutionAndPublication), concurrent callers all await the same load, and the template dictionary is guarded by a lock.",
   "packageId": "Tempo.Blazor.DiagramEditor",
   "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/DiagramTemplateRegistry.cs",
   "documentationStatus": "generated",

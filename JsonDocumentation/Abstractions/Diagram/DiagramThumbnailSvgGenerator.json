@@ -11,7 +11,7 @@
       "name": "Generate",
       "kind": "Method",
       "type": "string",
-      "description": "Generates an SVG string representing the document.",
+      "description": "Generates an SVG string representing the document (labels on, opaque white background, 300×200 viewport).",
       "parameters": [
         {
           "name": "document",

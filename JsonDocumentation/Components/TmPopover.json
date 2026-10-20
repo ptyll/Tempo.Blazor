@@ -25,7 +25,7 @@
       "type": "PopoverPosition",
       "isRequired": false,
       "default": "Bottom",
-      "description": "Position relative to trigger."
+      "description": "Preferred position relative to trigger — the panel flips to the opposite side when there is no room."
     },
     {
       "name": "IsOpen",

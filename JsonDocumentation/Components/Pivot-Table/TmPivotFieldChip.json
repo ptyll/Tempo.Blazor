@@ -22,74 +22,74 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "The area where this chip is currently placed."
+      "description": "Whether the chip can be dragged."
     },
     {
       "name": "Area",
       "type": "PivotArea",
       "isRequired": false,
       "default": "PivotArea.Unused",
-      "description": "The field this chip represents."
+      "description": "The area where this chip is currently placed."
     },
     {
       "name": "OnDragEnd",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Fires when drag starts."
+      "description": "Fires when drag ends."
     },
     {
       "name": "OnDragStart",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Whether to show the remove button."
+      "description": "Fires when drag starts."
     },
     {
       "name": "OnRemoveClick",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Fires when settings button is clicked."
+      "description": "Fires when remove button is clicked."
     },
     {
       "name": "OnSettingsClick",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Fires when sort direction or criterion changes."
+      "description": "Fires when settings button is clicked."
     },
     {
       "name": "OnSortChanged",
       "type": "EventCallback<(PivotSortDirection Direction, PivotSortBy SortBy)>",
       "isRequired": false,
-      "description": "Fires when drag ends."
+      "description": "Fires when sort direction or criterion changes."
     },
     {
       "name": "ShowRemove",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to show the settings button."
+      "description": "Whether to show the remove button."
     },
     {
       "name": "ShowSettings",
       "type": "bool",
       "isRequired": false,
-      "description": "Current sort criterion displayed on the chip."
+      "description": "Whether to show the settings button."
     },
     {
       "name": "ShowSortMenu",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the chip can be dragged."
+      "description": "Whether to show the sort menu button."
     },
     {
       "name": "SortBy",
       "type": "PivotSortBy",
       "isRequired": true,
-      "description": "Current sort direction displayed on the chip."
+      "description": "Current sort criterion displayed on the chip."
     },
     {
       "name": "SortDirection",
       "type": "PivotSortDirection",
       "isRequired": true,
-      "description": "Whether to show the sort menu button."
+      "description": "Current sort direction displayed on the chip."
     }
   ],
   "typeParameters": [

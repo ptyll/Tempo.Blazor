@@ -22,27 +22,27 @@
       "type": "IReadOnlyList<DocumentToolbarOverflowMenuGroup>",
       "isRequired": false,
       "default": "[]",
-      "description": "Current overflow search query."
+      "description": "Grouped overflow menu items."
     },
     {
       "name": "IsOpen",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the toolbar currently has overflowed commands."
+      "description": "Whether the overflow menu is open."
     },
     {
       "name": "MoreCommandsLabel",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Visible text for the More button."
+      "description": "Accessible label for the More commands menu."
     },
     {
       "name": "MoreLabel",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Grouped overflow menu items."
+      "description": "Visible text for the More button."
     },
     {
       "name": "NoResultsLabel",
@@ -55,50 +55,50 @@
       "name": "OnCommandRequested",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the search input changes."
+      "description": "Raised when a command is selected from the menu."
     },
     {
       "name": "OnMenuItemKeyDown",
       "type": "EventCallback<KeyboardEventArgs>",
       "isRequired": false,
-      "description": "Raised when a command is selected from the menu."
+      "description": "Raised when an overflow menu item receives a keydown event."
     },
     {
       "name": "OnMoreKeyDown",
       "type": "EventCallback<KeyboardEventArgs>",
       "isRequired": false,
-      "description": "Raised when the More button is clicked."
+      "description": "Raised when the More button receives a keydown event."
     },
     {
       "name": "OnSearchInput",
       "type": "EventCallback<ChangeEventArgs>",
       "isRequired": false,
-      "description": "Raised when the More button receives a keydown event."
+      "description": "Raised when the search input changes."
     },
     {
       "name": "OnToggle",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Accessible label and placeholder for the search input."
+      "description": "Raised when the More button is clicked."
     },
     {
       "name": "SearchLabel",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Accessible label for the More commands menu."
+      "description": "Accessible label and placeholder for the search input."
     },
     {
       "name": "SearchQuery",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the search box should be shown."
+      "description": "Current overflow search query."
     },
     {
       "name": "ShowSearch",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the overflow menu is open."
+      "description": "Whether the search box should be shown."
     }
   ]
 }

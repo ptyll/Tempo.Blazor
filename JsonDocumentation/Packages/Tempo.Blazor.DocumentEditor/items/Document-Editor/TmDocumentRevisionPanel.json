@@ -22,61 +22,61 @@
       "name": "CanReview",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether a review action is currently running."
+      "description": "Whether the current user can accept or reject revisions."
     },
     {
       "name": "IsBusy",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the panel is loading revision data."
+      "description": "Whether a review action is currently running."
     },
     {
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,
-      "description": "Document revisions to display."
+      "description": "Whether the panel is loading revision data."
     },
     {
       "name": "OnAcceptAllRevisions",
       "type": "EventCallback<DocumentRevisionFilter>",
       "isRequired": false,
-      "description": "Raised when a revision should be rejected."
+      "description": "Raised when all filtered pending revisions should be accepted."
     },
     {
       "name": "OnAcceptRevision",
       "type": "EventCallback<DocumentRevision>",
       "isRequired": false,
-      "description": "Raised when a revision is selected."
+      "description": "Raised when a revision should be accepted."
     },
     {
       "name": "OnRejectAllRevisions",
       "type": "EventCallback<DocumentRevisionFilter>",
       "isRequired": false,
-      "description": "Raised when all filtered pending revisions should be accepted."
+      "description": "Raised when all filtered pending revisions should be rejected."
     },
     {
       "name": "OnRejectRevision",
       "type": "EventCallback<DocumentRevision>",
       "isRequired": false,
-      "description": "Raised when a revision should be accepted."
+      "description": "Raised when a revision should be rejected."
     },
     {
       "name": "OnSelectRevision",
       "type": "EventCallback<DocumentRevision>",
       "isRequired": false,
-      "description": "Currently selected revision id."
+      "description": "Raised when a revision is selected."
     },
     {
       "name": "SelectedRevisionId",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional status message."
+      "description": "Currently selected revision id."
     },
     {
       "name": "StatusMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the current user can accept or reject revisions."
+      "description": "Optional status message."
     }
   ]
 }

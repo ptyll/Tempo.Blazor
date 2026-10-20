@@ -21,7 +21,7 @@
       "name": "LayoutChanged",
       "type": "EventCallback<TableLayoutContent>",
       "isRequired": false,
-      "description": "Current table layout."
+      "description": "Raised when table properties change."
     },
     {
       "name": "TestIdRoot",

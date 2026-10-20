@@ -21,62 +21,62 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback invoked when the custom action is clicked."
+      "description": "Additional CSS classes for the root element."
     },
     {
       "name": "CustomActionIcon",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional custom action text."
+      "description": "Optional custom action icon."
     },
     {
       "name": "CustomActionText",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the send-copy action is shown."
+      "description": "Optional custom action text."
     },
     {
       "name": "Description",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional completed title override."
+      "description": "Optional completed description override."
     },
     {
       "name": "DownloadUrl",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the signer is done but the submission is waiting for other recipients."
+      "description": "Optional completed document download URL."
     },
     {
       "name": "IsWaitingForOthers",
       "type": "bool",
       "isRequired": false,
-      "description": "Optional completed description override."
+      "description": "Whether the signer is done but the submission is waiting for other recipients."
     },
     {
       "name": "OnCustomAction",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Callback invoked when sending a copy is requested."
+      "description": "Callback invoked when the custom action is clicked."
     },
     {
       "name": "OnDownload",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Optional custom action icon."
+      "description": "Callback invoked when download is requested and no DownloadUrl is set."
     },
     {
       "name": "OnSendCopy",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Callback invoked when download is requested and no DownloadUrl is set."
+      "description": "Callback invoked when sending a copy is requested."
     },
     {
       "name": "ShowSendCopy",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Optional completed document download URL."
+      "description": "Whether the send-copy action is shown."
     }
   ]
 }

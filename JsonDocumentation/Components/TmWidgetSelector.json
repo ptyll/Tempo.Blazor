@@ -37,7 +37,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether selecting a widget closes the selector. With false the selector stays open: the added card flips to the green Added state, a multiple-instance widget grows an added counter, and a polite live region announces the addition."
+      "description": "Whether selecting a widget closes the selector. Defaults to true (the historical behaviour). With false the selector stays open: the added card flips to the green \"Added\" state, a multiple-instance widget grows an added counter, and a polite live region announces the addition (DA1)."
     },
     {
       "name": "LayoutMode",

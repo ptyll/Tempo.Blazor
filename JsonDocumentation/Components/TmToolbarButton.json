@@ -55,14 +55,14 @@
       "type": "ToolbarButtonPriority",
       "isRequired": false,
       "default": "Primary",
-      "description": "How important the button is when its TmToolbar runs out of room. An overflow rank only: buttons render in written order."
+      "description": "How important the button is when its TmToolbar runs out of room (Menu). An overflow rank only: buttons render in written order."
     },
     {
       "name": "LabelPosition",
       "type": "ToolbarLabelPosition",
       "isRequired": false,
       "default": "Inline",
-      "description": "Where the Text label sits: next to the icon, under it, or hidden (the text then stays the accessible name)."
+      "description": "Where the Text label sits: next to the icon (default), under it, or hidden (the text then stays the accessible name). Only an icon button can hide its label."
     },
     {
       "name": "Pressed",
@@ -83,7 +83,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it (the pointerdown and mousedown defaults are prevented), so an editor's text selection survives a formatting command. Keyboard activation and the \"More\" entry are unchanged.",
+      "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it (the pointerdown and mousedown defaults are prevented), so an editor's text selection survives a formatting command. Keyboard activation and the \"More\" entry are unchanged. Default false.",
       "example": "PreserveFocus=\"true\" OnClick=\"@ToggleBold\""
     }
   ],

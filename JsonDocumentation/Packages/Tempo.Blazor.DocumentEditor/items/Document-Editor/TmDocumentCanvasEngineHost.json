@@ -21,43 +21,43 @@
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Current canvas review display mode for tracked revisions."
+      "description": "Accessible label for the canvas document surface."
     },
     {
       "name": "Author",
       "type": "DocumentEditorAuthor?",
       "isRequired": false,
-      "description": "Host-supplied proofing options used by the canvas diagnostics overlay."
+      "description": "Current document author used by tracked canvas changes."
     },
     {
       "name": "ContentControlRenderMode",
       "type": "string?",
       "isRequired": false,
-      "description": "Validation policy for provider-backed canvas image uploads."
+      "description": "Canvas content-control rendering mode. Use form for plain fill mode or design for structured-tag chrome."
     },
     {
       "name": "ImageProvider",
       "type": "IDocumentImageProvider?",
       "isRequired": false,
-      "description": "Optional resolver for provider-managed document image assets."
+      "description": "Optional image provider used by canvas upload and clipboard image flows."
     },
     {
       "name": "ImageUrlResolver",
       "type": "IDocumentImageUrlResolver?",
       "isRequired": false,
-      "description": "Host-controlled permissions used to expose the canvas shell state."
+      "description": "Optional resolver for provider-managed document image assets."
     },
     {
       "name": "ImageValidation",
       "type": "DocumentImageValidationOptions",
       "isRequired": true,
-      "description": "Optional image provider used by canvas upload and clipboard image flows."
+      "description": "Validation policy for provider-backed canvas image uploads."
     },
     {
       "name": "InputAriaLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Accessible label for the canvas document surface."
+      "description": "Accessible label for the hidden keyboard and IME bridge."
     },
     {
       "name": "OnAnnotationSelected",
@@ -69,87 +69,87 @@
       "name": "OnChanged",
       "type": "Func<CanvasEngineChangedState, Task>?",
       "isRequired": false,
-      "description": "Raised when the JavaScript canvas host has mounted and reported readiness."
+      "description": "Raised when the canvas engine reports a model change. This is a plain delegate rather than an EventCallback{T} ON PURPOSE: it fires on every keystroke, and an EventCallback would auto-invoke StateHasChanged on the (very large) parent editor after every keystroke, re-rendering the whole toolbar/ribbon/chrome and freezing typing. The parent owns its own (debounced) re-render."
     },
     {
       "name": "OnCommandPaletteRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a canvas comment or revision marker is selected."
+      "description": "Raised when a canvas keyboard shortcut requests the command palette."
     },
     {
       "name": "OnContextMenu",
       "type": "EventCallback<CanvasEngineContextMenuRequest>",
       "isRequired": false,
-      "description": "Raised when the canvas engine reports a model change. This is a plain delegate rather than an ON PURPOSE: it fires on every keystroke, and an EventCallback would auto-invoke StateHasChanged on the (very large) parent editor after every keystroke, re-rendering the whole toolbar/ribbon/chrome and freezing typing. The parent owns its own (debounced) re-render."
+      "description": "Raised when the canvas engine requests a context menu at the pointer location."
     },
     {
       "name": "OnMiniToolbarChanged",
       "type": "Func<WysiwygMiniToolbarRequest?, Task>?",
       "isRequired": false,
-      "description": "Raised when the canvas engine requests a context menu at the pointer location."
+      "description": "Raised when the canvas selection changes (mini toolbar show/hide). A plain delegate, NOT an EventCallback, for the same reason as OnChanged: the selection changes on every keystroke (the caret moves), and an EventCallback would auto-render the whole parent editor each time. The parent re-renders itself only when the selection-driven state actually changes."
     },
     {
       "name": "OnReady",
       "type": "EventCallback<TmDocumentCanvasEngineHost>",
       "isRequired": false,
-      "description": "Accessible label for the hidden keyboard and IME bridge."
+      "description": "Raised when the JavaScript canvas host has mounted and reported readiness."
     },
     {
       "name": "OnRibbonFocusRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a canvas keyboard shortcut requests the command palette."
+      "description": "Raised when a canvas keyboard shortcut requests focus to move to the ribbon."
     },
     {
       "name": "OnUiStateChanged",
       "type": "Func<CanvasEngineUiState?, Task>?",
       "isRequired": false,
-      "description": "Raised when the canvas selection changes (mini toolbar show/hide). A plain delegate, NOT an EventCallback, for the same reason as : the selection changes on every keystroke (the caret moves), and an EventCallback would auto-render the whole parent editor each time. The parent re-renders itself only when the selection-driven state actually changes."
+      "description": "Raised with the small primitives-only UI snapshot (formatting pressed-state, dirty, undo/redo availability, page count) the engine pushes alongside a deliberate selection change (B2). Lets the parent update the toolbar immediately without a follow-up interop pull. A plain delegate for the same reason as OnMiniToolbarChanged."
     },
     {
       "name": "OnVersionsPanelRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a canvas keyboard shortcut requests focus to move to the ribbon."
+      "description": "Raised when a canvas keyboard shortcut requests the versions side panel."
     },
     {
       "name": "Permissions",
       "type": "DocumentEditorPermissions?",
       "isRequired": false,
-      "description": "Whether editing should be disabled for the canvas host."
+      "description": "Host-controlled permissions used to expose the canvas shell state."
     },
     {
       "name": "ProofingOptions",
       "type": "DocumentProofingOptions?",
       "isRequired": false,
-      "description": "Signer roles used to colour inline signing fields by submitter (plan S2)."
+      "description": "Host-supplied proofing options used by the canvas diagnostics overlay."
     },
     {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "description": "The document accepted by the canvas engine host."
+      "description": "Whether editing should be disabled for the canvas host."
     },
     {
       "name": "ReviewDisplayMode",
       "type": "DocumentReviewDisplayMode",
       "isRequired": false,
       "default": "DocumentReviewDisplayMode.AllMarkup",
-      "description": "Whether canvas tracked changes are enabled."
+      "description": "Current canvas review display mode for tracked revisions."
     },
     {
       "name": "SigningRoles",
       "type": "IReadOnlyList<Tempo.Blazor.Abstractions.Models.SigningSubmitterRole>",
       "isRequired": false,
       "default": "[]",
-      "description": "Canvas content-control rendering mode. Use form for plain fill mode or design for structured-tag chrome."
+      "description": "Signer roles used to colour inline signing fields by submitter (plan S2)."
     },
     {
       "name": "TrackChangesEnabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Current document author used by tracked canvas changes."
+      "description": "Whether canvas tracked changes are enabled."
     }
   ]
 }

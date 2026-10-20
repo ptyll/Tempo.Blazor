@@ -22,75 +22,75 @@
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Current document page count."
+      "description": "Label for the active editing region."
     },
     {
       "name": "CanRetrySave",
       "type": "bool",
       "isRequired": false,
-      "description": "Optional save status message."
+      "description": "Whether the latest save failure can be retried."
     },
     {
       "name": "LastSavedAt",
       "type": "DateTimeOffset?",
       "isRequired": false,
-      "description": "Raised when the user requests retry after a recoverable save failure."
+      "description": "Timestamp of the latest successful save."
     },
     {
       "name": "OnRetrySave",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Whether the latest save failure can be retried."
+      "description": "Raised when the user requests retry after a recoverable save failure."
     },
     {
       "name": "PageCount",
       "type": "int",
       "isRequired": false,
       "default": "1",
-      "description": "Current document word count."
+      "description": "Current document page count."
     },
     {
       "name": "PendingCount",
       "type": "int",
       "isRequired": false,
-      "description": "Whether the document has local unsaved changes."
+      "description": "Number of currently pending async operations."
     },
     {
       "name": "PendingMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Number of currently pending async operations."
+      "description": "Message of the first pending operation, or null when none."
     },
     {
       "name": "RuntimeFailed",
       "type": "bool",
       "isRequired": false,
-      "description": "Message shown after a JS runtime recovery event, or null when none."
+      "description": "When true, RuntimeMessage describes a recovery failure."
     },
     {
       "name": "RuntimeMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Current zoom label."
+      "description": "Message shown after a JS runtime recovery event, or null when none."
     },
     {
       "name": "SaveMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Message of the first pending operation, or null when none."
+      "description": "Optional save status message."
     },
     {
       "name": "WordCount",
       "type": "int",
       "isRequired": false,
-      "description": "Timestamp of the latest successful save."
+      "description": "Current document word count."
     },
     {
       "name": "ZoomLabel",
       "type": "string",
       "isRequired": false,
       "default": "\"100%\"",
-      "description": "Label for the active editing region."
+      "description": "Current zoom label."
     }
   ]
 }

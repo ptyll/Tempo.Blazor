@@ -22,50 +22,50 @@
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": false,
-      "description": "Selected thread id."
+      "description": "Current user id for mention indicators."
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Optional marker template for each rendered thread marker."
+      "description": "Whether marker interaction is disabled."
     },
     {
       "name": "DraftAnchor",
       "type": "DocumentCommentAnchor?",
       "isRequired": false,
-      "description": "Whether resolved threads should be rendered."
+      "description": "Current draft anchor."
     },
     {
       "name": "MarkerTemplate",
       "type": "RenderFragment<DocumentCommentThread>?",
       "isRequired": false,
-      "description": "Current draft anchor."
+      "description": "Optional marker template for each rendered thread marker."
     },
     {
       "name": "OnThreadSelected",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Whether marker interaction is disabled."
+      "description": "Callback invoked when a thread marker is selected."
     },
     {
       "name": "PageNumber",
       "type": "int",
       "isRequired": false,
       "default": "1",
-      "description": "Threads available to render."
+      "description": "One-based current page number."
     },
     {
       "name": "SelectedThreadId",
       "type": "string?",
       "isRequired": false,
-      "description": "One-based current page number."
+      "description": "Selected thread id."
     },
     {
       "name": "ShowResolved",
       "type": "bool",
       "isRequired": false,
-      "description": "Current user id for mention indicators."
+      "description": "Whether resolved threads should be rendered."
     }
   ]
 }

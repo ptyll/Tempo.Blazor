@@ -7,20 +7,95 @@
     "@using Tempo.Blazor.Components.Layout"
   ],
   "parameters": [
-    { "name": "Presentation", "type": "SidePanelPresentation", "isRequired": false, "default": "Auto", "description": "How the panel presents itself: Auto docks when the container resolves Desktop and is a sheet otherwise; Docked and Sheet pin the choice." },
-    { "name": "Open", "type": "bool", "isRequired": false, "description": "Whether the panel is open. Two-way with OpenChanged." },
-    { "name": "OpenChanged", "type": "EventCallback<bool>", "isRequired": false, "description": "Raised when the panel should open or close (every close path funnels through here)." },
-    { "name": "Title", "type": "string?", "isRequired": false, "description": "Title shown in the panel header; also the accessible name of the sheet." },
-    { "name": "RestoreFocusTargetId", "type": "string?", "isRequired": false, "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default." },
-    { "name": "HeaderActions", "type": "RenderFragment?", "isRequired": false, "description": "Optional actions rendered in the header, next to the close button." },
-    { "name": "ChildContent", "type": "RenderFragment?", "isRequired": false, "description": "Main body content." },
-    { "name": "FooterContent", "type": "RenderFragment?", "isRequired": false, "description": "Optional footer below the body (apply / cancel actions), sticky at the bottom of the docked panel and of the sheet." },
-    { "name": "Side", "type": "SidePanelSide", "isRequired": false, "default": "Right", "description": "The edge the panel belongs to (Right inspector, Left navigation/task panel); decides the edge the side sheet slides in from." },
-    { "name": "Width", "type": "string", "isRequired": false, "default": "\"360px\"", "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet." },
-    { "name": "LayoutMode", "type": "TmLayoutMode", "isRequired": false, "default": "Auto", "description": "The layout the presentation resolves from. Auto follows the nearest unnamed layout context; a forced value renders that mode without a DOM." },
-    { "name": "InitialMode", "type": "TmLayoutMode", "isRequired": false, "default": "Desktop", "description": "The layout rendered before the first measurement." },
-    { "name": "ResolvedLayoutChanged", "type": "EventCallback<TmLayoutMode>", "isRequired": false, "description": "Raised when the resolved layout changes. The initial value is not a change." },
-    { "name": "Class", "type": "string?", "isRequired": false, "description": "Extra CSS classes for the root (the docked root, or the sheet root through TmDrawer.Class)." }
+    {
+      "name": "Presentation",
+      "type": "SidePanelPresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the panel presents itself: Auto docks when the container resolves Desktop and is a sheet otherwise; Docked and Sheet pin the choice."
+    },
+    {
+      "name": "Open",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel is open. Two-way with OpenChanged."
+    },
+    {
+      "name": "OpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the panel should open or close (every close path funnels through here)."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title shown in the panel header; also the accessible name of the sheet."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional actions rendered in the header, next to the close button."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Main body content."
+    },
+    {
+      "name": "FooterContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional footer below the body (apply / cancel actions), sticky at the bottom of the docked panel and of the sheet."
+    },
+    {
+      "name": "Side",
+      "type": "SidePanelSide",
+      "isRequired": false,
+      "default": "Right",
+      "description": "The edge the panel belongs to (Right inspector, Left navigation/task panel); decides the edge the side sheet slides in from."
+    },
+    {
+      "name": "Width",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"360px\"",
+      "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet, which sizes from its snap point."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the presentation resolves from. Auto follows the nearest unnamed layout context; a forced value renders that mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra CSS classes for the root (the docked root, or the sheet root through TmDrawer.Class)."
+    }
   ],
   "cssClasses": [
     "tm-side-panel",

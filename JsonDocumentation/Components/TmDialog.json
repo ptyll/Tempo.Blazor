@@ -103,7 +103,7 @@
       "name": "Icon",
       "type": "string?",
       "isRequired": false,
-      "description": "An icon name from the registry. Null keeps the icon the variant and type imply."
+      "description": "An icon name from the registry. Null keeps the icon the variant and type imply, so an existing dialog looks exactly as it did."
     },
     {
       "name": "Layout",
@@ -144,7 +144,7 @@
       "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,
-      "description": "Raised when the rendered layout changes. The initial value is not a change."
+      "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair LayoutMode with this callback."
     },
     {
       "name": "RestoreFocusTarget",

@@ -22,55 +22,55 @@
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,
-      "description": "Versions to render."
+      "description": "Whether version list is loading."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the previewed version should be restored."
+      "description": "Raised when the panel should close."
     },
     {
       "name": "OnCreateVersion",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Version currently previewed by the editor."
+      "description": "Raised when the create-version dialog should open."
     },
     {
       "name": "OnRestoreVersion",
       "type": "EventCallback<DocumentVersion>",
       "isRequired": false,
-      "description": "Raised when preview should return to the current document."
+      "description": "Raised when the previewed version should be restored."
     },
     {
       "name": "OnReturnToCurrent",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a historical version should be previewed."
+      "description": "Raised when preview should return to the current document."
     },
     {
       "name": "OnSelectVersion",
       "type": "EventCallback<DocumentVersion>",
       "isRequired": false,
-      "description": "Raised when the create-version dialog should open."
+      "description": "Raised when a historical version should be previewed."
     },
     {
       "name": "PreviewVersion",
       "type": "DocumentVersion?",
       "isRequired": false,
-      "description": "Optional version status message."
+      "description": "Version currently previewed by the editor."
     },
     {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether version list is loading."
+      "description": "Whether create actions should be disabled."
     },
     {
       "name": "StatusMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether create actions should be disabled."
+      "description": "Optional version status message."
     }
   ]
 }

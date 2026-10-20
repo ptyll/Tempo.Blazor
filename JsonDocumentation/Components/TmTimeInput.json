@@ -46,7 +46,7 @@
       "name": "Invalid",
       "type": "bool",
       "isRequired": false,
-      "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. The segments stay editable; this only announces the invalid state."
+      "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. The segments stay editable; this only announces the invalid state (N148)."
     }
   ],
   "cssClasses": [

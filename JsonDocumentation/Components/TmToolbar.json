@@ -42,20 +42,20 @@
       "type": "ToolbarOverflow",
       "isRequired": false,
       "default": "None",
-      "description": "What happens when the buttons do not fit. None keeps every button as written; Menu moves the lowest-priority buttons into a More menu and keeps OverflowOnly buttons there."
+      "description": "What happens when the buttons do not fit. None (default) keeps every button as written; Menu moves the lowest-priority buttons into a \"More\" menu and keeps OverflowOnly buttons there."
     },
     {
       "name": "Labels",
       "type": "ToolbarLabels",
       "isRequired": false,
       "default": "Auto",
-      "description": "Whether icon buttons show their text. Auto shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins."
+      "description": "Whether icon buttons show their text. Auto (default) shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins."
     },
     {
       "name": "OverflowLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Accessible name and title of the More trigger. Falls back to the localized default."
+      "description": "Accessible name and title of the \"More\" trigger. Falls back to the localized default."
     },
     {
       "name": "AriaLabel",
@@ -68,7 +68,7 @@
       "type": "PanelPresentation",
       "isRequired": false,
       "default": "Auto",
-      "description": "How the More menu presents on a phone-sized viewport. Auto is the bottom sheet; a toolbar whose actions need the editor focus or selection to stay put sets Popover."
+      "description": "How the \"More\" menu presents on a phone-sized viewport. Auto (default) is the bottom sheet; a toolbar whose actions need the editor's focus or selection to stay put sets Popover (docs/overlays.md, rule 6)."
     }
   ],
   "cssClasses": [

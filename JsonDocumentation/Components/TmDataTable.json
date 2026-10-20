@@ -193,7 +193,7 @@
       "name": "CardMode",
       "type": "bool",
       "isRequired": false,
-      "description": "Opt-in responsive card mode. When true, the wrapper gains the tm-data-table-wrapper--card class and every data cell carries a data-label attribute (the owning column's Title), which the scoped CSS uses on narrow viewports to stack each row into a labeled card. Default: false — the rendered markup is unchanged from a non-card table, so existing consumers are unaffected. Fully compatible with server-side data (DataProvider) and sorting."
+      "description": "Opt-in responsive card mode. When true, the wrapper gains the tm-data-table-wrapper--card class and every data cell carries a data-label attribute (the owning column's Title), which the scoped CSS uses on narrow viewports to stack each row into a labeled card. It aliases Cards only when MobileLayout is None; explicit Scroll wins. Default: false — the rendered markup is unchanged from a non-card table, so existing consumers are unaffected. Fully compatible with server-side data (DataProvider) and sorting."
     },
     {
       "name": "ToolbarMode",
@@ -214,7 +214,7 @@
       "type": "int",
       "isRequired": false,
       "default": "25",
-      "description": "Initial page size. Default: 25."
+      "description": "Initial page size, read once during initialization. Default: 25. Ignored when PageSize is supplied, which is the controlled counterpart."
     },
     {
       "name": "PageSize",

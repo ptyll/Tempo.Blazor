@@ -21,69 +21,69 @@
       "name": "EmptyText",
       "type": "string?",
       "isRequired": false,
-      "description": "Text displayed while loading."
+      "description": "Text displayed when no results match."
     },
     {
       "name": "ErrorMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the menu is loading provider results."
+      "description": "Optional provider error message."
     },
     {
       "name": "HighlightedIndex",
       "type": "int",
       "isRequired": false,
-      "description": "Trigger that opened the menu."
+      "description": "Highlighted item index."
     },
     {
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,
-      "description": "Highlighted item index."
+      "description": "Whether the menu is loading provider results."
     },
     {
       "name": "Items",
       "type": "IReadOnlyList<DocumentAutocompleteItem>",
       "isRequired": false,
       "default": "[]",
-      "description": "Whether the autocomplete menu is visible."
+      "description": "Items displayed in the autocomplete menu."
     },
     {
       "name": "ItemTemplate",
       "type": "RenderFragment<DocumentAutocompleteItem>?",
       "isRequired": false,
-      "description": "Text displayed when no results match."
+      "description": "Optional custom item template."
     },
     {
       "name": "LoadingText",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional provider error message."
+      "description": "Text displayed while loading."
     },
     {
       "name": "OnHighlightedIndexChanged",
       "type": "EventCallback<int>",
       "isRequired": false,
-      "description": "Raised when an item is selected."
+      "description": "Raised when the highlighted index changes."
     },
     {
       "name": "OnItemSelected",
       "type": "EventCallback<DocumentAutocompleteItem>",
       "isRequired": false,
-      "description": "Optional custom item template."
+      "description": "Raised when an item is selected."
     },
     {
       "name": "Query",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Items displayed in the autocomplete menu."
+      "description": "Current query text without the trigger marker."
     },
     {
       "name": "Trigger",
       "type": "DocumentAutocompleteTrigger?",
       "isRequired": false,
-      "description": "Current query text without the trigger marker."
+      "description": "Trigger that opened the menu."
     }
   ]
 }

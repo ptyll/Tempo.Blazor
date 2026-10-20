@@ -23,155 +23,155 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether a comment operation is running."
+      "description": "Whether the current user can add comments or replies."
     },
     {
       "name": "CanDeleteOwnComments",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the current user can resolve or reopen comments."
+      "description": "Whether the current user can delete comment threads they own."
     },
     {
       "name": "CanResolve",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the current user can add comments or replies."
+      "description": "Whether the current user can resolve or reopen comments."
     },
     {
       "name": "CanStartComment",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Current author identifier used for ownership checks."
+      "description": "Whether a new comment can be started from the current selection."
     },
     {
       "name": "ComposerOpen",
       "type": "bool",
       "isRequired": false,
-      "description": "Current draft anchor when the new comment composer is open."
+      "description": "Whether the new comment composer is open."
     },
     {
       "name": "CurrentAuthorId",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the current user can delete comment threads they own."
+      "description": "Current author identifier used for ownership checks."
     },
     {
       "name": "DraftAnchor",
       "type": "DocumentCommentAnchor?",
       "isRequired": false,
-      "description": "Comment threads to display."
+      "description": "Current draft anchor when the new comment composer is open."
     },
     {
       "name": "Filter",
       "type": "DocumentCommentFilter",
       "isRequired": false,
       "default": "DocumentCommentFilter.All",
-      "description": "Selected comment thread id."
+      "description": "Current comment filter."
     },
     {
       "name": "FilterChanged",
       "type": "EventCallback<DocumentCommentFilter>",
       "isRequired": false,
-      "description": "Current comment filter."
+      "description": "Raised when the comment filter changes."
     },
     {
       "name": "IsBusy",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether comments are loading."
+      "description": "Whether a comment operation is running."
     },
     {
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,
-      "description": "Raised when the comment sort mode changes."
+      "description": "Whether comments are loading."
     },
     {
       "name": "MentionProvider",
       "type": "ITmPeopleProvider?",
       "isRequired": false,
-      "description": "Whether a new comment can be started from the current selection."
+      "description": "Optional mention provider reused by comment composers."
     },
     {
       "name": "OnBeginComment",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Optional status message."
+      "description": "Raised when a new comment flow should begin."
     },
     {
       "name": "OnCancelComment",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when a new comment is submitted."
+      "description": "Raised when the new comment composer is cancelled."
     },
     {
       "name": "OnCreateComment",
       "type": "EventCallback<DocumentCommentCreateRequest>",
       "isRequired": false,
-      "description": "Raised when a new comment flow should begin."
+      "description": "Raised when a new comment is submitted."
     },
     {
       "name": "OnDeleteComment",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when a comment should be reopened."
+      "description": "Raised when a comment should be deleted."
     },
     {
       "name": "OnEditComment",
       "type": "EventCallback<DocumentEditorCommentEditRequest>",
       "isRequired": false,
-      "description": "Raised when a reply is submitted."
+      "description": "Raised when an existing comment entry is edited."
     },
     {
       "name": "OnReopenComment",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when a comment should be resolved."
+      "description": "Raised when a comment should be reopened."
     },
     {
       "name": "OnReplyComment",
       "type": "EventCallback<DocumentEditorCommentReplyRequest>",
       "isRequired": false,
-      "description": "Raised when the new comment composer is cancelled."
+      "description": "Raised when a reply is submitted."
     },
     {
       "name": "OnResolveComment",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when an existing comment entry is edited."
+      "description": "Raised when a comment should be resolved."
     },
     {
       "name": "OnSelectComment",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when a comment should be deleted."
+      "description": "Raised when a comment is selected."
     },
     {
       "name": "SelectedCommentId",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the new comment composer is open."
+      "description": "Selected comment thread id."
     },
     {
       "name": "SortMode",
       "type": "DocumentCommentSortMode",
       "isRequired": false,
       "default": "DocumentCommentSortMode.Position",
-      "description": "Raised when the comment filter changes."
+      "description": "Current comment sort mode."
     },
     {
       "name": "SortModeChanged",
       "type": "EventCallback<DocumentCommentSortMode>",
       "isRequired": false,
-      "description": "Current comment sort mode."
+      "description": "Raised when the comment sort mode changes."
     },
     {
       "name": "StatusMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional mention provider reused by comment composers."
+      "description": "Optional status message."
     },
     {
       "name": "OnDraftChanged",

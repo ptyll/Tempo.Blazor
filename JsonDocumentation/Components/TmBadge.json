@@ -68,7 +68,7 @@
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Alias for Dot."
+      "description": "Badge content."
     },
     {
       "name": "Class",

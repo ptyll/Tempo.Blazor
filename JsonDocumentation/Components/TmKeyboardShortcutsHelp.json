@@ -36,7 +36,7 @@
       "name": "Description",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional subtitle under the title. Null renders nothing."
+      "description": "Optional subtitle under the title, for a note such as \"shortcuts work with an external keyboard\". Null renders nothing, which is the historical markup."
     },
     {
       "name": "Class",

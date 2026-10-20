@@ -22,7 +22,7 @@
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Warnings to display after a paste operation."
+      "description": "Raised when the user closes the report."
     }
   ]
 }

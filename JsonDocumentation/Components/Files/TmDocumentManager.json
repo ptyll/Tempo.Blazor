@@ -108,7 +108,7 @@
       "name": "EditForm",
       "type": "RenderFragment<EditContext<TMetadata>>?",
       "isRequired": false,
-      "description": "Custom delete confirmation form. When null, a default is used."
+      "description": "Custom edit/metadata form. When null, the Edit action is unavailable."
     },
     {
       "name": "ItemContextMenu",

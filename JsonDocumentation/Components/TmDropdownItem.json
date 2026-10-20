@@ -42,7 +42,7 @@
       "name": "AriaDisabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Marks the item aria-disabled=true and paints the disabled style while leaving it focusable, so a keyboard or screen-reader user can land on it and hear its explanation. A click does nothing. Unlike Disabled, the native disabled attribute is not set."
+      "description": "Marks the item aria-disabled=\"true\" and paints the disabled style while leaving it focusable, so a keyboard or screen-reader user can land on it and hear its explanation. A click does nothing. Unlike Disabled, the native disabled attribute is not set."
     },
     {
       "name": "Checked",

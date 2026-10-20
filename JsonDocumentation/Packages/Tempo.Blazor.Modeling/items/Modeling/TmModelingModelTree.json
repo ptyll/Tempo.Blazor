@@ -40,7 +40,7 @@
       "name": "OnElementSelected",
       "type": "EventCallback<ModelingElementDto>",
       "isRequired": false,
-      "description": "Raised when changes."
+      "description": "Raised when the user selects an element node."
     },
     {
       "name": "SelectedElement",

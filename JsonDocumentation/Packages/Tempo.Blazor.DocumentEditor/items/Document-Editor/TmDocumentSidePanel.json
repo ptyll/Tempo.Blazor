@@ -23,126 +23,126 @@
       "type": "DocumentSidePanelTab",
       "isRequired": false,
       "default": "DocumentSidePanelTab.Comments",
-      "description": "Whether the side panel shell is open."
+      "description": "Currently active tab."
     },
     {
       "name": "ActiveTabChanged",
       "type": "EventCallback<DocumentSidePanelTab>",
       "isRequired": false,
-      "description": "Currently active tab."
+      "description": "Raised when the active tab changes."
     },
     {
       "name": "CommentsContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Number of versions shown in the tab badge."
+      "description": "Content rendered for the comments tab."
     },
     {
       "name": "CommentsCount",
       "type": "int",
       "isRequired": false,
-      "description": "Whether to show the right-edge reopen button when closed."
+      "description": "Number of comments shown in the tab badge."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Content rendered for the pages tab."
+      "description": "Raised when the side panel should close."
     },
     {
       "name": "OnOpen",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the side panel should close."
+      "description": "Raised when the side panel should reopen."
     },
     {
       "name": "OutlineContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content rendered for the properties tab."
+      "description": "Content rendered for the outline tab."
     },
     {
       "name": "PagesContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content rendered for the outline tab."
+      "description": "Content rendered for the pages tab."
     },
     {
       "name": "PropertiesContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content rendered for the versions tab."
+      "description": "Content rendered for the properties tab."
     },
     {
       "name": "RevisionsContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content rendered for the comments tab."
+      "description": "Content rendered for the revisions tab."
     },
     {
       "name": "RevisionsCount",
       "type": "int",
       "isRequired": false,
-      "description": "Number of comments shown in the tab badge."
+      "description": "Number of pending revisions shown in the tab badge."
     },
     {
       "name": "ShowComments",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Raised when the active tab changes."
+      "description": "Whether the comments tab is available."
     },
     {
       "name": "ShowEdgeToggle",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the page navigator tab is available."
+      "description": "Whether to show the right-edge reopen button when closed."
     },
     {
       "name": "ShowOutline",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the properties tab is available."
+      "description": "Whether the outline tab is available."
     },
     {
       "name": "ShowPages",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the outline tab is available."
+      "description": "Whether the page navigator tab is available."
     },
     {
       "name": "ShowProperties",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the versions tab is available."
+      "description": "Whether the properties tab is available."
     },
     {
       "name": "ShowRevisions",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the comments tab is available."
+      "description": "Whether the revisions tab is available."
     },
     {
       "name": "ShowVersions",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the revisions tab is available."
+      "description": "Whether the versions tab is available."
     },
     {
       "name": "VersionsContent",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content rendered for the revisions tab."
+      "description": "Content rendered for the versions tab."
     },
     {
       "name": "VersionsCount",
       "type": "int",
       "isRequired": false,
-      "description": "Number of pending revisions shown in the tab badge."
+      "description": "Number of versions shown in the tab badge."
     }
   ]
 }

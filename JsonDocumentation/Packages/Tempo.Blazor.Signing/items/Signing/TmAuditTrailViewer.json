@@ -21,13 +21,13 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional resolved signing localization snapshot captured during the ceremony."
+      "description": "Additional CSS classes for the root element."
     },
     {
       "name": "LocalizationSnapshot",
       "type": "SigningSubmissionLocalizationSnapshot?",
       "isRequired": false,
-      "description": "Audit trail payload to render."
+      "description": "Optional resolved signing localization snapshot captured during the ceremony."
     }
   ]
 }

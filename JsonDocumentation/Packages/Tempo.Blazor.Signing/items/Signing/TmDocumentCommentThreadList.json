@@ -23,31 +23,31 @@
       "type": "IReadOnlyList<DocumentCommentThread>",
       "isRequired": false,
       "default": "[]",
-      "description": "Filtered threads to render."
+      "description": "All threads used for stable numbering."
     },
     {
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": false,
-      "description": "Selected thread id."
+      "description": "Current user id for mention indicators."
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Current user id for mention indicators."
+      "description": "Whether list interaction is disabled."
     },
     {
       "name": "OnThreadSelected",
       "type": "EventCallback<DocumentCommentThread>",
       "isRequired": false,
-      "description": "Whether list interaction is disabled."
+      "description": "Callback invoked when a thread is selected."
     },
     {
       "name": "SelectedThreadId",
       "type": "string?",
       "isRequired": false,
-      "description": "All threads used for stable numbering."
+      "description": "Selected thread id."
     }
   ]
 }

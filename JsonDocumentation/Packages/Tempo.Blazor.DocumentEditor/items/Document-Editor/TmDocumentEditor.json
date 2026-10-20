@@ -331,7 +331,7 @@
       "name": "SyncProvider",
       "type": "IDocumentSyncProvider?",
       "isRequired": false,
-      "description": "Optional offline draft store used when is enabled."
+      "description": "Optional provider used to submit an offline draft back to the authoritative store."
     },
     {
       "name": "TokenProvider",

@@ -123,7 +123,7 @@
       "name": "OnNodeContextMenu",
       "type": "EventCallback<(string NodeId, double ScreenX, double ScreenY, string Origin)>",
       "isRequired": false,
-      "description": "Raised when a node is right-clicked or long-pressed to open a context menu."
+      "description": "Raised when a node is right-clicked or long-pressed to open a context menu. Origin is the pointer type that opened it ('mouse' or 'touch' — a touch menu is anchored offset from the finger instead of under it)."
     },
     {
       "name": "OnNodeLinkClicked",
@@ -165,7 +165,7 @@
       "name": "OnShowReplace",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the user presses Ctrl+F."
+      "description": "Raised when the user presses Ctrl+H (find and replace)."
     },
     {
       "name": "OnShowSearch",

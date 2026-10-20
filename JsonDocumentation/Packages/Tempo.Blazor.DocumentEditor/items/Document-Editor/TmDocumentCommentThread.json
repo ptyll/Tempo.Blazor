@@ -28,87 +28,87 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether this thread is selected."
+      "description": "Whether the current user can add replies."
     },
     {
       "name": "CanDeleteOwnComments",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the current user can resolve or reopen threads."
+      "description": "Whether the current user can delete comment threads they own."
     },
     {
       "name": "CanResolve",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the current user can add replies."
+      "description": "Whether the current user can resolve or reopen threads."
     },
     {
       "name": "CollapseResolved",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether a comment operation is currently running."
+      "description": "Whether resolved threads are collapsed by default."
     },
     {
       "name": "CurrentAuthorId",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the current user can delete comment threads they own."
+      "description": "Current author identifier used for ownership checks."
     },
     {
       "name": "IsBusy",
       "type": "bool",
       "isRequired": false,
-      "description": "Current author identifier used for ownership checks."
+      "description": "Whether a comment operation is currently running."
     },
     {
       "name": "IsSelected",
       "type": "bool",
       "isRequired": false,
-      "description": "Comment thread to render."
+      "description": "Whether this thread is selected."
     },
     {
       "name": "MentionProvider",
       "type": "ITmPeopleProvider?",
       "isRequired": false,
-      "description": "Whether resolved threads are collapsed by default."
+      "description": "Optional mention provider reused by the reply composer."
     },
     {
       "name": "OnDelete",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the thread should be reopened."
+      "description": "Raised when the thread should be deleted."
     },
     {
       "name": "OnEdit",
       "type": "EventCallback<DocumentEditorCommentEditRequest>",
       "isRequired": false,
-      "description": "Raised when a reply is submitted."
+      "description": "Raised when an existing entry is edited."
     },
     {
       "name": "OnReopen",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the thread should be resolved."
+      "description": "Raised when the thread should be reopened."
     },
     {
       "name": "OnReply",
       "type": "EventCallback<DocumentEditorCommentReplyRequest>",
       "isRequired": false,
-      "description": "Raised when the thread is selected."
+      "description": "Raised when a reply is submitted."
     },
     {
       "name": "OnResolve",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when an existing entry is edited."
+      "description": "Raised when the thread should be resolved."
     },
     {
       "name": "OnSelect",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Optional mention provider reused by the reply composer."
+      "description": "Raised when the thread is selected."
     },
     {
       "name": "OnDraftChanged",

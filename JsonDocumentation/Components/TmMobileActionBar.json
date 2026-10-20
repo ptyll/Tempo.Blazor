@@ -24,7 +24,7 @@
       "type": "int",
       "isRequired": false,
       "default": "3",
-      "description": "How many actions stay on the bar before the rest overflow into the \"More\" menu. Values below 1 are treated as 1."
+      "description": "How many actions stay on the bar before the rest overflow into the \"More\" menu. Values below 1 are treated as 1. Default 3."
     },
     {
       "name": "Placement",
@@ -50,7 +50,7 @@
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Auto",
-      "description": "The layout the visibility resolves from. Auto follows the container (or the viewport scope for FixedViewport); a forced value never measures, so a test can render the bar without a DOM. The bar hides whenever the resolved layout is above the mobile breakpoint; the ChildContent always renders."
+      "description": "The layout the visibility resolves from. Auto follows the container (or the viewport scope for FixedViewport); a forced value never measures, so a test can render the bar without a DOM. The bar hides whenever the resolved layout is above the mobile breakpoint (tablet and desktop); the ChildContent always renders."
     },
     {
       "name": "InitialMode",

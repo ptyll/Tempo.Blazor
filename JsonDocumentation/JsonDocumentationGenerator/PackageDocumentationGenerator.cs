@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace JsonDocumentationGenerator;
 
-internal static class PackageDocumentationGenerator
+internal static partial class PackageDocumentationGenerator
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -209,6 +209,11 @@ internal static class PackageDocumentationGenerator
             }
         }
 
+        // A bundle can agree with a fresh generation and still be wrong: the overlay's prose wins in the
+        // merge, so a description shifted by an older parse reproduces itself on both sides. See
+        // PackageDocumentationGenerator.Descriptions.cs.
+        errors.AddRange(ShiftedDescriptionErrors(results, failOnManualDrift));
+
         var configuredPackageIds = configuredPackages.Select(p => p.PackageId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var projectPackageIds = Directory.GetFiles(Path.Combine(repoRoot, "src"), "*.csproj", SearchOption.AllDirectories)
             .Where(p => !IsUnderBuildOutput(p))
@@ -339,6 +344,11 @@ internal static class PackageDocumentationGenerator
                 var sourceFile = ResolveSourceFile(result.BaseDir, pair.Overlay.GetString("sourcePath"));
                 changes += RepairNamedDescriptions(overlay, pair.Generated, "parameters", sourceFile);
                 changes += RepairNamedDescriptions(overlay, pair.Generated, "members", sourceFile);
+
+                // A description that matches a SIBLING's freshly parsed description is provably shifted
+                // (the old parse paired the XML docs by declaration order against alphabetical names).
+                changes += RepairShiftedNamedDescriptions(overlay, pair.Generated, "parameters");
+                changes += RepairShiftedNamedDescriptions(overlay, pair.Generated, "members");
 
                 if (changes == 0)
                 {

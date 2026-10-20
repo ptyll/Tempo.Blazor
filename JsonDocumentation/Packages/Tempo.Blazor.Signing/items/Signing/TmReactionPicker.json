@@ -15,20 +15,20 @@
       "name": "Reactions",
       "type": "IReadOnlyList<string>",
       "isRequired": false,
-      "default": "[\"👍\", \"✅\", \"👀\", \"❤️\", \"🎉\"]",
+      "default": "[\"\uD83D\uDC4D\", \"✅\", \"\uD83D\uDC40\", \"❤️\", \"\uD83C\uDF89\"]",
       "description": "Available reaction values."
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Available reaction values."
+      "description": "Whether picker interaction is disabled."
     },
     {
       "name": "OnSelected",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Whether picker interaction is disabled."
+      "description": "Callback invoked when a reaction value is selected."
     }
   ]
 }

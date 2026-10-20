@@ -23,70 +23,70 @@
       "type": "string",
       "isRequired": false,
       "default": "\"document-comment-cancel\"",
-      "description": "Submit test id."
+      "description": "Cancel test id."
     },
     {
       "name": "InitialText",
       "type": "string?",
       "isRequired": false,
-      "description": "Submit button label."
+      "description": "Initial text used when the composer edits an existing entry."
     },
     {
       "name": "InputTestId",
       "type": "string",
       "isRequired": false,
       "default": "\"document-comment-input\"",
-      "description": "Root test id."
+      "description": "Input test id."
     },
     {
       "name": "IsBusy",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the current user may submit comments."
+      "description": "Whether a comment operation is currently running."
     },
     {
       "name": "MentionProvider",
       "type": "ITmPeopleProvider?",
       "isRequired": false,
-      "description": "Cancel test id."
+      "description": "Optional mention provider reused from the rich editor stack."
     },
     {
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when text is submitted."
+      "description": "Raised when the composer is cancelled."
     },
     {
       "name": "OnSubmit",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Optional mention provider reused from the rich editor stack."
+      "description": "Raised when text is submitted."
     },
     {
       "name": "Placeholder",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether a comment operation is currently running."
+      "description": "Input placeholder."
     },
     {
       "name": "SubmitLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Input placeholder."
+      "description": "Submit button label."
     },
     {
       "name": "SubmitTestId",
       "type": "string",
       "isRequired": false,
       "default": "\"document-comment-submit\"",
-      "description": "Input test id."
+      "description": "Submit test id."
     },
     {
       "name": "TestId",
       "type": "string",
       "isRequired": false,
       "default": "\"document-comment-composer\"",
-      "description": "Initial text used when the composer edits an existing entry."
+      "description": "Root test id."
     },
     {
       "name": "OnDraftChanged",

@@ -21,21 +21,21 @@
       "name": "OnWatchingChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
-      "description": "User identifier for the current watcher."
+      "description": "Raised after watch state changes."
     },
     {
       "name": "PageId",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Watch provider used to persist page subscriptions."
+      "description": "Page identifier being watched."
     },
     {
       "name": "UserId",
       "type": "string",
       "isRequired": false,
       "default": "\"\"",
-      "description": "Page identifier being watched."
+      "description": "User identifier for the current watcher."
     }
   ],
   "subcategory": "UI"

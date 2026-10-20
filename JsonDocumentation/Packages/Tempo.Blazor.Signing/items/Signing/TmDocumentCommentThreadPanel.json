@@ -22,86 +22,86 @@
       "name": "AllowReplyToResolved",
       "type": "bool",
       "isRequired": false,
-      "description": "Users available for mention suggestions."
+      "description": "Whether replies are allowed on resolved threads."
     },
     {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback invoked when a thread asks the parent to navigate to its page."
+      "description": "Additional CSS class."
     },
     {
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback invoked when selected thread id changes."
+      "description": "Current user id for mentions and active reactions."
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether replies are allowed on resolved threads."
+      "description": "Whether panel interaction is disabled."
     },
     {
       "name": "MentionUsers",
       "type": "IReadOnlyList<DocumentCommentUser>",
       "isRequired": false,
       "default": "[]",
-      "description": "Current user id for mentions and active reactions."
+      "description": "Users available for mention suggestions."
     },
     {
       "name": "OnDeleteRequested",
       "type": "EventCallback<DocumentCommentDeleteRequest>",
       "isRequired": false,
-      "description": "Callback invoked when editing a comment is requested."
+      "description": "Callback invoked when deleting a comment is requested."
     },
     {
       "name": "OnEditRequested",
       "type": "EventCallback<DocumentCommentEditRequest>",
       "isRequired": false,
-      "description": "Callback invoked when reopening a thread is requested."
+      "description": "Callback invoked when editing a comment is requested."
     },
     {
       "name": "OnReactionToggled",
       "type": "EventCallback<DocumentCommentReactionToggleRequest>",
       "isRequired": false,
-      "description": "Callback invoked when deleting a comment is requested."
+      "description": "Callback invoked when toggling a reaction is requested."
     },
     {
       "name": "OnReopenRequested",
       "type": "EventCallback<DocumentCommentThreadStatusRequest>",
       "isRequired": false,
-      "description": "Callback invoked when resolving a thread is requested."
+      "description": "Callback invoked when reopening a thread is requested."
     },
     {
       "name": "OnReplyRequested",
       "type": "EventCallback<DocumentCommentReplyRequest>",
       "isRequired": false,
-      "description": "Whether panel interaction is disabled."
+      "description": "Callback invoked when a reply is requested."
     },
     {
       "name": "OnResolveRequested",
       "type": "EventCallback<DocumentCommentThreadStatusRequest>",
       "isRequired": false,
-      "description": "Callback invoked when a reply is requested."
+      "description": "Callback invoked when resolving a thread is requested."
     },
     {
       "name": "OnThreadNavigateRequested",
       "type": "EventCallback<DocumentCommentThreadNavigateRequest>",
       "isRequired": false,
-      "description": "Callback invoked when toggling a reaction is requested."
+      "description": "Callback invoked when a thread asks the parent to navigate to its page."
     },
     {
       "name": "SelectedThreadId",
       "type": "string?",
       "isRequired": false,
-      "description": "Comment threads to render."
+      "description": "Selected thread id."
     },
     {
       "name": "SelectedThreadIdChanged",
       "type": "EventCallback<string?>",
       "isRequired": false,
-      "description": "Selected thread id."
+      "description": "Callback invoked when selected thread id changes."
     },
     {
       "name": "OnDraftChanged",

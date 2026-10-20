@@ -22,38 +22,38 @@
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether this marker is selected."
+      "description": "Current user id used for mention styling."
     },
     {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
-      "description": "Current user id used for mention styling."
+      "description": "Whether marker interaction is disabled."
     },
     {
       "name": "MarkerTemplate",
       "type": "RenderFragment<DocumentCommentThread>?",
       "isRequired": false,
-      "description": "Whether marker interaction is disabled."
+      "description": "Optional custom marker content."
     },
     {
       "name": "OnSelected",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Optional custom marker content."
+      "description": "Callback invoked when marker is selected."
     },
     {
       "name": "Selected",
       "type": "bool",
       "isRequired": false,
-      "description": "One-based visual thread number."
+      "description": "Whether this marker is selected."
     },
     {
       "name": "ThreadNumber",
       "type": "int",
       "isRequired": true,
       "default": "1",
-      "description": "Thread rendered by the marker.",
+      "description": "One-based visual thread number.",
       "editorRequired": true
     }
   ]

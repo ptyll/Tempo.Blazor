@@ -22,7 +22,7 @@
       "type": "string",
       "isRequired": false,
       "default": "\"polite\"",
-      "description": "Message announced to assistive technologies."
+      "description": "Aria-live politeness level. Defaults to polite."
     }
   ]
 }

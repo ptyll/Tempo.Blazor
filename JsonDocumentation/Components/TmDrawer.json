@@ -38,7 +38,7 @@
       "type": "string",
       "isRequired": false,
       "default": "\"400px\"",
-      "description": "Width of the drawer panel."
+      "description": "Width of the drawer panel. Ignored by a bottom sheet, which sizes from its snap point."
     },
     {
       "name": "Title",
@@ -103,7 +103,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the drawer is modal. A non-modal drawer renders inside its container with no overlay and no inert background."
+      "description": "Whether the drawer is modal. A non-modal drawer renders inside its container with no overlay and no inert background, so the page behind it stays usable."
     },
     {
       "name": "SnapPoints",
@@ -154,7 +154,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether a downward swipe past the lowest snap dismisses the sheet."
+      "description": "Whether a downward swipe past the lowest snap dismisses the sheet. The gesture itself lives in the drawer module; this flag is what the stylesheet and the tests read."
     },
     {
       "name": "LayoutMode",
@@ -168,13 +168,13 @@
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Desktop",
-      "description": "The layout rendered before the first measurement."
+      "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise, so a phone host can avoid flashing the desktop sheet."
     },
     {
       "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,
-      "description": "Raised when the rendered layout changes. The initial value is not a change."
+      "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
     },
     {
       "name": "Class",

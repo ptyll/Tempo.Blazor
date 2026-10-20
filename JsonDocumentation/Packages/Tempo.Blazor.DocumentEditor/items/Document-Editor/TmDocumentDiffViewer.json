@@ -21,32 +21,32 @@
       "name": "ComparisonResult",
       "type": "DocumentCompareResult?",
       "isRequired": false,
-      "description": "Whether side-by-side text panes should be shown."
+      "description": "Optional precomputed comparison result."
     },
     {
       "name": "NewDocument",
       "type": "DocumentEditorDocument?",
       "isRequired": false,
-      "description": "Old document snapshot."
+      "description": "New document snapshot."
     },
     {
       "name": "NewTitle",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional title for the old side."
+      "description": "Optional title for the new side."
     },
     {
       "name": "OldTitle",
       "type": "string?",
       "isRequired": false,
-      "description": "New document snapshot."
+      "description": "Optional title for the old side."
     },
     {
       "name": "SideBySide",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Optional title for the new side."
+      "description": "Whether side-by-side text panes should be shown."
     }
   ]
 }

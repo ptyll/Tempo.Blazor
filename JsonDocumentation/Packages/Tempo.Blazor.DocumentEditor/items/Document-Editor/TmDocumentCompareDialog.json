@@ -21,50 +21,50 @@
       "name": "Author",
       "type": "DocumentEditorAuthor?",
       "isRequired": false,
-      "description": "Whether local comparison should be used when the provider fails."
+      "description": "Author requesting the comparison."
     },
     {
       "name": "ComparisonProvider",
       "type": "IDocumentComparisonProvider?",
       "isRequired": false,
-      "description": "Optional external format provider used for DOCX upload comparison sources."
+      "description": "Optional provider-backed comparison boundary."
     },
     {
       "name": "DocumentProvider",
       "type": "IDocumentEditorProvider?",
       "isRequired": false,
-      "description": "Current editor document snapshot."
+      "description": "Provider used to resolve document id sources for local comparison."
     },
     {
       "name": "FormatProvider",
       "type": "IDocumentFormatProvider?",
       "isRequired": false,
-      "description": "Provider used to resolve document id sources for local comparison."
+      "description": "Optional external format provider used for DOCX upload comparison sources."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when comparison fails."
+      "description": "Raised when the dialog should close."
     },
     {
       "name": "OnCompared",
       "type": "EventCallback<DocumentCompareResult>",
       "isRequired": false,
-      "description": "Author requesting the comparison."
+      "description": "Raised when comparison succeeds."
     },
     {
       "name": "OnCompareFailed",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when comparison succeeds."
+      "description": "Raised when comparison fails."
     },
     {
       "name": "UseLocalComparisonFallback",
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Optional provider-backed comparison boundary."
+      "description": "Whether local comparison should be used when the provider fails."
     },
     {
       "name": "OnExportRedline",

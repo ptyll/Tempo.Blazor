@@ -70,7 +70,7 @@
       "name": "Value",
       "type": "string?",
       "isRequired": false,
-      "description": "Field identifier edited by the formula builder when is not supplied."
+      "description": "Formula text displayed by the builder. Human-readable field tokens are accepted."
     },
     {
       "name": "ValueChanged",

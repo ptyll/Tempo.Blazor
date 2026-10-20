@@ -11,13 +11,13 @@
       "name": "Decorative",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the handle is decorative. A decorative handle is not focusable and carries no label."
+      "description": "Whether the handle is decorative. A decorative handle is not focusable and carries no label, because it is not a control."
     },
     {
       "name": "SnapCount",
       "type": "int",
       "isRequired": false,
-      "description": "How many snap points the sheet has."
+      "description": "How many snap points the sheet has. The slider's maximum is one less."
     },
     {
       "name": "SnapIndex",
@@ -41,7 +41,7 @@
       "name": "OnDismiss",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when ArrowDown is pressed at the lowest snap."
+      "description": "Raised when ArrowDown is pressed at the lowest snap, which dismisses the sheet."
     }
   ],
   "cssClasses": [

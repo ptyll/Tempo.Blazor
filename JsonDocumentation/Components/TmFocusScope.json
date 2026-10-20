@@ -36,7 +36,7 @@
       "name": "RestoreFocusTargetId",
       "type": "string?",
       "isRequired": false,
-      "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Same skip rules as RestoreFocusTarget."
+      "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Set it when the target is rendered outside this scope. Same skip rules as RestoreFocusTarget."
     },
     {
       "name": "AriaLabelledBy",
@@ -80,7 +80,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether deactivation restores focus."
+      "description": "Whether deactivation restores focus. False leaves focus where the close action put it."
     },
     {
       "name": "NoteOpenerOnMount",
@@ -93,13 +93,13 @@
       "name": "OnDeactivated",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised after the trap deactivates."
+      "description": "Raised after the trap deactivates and focus has been restored."
     },
     {
       "name": "CloseOnEscape",
       "type": "bool",
       "isRequired": false,
-      "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits."
+      "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits. Only the topmost active scope handles it."
     },
     {
       "name": "OnEscape",

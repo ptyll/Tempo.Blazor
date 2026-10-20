@@ -21,37 +21,37 @@
       "name": "DocxDrawingMetadataJson",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional JSON with the current runtime debug state."
+      "description": "Optional JSON with imported/exportable DOCX DrawingML metadata."
     },
     {
       "name": "Json",
       "type": "string?",
       "isRequired": false,
-      "description": "Whether the modal is open."
+      "description": "JSON string to display."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the user requests copying the debug JSON payload."
+      "description": "Raised when the modal should close."
     },
     {
       "name": "OnCopyJson",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Optional JSON with the latest runtime recovery detail."
+      "description": "Raised when the user requests copying the debug JSON payload."
     },
     {
       "name": "RecoveryDetailJson",
       "type": "string?",
       "isRequired": false,
-      "description": "Optional JSON with imported/exportable DOCX DrawingML metadata."
+      "description": "Optional JSON with the latest runtime recovery detail."
     },
     {
       "name": "RuntimeDebugJson",
       "type": "string?",
       "isRequired": false,
-      "description": "JSON string to display."
+      "description": "Optional JSON with the current runtime debug state."
     }
   ]
 }

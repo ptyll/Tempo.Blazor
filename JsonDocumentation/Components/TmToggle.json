@@ -23,7 +23,7 @@
       "name": "Label",
       "type": "string?",
       "isRequired": false,
-      "description": "Label text shown beside the toggle."
+      "description": "Label text shown beside the toggle. It also names the switch for assistive technology, unless AriaLabel overrides it. Leave it null and use AriaLabel, AriaLabelledBy or Id when the visible text belongs to the surrounding page."
     },
     {
       "name": "AriaLabel",

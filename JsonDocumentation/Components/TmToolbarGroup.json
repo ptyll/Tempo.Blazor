@@ -11,7 +11,7 @@
       "name": "Label",
       "type": "string?",
       "isRequired": false,
-      "description": "Accessible name of the group on the bar and the header of its section in the More menu. Empty renders the wrapper without a role — a layout-only group."
+      "description": "Accessible name of the group on the bar and the header of its section in the \"More\" menu. Empty renders the wrapper without a role — a layout-only group."
     },
     {
       "name": "ChildContent",

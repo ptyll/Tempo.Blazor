@@ -21,13 +21,13 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false,
-      "description": "Callback invoked when the user requests verification."
+      "description": "Additional CSS classes for the root element."
     },
     {
       "name": "OnVerifyRequested",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Verification result to render."
+      "description": "Callback invoked when the user requests verification."
     }
   ]
 }
