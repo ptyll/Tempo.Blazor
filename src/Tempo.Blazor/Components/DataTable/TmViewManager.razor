@@ -5,9 +5,10 @@
 
 <div class="tm-view-manager">
     <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline tm-view-manager-toggle"
-            aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog" @onclick="ToggleDropdownAsync">
+            aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog"
+            title="@ToggleTitle" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
-        <span>@(ShowActiveViewName && _activeView is not null ? _activeView.Name : Loc["TmViewManager_Views"])</span>
+        <span class="@(ShowActiveViewName && _activeView is not null ? "tm-view-manager-toggle-name" : null)">@(ShowActiveViewName && _activeView is not null ? _activeView.Name : Loc["TmViewManager_Views"])</span>
         <TmIcon Name="chevron-down" />
     </button>
 
@@ -35,16 +36,18 @@
                     {
                         <div class="tm-view-item-row">
                             <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                 aria-current="@(_activeView?.Id == view.Id ? "true" : null)"
                                  @onclick="() => ApplyViewAsync(view)">
                                 <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
                                 @if (view.IsDefault)
                                 {
-                                    <span class="tm-view-item-badge">★</span>
+                                    <span class="tm-view-item-badge" aria-hidden="true">★</span>
+                                    <span class="tm-sr-only">@Loc["TmViewManager_DefaultView"]</span>
                                 }
                             </button>
                             @if (AllowSetDefault && !view.IsDefault)
                             {
-                                <button type="button" aria-label="@Loc["TmViewManager_SetDefault"]" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                                <button type="button" aria-label="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
                             }
                             @if (CanEditView(view))
                             {
@@ -82,18 +85,20 @@
                         {
                             <div class="tm-view-item-row">
                                 <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                     aria-current="@(_activeView?.Id == view.Id ? "true" : null)"
                                      @onclick="() => ApplyViewAsync(view)">
                                     <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
                                     @if (view.IsDefault)
                                     {
-                                        <span class="tm-view-item-badge">★</span>
+                                        <span class="tm-view-item-badge" aria-hidden="true">★</span>
+                                        <span class="tm-sr-only">@Loc["TmViewManager_DefaultView"]</span>
                                     }
                                 </button>
                                 @if (AllowSetDefault && !view.IsDefault)
-                            {
-                                <button type="button" aria-label="@Loc["TmViewManager_SetDefault"]" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
-                            }
-                            @if (CanEditView(view))
+                                {
+                                    <button type="button" aria-label="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                                }
+                                @if (CanEditView(view))
                                 {
                                     <button type="button" class="tm-view-edit-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_EditNamed"], view.Name)" @onclick="() => OpenEditModal(view)">
                                         <TmIcon Name="edit" Size="IconSize.Sm" />

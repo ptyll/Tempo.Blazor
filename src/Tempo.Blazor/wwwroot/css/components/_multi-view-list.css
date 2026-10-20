@@ -101,6 +101,19 @@
   padding: var(--tm-space-2) var(--tm-space-3); 
   border-bottom: 1px solid var(--tm-border-color); 
 }
+/* TableCellLayout.Stacked: the subtitle sits under the title inside the cell, never on the td itself. */
+.tm-mvl-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+}
+.tm-mvl-cell-primary {
+  font-weight: var(--tm-font-weight-medium);
+}
+.tm-mvl-cell-secondary {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
 
 /* Card Grid */
 .tm-mvl-card-grid {

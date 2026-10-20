@@ -8633,7 +8633,7 @@
               "name": "GroupHeaderTemplate",
               "type": "RenderFragment<DataGroup<TItem>>?",
               "isRequired": false,
-              "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+              "description": "Replaces the default group header (label and count) in every view. The context is the DataGroup. Omit it to keep the built-in header."
             },
             {
               "name": "GroupsCollapsedByDefault",
@@ -8812,7 +8812,7 @@
               "name": "StatusVariantField",
               "type": "Func<TItem, Tempo.Blazor.Components.DataDisplay.BadgeVariant>?",
               "isRequired": false,
-              "description": "Opt-in StatusVariantField behavior; defaults preserve the existing presentation."
+              "description": "Maps an item to the status badge variant (success, warning, and the other BadgeVariant values). Omit it and every status badge uses the default variant."
             },
             {
               "name": "SubTitleField",
@@ -8825,7 +8825,7 @@
               "type": "TableCellLayout",
               "isRequired": false,
               "default": "TableCellLayout.Inline",
-              "description": "Opt-in TableCellLayout behavior; defaults preserve the existing presentation."
+              "description": "Table-view cell layout. Inline (default) keeps title and subtitle in their own columns. Stacked drops the subtitle column and renders its value under the title in the same cell."
             },
             {
               "name": "TableRowTemplate",
@@ -9289,7 +9289,7 @@
               "name": "AllowSetDefault",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation.",
+              "description": "Passed to the embedded TmViewManager. When true, each non-default view offers Set as default, persisted through the view provider. Default false hides the action.",
               "default": "false"
             },
             {
@@ -9392,7 +9392,7 @@
               "type": "EditActionsMode",
               "isRequired": false,
               "default": "EditActionsMode.Icons",
-              "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
+              "description": "How an edited row presents Save and Cancel. Icons (default) shows icon buttons in the row. Text shows labeled buttons in the row. Footer moves them into a following row whose cell spans every rendered column (expander, checkbox, data columns and the edit-action column). Mobile cards always use Text."
             },
             {
               "name": "EmptyTitle",
@@ -9411,7 +9411,7 @@
               "name": "GroupHeaderTemplate",
               "type": "RenderFragment<DataGroup<TItem>>?",
               "isRequired": false,
-              "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+              "description": "Replaces the default group header (column title, value and count). The context is the DataGroup. Omit it to keep the built-in header."
             },
             {
               "name": "GroupsCollapsedByDefault",
@@ -9522,7 +9522,7 @@
               "name": "OnSetDefault",
               "type": "EventCallback<DataTableView>",
               "isRequired": false,
-              "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+              "description": "Passed to the embedded TmViewManager. Raised after the default view is persisted and the list reloads."
             },
             {
               "name": "PageSize",
@@ -9614,7 +9614,7 @@
               "name": "ShowActiveViewName",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation.",
+              "description": "Passed to the embedded TmViewManager. When true, the toggle shows the active view's name (truncated, full name in title) instead of Views.",
               "default": "false"
             },
             {
@@ -10431,7 +10431,7 @@
               "name": "AllowSetDefault",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation.",
+              "description": "When true, each non-default view offers Set as default. The choice is persisted through Provider.SetDefaultViewAsync, the list reloads, and OnSetDefault fires with the reloaded view. A failed write is shown in the panel and leaves the current default unchanged. Default false hides the action.",
               "default": "false"
             },
             {
@@ -10502,7 +10502,7 @@
               "name": "OnSetDefault",
               "type": "EventCallback<DataTableView>",
               "isRequired": false,
-              "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+              "description": "Raised after SetDefaultViewAsync succeeds and the view list reloads, with the persisted view."
             },
             {
               "name": "OnViewApplied",
@@ -10521,7 +10521,7 @@
               "name": "ShowActiveViewName",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation.",
+              "description": "When true and a view is active, the toggle shows that view's name (truncated, full name in title) instead of the generic Views label. Default false keeps Views.",
               "default": "false"
             },
             {
@@ -13121,7 +13121,7 @@
               "type": "FilterBuilderPresentation",
               "isRequired": false,
               "default": "FilterBuilderPresentation.Inline",
-              "description": "Inline (default) keeps today's layout, including PickersPage. Popover anchors the field picker and editor. Hosts must opt in."
+              "description": "Inline (default) keeps the field picker and editor in the document flow, including PickersPage. Popover and Auto open both through TmOverlayPanel anchored to Add filter: Popover stays a popover at every width, Auto becomes a sheet on a narrow viewport. Hosts must opt in."
             },
             {
               "name": "ResultCountProvider",

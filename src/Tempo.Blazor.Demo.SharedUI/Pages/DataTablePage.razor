@@ -417,6 +417,8 @@
                      ViewProvider="_viewProvider"
                      ViewFilterDefinitions="_employeeViewFilterDefs"
                      ShowExternalFilterBuilder="false"
+                     ShowActiveViewName="true"
+                     AllowSetDefault="true"
                      ShowSearch="false"
                      ViewCanCreateTenantViews="true"
                      CurrentUserId="@CurrentUserId"
@@ -464,6 +466,7 @@
                          ActiveFilters="@_activeEmployeeFilters"
                          OnFiltersChanged="OnEmployeeFiltersChanged"
                          DisplayResolver="ResolveDisplay"
+                         Presentation="FilterBuilderPresentation.Popover"
                          ShowClearAll="false" />
     </div>
     

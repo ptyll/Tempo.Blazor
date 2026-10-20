@@ -44,7 +44,7 @@
       "type": "FilterBuilderPresentation",
       "isRequired": false,
       "default": "Inline",
-      "description": "Inline (default) keeps today's layout, including PickersPage. Popover anchors the field picker and editor. Hosts must opt in."
+      "description": "Inline (default) keeps the field picker and editor in the document flow, including PickersPage. Popover and Auto open both through TmOverlayPanel anchored to Add filter: Popover stays a popover at every width, Auto becomes a sheet on a narrow viewport. Hosts must opt in."
     },
     {
       "name": "Class",

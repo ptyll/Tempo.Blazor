@@ -119,11 +119,11 @@ public enum ColumnMenuMode
 /// <summary>Presentation of inline row edit actions.</summary>
 public enum EditActionsMode
 {
-    /// <summary>Icon actions, preserving current markup.</summary>
+    /// <summary>Icon actions in the edited row. The default; preserves current markup.</summary>
     Icons,
-    /// <summary>Localized text buttons.</summary>
+    /// <summary>Localized text buttons in the edited row. Mobile cards always use this.</summary>
     Text,
-    /// <summary>Actions in a separate footer row.</summary>
+    /// <summary>Save and Cancel in the following row, spanning every rendered column.</summary>
     Footer
 }
 
@@ -139,9 +139,9 @@ public enum CardActivation
 /// <summary>Cell content layout for multi-view lists.</summary>
 public enum TableCellLayout
 {
-    /// <summary>Inline layout.</summary>
+    /// <summary>Title and subtitle each keep their own table column. The default.</summary>
     Inline,
-    /// <summary>Stack cell content.</summary>
+    /// <summary>The subtitle column is dropped and its value renders under the title in the same cell.</summary>
     Stacked
 }
 
@@ -206,10 +206,10 @@ public enum FilterBuilderPresentation
     /// <summary>The picker and editor render in the document flow.</summary>
     Inline,
 
-    /// <summary>The picker and editor render as an anchored popover.</summary>
+    /// <summary>The picker and editor open in a <c>TmOverlayPanel</c> anchored to Add filter, as a popover at every width.</summary>
     Popover,
 
-    /// <summary>Same as <see cref="Inline"/> until a host opts into a breakpoint rule.</summary>
+    /// <summary>Same anchored panel as <see cref="Popover"/>, becoming a sheet on a narrow viewport.</summary>
     Auto
 }
 

@@ -1343,6 +1343,12 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private ElementReference _selectAllRef;
     private bool IsSelected(TItem item) => _selectedItems.Contains(item);
     private int ColSpan => Math.Max(1, (HasDetail ? 1 : 0) + (Selectable ? 1 : 0) + _visibleColumns.Count + (HasEditActions ? 1 : 0));
+
+    /// <summary>
+    /// Columns the edit-action footer must cover: the expander, the checkbox, every rendered data
+    /// column and the edit-action column itself.
+    /// </summary>
+    private int EditFooterColSpan => (HasDetail ? 1 : 0) + (Selectable ? 1 : 0) + _renderedCellColumns.Count + 1;
     /// <summary>
     /// Attribute names the table manages itself on each &lt;tr&gt;. A consumer <see cref="RowAttributes"/>
     /// dictionary must not override these, or it would clobber row styling, selection clicks, keyboard

@@ -852,6 +852,12 @@
   align-items: center;
   gap: var(--tm-space-1);
 }
+.tm-view-manager-toggle-name {
+  max-inline-size: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tm-view-manager-panel {
   /* Positioning contract: the panel is a top-layer popover positioned by overlay.js in viewport
      coordinates (position:fixed from the :where() reset) — declaring position/top/right here
@@ -1453,6 +1459,26 @@
   gap: var(--tm-space-1);
 }
 .tm-data-table-row--edit-footer {
+  background: var(--tm-surface-secondary);
+}
+.tm-data-table-row--edit-footer > td {
+  padding: var(--tm-space-2) var(--tm-data-table-cell-px);
+  background: var(--tm-surface-secondary);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+/* EditActionsMode.Footer: flex lives on the inner wrapper so colspan on the td is honored. */
+.tm-data-table__edit-footer-actions {
+  display: flex;
+  gap: var(--tm-space-2);
+  justify-content: flex-end;
+}
+/* Mobile cards: the action cell is not in a table, so flex on the cell itself is fine. */
+.tm-data-table__edit-actions--card-footer {
+  display: flex;
+  gap: var(--tm-space-2);
+  justify-content: flex-end;
+  padding: var(--tm-space-2) var(--tm-data-table-cell-px);
   background: var(--tm-surface-secondary);
 }
 .tm-view-modal {

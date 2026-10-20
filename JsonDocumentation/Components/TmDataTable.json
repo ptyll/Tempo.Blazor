@@ -444,7 +444,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation."
+      "description": "Passed to the embedded TmViewManager. When true, each non-default view offers Set as default, persisted through the view provider. Default false hides the action."
     },
     {
       "name": "ColumnMenuMode",
@@ -458,7 +458,7 @@
       "type": "EditActionsMode",
       "isRequired": false,
       "default": "Icons",
-      "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
+      "description": "How an edited row presents Save and Cancel. Icons (default) shows icon buttons in the row. Text shows labeled buttons in the row. Footer moves them into a following row whose cell spans every rendered column (expander, checkbox, data columns and the edit-action column). Mobile cards always use Text."
     },
     {
       "name": "AllowExportSelected",
@@ -471,20 +471,20 @@
       "name": "GroupHeaderTemplate",
       "type": "RenderFragment<DataGroup<TItem>>?",
       "isRequired": false,
-      "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+      "description": "Replaces the default group header (column title, value and count). The context is the DataGroup. Omit it to keep the built-in header."
     },
     {
       "name": "OnSetDefault",
       "type": "EventCallback<DataTableView>",
       "isRequired": false,
-      "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+      "description": "Passed to the embedded TmViewManager. Raised after the default view is persisted and the list reloads."
     },
     {
       "name": "ShowActiveViewName",
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation."
+      "description": "Passed to the embedded TmViewManager. When true, the toggle shows the active view's name (truncated, full name in title) instead of Views."
     }
   ],
   "cssClasses": [

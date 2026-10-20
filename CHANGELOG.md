@@ -29,6 +29,20 @@
 
 ### Added
 
+- **Remaining opt-in presentation parameters.** All default `false` or to today's presentation.
+  `TmMultiViewList.TableCellLayout.Stacked` drops the subtitle column and renders its value under
+  the title (inner `.tm-mvl-cell-stack`; the `td` stays a table cell); `Inline` is unchanged. `TmFilterBuilder.Presentation` of
+  `Popover` or `Auto` opens the field picker and editor in a `TmOverlayPanel` anchored to Add
+  filter — `Auto` becomes a sheet on a narrow viewport, `Popover` stays a popover; `Inline`
+  (including PickersPage) stays in the document flow. `AllowSetDefault` shows "Set {name} as
+  default", persists through `IDataTableViewProvider.SetDefaultViewAsync`, reloads and then raises
+  `OnSetDefault`; the default view is `aria-current` with a visually hidden "Default view".
+  `ShowActiveViewName` puts the active view's name on the toggle (truncated at 16rem, full name in
+  `title`). `EditActionsMode.Footer` moves Save and Cancel into a following row whose cell spans
+  every rendered column; `Text` labels the in-row buttons. `GroupHeaderTemplate` and
+  `StatusVariantField` were already wired; their docs now say what they do. See
+  `docs/data-table-redesign.md`.
+
 - **Filter result preview.** `TmDataTable` and `TmMultiViewList` take `ShowFilterResultPreview`
   (default `false`). When the inline filter builder renders, it shows how many records match the
   current filters, including a valid filter still being edited: a `DataProvider` is asked with
@@ -1010,6 +1024,10 @@
   translations in an application (registered after `AddTempoBlazor()`).
 
 ### Breaking / Migration
+
+- **The default-view marker in `TmViewManager` is now named.** The decorative `★` stays, with
+  `aria-hidden="true"`, and a visually hidden "Default view" (`TmViewManager_DefaultView`) names it
+  for assistive technology. A custom `ITmLocalizer` must supply that key. <!-- snapshot:dt-viewmanager -->
 
 - **`TmFilterBuilder.ShowResultPreview` no longer shows a static "Preview".** Before this version,
   `ShowResultPreview="true"` rendered the literal preview placeholder even with no count source.

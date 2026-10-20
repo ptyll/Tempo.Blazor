@@ -16,6 +16,9 @@ This guide describes the landed opt-in presentation and interaction parameters f
 | `TmMultiViewList.AvatarFallback` | `AvatarFallback.None` | Missing avatar URLs render no fallback avatar. |
 | `TmMultiViewList.ShowItemCount` | `false` | Item count is hidden unless enabled. |
 | `TmMultiViewList.Responsive` | `false` | Responsive table/list behavior remains off. |
+| `TmMultiViewList.TableCellLayout` | `TableCellLayout.Inline` | Title and subtitle stay in their own table columns. |
+| `TmDataTable.EditActionsMode` | `EditActionsMode.Icons` | Save and Cancel are icon buttons in the edited row. |
+| `TmDataTable.ShowActiveViewName` / `AllowSetDefault` | `false` | The view toggle reads "Views"; no Set as default action. |
 
 Do not change these defaults as part of consumer adoption. Set an opt-in only when the screen requires it.
 
@@ -84,7 +87,7 @@ The menu offers only what the column can do:
 
 ## Surface and filter presentation
 
-`Appearance="DataTableAppearance.Card"` opts `TmDataTable` into its card surface; Plain remains the default. `TmFilterBuilder.Presentation="FilterBuilderPresentation.Popover"` opts the filter editor into an anchored popover; Inline remains the default.
+`Appearance="DataTableAppearance.Card"` opts `TmDataTable` into its card surface; Plain remains the default. `TmFilterBuilder.Presentation` opts the field picker and editor out of the document flow: `Popover` opens them in a `TmOverlayPanel` anchored to Add filter and stays a popover at every width; `Auto` uses the same panel and lets it become a sheet on a narrow viewport. `Inline` (the default, including PickersPage) is unchanged.
 
 ## Export scope
 
@@ -139,6 +142,26 @@ When defining an `EditTemplate` on `TmDataTableColumn`, wrap the edited control 
 </TmDataTableColumn>
 ```
 
+## Saved views
+
+`ShowActiveViewName="true"` replaces the generic "Views" toggle label with the active view's name. A long name is truncated (`max-inline-size: 16rem`, ellipsis) and the full name stays in the toggle's `title`.
+
+`AllowSetDefault="true"` adds a "Set {name} as default" action on every view that is not already the default. Choosing it calls `IDataTableViewProvider.SetDefaultViewAsync`, reloads the list, then raises `OnSetDefault` with the persisted view. A failed write is shown in the panel and the current default is left as it was. The default view is marked with `aria-current` and a visually hidden "Default view" (`TmViewManager_DefaultView`); the star itself is `aria-hidden`.
+
+## Edit actions
+
+`EditActionsMode` chooses how an edited row presents Save and Cancel:
+
+- `Icons` (default) keeps the icon buttons in the row.
+- `Text` keeps them in the row and shows the localized labels.
+- `Footer` moves them into the following row. That cell spans every rendered column — the expander, the checkbox, the data columns and the edit-action column. Flex alignment lives on the inner `.tm-data-table__edit-footer-actions`, not on the `td`, so `colspan` is honored.
+
+Mobile cards always use `Text`, whatever was set.
+
+`GroupHeaderTemplate` replaces the built-in group header (column title, value and count) on `TmDataTable` and `TmMultiViewList`. The context is the `DataGroup<TItem>`. Omit it and the built-in header stays.
+
 ## Multi-view list options
 
 `TmMultiViewList` retains its existing defaults: card appearance, icon-only view-switcher labels, no avatar fallback, hidden item count, and non-responsive behavior. Opt into `ViewSwitcherLabels.IconsAndText`, `AvatarFallback.Initials`, `ShowItemCount="true"`, or `Responsive="true"` only where needed. Responsive behavior is controlled by `Responsive`; no additional mobile presentation parameter is provided for `TmColumnPicker` or `TmViewManager`.
+
+`TableCellLayout="TableCellLayout.Stacked"` drops the subtitle column in the table view and renders its value under the title in the same cell (an inner `.tm-mvl-cell-stack`, with `.tm-mvl-cell-secondary` for the subtitle). The `td` stays a table cell. `Inline` (the default) keeps the two columns. `StatusVariantField` maps an item to the status badge variant; omit it and every badge uses the default variant.

@@ -389,20 +389,20 @@
       "name": "GroupHeaderTemplate",
       "type": "RenderFragment<DataGroup<TItem>>?",
       "isRequired": false,
-      "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+      "description": "Replaces the default group header (label and count) in every view. The context is the DataGroup. Omit it to keep the built-in header."
     },
     {
       "name": "StatusVariantField",
       "type": "Func<TItem, BadgeVariant>?",
       "isRequired": false,
-      "description": "Opt-in StatusVariantField behavior; defaults preserve the existing presentation."
+      "description": "Maps an item to the status badge variant (success, warning, and the other BadgeVariant values). Omit it and every status badge uses the default variant."
     },
     {
       "name": "TableCellLayout",
       "type": "TableCellLayout",
       "isRequired": false,
       "default": "Inline",
-      "description": "Opt-in TableCellLayout behavior; defaults preserve the existing presentation."
+      "description": "Table-view cell layout. Inline (default) keeps title and subtitle in their own columns. Stacked drops the subtitle column and renders its value under the title in the same cell."
     }
   ],
   "cssClasses": [

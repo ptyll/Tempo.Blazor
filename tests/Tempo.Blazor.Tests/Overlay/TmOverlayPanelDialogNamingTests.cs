@@ -8,6 +8,7 @@ using NSubstitute;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
@@ -280,6 +281,18 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                     .Add(c => c.Provider, provider)
                     .Add(c => c.ViewContext, "naming-sweep"));
                 cut.Find(".tm-view-manager-toggle").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // FilterBuilderPresentation.Popover opens the field picker in a named dialog.
+            ["TmFilterBuilder"] = () =>
+            {
+                var cut = Render<TmFilterBuilder>(p => p
+                    .Add(c => c.Presentation, FilterBuilderPresentation.Popover)
+                    .Add(c => c.FilterDefinitions, new[]
+                    {
+                        new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+                    }));
+                cut.Find(".tm-filter-builder-add").Click();
                 return cut.Find("[role='dialog']");
             },
         };

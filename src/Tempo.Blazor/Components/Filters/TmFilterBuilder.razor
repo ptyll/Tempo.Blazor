@@ -6,7 +6,7 @@
 @using Tempo.Blazor.Components.Pickers
 @implements IDisposable
 
-<div class="tm-filter-builder @(Presentation == FilterBuilderPresentation.Popover ? "tm-filter-builder--popover" : null) @Class">
+<div class="tm-filter-builder @Class">
     @* Active filter chips *@
     <div class="tm-filter-chips">
         @foreach (var f in _filters)
@@ -25,10 +25,10 @@
         }
     </div>
 
-    @* Add filter button *@
-    @if (Presentation == FilterBuilderPresentation.Popover || !_showFieldPicker)
+    @* Add filter button. Anchored presentations keep it visible: it is the overlay anchor. *@
+    @if (UsesOverlay || !_showFieldPicker)
     {
-        <button type="button" @ref="_addButton" class="tm-filter-builder-add" aria-expanded="@(Presentation == FilterBuilderPresentation.Popover && (_showFieldPicker || _selectedDefinition is not null) ? "true" : null)" @onclick="OpenFieldPicker">
+        <button type="button" @ref="_addButton" id="@(UsesOverlay ? _addButtonId : null)" class="tm-filter-builder-add" aria-expanded="@(UsesOverlay ? ((_showFieldPicker || _selectedDefinition is not null) ? "true" : "false") : null)" aria-haspopup="@(UsesOverlay ? "dialog" : null)" @onclick="OpenFieldPicker">
             @Loc["TmFilterBuilder_AddFilter"]
         </button>
     }
@@ -48,8 +48,29 @@
         </div>
     }
 
-    @* Field picker *@
-    @if (_showFieldPicker && _editingFilter is null)
+    @* Field picker. Popover/Auto render it inside an overlay anchored to Add filter. *@
+    @if (UsesOverlay && (_showFieldPicker || _selectedDefinition is not null))
+    {
+        <TmOverlayPanel Anchor="_addButton"
+                        IsOpen="true"
+                        IsOpenChanged="OnOverlayOpenChanged"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Role="dialog"
+                        Title="@Loc["TmFilterBuilder_AddFilter"]"
+                        MobilePresentation="@(Presentation == FilterBuilderPresentation.Auto ? PanelPresentation.Auto : PanelPresentation.Popover)"
+                        Class="tm-filter-builder-panel">
+            @if (_showFieldPicker && _editingFilter is null && _selectedDefinition is null)
+            {
+                @PickerContent
+            }
+            else if (_selectedDefinition is not null)
+            {
+                @EditorContent
+            }
+        </TmOverlayPanel>
+    }
+    else if (_showFieldPicker && _editingFilter is null)
     {
         <div class="tm-filter-field-picker" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
             @for (var i = 0; i < FilterDefinitions.Count; i++)
@@ -65,16 +86,99 @@
         </div>
     }
 
-    @* Filter editor *@
-    @if (_selectedDefinition is not null)
+    @* Filter editor. Overlay presentations render the same fragment inside the panel. *@
+    @if (!UsesOverlay && _selectedDefinition is not null)
+    {
+        @EditorContent
+    }
+</div>
+
+@code {
+    /// <summary>Definitions of filterable fields.</summary>
+    [Parameter] public IReadOnlyList<FilterDefinition> FilterDefinitions { get; set; } = [];
+
+    /// <summary>Currently applied filters (initial value).</summary>
+    [Parameter] public IReadOnlyList<ActiveFilter> ActiveFilters { get; set; } = [];
+
+    /// <summary>Fires whenever the filter list changes.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<ActiveFilter>> OnFiltersChanged { get; set; }
+
+    /// <summary>
+    /// Shows a live count of the records matching the filters, including a valid in-progress editor
+    /// filter. Renders only while <see cref="ResultCountProvider"/> is also set.
+    /// </summary>
+    [Parameter] public bool ShowResultPreview { get; set; }
+
+    /// <summary>
+    /// Returns the number of records matching the given filters, or null when unknown. Called with a
+    /// 300 ms debounce while <see cref="ShowResultPreview"/> is true. A thrown exception shows nothing
+    /// and never takes the builder down. An existing <c>Func</c> variable binds directly.
+    /// </summary>
+    [Parameter] public Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider { get; set; }
+
+    /// <summary>
+    /// How long a burst of filter changes waits before the count is asked for. Not a parameter —
+    /// tests set it through <c>InternalsVisibleTo</c>. Defaults to 300 ms.
+    /// </summary>
+    internal int ResultCountDebounceMs { get; set; } = 300;
+
+    /// <summary>Show the "Clear all" button when filters are active.</summary>
+    [Parameter] public bool ShowClearAll { get; set; } = true;
+
+    /// <summary>
+    /// Universal display resolver for field labels and filter values.
+    /// Passed from parent component.
+    /// </summary>
+    [Parameter] public Func<string, string?, string?>? DisplayResolver { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Picker placement. <see cref="FilterBuilderPresentation.Inline"/> (default) keeps today's layout,
+    /// including PickersPage. <see cref="FilterBuilderPresentation.Popover"/> and
+    /// <see cref="FilterBuilderPresentation.Auto"/> open the field picker and editor through
+    /// <c>TmOverlayPanel</c> anchored to the Add filter button — Popover stays a popover at every
+    /// width, Auto lets the panel become a sheet on a narrow viewport. Hosts must opt in.
+    /// </summary>
+    [Parameter] public FilterBuilderPresentation Presentation { get; set; } = FilterBuilderPresentation.Inline;
+
+    /// <summary>True when the picker and editor render in an overlay instead of the document flow.</summary>
+    private bool UsesOverlay => Presentation is FilterBuilderPresentation.Popover or FilterBuilderPresentation.Auto;
+
+    // Per instance, so a page with two builders never shares an anchor id.
+    private readonly string _addButtonId = $"tm-filter-add-{Guid.NewGuid():N}"[..20];
+
+    /// <summary>The picker and editor, shared by the in-flow markup and the overlay.</summary>
+    private RenderFragment PickerContent => __builder =>
+    {
+        if (_showFieldPicker && _editingFilter is null)
+        {
+            <div class="tm-filter-field-picker" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
+                @for (var i = 0; i < FilterDefinitions.Count; i++)
+                {
+                    var d = FilterDefinitions[i];
+                    <button type="button" class="tm-filter-field-option" @ref="_fieldOption" @onclick="() => SelectField(d)">
+                        @ResolveFieldLabel(d)
+                    </button>
+                }
+                <button type="button" class="tm-filter-cancel" @onclick="Cancel">
+                    @Loc["Tm_Cancel"]
+                </button>
+            </div>
+        }
+    };
+
+    /// <summary>The operator and value editor, shared by the in-flow markup and the overlay.</summary>
+    private RenderFragment EditorContent => __builder =>
     {
         <div class="tm-filter-editor" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
-            <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition)</span>
+            <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition!)</span>
 
             <select class="tm-filter-operator-select" aria-label="@Loc["TmFilterBuilder_Operator"]"
                     value="@_selectedOperator"
                     @onchange="OnOperatorChanged">
-                @foreach (var op in GetOperatorsFor(_selectedDefinition.FieldType))
+                @foreach (var op in GetOperatorsFor(_selectedDefinition!.FieldType))
                 {
                     <option value="@op">@FormatOperator(op)</option>
                 }
@@ -82,7 +186,7 @@
 
             @if (!IsEmptyOperator(_selectedOperator))
             {
-                @if (_selectedDefinition.FieldType == FilterFieldType.Date)
+                @if (_selectedDefinition!.FieldType == FilterFieldType.Date)
                 {
                     <TmDatePicker Label="@Loc["TmFilterBuilder_Value"]"
                                   Value="_dateValue"
@@ -132,55 +236,14 @@
                 @Loc["Tm_Cancel"]
             </button>
         </div>
+    };
+
+    private Task OnOverlayOpenChanged(bool open)
+    {
+        if (!open)
+            Cancel();
+        return Task.CompletedTask;
     }
-</div>
-
-@code {
-    /// <summary>Definitions of filterable fields.</summary>
-    [Parameter] public IReadOnlyList<FilterDefinition> FilterDefinitions { get; set; } = [];
-
-    /// <summary>Currently applied filters (initial value).</summary>
-    [Parameter] public IReadOnlyList<ActiveFilter> ActiveFilters { get; set; } = [];
-
-    /// <summary>Fires whenever the filter list changes.</summary>
-    [Parameter] public EventCallback<IReadOnlyList<ActiveFilter>> OnFiltersChanged { get; set; }
-
-    /// <summary>
-    /// Shows a live count of the records matching the filters, including a valid in-progress editor
-    /// filter. Renders only while <see cref="ResultCountProvider"/> is also set.
-    /// </summary>
-    [Parameter] public bool ShowResultPreview { get; set; }
-
-    /// <summary>
-    /// Returns the number of records matching the given filters, or null when unknown. Called with a
-    /// 300 ms debounce while <see cref="ShowResultPreview"/> is true. A thrown exception shows nothing
-    /// and never takes the builder down. An existing <c>Func</c> variable binds directly.
-    /// </summary>
-    [Parameter] public Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider { get; set; }
-
-    /// <summary>
-    /// How long a burst of filter changes waits before the count is asked for. Not a parameter —
-    /// tests set it through <c>InternalsVisibleTo</c>. Defaults to 300 ms.
-    /// </summary>
-    internal int ResultCountDebounceMs { get; set; } = 300;
-
-    /// <summary>Show the "Clear all" button when filters are active.</summary>
-    [Parameter] public bool ShowClearAll { get; set; } = true;
-
-    /// <summary>
-    /// Universal display resolver for field labels and filter values.
-    /// Passed from parent component.
-    /// </summary>
-    [Parameter] public Func<string, string?, string?>? DisplayResolver { get; set; }
-
-    /// <summary>Additional CSS class for the root element.</summary>
-    [Parameter] public string? Class { get; set; }
-
-    /// <summary>
-    /// Picker placement. <see cref="FilterBuilderPresentation.Inline"/> (default) keeps today's layout.
-    /// <see cref="FilterBuilderPresentation.Popover"/> anchors the picker. Hosts must opt in.
-    /// </summary>
-    [Parameter] public FilterBuilderPresentation Presentation { get; set; } = FilterBuilderPresentation.Inline;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

@@ -126,6 +126,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // tokens directly, so the zero-specificity overlay reset cannot win it.
         new("TmDataTable.razor", "tm-data-table-col-menu-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
+        // FilterBuilderPresentation.Popover/Auto anchors the field picker and editor. The panel
+        // owns only the surface; overlay.js owns position and stacking.
+        new("TmFilterBuilder.razor", "tm-filter-builder-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>

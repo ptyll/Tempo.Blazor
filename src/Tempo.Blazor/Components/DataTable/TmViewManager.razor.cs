@@ -15,7 +15,11 @@ public partial class TmViewManager : ComponentBase
     /// <summary>When true, show the active view name beside the view toggle icon.</summary>
     [Parameter] public bool ShowActiveViewName { get; set; }
 
-    /// <summary>When true, show Set as default actions. Changes persist only when OnSetDefault has a consumer.</summary>
+    /// <summary>
+    /// When true, each non-default view offers Set as default. The choice is persisted through
+    /// <see cref="Provider"/> and the list reloads; <see cref="OnSetDefault"/> is notified afterwards.
+    /// A failed write is reported in the panel error and does not change the current default.
+    /// </summary>
     [Parameter] public bool AllowSetDefault { get; set; }
 
     /// <summary>Raised when the user requests that a view become the default.</summary>
@@ -129,7 +133,35 @@ public partial class TmViewManager : ComponentBase
         _isOpen = false;
     }
 
-    private Task RequestSetDefaultAsync(DataTableView view) => OnSetDefault.HasDelegate ? OnSetDefault.InvokeAsync(view) : Task.CompletedTask;
+    private string? ToggleTitle => ShowActiveViewName && _activeView is not null ? _activeView.Name : null;
+
+    private string SetDefaultLabel(DataTableView view) => string.Format(
+        System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_SetDefaultNamed"], view.Name);
+
+    private async Task RequestSetDefaultAsync(DataTableView view)
+    {
+        if (string.IsNullOrEmpty(view.Id))
+            return;
+
+        DataTableView persisted;
+        try
+        {
+            _errorMessage = null;
+            await Provider.SetDefaultViewAsync(ViewContext, view.Id, CurrentTenantId, CurrentUserId);
+            await LoadViewsAsync();
+            persisted = _views.FirstOrDefault(v => v.Id == view.Id) ?? view;
+        }
+        catch
+        {
+            // Only a failed write or reload is a set-default failure. A consumer callback that
+            // throws after the default was saved must not be reported as a failed save, nor swallowed.
+            _errorMessage = Loc["TmViewManager_SetDefaultFailed"];
+            return;
+        }
+
+        if (OnSetDefault.HasDelegate)
+            await OnSetDefault.InvokeAsync(persisted);
+    }
 
     private async Task ApplyViewAsync(DataTableView view)
     {

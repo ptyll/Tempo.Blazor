@@ -644,10 +644,12 @@
                                 @if (HasEditActions && EffectiveEditActionsMode == EditActionsMode.Footer)
                                 {
                                     <tr class="tm-data-table-row--edit-footer">
-                                        <td colspan="@ColSpan">
-                                            @RowEditValidator
-                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save" aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]" data-testid="@TestId("edit-commit")" @onclick="CommitEditAsync"><TmIcon Name="save" /> @Loc["TmDataTable_SaveRow"]</button>
-                                            <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel" aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]" data-testid="@TestId("edit-cancel")" @onclick="CancelEditAsync"><TmIcon Name="x" /> @Loc["TmDataTable_CancelEdit"]</button>
+                                        <td class="tm-data-table__edit-actions" colspan="@EditFooterColSpan">
+                                            <div class="tm-data-table__edit-footer-actions">
+                                                @RowEditValidator
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--save" aria-label="@Loc["TmDataTable_SaveRow"]" title="@Loc["TmDataTable_SaveRow"]" data-testid="@TestId("edit-commit")" @onclick="CommitEditAsync"><TmIcon Name="save" /> @Loc["TmDataTable_SaveRow"]</button>
+                                                <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--cancel" aria-label="@Loc["TmDataTable_CancelEdit"]" title="@Loc["TmDataTable_CancelEdit"]" data-testid="@TestId("edit-cancel")" @onclick="CancelEditAsync"><TmIcon Name="x" /> @Loc["TmDataTable_CancelEdit"]</button>
+                                            </div>
                                         </td>
                                     </tr>
                                 }

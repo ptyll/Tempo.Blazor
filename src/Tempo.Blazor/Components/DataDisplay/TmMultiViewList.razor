@@ -178,7 +178,7 @@
                                 </th>
                             }
                             @if (_visibleColumns.Contains(ColumnKeys.Title)) { <th class="@(Responsive ? "tm-mvl-title-column" : null)">@Loc["TmMvl_ColTitle"]</th> }
-                            @if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
+                            @if (!StackTableCells && _visibleColumns.Contains(ColumnKeys.SubTitle)) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Status)) { <th>@Loc["TmMvl_ColStatus"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Date)) { <th>@Loc["TmMvl_ColDate"]</th> }
                             @if (_visibleColumns.Contains(ColumnKeys.Avatar)) { <th>@Loc["TmMvl_ColAvatar"]</th> }
@@ -323,8 +323,21 @@
     /// <summary>Maps an item to a badge variant when no explicit status color is supplied.</summary>
     [Parameter] public Func<TItem, Tempo.Blazor.Components.DataDisplay.BadgeVariant>? StatusVariantField { get; set; }
 
-    /// <summary>Cell layout in table mode. Inline preserves current markup.</summary>
+    /// <summary>
+    /// Cell layout in table mode. <see cref="DataTable.TableCellLayout.Inline"/> (the default) keeps
+    /// title and subtitle in their own columns. <see cref="DataTable.TableCellLayout.Stacked"/> drops
+    /// the subtitle column and renders its value under the title in the same cell.
+    /// </summary>
     [Parameter] public TableCellLayout TableCellLayout { get; set; } = TableCellLayout.Inline;
+
+    /// <summary>True when the table view stacks the subtitle under the title instead of its own column.</summary>
+    private bool StackTableCells => TableCellLayout == TableCellLayout.Stacked;
+
+    /// <summary>
+    /// Title cell classes. Only the responsive hook belongs on the <c>td</c>; stacking is an inner
+    /// div so <c>display:flex</c> never takes the cell out of table layout. Null when responsive is off.
+    /// </summary>
+    private string? TitleCellClass => Responsive ? "tm-mvl-title-column" : null;
 
     /// <summary>Group header content; null preserves the existing group label.</summary>
     [Parameter] public RenderFragment<DataGroup<TItem>>? GroupHeaderTemplate { get; set; }
@@ -1348,7 +1361,9 @@
 
     private string GetGroupKey(DataGroup<TItem> group) => $"{group.FieldName}:{group.Key}";
 
-    private int MvlColSpan => _visibleColumns.Count + (AllowSelection ? 1 : 0);
+    private int MvlColSpan => _visibleColumns.Count
+        - (StackTableCells && _visibleColumns.Contains(ColumnKeys.SubTitle) ? 1 : 0)
+        + (AllowSelection ? 1 : 0);
 
     private string GetMvlScrollContainerClass() =>
         IsVirtualized ? "tm-mvl-virtual-scroll" : "";
@@ -1426,7 +1441,7 @@
     {
         var selected = AllowSelection && IsSelected(item);
         var dragging = IsDragging(item);
-        <tr class="tm-mvl-row @(TableCellLayout == TableCellLayout.Stacked ? "tm-mvl-cell--stacked" : null) @(selected ? "tm-mvl-row--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
+        <tr class="tm-mvl-row @(selected ? "tm-mvl-row--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
             aria-selected="@(AllowSelection ? selected.ToString().ToLowerInvariant() : null)"
             tabindex="0"
             draggable="@(AllowDrag ? "true" : "false")"
@@ -1450,8 +1465,26 @@
             }
             else
             {
-                if (_visibleColumns.Contains(ColumnKeys.Title)) { <td class="@(Responsive ? "tm-mvl-title-column" : null)">@GetTitle(item)</td> }
-                if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <td>@GetSubTitle(item)</td> }
+                if (_visibleColumns.Contains(ColumnKeys.Title))
+                {
+                    <td class="@TitleCellClass">
+                        @if (StackTableCells)
+                        {
+                            <div class="tm-mvl-cell-stack">
+                                <span class="tm-mvl-cell-primary">@GetTitle(item)</span>
+                                @if (_visibleColumns.Contains(ColumnKeys.SubTitle) && !string.IsNullOrEmpty(GetSubTitle(item)))
+                                {
+                                    <span class="tm-mvl-cell-secondary">@GetSubTitle(item)</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            @GetTitle(item)
+                        }
+                    </td>
+                }
+                if (!StackTableCells && _visibleColumns.Contains(ColumnKeys.SubTitle)) { <td>@GetSubTitle(item)</td> }
                 if (_visibleColumns.Contains(ColumnKeys.Status))
                 {
                     <td>
