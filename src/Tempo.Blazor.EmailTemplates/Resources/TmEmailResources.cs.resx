@@ -183,6 +183,9 @@
   <data name="EmailEditor_Preview_Text" xml:space="preserve">
     <value>Prostý text</value>
   </data>
+  <data name="EmailEditor_Preview_Warnings" xml:space="preserve">
+    <value>Upozornění šablony</value>
+  </data>
   <data name="EmailEditor_Preview_Errors" xml:space="preserve">
     <value>Problémy renderování</value>
   </data>
@@ -230,6 +233,18 @@
   </data>
   <data name="validation.image.alt_missing" xml:space="preserve">
     <value>Obrázek nemá alternativní text.</value>
+  </data>
+  <data name="render.markup.unsafe_element_removed" xml:space="preserve">
+    <value>Z vyrenderované zprávy byl odstraněn markup, který může přepsat odkaz (SVG animační element nebo meta refresh).</value>
+  </data>
+  <data name="render.markup.too_complex" xml:space="preserve">
+    <value>Vyrenderovaný markup nešlo bezpečně zkontrolovat, a proto byl zahozen.</value>
+  </data>
+  <data name="render.markup.event_handler_removed" xml:space="preserve">
+    <value>Z vyrenderovaného markupu byl odstraněn atribut obsluhy události.</value>
+  </data>
+  <data name="render.url.blocked_scheme" xml:space="preserve">
+    <value>Odkaz s nepovoleným schématem URL byl nahrazen znakem '#'.</value>
   </data>
   <data name="validation.carousel.src_missing" xml:space="preserve">
     <value>Obrázek karuselu nemá zdroj.</value>

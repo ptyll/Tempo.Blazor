@@ -69,6 +69,52 @@ public class E8ComponentsTests : BunitContext
     }
 
     [Fact]
+    public void Preview_Warnings_AreShownSeparately_WithTheEngineFallbackText()
+    {
+        // The test localizer echoes the key, so a diagnostic whose key is unknown to the host must fall
+        // back to the engine's English message instead of showing the raw key.
+        var doc = new EmailTemplateDocument { Subject = "S" };
+        doc.Sections.Add(new EmailSection
+        {
+            Columns =
+            {
+                new EmailColumn
+                {
+                    Blocks = { new EmailButtonBlock { Text = "Go", Href = "javascript:alert(1)" } },
+                },
+            },
+        });
+
+        var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, doc));
+
+        cut.FindAll("[data-tm-preview-errors]").Should().BeEmpty();
+        var warnings = cut.Find("[data-tm-preview-warnings]");
+        warnings.TextContent.Should().Contain("blocked URL scheme");
+        warnings.TextContent.Should().NotContain("render.url.blocked_scheme");
+        cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().NotContain("javascript:");
+    }
+
+    [Fact]
+    public void Preview_WithError_ShowsTheErrorAndNoHtml()
+    {
+        // A message whose markup could not be built is fail-closed (Html = ""), so the preview shows the
+        // diagnostic instead of a half-built body.
+        var doc = new EmailTemplateDocument { Subject = "S" };
+        doc.Sections.Add(new EmailSection
+        {
+            Columns =
+            {
+                new EmailColumn { Blocks = { new EmailRawBlock { Content = "<mj-column>" } } },
+            },
+        });
+
+        var cut = Render<TmEmailTemplatePreview>(p => p.Add(c => c.Document, doc));
+
+        cut.Find("[data-tm-preview-errors]").TextContent.Should().NotBeNullOrWhiteSpace();
+        cut.Find("[data-tm-preview-frame]").GetAttribute("srcdoc").Should().BeEmpty();
+    }
+
+    [Fact]
     public void Preview_TextToggle_ShowsPlainText()
     {
         var cut = Render<TmEmailTemplatePreview>(p => p

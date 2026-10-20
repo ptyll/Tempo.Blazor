@@ -55,14 +55,14 @@ public static class EmailTemplateEndpoints
             if (parsed.Error is not null) return Results.BadRequest(parsed.Error);
 
             var model = ParseVariables(request.VariablesJson);
-            var result = await renderer.RenderAsync(parsed.Document!, model, ct);
+            var result = await renderer.RenderAsync(parsed.Document!, model, cancellationToken: ct);
             return Results.Ok(new RenderPreviewResponse
             {
                 Html = result.Html,
                 Text = result.TextVersion,
                 Subject = result.Subject,
                 Preheader = result.Preheader,
-                Errors = result.Errors.Select(e => new RenderErrorDto(e.Message, e.Line, e.Column)).ToList(),
+                Errors = result.Errors.Select(ToDto).ToList(),
             });
         });
 
@@ -90,9 +90,9 @@ public static class EmailTemplateEndpoints
             if (parsed.Error is not null) return Results.BadRequest(parsed.Error);
 
             var model = ParseVariables(request.VariablesJson);
-            var result = await renderer.RenderAsync(parsed.Document!, model, ct);
+            var result = await renderer.RenderAsync(parsed.Document!, model, cancellationToken: ct);
             if (!result.Success)
-                return Results.UnprocessableEntity(result.Errors.Select(e => new RenderErrorDto(e.Message, e.Line, e.Column)));
+                return Results.UnprocessableEntity(result.Errors.Select(ToDto));
 
             await sender.SendAsync(new EmailMessage(
                 From: null, To: request.To, Cc: request.Cc,
@@ -102,6 +102,9 @@ public static class EmailTemplateEndpoints
 
         return app;
     }
+
+    private static RenderErrorDto ToDto(RenderError error)
+        => new(error.Message, error.Line, error.Column, error.Key, error.Severity);
 
     private static EmailTemplateDocumentOrError ParseDocument(string contentJson)
     {

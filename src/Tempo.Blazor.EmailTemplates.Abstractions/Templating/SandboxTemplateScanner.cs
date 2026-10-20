@@ -112,18 +112,18 @@ internal static partial class SandboxTemplateScanner
         }
     }
 
-    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex WhitespacePattern();
 
-    [GeneratedRegex(@"\{\{(?<code>.*?)\}\}", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\{\{(?<code>.*?)\}\}", RegexOptions.Singleline | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex ExpressionSpanPattern();
 
-    [GeneratedRegex(@"\{%(?<code>.*?)%\}", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\{%(?<code>.*?)%\}", RegexOptions.Singleline | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex BlockSpanPattern();
 
     [GeneratedRegex(
         @"@?System\s*\.\s*(?:Reflection|IO|Diagnostics|Net|Runtime|Threading)(?:\s*\.\s*[A-Za-z_]\w*)*",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex NamespacePattern();
 
     /// <summary>
@@ -132,29 +132,29 @@ internal static partial class SandboxTemplateScanner
     /// </summary>
     [GeneratedRegex(
         @"(?<![\w.])(?<root>env)\s*\.",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex EnvironmentRootPattern();
 
     [GeneratedRegex(
         @"(?<![\w.])file\s*\.\s*(?:read|write|exists|append|delete|copy|move|open|info)\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex FileFunctionPattern();
 
     [GeneratedRegex(
         @"(?<![\w.])object\s*\.\s*(?:eval_template|eval)\b|(?<![\w.])eval_template\b|(?<![\w.])eval\b",
-        RegexOptions.CultureInvariant)]
+        RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex EvaluatingFunctionPattern();
 
-    [GeneratedRegex(@"(?<![\w.])include\b", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(?<![\w.])include\b", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex IncludeStatementPattern();
 
-    [GeneratedRegex(@"[A-Za-z_]\w*", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"[A-Za-z_]\w*", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex IdentifierPattern();
 
     /// <summary>
     /// A double-quoted, single-quoted or backtick string literal, with backslash escapes. Used only to
     /// mask literal contents before scanning; it is deliberately simple (the scan is not a parser).
     /// </summary>
-    [GeneratedRegex(@"""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|`[^`]*`", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|`[^`]*`", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 2000)]
     private static partial Regex StringLiteralPattern();
 }

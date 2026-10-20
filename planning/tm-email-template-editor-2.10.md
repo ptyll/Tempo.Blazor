@@ -214,6 +214,9 @@ nepoužívá** (staví string; `Generate` na `:15`), `Import/MjmlImporter.cs` je
 | `Rendering/EmailTemplateRenderer`, `LocalEmailPreviewRenderer` | **Engine** | **kvůli výchozí kompozici, bez přímé externí závislosti** — skládají Scriban engine + `MjmlNetCompiler` + `MjmlGenerator` a v Abstractions by nemohly mít funkční výchozí pipeline |
 | `Rendering/HtmlSanitizerPolicy`, `ConservativeHtmlContentSanitizer`, `IHtmlContentSanitizer` | Abstractions | viz rozhodnutí D12 níže |
 | `Editing/EmailSaveRequest`, `EmailSaveResult`, `EmailSaveStatus`, `EmailSaveTrigger` | Abstractions | nové (D1) |
+| `Rendering/UrlSchemePolicy`, `Rendering/MarkupGuard`, `Rendering/MarkupGuardResult`, `Templating/HtmlTextEscaper`, `Templating/IEscapingTemplateEngine`, `Templating/TemplateEscapeMode`, `Rendering/RenderErrorSeverity`, `Rendering/RenderKeys`, `Rendering/TemplateRenderOptions` (Fáze 3) | Abstractions | čisté BCL (regex + string), žádná externí závislost; `IEscapingTemplateEngine`/`TemplateEscapeMode` jsou `internal` a Engine je uvidí přes `InternalsVisibleTo` |
+| `Templating/HtmlTemplateFunctions`, `Templating/TrustedHtml`, `Templating/EscapedHtml`, `Templating/SandboxedTemplateContext` (Fáze 3) | **Engine** (dnes v Abstractions do Fáze 6) | registrují Scriban `html.trusted`/`html.escape` a escapovací hook `TemplateContext.Write` — přímá závislost na Scriban |
+| …poznámka k Fázi 6 | — | **Engine musí mít na Abstractions přesnou verzi `[2.10.0]`, ne `>=`** — `InternalsVisibleTo` je vázané na silné jméno+verzi sestavení; jinak `IEscapingTemplateEngine`/`TemplateEscapeMode` v Engine přestanou být viditelné a renderer ztratí per-pass escapování (a zaloguje warning o cizím enginu, D24) |
 
 **Dvě vazby, které rozhodnutí o rozdělení neřešilo, a jejich řešení:**
 
@@ -568,6 +571,11 @@ public enum EmailPreviewDevice { Desktop, Tablet, Mobile }
   `VariablesJson`/`CultureName` jsou prosté stringy. Výsledek se mapuje na `RenderPreviewRequest/Response`
   (Abstractions) nebo na vlastní DTO hostitele.
 - `Failed`/`Unavailable` → `Html`/`Text`/`Subject` jsou **`""`, nikdy `null`** (view nemusí nil-checkovat).
+- **Varování nejsou `RenderFailed` (D23):** `EmailPreviewStatus.Rendered` se použije i tehdy, když
+  `RenderResult.HasWarnings` je `true` (blokované URL, odstraněný event handler) — `Html` je kompletní a
+  `Success` zůstává `true`. `RenderFailed` je vyhrazený pro `RenderErrorSeverity.Error`; varování se
+  předávají v `Errors` a UI je zobrazuje odděleně (dnes `data-tm-preview-errors` vs
+  `data-tm-preview-warnings`).
 - Každé nové vykreslení **zruší `CancellationToken` předchozího**; starší odpověď nikdy nepřepíše novější.
 
 | Položka | Breaking | Fáze | Poznámka |
@@ -821,6 +829,96 @@ interface metoda, rozhodnuto).
 | Allow-list URL schémat + `BlockedUrlScheme` audit + `#` fallback | **ANO** (chování; součást B3) | 3 | Bezpečnostní pravidlo, ne konfigurace. |
 | `EmailTableCell.BackgroundColor` validace | ne (součást nového pole, Fáze 9) | 9 | Neplatná barva = atribut se nevygeneruje. |
 
+**Zpřesnění po review Fáze 3 (2026-10-20):**
+
+- **Síťová cesta / UNC je odmítnutá** (`//evil.example.com/x`, `\\evil.example.com\share`,
+  `/\evil.example.com`, `\t//evil.example.com`). „Relativní" v allow-listu znamená **bez autority**; jinak
+  by e-mailový klient mohl resolvovat vzdálený SMB share (NTLM leak). `UrlSchemePolicy` proto po
+  normalizaci překlopí `\` na `/` a hodnotu začínající `//` odmítne s pseudo-schématem `network-path`.
+  Migrace pro hostitele: protokol-relativní `//cdn/...` piš jako `https://cdn/...` (CHANGELOG
+  Breaking / Migration).
+- **`cid:` zůstává mimo allow-list** — vědomé rozhodnutí podle kontraktu (D15). Inline `cid:` obrázky by
+  byly **budoucí změna kontraktu**, ne tichá výjimka.
+- **Kontroluje se i `srcset`** (kandidáti po `,`, URL = první token), `ping` (seznam po mezerách), `data`,
+  `lowsrc`, `dynsrc`, `meta http-equiv="refresh"` (`content="0;url=…"`) a CSS `url(…)` uvnitř `<style>`
+  (tj. i `EmailStyle.Css`). Character reference se dekódují před posouzením schématu: numerické
+  libovolné délky s volitelným středníkem (`&#58`, `&#0000000058;`) i `&#x6A`/`&colon;`.
+- **Event handlery nejsou výstup šablony:** guard odstraní z raw markupu všechny `on*` atributy a
+  `srcdoc` (prohlížeč dekóduje hodnotu atributu před spuštěním JS, escapování tedy nestačí), vydá
+  `RenderError` Warning s klíčem `render.markup.event_handler_removed` a audit `BlockedMember` s názvem
+  atributu. Nekontroluje se, že by Mjml.Net nějaké `on*` generoval — negeneruje (golden test).
+- **`html.trusted` patří do obsahu elementu, ne do atributu.** Sanitizer serializuje vlastním
+  `QuoteSafeMarkupFormatter` (textové uzly i hodnoty atributů kódují `& < > " '`), takže hodnota
+  v atributu nemůže atribut uzavřít; značkování v atributu je i tak chyba návrhu šablony.
+
+**Třetí kolo review Fáze 3 (2026-10-20) — doplněno:**
+
+- **Skenování tagů je lineární tokenizer, ne regex.** `MarkupGuard` používal backtracking pattern, který
+  byl kvadratický (10 KB `<a` ≈ 2,4 s, 40 KB ≈ 36 s, 100 KB minuty). Nahrazeno `HtmlTagTokenizer`
+  (single-pass stavy podle WHATWG: tag name → before-attr-name → attr name (uvozovky a `<` jsou součást
+  jména) → before-value → `"…"`/`'…'`/unquoted; komentáře, `<!…>`, `</…>`, `<?…>` se přeskakují; obsah
+  `style`/`script`/`textarea`/`title` se nevrací jako tagy, CSS jde přes CSS guard). Nedokončený tag na
+  konci vstupu ukončí sken a zbytek se zahodí (prohlížeč ho také zahodí) — fail-closed. Zbývající regexe
+  v guardu mají `matchTimeoutMilliseconds: 2000`; `RegexMatchTimeoutException` → `RenderError` Error
+  s klíčem `render.markup.too_complex` a `Html = ""`.
+- **`Html = ""` při Error v kompilační/markup fázi:** nedostavěný nebo nezkontrolovaný markup se
+  hostiteli nikdy nepředá (náhled ukáže chybu, ne obsah). Varování HTML zachovávají.
+- **SMIL a meta refresh:** elementy `set|animate|animateMotion|animateTransform|discard` a celý
+  `<meta http-equiv="refresh">` se odstraňují (Warning `render.markup.unsafe_element_removed`, audit
+  `BlockedMember`) — prohlížeč aplikuje jejich `href`/`to`/`from`/`by` až po statické kontrole.
+- **CSS normalizace:** komentáře a CSS escapy (`\72`…) se před kontrolou dekódují; `image-set(…)` a
+  `@import` (URL i řetězec) se kontrolují jako `url(…)`; stylesheet, který i po normalizaci obsahuje
+  odmítnutý cíl, se zahodí.
+- **Falešné pozitivy:** `<img alt="a onerror=b">`, `title="href=javascript:x"` a `data-onclick` zůstávají
+  beze změny (tokenizer neplete obsah uvozovek s atributy).
+- **Tokenizer nikdy nepřeskakuje obsah, který prohlížeč může parsovat jako tagy:** komentáře se ukončují
+  i abruptně (`<!-->`, `<!--->`, `--!>`), takže `<!`/`<?`/`</` se přeskakuje jen po první `>` a zbytek se
+  skenuje znovu; obsah `style`/`script`/`textarea`/`title` se také skenuje (uvnitř `<svg>`/`<math>` se do
+  rawtextu nepřepíná — `<svg><style><img onerror=…>` a `<svg><title><a href="javascript:…">` jsou mXSS).
+  Rozsah obsahu `<style>` se páruje v témže lineárním průchodu (start tag ↔ `</style>`) pro CSS guard,
+  takže linearita zůstává. Falešné pozitivy uvnitř komentářů/skriptů jsou vědomě přijaté (přísnější než
+  prohlížeč).
+
+**Provedeno ve Fázi 3 (stav implementace):** allow-list je jedna interní `UrlSchemePolicy`
+(`http`/`https`/`mailto`/`tel` + relativní + `#`; schéma se čte jako v prohlížeči — tab/CR/LF se
+odstraní kdekoliv, C0 znaky a mezery na okrajích se ignorují), používají ji `MarkupGuard` (přejmenovaný
+`UrlAllowList`, protože od review řeší i event handlery) i `HtmlContentSanitizer` (D22). Kontrola běží **dvakrát**: nad substituovaným MJML před kompilací (to pokrývá
+`background-url`, které kompilátor rozkopíruje do CSS `url(…)`, atributu `background` a VML
+`<v:fill src>` uvnitř Outlook conditional commentu) a nad kompilovaným HTML (pokrývá `mj-raw`,
+`mj-html-attributes` a hostitelské atributy). Obě fáze přepisují jen hodnotu atributu na `#`, dokument
+se nereserializuje, takže běžný render zůstává bajtově shodný. Audit jde přes
+`EmailTemplateRenderer(auditSinks: …)`, `Detail` nese **jen schéma**, nikdy URL. `cid:` se podle
+kontraktu nepovoluje (starší checklist fáze ho uváděl; platí kontrakt).
+
+#### Text pro CHANGELOG 2.10.0 — „Breaking / Migration“ (B3, hotovo ve Fázi 3)
+
+> **Hodnoty proměnných v HTML těle se escapují (B3).** Tělo dřív substituovalo hodnoty modelu do MJML
+> **až po** sanitizaci obsahu, takže `{{ name }}` s `<script>` (nebo jakýmkoli markupem) prošlo do
+> zprávy doslova. Nyní se escapuje **výstup každého výrazu**; literální text šablony, filtry a model
+> zůstávají nedotčené (`{{ name | string.size }}` měří data, ne entity). Subject, preheader a textová
+> verze se neescapují (jsou to texty). Jediný opt-out je filtr `{{ value | html.trusted }}`, jehož
+> výstup **vždy** projde `HtmlContentSanitizer` (allow-list tagů a atributů platí dál);
+> `html.escape` vrací už zakódovaný markup, takže se nedvojnásobí.
+>
+> ```text
+> before  {{ description }}                     data: <b>Hi</b>   →  <b>Hi</b>        (markup se aplikoval)
+> after   {{ description }}                                        →  &lt;b&gt;Hi&lt;/b&gt;   (doslovný text)
+>         {{ description | html.trusted }}                         →  <b>Hi</b>        (sanitizovaný markup)
+> ```
+>
+> Migrace: `| html.trusted` přidej **jen** k hodnotám, které aplikace produkuje jako důvěryhodné HTML
+> (rich-text pole). Prosté textové pole filtr nedostane.
+>
+> **URL s nepovoleným schématem se nahradí `#` (B3).** `javascript:`, `data:`, `vbscript:`, `file:`,
+> `blob:` a neznámá schémata — i tatáž schémata propašovaná vloženým tabulátorem/novým řádkem — se do
+> zprávy nedostanou, ať přijdou z výrazu šablony nebo z modelu (`EmailButtonBlock.Href`,
+> `EmailImageBlock.Src`/`Href`, `EmailNavbarLink.Href`, `EmailSocialElement.Href`,
+> `EmailCarouselImage.Src`/`Href`, `EmailHeroBlock.BackgroundUrl`, `EmailWrapperBlock.BackgroundUrl`,
+> `EmailSection.BackgroundUrl`). Každý výskyt přidá `RenderError` (warning,
+> `RenderKeys.BlockedUrlScheme`) a audit `BlockedUrlScheme`; allow-list hostitel nerozšiřuje.
+> `http`/`https`/`mailto`/`tel`, relativní cesty a `#fragment` jsou beze změny.
+
+
 ### 3.8 Model a limity (Fáze 4 + 9 + 10)
 
 Následující bloky jsou tři samostatné soubory (`Model/EmailTemplateDocument.cs`,
@@ -1021,6 +1119,9 @@ popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking ch
 | D20 | **Mobilní chrome:** Uložit + `ToolbarStart` v `Header`, `ToolbarEnd` v overflow `⋮`; `MobileActions` jen Zpět/Znovu/Náhled/Validovat; `ResolvedLayoutChanged` vystavený; `ToolboxCollapsed` z `CollapsedPanelsChanged` (na mobilu ignorováno). |
 | D21 | **Namespace přesouvaných typů se NEMĚNÍ:** `…Abstractions.Templating`, `…Abstractions.Rendering` a `…Abstractions` zůstávají i po přesunu do balíčku Engine. Výslovně: `AddTempoEmailTemplateEngine` má namespace **`Tempo.Blazor.EmailTemplates.Abstractions`**, i když žije v assembly/balíčku Engine. **V Engine nesmí vzniknout typ se stejným FQN jako typ, který zůstává v Abstractions** (jinak CS0433); přesouvané typy z Abstractions mizí, nikdy se neduplikují. |
 | D22 | **`ConservativeHtmlContentSanitizer` v Abstractions přijat s omezeními:** tokenizer s HTML-encode, nikdy regex strip/replace; default akce = zakódovat `<`, `>`, `&`, `"`, `'`; znovu se emitují jen allow-list tagy bez atributů, výjimka `a[href]` po kontrole schémat z §3.7a; nikdy `style` ani `on*`; neuzavřené tagy se doplní, osiřelé zavírací se zakódují (vylučuje vložení `</mj-text>`, `<mj-raw>`, `<!--`); entity se dekódují a znovu zakódují; neznámý/nevalidní vstup degraduje na escapovaný text, nikdy na průchod; rozdíl proti AngleSharpu jen k přísnějšímu; paritní XSS sada včetně mutation-XSS (`<svg>`, `<math>`, `<noscript>`, `<!--`, `<![CDATA[`, nevalidní vnoření) + fuzz „výstup ⊆ policy“. UX: WASM export může ztratit formátování, které AngleSharp povolí. |
+
+| D23 | **Závažnost render diagnostiky (rozhodnutí uživatele 2026-10-20):** `public enum RenderErrorSeverity { Error = 0, Warning = 1 }`; `RenderError(Message, Line, Column, Key, Severity = Error)` — `Severity` je **poslední** volitelný parametr; `RenderResult.Success = Errors.All(e => e.Severity != Error)`, nově `RenderResult.HasWarnings = Errors.Any(e => e.Severity == Warning)`. Blokovaná URL i odstraněný event handler = **Warning** (HTML je kompletní, `Success` zůstává `true`), takže `POST /api/email-templates/{id}/send` na varování **neodpovídá 422** a náhled mapuje varování na `EmailPreviewStatus.Rendered` s HTML (ne `RenderFailed`). Breaking pro poziční dekonstrukci `RenderError` a binárně (CHANGELOG). |
+| D24 | **Cizí `ITemplateEngine` (rozhodnutí uživatele 2026-10-20):** `EmailTemplateRenderer` s enginem, který není `IEscapingTemplateEngine`, **nevyhazuje** — v konstruktoru jednou zaloguje warning „A custom ITemplateEngine cannot guarantee per-pass HTML escaping; the host is responsible for escaping.“ a použije fallback (`ITemplateEngine.Render`). Per-pass escapování je vlastnost Tempo enginu (`ScribanTemplateEngine`); dokumentováno v XML doc, `TEMPLATE_SYNTAX.md` a CHANGELOG. |
 
 ### 5.3 Dříve otevřené volby (uzavřeno rozhodnutími D21/D22)
 

@@ -183,6 +183,9 @@
   <data name="EmailEditor_Preview_Text" xml:space="preserve">
     <value>Texte brut</value>
   </data>
+  <data name="EmailEditor_Preview_Warnings" xml:space="preserve">
+    <value>Avertissements du modèle</value>
+  </data>
   <data name="EmailEditor_Preview_Errors" xml:space="preserve">
     <value>Problèmes de rendu</value>
   </data>
@@ -230,6 +233,18 @@
   </data>
   <data name="validation.image.alt_missing" xml:space="preserve">
     <value>L&#x27;image n&#x27;a pas de texte alternatif.</value>
+  </data>
+  <data name="render.markup.unsafe_element_removed" xml:space="preserve">
+    <value>Un balisage capable de réécrire un lien (élément d&#x27;animation SVG ou méta refresh) a été supprimé du message rendu.</value>
+  </data>
+  <data name="render.markup.too_complex" xml:space="preserve">
+    <value>Le balisage rendu n&#x27;a pas pu être vérifié en toute sécurité et a été écarté.</value>
+  </data>
+  <data name="render.markup.event_handler_removed" xml:space="preserve">
+    <value>Un attribut de gestionnaire d&#x27;événement a été supprimé du balisage rendu.</value>
+  </data>
+  <data name="render.url.blocked_scheme" xml:space="preserve">
+    <value>Un lien avec un schéma d&#x27;URL non autorisé a été remplacé par « # ».</value>
   </data>
   <data name="validation.carousel.src_missing" xml:space="preserve">
     <value>L&#x27;image du carrousel n&#x27;a pas de source.</value>

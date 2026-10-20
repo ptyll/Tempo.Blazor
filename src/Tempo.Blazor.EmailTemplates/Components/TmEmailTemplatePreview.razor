@@ -18,13 +18,25 @@
         </div>
     </div>
 
-    @if (_errors.Count > 0)
+    @if (_errors.Any(e => e.Severity == RenderErrorSeverity.Error))
     {
-        <TmAlert Severity="AlertSeverity.Warning" Title="@Loc["EmailEditor_Preview_Errors"]" data-tm-preview-errors="true">
+        <TmAlert Severity="AlertSeverity.Error" Title="@Loc["EmailEditor_Preview_Errors"]" data-tm-preview-errors="true">
             <ul>
-                @foreach (var error in _errors)
+                @foreach (var error in _errors.Where(e => e.Severity == RenderErrorSeverity.Error))
                 {
-                    <li>@error.Message</li>
+                    <li>@Describe(error)</li>
+                }
+            </ul>
+        </TmAlert>
+    }
+
+    @if (_errors.Any(e => e.Severity == RenderErrorSeverity.Warning))
+    {
+        <TmAlert Severity="AlertSeverity.Warning" Title="@Loc["EmailEditor_Preview_Warnings"]" data-tm-preview-warnings="true">
+            <ul>
+                @foreach (var error in _errors.Where(e => e.Severity == RenderErrorSeverity.Warning))
+                {
+                    <li>@Describe(error)</li>
                 }
             </ul>
         </TmAlert>
@@ -102,6 +114,24 @@
         _html = result.Html;
         _text = result.TextVersion;
         _errors = result.Errors;
+    }
+
+    /// <summary>
+    /// Localized text of a render diagnostic: a diagnostic that carries a localization key (for example
+    /// the blocked-URL warning from the scheme allow-list) is resolved through the editor resources; a
+    /// host that replaced the localizer with one that does not know the key still gets the engine's
+    /// English fallback instead of a raw key, and a message that comes straight from the MJML compiler is
+    /// shown as-is.
+    /// </summary>
+    private string Describe(RenderError error)
+    {
+        if (error.Key is null)
+        {
+            return error.Message;
+        }
+
+        var text = Loc[error.Key];
+        return string.Equals(text, error.Key, StringComparison.Ordinal) ? error.Message : text;
     }
 
     private object? BuildModel()

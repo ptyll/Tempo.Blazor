@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Scriban;
 using Scriban.Parsing;
 using Scriban.Syntax;
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 
 namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 
@@ -13,8 +14,10 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 /// <see cref="ITemplateSecurityAuditSink"/>s. Work is bounded by <see cref="TemplateSecurityOptions"/>
 /// (loops, recursion, output size, string conversion, regex and wall-clock time) and no .NET
 /// reflection is exposed — the member policy is hard-coded and cannot be relaxed by a host.
+/// <see cref="Render(string, object?, TemplateRenderOptions?)"/> HTML-encodes every expression result
+/// by default; the only opt-out is the <c>html.trusted</c> filter, whose output is always sanitized.
 /// </summary>
-public sealed class ScribanTemplateEngine : ITemplateEngine
+public sealed class ScribanTemplateEngine : IEscapingTemplateEngine
 {
     private readonly TemplateSecurityOptions _options;
     private readonly IReadOnlyList<ITemplateSecurityAuditSink> _auditSinks;
@@ -50,9 +53,30 @@ public sealed class ScribanTemplateEngine : ITemplateEngine
         _logger = logger;
     }
 
-    /// <inheritdoc />
-    public Result<string> Render(string template, object? model)
+    /// <summary>
+    /// Renders a template, HTML-encoding every expression result. This is the safe default: a value a
+    /// template prints can never open markup. Use the <c>html.trusted</c> filter for markup a template
+    /// is trusted to emit (it is sanitized, never written verbatim); the escaping mode itself is not
+    /// host-configurable (§3.7, D14).
+    /// </summary>
+    public Result<string> Render(string template, object? model, TemplateRenderOptions? options = null)
+        => Render(template, model, options, TemplateEscapeMode.Html);
+
+    /// <summary>Renders one pipeline pass with the renderer-chosen escaping mode.</summary>
+    Result<string> IEscapingTemplateEngine.Render(
+        string template,
+        object? model,
+        TemplateRenderOptions? options,
+        TemplateEscapeMode escapeMode)
+        => Render(template, model, options, escapeMode);
+
+    private Result<string> Render(
+        string template,
+        object? model,
+        TemplateRenderOptions? options,
+        TemplateEscapeMode escapeMode)
     {
+        _ = options; // per-render options (formatter culture) are applied by the culture phase
         var auditor = new TemplateSecurityAuditor(template, _auditSinks, _timeProvider, _logger);
 
         // Fail-closed gate: refused constructs abort the render before anything is evaluated.
@@ -74,7 +98,7 @@ public sealed class ScribanTemplateEngine : ITemplateEngine
 
         try
         {
-            using var context = new SandboxedTemplateContext(_options);
+            using var context = new SandboxedTemplateContext(_options, escapeMode);
             context.PushGlobal(ObjectToScriptObjectConverter.ToScriptObject(model));
             var output = new SandboxedScriptOutput(_options.MaxOutputLength, _options.Timeout);
             context.PushOutput(output);

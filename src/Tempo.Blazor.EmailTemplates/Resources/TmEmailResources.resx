@@ -183,6 +183,9 @@
   <data name="EmailEditor_Preview_Text" xml:space="preserve">
     <value>Plain text</value>
   </data>
+  <data name="EmailEditor_Preview_Warnings" xml:space="preserve">
+    <value>Template warnings</value>
+  </data>
   <data name="EmailEditor_Preview_Errors" xml:space="preserve">
     <value>Rendering issues</value>
   </data>
@@ -230,6 +233,18 @@
   </data>
   <data name="validation.image.alt_missing" xml:space="preserve">
     <value>Image has no alt text.</value>
+  </data>
+  <data name="render.markup.unsafe_element_removed" xml:space="preserve">
+    <value>Markup that can rewrite a link (an SVG animation element or a meta refresh) was removed from the rendered message.</value>
+  </data>
+  <data name="render.markup.too_complex" xml:space="preserve">
+    <value>The rendered markup could not be checked safely and was discarded.</value>
+  </data>
+  <data name="render.markup.event_handler_removed" xml:space="preserve">
+    <value>An event-handler attribute was removed from the rendered markup.</value>
+  </data>
+  <data name="render.url.blocked_scheme" xml:space="preserve">
+    <value>A link with a blocked URL scheme was replaced with '#'.</value>
   </data>
   <data name="validation.carousel.src_missing" xml:space="preserve">
     <value>Carousel image has no source.</value>

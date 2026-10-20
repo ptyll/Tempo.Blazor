@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 
 namespace Tempo.Blazor.Demo.Api.Tests;
 
@@ -101,6 +102,28 @@ public class EmailTemplateEndpointTests : IClassFixture<WebApplicationFactory<Pr
         var result = await response.Content.ReadFromJsonAsync<RenderPreviewResponse>();
         result!.Html.Should().Contain("Jane");
         result.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Preview_BlockedUrl_ReturnsWarningWithKeyAndSeverity()
+    {
+        // A refused URL is a warning: the preview still returns HTML, but the diagnostic carries the
+        // localization key and the severity so the client can render it as a warning.
+        const string content = "{\"sections\":[{\"columns\":[{\"blocks\":[" +
+            "{\"$type\":\"button\",\"text\":\"Go\",\"href\":\"javascript:alert(1)\"}]}]}]}";
+
+        var response = await _client.PostAsJsonAsync("/api/email-templates/preview", new RenderPreviewRequest
+        {
+            ContentJson = content,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<RenderPreviewResponse>();
+        result!.Html.Should().NotBeNullOrWhiteSpace();
+        result.Html.Should().NotContain("javascript:");
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].Key.Should().Be(RenderKeys.BlockedUrlScheme);
+        result.Errors[0].Severity.Should().Be(RenderErrorSeverity.Warning);
     }
 
     [Fact]

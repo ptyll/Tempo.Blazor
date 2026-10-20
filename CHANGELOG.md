@@ -55,7 +55,198 @@
   `NU1902` warnings the pins actually silenced came from `bunit` 2.7.2 pulling `AngleSharp` `1.4.0`
   into the UI test projects. `1.8.5` is simply the newest stable parser line for the sanitizer.
 
+- **HTML escaping of variable values + safe URLs (`Tempo.Blazor.EmailTemplates.Abstractions`).** The
+  output of every expression in the HTML/MJML body is HTML-encoded, so a value can never inject a tag,
+  an attribute or a script. The subject, preheader and plain-text version stay raw (they are text), the
+  literal template text is untouched and filters still see the raw value (`{{ name | string.size }}`
+  measures the data, not the entities). The single opt-out is the new filter
+  **`{{ value | html.trusted }}`**, whose output is always run through the HTML sanitizer first, so the
+  tag/attribute allow-list keeps applying. `html.escape` now returns already-encoded markup and is
+  therefore never encoded twice. See [docs/email-templates/TEMPLATE_SYNTAX.md](docs/email-templates/TEMPLATE_SYNTAX.md).
+
+  ```csharp
+  var result = await renderer.RenderAsync(document, new { name = "<script>alert(1)</script>" });
+  // result.Html      → …&lt;script&gt;alert(1)&lt;/script&gt;…
+  // result.TextVersion → <script>alert(1)</script>   (plain text pass is not escaped)
+  ```
+
+- **URL scheme allow-list.** Every URL is checked **after substitution**, both in the substituted MJML
+  (before compilation, so a refused `background-url` never reaches the CSS/VML the compiler emits) and
+  in the compiled HTML (covers raw blocks and host-set HTML attributes). `http`, `https`, `mailto`,
+  `tel`, relative paths and `#fragment` pass; anything else — including `data:`, `vbscript:`, `file:`,
+  `blob:` and unknown schemes, and obfuscations such as `java\tscript:` — is replaced with `#`, reported
+  as a `RenderErrorSeverity.Warning` (`RenderResult.Success` stays `true`, `RenderResult.HasWarnings`
+  turns `true`) and audited as `TemplateSecurityEventKind.BlockedUrlScheme`. The allow-list is a fixed
+  security rule; a host cannot extend it. `HtmlContentSanitizer` now uses the same
+  `UrlSchemePolicy` (so `tel:` links in rich text are kept, and character-smuggled schemes are refused).
+
+  ```csharp
+  var result = await renderer.RenderAsync(document, new { url = "javascript:alert(1)" });
+  // result.Html    → <a href="#" …>
+  // result.Errors  → [ RenderError { Key = RenderKeys.BlockedUrlScheme, … } ]
+  ```
+
+- **The markup guard is a linear tokenizer, and unchecked markup is never returned.** The tag scan is now
+  a single-pass WHATWG-style tokenizer (`HtmlTagTokenizer`) instead of a backtracking regular expression:
+  a document made of unterminated tags used to cost minutes (10 KB ≈ 2.4 s, 40 KB ≈ 36 s — quadratic),
+  it is now linear (1 MB in well under a second). Every remaining regular expression inside the guard
+  carries a 2 s match budget; a guard that cannot finish produces `RenderKeys.MarkupTooComplex`
+  (`render.markup.too_complex`, `RenderErrorSeverity.Error`) and an empty `RenderResult.Html`.
+  **Behaviour change:** `RenderResult.Html` is now `""` whenever an `Error`-severity diagnostic comes out
+  of the compile or markup phase (a broken MJML structure, an unchecked body) — a host never receives a
+  half-built or unchecked body. Warnings keep the complete HTML.
+
+- **The markup tokenizer never skips content a browser may parse as tags.** Abruptly closed comments
+  (`<!-->`, `<!--->`, `--!>`) and raw-text elements inside foreign content (`<svg><style>`,
+  `<svg><title>`) are classic mutation-XSS vectors: the guard now scans comment payloads and the content
+  of `style`/`script`/`textarea`/`title` for start tags instead of trusting the browser's raw-text state,
+  while a `<!`/`<?`/`</` construct is skipped only to its first `>`. Outlook conditional comments
+  (`<!--[if mso]>…<![endif]-->`) and their VML payload are scanned the same way — a legitimate
+  `background-url` is untouched, so the compiled output does not change.
+
+- **The markup guard drops markup that can rewrite a link at runtime.** SVG animation elements
+  (`set`, `animate`, `animateMotion`, `animateTransform`, `discard`) and every
+  `<meta http-equiv="refresh">` are removed with a warning (`RenderKeys.UnsafeElementRemoved` =
+  `render.markup.unsafe_element_removed`, audited as `BlockedMember`) — a browser would run their
+  `href`/`to`/`from`/`by` values after the static check. CSS is validated on a normalised copy
+  (comments removed, `:`-style escapes decoded), `image-set(…)` and `@import` targets are checked like
+  `url(…)`, and a stylesheet that still embeds a refused target is dropped. The tokenizer also removes the
+  legacy false positives: `<img alt="a onerror=b">` and `title="href=javascript:x"` are left untouched,
+  `data-onclick` survives.
+
+- **`RenderError.Severity` (Error / Warning).** A security clean-up is a warning, not a failure:
+  `RenderError` gained `RenderErrorSeverity Severity` (last optional parameter, default
+  `RenderErrorSeverity.Error`), `RenderResult.Success` now means "no *error*" (`Errors.All(e => e.Severity
+  != Error)`), and `RenderResult.HasWarnings` reports warnings. A blocked URL and a removed event handler
+  are warnings — the HTML is complete and `Success` stays `true`, so `POST /api/email-templates/{id}/send`
+  no longer answers `422` for a message that only had a link replaced with `#`; `TmEmailTemplatePreview`
+  lists errors and warnings separately. Decision `EMAIL-RENDER-ERROR-SEVERITY` (D23).
+
+- **Event-handler attributes are removed from rendered markup.** Escaping alone cannot neutralise
+  `<div onclick="f('{{ x }}')">`: the browser entity-decodes the attribute value *before* it runs it as
+  script. The markup guard now drops every `on*` attribute and `srcdoc` from raw markup (MJML and HTML
+  pass), reports a warning (`RenderKeys.EventHandlerRemoved` = `render.markup.event_handler_removed`) and
+  audits `BlockedMember` with the attribute name. `html.trusted` markup is serialized with a quote-safe
+  formatter, so a value inside an attribute cannot close it — `html.trusted` belongs in element content,
+  not in an attribute.
+
+- **The URL guard also covers `srcset`, `ping`, `data`, `lowsrc`, `dynsrc`, `meta http-equiv="refresh"`
+  and CSS `url(…)` inside `<style>`** (including `EmailStyle.Css`). Character references of any form
+  (`&#58`, `&#0000000058;`, `&#x6A`, `&colon;`) are decoded before the scheme is judged, and a
+  protocol-relative / UNC reference (`//host`, `\\host\share`, `/\host`) is refused as
+  `network-path` — a "relative" link must not resolve a remote authority (SMB leak).
+
+- **`RenderError.Key`.** A render diagnostic can now name a localization key
+  (`RenderKeys.BlockedUrlScheme` = `render.url.blocked_scheme`) so a host — and
+  `TmEmailTemplatePreview`, which resolves it through `ITmEmailLocalizer` — can present a localized
+  message. Diagnostics that come straight from the MJML compiler keep `Key = null`.
+
+- **`TemplateRenderOptions`.** Per-render options type threaded through
+  `ITemplateEngine.Render(…, TemplateRenderOptions?)` and
+  `IEmailTemplateRenderer.RenderAsync(…, TemplateRenderOptions?, CancellationToken)`. It is the
+  extension point for render-scoped configuration (the culture of formatters); it deliberately has no
+  escaping switch, and the renderer chooses the escaping mode per pass.
+
+- **Audit sinks cover the URL allow-list.** `EmailTemplateRenderer` takes optional
+  `IEnumerable<ITemplateSecurityAuditSink>`, `TimeProvider` and `ILogger<EmailTemplateRenderer>`
+  parameters (all appended, source compatible); `AddTempoEmailTemplateEngine` forwards every registered
+  sink, so `BlockedUrlScheme` events need no extra wiring. The audit detail is the scheme name only —
+  never the URL.
+
 ### Breaking / Migration
+
+- **Variable values are HTML-escaped in the body (B3).** The body used to substitute model values into
+  the MJML *after* the content sanitizer had run, so `{{ name }}` carrying `<script>` (or any markup)
+  reached the message verbatim. It is now encoded expression by expression.
+
+  ```text
+  before  {{ description }}                    data: <b>Hi</b>   →  <b>Hi</b>       (markup applied)
+  after   {{ description }}                                       →  &lt;b&gt;Hi&lt;/b&gt;  (literal text)
+          {{ description | html.trusted }}                        →  <b>Hi</b>       (sanitized markup)
+  ```
+
+  Migration: add `| html.trusted` **only** to values your application produces as trusted HTML (a rich
+  text field). A plain text field must stay without it. Subject, preheader and the text version are
+  unchanged. Policies that relied on the previous injection are the reason for the change (XSS).
+
+- **URLs with a non-allow-listed scheme are replaced with `#` (B3).** `javascript:`, `data:`,
+  `vbscript:`, `file:`, `blob:` and unknown schemes — and the same schemes smuggled with embedded tabs
+  or newlines — no longer reach the message, from a template expression or from a block model value
+  (`EmailButtonBlock.Href`, `EmailImageBlock.Src`/`Href`, `EmailNavbarLink.Href`,
+  `EmailSocialElement.Href`, `EmailCarouselImage.Src`/`Href`, `EmailHeroBlock.BackgroundUrl`,
+  `EmailWrapperBlock.BackgroundUrl`, `EmailSection.BackgroundUrl`). Each refused scheme adds one
+  warning `RenderError` (`RenderKeys.BlockedUrlScheme`) and one `BlockedUrlScheme` audit event, so a
+  template that used to render a `data:` image now renders `src="#"` and reports the warning
+  (`RenderResult.Success` becomes `false` — a host that must not send a broken link can act on it). The
+  allow-list cannot be extended by a host; `http`, `https`, `mailto`, `tel`, relative paths and
+  `#fragment` are unaffected.
+
+- **`ITemplateEngine.Render` and `IEmailTemplateRenderer.RenderAsync` have one signature with optional
+  parameters (B4).** Source compatible, **binary incompatible** (a library compiled against the old
+  signature must be recompiled); no default interface method is provided.
+
+  ```csharp
+  // before
+  interface ITemplateEngine { Result<string> Render(string template, object? model); }
+  interface IEmailTemplateRenderer
+  {
+      Task<RenderResult> RenderAsync(EmailTemplateDocument document, object? model = null,
+          CancellationToken cancellationToken = default);
+  }
+
+  // after
+  interface ITemplateEngine
+  {
+      Result<string> Render(string template, object? model, TemplateRenderOptions? options = null);
+  }
+  interface IEmailTemplateRenderer
+  {
+      Task<RenderResult> RenderAsync(EmailTemplateDocument document, object? model = null,
+          TemplateRenderOptions? options = null, CancellationToken cancellationToken = default);
+  }
+  ```
+
+  Migration: a caller that passed the cancellation token **positionally** must name it, because the
+  third argument is now the options:
+
+  ```csharp
+  // before
+  await renderer.RenderAsync(document, model, ct);
+  // after
+  await renderer.RenderAsync(document, model, cancellationToken: ct);
+  ```
+
+- **`RenderError` grew two optional parameters — breaking for positional deconstruction.** `Key`
+  (phase 3) and `Severity` were appended to the positional record, so its deconstructor has five
+  components instead of three and the type is **binary incompatible – recompile**. A host that only reads
+  the properties is source compatible; a host that deconstructed the record is not.
+
+  ```csharp
+  // before
+  var (message, line, column) = error;
+  // after
+  var message = error.Message;
+  var line = error.Line;
+  var column = error.Column;
+  // and, when only a failure matters:
+  if (error.Severity == RenderErrorSeverity.Error) { /* … */ }
+  ```
+
+  `RenderErrorDto` mirrors the new shape (`Key`, `Severity` appended, source compatible, **binary
+  incompatible – recompile**).
+
+- **`EmailTemplateRenderer` constructor gained optional parameters — binary incompatible.** The signature
+  is now `(ITemplateEngine, MjmlGenerator, IMjmlCompiler, TextVersionGenerator,
+  IEnumerable<ITemplateSecurityAuditSink>? auditSinks = null, TimeProvider? timeProvider = null,
+  ILogger<EmailTemplateRenderer>? logger = null)`; the four-argument call keeps compiling, a compiled
+  assembly must be recompiled. A custom `ITemplateEngine` (anything other than the Tempo
+  `ScribanTemplateEngine`) is accepted but logs one warning at construction: it cannot be asked for a raw
+  pass, so the host is responsible for escaping (D24).
+
+- **A protocol-relative URL is no longer a valid "relative" link.** `//cdn.example.com/x` (and the UNC
+  forms `\\host\share`, `/\host`) used to pass the allow-list as a relative path; it now resolves a
+  remote authority (SMB/NTLM leak in a mail client) and is replaced with `#`. Migration: write the scheme
+  explicitly — `https://cdn.example.com/x`.
 
 - **`ScribanTemplateEngine`: one public constructor.** The two public overloads
   (`(options)` and `(options, auditSinks)`) are merged into

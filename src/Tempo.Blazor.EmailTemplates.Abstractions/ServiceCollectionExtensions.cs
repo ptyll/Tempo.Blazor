@@ -38,7 +38,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MjmlGenerator>();
         services.AddSingleton<IMjmlCompiler, MjmlNetCompiler>();
         services.AddSingleton<TextVersionGenerator>();
-        services.AddSingleton<IEmailTemplateRenderer, EmailTemplateRenderer>();
+        services.AddSingleton<IEmailTemplateRenderer>(provider => new EmailTemplateRenderer(
+            provider.GetRequiredService<ITemplateEngine>(),
+            provider.GetRequiredService<MjmlGenerator>(),
+            provider.GetRequiredService<IMjmlCompiler>(),
+            provider.GetRequiredService<TextVersionGenerator>(),
+            provider.GetServices<ITemplateSecurityAuditSink>(),
+            provider.GetService<TimeProvider>(),
+            provider.GetService<ILogger<EmailTemplateRenderer>>()));
         services.AddSingleton<IBlockRegistry, BlockRegistry>();
 
         services.AddScoped<IValidator<CreateEmailTemplateRequest>, CreateEmailTemplateRequestValidator>();

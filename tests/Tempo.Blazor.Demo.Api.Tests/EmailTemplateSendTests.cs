@@ -72,6 +72,33 @@ public class EmailTemplateSendTests : IClassFixture<CapturingSenderFactory>
     }
 
     [Fact]
+    public async Task Send_WithBlockedUrl_IsAccepted_WarningDoesNotFailTheSend()
+    {
+        // A refused URL is a warning (D23): the message is delivered with '#' instead, so /send must
+        // answer 202 — a 422 would make the host believe the template is broken.
+        var created = await _client.PostAsJsonAsync("/api/email-templates", new CreateEmailTemplateRequest
+        {
+            Name = $"Blocked link {Guid.NewGuid():N}",
+            Subject = "S",
+            Language = "en",
+            ContentJson = "{\"sections\":[{\"columns\":[{\"blocks\":[" +
+                "{\"$type\":\"button\",\"text\":\"Go\",\"href\":\"javascript:alert(1)\"}]}]}]}",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var detail = await created.Content.ReadFromJsonAsync<EmailTemplateDetailDto>();
+
+        var response = await _client.PostAsJsonAsync($"/api/email-templates/{detail!.Id}/send", new SendEmailRequest
+        {
+            To = new[] { "recipient@example.com" },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        _factory.Sender.Last.Should().NotBeNull();
+        _factory.Sender.Last!.Html.Should().NotContain("javascript:");
+        _factory.Sender.Last.Html.Should().Contain("href=\"#\"");
+    }
+
+    [Fact]
     public async Task Send_UnknownTemplate_Returns404()
     {
         var response = await _client.PostAsJsonAsync($"/api/email-templates/{Guid.NewGuid()}/send", new SendEmailRequest

@@ -3,6 +3,7 @@ using Scriban;
 using Scriban.Parsing;
 using Scriban.Runtime;
 using Scriban.Syntax;
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 
 namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 
@@ -14,6 +15,9 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 /// <see cref="TemplateSecurityOptions"/>, a lookup probe that turns a refused access into a render
 /// error instead of an empty string, and a cancellation token that aborts the render once the
 /// wall-clock budget is spent — even when the template writes no output at all.
+/// It also owns HTML escaping (§3.7): in <see cref="TemplateEscapeMode.Html"/> the *output of every
+/// expression* is encoded — literal template text, filters and the model are left untouched, so
+/// <c>string.truncate</c> still measures the raw value and <c>html.escape</c> is not encoded twice.
 /// </summary>
 internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
 {
@@ -30,11 +34,16 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
     /// </summary>
     private readonly CancellationTokenSource _cts;
 
-    public SandboxedTemplateContext(TemplateSecurityOptions options)
+    private readonly TemplateEscapeMode _escapeMode;
+
+    public SandboxedTemplateContext(
+        TemplateSecurityOptions options,
+        TemplateEscapeMode escapeMode = TemplateEscapeMode.Html)
         : base(StringComparer.Ordinal)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        _escapeMode = escapeMode;
         _cts = new CancellationTokenSource(options.Timeout);
         CancellationToken = _cts.Token;
 
@@ -61,8 +70,50 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
         TryGetMember = GuardRefusedMember;
 
         RemoveUnsafeBuiltins();
+        RegisterHtmlFunctions();
         // No TemplateLoader is set on purpose: `include` fails instead of reading files.
     }
+
+    /// <summary>
+    /// Encodes the output of an expression. Scriban calls this overload — not
+    /// <see cref="TemplateContext.Write(string)"/> — for expression results only, which is exactly the
+    /// value boundary the contract draws: literal template text and the model itself stay untouched.
+    /// </summary>
+    public override TemplateContext Write(SourceSpan span, object? textAsObject)
+    {
+        switch (textAsObject)
+        {
+            // `{{ value | html.trusted }}`: the author asked for markup, so it is written without
+            // encoding — the sanitizer decides which tags and attributes actually survive.
+            case TrustedHtml trusted:
+                return base.Write(span, HtmlContentSanitizer.Sanitize(trusted.Value));
+
+            // `{{ value | html.escape }}`: already encoded, encoding it again would double-escape.
+            case EscapedHtml escaped:
+                return base.Write(span, escaped.Value);
+
+            case null:
+                return base.Write(span, textAsObject);
+
+            default:
+                if (_escapeMode == TemplateEscapeMode.None)
+                {
+                    return base.Write(span, textAsObject);
+                }
+
+                // Convert exactly as Scriban would (so number formatting keeps working) and encode the
+                // resulting text — never the model value itself.
+                return base.Write(span, HtmlTextEscaper.Encode(ObjectToString(textAsObject) ?? string.Empty));
+        }
+    }
+
+    /// <summary>
+    /// The asynchronous output path of <see cref="Write(SourceSpan, object?)"/>. Scriban's
+    /// <c>RenderAsync</c> writes expression results through this overload, so an async host render is
+    /// encoded exactly like the synchronous one — one implementation, no drift.
+    /// </summary>
+    public override ValueTask<TemplateContext> WriteAsync(SourceSpan span, object? textAsObject)
+        => new(Write(span, textAsObject));
 
     /// <summary>
     /// Refuses to convert a value whose <c>ToString()</c>/text conversion would leak CLR metadata:
@@ -152,5 +203,24 @@ internal sealed class SandboxedTemplateContext : TemplateContext, IDisposable
         {
             BuiltinObject.Remove(name);
         }
+    }
+
+    /// <summary>
+    /// Adds <c>html.trusted</c> and makes <c>html.escape</c> return already-encoded markup. The other
+    /// <c>html</c> builtins (<c>strip</c>, <c>url_encode</c>, …) stay as Scriban ships them. The
+    /// namespace is created when a future Scriban no longer ships one, so the opt-out filter can never
+    /// silently disappear.
+    /// </summary>
+    private void RegisterHtmlFunctions()
+    {
+        if (BuiltinObject.TryGetValue(HtmlTemplateFunctions.Namespace, out var html) && html is ScriptObject functions)
+        {
+            HtmlTemplateFunctions.Register(functions);
+            return;
+        }
+
+        functions = new ScriptObject();
+        HtmlTemplateFunctions.Register(functions);
+        BuiltinObject.SetValue(HtmlTemplateFunctions.Namespace, functions, readOnly: true);
     }
 }

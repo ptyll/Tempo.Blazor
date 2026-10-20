@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Tempo.Blazor.Demo.Services;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 
 namespace Tempo.Blazor.Tests.EmailTemplates;
 
@@ -92,6 +93,20 @@ public class EmailTemplateApiClientTests
         result.Success.Should().BeFalse();
         result.StatusCode.Should().Be(422);
         result.Errors.Should().Contain("Template error");
+    }
+
+    [Fact]
+    public async Task SendAsync_RenderErrorPayload_WithKeyAndSeverity_StillMapsTheMessage()
+    {
+        var client = Client(_ => Json(HttpStatusCode.UnprocessableEntity, new[]
+        {
+            new RenderErrorDto("Compile failed", 3, 4, "render.url.blocked_scheme", RenderErrorSeverity.Warning),
+        }));
+
+        var result = await client.SendAsync(Guid.NewGuid(), new SendEmailRequest { To = new[] { "a@b.com" } });
+
+        result.Success.Should().BeFalse();
+        result.Errors.Should().Contain("Compile failed");
     }
 
     [Fact]

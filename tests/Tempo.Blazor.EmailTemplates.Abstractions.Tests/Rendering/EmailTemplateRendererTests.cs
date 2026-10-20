@@ -88,4 +88,29 @@ public class EmailTemplateRendererTests
         result.Subject.Should().Be("Příliš kůň 🐎");
         result.Html.Should().Contain("Žluťoučký kůň 🦄");
     }
+
+    [Fact]
+    public async Task RenderAsync_AcceptsPerRenderOptions_WithoutChangingTheOutput()
+    {
+        // B4 signature: the options slot sits in front of the cancellation token.
+        var doc = DocWith("Hi {{ name }}", null, "Dear {{ name }}");
+
+        var result = await CreateRenderer().RenderAsync(
+            doc, new { Name = "Ada" }, new TemplateRenderOptions());
+
+        result.Success.Should().BeTrue();
+        result.Subject.Should().Be("Hi Ada");
+        result.Html.Should().Contain("Dear Ada");
+    }
+
+    [Fact]
+    public async Task RenderAsync_CancelledToken_Throws()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var render = () => CreateRenderer().RenderAsync(DocWith("S", null, "x"), null, cancellationToken: cts.Token);
+
+        await render.Should().ThrowAsync<OperationCanceledException>();
+    }
 }
