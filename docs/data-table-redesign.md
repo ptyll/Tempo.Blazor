@@ -105,6 +105,26 @@ The menu offers only what the column can do:
 
 `ShowFilterSummary="true"` enables the localized active-filter count and clear control. It is off by default.
 
+## Result preview
+
+`ShowFilterResultPreview="true"` on `TmDataTable` or `TmMultiViewList` makes the inline filter builder show how many records match the filters currently applied, including a valid filter still being edited. It is off by default, and it only renders where the inline builder renders (a view provider and external filter definitions).
+
+The count comes from `ResultCountProvider`, a `Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>`. Both components build one themselves:
+
+- with a `DataProvider`, the preview calls `GetDataAsync` with `PageSize` 1 and reads `TotalCount`, so a page of rows is never fetched just to count them;
+- without one, the in-memory rows are counted with the component's own filter rules, including the search and column filters already applied.
+
+A burst of changes waits 300 ms and collapses into one call. The text is pluralized (`TmFilterBuilder_ResultPreview`: "1 matching record" / "3 matching records", and the Czech forms for 1 / 2–4 / 5+) and announced in a `role="status"` region with `aria-live="polite"`. The region is in the document as soon as the preview and the provider are both set, so the first result is not announced into a region that was just created. While the first count is in flight the region shows a spinner and "Counting…" (`TmFilterBuilder_ResultPreviewLoading`). A later refresh keeps that number on screen and sets `aria-busy` until the new count arrives. A null count or a swallowed exception leaves the region empty, and the builder keeps working.
+
+A standalone `TmFilterBuilder` takes the same `ResultCountProvider` directly, together with `ShowResultPreview`. `ShowResultPreview` alone no longer renders the old static "Preview" placeholder.
+
+```razor
+<TmDataTable TItem="Person" Items="people" ViewProvider="views"
+             ExternalFilterDefinitions="filters" ShowFilterResultPreview="true">
+    <TmDataTableColumn TItem="Person" Title="Name" PropertyName="Name" Field="p => p.Name" />
+</TmDataTable>
+```
+
 ## Inline editing templates
 
 When defining an `EditTemplate` on `TmDataTableColumn`, wrap the edited control in `TmFormField` to provide consistent field layout and labeling:

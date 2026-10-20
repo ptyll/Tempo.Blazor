@@ -1194,6 +1194,30 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     [Parameter] public bool ShowFilterSummary { get; set; }
 
     /// <summary>
+    /// When true, the inline filter builder shows how many records match the current filters.
+    /// A <see cref="DataProvider"/> is asked with <see cref="DataTableQuery.PageSize"/> of 1 and the
+    /// preview reads <see cref="PagedResult{T}.TotalCount"/>; without one the in-memory rows are counted
+    /// with the same rules as the table. Default: false.
+    /// </summary>
+    [Parameter] public bool ShowFilterResultPreview { get; set; }
+
+    /// <summary>The count source handed to the inline filter builder, or null when the preview is off.</summary>
+    private Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider =>
+        ShowFilterResultPreview && ShouldRenderExternalFilterBuilder() ? _countDelegate : null;
+
+    private readonly DataTableResultCountProvider _resultCountProvider = new();
+
+    // One delegate for the lifetime of the table. A method group would be a new instance on every
+    // render, and the builder would treat that as a new provider and count again.
+    private readonly Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>> _countDelegate;
+
+    /// <summary>Initializes the stable count delegate the inline filter builder receives.</summary>
+    public TmDataTable()
+    {
+        _countDelegate = _resultCountProvider.CountAsync;
+    }
+
+    /// <summary>
     /// Filter definitions for the inline external filter builder (shown above the table when <see cref="ViewProvider"/> is set).
     /// When the page owns filtering, leave this empty and set <see cref="ShowExternalFilterBuilder"/> to false
     /// or use <see cref="ToolbarMode"/> = <see cref="DataToolbarMode.ContentOnly"/>.
@@ -1437,6 +1461,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>Initializes the table with default page size, controlled search text, and loads initial data.</summary>
     protected override async Task OnInitializedAsync()
     {
+        _resultCountProvider.Attach(this);
         if (_dataLoaded) return;
 
         // A controlled PageSize wins over DefaultPageSize here, not later, so a server-side provider is
@@ -2273,6 +2298,86 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             await LoadFromProviderAsync();
         else
             RefreshClientItems();
+    }
+
+    /// <summary>
+    /// Counts the records matching the inline filter builder's filters. A data provider is asked for a
+    /// single row so only <see cref="PagedResult{T}.TotalCount"/> moves; client-side data is counted with
+    /// the table's own filter rules, including the search and column filters already applied.
+    /// </summary>
+    private sealed class DataTableResultCountProvider
+    {
+        private TmDataTable<TItem>? _table;
+
+        public void Attach(TmDataTable<TItem> table) => _table = table;
+
+        public async Task<int?> CountAsync(IReadOnlyList<ActiveFilter> filters, CancellationToken ct)
+        {
+            var table = _table;
+            if (table is null) return null;
+
+            if (table.DataProvider is { } provider)
+            {
+                var query = table.BuildQuery();
+                query = new DataTableQuery
+                {
+                    Page = 1,
+                    PageSize = 1,
+                    SortColumn = query.SortColumn,
+                    SortDescending = query.SortDescending,
+                    SortDescriptors = query.SortDescriptors,
+                    SearchText = query.SearchText,
+                    GroupByColumns = query.GroupByColumns,
+                    Filters = MergeExternalFilters(query.Filters, filters),
+                };
+                var result = await provider.GetDataAsync(query, ct);
+                return result.TotalCount;
+            }
+
+            return table.CountClientItems(filters);
+        }
+
+        private static List<DataTableFilter> MergeExternalFilters(
+            IReadOnlyList<DataTableFilter> current,
+            IReadOnlyList<ActiveFilter> external)
+        {
+            var externalColumns = new HashSet<string>(external.Select(f => f.FieldName), StringComparer.Ordinal);
+            var merged = current.Where(f => !externalColumns.Contains(f.Column)).ToList();
+            merged.AddRange(external.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)));
+            return merged;
+        }
+    }
+
+    /// <summary>How many in-memory rows match the table's current search, column filters and these external filters.</summary>
+    private int CountClientItems(IReadOnlyList<ActiveFilter> externalFilters)
+    {
+        var items = (Items ?? []).AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var search = _searchText.Trim();
+            items = items.Where(item =>
+                _columns.Any(col =>
+                    col.Field?.Invoke(item)?.ToString()
+                       ?.Contains(search, StringComparison.OrdinalIgnoreCase) == true));
+        }
+
+        foreach (var filter in _activeFilters.Values)
+        {
+            var col = _columns.FirstOrDefault(c => c.Key == filter.Column);
+            if (col?.Field != null)
+                items = ApplyClientFilter(items, col.Field, filter);
+        }
+
+        foreach (var filter in externalFilters)
+        {
+            var col = _columns.FirstOrDefault(c => c.Key == filter.FieldName);
+            if (col?.Field is null) continue;
+            items = ApplyClientFilter(items, col.Field,
+                new DataTableFilter(filter.FieldName, filter.Operator.ToString(), filter.Value));
+        }
+
+        return items.Count();
     }
 
     private async Task OnExternalFiltersChanged(IEnumerable<ActiveFilter> filters)

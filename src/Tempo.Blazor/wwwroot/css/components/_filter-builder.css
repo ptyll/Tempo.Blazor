@@ -63,6 +63,7 @@
   gap: var(--tm-space-2);
   font-size: var(--tm-font-size-sm);
   color: var(--tm-text-secondary);
+  min-block-size: 1.5em;
 }
 .tm-stretched-link {
   color: var(--tm-color-primary);

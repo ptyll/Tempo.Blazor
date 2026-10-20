@@ -299,6 +299,13 @@
       "description": "When true and column filters are active, shows a localized active-filter count and clear-filters control. Default: false."
     },
     {
+      "name": "ShowFilterResultPreview",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the inline filter builder shows how many records match the current filters. A DataProvider is asked with PageSize 1 and the preview reads TotalCount; without one the in-memory rows are counted with the table's own filter rules. Default: false."
+    },
+    {
       "name": "ExternalFilterDefinitions",
       "type": "List<FilterDefinition>",
       "isRequired": false,

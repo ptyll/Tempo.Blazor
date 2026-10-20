@@ -141,6 +141,8 @@
                              ActiveFilters="_externalFilters"
                              OnFiltersChanged="OnExternalFiltersChanged"
                              DisplayResolver="DisplayResolver"
+                             ShowResultPreview="ShowFilterResultPreview"
+                             ResultCountProvider="ResultCountProvider"
                              ShowClearAll="true" />
         </div>
     }
@@ -543,6 +545,30 @@
     /// or use <see cref="ToolbarMode"/> = <see cref="DataToolbarMode.ContentOnly"/>.
     /// </summary>
     [Parameter] public List<FilterDefinition> ExternalFilterDefinitions { get; set; } = [];
+
+    /// <summary>
+    /// When true, the inline filter builder shows how many records match the current filters.
+    /// A <see cref="DataProvider"/> is asked with <see cref="DataTableQuery.PageSize"/> of 1 and the
+    /// preview reads <see cref="PagedResult{T}.TotalCount"/>; without one the in-memory items are counted
+    /// with the same rules as the list. Default: false.
+    /// </summary>
+    [Parameter] public bool ShowFilterResultPreview { get; set; }
+
+    /// <summary>The count source handed to the inline filter builder, or null when the preview is off.</summary>
+    private Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider =>
+        ShowFilterResultPreview && ShouldRenderExternalFilterBuilder() ? _countDelegate : null;
+
+    private readonly MultiViewListResultCountProvider _resultCountProvider = new();
+
+    // One delegate for the lifetime of the list. A method group would be a new instance on every
+    // render, and the builder would treat that as a new provider and count again.
+    private readonly Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>> _countDelegate;
+
+    /// <summary>Initializes the stable count delegate the inline filter builder receives.</summary>
+    public TmMultiViewList()
+    {
+        _countDelegate = _resultCountProvider.CountAsync;
+    }
 
     /// <summary>
     /// Universal display resolver for field labels and filter values.
@@ -959,6 +985,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _resultCountProvider.Attach(this);
         if (_dataLoaded) return;
 
         _pageSize = DefaultPageSize;
@@ -1105,6 +1132,59 @@
             await LoadFromProviderAsync();
         }
         await SearchTextChanged.InvokeAsync(_searchText);
+    }
+
+    /// <summary>
+    /// Counts the records matching the inline filter builder's filters. A data provider is asked for a
+    /// single row so only <see cref="PagedResult{T}.TotalCount"/> moves; client-side items are counted
+    /// with the list's own filter rules, including the search already applied.
+    /// </summary>
+    private sealed class MultiViewListResultCountProvider
+    {
+        private TmMultiViewList<TItem>? _list;
+
+        public void Attach(TmMultiViewList<TItem> list) => _list = list;
+
+        public async Task<int?> CountAsync(IReadOnlyList<ActiveFilter> filters, CancellationToken ct)
+        {
+            var list = _list;
+            if (list is null) return null;
+
+            if (list.DataProvider is { } provider)
+            {
+                var result = await provider.GetDataAsync(new DataTableQuery
+                {
+                    Page = 1,
+                    PageSize = 1,
+                    SearchText = list._searchText,
+                    Filters = filters.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)).ToList(),
+                }, ct);
+                return result.TotalCount;
+            }
+
+            return list.CountClientItems(filters);
+        }
+    }
+
+    /// <summary>How many in-memory items match the list's current search and these external filters.</summary>
+    private int CountClientItems(IReadOnlyList<ActiveFilter> externalFilters)
+    {
+        if (Items is null) return 0;
+
+        var query = Items.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var term = _searchText.Trim();
+            query = query.Where(item =>
+                (GetTitle(item)?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (GetSubTitle(item)?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (GetStatusLabel(item)?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        foreach (var filter in externalFilters)
+            query = ApplyFilter(query, filter);
+
+        return query.Count();
     }
 
     private async Task OnExternalFiltersChanged(IEnumerable<ActiveFilter> filters)

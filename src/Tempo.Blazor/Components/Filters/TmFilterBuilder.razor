@@ -1,7 +1,10 @@
 @namespace Tempo.Blazor.Components.Filters
 @using Microsoft.JSInterop
+@using Tempo.Blazor.Localization
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Pickers
+@implements IDisposable
 
 <div class="tm-filter-builder @(Presentation == FilterBuilderPresentation.Popover ? "tm-filter-builder--popover" : null) @Class">
     @* Active filter chips *@
@@ -30,9 +33,19 @@
         </button>
     }
 
-    @if (ShowResultPreview)
+    @if (ShowResultPreview && ResultCountProvider is not null)
     {
-        <div class="tm-filter-result-preview">@Loc["TmFilterBuilder_ResultPreview"]</div>
+        <div class="tm-filter-result-preview" role="status" aria-live="polite" aria-busy="@(_resultCountRefreshing ? "true" : null)">
+            @if (_resultCountPending)
+            {
+                <TmSpinner Size="SpinnerSize.Xs" />
+                @Loc["TmFilterBuilder_ResultPreviewLoading"]
+            }
+            else if (_resultCount is int count)
+            {
+                @Loc.Plural("TmFilterBuilder_ResultPreview", count)
+            }
+        </div>
     }
 
     @* Field picker *@
@@ -60,7 +73,7 @@
 
             <select class="tm-filter-operator-select" aria-label="@Loc["TmFilterBuilder_Operator"]"
                     value="@_selectedOperator"
-                    @onchange="e => _selectedOperator = Enum.Parse<FilterOperator>(e.Value!.ToString()!)">
+                    @onchange="OnOperatorChanged">
                 @foreach (var op in GetOperatorsFor(_selectedDefinition.FieldType))
                 {
                     <option value="@op">@FormatOperator(op)</option>
@@ -73,7 +86,7 @@
                 {
                     <TmDatePicker Label="@Loc["TmFilterBuilder_Value"]"
                                   Value="_dateValue"
-                                  ValueChanged="d => _dateValue = d"
+                                  ValueChanged="OnDateValueChanged"
                                   Class="tm-filter-value-input" />
                 }
                 else if (_selectedDefinition.FieldType == FilterFieldType.Select
@@ -81,7 +94,7 @@
                 {
                     <select class="tm-filter-select tm-filter-value-input" aria-label="@Loc["TmFilterBuilder_Value"]"
                             value="@_textValue"
-                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
+                            @onchange="OnTextValueChanged">
                         <option value="">@Loc["Tm_Select"]</option>
                         @if (_selectedDefinition.Options is not null)
                         {
@@ -96,7 +109,7 @@
                 {
                     <select class="tm-filter-select tm-filter-value-input" aria-label="@Loc["TmFilterBuilder_Value"]"
                             value="@_textValue"
-                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
+                            @onchange="OnTextValueChanged">
                         <option value="true">@Loc["Tm_Yes"]</option>
                         <option value="false">@Loc["Tm_No"]</option>
                     </select>
@@ -107,7 +120,8 @@
                            aria-label="@Loc["TmFilterBuilder_Value"]"
                            class="tm-filter-value-input"
                            value="@_textValue"
-                           @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty" />
+                           @oninput="OnTextValueInput"
+                           @onchange="OnTextValueChanged" />
                 }
             }
 
@@ -131,8 +145,24 @@
     /// <summary>Fires whenever the filter list changes.</summary>
     [Parameter] public EventCallback<IReadOnlyList<ActiveFilter>> OnFiltersChanged { get; set; }
 
-    /// <summary>Show a localized placeholder result preview; does not compute matching records.</summary>
+    /// <summary>
+    /// Shows a live count of the records matching the filters, including a valid in-progress editor
+    /// filter. Renders only while <see cref="ResultCountProvider"/> is also set.
+    /// </summary>
     [Parameter] public bool ShowResultPreview { get; set; }
+
+    /// <summary>
+    /// Returns the number of records matching the given filters, or null when unknown. Called with a
+    /// 300 ms debounce while <see cref="ShowResultPreview"/> is true. A thrown exception shows nothing
+    /// and never takes the builder down. An existing <c>Func</c> variable binds directly.
+    /// </summary>
+    [Parameter] public Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider { get; set; }
+
+    /// <summary>
+    /// How long a burst of filter changes waits before the count is asked for. Not a parameter —
+    /// tests set it through <c>InternalsVisibleTo</c>. Defaults to 300 ms.
+    /// </summary>
+    internal int ResultCountDebounceMs { get; set; } = 300;
 
     /// <summary>Show the "Clear all" button when filters are active.</summary>
     [Parameter] public bool ShowClearAll { get; set; } = true;
@@ -181,6 +211,14 @@
     private bool _restoreAddFocus;
     private List<ActiveFilter>   _filters          = [];
     private IReadOnlyList<ActiveFilter> _lastActiveFilters = [];
+    private Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? _lastResultCountProvider;
+    private bool _sawResultCountInputs;
+    private bool _lastShowResultPreview;
+    private int? _resultCount;
+    private bool _resultCountPending;
+    private bool _resultCountRefreshing;
+    private bool _disposed;
+    private CancellationTokenSource? _resultCountCts;
     private bool                 _showFieldPicker;
     private FilterDefinition?    _selectedDefinition;
     private ActiveFilter?        _editingFilter;
@@ -190,11 +228,178 @@
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(_lastActiveFilters, ActiveFilters))
+        var filtersChanged = !ReferenceEquals(_lastActiveFilters, ActiveFilters);
+        if (filtersChanged)
         {
             _filters = [.. ActiveFilters];
             _lastActiveFilters = ActiveFilters;
         }
+
+        // A new provider has never counted, so a count left by the previous one must not survive it.
+        var providerChanged = !ReferenceEquals(_lastResultCountProvider, ResultCountProvider);
+        if (providerChanged)
+        {
+            _lastResultCountProvider = ResultCountProvider;
+            _resultCount = null;
+        }
+
+        var previewChanged = _lastShowResultPreview != ShowResultPreview;
+        _lastShowResultPreview = ShowResultPreview;
+
+        // A parent re-render with the same inputs must not clear the count or ask again.
+        if (!_sawResultCountInputs || filtersChanged || providerChanged || previewChanged)
+        {
+            _sawResultCountInputs = true;
+            ScheduleResultCount();
+        }
+    }
+
+    /// <summary>
+    /// Collapses a burst of filter changes into one count. Each call cancels the previous wait, so
+    /// three changes inside the window produce exactly one call, made with the latest filters.
+    /// </summary>
+    private void ScheduleResultCount()
+    {
+        _resultCountCts?.Cancel();
+        _resultCountCts?.Dispose();
+        _resultCountCts = null;
+
+        if (!ShowResultPreview || ResultCountProvider is null)
+        {
+            _resultCount = null;
+            _resultCountPending = false;
+            _resultCountRefreshing = false;
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _resultCountCts = cts;
+        // "Counting…" only until the first count arrives. A refresh keeps the previous number.
+        _resultCountRefreshing = true;
+        _resultCountPending = _resultCount is null;
+        _ = CountAfterDebounceAsync(cts);
+    }
+
+    private async Task CountAfterDebounceAsync(CancellationTokenSource cts)
+    {
+        try
+        {
+            await Task.Delay(ResultCountDebounceMs, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (_disposed || !ReferenceEquals(_resultCountCts, cts)) return;
+
+        var provider = ResultCountProvider;
+        var filters = FiltersToCount();
+        int? count = null;
+        var failed = false;
+        try
+        {
+            if (provider is not null)
+                count = await provider(filters, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch
+        {
+            // The preview is advisory. A failing count must never take the builder down with it.
+            failed = true;
+        }
+
+        if (_disposed || !ReferenceEquals(_resultCountCts, cts)) return;
+
+        _resultCountPending = false;
+        _resultCountRefreshing = false;
+        if (failed)
+            _resultCount = null;
+        else
+            _resultCount = count;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _disposed = true;
+        _resultCountCts?.Cancel();
+        _resultCountCts?.Dispose();
+        _resultCountCts = null;
+    }
+
+    /// <summary>The applied filters plus the editor filter, once it has a value (or needs none).</summary>
+    private IReadOnlyList<ActiveFilter> FiltersToCount()
+    {
+        var counted = _filters.ToList();
+        var draft = DraftFilter();
+        if (draft is null)
+            return counted;
+
+        // Editing replaces the filter being edited rather than counting it twice.
+        if (_editingFilter is not null)
+            counted.Remove(_editingFilter);
+        counted.Add(draft);
+        return counted;
+    }
+
+    /// <summary>The filter the editor is building, or null until it is complete enough to count.</summary>
+    private ActiveFilter? DraftFilter()
+    {
+        if (_selectedDefinition is null)
+            return null;
+
+        if (!IsEmptyOperator(_selectedOperator))
+        {
+            var hasValue = _selectedDefinition.FieldType == FilterFieldType.Date
+                ? _dateValue is not null
+                : !string.IsNullOrWhiteSpace(_textValue);
+            if (!hasValue)
+                return null;
+        }
+
+        object? value = _selectedDefinition.FieldType == FilterFieldType.Date ? _dateValue : _textValue;
+        var display = _selectedDefinition.FieldType == FilterFieldType.Date
+            ? _dateValue?.ToString("d") ?? string.Empty
+            : _textValue;
+
+        return new ActiveFilter(
+            _selectedDefinition.FieldName,
+            ResolveFieldLabel(_selectedDefinition),
+            _selectedOperator,
+            value,
+            display);
+    }
+
+    private void OnEditorChanged()
+    {
+        ScheduleResultCount();
+        StateHasChanged();
+    }
+
+    private void OnOperatorChanged(ChangeEventArgs e)
+    {
+        _selectedOperator = Enum.Parse<FilterOperator>(e.Value!.ToString()!);
+        OnEditorChanged();
+    }
+
+    private void OnTextValueChanged(ChangeEventArgs e)
+    {
+        _textValue = e.Value?.ToString() ?? string.Empty;
+        OnEditorChanged();
+    }
+
+    private void OnTextValueInput(ChangeEventArgs e) => OnTextValueChanged(e);
+
+    private void OnDateValueChanged(DateOnly? date)
+    {
+        _dateValue = date;
+        OnEditorChanged();
     }
 
     private void OpenFieldPicker()
@@ -206,6 +411,7 @@
         _editingFilter      = null;
         _textValue          = string.Empty;
         _dateValue          = null;
+        OnEditorChanged();
     }
 
     private void SelectField(FilterDefinition def)
@@ -214,6 +420,7 @@
         _selectedOperator   = GetOperatorsFor(def.FieldType).First();
         _textValue          = string.Empty;
         _dateValue          = null;
+        OnEditorChanged();
     }
 
     private void EditFilter(ActiveFilter filter)
@@ -231,6 +438,7 @@
         _selectedOperator   = filter.Operator;
         _textValue          = filter.Value?.ToString() ?? string.Empty;
         _showFieldPicker    = true;
+        OnEditorChanged();
     }
 
     private async Task ApplyFilter()
@@ -288,6 +496,7 @@
         _editingFilter      = null;
         _textValue          = string.Empty;
         _dateValue          = null;
+        OnEditorChanged();
     }
 
     private Task NotifyChanged() => OnFiltersChanged.InvokeAsync(_filters.AsReadOnly());

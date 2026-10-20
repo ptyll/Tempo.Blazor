@@ -3876,6 +3876,7 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `tm-filter-select` | Select pole |
 | `tm-filter-value-input` | Input hodnoty |
 | `tm-filter-apply` | Tlačítko aplikace |
+| `tm-filter-result-preview` | Náhled počtu odpovídajících záznamů (`aria-live="polite"`) |
 
 #### Parametry
 
@@ -3885,6 +3886,8 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `ActiveFilters` | `IReadOnlyList<ActiveFilter>` | `[]` | Aktuální filtry |
 | `OnFiltersChanged` | `EventCallback<IReadOnlyList<ActiveFilter>>` | — | Změna filtrů |
 | `ShowClearAll` | `bool` | `true` | Zobrazit "Smazat vše" |
+| `ShowResultPreview` | `bool` | `false` | Zobrazí živý počet záznamů odpovídajících filtrům včetně rozpracovaného filtru v editoru; region se renderuje jen spolu s `ResultCountProvider` |
+| `ResultCountProvider` | `Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?` | `null` | Vrátí počet záznamů odpovídajících zadaným filtrům, nebo `null` když je neznámý. Volá se s debounce 300 ms, dokud je `ShowResultPreview` true |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `Disabled` | `bool` | `false` | Zakáže builder filtrů |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |

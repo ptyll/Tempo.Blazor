@@ -29,6 +29,19 @@
 
 ### Added
 
+- **Filter result preview.** `TmDataTable` and `TmMultiViewList` take `ShowFilterResultPreview`
+  (default `false`). When the inline filter builder renders, it shows how many records match the
+  current filters, including a valid filter still being edited: a `DataProvider` is asked with
+  `PageSize` 1 and the preview reads `TotalCount`, while in-memory data is counted with the
+  component's own filter rules. A standalone `TmFilterBuilder` takes `ShowResultPreview` plus
+  `ResultCountProvider` (`Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>`) directly.
+  Changes are debounced (300 ms) into one call, the text is pluralized (`TmFilterBuilder_ResultPreview`)
+  and announced in a `role="status"` region with `aria-live="polite"`. The region is in the document
+  as soon as both are set. While the first count is in flight the region shows a spinner and
+  "Counting…" (`TmFilterBuilder_ResultPreviewLoading`); a later refresh keeps the previous count and
+  sets `aria-busy`. A null count or a thrown exception leaves the region empty. The old static
+  "Preview" placeholder is gone — see Breaking / Migration.
+
 - **TmDataTable `AllowExportSelected`.** Opt-in export scope. With `Selectable="true"` the export
   menu offers "All rows" (every row matching the current filter and sort) and "Selected rows (N)"
   (the checked rows, sorted like the current view, with any row a later filter hid appended in
@@ -997,6 +1010,20 @@
   translations in an application (registered after `AddTempoBlazor()`).
 
 ### Breaking / Migration
+
+- **`TmFilterBuilder.ShowResultPreview` no longer shows a static "Preview".** Before this version,
+  `ShowResultPreview="true"` rendered the literal preview placeholder even with no count source.
+  It now renders a live count, and only when `ResultCountProvider` is also set. A custom
+  `ITmLocalizer` must supply the plural forms of `TmFilterBuilder_ResultPreview` (`{0}`); the key
+  is no longer a single static string.
+
+  ```razor
+  @* before: showed "Preview" *@
+  <TmFilterBuilder ShowResultPreview="true" />
+
+  @* after: pass a count function as well *@
+  <TmFilterBuilder ShowResultPreview="true" ResultCountProvider="CountAsync" />
+  ```
 
 - **`TmDataTable` export menu on phones: sheet → popover.** With the default
   `MobileLayout = DataTableMobileLayout.None` the export dropdown now opens as an anchored
