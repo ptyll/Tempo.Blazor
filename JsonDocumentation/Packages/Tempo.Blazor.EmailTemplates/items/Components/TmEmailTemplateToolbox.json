@@ -21,13 +21,13 @@
       "name": "OnAddSection",
       "type": "EventCallback<LayoutPreset>",
       "isRequired": false,
-      "description": "Raised when a block drag starts (for drag-and-drop onto the canvas)."
+      "description": "Raised when a layout preset is chosen to add as a new section."
     },
     {
       "name": "OnDragBlockStart",
       "type": "EventCallback<BlockDescriptor>",
       "isRequired": false,
-      "description": "Raised when a block is chosen (clicked) to be added."
+      "description": "Raised when a block drag starts (for drag-and-drop onto the canvas)."
     }
   ]
 }

@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "A function a provider exposes, for validation and docs.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateFunctionProvider.cs",
+  "documentationStatus": "generated",
+  "itemName": "TemplateFunctionInfo"
+}

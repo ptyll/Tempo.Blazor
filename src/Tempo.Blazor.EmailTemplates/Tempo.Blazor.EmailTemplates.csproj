@@ -33,6 +33,36 @@
     <ProjectReference Include="..\Tempo.Blazor.FluentValidation\Tempo.Blazor.FluentValidation.csproj" />
   </ItemGroup>
 
+  <!-- ═══ Localization: JSON resources embedded in THIS assembly ═══
+       The editor's strings live in Resources/TmEmailResources[.<culture>].json — a flat
+       { "Key": "Value" } map read by the CLOSED IStringLocalizer<TmEmailResources>
+       (JsonStringLocalizer<T>, registered by AddTempoEmailTemplates) — exactly the scheme the Tempo
+       core uses for TmResources*.json. They used to be .resx, which resolves through whatever
+       IStringLocalizerFactory the host registered: a host that replaces that factory (PostrionCore's
+       AddJsonLocalization calls RemoveAll<IStringLocalizerFactory>()) saw bare keys in the editor, and
+       the resource-manager pipeline returns raw keys under published Blazor WebAssembly as well. -->
+  <ItemGroup>
+    <!-- WithCulture=false stops the SDK inferring a culture from the ".cs."/".fr." in the file name
+         (which would route them into satellite assemblies — exactly what breaks under WASM). All four
+         embed into the main Tempo.Blazor.EmailTemplates.dll. -->
+    <EmbeddedResource Include="Resources/TmEmailResources.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Resources.TmEmailResources.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources/TmEmailResources.cs.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Resources.TmEmailResources.cs.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources/TmEmailResources.sk.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Resources.TmEmailResources.sk.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources/TmEmailResources.fr.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Resources.TmEmailResources.fr.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Tempo.Blazor.EmailTemplates.Tests</_Parameter1>

@@ -22,38 +22,38 @@
       "name": "DragActive",
       "type": "bool",
       "isRequired": false,
-      "description": "Raised after the document is mutated by a block/section/column action."
+      "description": "Whether a drag is in progress (shows drop zones between blocks)."
     },
     {
       "name": "OnBlockDragStart",
       "type": "EventCallback<Guid>",
       "isRequired": false,
-      "description": "Raised when a block is dropped into a column at an index."
+      "description": "Raised when an existing block begins being dragged."
     },
     {
       "name": "OnDocumentChanged",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised when the selection changes."
+      "description": "Raised after the document is mutated by a block/section/column action."
     },
     {
       "name": "OnDropInColumn",
       "type": "EventCallback<(Guid ColumnId, int Index)>",
       "isRequired": false,
-      "description": "Whether a drag is in progress (shows drop zones between blocks)."
+      "description": "Raised when a block is dropped into a column at an index."
     },
     {
       "name": "SelectedId",
       "type": "Guid?",
       "isRequired": true,
-      "description": "The document being displayed.",
+      "description": "The currently selected node id (block, column or section), if any.",
       "editorRequired": true
     },
     {
       "name": "SelectedIdChanged",
       "type": "EventCallback<Guid?>",
       "isRequired": false,
-      "description": "The currently selected node id (block, column or section), if any."
+      "description": "Raised when the selection changes."
     }
   ]
 }

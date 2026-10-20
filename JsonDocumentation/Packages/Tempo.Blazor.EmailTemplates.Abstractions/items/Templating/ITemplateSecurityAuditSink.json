@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "Optional audit sink for template sandbox events. Register zero to many implementations in DI; the engine resolves them as IEnumerable{T} and reports every refused member, namespace, function, URL scheme, limit and timeout. Audit is best effort: an exception thrown by a sink is swallowed and logged by the engine, never surfaced to the caller or the rendered output.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateSecurityAuditSink.cs",
+  "documentationStatus": "generated",
+  "itemName": "ITemplateSecurityAuditSink"
+}

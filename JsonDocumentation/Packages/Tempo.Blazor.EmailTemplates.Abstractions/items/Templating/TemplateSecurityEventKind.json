@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "Classification of a TemplateSecurityEvent. The engine reports exactly these kinds and never invents new ones at runtime, so a host can switch on the enum exhaustively. The numeric values are part of the public contract (§3.6) and must not be reordered — a host may persist them.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateSecurityEvent.cs",
+  "documentationStatus": "generated",
+  "itemName": "TemplateSecurityEventKind"
+}

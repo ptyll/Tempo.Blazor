@@ -22,7 +22,7 @@
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": true,
-      "description": "The dictionary being edited (rebuilt in place on every change).",
+      "description": "Raised after the dictionary changes.",
       "editorRequired": true
     }
   ]

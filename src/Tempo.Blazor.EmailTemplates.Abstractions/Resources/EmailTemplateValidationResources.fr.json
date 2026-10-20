@@ -1,0 +1,11 @@
+{
+  "Name_Required": "Le nom du modèle est obligatoire.",
+  "Name_TooLong": "Le nom du modèle ne peut pas dépasser 200 caractères.",
+  "Subject_TooLong": "L'objet ne peut pas dépasser 300 caractères.",
+  "Language_Invalid": "La langue doit être un code valide tel que « fr » ou « fr-FR ».",
+  "ContentJson_Required": "Le contenu du modèle est obligatoire.",
+  "To_Required": "Au moins un destinataire est requis.",
+  "To_InvalidEmail": "Une ou plusieurs adresses de destinataire ne sont pas des adresses e-mail valides.",
+  "Cc_InvalidEmail": "Une ou plusieurs adresses en copie ne sont pas des adresses e-mail valides.",
+  "VariablesJson_Invalid": "Les données de variables ne sont pas un JSON valide."
+}

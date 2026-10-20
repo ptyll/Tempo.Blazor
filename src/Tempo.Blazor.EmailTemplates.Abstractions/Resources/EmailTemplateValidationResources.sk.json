@@ -1,0 +1,11 @@
+{
+  "Name_Required": "Názov šablóny je povinný.",
+  "Name_TooLong": "Názov šablóny môže mať najviac 200 znakov.",
+  "Subject_TooLong": "Predmet môže mať najviac 300 znakov.",
+  "Language_Invalid": "Jazyk musí byť platný kód, napríklad „sk“ alebo „sk-SK“.",
+  "ContentJson_Required": "Obsah šablóny je povinný.",
+  "To_Required": "Je vyžadovaný aspoň jeden príjemca.",
+  "To_InvalidEmail": "Jedna alebo viac adries príjemcov nie je platná e-mailová adresa.",
+  "Cc_InvalidEmail": "Jedna alebo viac adries kópie nie je platná e-mailová adresa.",
+  "VariablesJson_Invalid": "Dáta premenných nie sú platný JSON."
+}

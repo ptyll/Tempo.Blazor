@@ -366,13 +366,13 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional resolved signing localization snapshot captured during the ceremony."
+          "description": "Additional CSS classes for the root element."
         },
         {
           "name": "LocalizationSnapshot",
           "type": "SigningSubmissionLocalizationSnapshot?",
           "isRequired": false,
-          "description": "Audit trail payload to render."
+          "description": "Optional resolved signing localization snapshot captured during the ceremony."
         },
         {
           "name": "Trail",
@@ -399,82 +399,82 @@
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Placeholder text."
+          "description": "Accessible label for the textarea."
         },
         {
           "name": "AutoFocus",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether to show a cancel button."
+          "description": "Whether the textarea should request focus when rendered."
         },
         {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Callback invoked when editing is canceled."
+          "description": "Additional CSS class."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Textarea row count."
+          "description": "Whether the composer is disabled."
         },
         {
           "name": "MentionsChanged",
           "type": "EventCallback<IReadOnlyList<DocumentCommentMention>>",
           "isRequired": false,
-          "description": "Users available for mention suggestions."
+          "description": "Callback invoked when the selected mention list changes."
         },
         {
           "name": "MentionUsers",
           "type": "IReadOnlyList<DocumentCommentUser>",
           "isRequired": false,
           "default": "[]",
-          "description": "Whether Enter submits the composer when mention selection is not open. Defaults to false."
+          "description": "Users available for mention suggestions."
         },
         {
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback invoked when the text is submitted."
+          "description": "Callback invoked when editing is canceled."
         },
         {
           "name": "OnSubmit",
           "type": "EventCallback<DocumentCommentComposerSubmitEventArgs>",
           "isRequired": false,
-          "description": "Callback invoked when the selected mention list changes."
+          "description": "Callback invoked when the text is submitted."
         },
         {
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false,
-          "description": "Callback invoked when the text changes."
+          "description": "Placeholder text."
         },
         {
           "name": "Rows",
           "type": "int",
           "isRequired": false,
           "default": "3",
-          "description": "Submit button label."
+          "description": "Textarea row count."
         },
         {
           "name": "ShowCancel",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the composer is disabled."
+          "description": "Whether to show a cancel button."
         },
         {
           "name": "SubmitOnEnter",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the textarea should request focus when rendered."
+          "description": "Whether Enter submits the composer when mention selection is not open. Defaults to false."
         },
         {
           "name": "SubmitText",
           "type": "string?",
           "isRequired": false,
-          "description": "Accessible label for the textarea."
+          "description": "Submit button label."
         },
         {
           "name": "Value",
@@ -487,7 +487,7 @@
           "name": "ValueChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Current text value."
+          "description": "Callback invoked when the text changes."
         }
       ]
     },
@@ -509,37 +509,37 @@
           "type": "IReadOnlyList<string>",
           "isRequired": false,
           "default": "[\"\uD83D\uDC4D\", \"✅\", \"\uD83D\uDC40\", \"❤️\", \"\uD83C\uDF89\"]",
-          "description": "Whether the picker is open."
+          "description": "Available picker reaction values."
         },
         {
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Existing grouped reactions."
+          "description": "Current user id used for active reaction styling."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Current user id used for active reaction styling."
+          "description": "Whether the reaction bar is disabled."
         },
         {
           "name": "OnReactionToggled",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Callback invoked when the picker open state changes."
+          "description": "Callback invoked when a reaction value is toggled."
         },
         {
           "name": "PickerOpen",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the reaction bar is disabled."
+          "description": "Whether the picker is open."
         },
         {
           "name": "PickerOpenChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Available picker reaction values."
+          "description": "Callback invoked when the picker open state changes."
         },
         {
           "name": "Reactions",
@@ -632,51 +632,51 @@
           "name": "Comment",
           "type": "DocumentComment",
           "isRequired": true,
-          "description": "Parent thread id.",
+          "description": "Comment to render.",
           "editorRequired": true
         },
         {
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Comment to render.",
+          "description": "Current user id for permissions and active reaction styling.",
           "editorRequired": true
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Current user id for permissions and active reaction styling."
+          "description": "Whether item interaction is disabled."
         },
         {
           "name": "OnDeleteRequested",
           "type": "EventCallback<DocumentCommentDeleteRequest>",
           "isRequired": false,
-          "description": "Callback invoked when editing is requested."
+          "description": "Callback invoked when deleting is requested."
         },
         {
           "name": "OnEditRequested",
           "type": "EventCallback<DocumentComment>",
           "isRequired": false,
-          "description": "Callback invoked when picker open state changes."
+          "description": "Callback invoked when editing is requested."
         },
         {
           "name": "OnReactionToggled",
           "type": "EventCallback<DocumentCommentReactionToggleRequest>",
           "isRequired": false,
-          "description": "Callback invoked when deleting is requested."
+          "description": "Callback invoked when a reaction is toggled."
         },
         {
           "name": "PickerOpen",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether item interaction is disabled."
+          "description": "Whether this comment's reaction picker is open."
         },
         {
           "name": "PickerOpenChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Whether this comment's reaction picker is open."
+          "description": "Callback invoked when picker open state changes."
         },
         {
           "name": "ThreadId",
@@ -705,31 +705,31 @@
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether this marker is selected."
+          "description": "Current user id used for mention styling."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Current user id used for mention styling."
+          "description": "Whether marker interaction is disabled."
         },
         {
           "name": "MarkerTemplate",
           "type": "RenderFragment<DocumentCommentThread>?",
           "isRequired": false,
-          "description": "Whether marker interaction is disabled."
+          "description": "Optional custom marker content."
         },
         {
           "name": "OnSelected",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Optional custom marker content."
+          "description": "Callback invoked when marker is selected."
         },
         {
           "name": "Selected",
           "type": "bool",
           "isRequired": false,
-          "description": "One-based visual thread number."
+          "description": "Whether this marker is selected."
         },
         {
           "name": "Thread",
@@ -743,7 +743,7 @@
           "type": "int",
           "isRequired": false,
           "default": "1",
-          "description": "Thread rendered by the marker.",
+          "description": "One-based visual thread number.",
           "editorRequired": true
         }
       ]
@@ -765,50 +765,50 @@
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Selected thread id."
+          "description": "Current user id for mention indicators."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Optional marker template for each rendered thread marker."
+          "description": "Whether marker interaction is disabled."
         },
         {
           "name": "DraftAnchor",
           "type": "DocumentCommentAnchor?",
           "isRequired": false,
-          "description": "Whether resolved threads should be rendered."
+          "description": "Current draft anchor."
         },
         {
           "name": "MarkerTemplate",
           "type": "RenderFragment<DocumentCommentThread>?",
           "isRequired": false,
-          "description": "Current draft anchor."
+          "description": "Optional marker template for each rendered thread marker."
         },
         {
           "name": "OnThreadSelected",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Whether marker interaction is disabled."
+          "description": "Callback invoked when a thread marker is selected."
         },
         {
           "name": "PageNumber",
           "type": "int",
           "isRequired": false,
           "default": "1",
-          "description": "Threads available to render."
+          "description": "One-based current page number."
         },
         {
           "name": "SelectedThreadId",
           "type": "string?",
           "isRequired": false,
-          "description": "One-based current page number."
+          "description": "Selected thread id."
         },
         {
           "name": "ShowResolved",
           "type": "bool",
           "isRequired": false,
-          "description": "Current user id for mention indicators."
+          "description": "Whether resolved threads should be rendered."
         },
         {
           "name": "Threads",
@@ -837,31 +837,31 @@
           "type": "IReadOnlyList<DocumentCommentThread>",
           "isRequired": false,
           "default": "[]",
-          "description": "Filtered threads to render."
+          "description": "All threads used for stable numbering."
         },
         {
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Selected thread id."
+          "description": "Current user id for mention indicators."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Current user id for mention indicators."
+          "description": "Whether list interaction is disabled."
         },
         {
           "name": "OnThreadSelected",
           "type": "EventCallback<DocumentCommentThread>",
           "isRequired": false,
-          "description": "Whether list interaction is disabled."
+          "description": "Callback invoked when a thread is selected."
         },
         {
           "name": "SelectedThreadId",
           "type": "string?",
           "isRequired": false,
-          "description": "All threads used for stable numbering."
+          "description": "Selected thread id."
         },
         {
           "name": "Threads",
@@ -889,38 +889,38 @@
           "name": "AllowReplyToResolved",
           "type": "bool",
           "isRequired": false,
-          "description": "Users available for mention suggestions."
+          "description": "Whether replies are allowed on resolved threads."
         },
         {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Callback invoked when a thread asks the parent to navigate to its page."
+          "description": "Additional CSS class."
         },
         {
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Callback invoked when selected thread id changes."
+          "description": "Current user id for mentions and active reactions."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether replies are allowed on resolved threads."
+          "description": "Whether panel interaction is disabled."
         },
         {
           "name": "MentionUsers",
           "type": "IReadOnlyList<DocumentCommentUser>",
           "isRequired": false,
           "default": "[]",
-          "description": "Current user id for mentions and active reactions."
+          "description": "Users available for mention suggestions."
         },
         {
           "name": "OnDeleteRequested",
           "type": "EventCallback<DocumentCommentDeleteRequest>",
           "isRequired": false,
-          "description": "Callback invoked when editing a comment is requested."
+          "description": "Callback invoked when deleting a comment is requested."
         },
         {
           "name": "OnDraftChanged",
@@ -932,49 +932,49 @@
           "name": "OnEditRequested",
           "type": "EventCallback<DocumentCommentEditRequest>",
           "isRequired": false,
-          "description": "Callback invoked when reopening a thread is requested."
+          "description": "Callback invoked when editing a comment is requested."
         },
         {
           "name": "OnReactionToggled",
           "type": "EventCallback<DocumentCommentReactionToggleRequest>",
           "isRequired": false,
-          "description": "Callback invoked when deleting a comment is requested."
+          "description": "Callback invoked when toggling a reaction is requested."
         },
         {
           "name": "OnReopenRequested",
           "type": "EventCallback<DocumentCommentThreadStatusRequest>",
           "isRequired": false,
-          "description": "Callback invoked when resolving a thread is requested."
+          "description": "Callback invoked when reopening a thread is requested."
         },
         {
           "name": "OnReplyRequested",
           "type": "EventCallback<DocumentCommentReplyRequest>",
           "isRequired": false,
-          "description": "Whether panel interaction is disabled."
+          "description": "Callback invoked when a reply is requested."
         },
         {
           "name": "OnResolveRequested",
           "type": "EventCallback<DocumentCommentThreadStatusRequest>",
           "isRequired": false,
-          "description": "Callback invoked when a reply is requested."
+          "description": "Callback invoked when resolving a thread is requested."
         },
         {
           "name": "OnThreadNavigateRequested",
           "type": "EventCallback<DocumentCommentThreadNavigateRequest>",
           "isRequired": false,
-          "description": "Callback invoked when toggling a reaction is requested."
+          "description": "Callback invoked when a thread asks the parent to navigate to its page."
         },
         {
           "name": "SelectedThreadId",
           "type": "string?",
           "isRequired": false,
-          "description": "Comment threads to render."
+          "description": "Selected thread id."
         },
         {
           "name": "SelectedThreadIdChanged",
           "type": "EventCallback<string?>",
           "isRequired": false,
-          "description": "Selected thread id."
+          "description": "Callback invoked when selected thread id changes."
         },
         {
           "name": "Threads",
@@ -1396,7 +1396,7 @@
           "name": "Value",
           "type": "string?",
           "isRequired": false,
-          "description": "Field identifier edited by the formula builder when is not supplied."
+          "description": "Formula text displayed by the builder. Human-readable field tokens are accepted."
         },
         {
           "name": "ValueChanged",
@@ -1423,13 +1423,13 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Callback invoked when the user requests verification."
+          "description": "Additional CSS classes for the root element."
         },
         {
           "name": "OnVerifyRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Verification result to render."
+          "description": "Callback invoked when the user requests verification."
         },
         {
           "name": "Result",
@@ -1616,13 +1616,13 @@
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Available reaction values."
+          "description": "Whether picker interaction is disabled."
         },
         {
           "name": "OnSelected",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Whether picker interaction is disabled."
+          "description": "Callback invoked when a reaction value is selected."
         },
         {
           "name": "Reactions",
@@ -1703,32 +1703,32 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether a QR code is rendered."
+          "description": "Additional CSS classes for the root element."
         },
         {
           "name": "EmbedCode",
           "type": "string?",
           "isRequired": false,
-          "description": "Public signing link."
+          "description": "Optional embed code for publishing the signing link."
         },
         {
           "name": "Enabled",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Optional embed code for publishing the signing link."
+          "description": "Whether sharing is enabled."
         },
         {
           "name": "EnabledChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Whether sharing is enabled."
+          "description": "Callback invoked when sharing is enabled or disabled."
         },
         {
           "name": "ExpiresAt",
           "type": "DateTimeOffset?",
           "isRequired": false,
-          "description": "Callback invoked when sharing is enabled or disabled."
+          "description": "Optional link expiration time."
         },
         {
           "name": "Link",
@@ -1742,7 +1742,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Optional link expiration time."
+          "description": "Whether a QR code is rendered."
         }
       ]
     },
@@ -1921,62 +1921,62 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Callback invoked when the custom action is clicked."
+          "description": "Additional CSS classes for the root element."
         },
         {
           "name": "CustomActionIcon",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional custom action text."
+          "description": "Optional custom action icon."
         },
         {
           "name": "CustomActionText",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the send-copy action is shown."
+          "description": "Optional custom action text."
         },
         {
           "name": "Description",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional completed title override."
+          "description": "Optional completed description override."
         },
         {
           "name": "DownloadUrl",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the signer is done but the submission is waiting for other recipients."
+          "description": "Optional completed document download URL."
         },
         {
           "name": "IsWaitingForOthers",
           "type": "bool",
           "isRequired": false,
-          "description": "Optional completed description override."
+          "description": "Whether the signer is done but the submission is waiting for other recipients."
         },
         {
           "name": "OnCustomAction",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback invoked when sending a copy is requested."
+          "description": "Callback invoked when the custom action is clicked."
         },
         {
           "name": "OnDownload",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Optional custom action icon."
+          "description": "Callback invoked when download is requested and no DownloadUrl is set."
         },
         {
           "name": "OnSendCopy",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback invoked when download is requested and no DownloadUrl is set."
+          "description": "Callback invoked when sending a copy is requested."
         },
         {
           "name": "ShowSendCopy",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Optional completed document download URL."
+          "description": "Whether the send-copy action is shown."
         },
         {
           "name": "Title",
@@ -2872,7 +2872,7 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false,
-          "description": "Submission events to display."
+          "description": "Additional CSS classes for the root element."
         },
         {
           "name": "Events",

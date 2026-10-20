@@ -37,6 +37,34 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
   </ItemGroup>
 
+  <!-- ═══ Localization: JSON resources embedded in THIS assembly ═══
+       The request validators' messages live in
+       Resources/EmailTemplateValidationResources[.<culture>].json — a flat { "Key": "Value" } map read
+       by the CLOSED IStringLocalizer<EmailTemplateValidationResources> (JsonStringLocalizer<T>,
+       registered by AddTempoEmailTemplateEngine). They used to be .resx, which only resolves through
+       the host's IStringLocalizerFactory: a host that replaces it got bare keys as validation
+       messages, and a host that never calls AddLocalization() could not resolve the validator at all. -->
+  <ItemGroup>
+    <!-- WithCulture=false keeps every file in the MAIN assembly (a culture suffix would route it into a
+         satellite assembly, which is not loaded under Blazor WebAssembly). -->
+    <EmbeddedResource Include="Resources/EmailTemplateValidationResources.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Abstractions.Resources.EmailTemplateValidationResources.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources/EmailTemplateValidationResources.cs.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Abstractions.Resources.EmailTemplateValidationResources.cs.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources/EmailTemplateValidationResources.sk.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Abstractions.Resources.EmailTemplateValidationResources.sk.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources/EmailTemplateValidationResources.fr.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Abstractions.Resources.EmailTemplateValidationResources.fr.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Tempo.Blazor.EmailTemplates.Abstractions.Tests</_Parameter1>

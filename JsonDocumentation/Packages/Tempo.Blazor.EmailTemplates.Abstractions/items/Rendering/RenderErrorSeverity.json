@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "How serious a RenderError is. The numeric values are part of the public contract (D23) and must not be reordered — a host may persist or compare them.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/RenderErrorSeverity.cs",
+  "documentationStatus": "generated",
+  "itemName": "RenderErrorSeverity"
+}

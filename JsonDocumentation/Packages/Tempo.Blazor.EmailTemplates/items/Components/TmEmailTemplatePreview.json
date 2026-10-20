@@ -23,13 +23,13 @@
       "type": "TimeProvider",
       "isRequired": false,
       "default": "TimeProvider.System",
-      "description": "Optional variable data (JSON). When null, sample data is generated from the template."
+      "description": "Clock used for the debounced re-render (overridable in tests)."
     },
     {
       "name": "VariablesJson",
       "type": "string?",
       "isRequired": true,
-      "description": "The document to preview.",
+      "description": "Optional variable data (JSON). When null, sample data is generated from the template.",
       "editorRequired": true
     }
   ]

@@ -21,13 +21,13 @@
       "name": "Document",
       "type": "EmailTemplateDocument",
       "isRequired": true,
-      "description": "Whether the dialog is shown."
+      "description": "The document to export."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": true,
-      "description": "The document to export.",
+      "description": "Raised when the dialog is closed.",
       "editorRequired": true
     }
   ]

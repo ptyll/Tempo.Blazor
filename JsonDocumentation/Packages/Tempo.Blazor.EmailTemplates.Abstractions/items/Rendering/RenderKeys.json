@@ -1,0 +1,36 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Localization keys for diagnostics produced while rendering a template.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/RenderKeys.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "BlockedUrlScheme",
+      "kind": "Field",
+      "type": "string",
+      "description": "A link, image or background used a URL scheme outside the allow-list and was replaced with # (§3.7a). Localized by the host; the resource entry lives in the editor package under the same key."
+    },
+    {
+      "name": "EventHandlerRemoved",
+      "kind": "Field",
+      "type": "string",
+      "description": "Raw markup carried an event-handler attribute (on*) or srcdoc, which was removed because a variable inside it would run as script. The editor package carries the resource entry."
+    },
+    {
+      "name": "MarkupTooComplex",
+      "kind": "Field",
+      "type": "string",
+      "description": "The rendered markup could not be checked within the guard's regex budget, so it was discarded and the render failed (Error): unchecked markup is never returned."
+    },
+    {
+      "name": "UnsafeElementRemoved",
+      "kind": "Field",
+      "type": "string",
+      "description": "Markup that can rewrite a link at runtime was removed: an SVG animation element (set/animate/animateMotion/animateTransform/discard) or a meta http-equiv=\"refresh\" redirect. E-mail has no legitimate use for either."
+    }
+  ],
+  "itemName": "RenderKeys"
+}

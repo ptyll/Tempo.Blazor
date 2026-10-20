@@ -95,7 +95,7 @@
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "The head attributes containing the named-class definitions (mj-class).",
+          "description": "Raised after the class definitions change.",
           "editorRequired": true
         }
       ]
@@ -117,14 +117,14 @@
           "name": "Document",
           "type": "EmailTemplateDocument",
           "isRequired": true,
-          "description": "Whether the dialog is shown.",
+          "description": "The document to export.",
           "editorRequired": true
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "The document to export.",
+          "description": "Raised when the dialog is closed.",
           "editorRequired": true
         },
         {
@@ -152,7 +152,7 @@
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "The mj-html-attributes selectors (round-trip only; not rendered by Mjml.Net).",
+          "description": "Raised after the selectors change.",
           "editorRequired": true
         },
         {
@@ -181,13 +181,13 @@
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised with the imported document when the user confirms."
+          "description": "Raised when the dialog is closed."
         },
         {
           "name": "OnImport",
           "type": "EventCallback<EmailTemplateDocument>",
           "isRequired": false,
-          "description": "Whether the dialog is shown."
+          "description": "Raised with the imported document when the user confirms."
         },
         {
           "name": "Show",
@@ -221,7 +221,7 @@
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "The dictionary being edited (rebuilt in place on every change).",
+          "description": "Raised after the dictionary changes.",
           "editorRequired": true
         }
       ]
@@ -250,7 +250,7 @@
           "type": "IReadOnlyList<string>",
           "isRequired": false,
           "default": "Array.Empty<string>()",
-          "description": "The list of sub-elements being edited (mutated in place).",
+          "description": "Property names shown first for each item.",
           "editorRequired": true
         },
         {
@@ -264,7 +264,7 @@
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Property names shown first for each item."
+          "description": "Raised after the list or any item changes."
         }
       ]
     },
@@ -286,20 +286,20 @@
           "type": "IReadOnlyList<string>",
           "isRequired": false,
           "default": "Array.Empty<string>()",
-          "description": "Property names shown above the \"Advanced\" section, in order."
+          "description": "Property names to omit (rendered by a dedicated editor elsewhere)."
         },
         {
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Property names to omit (rendered by a dedicated editor elsewhere)."
+          "description": "Raised after any field changes."
         },
         {
           "name": "Primary",
           "type": "IReadOnlyList<string>",
           "isRequired": false,
           "default": "Array.Empty<string>()",
-          "description": "The model object whose scalar properties are edited.",
+          "description": "Property names shown above the \"Advanced\" section, in order.",
           "editorRequired": true
         },
         {
@@ -335,19 +335,19 @@
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "The selected node id (block, section or column); null edits the document settings."
+          "description": "Raised after any property changes."
         },
         {
           "name": "OnImageUpload",
           "type": "Func<IBrowserFile, Task<string>>?",
           "isRequired": false,
-          "description": "Host-provided variables, merged with those extracted from the document."
+          "description": "Optional host upload handler: receives a picked file and returns the hosted image URL."
         },
         {
           "name": "SelectedId",
           "type": "Guid?",
           "isRequired": false,
-          "description": "The document being edited.",
+          "description": "The selected node id (block, section or column); null edits the document settings.",
           "editorRequired": true
         },
         {
@@ -355,7 +355,7 @@
           "type": "IReadOnlyList<TemplateVariableInfo>",
           "isRequired": false,
           "default": "Array.Empty<TemplateVariableInfo>()",
-          "description": "Raised after any property changes."
+          "description": "Host-provided variables, merged with those extracted from the document."
         }
       ]
     },
@@ -383,7 +383,7 @@
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "The table block being edited (mutated in place).",
+          "description": "Raised after the table changes.",
           "editorRequired": true
         }
       ]
@@ -412,38 +412,38 @@
           "name": "DragActive",
           "type": "bool",
           "isRequired": false,
-          "description": "Raised after the document is mutated by a block/section/column action."
+          "description": "Whether a drag is in progress (shows drop zones between blocks)."
         },
         {
           "name": "OnBlockDragStart",
           "type": "EventCallback<Guid>",
           "isRequired": false,
-          "description": "Raised when a block is dropped into a column at an index."
+          "description": "Raised when an existing block begins being dragged."
         },
         {
           "name": "OnDocumentChanged",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the selection changes."
+          "description": "Raised after the document is mutated by a block/section/column action."
         },
         {
           "name": "OnDropInColumn",
           "type": "EventCallback<(Guid ColumnId, int Index)>",
           "isRequired": false,
-          "description": "Whether a drag is in progress (shows drop zones between blocks)."
+          "description": "Raised when a block is dropped into a column at an index."
         },
         {
           "name": "SelectedId",
           "type": "Guid?",
           "isRequired": false,
-          "description": "The document being displayed.",
+          "description": "The currently selected node id (block, column or section), if any.",
           "editorRequired": true
         },
         {
           "name": "SelectedIdChanged",
           "type": "EventCallback<Guid?>",
           "isRequired": false,
-          "description": "The currently selected node id (block, column or section), if any."
+          "description": "Raised when the selection changes."
         }
       ]
     },
@@ -464,7 +464,7 @@
           "name": "AutoSave",
           "type": "AutoSaveOptions?",
           "isRequired": false,
-          "description": "Raised when the user requests a save."
+          "description": "Auto-save configuration; when enabled, edits are saved after a debounce interval."
         },
         {
           "name": "Document",
@@ -482,33 +482,33 @@
           "name": "OnAutoSave",
           "type": "EventCallback<EmailTemplateDocument>",
           "isRequired": false,
-          "description": "Auto-save configuration; when enabled, edits are saved after a debounce interval."
+          "description": "Raised by auto-save with the current document."
         },
         {
           "name": "OnImageUpload",
           "type": "Func<IBrowserFile, Task<string>>?",
           "isRequired": false,
-          "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
+          "description": "Optional host image-upload handler: receives a picked file, returns the hosted URL."
         },
         {
           "name": "OnSave",
           "type": "EventCallback<EmailTemplateDocument>",
           "isRequired": false,
-          "description": "Raised when the document changes (for @bind-Document)."
+          "description": "Raised when the user requests a save."
         },
         {
           "name": "TimeProvider",
           "type": "TimeProvider",
           "isRequired": false,
           "default": "TimeProvider.System",
-          "description": "Raised by auto-save with the current document."
+          "description": "Clock used for auto-save debouncing (overridable in tests)."
         },
         {
           "name": "Variables",
           "type": "IReadOnlyList<TemplateVariableInfo>",
           "isRequired": false,
           "default": "Array.Empty<TemplateVariableInfo>()",
-          "description": "Clock used for auto-save debouncing (overridable in tests)."
+          "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
         }
       ]
     },
@@ -537,13 +537,13 @@
           "type": "TimeProvider",
           "isRequired": false,
           "default": "TimeProvider.System",
-          "description": "Optional variable data (JSON). When null, sample data is generated from the template."
+          "description": "Clock used for the debounced re-render (overridable in tests)."
         },
         {
           "name": "VariablesJson",
           "type": "string?",
           "isRequired": false,
-          "description": "The document to preview.",
+          "description": "Optional variable data (JSON). When null, sample data is generated from the template.",
           "editorRequired": true
         }
       ]
@@ -571,13 +571,13 @@
           "name": "OnAddSection",
           "type": "EventCallback<LayoutPreset>",
           "isRequired": false,
-          "description": "Raised when a block drag starts (for drag-and-drop onto the canvas)."
+          "description": "Raised when a layout preset is chosen to add as a new section."
         },
         {
           "name": "OnDragBlockStart",
           "type": "EventCallback<BlockDescriptor>",
           "isRequired": false,
-          "description": "Raised when a block is chosen (clicked) to be added."
+          "description": "Raised when a block drag starts (for drag-and-drop onto the canvas)."
         }
       ]
     },
@@ -605,7 +605,7 @@
           "name": "OnNavigate",
           "type": "EventCallback<Guid?>",
           "isRequired": false,
-          "description": "The document to validate.",
+          "description": "Raised with the offending node id when a finding is clicked.",
           "editorRequired": true
         }
       ]
@@ -627,7 +627,7 @@
           "name": "OnInsert",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "The variables available to insert (extracted from the document plus host-provided)."
+          "description": "Raised with the {{ path }} token when a variable is chosen."
         },
         {
           "name": "Variables",

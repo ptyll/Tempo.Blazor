@@ -1,0 +1,11 @@
+{
+  "Name_Required": "The template name is required.",
+  "Name_TooLong": "The template name must be at most 200 characters.",
+  "Subject_TooLong": "The subject must be at most 300 characters.",
+  "Language_Invalid": "The language must be a valid code such as 'en' or 'en-US'.",
+  "ContentJson_Required": "The template content is required.",
+  "To_Required": "At least one recipient is required.",
+  "To_InvalidEmail": "One or more recipient addresses are not valid email addresses.",
+  "Cc_InvalidEmail": "One or more copy addresses are not valid email addresses.",
+  "VariablesJson_Invalid": "The variable data is not valid JSON."
+}

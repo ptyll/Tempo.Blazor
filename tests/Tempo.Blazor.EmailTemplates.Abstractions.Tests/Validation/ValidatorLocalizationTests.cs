@@ -1,8 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Localization;
 using Tempo.Blazor.EmailTemplates.Abstractions.Resources;
 using Tempo.Blazor.EmailTemplates.Abstractions.Validation;
 
@@ -10,12 +9,9 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Tests.Validation;
 
 public class ValidatorLocalizationTests
 {
+    /// <summary>The exact localizer the engine registers: embedded JSON, not the host's factory.</summary>
     private static IStringLocalizer<EmailTemplateValidationResources> Localizer()
-    {
-        var factory = new ResourceManagerStringLocalizerFactory(
-            Options.Create(new LocalizationOptions()), NullLoggerFactory.Instance);
-        return new StringLocalizer<EmailTemplateValidationResources>(factory);
-    }
+        => new JsonStringLocalizer<EmailTemplateValidationResources>();
 
     private static TResult InCulture<TResult>(string culture, Func<TResult> action)
     {

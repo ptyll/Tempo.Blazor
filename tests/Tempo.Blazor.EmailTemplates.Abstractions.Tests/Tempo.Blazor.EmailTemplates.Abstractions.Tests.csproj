@@ -25,6 +25,15 @@
     <ProjectReference Include="..\..\src\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />
   </ItemGroup>
 
+  <!-- A deliberately malformed flat table (one entry is a number), embedded under the marker type's
+       full name so JsonStringLocalizer<T> finds it: pins the parse failure mode of the localizer. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/NonStringResources.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>Tempo.Blazor.EmailTemplates.Abstractions.Tests.Resources.NonStringResources.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="FluentAssertions" />

@@ -1,10 +1,13 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Localization;
 using Tempo.Blazor.EmailTemplates.Abstractions.Registry;
 using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
+using Tempo.Blazor.EmailTemplates.Abstractions.Resources;
 using Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 using Tempo.Blazor.EmailTemplates.Abstractions.Validation;
 
@@ -15,8 +18,12 @@ public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the email template engine: template engine, MJML generator/compiler, renderer,
-    /// text generator, block registry and request validators. Localization
-    /// (<c>IStringLocalizer</c>) must be registered separately by the host (e.g. <c>AddLocalization</c>).
+    /// text generator, block registry and request validators. The validators' messages come from a
+    /// CLOSED <c>IStringLocalizer&lt;EmailTemplateValidationResources&gt;</c> registration over embedded
+    /// JSON (<c>Resources/EmailTemplateValidationResources[.&lt;culture&gt;].json</c>, en/cs/sk/fr), so the
+    /// host needs neither <c>AddLocalization()</c> nor a working <see cref="IStringLocalizerFactory"/>:
+    /// a host that replaces the factory and its <c>IStringLocalizer&lt;&gt;</c> still gets real messages
+    /// instead of raw keys, because a closed registration wins over an open-generic one.
     /// Any <see cref="ITemplateSecurityAuditSink"/> registered in the container is wired into the
     /// template engine automatically, and every registered <see cref="ITemplateFunctionProvider"/> is
     /// validated and exposed under its namespace. Providers must be registered as
@@ -42,6 +49,12 @@ public static class ServiceCollectionExtensions
         var configured = new TemplateSecurityOptions();
         configure?.Invoke(configured);
         configured.Validate();
+
+        // The validators' own JSON tables (en/cs/sk/fr). Closed generic registration: it wins over an
+        // open-generic IStringLocalizer<> the host may have registered, so a host factory that does not
+        // know these keys can never turn validation messages into raw keys. TryAdd keeps a host decorator.
+        services.TryAddSingleton<IStringLocalizer<EmailTemplateValidationResources>,
+            JsonStringLocalizer<EmailTemplateValidationResources>>();
 
         services.AddSingleton<TemplateFunctionRegistry>(provider =>
         {

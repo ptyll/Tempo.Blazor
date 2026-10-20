@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "One audit record emitted by a template render. Detail names the refused member, namespace, function or limit only — it never contains model values, so an audit trail cannot leak the data a template was rendering.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateSecurityEvent.cs",
+  "documentationStatus": "generated",
+  "itemName": "TemplateSecurityEvent"
+}

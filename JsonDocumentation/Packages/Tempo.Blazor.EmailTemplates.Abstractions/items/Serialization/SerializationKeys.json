@@ -1,0 +1,42 @@
+{
+  "kind": "Class",
+  "category": "Serialization",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Serialization",
+  "description": "Localization keys for template serialization diagnostics (never raw text).",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Serialization/SerializationKeys.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "InputTooLarge",
+      "kind": "Field",
+      "type": "string",
+      "description": "The JSON is larger than MaxInputBytes (UTF-8 bytes)."
+    },
+    {
+      "name": "InvalidSchemaVersion",
+      "kind": "Field",
+      "type": "string",
+      "description": "The schema version header is missing a number, is not positive or appears twice."
+    },
+    {
+      "name": "Malformed",
+      "kind": "Field",
+      "type": "string",
+      "description": "The JSON itself is malformed (not parseable, or an unsupported type)."
+    },
+    {
+      "name": "TooDeeplyNested",
+      "kind": "Field",
+      "type": "string",
+      "description": "The document nests blocks too deeply (or contains a block cycle) to be serialized."
+    },
+    {
+      "name": "UnsupportedSchemaVersion",
+      "kind": "Field",
+      "type": "string",
+      "description": "The document uses a schema version newer than CurrentSchemaVersion."
+    }
+  ],
+  "itemName": "SerializationKeys"
+}

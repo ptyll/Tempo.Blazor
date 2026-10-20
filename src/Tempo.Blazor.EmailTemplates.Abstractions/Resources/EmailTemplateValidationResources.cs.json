@@ -1,0 +1,11 @@
+{
+  "Name_Required": "Název šablony je povinný.",
+  "Name_TooLong": "Název šablony může mít nejvýše 200 znaků.",
+  "Subject_TooLong": "Předmět může mít nejvýše 300 znaků.",
+  "Language_Invalid": "Jazyk musí být platný kód, například „cs“ nebo „cs-CZ“.",
+  "ContentJson_Required": "Obsah šablony je povinný.",
+  "To_Required": "Je vyžadován alespoň jeden příjemce.",
+  "To_InvalidEmail": "Jedna nebo více adres příjemců není platná e-mailová adresa.",
+  "Cc_InvalidEmail": "Jedna nebo více adres kopie není platná e-mailová adresa.",
+  "VariablesJson_Invalid": "Data proměnných nejsou platný JSON."
+}

@@ -214,6 +214,7 @@ nepoužívá** (staví string; `Generate` na `:15`), `Import/MjmlImporter.cs` je
 | `Rendering/EmailTemplateRenderer`, `LocalEmailPreviewRenderer` | **Engine** | **kvůli výchozí kompozici, bez přímé externí závislosti** — skládají Scriban engine + `MjmlNetCompiler` + `MjmlGenerator` a v Abstractions by nemohly mít funkční výchozí pipeline |
 | `Rendering/HtmlSanitizerPolicy`, `ConservativeHtmlContentSanitizer`, `IHtmlContentSanitizer` | Abstractions | viz rozhodnutí D12 níže |
 | `Editing/EmailSaveRequest`, `EmailSaveResult`, `EmailSaveStatus`, `EmailSaveTrigger` | Abstractions | nové (D1) |
+| `Localization/JsonStringLocalizer<T>` (Fáze 5) | Abstractions | **`public sealed`**, jen BCL + `Microsoft.Extensions.Localization.Abstractions` (žádná nová `PackageReference`); registruje ho `AddTempoEmailTemplateModel` (po Fázi 6, vedle validátorů) a dnes `AddTempoEmailTemplates` jako CLOSED `IStringLocalizer<TMarker>` — viz D25 |
 | `Rendering/UrlSchemePolicy`, `Rendering/MarkupGuard`, `Rendering/MarkupGuardResult`, `Templating/HtmlTextEscaper`, `Templating/IEscapingTemplateEngine`, `Templating/TemplateEscapeMode`, `Rendering/RenderErrorSeverity`, `Rendering/RenderKeys`, `Rendering/TemplateRenderOptions` (Fáze 3) | Abstractions | čisté BCL (regex + string), žádná externí závislost; `IEscapingTemplateEngine`/`TemplateEscapeMode` jsou `internal` a Engine je uvidí přes `InternalsVisibleTo` |
 | `Templating/HtmlTemplateFunctions`, `Templating/TrustedHtml`, `Templating/EscapedHtml`, `Templating/SandboxedTemplateContext` (Fáze 3) | **Engine** (dnes v Abstractions do Fáze 6) | registrují Scriban `html.trusted`/`html.escape` a escapovací hook `TemplateContext.Write` — přímá závislost na Scriban |
 | …poznámka k Fázi 6 | — | **Engine musí mít na Abstractions přesnou verzi `[2.10.0]`, ne `>=`** — `InternalsVisibleTo` je vázané na silné jméno+verzi sestavení; jinak `IEscapingTemplateEngine`/`TemplateEscapeMode` v Engine přestanou být viditelné a renderer ztratí per-pass escapování (a zaloguje warning o cizím enginu, D24) |
@@ -303,8 +304,14 @@ deleguje na `AddTempoEmailTemplateEditor`.
 
 - `AddTempoEmailTemplateModel` je **idempotentní** a registruje baseline přes `TryAdd*`:
   `IHtmlContentSanitizer` = `ConservativeHtmlContentSanitizer`, `ITemplateVariableExtractor` =
-  `RegexTemplateVariableExtractor`, a **jednu instanci** `TemplateSecurityOptions` (`TryAddSingleton`;
-  `configure` se aplikuje vždy na tuto jednu instanci).
+  `RegexTemplateVariableExtractor`, **`IStringLocalizer<EmailTemplateValidationResources>`** =
+  `JsonStringLocalizer<EmailTemplateValidationResources>` (Fáze 5 — **musí žít tady, vedle validátorů,
+  ne v Engine**: validátory jsou v Abstractions, takže i bez Engine musí vracet přeložený text;
+  testy `HostLocalizerFactoryReplacementTests` se ve Fázi 6 přepnou z `AddTempoEmailTemplateEngine()`
+  na `AddTempoEmailTemplateModel()` a přibude případ `AddTempoEmailTemplateEditor()` bez Engine →
+  validátor vrací `cs` text) a **jednu instanci** `TemplateSecurityOptions` (`TryAddSingleton`;
+  `configure` se aplikuje vždy na tuto jednu instanci). Dnes (do Fáze 6) tuto registraci dělá
+  `AddTempoEmailTemplateEngine` v Abstractions.
 - `AddTempoEmailTemplateEngine` baseline **přepíše přes `Replace`** (`AngleSharpHtmlContentSanitizer`,
   `ScribanTemplateVariableExtractor`, `ScribanTemplateValidator`, `MjmlNetCompiler`, `EmailTemplateRenderer`,
   `LocalEmailPreviewRenderer`) → **výsledek nezávisí na pořadí volání** a `configure` se vždy aplikuje
@@ -1033,6 +1040,7 @@ public enum EmailItemEditingMode { Inline, Dialog }
 | `ToolboxCollapsed` / `ToolboxCollapsedChanged` | `bool` + `EventCallback<bool>` | ne | 8 |
 | `ShowSaveStatus` | `[Parameter] public bool ShowSaveStatus { get; set; } = true;` | ne | 7 |
 | `ImportOptions` | `[Parameter] public EmailImportOptions? ImportOptions { get; set; }` (editor + import dialog) | ne | 10 |
+| `JsonStringLocalizer<T>` | `public sealed class JsonStringLocalizer<TResourceSource> : IStringLocalizer<TResourceSource>` — embedded JSON tabulky (`{Marker}.json` + `{Marker}.{culture}.json`), registruje se jako CLOSED generic | ne (aditivní, nový typ; žádný existující člen se nemění) | 5 |
 | První doporučující pravidlo | `LayoutSeverity.Info` = preheader delší než 100 znaků (jedno pravidlo, `DocumentValidationKeys`) | ne (nové pravidlo) | 10 |
 
 ### 3.11 Souhrn breaking changes (pro CHANGELOG „Breaking / Migration“ 2.10.0)
@@ -1044,7 +1052,7 @@ public enum EmailItemEditingMode { Inline, Dialog }
 | B3 | **ANO** | Hodnoty proměnných v HTML/MJML těle se ve výchozím stavu escapují (subject/preheader/text ne); jediný opt-out je filtr `{{ value \| html.trusted }}` (výstup vždy přes sanitizer); allow-list URL schémat + `#` fallback a audit `BlockedUrlScheme` | 3 |
 | B4 | **ANO** | `ITemplateEngine.Render` / `IEmailTemplateRenderer.RenderAsync` mají **jednu signaturu s volitelnými parametry** (`TemplateRenderOptions?`, `CancellationToken`) — binárně jiná signatura, **bez default interface metody** | 3 |
 | B5 | **ANO** (částečně) | `LayoutSeverity`: nová hodnota `Info = 2`, existující `Warning = 0` a `Error = 1` explicitně zafixované **beze změny číselných hodnot**; breaking jen pro exhaustivní `switch` bez `default` | 10 |
-| B6 | **ANO** (částečně) | Lokalizace: `.resx` → embedded JSON, `AddTempoEmailTemplates` už nevolá `AddLocalization()` | 5 |
+| B6 | **ANO** (částečně) | Lokalizace: `.resx` → embedded JSON, `AddTempoEmailTemplates` už nevolá `AddLocalization()`; **+ nový public `JsonStringLocalizer<T>`** (aditivní, D25) | 5 |
 | B7 | **ANO** | **Nový balíček `Tempo.Blazor.EmailTemplates.Engine`**: `AddTempoEmailTemplateEngine` se přesunul do něj (namespace `Tempo.Blazor.EmailTemplates.Abstractions` — D21), `AddTempoEmailTemplates` je `[Obsolete]` a jen deleguje na `AddTempoEmailTemplateEditor(o => configure?.Invoke(o.Security))` (engine neregistruje; náhled bez rendereru = `Unavailable` s textem o chybějící registraci), `HtmlContentSanitizer.Sanitize` (static) → `IHtmlContentSanitizer` (`AngleSharpHtmlContentSanitizer` v Engine, konzervativní fallback v Abstractions), `TemplateVariableExtractor` → `ITemplateVariableExtractor`/`ScribanTemplateVariableExtractor`, `ITemplateEngine` v UI nahrazen `ITemplateValidator`. **Migrace:** přidat `PackageReference Tempo.Blazor.EmailTemplates.Engine` a volat `AddTempoEmailTemplateEngine()`; WASM editor místo toho dodá `IEmailPreviewRenderer` (+ volitelně serverový `ITemplateValidator`) | 6 |
 | B8 | ne, ale mění výstup | `EmailTemplateDocument.SchemaVersion` v serializovaném JSON (`static CurrentSchemaVersion => 1`) | 4 |
 | B9 | ne, ale mění rovnost | `TemplateVariableInfo.Description`/`Group` v `Equals`/`GetHashCode` | 7A |
@@ -1130,6 +1138,8 @@ popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking ch
 
 | D23 | **Závažnost render diagnostiky (rozhodnutí uživatele 2026-10-20):** `public enum RenderErrorSeverity { Error = 0, Warning = 1 }`; `RenderError(Message, Line, Column, Key, Severity = Error)` — `Severity` je **poslední** volitelný parametr; `RenderResult.Success = Errors.All(e => e.Severity != Error)`, nově `RenderResult.HasWarnings = Errors.Any(e => e.Severity == Warning)`. Blokovaná URL i odstraněný event handler = **Warning** (HTML je kompletní, `Success` zůstává `true`), takže `POST /api/email-templates/{id}/send` na varování **neodpovídá 422** a náhled mapuje varování na `EmailPreviewStatus.Rendered` s HTML (ne `RenderFailed`). Breaking pro poziční dekonstrukci `RenderError` a binárně (CHANGELOG). |
 | D24 | **Cizí `ITemplateEngine` (rozhodnutí uživatele 2026-10-20):** `EmailTemplateRenderer` s enginem, který není `IEscapingTemplateEngine`, **nevyhazuje** — v konstruktoru jednou zaloguje warning „A custom ITemplateEngine cannot guarantee per-pass HTML escaping; the host is responsible for escaping.“ a použije fallback (`ITemplateEngine.Render`). Per-pass escapování je vlastnost Tempo enginu (`ScribanTemplateEngine`); dokumentováno v XML doc, `TEMPLATE_SYNTAX.md` a CHANGELOG. |
+
+| D25 | **`JsonStringLocalizer<T>` zůstává `public sealed` v `Tempo.Blazor.EmailTemplates.Abstractions.Localization`** (potvrzeno uživatelem 2026-10-20). Necpi ho jako `internal` s `InternalsVisibleTo` do UI balíčku: IVT je vázané na silné jméno **a přesnou verzi** sestavení, takže každý bump verze by tiše rozbil lokalizaci editoru (stejný důvod, proč F6 pinuje Engine na `[2.10.0]`). Veřejný typ je aditivní API (B6) a hostitel ho může použít i pro vlastní markery; registruje ho `AddTempoEmailTemplateModel` (po Fázi 6) vedle validátorů a `AddTempoEmailTemplates` pro editor. |
 
 ### 5.3 Dříve otevřené volby (uzavřeno rozhodnutími D21/D22)
 

@@ -1,0 +1,23 @@
+{
+  "kind": "Class",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Localization",
+  "description": "An IStringLocalizer<TResourceSource> backed by JSON tables embedded in the resource type's assembly: {TResourceSource.FullName}.json for the neutral language and {TResourceSource.FullName}.{culture}.json per culture, each a flat { \"Key\": \"Value\" } map. The tables travel with the assembly and are never resolved through a host-supplied IStringLocalizerFactory, so an application that replaces the whole localization pipeline with its own factory still gets real text instead of raw key names; embedded JSON also resolves under Blazor WebAssembly, where resx satellite assemblies and the embedded neutral .resources are not loaded. Lookup walks CultureInfo.CurrentUICulture -> parent cultures -> neutral, each table is parsed at most once, and a missing table is an empty table rather than a failure. Register it as a CLOSED generic (IStringLocalizer<TMarker>) so it takes precedence over an open-generic registration, and pass a marker type that lives in the assembly holding the JSON files.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Localization/JsonStringLocalizer.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "GetAllStrings",
+      "kind": "Method",
+      "type": "IEnumerable<LocalizedString>",
+      "parameters": [
+        {
+          "name": "includeParentCultures",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "itemName": "JsonStringLocalizer<TResourceSource>"
+}

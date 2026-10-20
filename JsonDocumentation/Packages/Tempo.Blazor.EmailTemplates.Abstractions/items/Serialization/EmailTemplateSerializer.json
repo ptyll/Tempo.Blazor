@@ -23,7 +23,7 @@
       "name": "Deserialize",
       "kind": "Method",
       "type": "EmailTemplateDocument",
-      "description": "Deserializes a document from JSON.",
+      "description": "Deserializes a document from JSON, migrating it to CurrentSchemaVersion.",
       "parameters": [
         {
           "name": "json",
@@ -35,7 +35,7 @@
       "name": "Serialize",
       "kind": "Method",
       "type": "string",
-      "description": "Serializes a document to a compact JSON string.",
+      "description": "Serializes a document to a compact JSON string, always stamping the current schema version (SchemaVersion on the instance is never mutated).",
       "parameters": [
         {
           "name": "document",

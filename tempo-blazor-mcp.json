@@ -1014,7 +1014,7 @@
         {
           "name": "AddTempoNotionMcpTools",
           "type": "static IServiceCollection AddTempoNotionMcpTools()",
-          "description": "Registers dependencies required by the NotionEditor MCP tools. The host must supply INotionDataProvider for page lifecycle and INotionAggregateProvider for canonical recursive reads and atomic block authoring."
+          "description": "Registers dependencies required by the NotionEditor MCP tools. The host must supply INotionDataProvider for page metadata/lifecycle tools and INotionAggregateProvider for canonical recursive reads and atomic block authoring. Hosts may implement INotionIdempotentAggregateProvider to replace the registered process-local receipt fallback with a durable transactional boundary."
         }
       ]
     },

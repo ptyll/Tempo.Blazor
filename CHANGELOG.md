@@ -225,7 +225,43 @@
   var violations = new EmailDocumentLimitsValidator(options).Validate(document);   // [] when it fits
   ```
 
+- **New public `Tempo.Blazor.EmailTemplates.Abstractions.Localization.JsonStringLocalizer<T>`.** The
+  core's JSON localizer lives in `Tempo.Blazor` and is `internal`, and this Abstractions package must not
+  reference the Blazor package, so the implementation is published here for the email packages (and for a
+  host that wants the same behaviour for its own marker type). It is `sealed` — compose it, do not derive.
+  Register the resource type as a **closed** generic so it wins over an open-generic `IStringLocalizer<>`:
+
+  ```csharp
+  services.TryAddSingleton<IStringLocalizer<TmEmailResources>,
+      JsonStringLocalizer<TmEmailResources>>();
+  ```
+
 ### Fixed
+
+- **Every key the packages hand to the localizer now resolves (en / cs / sk / fr) — previously the bare
+  key was rendered.** The editor showed the *key* for the diagnostics phases 2–4 introduced: the import
+  messages (`import.empty`, `import.parse_error`, `import.not_mjml`, `import.unknown_element`,
+  `import.wrapper_flattened`, `import.element_wrapped`, `import.include_unresolved`,
+  `import.input_too_large`), the document limits (`validation.limits.sections|blocks|nesting`) and the
+  serializer failures (`serialization.malformed`, `serialization.schema_version.invalid`,
+  `serialization.schema_version.unsupported`, `serialization.too_deeply_nested`,
+  `serialization.input_too_large`) had no resource entry in any language. They do now
+  (`TmEmailResources*.json`, en/cs/sk/fr), and `TmEmailResourcesParityTests` walks every public `*Keys`
+  constant in the Abstractions assembly and fails if any of them resolves to nothing — so a new key cannot
+  ship untranslated again.
+
+- **JSON documentation: parameter and member descriptions shifted by one position are repaired across all
+  packages, and `validate --fail-on-drift` now fails on a description borrowed from a sibling.** The
+  committed overlays were produced by an older parse that paired the XML-doc summaries in **declaration**
+  order against parameters emitted **alphabetically**, so an entry carried its neighbour's sentence — and
+  where the old parse had dropped a `<see cref="…"/>`, a hole-punched fragment of it
+  (`TmEmailImportDialog.OnClose` carried `OnImport`'s, `TmTreeListColumn.Editable` carried
+  `CellTemplate`'s). `PackageDocumentationGenerator` detects both forms (an entry whose description is a
+  sibling's freshly parsed description, or that description with characters deleted) and repairs it from
+  the source; `validate --fail-on-drift` reports any that remain. **Description-only change** — no
+  parameter, type or default moved — and the same regeneration catches up the missing
+  `DataTableExportScope` overlay (earlier phases added public types without one, which made
+  `validate --fail-on-drift` fail).
 
 - **Scriban code inside block content renders again (regression from 2.9.0).** `MjmlGenerator` sanitized
   the authored content of `mj-text`/`mj-accordion-text` *before* substitution, and the sanitizer's
@@ -417,6 +453,47 @@
   change).** The import dialog's historical 5 MB limit is now the default of a configurable option, so
   existing imports keep working; raise or lower it per call. The limit is measured in **UTF-8 bytes**,
   so multi-byte content is judged by its transported size.
+
+- **The email packages' strings are embedded JSON and `AddTempoEmailTemplates()` no longer calls
+  `AddLocalization()` (B6).** `TmEmailResources*.resx` and `EmailTemplateValidationResources*.resx` are
+  gone; the editor and the request validators resolve their strings from flat `Resources/*.json` tables
+  embedded in the package assembly (en / cs / **sk** / fr), registered as a CLOSED
+  `IStringLocalizer<TmEmailResources>` / `IStringLocalizer<EmailTemplateValidationResources>` over
+  `Tempo.Blazor.EmailTemplates.Abstractions.Localization.JsonStringLocalizer<T>` — the same scheme the
+  Tempo core uses for `TmResources*.json`.
+
+  ```text
+  before: AddTempoEmailTemplates() → services.AddLocalization()
+                                     IStringLocalizer<TmEmailResources> → host's IStringLocalizerFactory
+                                     → resx ResourceManager
+  after:  AddTempoEmailTemplates() → no IStringLocalizerFactory registration at all
+                                     IStringLocalizer<TmEmailResources> → embedded JSON in the package
+  ```
+
+  ```csharp
+  // before — the package registered the localization pipeline for the whole app
+  builder.Services.AddTempoEmailTemplates();
+
+  // after — a host that relied on that must register it itself (other components still need it);
+  // the email editor works either way, because its strings no longer go through a factory
+  builder.Services.AddLocalization();
+  builder.Services.AddTempoEmailTemplates();
+  ```
+
+  Impact and migration:
+  * A host that **relied on `AddTempoEmailTemplates()` to register the localization pipeline** must call
+    `builder.Services.AddLocalization()` itself (or `AddJsonLocalization()` / its own factory). The editor
+    no longer needs it, but other components still do.
+  * A host that **replaces `IStringLocalizerFactory`** (PostrionCore's `AddJsonLocalization()` calls
+    `RemoveAll<IStringLocalizerFactory>()`) used to see raw keys (`EmailEditor_Toolbar_Save`) in the
+    editor and raw keys as validation messages; both now render real text in all four languages. No
+    migration needed — this is the bug the change closes.
+  * A host that **overrode the editor's strings** keeps its strings: a registration made *after* the call
+    wins (last registration wins), and one made *before* it is kept because the package uses `TryAdd`.
+    A fork that edited the `.resx` files must move its strings into
+    `Resources/TmEmailResources.<culture>.json`.
+  * Slovak (`sk`) now ships for both tables; `cs`/`sk`/`fr` are guaranteed to carry exactly the English
+    key set with identical `{0}` placeholders (`TmEmailResourcesParityTests`).
 
 ## 2.9.1 (unreleased)
 

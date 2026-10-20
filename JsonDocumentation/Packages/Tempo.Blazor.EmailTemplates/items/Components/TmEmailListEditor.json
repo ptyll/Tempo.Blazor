@@ -23,14 +23,14 @@
       "type": "IReadOnlyList<string>",
       "isRequired": true,
       "default": "Array.Empty<string>()",
-      "description": "The list of sub-elements being edited (mutated in place).",
+      "description": "Property names shown first for each item.",
       "editorRequired": true
     },
     {
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Property names shown first for each item."
+      "description": "Raised after the list or any item changes."
     }
   ],
   "typeParameters": [

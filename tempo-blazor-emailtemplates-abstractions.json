@@ -18,15 +18,15 @@
     "dependencies": [
       {
         "name": "AngleSharp",
-        "version": "1.5.2"
+        "version": "1.8.5"
       },
       {
         "name": "Mjml.Net",
-        "version": "4.11.0"
+        "version": "4.15.0"
       },
       {
         "name": "Scriban",
-        "version": "7.2.4"
+        "version": "7.5.1"
       },
       {
         "name": "FluentValidation",
@@ -52,6 +52,7 @@
       "Tempo.Blazor.EmailTemplates.Abstractions.Dtos",
       "Tempo.Blazor.EmailTemplates.Abstractions.Import",
       "Tempo.Blazor.EmailTemplates.Abstractions.Layout",
+      "Tempo.Blazor.EmailTemplates.Abstractions.Localization",
       "Tempo.Blazor.EmailTemplates.Abstractions.Model",
       "Tempo.Blazor.EmailTemplates.Abstractions.Model.Blocks",
       "Tempo.Blazor.EmailTemplates.Abstractions.Registry",
@@ -74,15 +75,15 @@
     "dependencies": [
       {
         "name": "AngleSharp",
-        "version": "1.5.2"
+        "version": "1.8.5"
       },
       {
         "name": "Mjml.Net",
-        "version": "4.11.0"
+        "version": "4.15.0"
       },
       {
         "name": "Scriban",
-        "version": "7.2.4"
+        "version": "7.5.1"
       },
       {
         "name": "FluentValidation",
@@ -467,6 +468,12 @@
           "description": "Optional source column."
         },
         {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional localization key, see RenderKeys."
+        },
+        {
           "name": "Line",
           "kind": "Property",
           "type": "int?",
@@ -476,7 +483,13 @@
           "name": "Message",
           "kind": "Property",
           "type": "string",
-          "description": "The error message."
+          "description": "The message (English fallback)."
+        },
+        {
+          "name": "Severity",
+          "kind": "Property",
+          "type": "RenderErrorSeverity",
+          "description": "Whether the render failed (Error, the default) or completed with a security clean-up (Warning)."
         }
       ]
     },
@@ -665,6 +678,42 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "EmailImportOptions",
+      "kind": "Class",
+      "category": "Import",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Import",
+      "description": "Limits applied when a template enters the application: the size of the MJML input, the number of sections and blocks, and how deeply blocks may nest. They guard both the MJML importer and the JSON deserialization against a hostile or broken document (a \"billion laughs\" style tree, a runaway paste) and are reusable through EmailDocumentLimitsValidator before a document is saved.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Import/EmailImportOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "MaxBlocks",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum number of blocks in the imported document, including blocks nested in hero, group and wrapper containers (default 2000). Exceeding it fails the import with TooManyBlocks."
+        },
+        {
+          "name": "MaxInputBytes",
+          "kind": "Property",
+          "type": "long",
+          "description": "Maximum size of the input in UTF-8 bytes (not in characters), default 5 MB. Exceeding it fails the import with InputTooLarge instead of parsing the payload."
+        },
+        {
+          "name": "MaxNestingDepth",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum nesting depth of blocks (default 8). A block directly in a section column is depth 1 and every hero/group/wrapper level adds one — the same convention LayoutValidator uses. Exceeding it fails the import with TooDeeplyNested."
+        },
+        {
+          "name": "MaxSections",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum number of sections in the imported document, including sections nested inside a wrapper (default 200). Exceeding it fails the import with TooManySections."
+        }
+      ]
+    },
+    {
       "itemName": "IMjmlIncludeResolver",
       "kind": "Interface",
       "category": "Import",
@@ -701,6 +750,12 @@
           "kind": "Field",
           "type": "string",
           "description": "An mj-include could not be resolved."
+        },
+        {
+          "name": "InputTooLarge",
+          "kind": "Field",
+          "type": "string",
+          "description": "The input is larger than MaxInputBytes (UTF-8 bytes)."
         },
         {
           "name": "NotMjml",
@@ -799,7 +854,7 @@
       "kind": "Class",
       "category": "Import",
       "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Import",
-      "description": "Imports MJML markup into an EmailTemplateDocument. Parsing is XML-based with an mj-raw shim (raw content may be non-well-formed HTML), tolerates comments, preserves unknown elements as raw blocks and unknown attributes in ExtraAttributes, and never throws — failures are returned as ImportMessages.",
+      "description": "Imports MJML markup into an EmailTemplateDocument. Parsing is XML-based with an mj-raw shim (raw content may be non-well-formed HTML), tolerates comments, preserves unknown elements as raw blocks and unknown attributes in ExtraAttributes, and never throws — failures (including a breach of the EmailImportOptions limits) are returned as ImportMessages.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Import/MjmlImporter.cs",
       "documentationStatus": "merged",
@@ -1004,6 +1059,36 @@
             {
               "name": "document",
               "type": "EmailTemplateDocument"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "JsonStringLocalizer<TResourceSource>",
+      "kind": "Class",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Localization",
+      "description": "An IStringLocalizer<TResourceSource> backed by JSON tables embedded in the resource type's assembly: {TResourceSource.FullName}.json for the neutral language and {TResourceSource.FullName}.{culture}.json per culture, each a flat { \"Key\": \"Value\" } map. The tables travel with the assembly and are never resolved through a host-supplied IStringLocalizerFactory, so an application that replaces the whole localization pipeline with its own factory still gets real text instead of raw key names; embedded JSON also resolves under Blazor WebAssembly, where resx satellite assemblies and the embedded neutral .resources are not loaded. Lookup walks CultureInfo.CurrentUICulture -> parent cultures -> neutral, each table is parsed at most once, and a missing table is an empty table rather than a failure. Register it as a CLOSED generic (IStringLocalizer<TMarker>) so it takes precedence over an open-generic registration, and pass a marker type that lives in the assembly holding the JSON files.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Localization/JsonStringLocalizer.cs",
+      "documentationStatus": "merged",
+      "typeParameters": [
+        {
+          "name": "TResourceSource",
+          "description": "Generic type parameter TResourceSource."
+        }
+      ],
+      "members": [
+        {
+          "name": "GetAllStrings",
+          "kind": "Method",
+          "type": "IEnumerable<LocalizedString>",
+          "description": "Every key of the current culture's tables (most specific first, then its parents and the neutral table when includeParentCultures is true), each key once.",
+          "parameters": [
+            {
+              "name": "includeParentCultures",
+              "type": "bool"
             }
           ]
         }
@@ -2818,6 +2903,12 @@
           "description": "Gets or sets the creation timestamp (UTC)."
         },
         {
+          "name": "CurrentSchemaVersion",
+          "kind": "Property",
+          "type": "int",
+          "description": "The schema version the serializer writes and the version a migration upgrades to. It is a property (not a const) so a future version can change it without recompiling consumers."
+        },
+        {
           "name": "Id",
           "kind": "Property",
           "type": "Guid",
@@ -2840,6 +2931,12 @@
           "kind": "Property",
           "type": "string?",
           "description": "Gets or sets the preview text shown in inboxes (mj-preview)."
+        },
+        {
+          "name": "SchemaVersion",
+          "kind": "Property",
+          "type": "int",
+          "description": "Gets or sets the schema version of this document. The serializer always writes CurrentSchemaVersion; a document read without the property is version 1 and Deserialize migrates it upward."
         },
         {
           "name": "Sections",
@@ -3336,6 +3433,24 @@
           "kind": "Field",
           "type": "string",
           "description": "An image has no source URL."
+        },
+        {
+          "name": "TooDeeplyNested",
+          "kind": "Field",
+          "type": "string",
+          "description": "Blocks are nested deeper than the configured import limit allows."
+        },
+        {
+          "name": "TooManyBlocks",
+          "kind": "Field",
+          "type": "string",
+          "description": "The document has more blocks than the configured import limit allows."
+        },
+        {
+          "name": "TooManySections",
+          "kind": "Field",
+          "type": "string",
+          "description": "The document has more sections than the configured import limit allows."
         }
       ]
     },
@@ -3366,6 +3481,36 @@
           "kind": "Property",
           "type": "LayoutSeverity",
           "description": "How serious the finding is."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailDocumentLimitsValidator",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "Validates a document against EmailImportOptions: the number of sections, the number of blocks and the block nesting depth. A host runs it on the server before saving (and the MJML importer uses the very same validator, so an import can never accept a document the save-time check rejects). Findings carry localization keys, never localized text.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailDocumentLimitsValidator.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Validate",
+          "kind": "Method",
+          "type": "IReadOnlyList<DocumentValidationMessage>",
+          "description": "Validates the document and returns every violated limit (empty when it fits).",
+          "parameters": [
+            {
+              "name": "document",
+              "type": "EmailTemplateDocument"
+            }
+          ]
+        },
+        {
+          "name": "Options",
+          "kind": "Property",
+          "type": "EmailImportOptions",
+          "description": "Gets the limits this validator applies."
         }
       ]
     },
@@ -3431,11 +3576,16 @@
       "kind": "Class",
       "category": "Rendering",
       "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
-      "description": "Sanitizes the inline HTML allowed inside text-bearing blocks: only a small safe whitelist of tags and attributes survives; scripts/styles are dropped with their content, event handlers and unsafe URL schemes are stripped. Built on AngleSharp's HTML parser so it is robust against evasion.",
+      "description": "Sanitizes the inline HTML allowed inside text-bearing blocks: only a small safe whitelist of tags and attributes survives; scripts/styles are dropped with their content, event handlers and unsafe URL schemes are stripped. The link allow-list is UrlSchemePolicy (the same http/https/mailto/tel + relative rules the render pipeline applies, D22). Built on AngleSharp's HTML parser so it is robust against evasion.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/HtmlContentSanitizer.cs",
       "documentationStatus": "merged",
       "members": [
+        {
+          "name": "Instance",
+          "kind": "Field",
+          "type": "QuoteSafeMarkupFormatter"
+        },
         {
           "name": "Sanitize",
           "kind": "Method",
@@ -3445,6 +3595,29 @@
             {
               "name": "html",
               "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "SanitizeTemplateContent",
+          "kind": "Method",
+          "type": "string",
+          "description": "Sanitizes the authored content of a text-bearing block (mj-text, mj-accordion-text) that may carry Scriban code. The plain Sanitize pass would entity-encode the quotes, > and & *inside* a code span and destroy the template ({{ price | math.format \"N2\" }} → \"Invalid token found &\"), so each {{ … }} span is swapped for an inert placeholder, the rest is sanitized, and the spans are restored verbatim.",
+          "parameters": [
+            {
+              "name": "content",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "Text",
+          "kind": "Method",
+          "type": "string",
+          "parameters": [
+            {
+              "name": "text",
+              "type": "ICharacterData"
             }
           ]
         }
@@ -3599,6 +3772,12 @@
           "description": "1-based source column, when known."
         },
         {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Localization key of the diagnostic (for example BlockedUrlScheme), so a host can present a localized message; null for messages that come straight from the MJML compiler."
+        },
+        {
           "name": "Line",
           "kind": "Property",
           "type": "int?",
@@ -3608,7 +3787,59 @@
           "name": "Message",
           "kind": "Property",
           "type": "string",
-          "description": "Human-readable description of the problem."
+          "description": "Human-readable description of the problem (English fallback)."
+        },
+        {
+          "name": "Severity",
+          "kind": "Property",
+          "type": "RenderErrorSeverity",
+          "description": "Whether the render failed (Error, the default) or completed with a security clean-up (Warning)."
+        }
+      ]
+    },
+    {
+      "itemName": "RenderErrorSeverity",
+      "kind": "Enum",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "How serious a RenderError is. The numeric values are part of the public contract (D23) and must not be reordered — a host may persist or compare them.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/RenderErrorSeverity.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "RenderKeys",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "Localization keys for diagnostics produced while rendering a template.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/RenderKeys.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BlockedUrlScheme",
+          "kind": "Field",
+          "type": "string",
+          "description": "A link, image or background used a URL scheme outside the allow-list and was replaced with # (§3.7a). Localized by the host; the resource entry lives in the editor package under the same key."
+        },
+        {
+          "name": "EventHandlerRemoved",
+          "kind": "Field",
+          "type": "string",
+          "description": "Raw markup carried an event-handler attribute (on*) or srcdoc, which was removed because a variable inside it would run as script. The editor package carries the resource entry."
+        },
+        {
+          "name": "MarkupTooComplex",
+          "kind": "Field",
+          "type": "string",
+          "description": "The rendered markup could not be checked within the guard's regex budget, so it was discarded and the render failed (Error): unchecked markup is never returned."
+        },
+        {
+          "name": "UnsafeElementRemoved",
+          "kind": "Field",
+          "type": "string",
+          "description": "Markup that can rewrite a link at runtime was removed: an SVG animation element (set/animate/animateMotion/animateTransform/discard) or a meta http-equiv=\"refresh\" redirect. E-mail has no legitimate use for either."
         }
       ]
     },
@@ -3626,13 +3857,19 @@
           "name": "Errors",
           "kind": "Property",
           "type": "IReadOnlyList<RenderError>",
-          "description": "Errors gathered across the pipeline phases, in order."
+          "description": "Errors and warnings gathered across the pipeline phases, in order."
+        },
+        {
+          "name": "HasWarnings",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether the render produced any Warning."
         },
         {
           "name": "Html",
           "kind": "Property",
           "type": "string",
-          "description": "The rendered HTML body."
+          "description": "The rendered HTML body. Empty (\"\", never null) when the markup could not be built or could not be checked safely — an unchecked or half-compiled body is never handed to a host."
         },
         {
           "name": "Preheader",
@@ -3650,13 +3887,37 @@
           "name": "Success",
           "kind": "Property",
           "type": "bool",
-          "description": "Gets whether rendering completed without errors."
+          "description": "Gets whether rendering completed without errors. A Warning (a URL replaced with #, a removed event handler) does not fail the render — the message and its HTML are usable, so the host can still send it."
         },
         {
           "name": "TextVersion",
           "kind": "Property",
           "type": "string",
           "description": "The plain-text alternative after variable substitution."
+        }
+      ]
+    },
+    {
+      "itemName": "TemplateRenderOptions",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "Per-render options handed to Render and RenderAsync. It is the extension point for render-scoped configuration (the culture of formatters); it deliberately has no escaping switch: the renderer decides the escaping mode per pass (§3.7, D14) and the only opt-out is the {{ value | html.trusted }} template filter. A host therefore cannot accidentally turn HTML escaping off.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/TemplateRenderOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Culture",
+          "kind": "Property",
+          "type": "CultureInfo?",
+          "description": "Culture of the formatters (math.format, date.to_string, plain number output…). null means \"decide from UseDocumentLanguageCulture\": the culture of Language when that option is set, otherwise InvariantCulture — so a render never depends on the server's thread culture."
+        },
+        {
+          "name": "UseDocumentLanguageCulture",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true and Culture is null, the renderer takes the culture from the rendered document's language (an unknown language falls back to InvariantCulture). Render has no document, so the engine itself falls back to the invariant culture."
         }
       ]
     },
@@ -3702,7 +3963,15 @@
       "description": "Thrown when an email template document cannot be (de)serialized — for example malformed JSON or an unknown block type discriminator. Carries a clear, surfaced message instead of crashing.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Serialization/EmailTemplateSerializationException.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Gets the localization key describing the failure, when it has one."
+        }
+      ]
     },
     {
       "itemName": "EmailTemplateSerializer",
@@ -3730,7 +3999,19 @@
           "name": "Deserialize",
           "kind": "Method",
           "type": "EmailTemplateDocument",
-          "description": "Deserializes a document from JSON.",
+          "description": "Deserializes a document from JSON, migrating it to CurrentSchemaVersion.",
+          "parameters": [
+            {
+              "name": "json",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "ReadSchemaVersion",
+          "kind": "Method",
+          "type": "int",
+          "description": "Reads the schema version header of the JSON without deserializing the document (useful to decide about a migration or to build a friendly error). A missing (or non-positive) version means version 1.",
           "parameters": [
             {
               "name": "json",
@@ -3742,7 +4023,7 @@
           "name": "Serialize",
           "kind": "Method",
           "type": "string",
-          "description": "Serializes a document to a compact JSON string.",
+          "description": "Serializes a document to a compact JSON string, always stamping the current schema version (SchemaVersion on the instance is never mutated).",
           "parameters": [
             {
               "name": "document",
@@ -3755,6 +4036,48 @@
           "kind": "Property",
           "type": "static JsonSerializerOptions",
           "description": "Gets the canonical serialization options used for documents, blocks and cloning."
+        }
+      ]
+    },
+    {
+      "itemName": "SerializationKeys",
+      "kind": "Class",
+      "category": "Serialization",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Serialization",
+      "description": "Localization keys for template serialization diagnostics (never raw text).",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Serialization/SerializationKeys.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "InputTooLarge",
+          "kind": "Field",
+          "type": "string",
+          "description": "The JSON is larger than MaxInputBytes (UTF-8 bytes)."
+        },
+        {
+          "name": "InvalidSchemaVersion",
+          "kind": "Field",
+          "type": "string",
+          "description": "The schema version header is missing a number, is not positive or appears twice."
+        },
+        {
+          "name": "Malformed",
+          "kind": "Field",
+          "type": "string",
+          "description": "The JSON itself is malformed (not parseable, or an unsupported type)."
+        },
+        {
+          "name": "TooDeeplyNested",
+          "kind": "Field",
+          "type": "string",
+          "description": "The document nests blocks too deeply (or contains a block cycle) to be serialized."
+        },
+        {
+          "name": "UnsupportedSchemaVersion",
+          "kind": "Field",
+          "type": "string",
+          "description": "The document uses a schema version newer than CurrentSchemaVersion."
         }
       ]
     },
@@ -3790,6 +4113,26 @@
       "description": "Renders, validates and analyzes Scriban-syntax templates within a sandbox.",
       "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateEngine.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ITemplateFunctionProvider",
+      "kind": "Interface",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "Host-supplied template functions under one namespace. A provider lets an application add its own filters (for example currency formatting) without forking the engine: the functions are registered under Namespace and called from a template as {{ value | app.my_filter }}.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateFunctionProvider.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ITemplateSecurityAuditSink",
+      "kind": "Interface",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "Optional audit sink for template sandbox events. Register zero to many implementations in DI; the engine resolves them as IEnumerable{T} and reports every refused member, namespace, function, URL scheme, limit and timeout. Audit is best effort: an exception thrown by a sink is swallowed and logged by the engine, never surfaced to the caller or the rendered output.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateSecurityAuditSink.cs",
       "documentationStatus": "merged"
     },
     {
@@ -3925,6 +4268,7 @@
           "name": "Render",
           "kind": "Method",
           "type": "Result<string>",
+          "description": "Renders a template, HTML-encoding every expression result. This is the safe default: a value a template prints can never open markup. Use the html.trusted filter for markup a template is trusted to emit (it is sanitized, never written verbatim); the escaping mode itself is not host-configurable (§3.7, D14).",
           "parameters": [
             {
               "name": "template",
@@ -3933,6 +4277,11 @@
             {
               "name": "model",
               "type": "object?"
+            },
+            {
+              "name": "options",
+              "type": "TemplateRenderOptions?",
+              "default": "null"
             }
           ]
         },
@@ -3980,6 +4329,36 @@
       ]
     },
     {
+      "itemName": "TemplateFunctionInfo",
+      "kind": "Record",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "A function a provider exposes, for validation and docs.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateFunctionProvider.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TemplateSecurityEvent",
+      "kind": "Record",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "One audit record emitted by a template render. Detail names the refused member, namespace, function or limit only — it never contains model values, so an audit trail cannot leak the data a template was rendering.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateSecurityEvent.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TemplateSecurityEventKind",
+      "kind": "Enum",
+      "category": "Templating",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+      "description": "Classification of a TemplateSecurityEvent. The engine reports exactly these kinds and never invents new ones at runtime, so a host can switch on the enum exhaustively. The numeric values are part of the public contract (§3.6) and must not be reordered — a host may persist them.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateSecurityEvent.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "TemplateSecurityOptions",
       "kind": "Class",
       "category": "Templating",
@@ -3989,6 +4368,18 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/TemplateSecurityOptions.cs",
       "documentationStatus": "merged",
       "members": [
+        {
+          "name": "FunctionNamespaces",
+          "kind": "Property",
+          "type": "ISet<string>",
+          "description": "Namespaces of the registered ITemplateFunctionProviders (D6). The engine adds every provider namespace to its own copy, so a host-side template validator can tell a host function namespace (app.format_currency) from a data path and tolerate the unknown members of exactly these namespaces. It never widens the sandbox: the namespaces are validated when the engine is constructed and the member filter, the limits and the escaping keep applying."
+        },
+        {
+          "name": "LimitToString",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum length of a single string produced by converting a value to text, in UTF-16 characters (default 1,048,576). Exceeding it aborts the render instead of silently truncating."
+        },
         {
           "name": "LoopLimit",
           "kind": "Property",
@@ -4002,10 +4393,22 @@
           "description": "Maximum length of the rendered output in characters (default 5,000,000)."
         },
         {
+          "name": "ObjectRecursionLimit",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum recursion depth while converting an object graph to text (default 20), guarding deep or self-referencing values handed to the renderer as the model."
+        },
+        {
           "name": "RecursiveLimit",
           "kind": "Property",
           "type": "int",
           "description": "Maximum recursion depth before rendering aborts (default 100)."
+        },
+        {
+          "name": "RegexTimeOut",
+          "kind": "Property",
+          "type": "TimeSpan",
+          "description": "Timeout applied to every regular expression evaluated by the regex filters (default one second). Protects against catastrophic backtracking in a user-authored pattern. InfiniteMatchTimeout is rejected."
         },
         {
           "name": "StrictVariables",
@@ -4194,11 +4597,11 @@
     }
   ],
   "summary": {
-    "itemCount": 97,
-    "manualItemCount": 97,
-    "generatedItemCount": 97,
+    "itemCount": 109,
+    "manualItemCount": 109,
+    "generatedItemCount": 109,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 97
+    "publicApiTypeCount": 109
   }
 }

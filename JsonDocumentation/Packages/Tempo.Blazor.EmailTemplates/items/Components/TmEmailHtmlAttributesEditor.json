@@ -22,7 +22,7 @@
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": true,
-      "description": "The mj-html-attributes selectors (round-trip only; not rendered by Mjml.Net).",
+      "description": "Raised after the selectors change.",
       "editorRequired": true
     }
   ]

@@ -1,0 +1,36 @@
+{
+  "kind": "Class",
+  "category": "Import",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Import",
+  "description": "Limits applied when a template enters the application: the size of the MJML input, the number of sections and blocks, and how deeply blocks may nest. They guard both the MJML importer and the JSON deserialization against a hostile or broken document (a \"billion laughs\" style tree, a runaway paste) and are reusable through EmailDocumentLimitsValidator before a document is saved.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Import/EmailImportOptions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "MaxBlocks",
+      "kind": "Property",
+      "type": "int",
+      "description": "Maximum number of blocks in the imported document, including blocks nested in hero, group and wrapper containers (default 2000). Exceeding it fails the import with TooManyBlocks."
+    },
+    {
+      "name": "MaxInputBytes",
+      "kind": "Property",
+      "type": "long",
+      "description": "Maximum size of the input in UTF-8 bytes (not in characters), default 5 MB. Exceeding it fails the import with InputTooLarge instead of parsing the payload."
+    },
+    {
+      "name": "MaxNestingDepth",
+      "kind": "Property",
+      "type": "int",
+      "description": "Maximum nesting depth of blocks (default 8). A block directly in a section column is depth 1 and every hero/group/wrapper level adds one — the same convention LayoutValidator uses. Exceeding it fails the import with TooDeeplyNested."
+    },
+    {
+      "name": "MaxSections",
+      "kind": "Property",
+      "type": "int",
+      "description": "Maximum number of sections in the imported document, including sections nested inside a wrapper (default 200). Exceeding it fails the import with TooManySections."
+    }
+  ],
+  "itemName": "EmailImportOptions"
+}

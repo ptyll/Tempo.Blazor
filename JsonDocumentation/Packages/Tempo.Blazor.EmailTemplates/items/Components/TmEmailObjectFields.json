@@ -23,20 +23,20 @@
       "type": "IReadOnlyList<string>",
       "isRequired": false,
       "default": "Array.Empty<string>()",
-      "description": "Property names shown above the \"Advanced\" section, in order."
+      "description": "Property names to omit (rendered by a dedicated editor elsewhere)."
     },
     {
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Property names to omit (rendered by a dedicated editor elsewhere)."
+      "description": "Raised after any field changes."
     },
     {
       "name": "Primary",
       "type": "IReadOnlyList<string>",
       "isRequired": true,
       "default": "Array.Empty<string>()",
-      "description": "The model object whose scalar properties are edited.",
+      "description": "Property names shown above the \"Advanced\" section, in order.",
       "editorRequired": true
     }
   ]

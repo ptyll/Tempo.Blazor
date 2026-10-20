@@ -1,0 +1,30 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Validates a document against EmailImportOptions: the number of sections, the number of blocks and the block nesting depth. A host runs it on the server before saving (and the MJML importer uses the very same validator, so an import can never accept a document the save-time check rejects). Findings carry localization keys, never localized text.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailDocumentLimitsValidator.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Validate",
+      "kind": "Method",
+      "type": "IReadOnlyList<DocumentValidationMessage>",
+      "description": "Validates the document and returns every violated limit (empty when it fits).",
+      "parameters": [
+        {
+          "name": "document",
+          "type": "EmailTemplateDocument"
+        }
+      ]
+    },
+    {
+      "name": "Options",
+      "kind": "Property",
+      "type": "EmailImportOptions",
+      "description": "Gets the limits this validator applies."
+    }
+  ],
+  "itemName": "EmailDocumentLimitsValidator"
+}

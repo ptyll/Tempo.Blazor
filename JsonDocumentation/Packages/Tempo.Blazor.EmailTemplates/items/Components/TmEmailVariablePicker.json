@@ -22,7 +22,7 @@
       "name": "OnInsert",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "The variables available to insert (extracted from the document plus host-provided)."
+      "description": "Raised with the {{ path }} token when a variable is chosen."
     }
   ]
 }

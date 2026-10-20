@@ -3653,25 +3653,25 @@
           "name": "EmptyText",
           "type": "string?",
           "isRequired": false,
-          "description": "Text displayed while loading."
+          "description": "Text displayed when no results match."
         },
         {
           "name": "ErrorMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the menu is loading provider results."
+          "description": "Optional provider error message."
         },
         {
           "name": "HighlightedIndex",
           "type": "int",
           "isRequired": false,
-          "description": "Trigger that opened the menu."
+          "description": "Highlighted item index."
         },
         {
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
-          "description": "Highlighted item index."
+          "description": "Whether the menu is loading provider results."
         },
         {
           "name": "IsVisible",
@@ -3684,44 +3684,44 @@
           "type": "IReadOnlyList<DocumentAutocompleteItem>",
           "isRequired": false,
           "default": "[]",
-          "description": "Whether the autocomplete menu is visible."
+          "description": "Items displayed in the autocomplete menu."
         },
         {
           "name": "ItemTemplate",
           "type": "RenderFragment<DocumentAutocompleteItem>?",
           "isRequired": false,
-          "description": "Text displayed when no results match."
+          "description": "Optional custom item template."
         },
         {
           "name": "LoadingText",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional provider error message."
+          "description": "Text displayed while loading."
         },
         {
           "name": "OnHighlightedIndexChanged",
           "type": "EventCallback<int>",
           "isRequired": false,
-          "description": "Raised when an item is selected."
+          "description": "Raised when the highlighted index changes."
         },
         {
           "name": "OnItemSelected",
           "type": "EventCallback<DocumentAutocompleteItem>",
           "isRequired": false,
-          "description": "Optional custom item template."
+          "description": "Raised when an item is selected."
         },
         {
           "name": "Query",
           "type": "string",
           "isRequired": false,
           "default": "\"\"",
-          "description": "Items displayed in the autocomplete menu."
+          "description": "Current query text without the trigger marker."
         },
         {
           "name": "Trigger",
           "type": "DocumentAutocompleteTrigger?",
           "isRequired": false,
-          "description": "Current query text without the trigger marker."
+          "description": "Trigger that opened the menu."
         }
       ]
     },
@@ -3789,19 +3789,19 @@
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Current canvas review display mode for tracked revisions."
+          "description": "Accessible label for the canvas document surface."
         },
         {
           "name": "Author",
           "type": "DocumentEditorAuthor?",
           "isRequired": false,
-          "description": "Host-supplied proofing options used by the canvas diagnostics overlay."
+          "description": "Current document author used by tracked canvas changes."
         },
         {
           "name": "ContentControlRenderMode",
           "type": "string?",
           "isRequired": false,
-          "description": "Validation policy for provider-backed canvas image uploads."
+          "description": "Canvas content-control rendering mode. Use form for plain fill mode or design for structured-tag chrome."
         },
         {
           "name": "Document",
@@ -3813,25 +3813,25 @@
           "name": "ImageProvider",
           "type": "IDocumentImageProvider?",
           "isRequired": false,
-          "description": "Optional resolver for provider-managed document image assets."
+          "description": "Optional image provider used by canvas upload and clipboard image flows."
         },
         {
           "name": "ImageUrlResolver",
           "type": "IDocumentImageUrlResolver?",
           "isRequired": false,
-          "description": "Host-controlled permissions used to expose the canvas shell state."
+          "description": "Optional resolver for provider-managed document image assets."
         },
         {
           "name": "ImageValidation",
           "type": "DocumentImageValidationOptions",
           "isRequired": true,
-          "description": "Optional image provider used by canvas upload and clipboard image flows."
+          "description": "Validation policy for provider-backed canvas image uploads."
         },
         {
           "name": "InputAriaLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Accessible label for the canvas document surface."
+          "description": "Accessible label for the hidden keyboard and IME bridge."
         },
         {
           "name": "OnAnnotationSelected",
@@ -3843,87 +3843,87 @@
           "name": "OnChanged",
           "type": "Func<CanvasEngineChangedState, Task>?",
           "isRequired": false,
-          "description": "Raised when the JavaScript canvas host has mounted and reported readiness."
+          "description": "Raised when the canvas engine reports a model change. This is a plain delegate rather than an EventCallback{T} ON PURPOSE: it fires on every keystroke, and an EventCallback would auto-invoke StateHasChanged on the (very large) parent editor after every keystroke, re-rendering the whole toolbar/ribbon/chrome and freezing typing. The parent owns its own (debounced) re-render."
         },
         {
           "name": "OnCommandPaletteRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a canvas comment or revision marker is selected."
+          "description": "Raised when a canvas keyboard shortcut requests the command palette."
         },
         {
           "name": "OnContextMenu",
           "type": "EventCallback<CanvasEngineContextMenuRequest>",
           "isRequired": false,
-          "description": "Raised when the canvas engine reports a model change. This is a plain delegate rather than an ON PURPOSE: it fires on every keystroke, and an EventCallback would auto-invoke StateHasChanged on the (very large) parent editor after every keystroke, re-rendering the whole toolbar/ribbon/chrome and freezing typing. The parent owns its own (debounced) re-render."
+          "description": "Raised when the canvas engine requests a context menu at the pointer location."
         },
         {
           "name": "OnMiniToolbarChanged",
           "type": "Func<WysiwygMiniToolbarRequest?, Task>?",
           "isRequired": false,
-          "description": "Raised when the canvas engine requests a context menu at the pointer location."
+          "description": "Raised when the canvas selection changes (mini toolbar show/hide). A plain delegate, NOT an EventCallback, for the same reason as OnChanged: the selection changes on every keystroke (the caret moves), and an EventCallback would auto-render the whole parent editor each time. The parent re-renders itself only when the selection-driven state actually changes."
         },
         {
           "name": "OnReady",
           "type": "EventCallback<TmDocumentCanvasEngineHost>",
           "isRequired": false,
-          "description": "Accessible label for the hidden keyboard and IME bridge."
+          "description": "Raised when the JavaScript canvas host has mounted and reported readiness."
         },
         {
           "name": "OnRibbonFocusRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a canvas keyboard shortcut requests the command palette."
+          "description": "Raised when a canvas keyboard shortcut requests focus to move to the ribbon."
         },
         {
           "name": "OnUiStateChanged",
           "type": "Func<CanvasEngineUiState?, Task>?",
           "isRequired": false,
-          "description": "Raised when the canvas selection changes (mini toolbar show/hide). A plain delegate, NOT an EventCallback, for the same reason as : the selection changes on every keystroke (the caret moves), and an EventCallback would auto-render the whole parent editor each time. The parent re-renders itself only when the selection-driven state actually changes."
+          "description": "Raised with the small primitives-only UI snapshot (formatting pressed-state, dirty, undo/redo availability, page count) the engine pushes alongside a deliberate selection change (B2). Lets the parent update the toolbar immediately without a follow-up interop pull. A plain delegate for the same reason as OnMiniToolbarChanged."
         },
         {
           "name": "OnVersionsPanelRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a canvas keyboard shortcut requests focus to move to the ribbon."
+          "description": "Raised when a canvas keyboard shortcut requests the versions side panel."
         },
         {
           "name": "Permissions",
           "type": "DocumentEditorPermissions?",
           "isRequired": false,
-          "description": "Whether editing should be disabled for the canvas host."
+          "description": "Host-controlled permissions used to expose the canvas shell state."
         },
         {
           "name": "ProofingOptions",
           "type": "DocumentProofingOptions?",
           "isRequired": false,
-          "description": "Signer roles used to colour inline signing fields by submitter (plan S2)."
+          "description": "Host-supplied proofing options used by the canvas diagnostics overlay."
         },
         {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
-          "description": "The document accepted by the canvas engine host."
+          "description": "Whether editing should be disabled for the canvas host."
         },
         {
           "name": "ReviewDisplayMode",
           "type": "DocumentReviewDisplayMode",
           "isRequired": false,
           "default": "DocumentReviewDisplayMode.AllMarkup",
-          "description": "Whether canvas tracked changes are enabled."
+          "description": "Current canvas review display mode for tracked revisions."
         },
         {
           "name": "SigningRoles",
           "type": "IReadOnlyList<Tempo.Blazor.Abstractions.Models.SigningSubmitterRole>",
           "isRequired": false,
           "default": "[]",
-          "description": "Canvas content-control rendering mode. Use form for plain fill mode or design for structured-tag chrome."
+          "description": "Signer roles used to colour inline signing fields by submitter (plan S2)."
         },
         {
           "name": "TrackChangesEnabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Current document author used by tracked canvas changes."
+          "description": "Whether canvas tracked changes are enabled."
         }
       ]
     },
@@ -3950,7 +3950,7 @@
           "name": "CellChanged",
           "type": "EventCallback<TableCellContent>",
           "isRequired": false,
-          "description": "Current cell content."
+          "description": "Raised when cell properties change."
         },
         {
           "name": "TestIdRoot",
@@ -3985,7 +3985,7 @@
           "name": "Html",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the modal is open."
+          "description": "Legacy HTML content to display when no raw clipboard HTML is provided."
         },
         {
           "name": "IsOpen",
@@ -3997,25 +3997,25 @@
           "name": "NormalizedJson",
           "type": "string?",
           "isRequired": false,
-          "description": "Raw HTML captured from the last clipboard paste."
+          "description": "Normalized Tempo block JSON from the last clipboard paste."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Clipboard pipeline warnings from the last clipboard paste."
+          "description": "Raised when the modal should close."
         },
         {
           "name": "RawHtml",
           "type": "string?",
           "isRequired": false,
-          "description": "Legacy HTML content to display when no raw clipboard HTML is provided."
+          "description": "Raw HTML captured from the last clipboard paste."
         },
         {
           "name": "WarningsJson",
           "type": "string?",
           "isRequired": false,
-          "description": "Normalized Tempo block JSON from the last clipboard paste."
+          "description": "Clipboard pipeline warnings from the last clipboard paste."
         }
       ]
     },
@@ -4058,7 +4058,7 @@
           "name": "Commands",
           "type": "IReadOnlyDictionary<string, DocumentEditorCommandState>?",
           "isRequired": false,
-          "description": "Raised when the command palette should close."
+          "description": "Current command states."
         },
         {
           "name": "IsOpen",
@@ -4070,13 +4070,13 @@
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Whether the command palette is visible."
+          "description": "Raised when the command palette should close."
         },
         {
           "name": "OnExecuteCommand",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Current command states."
+          "description": "Raised when a command is selected."
         }
       ]
     },
@@ -4098,7 +4098,7 @@
           "type": "string",
           "isRequired": false,
           "default": "\"document-comment-cancel\"",
-          "description": "Submit test id."
+          "description": "Cancel test id."
         },
         {
           "name": "CanComment",
@@ -4111,32 +4111,32 @@
           "name": "InitialText",
           "type": "string?",
           "isRequired": false,
-          "description": "Submit button label."
+          "description": "Initial text used when the composer edits an existing entry."
         },
         {
           "name": "InputTestId",
           "type": "string",
           "isRequired": false,
           "default": "\"document-comment-input\"",
-          "description": "Root test id."
+          "description": "Input test id."
         },
         {
           "name": "IsBusy",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the current user may submit comments."
+          "description": "Whether a comment operation is currently running."
         },
         {
           "name": "MentionProvider",
           "type": "ITmPeopleProvider?",
           "isRequired": false,
-          "description": "Cancel test id."
+          "description": "Optional mention provider reused from the rich editor stack."
         },
         {
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when text is submitted."
+          "description": "Raised when the composer is cancelled."
         },
         {
           "name": "OnDraftChanged",
@@ -4148,33 +4148,33 @@
           "name": "OnSubmit",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Optional mention provider reused from the rich editor stack."
+          "description": "Raised when text is submitted."
         },
         {
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether a comment operation is currently running."
+          "description": "Input placeholder."
         },
         {
           "name": "SubmitLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Input placeholder."
+          "description": "Submit button label."
         },
         {
           "name": "SubmitTestId",
           "type": "string",
           "isRequired": false,
           "default": "\"document-comment-submit\"",
-          "description": "Input test id."
+          "description": "Submit test id."
         },
         {
           "name": "TestId",
           "type": "string",
           "isRequired": false,
           "default": "\"document-comment-composer\"",
-          "description": "Initial text used when the composer edits an existing entry."
+          "description": "Root test id."
         }
       ]
     },
@@ -4196,27 +4196,27 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether a comment operation is running."
+          "description": "Whether the current user can add comments or replies."
         },
         {
           "name": "CanDeleteOwnComments",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the current user can resolve or reopen comments."
+          "description": "Whether the current user can delete comment threads they own."
         },
         {
           "name": "CanResolve",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the current user can add comments or replies."
+          "description": "Whether the current user can resolve or reopen comments."
         },
         {
           "name": "CanStartComment",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Current author identifier used for ownership checks."
+          "description": "Whether a new comment can be started from the current selection."
         },
         {
           "name": "Comments",
@@ -4229,74 +4229,74 @@
           "name": "ComposerOpen",
           "type": "bool",
           "isRequired": false,
-          "description": "Current draft anchor when the new comment composer is open."
+          "description": "Whether the new comment composer is open."
         },
         {
           "name": "CurrentAuthorId",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the current user can delete comment threads they own."
+          "description": "Current author identifier used for ownership checks."
         },
         {
           "name": "DraftAnchor",
           "type": "DocumentCommentAnchor?",
           "isRequired": false,
-          "description": "Comment threads to display."
+          "description": "Current draft anchor when the new comment composer is open."
         },
         {
           "name": "Filter",
           "type": "DocumentCommentFilter",
           "isRequired": false,
           "default": "DocumentCommentFilter.All",
-          "description": "Selected comment thread id."
+          "description": "Current comment filter."
         },
         {
           "name": "FilterChanged",
           "type": "EventCallback<DocumentCommentFilter>",
           "isRequired": false,
-          "description": "Current comment filter."
+          "description": "Raised when the comment filter changes."
         },
         {
           "name": "IsBusy",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether comments are loading."
+          "description": "Whether a comment operation is running."
         },
         {
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
-          "description": "Raised when the comment sort mode changes."
+          "description": "Whether comments are loading."
         },
         {
           "name": "MentionProvider",
           "type": "ITmPeopleProvider?",
           "isRequired": false,
-          "description": "Whether a new comment can be started from the current selection."
+          "description": "Optional mention provider reused by comment composers."
         },
         {
           "name": "OnBeginComment",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Optional status message."
+          "description": "Raised when a new comment flow should begin."
         },
         {
           "name": "OnCancelComment",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a new comment is submitted."
+          "description": "Raised when the new comment composer is cancelled."
         },
         {
           "name": "OnCreateComment",
           "type": "EventCallback<DocumentCommentCreateRequest>",
           "isRequired": false,
-          "description": "Raised when a new comment flow should begin."
+          "description": "Raised when a new comment is submitted."
         },
         {
           "name": "OnDeleteComment",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when a comment should be reopened."
+          "description": "Raised when a comment should be deleted."
         },
         {
           "name": "OnDraftChanged",
@@ -4308,56 +4308,56 @@
           "name": "OnEditComment",
           "type": "EventCallback<DocumentEditorCommentEditRequest>",
           "isRequired": false,
-          "description": "Raised when a reply is submitted."
+          "description": "Raised when an existing comment entry is edited."
         },
         {
           "name": "OnReopenComment",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when a comment should be resolved."
+          "description": "Raised when a comment should be reopened."
         },
         {
           "name": "OnReplyComment",
           "type": "EventCallback<DocumentEditorCommentReplyRequest>",
           "isRequired": false,
-          "description": "Raised when the new comment composer is cancelled."
+          "description": "Raised when a reply is submitted."
         },
         {
           "name": "OnResolveComment",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when an existing comment entry is edited."
+          "description": "Raised when a comment should be resolved."
         },
         {
           "name": "OnSelectComment",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when a comment should be deleted."
+          "description": "Raised when a comment is selected."
         },
         {
           "name": "SelectedCommentId",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the new comment composer is open."
+          "description": "Selected comment thread id."
         },
         {
           "name": "SortMode",
           "type": "DocumentCommentSortMode",
           "isRequired": false,
           "default": "DocumentCommentSortMode.Position",
-          "description": "Raised when the comment filter changes."
+          "description": "Current comment sort mode."
         },
         {
           "name": "SortModeChanged",
           "type": "EventCallback<DocumentCommentSortMode>",
           "isRequired": false,
-          "description": "Current comment sort mode."
+          "description": "Raised when the comment sort mode changes."
         },
         {
           "name": "StatusMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional mention provider reused by comment composers."
+          "description": "Optional status message."
         }
       ]
     },
@@ -4379,27 +4379,27 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether this thread is selected."
+          "description": "Whether the current user can add replies."
         },
         {
           "name": "CanDeleteOwnComments",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the current user can resolve or reopen threads."
+          "description": "Whether the current user can delete comment threads they own."
         },
         {
           "name": "CanResolve",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the current user can add replies."
+          "description": "Whether the current user can resolve or reopen threads."
         },
         {
           "name": "CollapseResolved",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether a comment operation is currently running."
+          "description": "Whether resolved threads are collapsed by default."
         },
         {
           "name": "Comment",
@@ -4411,31 +4411,31 @@
           "name": "CurrentAuthorId",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the current user can delete comment threads they own."
+          "description": "Current author identifier used for ownership checks."
         },
         {
           "name": "IsBusy",
           "type": "bool",
           "isRequired": false,
-          "description": "Current author identifier used for ownership checks."
+          "description": "Whether a comment operation is currently running."
         },
         {
           "name": "IsSelected",
           "type": "bool",
           "isRequired": false,
-          "description": "Comment thread to render."
+          "description": "Whether this thread is selected."
         },
         {
           "name": "MentionProvider",
           "type": "ITmPeopleProvider?",
           "isRequired": false,
-          "description": "Whether resolved threads are collapsed by default."
+          "description": "Optional mention provider reused by the reply composer."
         },
         {
           "name": "OnDelete",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the thread should be reopened."
+          "description": "Raised when the thread should be deleted."
         },
         {
           "name": "OnDraftChanged",
@@ -4447,31 +4447,31 @@
           "name": "OnEdit",
           "type": "EventCallback<DocumentEditorCommentEditRequest>",
           "isRequired": false,
-          "description": "Raised when a reply is submitted."
+          "description": "Raised when an existing entry is edited."
         },
         {
           "name": "OnReopen",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the thread should be resolved."
+          "description": "Raised when the thread should be reopened."
         },
         {
           "name": "OnReply",
           "type": "EventCallback<DocumentEditorCommentReplyRequest>",
           "isRequired": false,
-          "description": "Raised when the thread is selected."
+          "description": "Raised when a reply is submitted."
         },
         {
           "name": "OnResolve",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when an existing entry is edited."
+          "description": "Raised when the thread should be resolved."
         },
         {
           "name": "OnSelect",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Optional mention provider reused by the reply composer."
+          "description": "Raised when the thread is selected."
         },
         {
           "name": "Participants",
@@ -4498,13 +4498,13 @@
           "name": "Author",
           "type": "DocumentEditorAuthor?",
           "isRequired": false,
-          "description": "Whether local comparison should be used when the provider fails."
+          "description": "Author requesting the comparison."
         },
         {
           "name": "ComparisonProvider",
           "type": "IDocumentComparisonProvider?",
           "isRequired": false,
-          "description": "Optional external format provider used for DOCX upload comparison sources."
+          "description": "Optional provider-backed comparison boundary."
         },
         {
           "name": "CurrentDocument",
@@ -4516,31 +4516,31 @@
           "name": "DocumentProvider",
           "type": "IDocumentEditorProvider?",
           "isRequired": false,
-          "description": "Current editor document snapshot."
+          "description": "Provider used to resolve document id sources for local comparison."
         },
         {
           "name": "FormatProvider",
           "type": "IDocumentFormatProvider?",
           "isRequired": false,
-          "description": "Provider used to resolve document id sources for local comparison."
+          "description": "Optional external format provider used for DOCX upload comparison sources."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when comparison fails."
+          "description": "Raised when the dialog should close."
         },
         {
           "name": "OnCompared",
           "type": "EventCallback<DocumentCompareResult>",
           "isRequired": false,
-          "description": "Author requesting the comparison."
+          "description": "Raised when comparison succeeds."
         },
         {
           "name": "OnCompareFailed",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when comparison succeeds."
+          "description": "Raised when comparison fails."
         },
         {
           "name": "OnExportRedline",
@@ -4553,7 +4553,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Optional provider-backed comparison boundary."
+          "description": "Whether local comparison should be used when the provider fails."
         }
       ]
     },
@@ -4574,19 +4574,19 @@
           "name": "ComparisonResult",
           "type": "DocumentCompareResult?",
           "isRequired": false,
-          "description": "Whether side-by-side text panes should be shown."
+          "description": "Optional precomputed comparison result."
         },
         {
           "name": "NewDocument",
           "type": "DocumentEditorDocument?",
           "isRequired": false,
-          "description": "Old document snapshot."
+          "description": "New document snapshot."
         },
         {
           "name": "NewTitle",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional title for the old side."
+          "description": "Optional title for the new side."
         },
         {
           "name": "OldDocument",
@@ -4598,14 +4598,14 @@
           "name": "OldTitle",
           "type": "string?",
           "isRequired": false,
-          "description": "New document snapshot."
+          "description": "Optional title for the old side."
         },
         {
           "name": "SideBySide",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Optional title for the new side."
+          "description": "Whether side-by-side text panes should be shown."
         }
       ]
     },
@@ -4942,7 +4942,7 @@
           "name": "SyncProvider",
           "type": "IDocumentSyncProvider?",
           "isRequired": false,
-          "description": "Optional offline draft store used when is enabled."
+          "description": "Optional provider used to submit an offline draft back to the authoritative store."
         },
         {
           "name": "TokenProvider",
@@ -4996,7 +4996,7 @@
           "type": "string",
           "isRequired": false,
           "default": "\"polite\"",
-          "description": "Message announced to assistive technologies."
+          "description": "Aria-live politeness level. Defaults to polite."
         },
         {
           "name": "Message",
@@ -5024,13 +5024,13 @@
           "type": "string",
           "isRequired": false,
           "default": "\"\"",
-          "description": "Current document page count."
+          "description": "Label for the active editing region."
         },
         {
           "name": "CanRetrySave",
           "type": "bool",
           "isRequired": false,
-          "description": "Optional save status message."
+          "description": "Whether the latest save failure can be retried."
         },
         {
           "name": "IsDirty",
@@ -5042,63 +5042,63 @@
           "name": "LastSavedAt",
           "type": "DateTimeOffset?",
           "isRequired": false,
-          "description": "Raised when the user requests retry after a recoverable save failure."
+          "description": "Timestamp of the latest successful save."
         },
         {
           "name": "OnRetrySave",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Whether the latest save failure can be retried."
+          "description": "Raised when the user requests retry after a recoverable save failure."
         },
         {
           "name": "PageCount",
           "type": "int",
           "isRequired": false,
           "default": "1",
-          "description": "Current document word count."
+          "description": "Current document page count."
         },
         {
           "name": "PendingCount",
           "type": "int",
           "isRequired": false,
-          "description": "Whether the document has local unsaved changes."
+          "description": "Number of currently pending async operations."
         },
         {
           "name": "PendingMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Number of currently pending async operations."
+          "description": "Message of the first pending operation, or null when none."
         },
         {
           "name": "RuntimeFailed",
           "type": "bool",
           "isRequired": false,
-          "description": "Message shown after a JS runtime recovery event, or null when none."
+          "description": "When true, RuntimeMessage describes a recovery failure."
         },
         {
           "name": "RuntimeMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Current zoom label."
+          "description": "Message shown after a JS runtime recovery event, or null when none."
         },
         {
           "name": "SaveMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Message of the first pending operation, or null when none."
+          "description": "Optional save status message."
         },
         {
           "name": "WordCount",
           "type": "int",
           "isRequired": false,
-          "description": "Timestamp of the latest successful save."
+          "description": "Current document word count."
         },
         {
           "name": "ZoomLabel",
           "type": "string",
           "isRequired": false,
           "default": "\"100%\"",
-          "description": "Label for the active editing region."
+          "description": "Current zoom label."
         }
       ]
     },
@@ -5119,100 +5119,100 @@
           "name": "ActiveHeaderFooterScopeLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Logical editor region currently holding the caret."
+          "description": "Human-readable label for the currently edited header/footer scope."
         },
         {
           "name": "ActiveRegion",
           "type": "string",
           "isRequired": false,
           "default": "\"Body\"",
-          "description": "Whether advanced canvas field and cross-reference controls are visible."
+          "description": "Logical editor region currently holding the caret."
         },
         {
           "name": "AllCapsState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current small caps formatting state for the selection."
+          "description": "Current all caps formatting state for the selection."
         },
         {
           "name": "BoldState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Whether debug tools (viewDocumentJson etc.) are available."
+          "description": "Current bold formatting state for the selection."
         },
         {
           "name": "BulletListActive",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether selected paragraphs have mixed spacing after values."
+          "description": "Whether the current paragraph is a bulleted list item."
         },
         {
           "name": "CanBrowseImageAssets",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether provider-backed image uploads are available."
+          "description": "Whether provider-backed image asset browsing is available."
         },
         {
           "name": "CanComment",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Current tracked-change display mode."
+          "description": "Whether comment actions are currently available."
         },
         {
           "name": "CanCompareDocuments",
           "type": "bool",
           "isRequired": false,
-          "description": "Feature names that should be hidden from this toolbar instance."
+          "description": "Whether arbitrary document comparison is available."
         },
         {
           "name": "CanExportDocx",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether DOCX import is available through a host format provider."
+          "description": "Whether DOCX export is available through a host format provider."
         },
         {
           "name": "CanExportPdf",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether template preview can be toggled."
+          "description": "Whether PDF export is available through a host provider."
         },
         {
           "name": "CanImportDocx",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether a PDF export request is running."
+          "description": "Whether DOCX import is available through a host format provider."
         },
         {
           "name": "CanPreviewTemplate",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether template preview is currently active."
+          "description": "Whether template preview can be toggled."
         },
         {
           "name": "CanRedo",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether undo is currently available."
+          "description": "Whether redo is currently available."
         },
         {
           "name": "CanTrackChanges",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether tracked changes are enabled."
+          "description": "Whether tracked changes can be toggled."
         },
         {
           "name": "CanUndo",
           "type": "bool",
           "isRequired": false,
-          "description": "Timestamp of the latest successful save."
+          "description": "Whether undo is currently available."
         },
         {
           "name": "CanUploadImages",
           "type": "bool",
           "isRequired": false,
-          "description": "Raised when the image insert flow should open."
+          "description": "Whether provider-backed image uploads are available."
         },
         {
           "name": "CommandRegistry",
@@ -5224,147 +5224,147 @@
           "name": "CurrentBlockStyle",
           "type": "string?",
           "isRequired": false,
-          "description": "R.4.8 — show the paragraph (block) style picker (core engine preview)."
+          "description": "R.4.8 — current paragraph style name (Normal/Title/Heading1…) for the picker."
         },
         {
           "name": "CurrentFontFamily",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether selected paragraphs have mixed alignment."
+          "description": "Current font family reported by the JS selection runtime."
         },
         {
           "name": "CurrentFontSize",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether selected text has mixed font families."
+          "description": "Current font size reported by the JS selection runtime."
         },
         {
           "name": "CurrentHighlightColor",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether selected text has mixed text colors."
+          "description": "Current highlight color reported by the JS selection runtime."
         },
         {
           "name": "CurrentLineSpacing",
           "type": "double",
           "isRequired": false,
           "default": "1",
-          "description": "Whether selected text has mixed highlight colors."
+          "description": "Current line spacing reported by the JS selection runtime."
         },
         {
           "name": "CurrentSpacingAfter",
           "type": "double",
           "isRequired": false,
-          "description": "Whether selected paragraphs have mixed spacing before values."
+          "description": "Current paragraph spacing after reported by the JS selection runtime."
         },
         {
           "name": "CurrentSpacingBefore",
           "type": "double",
           "isRequired": false,
-          "description": "Whether selected paragraphs have mixed line spacing."
+          "description": "Current paragraph spacing before reported by the JS selection runtime."
         },
         {
           "name": "CurrentTextColor",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether selected text has mixed font sizes."
+          "description": "Current text color reported by the JS selection runtime."
         },
         {
           "name": "DifferentFirstPage",
           "type": "bool",
           "isRequired": false,
-          "description": "Raised when combined page, column, or line-numbering setup changes through the inspector."
+          "description": "Whether the current section uses a different first-page header/footer."
         },
         {
           "name": "DifferentFirstPageChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Whether the current section uses a different first-page header/footer."
+          "description": "Raised when different first-page mode changes."
         },
         {
           "name": "DifferentOddAndEvenPages",
           "type": "bool",
           "isRequired": false,
-          "description": "Raised when different first-page mode changes."
+          "description": "Whether the current section uses different odd/even headers and footers."
         },
         {
           "name": "DifferentOddAndEvenPagesChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Whether the current section uses different odd/even headers and footers."
+          "description": "Raised when different odd/even mode changes."
         },
         {
           "name": "DisabledFeatures",
           "type": "IReadOnlyCollection<string>?",
           "isRequired": false,
-          "description": "Optional template preview status text."
+          "description": "Feature names that should be hidden from this toolbar instance."
         },
         {
           "name": "DoubleStrikethroughState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current all caps formatting state for the selection."
+          "description": "Current double strikethrough formatting state for the selection."
         },
         {
           "name": "FontFamilies",
           "type": "IReadOnlyList<DocumentFontFamily>",
           "isRequired": false,
           "default": "[]",
-          "description": "Whether selected paragraphs have mixed list states."
+          "description": "Font families available in the font selector."
         },
         {
           "name": "FontFamilyMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current font family reported by the JS selection runtime."
+          "description": "Whether selected text has mixed font families."
         },
         {
           "name": "FontSizeMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current font size reported by the JS selection runtime."
+          "description": "Whether selected text has mixed font sizes."
         },
         {
           "name": "HighlightColorMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current highlight color reported by the JS selection runtime."
+          "description": "Whether selected text has mixed highlight colors."
         },
         {
           "name": "IsDirty",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the editor is currently saving."
+          "description": "Whether the document has local unsaved changes."
         },
         {
           "name": "IsDocumentProtected",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether tracked changes can be toggled."
+          "description": "Whether the document is currently in protected (restricted-editing) mode."
         },
         {
           "name": "IsExportingDocx",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether a DOCX import request is running."
+          "description": "Whether a DOCX export request is running."
         },
         {
           "name": "IsExportingPdf",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether PDF export is available through a host provider."
+          "description": "Whether a PDF export request is running."
         },
         {
           "name": "IsFullscreen",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether non-printing characters are shown in the WYSIWYG view."
+          "description": "Whether the editor is in fullscreen mode."
         },
         {
           "name": "IsImportingDocx",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether DOCX export is available through a host format provider."
+          "description": "Whether a DOCX import request is running."
         },
         {
           "name": "IsSaving",
@@ -5376,253 +5376,253 @@
           "name": "ItalicState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current bold formatting state for the selection."
+          "description": "Current italic formatting state for the selection."
         },
         {
           "name": "LastSavedAt",
           "type": "DateTimeOffset?",
           "isRequired": false,
-          "description": "Optional save status text."
+          "description": "Timestamp of the latest successful save."
         },
         {
           "name": "LineNumbering",
           "type": "DocumentLineNumbering?",
           "isRequired": false,
-          "description": "Current section column settings for the page layout inspector."
+          "description": "Current section line numbering settings for the page layout inspector."
         },
         {
           "name": "LineSpacingMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current line spacing reported by the JS selection runtime."
+          "description": "Whether selected paragraphs have mixed line spacing."
         },
         {
           "name": "LinkInfoProvider",
           "type": "Func<Task<WysiwygLinkInfo?>>?",
           "isRequired": false,
-          "description": "Raised when the current link should be removed."
+          "description": "Optional callback used to load link metadata for the current selection."
         },
         {
           "name": "ListMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the current paragraph is a numbered list item."
+          "description": "Whether selected paragraphs have mixed list states."
         },
         {
           "name": "NextRedoDescription",
           "type": "string?",
           "isRequired": false,
-          "description": "Description of the next undo action."
+          "description": "Description of the next redo action."
         },
         {
           "name": "NextUndoDescription",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether redo is currently available."
+          "description": "Description of the next undo action."
         },
         {
           "name": "NumberedListActive",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the current paragraph is a bulleted list item."
+          "description": "Whether the current paragraph is a numbered list item."
         },
         {
           "name": "OnAddComment",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the tracked-change display mode changes."
+          "description": "Raised when adding a comment is requested."
         },
         {
           "name": "OnAllCaps",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when small caps formatting is requested."
+          "description": "Raised when all caps formatting is requested."
         },
         {
           "name": "OnApplyHeaderFooterPreset",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when a document-author field should be inserted."
+          "description": "Raised when a header/footer preset should be inserted."
         },
         {
           "name": "OnBlockStyleChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "R.4.8 — current paragraph style name (Normal/Title/Heading1…) for the picker."
+          "description": "R.4.8 — raised when the block-style picker changes (style name)."
         },
         {
           "name": "OnBold",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when redo is requested."
+          "description": "Raised when bold formatting is requested."
         },
         {
           "name": "OnChangeCase",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when font size decrease is requested."
+          "description": "Raised when a change-case variant is selected."
         },
         {
           "name": "OnClearFormatting",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Optional callback used to load link metadata for the current selection."
+          "description": "Raised when clear formatting is requested."
         },
         {
           "name": "OnCloseHeaderFooter",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the versions side panel tab should open."
+          "description": "Raised when header/footer editing should close and focus should return to body."
         },
         {
           "name": "OnCompareDocuments",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the revisions side panel tab should open."
+          "description": "Raised when document comparison is requested."
         },
         {
           "name": "OnDecreaseFontSize",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when font size increase is requested."
+          "description": "Raised when font size decrease is requested."
         },
         {
           "name": "OnDecreaseIndent",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when paragraph indent should increase."
+          "description": "Raised when paragraph indent should decrease."
         },
         {
           "name": "OnDoubleStrikethrough",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when all caps formatting is requested."
+          "description": "Raised when double strikethrough formatting is requested."
         },
         {
           "name": "OnExportDocx",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a DOCX package is selected for import."
+          "description": "Raised when DOCX export is requested."
         },
         {
           "name": "OnExportPdf",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when template preview should be toggled."
+          "description": "Raised when PDF export is requested."
         },
         {
           "name": "OnFontFamilyChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when a change-case variant is selected."
+          "description": "Raised when the font family changes."
         },
         {
           "name": "OnFontSizeChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when the font family changes."
+          "description": "Raised when the font size changes."
         },
         {
           "name": "OnFullscreenToggle",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when non-printing characters should be toggled."
+          "description": "Raised when the fullscreen toggle is clicked."
         },
         {
           "name": "OnHighlightColorChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the text color changes."
+          "description": "Raised when the highlight color changes."
         },
         {
           "name": "OnImportDocx",
           "type": "EventCallback<InputFileChangeEventArgs>",
           "isRequired": false,
-          "description": "Raised when PDF export is requested."
+          "description": "Raised when a DOCX package is selected for import."
         },
         {
           "name": "OnIncreaseFontSize",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when double strikethrough formatting is requested."
+          "description": "Raised when font size increase is requested."
         },
         {
           "name": "OnIncreaseIndent",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when paragraph spacing after changes."
+          "description": "Raised when paragraph indent should increase."
         },
         {
           "name": "OnInsertAuthorField",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a document-title field should be inserted."
+          "description": "Raised when a document-author field should be inserted."
         },
         {
           "name": "OnInsertBibliography",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the user inserts a generated table of contents."
+          "description": "Raised when a generated bibliography should be inserted."
         },
         {
           "name": "OnInsertCaption",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a table should be inserted (legacy, 2×2 default)."
+          "description": "Raised when a generated caption should be inserted."
         },
         {
           "name": "OnInsertCrossReference",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a generated caption should be inserted."
+          "description": "Raised when a cross-reference should be inserted."
         },
         {
           "name": "OnInsertDateField",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a page X of Y field should be inserted."
+          "description": "Raised when a date field should be inserted."
         },
         {
           "name": "OnInsertDocumentTitleField",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a date field should be inserted."
+          "description": "Raised when a document-title field should be inserted."
         },
         {
           "name": "OnInsertEndnote",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a footnote should be inserted at the current selection."
+          "description": "Raised when an endnote should be inserted at the current selection."
         },
         {
           "name": "OnInsertEquation",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the signing-fields toolbar button inserts a signing field (plan S2.19)."
+          "description": "Raised when a predefined equation gallery item should be inserted."
         },
         {
           "name": "OnInsertFootnote",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a predefined symbol or emoji palette item should be inserted."
+          "description": "Raised when a footnote should be inserted at the current selection."
         },
         {
           "name": "OnInsertImage",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the grid picker selects dimensions for table insertion."
+          "description": "Raised when the image insert flow should open."
         },
         {
           "name": "OnInsertImageAsset",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when upload image insertion is requested from the split menu."
+          "description": "Raised when asset picker image insertion is requested from the split menu."
         },
         {
           "name": "OnInsertImageUpload",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when URL image insertion is requested from the split menu."
+          "description": "Raised when upload image insertion is requested from the split menu."
         },
         {
           "name": "OnInsertImageUrl",
@@ -5634,338 +5634,338 @@
           "name": "OnInsertPageBreak",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when asset picker image insertion is requested from the split menu."
+          "description": "Raised when a page break should be inserted at the current selection."
         },
         {
           "name": "OnInsertPageCount",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a page-number field should be inserted."
+          "description": "Raised when a total-page-count field should be inserted."
         },
         {
           "name": "OnInsertPageNumber",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when an endnote should be inserted at the current selection."
+          "description": "Raised when a page-number field should be inserted."
         },
         {
           "name": "OnInsertPageXOfY",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a total-page-count field should be inserted."
+          "description": "Raised when a page X of Y field should be inserted."
         },
         {
           "name": "OnInsertSigningField",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a page break should be inserted at the current selection."
+          "description": "Raised when the signing-fields toolbar button inserts a signing field (plan S2.19)."
         },
         {
           "name": "OnInsertSymbol",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when a predefined equation gallery item should be inserted."
+          "description": "Raised when a predefined symbol or emoji palette item should be inserted."
         },
         {
           "name": "OnInsertTable",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the insert panel should be toggled."
+          "description": "Raised when a table should be inserted (legacy, 2×2 default)."
         },
         {
           "name": "OnInsertTableOfContents",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a generated table of figures should be inserted."
+          "description": "Raised when the user inserts a generated table of contents."
         },
         {
           "name": "OnInsertTableOfFigures",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a cross-reference should be inserted."
+          "description": "Raised when a generated table of figures should be inserted."
         },
         {
           "name": "OnInsertTableWithDimensions",
           "type": "EventCallback<(int Rows, int Columns)>",
           "isRequired": false,
-          "description": "Raised when all document fields should be refreshed."
+          "description": "Raised when the grid picker selects dimensions for table insertion."
         },
         {
           "name": "OnItalic",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when bold formatting is requested."
+          "description": "Raised when italic formatting is requested."
         },
         {
           "name": "OnLineSpacingChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when paragraph alignment changes."
+          "description": "Raised when line spacing changes."
         },
         {
           "name": "OnLink",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when numbered list formatting should be toggled."
+          "description": "Raised when a link URL is submitted."
         },
         {
           "name": "OnLinkApplied",
           "type": "EventCallback<WysiwygLinkPayload>",
           "isRequired": false,
-          "description": "Raised when a link URL is submitted."
+          "description": "Raised when a link URL and title are submitted."
         },
         {
           "name": "OnLinkRemoved",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a link URL and title are submitted."
+          "description": "Raised when the current link should be removed."
         },
         {
           "name": "OnMarkEditableRegion",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when document protection should be toggled."
+          "description": "Raised when the user wants to mark the current selection as an editable region."
         },
         {
           "name": "OnOpenComments",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when adding a comment is requested."
+          "description": "Raised when the comments side panel tab should open."
         },
         {
           "name": "OnOpenPrintPreview",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the fullscreen toggle is clicked."
+          "description": "Raised when canvas print preview should be opened."
         },
         {
           "name": "OnOpenRevisions",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the comments side panel tab should open."
+          "description": "Raised when the revisions side panel tab should open."
         },
         {
           "name": "OnOpenVersions",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when DOCX export is requested."
+          "description": "Raised when the versions side panel tab should open."
         },
         {
           "name": "OnParagraphAlignmentChanged",
           "type": "EventCallback<DocumentTextAlignment>",
           "isRequired": false,
-          "description": "Raised when the highlight color changes."
+          "description": "Raised when paragraph alignment changes."
         },
         {
           "name": "OnPrintDocument",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when canvas print preview should be opened."
+          "description": "Raised when the current canvas document should be sent to the browser print dialog."
         },
         {
           "name": "OnProtectDocument",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when document comparison is requested."
+          "description": "Raised when document protection should be toggled."
         },
         {
           "name": "OnRedo",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when undo is requested."
+          "description": "Raised when redo is requested."
         },
         {
           "name": "OnSave",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when page-width zoom is requested."
+          "description": "Raised when save is requested."
         },
         {
           "name": "OnShowBlocksToggle",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the user wants to mark the current selection as an editable region."
+          "description": "Raised when the show-blocks toggle is clicked."
         },
         {
           "name": "OnSmallCaps",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when subscript formatting is requested."
+          "description": "Raised when small caps formatting is requested."
         },
         {
           "name": "OnSpacingAfterChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when paragraph spacing before changes."
+          "description": "Raised when paragraph spacing after changes."
         },
         {
           "name": "OnSpacingBeforeChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when line spacing changes."
+          "description": "Raised when paragraph spacing before changes."
         },
         {
           "name": "OnStrikethrough",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when underline formatting is requested."
+          "description": "Raised when strikethrough formatting is requested."
         },
         {
           "name": "OnStyleCreatedFromSelection",
           "type": "EventCallback<DocumentStyleDefinition>",
           "isRequired": false,
-          "description": "Raised when a document style definition should be created or updated."
+          "description": "Raised when a new paragraph style should be created from the current selection."
         },
         {
           "name": "OnStyleDefinitionChanged",
           "type": "EventCallback<DocumentStyleDefinition>",
           "isRequired": false,
-          "description": "Whether advanced character formatting controls are visible."
+          "description": "Raised when a document style definition should be created or updated."
         },
         {
           "name": "OnStyleDeleted",
           "type": "EventCallback<DocumentStyleDefinition>",
           "isRequired": false,
-          "description": "Raised when the current document style should be renamed."
+          "description": "Raised when the current document style should be deleted."
         },
         {
           "name": "OnStyleFormattingReset",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the current document style should be deleted."
+          "description": "Raised when direct paragraph formatting should be reset to the current style."
         },
         {
           "name": "OnStyleRenamed",
           "type": "EventCallback<DocumentStyleDefinition>",
           "isRequired": false,
-          "description": "Raised when a new paragraph style should be created from the current selection."
+          "description": "Raised when the current document style should be renamed."
         },
         {
           "name": "OnSubscript",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when superscript formatting is requested."
+          "description": "Raised when subscript formatting is requested."
         },
         {
           "name": "OnSuperscript",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when strikethrough formatting is requested."
+          "description": "Raised when superscript formatting is requested."
         },
         {
           "name": "OnTextColorChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the font size changes."
+          "description": "Raised when the text color changes."
         },
         {
           "name": "OnToggleBulletList",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when paragraph indent should decrease."
+          "description": "Raised when bulleted list formatting should be toggled."
         },
         {
           "name": "OnToggleInsert",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when clear formatting is requested."
+          "description": "Raised when the insert panel should be toggled."
         },
         {
           "name": "OnToggleNonPrintingCharacters",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the show-blocks toggle is clicked."
+          "description": "Raised when non-printing characters should be toggled."
         },
         {
           "name": "OnToggleNumberedList",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when bulleted list formatting should be toggled."
+          "description": "Raised when numbered list formatting should be toggled."
         },
         {
           "name": "OnToggleTemplatePreview",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the view clipboard HTML debug button is clicked."
+          "description": "Raised when template preview should be toggled."
         },
         {
           "name": "OnToggleTrackChanges",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a header/footer preset should be inserted."
+          "description": "Raised when tracked changes should be toggled."
         },
         {
           "name": "OnUnderline",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when italic formatting is requested."
+          "description": "Raised when underline formatting is requested."
         },
         {
           "name": "OnUndo",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when save is requested."
+          "description": "Raised when undo is requested."
         },
         {
           "name": "OnUpdateFields",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a generated bibliography should be inserted."
+          "description": "Raised when all document fields should be refreshed."
         },
         {
           "name": "OnViewClipboardHtml",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the view document JSON debug button is clicked."
+          "description": "Raised when the view clipboard HTML debug button is clicked."
         },
         {
           "name": "OnViewDocumentJson",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the current canvas document should be sent to the browser print dialog."
+          "description": "Raised when the view document JSON debug button is clicked."
         },
         {
           "name": "OnZoomPageWidth",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when zoom percent changes."
+          "description": "Raised when page-width zoom is requested."
         },
         {
           "name": "PageSettings",
           "type": "DocumentPageSettings?",
           "isRequired": false,
-          "description": "Human-readable label for the currently edited header/footer scope."
+          "description": "Current page layout settings for the active section or document."
         },
         {
           "name": "PageSettingsChanged",
           "type": "EventCallback<DocumentPageSettings>",
           "isRequired": false,
-          "description": "Current page layout settings for the active section or document."
+          "description": "Raised when page layout settings are changed through the inspector."
         },
         {
           "name": "PageSetupChanged",
           "type": "EventCallback<DocumentSectionPageSetup>",
           "isRequired": false,
-          "description": "Current section line numbering settings for the page layout inspector."
+          "description": "Raised when combined page, column, or line-numbering setup changes through the inspector."
         },
         {
           "name": "ParagraphAlignment",
           "type": "DocumentTextAlignment",
           "isRequired": false,
           "default": "DocumentTextAlignment.Left",
-          "description": "Current double strikethrough formatting state for the selection."
+          "description": "Current paragraph alignment for the selection."
         },
         {
           "name": "ParagraphAlignmentMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current paragraph alignment for the selection."
+          "description": "Whether selected paragraphs have mixed alignment."
         },
         {
           "name": "PrintPreviewActive",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether canvas print preview actions should be displayed in the View tab."
+          "description": "Whether canvas print preview is currently active."
         },
         {
           "name": "ReadOnly",
@@ -5978,190 +5978,190 @@
           "type": "DocumentReviewDisplayMode",
           "isRequired": false,
           "default": "DocumentReviewDisplayMode.AllMarkup",
-          "description": "Font families available in the font selector."
+          "description": "Current tracked-change display mode."
         },
         {
           "name": "ReviewDisplayModeChanged",
           "type": "EventCallback<DocumentReviewDisplayMode>",
           "isRequired": false,
-          "description": "Raised when tracked changes should be toggled."
+          "description": "Raised when the tracked-change display mode changes."
         },
         {
           "name": "SaveMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the document has local unsaved changes."
+          "description": "Optional save status text."
         },
         {
           "name": "SectionColumns",
           "type": "DocumentSectionColumns?",
           "isRequired": false,
-          "description": "Raised when page layout settings are changed through the inspector."
+          "description": "Current section column settings for the page layout inspector."
         },
         {
           "name": "ShowAdvancedCharacterFormatting",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether advanced paragraph style management controls are visible."
+          "description": "Whether advanced character formatting controls are visible."
         },
         {
           "name": "ShowAdvancedFields",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether arbitrary document comparison is available."
+          "description": "Whether advanced canvas field and cross-reference controls are visible."
         },
         {
           "name": "ShowBlocks",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the document is currently in protected (restricted-editing) mode."
+          "description": "Whether block boundaries are shown in the WYSIWYG view."
         },
         {
           "name": "ShowBlockStyle",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the canvas symbol and emoji palette should be shown in the Insert ribbon."
+          "description": "R.4.8 — show the paragraph (block) style picker (core engine preview)."
         },
         {
           "name": "ShowDebugTools",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the editor is in fullscreen mode."
+          "description": "Whether debug tools (viewDocumentJson etc.) are available."
         },
         {
           "name": "ShowEquationTools",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether provider-backed image asset browsing is available."
+          "description": "Whether the canvas equation gallery should be shown in the Insert ribbon."
         },
         {
           "name": "ShowNonPrintingCharacters",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether block boundaries are shown in the WYSIWYG view."
+          "description": "Whether non-printing characters are shown in the WYSIWYG view."
         },
         {
           "name": "ShowPrintPreviewTools",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether a DOCX export request is running."
+          "description": "Whether canvas print preview actions should be displayed in the View tab."
         },
         {
           "name": "ShowRuler",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Raised when different odd/even mode changes."
+          "description": "Whether the page ruler is visible."
         },
         {
           "name": "ShowRulerChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Whether the page ruler is visible."
+          "description": "Raised when ruler visibility changes."
         },
         {
           "name": "ShowStyleManagement",
           "type": "bool",
           "isRequired": false,
-          "description": "R.4.8 — raised when the block-style picker changes (style name)."
+          "description": "Whether advanced paragraph style management controls are visible."
         },
         {
           "name": "ShowSymbolTools",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the canvas equation gallery should be shown in the Insert ribbon."
+          "description": "Whether the canvas symbol and emoji palette should be shown in the Insert ribbon."
         },
         {
           "name": "SmallCapsState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current subscript formatting state for the selection."
+          "description": "Current small caps formatting state for the selection."
         },
         {
           "name": "SpacingAfterMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current paragraph spacing after reported by the JS selection runtime."
+          "description": "Whether selected paragraphs have mixed spacing after values."
         },
         {
           "name": "SpacingBeforeMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current paragraph spacing before reported by the JS selection runtime."
+          "description": "Whether selected paragraphs have mixed spacing before values."
         },
         {
           "name": "StrikethroughState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current underline formatting state for the selection."
+          "description": "Current strikethrough formatting state for the selection."
         },
         {
           "name": "SubscriptState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current superscript formatting state for the selection."
+          "description": "Current subscript formatting state for the selection."
         },
         {
           "name": "SuperscriptState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current strikethrough formatting state for the selection."
+          "description": "Current superscript formatting state for the selection."
         },
         {
           "name": "TemplatePreviewEnabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether comment actions are currently available."
+          "description": "Whether template preview is currently active."
         },
         {
           "name": "TemplatePreviewMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether canvas print preview is currently active."
+          "description": "Optional template preview status text."
         },
         {
           "name": "TextColorMixed",
           "type": "bool",
           "isRequired": false,
-          "description": "Current text color reported by the JS selection runtime."
+          "description": "Whether selected text has mixed text colors."
         },
         {
           "name": "ToolbarMode",
           "type": "DocumentToolbarMode",
           "isRequired": false,
           "default": "DocumentToolbarMode.Ribbon",
-          "description": "Whether toolbar commands should be disabled for read-only mode."
+          "description": "Visual mode used by the toolbar."
         },
         {
           "name": "TrackChangesEnabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Description of the next redo action."
+          "description": "Whether tracked changes are enabled."
         },
         {
           "name": "UnderlineState",
           "type": "WysiwygFormattingValue",
           "isRequired": true,
-          "description": "Current italic formatting state for the selection."
+          "description": "Current underline formatting state for the selection."
         },
         {
           "name": "ZoomPageWidth",
           "type": "bool",
           "isRequired": false,
-          "description": "Current document zoom percent."
+          "description": "Whether page-width zoom mode is active."
         },
         {
           "name": "ZoomPercent",
           "type": "int",
           "isRequired": false,
           "default": "100",
-          "description": "Raised when ruler visibility changes."
+          "description": "Current document zoom percent."
         },
         {
           "name": "ZoomPercentChanged",
           "type": "EventCallback<int>",
           "isRequired": false,
-          "description": "Whether page-width zoom mode is active."
+          "description": "Raised when zoom percent changes."
         }
       ]
     },
@@ -6197,7 +6197,7 @@
           "name": "OnNavigateRequested",
           "type": "EventCallback<int>",
           "isRequired": false,
-          "description": "R.4.8 — raised when the query/options change, so a host (e.g. the core engine) can run its own search + highlight. Carries the current query."
+          "description": "R.4.8 — raised on next(+1)/previous(-1) navigation for host-driven highlight."
         },
         {
           "name": "OnReplaceAllRequested",
@@ -6244,31 +6244,31 @@
           "name": "AlignmentChanged",
           "type": "EventCallback<DocumentImageAlignment>",
           "isRequired": false,
-          "description": "Raised when text wrapping mode changes."
+          "description": "Raised when alignment changes."
         },
         {
           "name": "AltTextChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Image content displayed by the inspector."
+          "description": "Raised when alternative text changes."
         },
         {
           "name": "BringForward",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the object anchor lock changes."
+          "description": "Raised when the image should move one layer forward."
         },
         {
           "name": "CaptionChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the caption should be toggled."
+          "description": "Raised when the image caption text changes."
         },
         {
           "name": "DecorativeChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Raised when alternative text changes."
+          "description": "Raised when decorative image mode changes."
         },
         {
           "name": "Image",
@@ -6280,43 +6280,43 @@
           "name": "LockAnchorChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Raised when image object position offsets change."
+          "description": "Raised when the object anchor lock changes."
         },
         {
           "name": "PositionChanged",
           "type": "EventCallback<DocumentObjectPosition>",
           "isRequired": false,
-          "description": "Raised when image size changes."
+          "description": "Raised when image object position offsets change."
         },
         {
           "name": "SendBackward",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the image should move one layer forward."
+          "description": "Raised when the image should move one layer backward."
         },
         {
           "name": "SizeChanged",
           "type": "EventCallback<DocumentImageSize>",
           "isRequired": false,
-          "description": "Raised when alignment changes."
+          "description": "Raised when image size changes."
         },
         {
           "name": "ToggleCaption",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when decorative image mode changes."
+          "description": "Raised when the caption should be toggled."
         },
         {
           "name": "UrlChanged",
           "type": "EventCallback<string?>",
           "isRequired": false,
-          "description": "Raised when the image caption text changes."
+          "description": "Raised when the source URL of an URL-backed image changes."
         },
         {
           "name": "WrapModeChanged",
           "type": "EventCallback<DocumentWrapMode>",
           "isRequired": false,
-          "description": "Raised when the source URL of an URL-backed image changes."
+          "description": "Raised when text wrapping mode changes."
         }
       ]
     },
@@ -6337,7 +6337,7 @@
           "name": "CurrentHorizontalPosition",
           "type": "DocumentImageHorizontalPosition?",
           "isRequired": false,
-          "description": "Current text wrapping mode for the selected image."
+          "description": "Current horizontal position for non-inline image wrapping."
         },
         {
           "name": "CurrentWrapMode",
@@ -6350,103 +6350,103 @@
           "name": "DistanceBottom",
           "type": "double",
           "isRequired": false,
-          "description": "Current top text distance around the image."
+          "description": "Current bottom text distance around the image."
         },
         {
           "name": "DistanceLeft",
           "type": "double",
           "isRequired": false,
-          "description": "Current horizontal position for non-inline image wrapping."
+          "description": "Current left text distance around the image."
         },
         {
           "name": "DistanceRight",
           "type": "double",
           "isRequired": false,
-          "description": "Current left text distance around the image."
+          "description": "Current right text distance around the image."
         },
         {
           "name": "DistanceTop",
           "type": "double",
           "isRequired": false,
-          "description": "Current right text distance around the image."
+          "description": "Current top text distance around the image."
         },
         {
           "name": "LockAnchor",
           "type": "bool",
           "isRequired": false,
-          "description": "Current bottom text distance around the image."
+          "description": "Whether the selected image anchor is locked."
         },
         {
           "name": "OnAltTextRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the image anchor lock changes."
+          "description": "Raised when the alt text action is requested."
         },
         {
           "name": "OnCaptionToggle",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the alt text action is requested."
+          "description": "Raised when the caption toggle is requested."
         },
         {
           "name": "OnDelete",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the replace image action is requested."
+          "description": "Raised when the delete image action is requested."
         },
         {
           "name": "OnDistanceBottomChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when the top text distance changes."
+          "description": "Raised when the bottom text distance changes."
         },
         {
           "name": "OnDistanceLeftChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when the image horizontal position changes."
+          "description": "Raised when the left text distance changes."
         },
         {
           "name": "OnDistanceRightChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when the left text distance changes."
+          "description": "Raised when the right text distance changes."
         },
         {
           "name": "OnDistanceTopChanged",
           "type": "EventCallback<double>",
           "isRequired": false,
-          "description": "Raised when the right text distance changes."
+          "description": "Raised when the top text distance changes."
         },
         {
           "name": "OnHorizontalPositionChanged",
           "type": "EventCallback<DocumentImageHorizontalPosition>",
           "isRequired": false,
-          "description": "Raised when the image wrap mode changes."
+          "description": "Raised when the image horizontal position changes."
         },
         {
           "name": "OnLockAnchorChanged",
           "type": "EventCallback<bool>",
           "isRequired": false,
-          "description": "Raised when the bottom text distance changes."
+          "description": "Raised when the image anchor lock changes."
         },
         {
           "name": "OnMoreOptionsRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the delete image action is requested."
+          "description": "Raised when more image options are requested."
         },
         {
           "name": "OnReplaceRequested",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the caption toggle is requested."
+          "description": "Raised when the replace image action is requested."
         },
         {
           "name": "OnWrapModeChanged",
           "type": "EventCallback<DocumentWrapMode>",
           "isRequired": false,
-          "description": "Whether the selected image anchor is locked."
+          "description": "Raised when the image wrap mode changes."
         }
       ]
     },
@@ -6507,7 +6507,7 @@
           "name": "DocxDrawingMetadataJson",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional JSON with the current runtime debug state."
+          "description": "Optional JSON with imported/exportable DOCX DrawingML metadata."
         },
         {
           "name": "IsOpen",
@@ -6519,31 +6519,31 @@
           "name": "Json",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the modal is open."
+          "description": "JSON string to display."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the user requests copying the debug JSON payload."
+          "description": "Raised when the modal should close."
         },
         {
           "name": "OnCopyJson",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Optional JSON with the latest runtime recovery detail."
+          "description": "Raised when the user requests copying the debug JSON payload."
         },
         {
           "name": "RecoveryDetailJson",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional JSON with imported/exportable DOCX DrawingML metadata."
+          "description": "Optional JSON with the latest runtime recovery detail."
         },
         {
           "name": "RuntimeDebugJson",
           "type": "string?",
           "isRequired": false,
-          "description": "JSON string to display."
+          "description": "Optional JSON with the current runtime debug state."
         }
       ]
     },
@@ -6564,13 +6564,13 @@
           "name": "ActiveBlockId",
           "type": "string?",
           "isRequired": false,
-          "description": "Document heading outline to display."
+          "description": "Currently active heading block id reported by the WYSIWYG runtime."
         },
         {
           "name": "OnNavigateToBlock",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Currently active heading block id reported by the WYSIWYG runtime."
+          "description": "Raised when the user clicks a heading to navigate to it."
         },
         {
           "name": "Outline",
@@ -6597,7 +6597,7 @@
           "name": "ActivePageIndex",
           "type": "int",
           "isRequired": false,
-          "description": "Runtime page metrics reported by the WYSIWYG editor."
+          "description": "Zero-based active page index."
         },
         {
           "name": "Metrics",
@@ -6609,7 +6609,7 @@
           "name": "OnNavigateToPage",
           "type": "EventCallback<int>",
           "isRequired": false,
-          "description": "Zero-based active page index."
+          "description": "Raised when a page thumbnail is selected."
         }
       ]
     },
@@ -6630,7 +6630,7 @@
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Warnings to display after a paste operation."
+          "description": "Raised when the user closes the report."
         },
         {
           "name": "Warnings",
@@ -6658,19 +6658,19 @@
           "name": "OpenCommentCount",
           "type": "int",
           "isRequired": false,
-          "description": "Number of pending tracked changes."
+          "description": "Number of open comment threads."
         },
         {
           "name": "OpenComments",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Number of open comment threads."
+          "description": "Raised when the comments panel should open."
         },
         {
           "name": "OpenRevisions",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the comments panel should open."
+          "description": "Raised when the revisions panel should open."
         },
         {
           "name": "PendingRevisionCount",
@@ -6697,49 +6697,49 @@
           "name": "CanReview",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether a review action is currently running."
+          "description": "Whether the current user can accept or reject revisions."
         },
         {
           "name": "IsBusy",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the panel is loading revision data."
+          "description": "Whether a review action is currently running."
         },
         {
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
-          "description": "Document revisions to display."
+          "description": "Whether the panel is loading revision data."
         },
         {
           "name": "OnAcceptAllRevisions",
           "type": "EventCallback<DocumentRevisionFilter>",
           "isRequired": false,
-          "description": "Raised when a revision should be rejected."
+          "description": "Raised when all filtered pending revisions should be accepted."
         },
         {
           "name": "OnAcceptRevision",
           "type": "EventCallback<DocumentRevision>",
           "isRequired": false,
-          "description": "Raised when a revision is selected."
+          "description": "Raised when a revision should be accepted."
         },
         {
           "name": "OnRejectAllRevisions",
           "type": "EventCallback<DocumentRevisionFilter>",
           "isRequired": false,
-          "description": "Raised when all filtered pending revisions should be accepted."
+          "description": "Raised when all filtered pending revisions should be rejected."
         },
         {
           "name": "OnRejectRevision",
           "type": "EventCallback<DocumentRevision>",
           "isRequired": false,
-          "description": "Raised when a revision should be accepted."
+          "description": "Raised when a revision should be rejected."
         },
         {
           "name": "OnSelectRevision",
           "type": "EventCallback<DocumentRevision>",
           "isRequired": false,
-          "description": "Currently selected revision id."
+          "description": "Raised when a revision is selected."
         },
         {
           "name": "Revisions",
@@ -6752,13 +6752,13 @@
           "name": "SelectedRevisionId",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional status message."
+          "description": "Currently selected revision id."
         },
         {
           "name": "StatusMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the current user can accept or reject revisions."
+          "description": "Optional status message."
         }
       ]
     },
@@ -6780,25 +6780,25 @@
           "type": "DocumentSidePanelTab",
           "isRequired": false,
           "default": "DocumentSidePanelTab.Comments",
-          "description": "Whether the side panel shell is open."
+          "description": "Currently active tab."
         },
         {
           "name": "ActiveTabChanged",
           "type": "EventCallback<DocumentSidePanelTab>",
           "isRequired": false,
-          "description": "Currently active tab."
+          "description": "Raised when the active tab changes."
         },
         {
           "name": "CommentsContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Number of versions shown in the tab badge."
+          "description": "Content rendered for the comments tab."
         },
         {
           "name": "CommentsCount",
           "type": "int",
           "isRequired": false,
-          "description": "Whether to show the right-edge reopen button when closed."
+          "description": "Number of comments shown in the tab badge."
         },
         {
           "name": "IsOpen",
@@ -6811,102 +6811,102 @@
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Content rendered for the pages tab."
+          "description": "Raised when the side panel should close."
         },
         {
           "name": "OnOpen",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the side panel should close."
+          "description": "Raised when the side panel should reopen."
         },
         {
           "name": "OutlineContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content rendered for the properties tab."
+          "description": "Content rendered for the outline tab."
         },
         {
           "name": "PagesContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content rendered for the outline tab."
+          "description": "Content rendered for the pages tab."
         },
         {
           "name": "PropertiesContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content rendered for the versions tab."
+          "description": "Content rendered for the properties tab."
         },
         {
           "name": "RevisionsContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content rendered for the comments tab."
+          "description": "Content rendered for the revisions tab."
         },
         {
           "name": "RevisionsCount",
           "type": "int",
           "isRequired": false,
-          "description": "Number of comments shown in the tab badge."
+          "description": "Number of pending revisions shown in the tab badge."
         },
         {
           "name": "ShowComments",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Raised when the active tab changes."
+          "description": "Whether the comments tab is available."
         },
         {
           "name": "ShowEdgeToggle",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the page navigator tab is available."
+          "description": "Whether to show the right-edge reopen button when closed."
         },
         {
           "name": "ShowOutline",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the properties tab is available."
+          "description": "Whether the outline tab is available."
         },
         {
           "name": "ShowPages",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the outline tab is available."
+          "description": "Whether the page navigator tab is available."
         },
         {
           "name": "ShowProperties",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the versions tab is available."
+          "description": "Whether the properties tab is available."
         },
         {
           "name": "ShowRevisions",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the comments tab is available."
+          "description": "Whether the revisions tab is available."
         },
         {
           "name": "ShowVersions",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the revisions tab is available."
+          "description": "Whether the versions tab is available."
         },
         {
           "name": "VersionsContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content rendered for the revisions tab."
+          "description": "Content rendered for the versions tab."
         },
         {
           "name": "VersionsCount",
           "type": "int",
           "isRequired": false,
-          "description": "Number of pending revisions shown in the tab badge."
+          "description": "Number of versions shown in the tab badge."
         }
       ]
     },
@@ -6928,43 +6928,43 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether a review action is running."
+          "description": "Whether the current user can accept or reject suggestions."
         },
         {
           "name": "IsBusy",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether suggestions are loading."
+          "description": "Whether a review action is running."
         },
         {
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
-          "description": "Suggestions to display."
+          "description": "Whether suggestions are loading."
         },
         {
           "name": "OnAcceptSuggestion",
           "type": "EventCallback<DocumentSuggestion>",
           "isRequired": false,
-          "description": "Raised when a suggestion is selected."
+          "description": "Raised when a suggestion should be accepted."
         },
         {
           "name": "OnRejectSuggestion",
           "type": "EventCallback<DocumentSuggestion>",
           "isRequired": false,
-          "description": "Raised when a suggestion should be accepted."
+          "description": "Raised when a suggestion should be rejected."
         },
         {
           "name": "OnSelectSuggestion",
           "type": "EventCallback<DocumentSuggestion>",
           "isRequired": false,
-          "description": "Optional status text."
+          "description": "Raised when a suggestion is selected."
         },
         {
           "name": "StatusMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the current user can accept or reject suggestions."
+          "description": "Optional status text."
         },
         {
           "name": "Suggestions",
@@ -6992,7 +6992,7 @@
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the user chooses a table size."
+          "description": "Raised when the picker should close without inserting a table."
         },
         {
           "name": "OnInsert",
@@ -7025,7 +7025,7 @@
           "name": "LayoutChanged",
           "type": "EventCallback<TableLayoutContent>",
           "isRequired": false,
-          "description": "Current table layout."
+          "description": "Raised when table properties change."
         },
         {
           "name": "TestIdRoot",
@@ -7060,37 +7060,37 @@
           "name": "CellProperties",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when table properties should open."
+          "description": "Raised when cell properties should open."
         },
         {
           "name": "DeleteColumn",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the current row should be deleted."
+          "description": "Raised when the current column should be deleted."
         },
         {
           "name": "DeleteRow",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a column should be inserted after the current column."
+          "description": "Raised when the current row should be deleted."
         },
         {
           "name": "InsertColumnAfter",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a column should be inserted before the current column."
+          "description": "Raised when a column should be inserted after the current column."
         },
         {
           "name": "InsertColumnBefore",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a row should be inserted after the current row."
+          "description": "Raised when a column should be inserted before the current column."
         },
         {
           "name": "InsertRowAfter",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a row should be inserted before the current row."
+          "description": "Raised when a row should be inserted after the current row."
         },
         {
           "name": "InsertRowBefore",
@@ -7102,19 +7102,19 @@
           "name": "MergeCells",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the current column should be deleted."
+          "description": "Raised when selected cells should merge."
         },
         {
           "name": "SplitCell",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when selected cells should merge."
+          "description": "Raised when the current merged cell should split."
         },
         {
           "name": "TableProperties",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the current merged cell should split."
+          "description": "Raised when table properties should open."
         }
       ]
     },
@@ -7135,13 +7135,13 @@
           "name": "HighlightedIndex",
           "type": "int",
           "isRequired": false,
-          "description": "Current search query."
+          "description": "Currently highlighted item index."
         },
         {
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
-          "description": "Currently highlighted item index."
+          "description": "Whether the token provider is loading."
         },
         {
           "name": "IsVisible",
@@ -7153,27 +7153,27 @@
           "name": "OnHighlightedIndexChanged",
           "type": "EventCallback<int>",
           "isRequired": false,
-          "description": "Raised when a token is selected."
+          "description": "Raised when the highlighted item changes."
         },
         {
           "name": "OnTokenSelected",
           "type": "EventCallback<TokenItem>",
           "isRequired": false,
-          "description": "Whether the token provider is loading."
+          "description": "Raised when a token is selected."
         },
         {
           "name": "Query",
           "type": "string",
           "isRequired": false,
           "default": "\"\"",
-          "description": "Tokens shown in the menu."
+          "description": "Current search query."
         },
         {
           "name": "Tokens",
           "type": "IEnumerable<TokenItem>",
           "isRequired": false,
           "default": "[]",
-          "description": "Whether the token menu is visible."
+          "description": "Tokens shown in the menu."
         }
       ]
     },
@@ -7195,13 +7195,13 @@
           "type": "IReadOnlyList<DocumentToolbarOverflowMenuGroup>",
           "isRequired": false,
           "default": "[]",
-          "description": "Current overflow search query."
+          "description": "Grouped overflow menu items."
         },
         {
           "name": "IsOpen",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the toolbar currently has overflowed commands."
+          "description": "Whether the overflow menu is open."
         },
         {
           "name": "IsOverflowing",
@@ -7214,14 +7214,14 @@
           "type": "string",
           "isRequired": false,
           "default": "\"\"",
-          "description": "Visible text for the More button."
+          "description": "Accessible label for the More commands menu."
         },
         {
           "name": "MoreLabel",
           "type": "string",
           "isRequired": false,
           "default": "\"\"",
-          "description": "Grouped overflow menu items."
+          "description": "Visible text for the More button."
         },
         {
           "name": "NoResultsLabel",
@@ -7234,50 +7234,50 @@
           "name": "OnCommandRequested",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised when the search input changes."
+          "description": "Raised when a command is selected from the menu."
         },
         {
           "name": "OnMenuItemKeyDown",
           "type": "EventCallback<KeyboardEventArgs>",
           "isRequired": false,
-          "description": "Raised when a command is selected from the menu."
+          "description": "Raised when an overflow menu item receives a keydown event."
         },
         {
           "name": "OnMoreKeyDown",
           "type": "EventCallback<KeyboardEventArgs>",
           "isRequired": false,
-          "description": "Raised when the More button is clicked."
+          "description": "Raised when the More button receives a keydown event."
         },
         {
           "name": "OnSearchInput",
           "type": "EventCallback<ChangeEventArgs>",
           "isRequired": false,
-          "description": "Raised when the More button receives a keydown event."
+          "description": "Raised when the search input changes."
         },
         {
           "name": "OnToggle",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Accessible label and placeholder for the search input."
+          "description": "Raised when the More button is clicked."
         },
         {
           "name": "SearchLabel",
           "type": "string",
           "isRequired": false,
           "default": "\"\"",
-          "description": "Accessible label for the More commands menu."
+          "description": "Accessible label and placeholder for the search input."
         },
         {
           "name": "SearchQuery",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether the search box should be shown."
+          "description": "Current overflow search query."
         },
         {
           "name": "ShowSearch",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the overflow menu is open."
+          "description": "Whether the search box should be shown."
         }
       ]
     },
@@ -7304,19 +7304,19 @@
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the user confirms version creation."
+          "description": "Raised when the dialog should close without creating a version."
         },
         {
           "name": "OnCreate",
           "type": "EventCallback<DocumentVersionDialogResult>",
           "isRequired": false,
-          "description": "Whether major versions require a non-empty description."
+          "description": "Raised when the user confirms version creation."
         },
         {
           "name": "RequireMajorDescription",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether create action is currently running."
+          "description": "Whether major versions require a non-empty description."
         }
       ]
     },
@@ -7337,55 +7337,55 @@
           "name": "IsLoading",
           "type": "bool",
           "isRequired": false,
-          "description": "Versions to render."
+          "description": "Whether version list is loading."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when the previewed version should be restored."
+          "description": "Raised when the panel should close."
         },
         {
           "name": "OnCreateVersion",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Version currently previewed by the editor."
+          "description": "Raised when the create-version dialog should open."
         },
         {
           "name": "OnRestoreVersion",
           "type": "EventCallback<DocumentVersion>",
           "isRequired": false,
-          "description": "Raised when preview should return to the current document."
+          "description": "Raised when the previewed version should be restored."
         },
         {
           "name": "OnReturnToCurrent",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when a historical version should be previewed."
+          "description": "Raised when preview should return to the current document."
         },
         {
           "name": "OnSelectVersion",
           "type": "EventCallback<DocumentVersion>",
           "isRequired": false,
-          "description": "Raised when the create-version dialog should open."
+          "description": "Raised when a historical version should be previewed."
         },
         {
           "name": "PreviewVersion",
           "type": "DocumentVersion?",
           "isRequired": false,
-          "description": "Optional version status message."
+          "description": "Version currently previewed by the editor."
         },
         {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether version list is loading."
+          "description": "Whether create actions should be disabled."
         },
         {
           "name": "StatusMessage",
           "type": "string?",
           "isRequired": false,
-          "description": "Whether create actions should be disabled."
+          "description": "Optional version status message."
         },
         {
           "name": "Versions",

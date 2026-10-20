@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "Per-render options handed to Render and RenderAsync. It is the extension point for render-scoped configuration (the culture of formatters); it deliberately has no escaping switch: the renderer decides the escaping mode per pass (§3.7, D14) and the only opt-out is the {{ value | html.trusted }} template filter. A host therefore cannot accidentally turn HTML escaping off.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/TemplateRenderOptions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Culture",
+      "kind": "Property",
+      "type": "CultureInfo?",
+      "description": "Culture of the formatters (math.format, date.to_string, plain number output…). null means \"decide from UseDocumentLanguageCulture\": the culture of Language when that option is set, otherwise InvariantCulture — so a render never depends on the server's thread culture."
+    },
+    {
+      "name": "UseDocumentLanguageCulture",
+      "kind": "Property",
+      "type": "bool",
+      "description": "When true and Culture is null, the renderer takes the culture from the rendered document's language (an unknown language falls back to InvariantCulture). Render has no document, so the engine itself falls back to the invariant culture."
+    }
+  ],
+  "itemName": "TemplateRenderOptions"
+}

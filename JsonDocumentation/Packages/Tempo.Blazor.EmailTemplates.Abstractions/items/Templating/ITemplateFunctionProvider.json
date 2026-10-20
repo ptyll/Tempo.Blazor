@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "Templating",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Templating",
+  "description": "Host-supplied template functions under one namespace. A provider lets an application add its own filters (for example currency formatting) without forking the engine: the functions are registered under Namespace and called from a template as {{ value | app.my_filter }}.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Templating/ITemplateFunctionProvider.cs",
+  "documentationStatus": "generated",
+  "itemName": "ITemplateFunctionProvider"
+}

@@ -616,14 +616,14 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Auto",
-          "description": "The layout the visibility resolves from. Auto follows the container (or the viewport scope for FixedViewport); a forced value never measures, so a test can render the bar without a DOM. The bar hides whenever the resolved layout is above the mobile breakpoint; the ChildContent always renders."
+          "description": "The layout the visibility resolves from. Auto follows the container (or the viewport scope for FixedViewport); a forced value never measures, so a test can render the bar without a DOM. The bar hides whenever the resolved layout is above the mobile breakpoint (tablet and desktop); the ChildContent always renders."
         },
         {
           "name": "MaxVisible",
           "type": "int",
           "isRequired": false,
           "default": "3",
-          "description": "How many actions stay on the bar before the rest overflow into the \"More\" menu. Values below 1 are treated as 1."
+          "description": "How many actions stay on the bar before the rest overflow into the \"More\" menu. Values below 1 are treated as 1. Default 3."
         },
         {
           "name": "MoreLabel",
@@ -969,7 +969,7 @@
           "name": "ActiveFormats",
           "type": "List<string>",
           "isRequired": true,
-          "description": "Whether the toolbar is disabled."
+          "description": "List of currently active format names returned by tmMarkdownEditor.getActiveFormats() (e.g. \"bold\", \"h2\", \"ul\")."
         },
         {
           "name": "IsDisabled",
@@ -981,7 +981,7 @@
           "name": "OnFormat",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "List of currently active format names returned by tmMarkdownEditor.getActiveFormats() (e.g. \"bold\", \"h2\", \"ul\")."
+          "description": "Callback fired when a toolbar button is clicked. Argument is the format name."
         }
       ]
     },
@@ -7368,7 +7368,7 @@
           "name": "AddTempoBlazor",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON tables for en/cs/sk/fr) ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To reword shipped translations in your application, register a decorator ITmLocalizer AFTER this call (it injects the built-in IStringLocalizer<TmResources> and overrides only the keys you list): builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support e.g. Czech or Slovak localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
+          "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON tables for en/cs/sk/fr) ITmRelativeTimeFormatter: Scoped relative-time formatter over a private TimeProvider that reads ITmUserTimeZone — the time comes from the host's TimeProvider (the system clock when none is registered), while the calendar day (\"yesterday at 4:20 PM\") is judged in the user's zone: the runtime's zone on WebAssembly, the browser's IANA zone on Blazor Server (UTC until the probe reports after the first interactive render, then the browser zone). The scoped ITmUserTimeZone instance is shared (the browser is read once per circuit); relative-time components re-render when the zone arrives and ITmUserTimeZone.SetZone lets a host profile setting win. Never replace the app-wide TimeProvider: Kestrel and cookie authentication are singletons that consume it, so a scoped replacement fails the host under ValidateScopes. No component takes a time-zone parameter for this. ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To reword shipped translations in your application, register a decorator ITmLocalizer AFTER this call (it injects the built-in IStringLocalizer<TmResources> and overrides only the keys you list): builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support e.g. Czech or Slovak localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
           "parameters": [
             {
               "name": "services",
@@ -7428,7 +7428,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether selecting a widget in the widget selector closes it. With false the selector stays open while the host keeps receiving additions; the freshly added widget still gets the highlight and the scroll-into-view once the selector closes."
+          "description": "Whether selecting a widget in the widget selector closes it. Defaults to true (the historical behaviour). With false the selector stays open while the host keeps receiving OnWidgetSelected's additions; the freshly added widget still gets the highlight and the scroll-into-view once the selector closes (DA1)."
         },
         {
           "name": "DashboardId",
@@ -7479,7 +7479,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the header toolbar renders in view mode. Edit mode always renders the toolbar, because it is the only surface carrying Save/Cancel."
+          "description": "Whether the header toolbar renders in view mode. Edit mode always renders the toolbar, because it is the only surface carrying Save/Cancel. Defaults to true."
         },
         {
           "name": "ShowTitle",
@@ -7492,7 +7492,7 @@
           "name": "ShowWidgetDescriptions",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the widget header renders the definition's Description as a secondary line under the title.",
+          "description": "Whether the widget header renders the definition's Description as a secondary line under the title. Defaults to false.",
           "default": "false"
         },
         {
@@ -7500,7 +7500,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the widget header renders the 40px category icon tile from the widget definition."
+          "description": "Whether the widget header renders the 40px category icon tile from the widget definition. Defaults to true."
         },
         {
           "name": "Subtitle",
@@ -7512,7 +7512,7 @@
           "name": "Title",
           "type": "string?",
           "isRequired": false,
-          "description": "Heading text in view and edit mode, overriding the current dashboard's name. Without a Title (and with a provider) the heading is visually hidden in view mode, because the switcher trigger already shows the name."
+          "description": "Heading text in view and edit mode, overriding the current dashboard's name. Null keeps the dashboard name. Without a Title (and with a provider) the heading is visually hidden in view mode, because the switcher trigger already shows the name."
         },
         {
           "name": "UserId",
@@ -7634,7 +7634,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether selecting a widget closes the selector. With false the selector stays open: the added card flips to the green Added state, a multiple-instance widget grows an added counter, and a polite live region announces the addition."
+          "description": "Whether selecting a widget closes the selector. Defaults to true (the historical behaviour). With false the selector stays open: the added card flips to the green \"Added\" state, a multiple-instance widget grows an added counter, and a polite live region announces the addition (DA1)."
         },
         {
           "name": "ExistingWidgets",
@@ -7848,7 +7848,7 @@
           "name": "ChildContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Alias for Dot."
+          "description": "Badge content."
         },
         {
           "name": "Class",
@@ -9012,7 +9012,7 @@
           "name": "SubValueColor",
           "type": "string?",
           "isRequired": false,
-          "description": "Colour for the SubValue — must be a CSS colour value: a var(--tm-*) token reference, a hex literal (#16a34a), an rgb/hsl/oklch/color-mix function, or a named colour (seagreen). Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves via var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the value therefore always wins over the default colour regardless of consumer stylesheet order. 2.9.0 BREAKING CHANGE: the value is validated before it reaches the attribute — a CSS class name such as text-green-600 (previously accepted and silently dead) or any payload containing ; { } or url( emits no style and logs a warning through the optionally injected ILoggerFactory. Migration: SubValueColor=\"text-green-600\" → SubValueColor=\"var(--tm-color-success-text)\" or \"#16a34a\". Only meaningful together with SubValue: the component THROWS InvalidOperationException for SubValueColor without SubValue."
+          "description": "Colour for the SubValue, as a CSS colour value — a var(--tm-*) token reference, a hex literal (#16a34a), an rgb/hsl/oklch/color-mix function, or a named colour (seagreen). Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves with var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the parameter therefore ALWAYS wins over the default colour, no matter where the consumer's stylesheet sits in source order. Only meaningful together with SubValue: without it there is nothing to colour and the card REFUSES to render (see OnParametersSet)."
         },
         {
           "name": "Title",
@@ -9301,7 +9301,7 @@
           "name": "CardMode",
           "type": "bool",
           "isRequired": false,
-          "description": "Opt-in responsive card mode. When true, the wrapper gains the tm-data-table-wrapper--card class and every data cell carries a data-label attribute (the owning column's Title), which the scoped CSS uses on narrow viewports to stack each row into a labeled card. Default: false — the rendered markup is unchanged from a non-card table, so existing consumers are unaffected. Fully compatible with server-side data (DataProvider) and sorting."
+          "description": "Opt-in responsive card mode. When true, the wrapper gains the tm-data-table-wrapper--card class and every data cell carries a data-label attribute (the owning column's Title), which the scoped CSS uses on narrow viewports to stack each row into a labeled card. It aliases Cards only when MobileLayout is None; explicit Scroll wins. Default: false — the rendered markup is unchanged from a non-card table, so existing consumers are unaffected. Fully compatible with server-side data (DataProvider) and sorting."
         },
         {
           "name": "ChildContent",
@@ -9352,7 +9352,7 @@
           "type": "int",
           "isRequired": false,
           "default": "25",
-          "description": "Initial page size. Default: 25."
+          "description": "Initial page size, read once during initialization. Default: 25. Ignored when PageSize is supplied, which is the controlled counterpart."
         },
         {
           "name": "DefaultSortColumn",
@@ -9932,7 +9932,7 @@
           "name": "FilterOperator",
           "type": "string?",
           "isRequired": false,
-          "description": "Opt-in operator sent with this column's filter. Null keeps contains so existing server providers are unchanged."
+          "description": "Opt-in filter operator sent with this column's filter. Null keeps the historical \"contains\" operator so existing server providers are unchanged."
         },
         {
           "name": "FilterOptions",
@@ -10289,7 +10289,7 @@
           "name": "OnSelectionChange",
           "type": "EventCallback<IReadOnlySet<object>>",
           "isRequired": false,
-          "description": "Fires when a row is clicked (only when is true)."
+          "description": "Fires when the selection changes (multi-select mode)."
         },
         {
           "name": "PageSize",
@@ -10353,49 +10353,49 @@
           "type": "ColumnAlign",
           "isRequired": false,
           "default": "ColumnAlign.Left",
-          "description": "Column width CSS value (e.g. \"200px\", \"20%\")."
+          "description": "Horizontal text alignment in cells."
         },
         {
           "name": "CellTemplate",
           "type": "RenderFragment<TItem>?",
           "isRequired": false,
-          "description": "Field accessor that returns the cell value for a given row item."
+          "description": "Optional custom cell template. When set, overrides Field rendering."
         },
         {
           "name": "CssClass",
           "type": "string?",
           "isRequired": false,
-          "description": "Horizontal text alignment in cells."
+          "description": "Additional CSS class applied to each data cell in this column."
         },
         {
           "name": "Editable",
           "type": "bool",
           "isRequired": false,
-          "description": "Optional custom cell template. When set, overrides rendering."
+          "description": "Whether this column supports inline editing."
         },
         {
           "name": "EditTemplate",
           "type": "RenderFragment<TItem>?",
           "isRequired": false,
-          "description": "Whether this column supports inline editing."
+          "description": "Template rendered when the row is in edit mode. Replaces CellTemplate and Field."
         },
         {
           "name": "Field",
           "type": "Func<TItem, object?>?",
           "isRequired": false,
-          "description": "Column header text."
+          "description": "Field accessor that returns the cell value for a given row item."
         },
         {
           "name": "Format",
           "type": "string?",
           "isRequired": false,
-          "description": "Custom header render fragment (replaces plain text when set)."
+          "description": "Optional .NET format string applied to the cell value (e.g. \"{0:C0}\")."
         },
         {
           "name": "HeaderTemplate",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Additional CSS class applied to each data cell in this column."
+          "description": "Custom header render fragment (replaces plain Title text when set)."
         },
         {
           "name": "Title",
@@ -10783,7 +10783,7 @@
           "name": "AriaDisabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Marks the item aria-disabled=true and paints the disabled style while leaving it focusable, so a keyboard or screen-reader user can land on it and hear its explanation. A click does nothing. Unlike Disabled, the native disabled attribute is not set."
+          "description": "Marks the item aria-disabled=\"true\" and paints the disabled style while leaving it focusable, so a keyboard or screen-reader user can land on it and hear its explanation. A click does nothing. Unlike Disabled, the native disabled attribute is not set."
         },
         {
           "name": "Checked",
@@ -11256,7 +11256,7 @@
           "name": "Icon",
           "type": "string?",
           "isRequired": false,
-          "description": "An icon name from the registry. Null keeps the icon the variant and type imply."
+          "description": "An icon name from the registry. Null keeps the icon the variant and type imply, so an existing dialog looks exactly as it did."
         },
         {
           "name": "InitialMode",
@@ -11324,7 +11324,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered layout changes. The initial value is not a change."
+          "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair LayoutMode with this callback."
         },
         {
           "name": "RestoreFocusTarget",
@@ -11445,7 +11445,7 @@
           "name": "CloseOnEscape",
           "type": "bool",
           "isRequired": false,
-          "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits."
+          "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits. Only the topmost active scope handles it."
         },
         {
           "name": "DialogRole",
@@ -11490,7 +11490,7 @@
           "name": "OnDeactivated",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised after the trap deactivates."
+          "description": "Raised after the trap deactivates and focus has been restored."
         },
         {
           "name": "OnEscape",
@@ -11503,7 +11503,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether deactivation restores focus."
+          "description": "Whether deactivation restores focus. False leaves focus where the close action put it."
         },
         {
           "name": "RestoreFocusTarget",
@@ -11515,7 +11515,7 @@
           "name": "RestoreFocusTargetId",
           "type": "string?",
           "isRequired": false,
-          "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Same skip rules as RestoreFocusTarget."
+          "description": "The id of the restore target, recorded on the root so a test and the module can both find it. Set it when the target is rendered outside this scope. Same skip rules as RestoreFocusTarget."
         }
       ],
       "cssClasses": [
@@ -11611,7 +11611,7 @@
           "type": "MobilePresentation",
           "isRequired": false,
           "default": "MobilePresentation.Auto",
-          "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring."
+          "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring, so a test can render it without a DOM."
         },
         {
           "name": "OkButtonDisabled",
@@ -11840,7 +11840,7 @@
           "type": "PopoverPosition",
           "isRequired": false,
           "default": "PopoverPosition.Bottom",
-          "description": "Position relative to trigger."
+          "description": "Preferred position relative to trigger — the panel flips to the opposite side when there is no room."
         },
         {
           "name": "ResolvedLayoutChanged",
@@ -12035,19 +12035,19 @@
           "name": "Decorative",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the handle is decorative. A decorative handle is not focusable and carries no label."
+          "description": "Whether the handle is decorative. A decorative handle is not focusable and carries no label, because it is not a control."
         },
         {
           "name": "OnDismiss",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Raised when ArrowDown is pressed at the lowest snap."
+          "description": "Raised when ArrowDown is pressed at the lowest snap, which dismisses the sheet."
         },
         {
           "name": "SnapCount",
           "type": "int",
           "isRequired": false,
-          "description": "How many snap points the sheet has."
+          "description": "How many snap points the sheet has. The slider's maximum is one less."
         },
         {
           "name": "SnapIndex",
@@ -12528,7 +12528,7 @@
           "name": "EditForm",
           "type": "RenderFragment<EditContext<TMetadata>>?",
           "isRequired": false,
-          "description": "Custom delete confirmation form. When null, a default is used."
+          "description": "Custom edit/metadata form. When null, the Edit action is unavailable."
         },
         {
           "name": "ItemContextMenu",
@@ -13125,7 +13125,7 @@
           "name": "ResultCountProvider",
           "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
           "isRequired": false,
-          "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down."
+          "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down. An existing Func variable binds directly."
         },
         {
           "name": "ShowClearAll",
@@ -15266,7 +15266,7 @@
           "name": "ApplyText",
           "type": "string?",
           "isRequired": false,
-          "description": "Shows a cancel button next to Apply when is true."
+          "description": "Optional apply button text."
         },
         {
           "name": "CancelText",
@@ -17550,7 +17550,7 @@
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false,
-          "description": "Placeholder option shown when no value is selected."
+          "description": "Placeholder option shown when no value is selected. Rendered as <option value=\"\"> mapped to default(TValue) when picked — for a non-nullable TValue that is 0/Guid.Empty/..., which can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound Value may be null should include a null-valued option or set a Placeholder, otherwise the browser shows the first option."
         },
         {
           "name": "PlaceholderSelectable",
@@ -18415,7 +18415,7 @@
           "name": "Label",
           "type": "string?",
           "isRequired": false,
-          "description": "Label text shown beside the toggle."
+          "description": "Label text shown beside the toggle. It also names the switch for assistive technology, unless AriaLabel overrides it. Leave it null and use AriaLabel, AriaLabelledBy or Id when the visible text belongs to the surrounding page."
         },
         {
           "name": "Required",
@@ -18929,7 +18929,7 @@
           "name": "Items",
           "type": "List<DockPane>?",
           "isRequired": false,
-          "description": "Child definitions."
+          "description": "Optional data-bound pane list. When set, panes are rendered from this list instead of ChildContent."
         },
         {
           "name": "OnLayoutChanged",
@@ -18941,7 +18941,7 @@
           "name": "OnPaneClose",
           "type": "EventCallback<DockPane>",
           "isRequired": false,
-          "description": "Template used to render each when is set."
+          "description": "Fires when a pane is closed."
         },
         {
           "name": "OnPaneDock",
@@ -19138,7 +19138,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The layout rendered before the first measurement."
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise, so a phone host can avoid flashing the desktop sheet."
         },
         {
           "name": "IsOpen",
@@ -19171,7 +19171,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the drawer is modal. A non-modal drawer renders inside its container with no overlay and no inert background."
+          "description": "Whether the drawer is modal. A non-modal drawer renders inside its container with no overlay and no inert background, so the page behind it stays usable."
         },
         {
           "name": "Position",
@@ -19184,7 +19184,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered layout changes. The initial value is not a change."
+          "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "RestoreFocusTarget",
@@ -19243,7 +19243,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether a downward swipe past the lowest snap dismisses the sheet."
+          "description": "Whether a downward swipe past the lowest snap dismisses the sheet. The gesture itself lives in the drawer module; this flag is what the stylesheet and the tests read."
         },
         {
           "name": "Title",
@@ -19256,7 +19256,7 @@
           "type": "string",
           "isRequired": false,
           "default": "\"400px\"",
-          "description": "Width of the drawer panel."
+          "description": "Width of the drawer panel. Ignored by a bottom sheet, which sizes from its snap point."
         }
       ],
       "cssClasses": [
@@ -19369,7 +19369,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The layout rendered before the first measurement."
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise."
         },
         {
           "name": "LayoutMode",
@@ -19389,7 +19389,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the left panel is open. Two-way with LeftOpenChanged."
+          "description": "Whether the left panel is open. Two-way with LeftOpenChanged. Means the same on desktop and tablet; the mobile Tabs presentation ignores it."
         },
         {
           "name": "LeftOpenChanged",
@@ -19427,14 +19427,14 @@
           "type": "int",
           "isRequired": false,
           "default": "480",
-          "description": "Largest width in CSS pixels the left panel can be resized to."
+          "description": "Largest width, in CSS pixels, the left panel can be resized to. Default 480."
         },
         {
           "name": "MaxRightWidth",
           "type": "int",
           "isRequired": false,
           "default": "560",
-          "description": "Largest width in CSS pixels the right panel can be resized to."
+          "description": "Largest width, in CSS pixels, the right panel can be resized to. Default 560."
         },
         {
           "name": "MinCanvasWidth",
@@ -19448,14 +19448,14 @@
           "type": "int",
           "isRequired": false,
           "default": "200",
-          "description": "Smallest width in CSS pixels the left panel can be resized to."
+          "description": "Smallest width, in CSS pixels, the left panel can be resized to. Default 200."
         },
         {
           "name": "MinRightWidth",
           "type": "int",
           "isRequired": false,
           "default": "240",
-          "description": "Smallest width in CSS pixels the right panel can be resized to."
+          "description": "Smallest width, in CSS pixels, the right panel can be resized to. Default 240."
         },
         {
           "name": "MobileActions",
@@ -19512,7 +19512,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the right panel is open. Two-way with RightOpenChanged."
+          "description": "Whether the right panel is open. Two-way with RightOpenChanged. Means the same on desktop and tablet; the mobile Tabs presentation ignores it."
         },
         {
           "name": "RightOpenChanged",
@@ -19619,7 +19619,7 @@
           "name": "Description",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional subtitle under the title. Null renders nothing."
+          "description": "Optional subtitle under the title, for a note such as \"shortcuts work with an external keyboard\". Null renders nothing, which is the historical markup."
         },
         {
           "name": "IsVisible",
@@ -19699,7 +19699,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The mode rendered before the first measurement: static SSR, prerender and the first frame."
+          "description": "The mode rendered before the first measurement: static SSR, prerender, and the first frame. A cascaded app-level context beats it; see Resolve."
         },
         {
           "name": "IsContainer",
@@ -19738,7 +19738,7 @@
           "name": "Style",
           "type": "string?",
           "isRequired": false,
-          "description": "Inline style appended to the root."
+          "description": "Inline style appended to the root. Use it to give the container a width in a demo."
         }
       ],
       "cssClasses": [
@@ -19964,7 +19964,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The layout rendered before the first measurement."
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise."
         },
         {
           "name": "LayoutMode",
@@ -19996,7 +19996,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the resolved layout changes. The initial value is not a change."
+          "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "RestoreFocusTargetId",
@@ -20022,7 +20022,7 @@
           "type": "string",
           "isRequired": false,
           "default": "\"360px\"",
-          "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet."
+          "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet, which sizes from its snap point."
         }
       ],
       "cssClasses": [
@@ -21308,7 +21308,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Close when a pointerdown lands outside both the panel and the anchor."
+          "description": "Close when a pointerdown lands outside both the panel and the anchor. Default true. The anchor is exempt so clicking the trigger toggles instead of close-then-reopen races. In sheet mode this governs the backdrop click and the swipe-to-dismiss gesture."
         },
         {
           "name": "ConstrainHeight",
@@ -21322,14 +21322,14 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Flip to the opposite side when the preferred side does not have enough room."
+          "description": "Flip to the opposite side when the preferred side does not have enough room. Default true."
         },
         {
           "name": "Id",
           "type": "string",
           "isRequired": false,
           "default": "$\"tm-overlay-panel-{Guid.NewGuid():n}\"",
-          "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls)."
+          "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls). In sheet mode the id lands on the content wrapper inside the drawer body, so the reference resolves in both presentations."
         },
         {
           "name": "InitialMode",
@@ -21376,7 +21376,7 @@
           "type": "int",
           "isRequired": false,
           "default": "4",
-          "description": "Gap in pixels between anchor and panel on the resolved side."
+          "description": "Gap in pixels between anchor and panel on the resolved side. Default 4."
         },
         {
           "name": "OnDismissed",
@@ -21421,7 +21421,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Slide the panel along the cross axis so it stays inside the viewport."
+          "description": "Slide the panel along the cross axis so it stays inside the viewport. Default true."
         },
         {
           "name": "Title",
@@ -21441,7 +21441,7 @@
           "type": "int",
           "isRequired": false,
           "default": "8",
-          "description": "Minimum distance in pixels the panel keeps from the viewport edges."
+          "description": "Minimum distance in pixels the panel keeps from the viewport edges. Default 8."
         }
       ],
       "cssClasses": [
@@ -22090,7 +22090,7 @@
           "name": "Invalid",
           "type": "bool",
           "isRequired": false,
-          "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. The segments stay editable; this only announces the invalid state."
+          "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. The segments stay editable; this only announces the invalid state (N148)."
         },
         {
           "name": "MaxTime",
@@ -22324,14 +22324,14 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "The area where this chip is currently placed."
+          "description": "Whether the chip can be dragged."
         },
         {
           "name": "Area",
           "type": "PivotArea",
           "isRequired": false,
           "default": "PivotArea.Unused",
-          "description": "The field this chip represents."
+          "description": "The area where this chip is currently placed."
         },
         {
           "name": "Field",
@@ -22343,61 +22343,61 @@
           "name": "OnDragEnd",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Fires when drag starts."
+          "description": "Fires when drag ends."
         },
         {
           "name": "OnDragStart",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Whether to show the remove button."
+          "description": "Fires when drag starts."
         },
         {
           "name": "OnRemoveClick",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Fires when settings button is clicked."
+          "description": "Fires when remove button is clicked."
         },
         {
           "name": "OnSettingsClick",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Fires when sort direction or criterion changes."
+          "description": "Fires when settings button is clicked."
         },
         {
           "name": "OnSortChanged",
           "type": "EventCallback<(PivotSortDirection Direction, PivotSortBy SortBy)>",
           "isRequired": false,
-          "description": "Fires when drag ends."
+          "description": "Fires when sort direction or criterion changes."
         },
         {
           "name": "ShowRemove",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether to show the settings button."
+          "description": "Whether to show the remove button."
         },
         {
           "name": "ShowSettings",
           "type": "bool",
           "isRequired": false,
-          "description": "Current sort criterion displayed on the chip."
+          "description": "Whether to show the settings button."
         },
         {
           "name": "ShowSortMenu",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the chip can be dragged."
+          "description": "Whether to show the sort menu button."
         },
         {
           "name": "SortBy",
           "type": "PivotSortBy",
           "isRequired": true,
-          "description": "Current sort direction displayed on the chip."
+          "description": "Current sort criterion displayed on the chip."
         },
         {
           "name": "SortDirection",
           "type": "PivotSortDirection",
           "isRequired": true,
-          "description": "Whether to show the sort menu button."
+          "description": "Current sort direction displayed on the chip."
         }
       ]
     },
@@ -22519,14 +22519,14 @@
           "type": "List<string>",
           "isRequired": false,
           "default": "[]",
-          "description": "Keys of fields currently in the row area."
+          "description": "Keys of fields currently in the column area."
         },
         {
           "name": "DataFieldKeys",
           "type": "List<string>",
           "isRequired": false,
           "default": "[]",
-          "description": "Keys of fields currently in the column area."
+          "description": "Keys of fields currently in the data area."
         },
         {
           "name": "Fields",
@@ -22540,26 +22540,26 @@
           "type": "Dictionary<string, List<object?>>",
           "isRequired": false,
           "default": "[]",
-          "description": "Keys of fields currently in the data area."
+          "description": "Keys of fields currently in the filter area."
         },
         {
           "name": "OnAddToArea",
           "type": "EventCallback<(string FieldKey, PivotArea Area)>",
           "isRequired": false,
-          "description": "Keys of fields currently in the filter area."
+          "description": "Fires when a field should be added/moved to a target area."
         },
         {
           "name": "OnRemove",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Fires when a field should be added/moved to a target area."
+          "description": "Fires when a field should be removed from all areas."
         },
         {
           "name": "RowFieldKeys",
           "type": "List<string>",
           "isRequired": false,
           "default": "[]",
-          "description": "All available field definitions."
+          "description": "Keys of fields currently in the row area."
         }
       ]
     },
@@ -23491,7 +23491,7 @@
           "type": "DateTime",
           "isRequired": false,
           "default": "DateTime.Today",
-          "description": "Today's date in the display zone — caps the rolling window at (today − 7 days) and seeds it when no data exists. TmGantt passes the user-zone today."
+          "description": "Today's date in the display zone — caps the rolling window at (today − 7 days) and seeds it when no data exists. TmGantt passes the user-zone today; defaults to Today."
         },
         {
           "name": "WorkingSchedule",
@@ -26009,28 +26009,28 @@
           "name": "Labels",
           "type": "ToolbarLabels",
           "isRequired": true,
-          "description": "Whether icon buttons show their text. Auto shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins.",
+          "description": "Whether icon buttons show their text. Auto (default) shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins.",
           "default": "Auto"
         },
         {
           "name": "Overflow",
           "type": "ToolbarOverflow",
           "isRequired": true,
-          "description": "What happens when the buttons do not fit. None keeps every button as written; Menu moves the lowest-priority buttons into a More menu and keeps OverflowOnly buttons there.",
+          "description": "What happens when the buttons do not fit. None (default) keeps every button as written; Menu moves the lowest-priority buttons into a \"More\" menu and keeps OverflowOnly buttons there.",
           "default": "None"
         },
         {
           "name": "OverflowLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Accessible name and title of the More trigger. Falls back to the localized default."
+          "description": "Accessible name and title of the \"More\" trigger. Falls back to the localized default."
         },
         {
           "name": "OverflowPresentation",
           "type": "PanelPresentation",
           "isRequired": false,
           "default": "PanelPresentation.Auto",
-          "description": "How the More menu presents on a phone-sized viewport. Auto is the bottom sheet; a toolbar whose actions need the editor focus or selection to stay put sets Popover."
+          "description": "How the \"More\" menu presents on a phone-sized viewport. Auto (default) is the bottom sheet; a toolbar whose actions need the editor's focus or selection to stay put sets Popover (docs/overlays.md, rule 6)."
         },
         {
           "name": "Sticky",
@@ -26113,7 +26113,7 @@
           "name": "LabelPosition",
           "type": "ToolbarLabelPosition",
           "isRequired": true,
-          "description": "Where the Text label sits: next to the icon, under it, or hidden (the text then stays the accessible name).",
+          "description": "Where the Text label sits: next to the icon (default), under it, or hidden (the text then stays the accessible name). Only an icon button can hide its label.",
           "default": "Inline"
         },
         {
@@ -26126,7 +26126,7 @@
           "name": "PreserveFocus",
           "type": "bool",
           "isRequired": false,
-          "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it (the pointerdown and mousedown defaults are prevented), so an editor's text selection survives a formatting command. Keyboard activation and the \"More\" entry are unchanged.",
+          "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it (the pointerdown and mousedown defaults are prevented), so an editor's text selection survives a formatting command. Keyboard activation and the \"More\" entry are unchanged. Default false.",
           "default": "false",
           "example": "PreserveFocus=\"true\" OnClick=\"@ToggleBold\""
         },
@@ -26148,7 +26148,7 @@
           "name": "Priority",
           "type": "ToolbarButtonPriority",
           "isRequired": true,
-          "description": "How important the button is when its TmToolbar runs out of room. An overflow rank only: buttons render in written order.",
+          "description": "How important the button is when its TmToolbar runs out of room (Menu). An overflow rank only: buttons render in written order.",
           "default": "Primary"
         },
         {
@@ -26248,7 +26248,7 @@
           "name": "Label",
           "type": "string?",
           "isRequired": false,
-          "description": "Accessible name of the group on the bar and the header of its section in the More menu. Empty renders the wrapper without a role — a layout-only group."
+          "description": "Accessible name of the group on the bar and the header of its section in the \"More\" menu. Empty renders the wrapper without a role — a layout-only group."
         }
       ],
       "cssClasses": [
@@ -26294,14 +26294,14 @@
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
-          "description": "Disables the More entry (or every MenuItems entry). The bar control's own disabled state stays the host's: set both.",
+          "description": "Disables the \"More\" entry (or every MenuItems entry). The bar control's own disabled state stays the host's: set both.",
           "default": "false"
         },
         {
           "name": "MenuIcon",
           "type": "string?",
           "isRequired": false,
-          "description": "Optional icon of the single More entry (an IconNames value). Ignored with MenuItems."
+          "description": "Optional icon of the single \"More\" entry (an IconNames value). Ignored with MenuItems."
         },
         {
           "name": "MenuItems",
@@ -26320,13 +26320,13 @@
           "name": "MenuLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "The label of the item's More entry (or, with MenuItems, the header and accessible name of its group). With an OnMenuInvoke handler it makes the item collapsible; without one (and without MenuItems) the item never leaves the bar."
+          "description": "The label of the item's \"More\" entry (or, with MenuItems, the header and accessible name of its group). With an OnMenuInvoke handler it makes the item collapsible; without one (and without MenuItems) the item never leaves the bar."
         },
         {
           "name": "OnMenuInvoke",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Runs when the user picks the item's single More entry. Typically opens the full control in a dialog or sheet (then set MenuKeepOpen). Invoked exactly once per activation. Together with a non-empty MenuLabel it makes the item collapsible; a label without a handler (and without MenuItems) never leaves the bar. Ignored with MenuItems."
+          "description": "Runs when the user picks the item's single \"More\" entry. Typically opens the full control in a dialog or sheet (then set MenuKeepOpen). Invoked exactly once per activation. Together with a non-empty MenuLabel it makes the item collapsible; a label without a handler (and without MenuItems) never leaves the bar. Ignored with MenuItems."
         },
         {
           "name": "Priority",

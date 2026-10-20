@@ -2473,7 +2473,7 @@
           "name": "Generate",
           "kind": "Method",
           "type": "string",
-          "description": "Generates an SVG string representing the document.",
+          "description": "Generates an SVG string representing the document (labels on, opaque white background, 300×200 viewport).",
           "parameters": [
             {
               "name": "document",
@@ -11844,7 +11844,7 @@
       "kind": "Class",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Abstractions.Layout",
-      "description": "Resolves which layout a component renders. The order is an explicit mode, then a forced ancestor, then this component's own measurement, then an Auto ancestor's resolved mode, then the initial mode.",
+      "description": "Resolves which layout a component renders. The order is fixed so a host, an overlay and a test all reach the same answer: an explicit mode, then a forced ancestor, then this component's own measurement, then an Auto ancestor's resolved mode, then the initial mode. An overlay measures nothing, so it passes the viewport-scope context and a null measurement.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayout.cs",
       "documentationStatus": "merged"
@@ -13245,14 +13245,14 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "DataTableExportScope",
       "kind": "Enum",
       "category": "Models",
       "namespace": "Tempo.Blazor.Models",
       "description": "Which rows a data-table export includes.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DataTableExport.cs",
-      "documentationStatus": "generated",
-      "itemName": "DataTableExportScope"
+      "documentationStatus": "merged"
     },
     {
       "itemName": "DataTableFilter",
@@ -37308,9 +37308,9 @@
   "libraryExamples": [],
   "summary": {
     "itemCount": 1490,
-    "manualItemCount": 1489,
+    "manualItemCount": 1490,
     "generatedItemCount": 1473,
-    "generatedOnlyItemCount": 1,
+    "generatedOnlyItemCount": 0,
     "componentCount": 0,
     "publicApiTypeCount": 1473
   }

@@ -22,7 +22,7 @@
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": true,
-      "description": "The table block being edited (mutated in place).",
+      "description": "Raised after the table changes.",
       "editorRequired": true
     }
   ]

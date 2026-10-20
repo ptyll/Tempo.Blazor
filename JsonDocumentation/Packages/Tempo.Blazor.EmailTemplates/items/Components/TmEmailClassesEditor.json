@@ -22,7 +22,7 @@
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": true,
-      "description": "The head attributes containing the named-class definitions (mj-class).",
+      "description": "Raised after the class definitions change.",
       "editorRequired": true
     }
   ]

@@ -21,7 +21,7 @@
       "name": "AutoSave",
       "type": "AutoSaveOptions?",
       "isRequired": false,
-      "description": "Raised when the user requests a save."
+      "description": "Auto-save configuration; when enabled, edits are saved after a debounce interval."
     },
     {
       "name": "DocumentChanged",
@@ -33,33 +33,33 @@
       "name": "OnAutoSave",
       "type": "EventCallback<EmailTemplateDocument>",
       "isRequired": false,
-      "description": "Auto-save configuration; when enabled, edits are saved after a debounce interval."
+      "description": "Raised by auto-save with the current document."
     },
     {
       "name": "OnImageUpload",
       "type": "Func<IBrowserFile, Task<string>>?",
       "isRequired": false,
-      "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
+      "description": "Optional host image-upload handler: receives a picked file, returns the hosted URL."
     },
     {
       "name": "OnSave",
       "type": "EventCallback<EmailTemplateDocument>",
       "isRequired": false,
-      "description": "Raised when the document changes (for @bind-Document)."
+      "description": "Raised when the user requests a save."
     },
     {
       "name": "TimeProvider",
       "type": "TimeProvider",
       "isRequired": false,
       "default": "TimeProvider.System",
-      "description": "Raised by auto-save with the current document."
+      "description": "Clock used for auto-save debouncing (overridable in tests)."
     },
     {
       "name": "Variables",
       "type": "IReadOnlyList<TemplateVariableInfo>",
       "isRequired": false,
       "default": "Array.Empty<TemplateVariableInfo>()",
-      "description": "Clock used for auto-save debouncing (overridable in tests)."
+      "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
     }
   ]
 }

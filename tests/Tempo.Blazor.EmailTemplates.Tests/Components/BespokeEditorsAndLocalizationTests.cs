@@ -130,6 +130,7 @@ public class BespokeEditorsAndLocalizationTests : BunitContext
     [Theory]
     [InlineData("cs", "Uložit")]
     [InlineData("en", "Save")]
+    [InlineData("sk", "Uložiť")]
     [InlineData("fr", "Enregistrer")]
     public void Editor_RendersLocalizedToolbar_PerCulture(string culture, string expectedSave)
     {
@@ -139,7 +140,8 @@ public class BespokeEditorsAndLocalizationTests : BunitContext
             CultureInfo.CurrentUICulture = new CultureInfo(culture);
             var cut = Render<TmEmailTemplateEditor>(p => p.Add(c => c.Document, new EmailTemplateDocument()));
 
-            // The save button text comes from the real ITmEmailLocalizer (resx), not a key fallback.
+            // The save button text comes from the real ITmEmailLocalizer over the package's embedded
+            // JSON tables, not a key fallback.
             cut.Find("[data-tm-save]").TextContent.Should().Contain(expectedSave);
         }
         finally

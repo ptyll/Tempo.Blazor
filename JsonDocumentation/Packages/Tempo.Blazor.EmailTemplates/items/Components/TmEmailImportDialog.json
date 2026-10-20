@@ -21,13 +21,13 @@
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Raised with the imported document when the user confirms."
+      "description": "Raised when the dialog is closed."
     },
     {
       "name": "OnImport",
       "type": "EventCallback<EmailTemplateDocument>",
       "isRequired": false,
-      "description": "Whether the dialog is shown."
+      "description": "Raised with the imported document when the user confirms."
     }
   ]
 }

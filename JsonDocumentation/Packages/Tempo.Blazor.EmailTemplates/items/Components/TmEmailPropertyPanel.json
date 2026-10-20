@@ -22,19 +22,19 @@
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "The selected node id (block, section or column); null edits the document settings."
+      "description": "Raised after any property changes."
     },
     {
       "name": "OnImageUpload",
       "type": "Func<IBrowserFile, Task<string>>?",
       "isRequired": false,
-      "description": "Host-provided variables, merged with those extracted from the document."
+      "description": "Optional host upload handler: receives a picked file and returns the hosted image URL."
     },
     {
       "name": "SelectedId",
       "type": "Guid?",
       "isRequired": true,
-      "description": "The document being edited.",
+      "description": "The selected node id (block, section or column); null edits the document settings.",
       "editorRequired": true
     },
     {
@@ -42,7 +42,7 @@
       "type": "IReadOnlyList<TemplateVariableInfo>",
       "isRequired": false,
       "default": "Array.Empty<TemplateVariableInfo>()",
-      "description": "Raised after any property changes."
+      "description": "Host-provided variables, merged with those extracted from the document."
     }
   ]
 }

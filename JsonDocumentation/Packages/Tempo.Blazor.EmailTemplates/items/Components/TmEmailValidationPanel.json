@@ -22,7 +22,7 @@
       "name": "OnNavigate",
       "type": "EventCallback<Guid?>",
       "isRequired": true,
-      "description": "The document to validate.",
+      "description": "Raised with the offending node id when a finding is clicked.",
       "editorRequired": true
     }
   ]
