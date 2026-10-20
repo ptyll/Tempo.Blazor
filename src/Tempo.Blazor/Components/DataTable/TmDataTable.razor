@@ -47,6 +47,7 @@
                     <TmViewManager Provider="ViewProvider"
                                    ViewContext="@ViewContext"
                                    Compact="@IsRedesigned"
+                                   MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                    ShowActiveViewName="@ShowActiveViewName"
                                    AllowSetDefault="@AllowSetDefault"
                                    OnSetDefault="@OnSetDefault"
@@ -67,6 +68,7 @@
                        display:none there, so this dropdown is the only sort surface. *@
                     <TmDropdown Text="@Loc["TmDataTable_MobileSort"]"
                                 Class="tm-data-table-cards-toolbar__sort tm-data-table-mobile-only"
+                                OutlineTrigger="true"
                                 MobilePresentation="PanelPresentation.Auto"
                                 OnSelect="OnCardSortSelectedAsync">
                         @foreach (var col in CardsSortableColumns)
@@ -286,7 +288,7 @@
                 <button type="button" class="tm-btn tm-btn-outline" @onclick="ClearAllFiltersAsync">
                     @Loc["TmDataTable_ClearAll"]
                 </button>
-                <button type="button" class="tm-btn tm-btn-primary" @onclick="() => SetCardsFilterOpenAsync(false)">
+                <button type="button" class="tm-btn tm-btn-primary tm-data-table-cards-sheet__done" @onclick="() => SetCardsFilterOpenAsync(false)">
                     @Loc["Tm_Done"]
                 </button>
             </div>

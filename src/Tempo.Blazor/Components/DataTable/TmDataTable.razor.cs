@@ -539,6 +539,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     [Parameter] public RenderFragment? RowEditValidator { get; set; }
 
     private int _editingRowIndex = -1;
+    private bool _editorFocusPending;
     private bool AnyEditableColumn => _columns.Any(c => c.Editable && c.EditTemplate is not null);
     private bool HasEditActions => Editable
         && ShowEditButtons
@@ -567,6 +568,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         }
 
         SetEditingRow(rowIndex, item);
+        // The editing row renders no grid cells, so the cell that held focus is gone. Grid mode hands
+        // focus to the editor, or Escape/Enter (answered on the editing row) never reach the table.
+        _editorFocusPending = IsGrid;
         StateHasChanged();
         await OnRowEditStart.InvokeAsync(item);
     }
@@ -601,6 +605,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             _editContext = null;
             _editingRowIndex = -1;
             _editHasErrors = false;
+            if (IsGrid)
+                _gridFocusPending = true;
         }
 
         StateHasChanged();
@@ -1945,6 +1951,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         }
 
         await SyncGridKeysAsync();
+        await SyncColumnMenuKeysAsync();
+        await FocusRowEditorAsync();
         await FocusActiveGridCellAsync();
     }
 
@@ -2149,6 +2157,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _dotNetRef = null;
         if (_gridKeysAttached)
             _ = DetachGridKeysAsync();
+        if (_columnMenuKeysAttached)
+            _ = DetachColumnMenuKeysAsync();
     }
 
     /// <inheritdoc />
@@ -2156,6 +2166,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         if (_gridKeysAttached)
             await DetachGridKeysAsync();
+        if (_columnMenuKeysAttached)
+            await DetachColumnMenuKeysAsync();
         Dispose();
     }
 

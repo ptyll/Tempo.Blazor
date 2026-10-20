@@ -315,6 +315,9 @@
      and silently ignore the documented contract. --tm-data-table-row-height stays inline. */
   --tm-data-table-cell-py: var(--tm-space-3);
   --tm-data-table-cell-px: var(--tm-space-4);
+  /* Column pin toggle: its square size and its inset from the header's inline-end edge. The RTL pinned header reserves both. */
+  --tm-data-table-pin-glyph: 1.1rem;
+  --tm-data-table-pin-inset: var(--tm-space-1-5);
   --tm-color-surface:          var(--tm-bg-surface);
   --tm-color-surface-secondary: var(--tm-bg-surface-secondary);
   --tm-color-surface-elevated: var(--tm-color-white);

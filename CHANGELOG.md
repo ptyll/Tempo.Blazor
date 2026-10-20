@@ -4,6 +4,19 @@
 
 ### Fixed
 
+- **`TmDataTable` UX defects from the phase 13 screenshot review.** RTL pinned headers reserve the pin glyph (logical padding), long filter placeholders and Scroll cells end in an ellipsis, filter and views sheets use 44px targets and show one Done, and the cards layout drops the "Drag column headers here to group" hint.
+
+- **`TmDataTable` column menu opens with Alt+ArrowDown in a real browser.** The chord was announced (`aria-keyshortcuts`) and
+  opened the menu, but its browser default scrolled the page, the header left the viewport and the overlay dismissed itself
+  as `anchor-hidden` about 150 ms later (`M` was unaffected). `data-table.js` now cancels the default for that chord on a
+  header that announces it (`tmDataTable.attachColumnMenuKeys`, attached only while `ColumnMenuMode` is `Menu`).
+  Found by the phase 13 keyboard E2E; the bUnit test sent the key straight to the header and could not see it.
+
+- **Grid keyboard: F2 / Enter on an editable cell moves focus into the editor.** The editing row renders plain cells, not
+  grid cells, so the cell that held focus vanished and focus fell to the page: Escape (answered on the editing row) never
+  reached the table and a keyboard user could not cancel. `KeyboardNavigation=Grid` now focuses the first editor control
+  (`tmDataTable.focusRowEditor`) and, when the edit is saved, returns focus to the roving cell. `Rows` mode is unchanged.
+
 - **TmOverlayPanel no longer takes a focus-restore id.** `RestoreFocusTargetId` was removed.
   Escape returns focus to the anchor inside `overlay.js` (`anchor.focus({ preventScroll: true })`)
   when focus would otherwise die. An outside click does not: the user clicked somewhere else.
@@ -37,6 +50,16 @@
   `--tm-color-on-primary-fixed` is `var(--tm-color-white)` in both themes. Both are declared in
   `tokens.css` and re-declared in `tokens-dark.css`, so a wrapper with `data-theme="dark"` does
   not inherit the finished light colour. The active page button is the first consumer.
+
+- **`TmViewManager.MobilePresentation`** (`PanelPresentation`, default `Popover`). The Views panel was the one toolbar overlay that
+  never offered the mobile sheet: on a 390px viewport it stayed an anchored popover. `Auto` turns it into a full-width
+  bottom sheet on a mobile viewport. `TmDataTable` passes `Auto` when `MobileLayout` is not `None` and
+  `TmMultiViewList` when `Responsive` is on, like the export menu and group picker already do; a table or list without
+  those opt-ins keeps the popover. Found by the phase 13 overlay E2E.
+
+- **Narrow-table toolbar wraps.** The right toolbar group (Choose columns, Views, Sort, Filters, Export) is no longer
+  clipped at 390px: below the table's container breakpoint (and below the 768px viewport breakpoint for a plain table)
+  `.tm-data-table-toolbar-right` gets `flex-wrap: wrap`. No change at wider widths.
 
 - **`TmViewManager.Compact`** (bool, default `false`). When true, the Views toggle adds
   `tm-btn-sm` so it lines up with the other card-toolbar triggers. `TmDataTable` passes it when

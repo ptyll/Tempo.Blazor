@@ -437,6 +437,19 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         ".tm-overlay-panel-sheet .tm-notification-bell__header",
         ".tm-overlay-panel-sheet .tm-notification-bell__item",
         ".tm-overlay-panel-sheet .tm-notification-bell__actions",
+        // Phase 13 fix round 1: finger-sized sheet controls of the data table (descendants of the sheet only).
+        ".tm-overlay-panel-sheet .tm-col-filter-input",
+        ".tm-overlay-panel-sheet .tm-col-filter-select",
+        ".tm-overlay-panel-sheet .tm-col-filter-clear",
+        ".tm-overlay-panel-sheet .tm-view-item",
+        ".tm-overlay-panel-sheet .tm-view-edit-btn",
+        ".tm-overlay-panel-sheet .tm-view-delete-btn",
+        ".tm-overlay-panel-sheet .tm-view-set-default-btn",
+        ".tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn",
+        ".tm-overlay-panel-sheet .tm-data-table-cards-sheet__footer .tm-btn",
+        ".tm-overlay-panel-sheet .tm-view-item-row",
+        ".tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn + .tm-btn",
+        ".tm-overlay-panel-sheet .tm-btn.tm-data-table-cards-sheet__done",
     ];
 
     /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>

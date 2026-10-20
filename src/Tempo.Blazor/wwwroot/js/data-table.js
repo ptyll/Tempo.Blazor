@@ -324,6 +324,37 @@ window.tmDataTable = (function () {
         arrowKeyRoots.set(el, onKey);
     }
 
+    var menuKeyRoots = new Map();
+
+    /**
+     * Cancels the browser's default for Alt+ArrowDown on a column header that announces it as its
+     * shortcut (aria-keyshortcuts contains "Alt+ArrowDown"). The component opens the column menu on
+     * that chord, but the chord also scrolls the page; the header leaves the viewport and the overlay
+     * dismisses itself as "anchor-hidden" ~150 ms later. Blazor cannot make preventDefault depend on
+     * the key, so the decision lives here. Every other key and every other header is left alone.
+     */
+    function attachColumnMenuKeys(table) {
+        if (!table || !table.addEventListener || menuKeyRoots.has(table)) return;
+        var onKey = function (event) {
+            if (!event.altKey || event.ctrlKey || event.metaKey || event.key !== 'ArrowDown') return;
+            var target = event.target;
+            if (!target || typeof target.closest !== 'function') return;
+            var header = target.closest('th');
+            if (!header || typeof header.getAttribute !== 'function') return;
+            var shortcuts = header.getAttribute('aria-keyshortcuts') || '';
+            if (shortcuts.indexOf('Alt+ArrowDown') === -1) return;
+            event.preventDefault();
+        };
+        table.addEventListener('keydown', onKey);
+        menuKeyRoots.set(table, onKey);
+    }
+
+    function detachColumnMenuKeys(table) {
+        var onKey = menuKeyRoots.get(table);
+        if (!onKey) return;
+        menuKeyRoots.delete(table);
+        table.removeEventListener('keydown', onKey);
+    }
     function detachGridKeys(table) {
         var onKey = gridKeyRoots.get(table);
         if (!onKey) return;
@@ -405,6 +436,20 @@ window.tmDataTable = (function () {
     }
 
     /**
+     * Moves focus into the first editor of the row that just entered edit mode. The editing row renders
+     * plain cells, not grid cells, so the cell that held focus is gone and focus would fall to the page:
+     * Escape and Enter (answered on the editing row) would never reach the table. Only an editor control
+     * qualifies; a row with none keeps focus where it is.
+     */
+    function focusRowEditor(table) {
+        if (!table || typeof table.querySelector !== 'function') return;
+        var editor = table.querySelector('tr.tm-row-editing td.tm-data-table-cell--editing input, tr.tm-row-editing td.tm-data-table-cell--editing select, tr.tm-row-editing td.tm-data-table-cell--editing textarea, tr.tm-row-editing td.tm-data-table-cell--editing [contenteditable="true"]');
+        if (editor && typeof editor.focus === 'function') {
+            try { editor.focus({ preventScroll: true }); } catch (e) { editor.focus(); }
+        }
+    }
+
+    /**
      * Moves focus onto the filter control the column menu's "Filter" item names. The control is
      * rendered by Blazor before this runs, so a missing element means the column is not filterable.
      */
@@ -474,5 +519,5 @@ window.tmDataTable = (function () {
         pinObservers.delete(wrapper);
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader, observePinnedOffsets, disposePinnedOffsets };
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, focusRowEditor, attachGridKeys, detachGridKeys, attachColumnMenuKeys, detachColumnMenuKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader, observePinnedOffsets, disposePinnedOffsets };
 })();

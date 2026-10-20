@@ -400,6 +400,47 @@ public partial class TmDataTable<TItem>
         }
     }
 
+    private bool _columnMenuKeysAttached;
+
+    private bool WantsColumnMenuKeys => ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu;
+
+    /// <summary>
+    /// Attaches the key listener that cancels the browser's page-scroll default for Alt+ArrowDown on a
+    /// header (<c>tmDataTable.attachColumnMenuKeys</c>). The chord opens the column menu, and the scroll
+    /// it also performed moved the header out of view, so the overlay dismissed itself as "anchor-hidden".
+    /// Blazor cannot make <c>preventDefault</c> depend on the key, so the decision lives in JavaScript.
+    /// </summary>
+    private async Task SyncColumnMenuKeysAsync()
+    {
+        if (WantsColumnMenuKeys == _columnMenuKeysAttached)
+            return;
+        try
+        {
+            if (WantsColumnMenuKeys)
+                await JS.InvokeVoidAsync("tmDataTable.attachColumnMenuKeys", _tableRef);
+            else
+                await JS.InvokeVoidAsync("tmDataTable.detachColumnMenuKeys", _tableRef);
+            _columnMenuKeysAttached = WantsColumnMenuKeys;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
+        {
+            // JS unavailable (tests, prerender). The menu still opens; only the scroll default remains.
+        }
+    }
+
+    private async Task DetachColumnMenuKeysAsync()
+    {
+        _columnMenuKeysAttached = false;
+        try
+        {
+            await JS.InvokeVoidAsync("tmDataTable.detachColumnMenuKeys", _tableRef);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
+        {
+        }
+    }
     private async Task DetachGridKeysAsync()
     {
         _gridKeysAttached = false;
@@ -413,6 +454,22 @@ public partial class TmDataTable<TItem>
         }
     }
 
+    /// <summary>Hands focus to the first editor of the row that just entered edit mode (Grid mode only).</summary>
+    private async Task FocusRowEditorAsync()
+    {
+        if (!_editorFocusPending || !IsGrid || _editContext is null)
+            return;
+        _editorFocusPending = false;
+        try
+        {
+            await JS.InvokeVoidAsync("tmDataTable.focusRowEditor", _tableRef);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
+        {
+            // JS unavailable (tests, prerender). The editor is still rendered and reachable by Tab.
+        }
+    }
     private async Task FocusActiveGridCellAsync()
     {
         if (!_gridFocusPending || !IsGrid)

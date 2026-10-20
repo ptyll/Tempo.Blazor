@@ -1,0 +1,121 @@
+using System.Text.RegularExpressions;
+using FluentAssertions;
+using Xunit;
+
+namespace Tempo.Blazor.Tests.Theme;
+
+/// <summary>
+/// Phase 13 fix round 1 (UX review of the redesign screenshots): the open defects of 13.12 are
+/// guarded in the shipped stylesheet - RTL pin overlap, clipped long text, sub-44px sheet targets
+/// and the cards hint that points at a header that is not there.
+/// </summary>
+public sealed class DataTableUxDefectsCssTests
+{
+    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+
+    private static string Css() => ThemeCss.ComponentCss("_data-table.css");
+
+    private static string Rule(string css, string selectorFragment)
+    {
+        foreach (Match m in Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.None, Timeout))
+        {
+            if (m.Groups["sel"].Value.Contains(selectorFragment, StringComparison.Ordinal))
+                return m.Groups["body"].Value;
+        }
+
+        throw new Xunit.Sdk.XunitException($"No rule for '{selectorFragment}'");
+    }
+
+    [Fact]
+    public void RtlPinnedHeader_PaddingUsesTheSharedPinGlyphTokens_NoHardcodedSizes()
+    {
+        var css = Css();
+        var body = Rule(css, "[dir=\"rtl\"] .tm-data-table th.tm-col-pinned");
+        body.Should().Contain("--tm-data-table-pin-glyph").And.Contain("--tm-data-table-pin-inset");
+        body.Should().NotContain("6px").And.NotContain("1.1rem");
+
+        var pin = Rule(css, "\n.tm-col-pin-btn");
+        pin.Should().Contain("inset-inline-end: var(--tm-data-table-pin-inset)");
+        pin.Should().Contain("width: var(--tm-data-table-pin-glyph)");
+    }
+
+    [Fact]
+    public void PinnedColumns_StickToLogicalEdges()
+    {
+        var css = Css();
+        css.Should().Contain(".tm-col-pinned-left { inset-inline-start: var(--tm-pin-left, 0); }");
+        css.Should().Contain(".tm-col-pinned-right { inset-inline-end: var(--tm-pin-right, 0); }");
+    }
+
+    [Fact]
+    public void RtlPinnedHeader_ReservesTheGlyphWithLogicalPadding()
+    {
+        var body = Rule(Css(), "[dir=\"rtl\"] .tm-data-table th.tm-col-pinned");
+        body.Should().Contain("padding-inline-start");
+        body.Should().Contain("padding-inline-end");
+    }
+
+    [Fact]
+    public void Rtl_PlainCellsFollowTheWritingDirection()
+    {
+        Rule(Css(), "[dir=\"rtl\"] .tm-data-table th:not(.tm-text-right)").Should().Contain("text-align: right");
+    }
+
+    [Fact]
+    public void ScrollLayoutCells_EndInAnEllipsisAndTheCapIsContainerRelative()
+    {
+        var css = Css();
+        var at = css.IndexOf(".tm-data-table-wrapper--responsive .tm-data-table td:not(", StringComparison.Ordinal);
+        at.Should().BeGreaterThanOrEqualTo(0);
+        var open = css.IndexOf('{', at);
+        var body = css[open..css.IndexOf('}', open)];
+        body.Should().Contain("overflow: hidden");
+        body.Should().Contain("text-overflow: ellipsis");
+        body.Should().Contain("white-space: nowrap");
+        body.Should().Contain("max-inline-size");
+    }
+
+    [Fact]
+    public void FilterInputAndPlaceholder_EndInAnEllipsis()
+    {
+        var body = Rule(Css(), ".tm-col-filter-input::placeholder");
+        body.Should().Contain("overflow: hidden");
+        body.Should().Contain("text-overflow: ellipsis");
+        body.Should().Contain("white-space: nowrap");
+    }
+
+    [Theory]
+    [InlineData(".tm-overlay-panel-sheet .tm-col-filter-input")]
+    [InlineData(".tm-overlay-panel-sheet .tm-col-filter-select")]
+    [InlineData(".tm-overlay-panel-sheet .tm-view-item")]
+    [InlineData(".tm-overlay-panel-sheet .tm-view-edit-btn")]
+    [InlineData(".tm-overlay-panel-sheet .tm-view-delete-btn")]
+    [InlineData(".tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn")]
+    [InlineData(".tm-overlay-panel-sheet .tm-data-table-cards-sheet__footer .tm-btn")]
+    public void SheetControls_AreAtLeastATouchTarget(string selector)
+    {
+        var css = Css();
+        var rule = Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.None, Timeout)
+            .Where(m => m.Groups["sel"].Value.Split(',').Any(s => s.Trim() == selector))
+            .Select(m => m.Groups["body"].Value)
+            .FirstOrDefault(b => b.Contains("min-block-size: var(--tm-touch-target)", StringComparison.Ordinal));
+        rule.Should().NotBeNull($"{selector} must be at least var(--tm-touch-target) tall inside a sheet");
+    }
+
+    [Fact]
+    public void SheetFooterDone_IsHiddenBecauseTheSheetHeaderCarriesIt()
+    {
+        Rule(Css(), ".tm-overlay-panel-sheet .tm-btn.tm-data-table-cards-sheet__done").Should().Contain("display: none");
+    }
+
+    [Fact]
+    public void CardsGroupHint_IsHiddenWhereTheHeaderIsGone()
+    {
+        var css = Css();
+        var at = css.IndexOf(".tm-data-table-wrapper--cards .tm-data-table-group-placeholder", StringComparison.Ordinal);
+        at.Should().BeGreaterThanOrEqualTo(0);
+        Regex.IsMatch(css[..at], @"@container\s+tm-data-table\s*\(width\s*<\s*640px\)\s*\{\s*$", RegexOptions.None, Timeout)
+            .Should().BeTrue("the hint disappears only where the cards layout is active (narrow container)");
+        css[at..].Should().Contain("display: none");
+    }
+}

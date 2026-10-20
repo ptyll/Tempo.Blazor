@@ -60,3 +60,8 @@ nunit-*.xml
 node_modules/
 src/Tempo.Blazor/wwwroot/js/document-editor.dist.js
 src/Tempo.Blazor/wwwroot/js/document-editor.dist.js.map
+# Local run artefacts (diagram DB, exports, scratch)
+/diagrams.db*
+/output.zip
+/output/
+/tmp/

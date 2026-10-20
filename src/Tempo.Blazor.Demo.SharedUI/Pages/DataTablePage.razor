@@ -98,7 +98,7 @@
                                        CardRole="DataTableCardRole.Field" />
                     <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColHired"]" PropertyName="HiredOn"
                                        Field="e => e.HiredOn" Sortable="true">
-                        <CellTemplate Context="employee">@employee.HiredOn.ToString("yyyy-MM-dd")</CellTemplate>
+                        <CellTemplate Context="employee"><span class="whitespace-nowrap">@employee.HiredOn.ToString("yyyy-MM-dd")</span></CellTemplate>
                     </TmDataTableColumn>
                 </ChildContent>
             </TmDataTable>
@@ -167,6 +167,96 @@
                              ResultCountProvider="CountStandaloneMatches" />
         </div>
     </div>
+</section>
+
+<!-- Edge cases: fixed data so the E2E and screenshot specs are measurements, not guesses -->
+<section class="demo-section" data-testid="dt-edge-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_EdgeTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_EdgeDescription"]</p>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">@Loc["TmDataTableDemo_EdgeEmptyHeading"]</h3>
+        <div data-testid="dt-edge-empty">
+            <TmDataTable TItem="Employee" Items="_edgeEmpty" ViewContext="edge-empty" EmptyTitle="@Loc["TmDataTableDemo_EdgeEmptyTitle"]" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" Sortable="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <div class="mt-4" style="max-inline-size: 24rem" data-testid="dt-edge-empty-cards">
+            <TmDataTable TItem="Employee" Items="_edgeEmpty" ViewContext="edge-empty-cards" MobileLayout="DataTableMobileLayout.Cards"
+                         Appearance="DataTableAppearance.Card" EmptyTitle="@Loc["TmDataTableDemo_EdgeEmptyTitle"]" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" Sortable="true" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeNoResultsHeading"]</h3>
+        <div data-testid="dt-edge-search">
+            <TmDataTable TItem="Employee" Items="_redesignEmployees" ViewContext="edge-search" EmptyTitle="@Loc["TmDataTableDemo_EdgeNoResultsTitle"]" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" Sortable="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeLoadingHeading"]</h3>
+        <div data-testid="dt-edge-loading">
+            <TmDataTable TItem="Employee" Items="_redesignEmployees" ViewContext="edge-loading" IsLoading="true" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeLongHeading"]</h3>
+        <div data-testid="dt-edge-long" style="max-inline-size: 24rem">
+            <TmDataTable TItem="Employee" Items="_edgeLongEmployees" ViewContext="edge-long" ViewProvider="_edgeLongViews"
+                         ShowActiveViewName="true" MobileLayout="DataTableMobileLayout.Scroll" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" MobilePinned="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeWideHeading"]</h3>
+        <div data-testid="dt-edge-wide">
+            <TmDataTable TItem="Employee" Items="_redesignEmployees" ViewContext="edge-wide" ShowPagination="false" ShowToolbar="false">
+                <ChildContent>
+                    @foreach (var number in Enumerable.Range(1, 15))
+                    {
+                        var column = number;
+                        <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_EdgeColumn", column]" PropertyName="@($"c{column}")"
+                                           Field="@(e => $"{e.Name.Split(' ')[0]} {column}")" Pinned="@(column == 1 ? ColumnPin.Left : ColumnPin.None)" Width="@(column == 1 ? "9rem" : "8rem")" />
+                    }
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgePagerHeading"]</h3>
+        <div data-testid="dt-edge-pager-wide">
+            <TmDataTable TItem="Employee" Items="_employees" ViewContext="edge-pager-wide" MobileLayout="DataTableMobileLayout.Cards" DefaultPageSize="4" ShowToolbar="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <div class="mt-4" style="max-inline-size: 24rem" data-testid="dt-edge-pager-narrow">
+            <TmDataTable TItem="Employee" Items="_employees" ViewContext="edge-pager-narrow" MobileLayout="DataTableMobileLayout.Cards" DefaultPageSize="4" ShowToolbar="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>    </div>
 </section>
 
 <!-- Forced card layout -->
@@ -882,6 +972,33 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="dt-grid-edit">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_GridEditTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_GridEditDescription"]</p>
+        <TmDataTable TItem="TransactionDemo"
+                     Items="_gridEditTransactions"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     Editable="true"
+                     ViewContext="grid-keyboard-edit"
+                     ShowToolbar="false"
+                     ShowPagination="false"
+                     OnRowSave="HandleGridEditSaved">
+            <ChildContent>
+                <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Category"]" PropertyName="Category" Field="transaction => transaction.Category" />
+                <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Note"]" PropertyName="Note" Field="transaction => transaction.Note" Editable="true">
+                    <EditTemplate Context="transaction">
+                        <input class="tm-input" data-testid="grid-edit-note-input" aria-label="@Loc["TmDataTableDemo_Note"]"
+                               @bind="transaction.Note" @bind:event="oninput" />
+                    </EditTemplate>
+                </TmDataTableColumn>
+            </ChildContent>
+        </TmDataTable>
+        <p class="text-sm text-slate-600 mt-3" data-testid="dt-grid-edit-saved" aria-live="polite">@(_gridEditSaved is null ? string.Empty : Loc["TmDataTableDemo_GridEditSaved", _gridEditSaved])</p>
+    </div>
+</section>
 <!-- Pagination Demo -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">
@@ -1017,6 +1134,31 @@
         new DataTableView { Id = "engineering", Name = Loc["TmDataTableDemo_ViewEngineering"], Scope = ViewScope.Personal }
     ];
 
+    private readonly List<TransactionDemo> _gridEditTransactions =
+    [
+        new() { Date = new DateTime(2026, 7, 21), Amount = 10m, Category = "Travel", Note = "Train to Prague" },
+        new() { Date = new DateTime(2026, 7, 22), Amount = 20m, Category = "Office", Note = "Team supplies" }
+    ];
+    private string? _gridEditSaved;
+
+    private void HandleGridEditSaved(TransactionDemo transaction) => _gridEditSaved = transaction.Note;
+    // ── Edge-case playground (fixed data) ──
+    private readonly List<Employee> _edgeEmpty = [];
+    private List<Employee> _edgeLongEmployees = [];
+    private InMemoryViewProvider _edgeLongViews = new([]);
+
+    private void BuildEdgeDemoState()
+    {
+        _edgeLongEmployees =
+        [
+            new(Loc["TmDataTableDemo_EdgeLongName"], "Admin", "Engineering", 97, "ada@example.com", Id: 901),
+            new("Grace Hopper", "Manager", "Engineering", 94, "grace@example.com", Id: 902)
+        ];
+        _edgeLongViews = new InMemoryViewProvider(
+        [
+            new DataTableView { Id = "long", Name = Loc["TmDataTableDemo_EdgeLongView"], IsDefault = true, Scope = ViewScope.Personal }
+        ]);
+    }
     private void BuildRedesignDemoState()
     {
         _appearanceOptions = EnumOptions<DataTableAppearance>();
@@ -1171,6 +1313,7 @@
         _personProvider = PersonProvider;
         _viewProvider = ViewProvider;
         BuildRedesignDemoState();
+        BuildEdgeDemoState();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

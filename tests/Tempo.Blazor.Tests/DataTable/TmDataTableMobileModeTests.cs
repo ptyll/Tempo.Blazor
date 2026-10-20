@@ -167,6 +167,25 @@ public class TmDataTableMobileModeTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Cards_FilterSheetFooterDone_IsMarkedSoTheSheetCanDropItsDuplicate()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People(3))
+            .Add(c => c.MobileLayout, DataTableMobileLayout.Cards)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.PropertyName, "name")
+                .Add(x => x.Filterable, true)
+                .Add(x => x.Field, person => person.Name)));
+
+        cut.Find(".tm-data-table-cards-toolbar__filter").Click();
+
+        // The sheet header's own Done (tm-overlay-panel-sheet__done) closes it; the footer's Done carries a
+        // class that _data-table.css hides inside a sheet, so a sheet shows exactly one Done.
+        cut.Find(".tm-data-table-cards-sheet__footer .tm-btn-primary").ClassList
+            .Should().Contain("tm-data-table-cards-sheet__done");
+    }
+    [Fact]
     public void PinnedColumns_DeclareTheirOffsetAsCustomProperties()
     {
         var cut = Render<TmDataTable<BasicPerson>>(p => p

@@ -237,6 +237,53 @@ public class TmDataTableGridKeyboardTests : LocalizationTestBase
         cut.FindAll("td[tabindex='0']").Should().ContainSingle();
     }
 
+    private IRenderedComponent<TmDataTable<EditableGridPerson>> RenderEditableGrid(DataTableKeyboardNavigation keyboard)
+        => Render<TmDataTable<EditableGridPerson>>(p => p
+            .Add(c => c.Items, new List<EditableGridPerson> { new() { Name = "Alice" } })
+            .Add(c => c.Editable, true)
+            .Add(c => c.KeyboardNavigation, keyboard)
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />")))));
+
+    [Fact]
+    public void Grid_F2_MovesFocusIntoTheEditor()
+    {
+        var cut = RenderEditableGrid(DataTableKeyboardNavigation.Grid);
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+
+        // The editing row renders no grid cells, so without an explicit move focus drops to the page and
+        // Escape (answered on the editing row) never reaches the table.
+        cut.WaitForAssertion(() => JSInterop.VerifyInvoke("tmDataTable.focusRowEditor"));
+    }
+
+    [Fact]
+    public void Grid_EditEnd_ReturnsFocusToTheCell()
+    {
+        var cut = RenderEditableGrid(DataTableKeyboardNavigation.Grid);
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+        var focusCallsWhileEditing = JSInterop.Invocations["tmDataTable.focusGridCell"].Count();
+
+        cut.Find("tr.tm-row-editing").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.WaitForAssertion(() => JSInterop.Invocations["tmDataTable.focusGridCell"].Count().Should().BeGreaterThan(focusCallsWhileEditing,
+            "committing the edit hands focus back to the roving cell"));
+    }
+
+    [Fact]
+    public void Rows_Mode_DoesNotMoveFocusIntoTheEditor()
+    {
+        var cut = RenderEditableGrid(DataTableKeyboardNavigation.Rows);
+
+        cut.Find("tbody tr").DoubleClick();
+
+        cut.FindAll("tr.tm-row-editing").Should().ContainSingle();
+        JSInterop.VerifyNotInvoke("tmDataTable.focusRowEditor");
+    }
     [Fact]
     public void Grid_CardLayout_ColumnCountIgnoresHidden()
     {

@@ -394,6 +394,10 @@
   cursor: pointer;
 }
 
+.tm-mvl-group-toggle[aria-expanded="true"] .tm-icon {
+  transform: rotate(90deg);
+}
+
 .tm-mvl-group-card .tm-mvl-group-toggle {
   justify-content: flex-start;
   gap: var(--tm-space-2);

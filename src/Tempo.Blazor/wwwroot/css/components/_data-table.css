@@ -278,13 +278,13 @@
 .tm-col-pin-btn {
   position: absolute;
   top: 50%;
-  inset-inline-end: 6px;
+  inset-inline-end: var(--tm-data-table-pin-inset);
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.1rem;
-  height: 1.1rem;
+  width: var(--tm-data-table-pin-glyph);
+  height: var(--tm-data-table-pin-glyph);
   padding: 0;
   border: none;
   border-radius: var(--tm-radius-sm);
@@ -1054,6 +1054,14 @@
   color: var(--tm-text-primary);
   background: var(--tm-bg-surface);
 }
+/* A long placeholder or value ends in an ellipsis instead of being cut at the field edge. */
+.tm-col-filter-input,
+.tm-col-filter-input::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tm-col-filter-input { min-inline-size: 0; }
 .tm-col-filter-input:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-col-filter-clear {
   position: absolute;
@@ -1106,6 +1114,12 @@
     width: 100%;
     max-width: none;
   }
+
+  /* Five controls (columns, views, sort, filters, export) do not fit a phone card on one line:
+     the group wraps instead of running off the card edge. */
+  .tm-data-table-toolbar-right {
+    flex-wrap: wrap;
+  }
   
   .tm-data-table-toolbar-center {
     order: -1;
@@ -1144,6 +1158,12 @@
   .tm-data-table-toolbar-right {
     width: 100%;
     max-width: none;
+  }
+
+  /* Five controls (columns, views, sort, filters, export) do not fit a phone card on one line:
+     the group wraps instead of running off the card edge. */
+  .tm-data-table-toolbar-right {
+    flex-wrap: wrap;
   }
 
   .tm-data-table-toolbar-center {
@@ -1285,6 +1305,12 @@
 }
 
 .tm-data-table-group-chevron--open {
+  transform: rotate(90deg);
+}
+
+/* TmIcon has no Class parameter, so the modifier above never reaches the SVG: the rotation follows
+   the toggle's own aria-expanded instead (the state assistive technology reads as well). */
+.tm-data-table-group-toggle[aria-expanded="true"] .tm-icon {
   transform: rotate(90deg);
 }
 
@@ -1503,6 +1529,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-inline-size: 60cqi;
   }
 }
 
@@ -1658,3 +1685,53 @@
 
 /* Screen-reader-only live region announcing the visible row count; the hiding comes from .tm-sr-only (base.css). */
 .tm-data-table-live-count { white-space: nowrap; }
+
+/* The view dialog is portaled out of the table: native radios and checkboxes follow the theme's primary, not the browser blue. */
+.tm-view-radio-label input,
+.tm-view-column-item input {
+  accent-color: var(--tm-color-primary);
+}
+
+/* RTL: the pin glyph sits on the inline-end edge, which is the physical LEFT, exactly where the
+   base rule's hard-coded text-align: left starts the header text - so it overlapped the first
+   letter. Plain cells and headers follow the writing direction instead (an explicit Align class still
+   wins: it is more specific), and a pinned header reserves the glyph's width on both logical sides. */
+[dir="rtl"] .tm-data-table th:not(.tm-text-right):not(.tm-text-center),
+[dir="rtl"] .tm-data-table td:not(.tm-text-right):not(.tm-text-center) {
+  text-align: right;
+}
+[dir="rtl"] .tm-data-table th.tm-col-pinned {
+  padding-inline-start: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
+  padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
+}
+
+/* Cards hide the header, so "Drag column headers here to group" points at nothing there. */
+@container tm-data-table (width < 640px) {
+  .tm-data-table-wrapper--cards .tm-data-table-group-placeholder { display: none; }
+}
+
+/* Mobile sheets (filter sheet, views panel): every control is a finger-sized target and neighbours
+   do not touch. The sheet root carries .tm-overlay-panel-sheet; the popover keeps its compact sizes. */
+.tm-overlay-panel-sheet .tm-col-filter-input,
+.tm-overlay-panel-sheet .tm-col-filter-select,
+.tm-overlay-panel-sheet .tm-col-filter-clear,
+.tm-overlay-panel-sheet .tm-view-item,
+.tm-overlay-panel-sheet .tm-view-edit-btn,
+.tm-overlay-panel-sheet .tm-view-delete-btn,
+.tm-overlay-panel-sheet .tm-view-set-default-btn,
+.tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn,
+.tm-overlay-panel-sheet .tm-data-table-cards-sheet__footer .tm-btn {
+  min-block-size: var(--tm-touch-target);
+}
+.tm-overlay-panel-sheet .tm-col-filter-clear,
+.tm-overlay-panel-sheet .tm-view-edit-btn,
+.tm-overlay-panel-sheet .tm-view-delete-btn,
+.tm-overlay-panel-sheet .tm-view-set-default-btn {
+  min-inline-size: var(--tm-touch-target);
+}
+.tm-overlay-panel-sheet .tm-view-item-row { gap: var(--tm-space-2); }
+.tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn + .tm-btn { margin-block-start: var(--tm-space-2); }
+
+/* The sheet header already carries Done, so the footer's second Done is redundant there; the popover
+   has no header action and keeps it. */
+.tm-overlay-panel-sheet .tm-btn.tm-data-table-cards-sheet__done { display: none; }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components.Filters;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 
@@ -20,6 +21,13 @@ public partial class TmViewManager : ComponentBase
     /// card-toolbar triggers (Choose columns, Export). Default false keeps the plain toggle.
     /// </summary>
     [Parameter] public bool Compact { get; set; }
+
+    /// <summary>
+    /// How the Views panel presents on a narrow viewport. Default <see cref="PanelPresentation.Popover"/> keeps the anchored panel;
+    /// <see cref="PanelPresentation.Auto"/> turns it into a full-width bottom sheet on a mobile viewport. 
+    /// <c>TmDataTable</c> and <c>TmMultiViewList</c> pass Auto together with their own mobile opt-in.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
 
     /// <summary>
     /// When true, each non-default view offers Set as default. The choice is persisted through

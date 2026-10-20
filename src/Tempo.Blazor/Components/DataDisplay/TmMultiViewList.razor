@@ -118,6 +118,7 @@
                 {
                     <TmViewManager Provider="ViewProvider"
                                    ViewContext="@ViewContext"
+                                   MobilePresentation="@(Responsive ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                    OnViewApplied="ApplyViewAsync"
                                    GetCurrentView="GetCurrentView"
                                    GetCurrentFilters="() => _externalFilters"

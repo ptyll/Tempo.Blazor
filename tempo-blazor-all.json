@@ -10500,6 +10500,13 @@
               "description": "Callback to get current view state."
             },
             {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the Views panel presents on a narrow viewport. Popover (default) keeps the anchored panel; Auto turns it into a full-width bottom sheet on a mobile viewport. TmDataTable passes Auto when MobileLayout is not None and TmMultiViewList when Responsive is on."
+            },
+            {
               "name": "OnCreateView",
               "type": "EventCallback<DataTableView>",
               "isRequired": false,
@@ -27810,6 +27817,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/dashboard-pointer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-menu-keys.test.mjs",
           "kind": "JavaScript"
         },
         {

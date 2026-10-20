@@ -98,6 +98,38 @@
     </div>
 </section>
 
+<!-- Edge cases: an empty card list and cards with very long titles -->
+<section class="demo-section" data-testid="mvl-edge-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmMvlDemo_EdgeTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">@Loc["TmMvlDemo_EdgeEmptyHeading"]</h3>
+        <div data-testid="mvl-edge-empty">
+            <TmMultiViewList TItem="TeamMember"
+                             Items="_edgeEmptyMembers"
+                             ViewContext="mvl-edge-empty"
+                             ViewMode="ListViewMode.Card"
+                             EmptyTitle="@Loc["TmMvlDemo_EdgeEmptyTitle"]"
+                             TitleField="m => m.Title"
+                             ShowSearch="false"
+                             ShowViewSwitcher="false" />
+        </div>
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmMvlDemo_EdgeLongHeading"]</h3>
+        <div data-testid="mvl-edge-long" style="max-inline-size: 24rem">
+            <TmMultiViewList TItem="TeamMember"
+                             Items="_edgeLongMembers"
+                             ViewContext="mvl-edge-long"
+                             ViewMode="ListViewMode.Card"
+                             AvatarFallback="AvatarFallback.Initials"
+                             TitleField="m => m.Title"
+                             SubTitleField="m => m.SubTitle"
+                             StatusLabelField="m => m.StatusLabel"
+                             ShowSearch="false"
+                             ShowViewSwitcher="false" />
+        </div>
+    </div>
+</section>
 <!-- Page Header -->
 <div class="mb-8">
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Multi View List</h1>
@@ -500,6 +532,9 @@
         new() { Title = "Alan Turing", SubTitle = "Account Lead", Role = "Analyst", StatusLabel = "Inactive" }
     ];
 
+    // ── Edge-case playground (fixed data) ──
+    private readonly List<TeamMember> _edgeEmptyMembers = [];
+    private List<TeamMember> _edgeLongMembers = [];
     private IReadOnlyList<GroupFieldDefinition<TeamMember>> _redesignGroupFields = [];
 
     private readonly InMemoryViewProvider _redesignViews = new([]);
@@ -523,6 +558,11 @@
         _avatarFallbackOptions = EnumOptions<AvatarFallback>();
         _cellLayoutOptions = EnumOptions<TableCellLayout>();
         _cardActivationOptions = EnumOptions<CardActivation>();
+        _edgeLongMembers =
+        [
+            new() { Title = Loc["TmMvlDemo_EdgeLongTitle"], SubTitle = Loc["TmMvlDemo_EdgeLongSubtitle"], Role = "Developer", StatusLabel = "Active" },
+            new() { Title = "Grace Hopper", SubTitle = Loc["TmMvlDemo_EdgeLongSubtitle"], Role = "Developer", StatusLabel = "Inactive" }
+        ];
         _redesignGroupFields =
         [
             new GroupFieldDefinition<TeamMember> { FieldName = "Role", Label = Loc["TmMvlDemo_RedesignRole"], FieldAccessor = m => m.Role }

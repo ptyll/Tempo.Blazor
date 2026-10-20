@@ -19,6 +19,7 @@
                     Align="OverlayAlign.End"
                     Role="dialog"
                     Title="@Loc["TmViewManager_Views"]"
+                    MobilePresentation="MobilePresentation"
                     Class="tm-view-manager-panel">
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
@@ -148,7 +149,7 @@
          ShowCloseButton="true"
          InitialFocusTargetId="@_nameId"
          RestoreFocusTargetId="@_toggleId"
-         MobilePresentation="MobilePresentation.Auto">
+         MobilePresentation="Tempo.Blazor.Components.Feedback.MobilePresentation.Auto">
     <ChildContent>
         <div class="tm-view-modal">
                 @if (_saveCurrent)
