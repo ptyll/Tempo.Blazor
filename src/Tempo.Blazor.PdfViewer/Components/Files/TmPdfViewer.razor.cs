@@ -1221,6 +1221,24 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         catch { }
     }
 
+    private async Task EditCommentAsync(DocumentCommentEditRequest request)
+    {
+        try
+        {
+            await EffectiveAnnotationProvider.EditAsync(AnnotationDocumentId, request);
+            await LoadAnnotationsAsync();
+            await RefreshAnnotationOverlayAsync();
+        }
+        catch { }
+    }
+
+    private async Task CloseAnnotationsPanelAsync()
+    {
+        _annotationsPanelVisible = false;
+        await InvokeAsync(StateHasChanged);
+        await RefreshAnnotationOverlayAsync();
+    }
+
     private async Task SelectThreadAsync(string? threadId)
     {
         _selectedThreadId = threadId;

@@ -10704,6 +10704,13 @@
           "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
         },
         {
+          "name": "ShowChevron",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the trigger renders its trailing chevron. Default is true; compact icon-only triggers (e.g. the PDF comment \"⋯\" action menu) turn it off to keep a square hit area (since 2.9.1)."
+        },
+        {
           "name": "Text",
           "type": "string",
           "isRequired": false,

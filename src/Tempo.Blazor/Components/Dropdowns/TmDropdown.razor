@@ -23,7 +23,10 @@
             <TmIcon Name="@Icon" Size="IconSize.Sm" />
         }
         <span>@Text</span>
-        <TmIcon Name="@((_isOpen ? IconNames.ChevronUp : IconNames.ChevronDown))" Size="IconSize.Sm" />
+        @if (ShowChevron)
+        {
+            <TmIcon Name="@((_isOpen ? IconNames.ChevronUp : IconNames.ChevronDown))" Size="IconSize.Sm" />
+        }
     </button>
 
     @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
@@ -65,6 +68,12 @@
 
     /// <summary>Optional leading icon on the trigger button.</summary>
     [Parameter] public string? Icon { get; set; }
+
+    /// <summary>
+    /// Whether the trigger renders its trailing chevron. Default is true; compact icon-only
+    /// triggers (e.g. the PDF comment "⋯" action menu) turn it off to keep a square hit area.
+    /// </summary>
+    [Parameter] public bool ShowChevron { get; set; } = true;
 
     /// <summary>Fires when a dropdown item is selected (value = item key).</summary>
     [Parameter] public EventCallback<string> OnSelect { get; set; }

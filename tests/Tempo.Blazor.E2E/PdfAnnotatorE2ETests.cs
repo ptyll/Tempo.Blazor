@@ -219,15 +219,18 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await stamp.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
         await SaveScreenshotAsync(page, "stamp-placed");
 
-        // Drawing: drag a stroke, then save the draft.
+        // Drawing: drag a stroke, then save the draft. The stroke must start inside the
+        // VISIBLE part of the canvas — the page canvas may overflow (and be clipped by) the
+        // scrollable canvas wrap when the panel narrows the viewer, and raw mouse coordinates
+        // from the surface's full bounding box would then land on the clipped zone.
         await alice.Locator("[data-testid='pdf-annotator-mode-draw']").ClickAsync();
-        var surface = alice.Locator("[data-testid='pdf-annotator-surface']");
-        var box = await surface.BoundingBoxAsync();
-        Assert.IsNotNull(box, "The drawing surface should have a bounding box.");
-        await page.Mouse.MoveAsync((float)(box!.X + 60), (float)(box.Y + 220));
+        var p1 = await VisibleSurfacePointAsync(alice, 0.30, 0.45);
+        var p2 = await VisibleSurfacePointAsync(alice, 0.55, 0.55);
+        var p3 = await VisibleSurfacePointAsync(alice, 0.75, 0.50);
+        await page.Mouse.MoveAsync((float)p1.X, (float)p1.Y);
         await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync((float)(box.X + 140), (float)(box.Y + 260), new MouseMoveOptions { Steps = 8 });
-        await page.Mouse.MoveAsync((float)(box.X + 220), (float)(box.Y + 210), new MouseMoveOptions { Steps = 8 });
+        await page.Mouse.MoveAsync((float)p2.X, (float)p2.Y, new MouseMoveOptions { Steps = 8 });
+        await page.Mouse.MoveAsync((float)p3.X, (float)p3.Y, new MouseMoveOptions { Steps = 8 });
         await page.Mouse.UpAsync();
 
         var composer = alice.Locator("[data-testid='pdf-annotator-new']");
@@ -354,10 +357,8 @@ public class PdfAnnotatorE2ETests : WasmTestBase
 
         // Edge 2: in draw mode a click without dragging (single-point stroke) must not open a draft.
         await alice.Locator("[data-testid='pdf-annotator-mode-draw']").ClickAsync();
-        var surface = alice.Locator("[data-testid='pdf-annotator-surface']");
-        var box = await surface.BoundingBoxAsync();
-        Assert.IsNotNull(box);
-        await page.Mouse.MoveAsync((float)(box!.X + 100), (float)(box.Y + 100));
+        var point = await VisibleSurfacePointAsync(alice, 0.5, 0.4);
+        await page.Mouse.MoveAsync((float)point.X, (float)point.Y);
         await page.Mouse.DownAsync();
         await page.Mouse.UpAsync();
         await page.WaitForTimeoutAsync(500);
@@ -371,7 +372,91 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         AssertNoBlazorErrors(handle);
     }
 
+    // ── Edit comment: saved through the provider, visible to the other user ──
+
+    /// <summary>
+    /// Phase 4 (shared thread cards): Alice edits her comment through the ⋯ menu; the provider
+    /// persists the body and Bob sees the edited text (and the edited card preview) in his pane.
+    /// Ends with the <c>panel-cards</c> screenshot of the redesigned card panels.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_EditComment_VisibleToOtherUser()
+    {
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
+        var bob = page.Locator("[data-testid='pdf-annotator-pane-bob']");
+        await alice.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(alice);
+        await WaitForSurfaceReadyAsync(bob);
+
+        // Alice adds a comment thread.
+        await alice.Locator("[data-testid='pdf-annotator-mode-comment']").ClickAsync();
+        await alice.Locator("[data-testid='pdf-annotator-surface']")
+            .ClickAsync(new LocatorClickOptions { Position = new Position { X = 150, Y = 120 } });
+        var composer = alice.Locator("[data-testid='pdf-annotator-new-input']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await composer.FillAsync("Původní text komentáře");
+        await alice.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
+
+        // The thread appears in BOTH panes; creating selects it in Alice's panel.
+        await bob.Locator("[data-testid='pdf-annotator-thread']").First
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        // Alice edits her comment via its ⋯ action menu.
+        await alice.Locator(".tm-pdf-annotator-panel .tm-pdf-comment-item__menu .tm-dropdown-trigger")
+            .First.ClickAsync();
+        await alice.Locator("[data-testid='pdf-annotator-edit']").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        var editInput = alice.Locator("[data-testid='pdf-annotator-edit-input']").First;
+        await editInput.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await editInput.FillAsync("Upravený text viditelný pro druhého uživatele");
+        await alice.Locator("[data-testid='pdf-annotator-edit-save']").First.ClickAsync();
+
+        // Bob opens the thread and sees the edited body (provider round-trip).
+        await bob.Locator("[data-testid='pdf-annotator-thread']").First.ClickAsync();
+        var bobComment = bob.Locator("[data-testid='pdf-annotator-comment']").First;
+        await bobComment.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await Assertions.Expect(bobComment).ToContainTextAsync(
+            "Upravený text viditelný pro druhého uživatele",
+            new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+        // Alice's collapsed card header shows the new preview as well.
+        await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-thread']").First)
+            .ToContainTextAsync("Upravený text viditelný",
+                new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+        await SaveScreenshotAsync(page, "panel-cards");
+        AssertNoBlazorErrors(handle);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A point inside the visible intersection of the annotator surface and the scrollable
+    /// canvas wrap, at relative coordinates (<paramref name="fx"/>, <paramref name="fy"/>).
+    /// The page canvas may overflow the wrap (and be clipped), so raw coordinates from the
+    /// surface's full bounding box can land on a zone the pointer can never reach.
+    /// </summary>
+    private static async Task<(double X, double Y)> VisibleSurfacePointAsync(
+        ILocator pane, double fx, double fy)
+    {
+        var surface = await pane.Locator("[data-testid='pdf-annotator-surface']").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The annotator surface has no bounding box.");
+        var wrap = await pane.Locator(".tm-pdf-viewer__canvas-wrap").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The canvas wrap has no bounding box.");
+
+        var left = Math.Max(surface.X, wrap.X);
+        var right = Math.Min(surface.X + surface.Width, wrap.X + wrap.Width);
+        var top = Math.Max(surface.Y, wrap.Y);
+        var bottom = Math.Min(surface.Y + surface.Height, wrap.Y + wrap.Height);
+        Assert.IsTrue(right > left && bottom > top,
+            "The annotator surface has no visible intersection with the canvas wrap.");
+
+        return (left + (right - left) * fx, top + (bottom - top) * fy);
+    }
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)
     {

@@ -34,7 +34,7 @@
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": false,
-      "description": "Current user id used for mention styling."
+      "description": "Current user id used for mention styling and permission checks."
     },
     {
       "name": "ShowResolved",
@@ -73,6 +73,12 @@
       "description": "Callback invoked when a reply is requested."
     },
     {
+      "name": "OnEditRequested",
+      "type": "EventCallback<DocumentCommentEditRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when an existing comment body is edited."
+    },
+    {
       "name": "OnResolveRequested",
       "type": "EventCallback<string>",
       "isRequired": false,
@@ -95,6 +101,12 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Callback invoked when the pending selection is dismissed."
+    },
+    {
+      "name": "OnCloseRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked when the panel's close button is pressed."
     }
   ]
 }

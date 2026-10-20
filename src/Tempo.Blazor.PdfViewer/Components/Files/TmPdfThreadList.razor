@@ -1,0 +1,204 @@
+@namespace Tempo.Blazor.Components.Files
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Models
+
+@* Shared thread list (PdfViewer redesign phase 4, PD4): renders the annotation threads of both
+   panels as TmPdfThreadCard headers whose expanded detail hosts the quoted text, the comments
+   and the sticky reply composer. The owning panel keeps only its header (title, filter, close)
+   and its own new-thread/draft prompt. The kind caption is decided through HideCommentKind —
+   the viewer passes true so plain comment threads render no kind label. All card test ids are
+   derived from TestIdBase (e.g. "pdf-annotation" or "pdf-annotator") so both panel contracts
+   stay unchanged. *@
+
+@if (!VisibleThreads.Any())
+{
+    @if (!string.IsNullOrWhiteSpace(EmptyText))
+    {
+        <div class="tm-pdf-thread-list__empty" data-testid="@TestIdFor("empty")">@EmptyText</div>
+    }
+}
+else
+{
+    <ul class="tm-pdf-thread-list">
+        @foreach (var thread in VisibleThreads)
+        {
+            <TmPdfThreadCard @key="thread.Id"
+                             ThreadId="@thread.Id"
+                             Number="@PdfAnnotationTextHelper.ThreadNumber(Threads, thread)"
+                             Color="@Color(thread)"
+                             KindLabel="@KindLabel(thread)"
+                             Preview="@PdfAnnotationTextHelper.Preview(thread)"
+                             AuthorName="@thread.Comments.FirstOrDefault()?.AuthorName"
+                             CreatedAt="@(thread.Comments.FirstOrDefault()?.CreatedAt ?? default)"
+                             PageNumber="@thread.Anchor.PageNumber"
+                             ReplyCount="@Math.Max(0, thread.Comments.Count - 1)"
+                             Resolved="@(thread.Status == DocumentCommentThreadStatus.Resolved)"
+                             Selected="@IsSelected(thread)"
+                             OnToggle="(() => SelectAsync(thread.Id))"
+                             DetailId="@DetailId(thread)"
+                             HeaderTestId="@TestIdFor("thread")"
+                             DetailTestId="@TestIdFor("detail")">
+                @if (!string.IsNullOrWhiteSpace(thread.Anchor.HighlightedText))
+                {
+                    <div class="tm-pdf-thread-list__quote">@PdfAnnotationTextHelper.Truncate(thread.Anchor.HighlightedText!)</div>
+                }
+
+                @foreach (var comment in thread.Comments)
+                {
+                    <TmPdfCommentItem @key="comment.Id"
+                                      ThreadId="@thread.Id"
+                                      Comment="@comment"
+                                      CurrentUserId="@CurrentUserId"
+                                      Disabled="@Disabled"
+                                      TestIdBase="@TestIdBase"
+                                      OnEditRequested="EditCommentAsync"
+                                      OnDeleteRequested="DeleteAsync" />
+                }
+
+                @if (!Disabled)
+                {
+                    <TmPdfComposer Placeholder="@ReplyPlaceholder"
+                                   SubmitLabel="@ReplySubmitLabel"
+                                   InputTestId="@TestIdFor("reply-input")"
+                                   SubmitTestId="@TestIdFor("reply-submit")"
+                                   SecondaryLabel="@(thread.Status == DocumentCommentThreadStatus.Open ? ResolveLabel : ReopenLabel)"
+                                   SecondaryTestId="@(thread.Status == DocumentCommentThreadStatus.Open ? TestIdFor("resolve") : TestIdFor("reopen"))"
+                                   OnSecondary="@(thread.Status == DocumentCommentThreadStatus.Open ? () => ResolveAsync(thread.Id) : () => ReopenAsync(thread.Id))"
+                                   Sticky="true"
+                                   ResetKey="@thread.Id"
+                                   OnSubmit="@(body => ReplyAsync(thread.Id, body))" />
+                }
+            </TmPdfThreadCard>
+        }
+    </ul>
+}
+
+@code {
+    // Per-instance id prefix: two panels on one page each render this list, and identical
+    // detail ids would break aria-controls/aria-labelledby.
+    private string _uid = "tm-pdf-th-" + Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>Annotation threads to render (the resolved filter applies on top).</summary>
+    [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
+
+    /// <summary>Selected thread id.</summary>
+    [Parameter] public string? SelectedThreadId { get; set; }
+
+    /// <summary>Callback invoked when the selected thread id changes.</summary>
+    [Parameter] public EventCallback<string?> SelectedThreadIdChanged { get; set; }
+
+    /// <summary>Current user id, used for comment permission checks.</summary>
+    [Parameter] public string? CurrentUserId { get; set; }
+
+    /// <summary>Whether resolved threads are shown.</summary>
+    [Parameter] public bool ShowResolved { get; set; }
+
+    /// <summary>Whether interaction (reply composer, comment menu) is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Base of the panel's testid contract (e.g. <c>pdf-annotation</c> or <c>pdf-annotator</c>);
+    /// the card and composer test ids derive as <c>{base}-thread</c>, <c>{base}-detail</c>,
+    /// <c>{base}-reply-*</c>, <c>{base}-resolve</c>, <c>{base}-reopen</c> and <c>{base}-empty</c>.
+    /// </summary>
+    [Parameter] public string? TestIdBase { get; set; }
+
+    /// <summary>Resolves the display color of a thread. When null the helper default is used.</summary>
+    [Parameter] public Func<DocumentCommentThread, string>? ColorResolver { get; set; }
+
+    /// <summary>
+    /// Hides the kind caption of plain comment threads so only Highlight/Stamp/Drawing carry a
+    /// label. The viewer's panel passes true; the annotator keeps captions for every kind.
+    /// </summary>
+    [Parameter] public bool HideCommentKind { get; set; }
+
+    /// <summary>Localized empty-state text rendered when no visible thread remains.</summary>
+    [Parameter] public string? EmptyText { get; set; }
+
+    /// <summary>Placeholder of the sticky reply composer.</summary>
+    [Parameter] public string? ReplyPlaceholder { get; set; }
+
+    /// <summary>Submit label of the sticky reply composer.</summary>
+    [Parameter] public string? ReplySubmitLabel { get; set; }
+
+    /// <summary>Label of the resolve action on an open thread.</summary>
+    [Parameter] public string? ResolveLabel { get; set; }
+
+    /// <summary>Label of the reopen action on a resolved thread.</summary>
+    [Parameter] public string? ReopenLabel { get; set; }
+
+    /// <summary>Callback invoked when a reply is requested.</summary>
+    [Parameter] public EventCallback<DocumentCommentReplyRequest> OnReplyRequested { get; set; }
+
+    /// <summary>Callback invoked when an existing comment body is edited.</summary>
+    [Parameter] public EventCallback<DocumentCommentEditRequest> OnEditRequested { get; set; }
+
+    /// <summary>Callback invoked when resolving a thread is requested.</summary>
+    [Parameter] public EventCallback<string> OnResolveRequested { get; set; }
+
+    /// <summary>Callback invoked when reopening a thread is requested.</summary>
+    [Parameter] public EventCallback<string> OnReopenRequested { get; set; }
+
+    /// <summary>Callback invoked when deleting a comment is requested.</summary>
+    [Parameter] public EventCallback<DocumentCommentDeleteRequest> OnDeleteRequested { get; set; }
+
+    private IEnumerable<DocumentCommentThread> VisibleThreads => Threads
+        .Where(thread => ShowResolved || thread.Status == DocumentCommentThreadStatus.Open);
+
+    private string? TestIdFor(string suffix)
+        => string.IsNullOrWhiteSpace(TestIdBase) ? null : $"{TestIdBase}-{suffix}";
+
+    private bool IsSelected(DocumentCommentThread thread)
+        => string.Equals(thread.Id, SelectedThreadId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// DOM id of the thread's expandable detail region, referenced by the header's
+    /// aria-controls. Unique per list instance (Guid prefix) and per thread (list index),
+    /// so two panels on one page never collide.
+    /// </summary>
+    private string DetailId(DocumentCommentThread thread)
+    {
+        for (var i = 0; i < Threads.Count; i++)
+        {
+            if (ReferenceEquals(Threads[i], thread) || string.Equals(Threads[i].Id, thread.Id, StringComparison.Ordinal))
+            {
+                return $"{_uid}-{i}";
+            }
+        }
+
+        return $"{_uid}-x";
+    }
+
+    private string Color(DocumentCommentThread thread)
+        => ColorResolver?.Invoke(thread)
+           ?? PdfAnnotationColorHelper.ResolveColor(thread, null, null, null);
+
+    private string? KindLabel(DocumentCommentThread thread)
+        => HideCommentKind && thread.Kind == DocumentAnnotationKind.Comment
+            ? null
+            : thread.Kind switch
+            {
+                DocumentAnnotationKind.Highlight => Loc["TmPdfAnnotator_KindHighlight"],
+                DocumentAnnotationKind.Stamp => Loc["TmPdfAnnotator_KindStamp"],
+                DocumentAnnotationKind.Drawing => Loc["TmPdfAnnotator_KindDrawing"],
+                _ => Loc["TmPdfAnnotator_KindComment"]
+            };
+
+    private async Task SelectAsync(string threadId)
+    {
+        // The selected thread id is owned by the parent; do not mutate the parameter here.
+        var next = string.Equals(threadId, SelectedThreadId, StringComparison.Ordinal) ? null : threadId;
+        await SelectedThreadIdChanged.InvokeAsync(next);
+    }
+
+    private Task ReplyAsync(string threadId, string body)
+        => OnReplyRequested.InvokeAsync(new DocumentCommentReplyRequest { ThreadId = threadId, Body = body });
+
+    private Task ResolveAsync(string threadId) => OnResolveRequested.InvokeAsync(threadId);
+
+    private Task ReopenAsync(string threadId) => OnReopenRequested.InvokeAsync(threadId);
+
+    private Task DeleteAsync(DocumentCommentDeleteRequest request) => OnDeleteRequested.InvokeAsync(request);
+
+    private Task EditCommentAsync(DocumentCommentEditRequest request) => OnEditRequested.InvokeAsync(request);
+}

@@ -113,6 +113,19 @@
                 <span class="tm-pdf-annotator__action-text">@Loc["TmPdfAnnotator_Print"]</span>
             </button>
         }
+
+        @* The panel toggle keeps the panel reachable when ShowPanel is unbound: the ✕ inside the
+           panel only flips the internal state, this button flips it back (aria-pressed reflects
+           the current visibility). *@
+        <button type="button"
+                class="tm-pdf-annotator__action tm-pdf-annotator__panel-toggle"
+                title="@Loc["TmPdfAnnotator_PanelToggle"]"
+                aria-label="@Loc["TmPdfAnnotator_PanelToggle"]"
+                aria-pressed="@(_panelVisible ? "true" : "false")"
+                data-testid="@TestId("pdf-annotator-panel-toggle")"
+                @onclick="TogglePanelAsync">
+            <TmIcon Name="@IconNames.PanelRight" Size="IconSize.Sm" />
+        </button>
     </div>
 
     <div class="tm-pdf-annotator__body">
@@ -151,11 +164,12 @@
             </TmPdfViewer>
         </div>
 
-        @if (ShowPanel)
+        @if (_panelVisible)
         {
             <TmPdfAnnotatorPanel Threads="_threads"
                                  SelectedThreadId="@_selectedThreadId"
                                  SelectedThreadIdChanged="SelectThreadAsync"
+                                 CurrentUserId="@(CurrentUser?.UserId)"
                                  ShowResolved="_showResolved"
                                  ShowResolvedChanged="SetShowResolvedAsync"
                                  ColorResolver="_colorResolver"
@@ -164,9 +178,11 @@
                                  OnCreateRequested="CreateFromDraftAsync"
                                  OnDraftDismissed="DismissDraftAsync"
                                  OnReplyRequested="ReplyToThreadAsync"
+                                 OnEditRequested="EditCommentAsync"
                                  OnResolveRequested="ResolveThreadAsync"
                                  OnReopenRequested="ReopenThreadAsync"
-                                 OnDeleteRequested="DeleteCommentAsync" />
+                                 OnDeleteRequested="DeleteCommentAsync"
+                                 OnCloseRequested="ClosePanelAsync" />
         }
     </div>
 </div>

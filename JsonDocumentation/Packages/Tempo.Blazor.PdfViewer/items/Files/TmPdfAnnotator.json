@@ -110,6 +110,12 @@
       "description": "Whether the thread panel is rendered. Default is true."
     },
     {
+      "name": "ShowPanelChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback invoked when the panel's close button requests to hide the panel (two-way ShowPanel binding)."
+    },
+    {
       "name": "ShowViewerToolbar",
       "type": "bool",
       "isRequired": false,

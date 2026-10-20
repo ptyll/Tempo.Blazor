@@ -518,4 +518,65 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
 
         act.Should().NotThrow();
     }
+
+    // ── Phase 4 — shared cards: panel close and comment edit ─────────────────
+
+    [Fact]
+    public void Panel_Close_RaisesShowPanelChanged()
+    {
+        var showPanel = true;
+        var cut = Render(Seeded(Highlight("h1")), p => p
+            .Add(x => x.ShowPanelChanged, EventCallback.Factory.Create<bool>(this, v => showPanel = v)));
+
+        cut.WaitForElement("[data-testid='pdf-annotator-close']").Click();
+
+        showPanel.Should().BeFalse("the panel's ✕ raises ShowPanelChanged(false) for two-way ShowPanel binding");
+
+        // A host bound to ShowPanel=false does not render the panel at all.
+        var hidden = Render(Seeded(Highlight("h1")), p => p.Add(x => x.ShowPanel, false));
+        hidden.FindAll("[data-testid='pdf-annotator-panel']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Panel_CloseUnbound_HidesPanel_AndToolbarToggleReopens()
+    {
+        var cut = Render(Seeded(Highlight("h1")));
+
+        cut.WaitForElement("[data-testid='pdf-annotator-close']").Click();
+
+        cut.FindAll("[data-testid='pdf-annotator-panel']").Should().BeEmpty(
+            "the ✕ must hide the panel even when ShowPanel is unbound (no host echo)");
+        cut.Find("[data-testid='pdf-annotator-panel-toggle']")
+            .GetAttribute("aria-pressed").Should().Be("false", "the toggle mirrors the hidden panel");
+
+        cut.Find("[data-testid='pdf-annotator-panel-toggle']").Click();
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='pdf-annotator-panel']").Should().HaveCount(1,
+                "the toolbar toggle reopens the panel"));
+        cut.Find("[data-testid='pdf-annotator-panel-toggle']")
+            .GetAttribute("aria-pressed").Should().Be("true", "the toggle mirrors the visible panel");
+    }
+
+    [Fact]
+    public async Task EditComment_CallsProviderEditAsync()
+    {
+        var thread = Highlight("h1");
+        thread.Comments[0].CanEdit = true;
+        var provider = Seeded(thread);
+        var cut = Render(provider);
+
+        cut.WaitForElement("[data-testid='pdf-annotator-thread']").Click();
+        cut.WaitForElement(".tm-pdf-annotator-panel .tm-pdf-comment-item__menu .tm-dropdown-trigger").Click();
+        cut.WaitForElement("[data-testid='pdf-annotator-edit']").Click();
+        cut.WaitForElement("[data-testid='pdf-annotator-edit-input']").Input("edited by bob");
+        cut.Find("[data-testid='pdf-annotator-edit-save']").Click();
+
+        await cut.InvokeAsync(async () =>
+        {
+            var threads = await provider.GetThreadsAsync(DocId);
+            threads[0].Comments[0].Body.Should().Be("edited by bob");
+            threads[0].Comments[0].EditedAt.Should().NotBeNull();
+        });
+    }
 }

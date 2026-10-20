@@ -31,6 +31,12 @@
       "description": "Callback invoked when the selected thread id changes."
     },
     {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id, used for comment permission checks."
+    },
+    {
       "name": "ShowResolved",
       "type": "bool",
       "isRequired": false,
@@ -86,6 +92,12 @@
       "description": "Callback invoked when a reply is requested."
     },
     {
+      "name": "OnEditRequested",
+      "type": "EventCallback<DocumentCommentEditRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when an existing comment body is edited."
+    },
+    {
       "name": "OnResolveRequested",
       "type": "EventCallback<string>",
       "isRequired": false,
@@ -102,6 +114,12 @@
       "type": "EventCallback<DocumentCommentDeleteRequest>",
       "isRequired": false,
       "description": "Callback invoked when deleting a comment is requested."
+    },
+    {
+      "name": "OnCloseRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked when the panel's close button is pressed."
     }
   ]
 }

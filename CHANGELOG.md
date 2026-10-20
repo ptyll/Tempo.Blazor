@@ -39,7 +39,132 @@
   `title` and `zoomMode` (`custom` | `fit-width` | `fit-page`); the `pdf-viewer` role is
   unchanged.
 
+- **TmPdfViewer/TmPdfAnnotator: shared thread cards for both annotation panels.** The
+  `TmPdfAnnotationThreadPanel` and `TmPdfAnnotatorPanel` now compose three new components —
+  `TmPdfThreadCard` (card header with colored badge, plain-case kind label, preview,
+  "author · time", "Str. N" page reference, neutral reply count, success-subtle "Resolved" chip
+  and chevron over the expandable detail), `TmPdfCommentItem` (TmAvatar with initials or the
+  author's image, body with an "(Edited)" marker, and a "⋯" `TmDropdown` menu with Edit and
+  Delete in place of the inline link) and `TmPdfComposer` (the textarea + 32px-minimum actions
+  row; the reply composer is sticky at the bottom of the expanded thread and supports
+  Ctrl+Enter). Both panels keep their public parameters and `data-testid` contract; the cards
+  are white surfaces on the muted panel background with `--tm-radius-card`.
+
+- **TmPdfViewer/TmPdfAnnotator: comment editing and panel close.** Both panels gain
+  `OnEditRequested` (`EventCallback<DocumentCommentEditRequest>`); the viewer and the annotator
+  persist the edit through `IPdfAnnotationProvider.EditAsync` and refresh the threads. The
+  panels gain `OnCloseRequested` — a ✕ in the panel header; the viewer then hides the
+  annotations panel and the annotator raises `ShowPanelChanged` (two-way `ShowPanel`). The
+  panel width keeps flowing through the `--tm-pdf-panel-width` token (280px viewer /
+  300px annotator).
+
+- **TmPdfViewer/TmPdfAnnotator: the thread cards moved into one shared `TmPdfThreadList`.**
+  Both panels now delegate their card loop to a public `TmPdfThreadList` (XML-documented, JSON
+  overlay + bundle) that owns the `TmPdfThreadCard` rendering — `@key="thread.Id"` per card,
+  `@key="comment.Id"` per comment — plus the quoted text and the sticky reply composer. The
+  panels keep only their header (title, resolved filter, ✕) and their own new-thread/draft
+  prompt; they pass the localized reply labels and decide the kind-caption policy through
+  `HideCommentKind` (the viewer passes `true`, so plain comment threads render no kind label;
+  the annotator keeps captions for every kind). The shared text helpers (`Truncate`,
+  `Preview`, `ThreadNumber`) and the single `FormatTime` live in one internal helper used by
+  the card and the comment item alike, and the card/comment test ids keep flowing from
+  `TestIdBase` (the panels now pass `TestId("pdf-annotation")` / `TestId("pdf-annotator")`,
+  so a host `TestIdPrefix` is respected).
+
+- **TmPdfAnnotator: the ✕ keeps working without a `ShowPanel` binding, and a toolbar toggle
+  reopens the panel.** The annotator now tracks the panel visibility internally (synced from
+  `ShowPanel` only when the parameter value changes), so an unbound host can still close the
+  panel via the ✕; `pdf-annotator-panel-toggle` in the toolbar flips it back and mirrors the
+  state through `aria-pressed` (localized label `TmPdfAnnotator_PanelToggle`).
+
+- **TmDropdown: `ShowChevron` (default `true`).** Compact icon-only triggers can drop the
+  trailing chevron; the PDF comment "⋯" menu uses it to stay a compact square
+  (`min-width`/`min-height: var(--tm-space-8)`) that never stretches the comment card.
+
+- **TmPdfViewer/TmPdfAnnotator: comment head and card chrome polish.** The comment head splits
+  into two rows — author + ⋯ menu on row 1 (the author shrinks with `flex: 0 1 auto` but never
+  below `min-width: 4ch`), time + "(Edited)" on row 2; a changed `Comment.Id` closes a stale
+  inline edit. A selected thread card is marked by `border-color: var(--tm-color-primary)` and
+  a `var(--tm-color-primary-subtle)` header background — the focus ring stays reserved for
+  `:focus-visible`; the reply count moved top-right of the card header (the meta row keeps
+  "author · time · page ref", so the page ref and the reply count are no longer glued
+  together); and the composer textarea carries its localized placeholder as `aria-label`.
+
 ### Breaking / Migration
+
+- **TmPdfAnnotationThreadPanel / TmPdfAnnotatorPanel internal DOM replaced by the shared cards
+  (TmPdfThreadCard + TmPdfCommentItem + TmPdfComposer).** The panels' own item/thread classes
+  are gone; hosts styling the internals must move to the new shared classes:
+
+  | Old class | New class |
+  |---|---|
+  | `.tm-pdf-annotation-panel__item` / `.tm-pdf-annotator-panel__item` | `li.tm-pdf-thread-card` |
+  | `…__item--selected` | `.tm-pdf-thread-card--selected` |
+  | `…__item--resolved` | `.tm-pdf-thread-card--resolved` |
+  | `…__thread-head` | `.tm-pdf-thread-card__header` |
+  | `…__badge` | `.tm-pdf-thread-card__badge` |
+  | `…__kind` (annotator) | `.tm-pdf-thread-card__kind` (normal casing) |
+  | `…__preview` | `.tm-pdf-thread-card__preview` |
+  | `…__status` (plain uppercase text) | `.tm-pdf-thread-card__chip.tm-pdf-thread-card__chip--success` |
+  | `…__detail` | `.tm-pdf-thread-card__detail` |
+  | `…__list` / `…__empty` | `ul.tm-pdf-thread-list` / `.tm-pdf-thread-list__empty` (the shared `TmPdfThreadList`) |
+  | `…__quote` (inside a thread) | `.tm-pdf-thread-list__quote` (panel prompts keep `…panel__quote`) |
+  | `…__comment` | `.tm-pdf-comment-item` |
+  | `…__comment-head` / `__author` / `__time` | `.tm-pdf-comment-item__head` / `__author` / `__time` |
+  | `…__comment-body` | `.tm-pdf-comment-item__body` |
+  | `…__link` (inline delete link) | `.tm-pdf-comment-item__menu .tm-dropdown-item` (⋯ menu: Edit + Delete) |
+  | `…__input` | `.tm-pdf-composer__input` |
+  | `…__actions` | `.tm-pdf-composer__actions` |
+  | `…__btn` / `__btn--primary` / `__btn--ghost` | `.tm-pdf-composer__btn` / `__btn--primary` / `__btn--ghost` |
+  | — (new) | `.tm-pdf-thread-card__top`, `__spacer`, `__chevron`, `__meta`, `__author`, `__sep`, `__time`, `__page`, `__replies`; `.tm-pdf-comment-item__edited`, `__edit-input`, `__edit-actions`, `__meta`, `__menu`; `.tm-pdf-composer--sticky`; panels: `…__close`; annotator: `…__panel-toggle` |
+
+  ```html
+  <!-- BEFORE (annotation panel, simplified) -->
+  <li class="tm-pdf-annotation-panel__item tm-pdf-annotation-panel__item--selected">
+      <button class="tm-pdf-annotation-panel__thread-head">
+          <span class="tm-pdf-annotation-panel__badge">1</span>
+          <span class="tm-pdf-annotation-panel__preview">Body preview…</span>
+          <span class="tm-pdf-annotation-panel__status">RESOLVED</span>
+      </button>
+      <div class="tm-pdf-annotation-panel__detail">
+          <div class="tm-pdf-annotation-panel__comment">
+              <div class="tm-pdf-annotation-panel__comment-head">…</div>
+              <button class="tm-pdf-annotation-panel__link">Delete</button>
+          </div>
+      </div>
+  </li>
+
+  <!-- AFTER -->
+  <li class="tm-pdf-thread-card tm-pdf-thread-card--selected">
+      <button class="tm-pdf-thread-card__header" aria-expanded="true" aria-controls="…">
+          <span class="tm-pdf-thread-card__top">
+              <span class="tm-pdf-thread-card__badge" style="background:#2563eb">1</span>
+              <span class="tm-pdf-thread-card__kind">Comment</span>
+              <span class="tm-pdf-thread-card__spacer"></span>
+              <span class="tm-pdf-thread-card__chip tm-pdf-thread-card__chip--success">Resolved</span>
+              <span class="tm-pdf-thread-card__chevron">…</span>
+          </span>
+          <span class="tm-pdf-thread-card__preview">Body preview…</span>
+          <span class="tm-pdf-thread-card__meta">
+              <span class="tm-pdf-thread-card__author">Alena</span>
+              <span class="tm-pdf-thread-card__sep">·</span>
+              <span class="tm-pdf-thread-card__time">6.6.2025 9:00</span>
+              <span class="tm-pdf-thread-card__page">Str. 3</span>
+              <span class="tm-pdf-thread-card__replies">Odpovědi: 2</span>
+          </span>
+      </button>
+      <div class="tm-pdf-thread-card__detail">
+          <div class="tm-pdf-comment-item">…<div class="tm-pdf-comment-item__menu">⋯ Edit/Delete</div></div>
+          <div class="tm-pdf-composer tm-pdf-composer--sticky">…</div>
+      </div>
+  </li>
+  ```
+
+  The panel-level classes (`tm-pdf-annotation-panel__header/-title/-filter/-new/-prompt/-quote/-empty/-list`,
+  `tm-pdf-annotator-panel__*` equivalents, plus the new `__close`) are unchanged; the panel width
+  still resolves through `--tm-pdf-panel-width`. Delete moved from an inline link into the comment's
+  "⋯" menu, so automation must open the menu (`[data-testid='…-comment'] .tm-dropdown-trigger`)
+  before clicking `[data-testid='…-delete']`; the resolved chip text is no longer uppercased.
 
 - **TmPdfViewer toolbar DOM restructured (desktop reference).** The toolbar root is now
   `role="toolbar"` with labelled `role="group"` sections (Navigation | Zoom | Rotate | Mode ||

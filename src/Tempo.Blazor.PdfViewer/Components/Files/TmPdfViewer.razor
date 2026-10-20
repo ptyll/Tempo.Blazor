@@ -388,10 +388,12 @@
                                             PendingSelection="_pendingSelection"
                                             OnCreateThreadRequested="CreateThreadFromSelectionAsync"
                                             OnReplyRequested="ReplyToThreadAsync"
+                                            OnEditRequested="EditCommentAsync"
                                             OnResolveRequested="ResolveThreadAsync"
                                             OnReopenRequested="ReopenThreadAsync"
                                             OnDeleteRequested="DeleteCommentAsync"
-                                            OnSelectionDismissed="DismissSelectionAsync" />
+                                            OnSelectionDismissed="DismissSelectionAsync"
+                                            OnCloseRequested="CloseAnnotationsPanelAsync" />
             }
         </div>
     }

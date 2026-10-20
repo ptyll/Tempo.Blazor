@@ -258,13 +258,19 @@
           "name": "CurrentUserId",
           "type": "string?",
           "isRequired": false,
-          "description": "Current user id used for mention styling."
+          "description": "Current user id used for mention styling and permission checks."
         },
         {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
           "description": "Whether panel interaction is disabled."
+        },
+        {
+          "name": "OnCloseRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Callback invoked when the panel's close button is pressed."
         },
         {
           "name": "OnCreateThreadRequested",
@@ -277,6 +283,12 @@
           "type": "EventCallback<DocumentCommentDeleteRequest>",
           "isRequired": false,
           "description": "Callback invoked when deleting a comment is requested."
+        },
+        {
+          "name": "OnEditRequested",
+          "type": "EventCallback<DocumentCommentEditRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when an existing comment body is edited."
         },
         {
           "name": "OnReopenRequested",
@@ -442,6 +454,12 @@
           "description": "Whether the thread panel is rendered. Default is true."
         },
         {
+          "name": "ShowPanelChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Callback invoked when the panel's close button requests to hide the panel (two-way ShowPanel binding)."
+        },
+        {
           "name": "ShowResolved",
           "type": "bool",
           "isRequired": false,
@@ -578,6 +596,12 @@
           "description": "Resolves the display color of a thread."
         },
         {
+          "name": "CurrentUserId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Current user id, used for comment permission checks."
+        },
+        {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
@@ -597,6 +621,12 @@
           "description": "Color used for the draft indicator. Defaults to DefaultColor."
         },
         {
+          "name": "OnCloseRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Callback invoked when the panel's close button is pressed."
+        },
+        {
           "name": "OnCreateRequested",
           "type": "EventCallback<string>",
           "isRequired": false,
@@ -613,6 +643,12 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Callback invoked when the draft is dismissed."
+        },
+        {
+          "name": "OnEditRequested",
+          "type": "EventCallback<DocumentCommentEditRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when an existing comment body is edited."
         },
         {
           "name": "OnReopenRequested",
@@ -662,6 +698,402 @@
           "isRequired": false,
           "default": "[]",
           "description": "Annotation threads to render."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfCommentItem",
+      "kind": "Component",
+      "category": "Files",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "Shared PDF comment entry used by both annotation panels: a TmAvatar with initials or the author's image, the body with an edited marker, and a \"...\" TmDropdown menu with Edit and Delete in place of an inline link. Editing is an inline textarea with Save/Cancel, Ctrl+Enter and Escape.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfCommentItem.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Files"
+      ],
+      "parameters": [
+        {
+          "name": "Comment",
+          "type": "DocumentComment",
+          "isRequired": true,
+          "description": "Comment entry to render."
+        },
+        {
+          "name": "CurrentUserId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Current user id, used with DocumentCommentPermissionHelper."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether panel interaction is disabled; hides the action menu."
+        },
+        {
+          "name": "OnDeleteRequested",
+          "type": "EventCallback<DocumentCommentDeleteRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when the comment is deleted."
+        },
+        {
+          "name": "OnEditRequested",
+          "type": "EventCallback<DocumentCommentEditRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when the edited body is saved."
+        },
+        {
+          "name": "TestIdBase",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Base of the panel's testid contract (e.g. pdf-annotation or pdf-annotator); internal test ids are derived as {base}-comment, {base}-edit, {base}-delete, {base}-edit-input, {base}-edit-save and {base}-edit-cancel."
+        },
+        {
+          "name": "ThreadId",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Thread that owns the comment; used for edit/delete requests."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfComposer",
+      "kind": "Component",
+      "category": "Files",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "Shared PDF annotation composer used by both panels: a textarea plus a 32px-minimum actions row. The sticky variant pins the reply composer to the bottom of the expanded thread; the optional ghost secondary button carries Cancel, Resolve or Reopen. Ctrl+Enter submits.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfComposer.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Files"
+      ],
+      "parameters": [
+        {
+          "name": "AllowEmptySubmit",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Allows submitting an empty body (the annotator's note is optional for highlights and drawings). Ignored when CanSubmit is explicit."
+        },
+        {
+          "name": "CanSubmit",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "Explicit submit gate overriding the empty-body rules below. When null the body must not be blank unless AllowEmptySubmit is set."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the composer is disabled."
+        },
+        {
+          "name": "InputTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Test id of the textarea (panel contract, e.g. pdf-annotation-reply-input)."
+        },
+        {
+          "name": "OnSecondary",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Callback invoked when the secondary button is clicked."
+        },
+        {
+          "name": "OnSubmit",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Callback invoked with the body when the composer is submitted."
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Placeholder shown for an empty body."
+        },
+        {
+          "name": "ResetKey",
+          "type": "string?",
+          "isRequired": false,
+          "description": "When this key changes (e.g. another thread is selected) the body is cleared, so a stale draft never leaks into the next thread's composer."
+        },
+        {
+          "name": "SecondaryLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Label of the optional ghost secondary button (Cancel / Resolve / Reopen)."
+        },
+        {
+          "name": "SecondaryTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Test id of the secondary button (panel contract, e.g. pdf-annotation-resolve)."
+        },
+        {
+          "name": "Sticky",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the composer sticks to the bottom of the expanded thread."
+        },
+        {
+          "name": "SubmitLabel",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Label of the primary submit button."
+        },
+        {
+          "name": "SubmitTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Test id of the primary button (panel contract, e.g. pdf-annotation-reply-submit)."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfThreadCard",
+      "kind": "Component",
+      "category": "Files",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "Shared PDF annotation thread card used by both TmPdfAnnotationThreadPanel and TmPdfAnnotatorPanel: a colored badge, plain-case kind label, first-comment preview, author and time, page reference, neutral reply count, a success-subtle resolved chip, and a chevron over an expandable detail region.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Files"
+      ],
+      "parameters": [
+        {
+          "name": "AuthorName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Author display name of the initial comment, when known."
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Detail content rendered while the thread is selected."
+        },
+        {
+          "name": "Color",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS color for the badge background. When null the primary token is used."
+        },
+        {
+          "name": "CreatedAt",
+          "type": "DateTimeOffset",
+          "isRequired": false,
+          "description": "Creation timestamp of the initial comment (absolute until phase 9)."
+        },
+        {
+          "name": "DetailId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "DOM id of the expandable detail region, referenced by the header's aria-controls."
+        },
+        {
+          "name": "DetailTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Test id of the detail region (panel contract, e.g. pdf-annotation-detail)."
+        },
+        {
+          "name": "HeaderTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Test id of the header button (panel contract, e.g. pdf-annotation-thread)."
+        },
+        {
+          "name": "KindLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Localized annotation kind label rendered in normal casing, when present."
+        },
+        {
+          "name": "Number",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "Ordinal number rendered in the colored badge."
+        },
+        {
+          "name": "OnToggle",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Callback invoked when the header is clicked to toggle selection."
+        },
+        {
+          "name": "PageNumber",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "Page number the thread is anchored to."
+        },
+        {
+          "name": "Preview",
+          "type": "string?",
+          "isRequired": false,
+          "description": "First-comment preview text."
+        },
+        {
+          "name": "ReplyCount",
+          "type": "int",
+          "isRequired": false,
+          "description": "Number of replies (comments after the first) in the thread."
+        },
+        {
+          "name": "Resolved",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the thread is resolved; renders the success-subtle chip."
+        },
+        {
+          "name": "Selected",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the thread is selected (expanded detail, chevron up)."
+        },
+        {
+          "name": "ThreadId",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Stable thread identifier, exposed as data-thread-id."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfThreadList",
+      "kind": "Component",
+      "category": "Files",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "Shared thread list of the PDF annotation panels (TmPdfViewer and TmPdfAnnotator): renders each thread as an expandable TmPdfThreadCard whose detail hosts the quoted text, the comments (TmPdfCommentItem) and the sticky reply composer (TmPdfComposer). The owning panel keeps only its header and its new-thread/draft prompt. The kind caption of plain comment threads is controlled by HideCommentKind.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Files"
+      ],
+      "parameters": [
+        {
+          "name": "ColorResolver",
+          "type": "Func<DocumentCommentThread, string>?",
+          "isRequired": false,
+          "description": "Resolves the display color of a thread. When null the helper default is used."
+        },
+        {
+          "name": "CurrentUserId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Current user id, used for comment permission checks."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether interaction (reply composer, comment menu) is disabled."
+        },
+        {
+          "name": "EmptyText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Localized empty-state text rendered when no visible thread remains."
+        },
+        {
+          "name": "HideCommentKind",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Hides the kind caption of plain comment threads so only Highlight/Stamp/Drawing carry a label. The viewer's panel passes true; the annotator keeps captions for every kind."
+        },
+        {
+          "name": "OnDeleteRequested",
+          "type": "EventCallback<DocumentCommentDeleteRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when deleting a comment is requested."
+        },
+        {
+          "name": "OnEditRequested",
+          "type": "EventCallback<DocumentCommentEditRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when an existing comment body is edited."
+        },
+        {
+          "name": "OnReopenRequested",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Callback invoked when reopening a thread is requested."
+        },
+        {
+          "name": "OnReplyRequested",
+          "type": "EventCallback<DocumentCommentReplyRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when a reply is requested."
+        },
+        {
+          "name": "OnResolveRequested",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Callback invoked when resolving a thread is requested."
+        },
+        {
+          "name": "ReopenLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Label of the reopen action on a resolved thread."
+        },
+        {
+          "name": "ReplyPlaceholder",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Placeholder of the sticky reply composer."
+        },
+        {
+          "name": "ReplySubmitLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Submit label of the sticky reply composer."
+        },
+        {
+          "name": "ResolveLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Label of the resolve action on an open thread."
+        },
+        {
+          "name": "SelectedThreadId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Selected thread id."
+        },
+        {
+          "name": "SelectedThreadIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Callback invoked when the selected thread id changes."
+        },
+        {
+          "name": "ShowResolved",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether resolved threads are shown."
+        },
+        {
+          "name": "TestIdBase",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Base of the panel's testid contract (e.g. pdf-annotation or pdf-annotator); the card and composer test ids derive as {base}-thread, {base}-detail, {base}-reply-*, {base}-resolve, {base}-reopen and {base}-empty."
+        },
+        {
+          "name": "Threads",
+          "type": "IReadOnlyList<DocumentCommentThread>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Annotation threads to render (the resolved filter applies on top)."
         }
       ]
     },
@@ -1020,6 +1452,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-fit.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-render.mjs",
       "kind": "JavaScript"
     },
@@ -1044,6 +1480,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-fit.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-init.test.mjs",
       "kind": "JavaScript"
     },
@@ -1057,11 +1497,11 @@
     }
   ],
   "summary": {
-    "itemCount": 13,
-    "manualItemCount": 13,
-    "generatedItemCount": 13,
+    "itemCount": 17,
+    "manualItemCount": 17,
+    "generatedItemCount": 17,
     "generatedOnlyItemCount": 0,
-    "componentCount": 7,
+    "componentCount": 11,
     "publicApiTypeCount": 6
   }
 }

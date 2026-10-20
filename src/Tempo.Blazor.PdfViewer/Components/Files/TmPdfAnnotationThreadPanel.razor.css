@@ -1,4 +1,5 @@
-/* TmPdfAnnotationThreadPanel scoped styles */
+/* TmPdfAnnotationThreadPanel scoped styles — the viewer's comment panel: header, selection
+   prompt and quote only; the thread cards render through the shared TmPdfThreadList (phase 4). */
 
 .tm-pdf-annotation-panel {
     /* Component-local width token — resolved at the component root, not a global alias. */
@@ -9,7 +10,7 @@
     width: var(--tm-pdf-panel-width);
     flex-shrink: 0;
     overflow-y: auto;
-    background: var(--tm-color-surface-elevated);
+    background: var(--tm-bg-surface-secondary);
     border-left: 1px solid var(--tm-border-color);
     color: var(--tm-text-primary);
     font-size: 13px;
@@ -18,17 +19,17 @@
 .tm-pdf-annotation-panel__header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
     border-bottom: 1px solid var(--tm-border-color);
     position: sticky;
     top: 0;
-    background: var(--tm-color-surface-elevated);
-    z-index: 1;
+    background: var(--tm-bg-surface-secondary);
+    z-index: 2;
 }
 
 .tm-pdf-annotation-panel__title {
+    flex: 1;
     font-weight: 600;
 }
 
@@ -42,15 +43,36 @@
     user-select: none;
 }
 
-/* ── New comment composer ────────────────────────────────────────────────── */
+.tm-pdf-annotation-panel__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-7);
+    height: var(--tm-space-7);
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-pdf-annotation-panel__close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+/* ── New comment composer (shared TmPdfComposer inside the prompt card) ──── */
 
 .tm-pdf-annotation-panel__new {
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-2);
+    margin: var(--tm-space-2) var(--tm-space-3);
     padding: var(--tm-space-3);
-    border-bottom: 1px solid var(--tm-border-color);
-    background: color-mix(in srgb, var(--tm-color-primary) 6%, transparent);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-color-surface-elevated);
 }
 
 .tm-pdf-annotation-panel__prompt {
@@ -68,199 +90,10 @@
     font-style: italic;
 }
 
-.tm-pdf-annotation-panel__input {
-    width: 100%;
-    min-height: 56px;
-    resize: vertical;
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-control);
-    padding: var(--tm-space-2);
-    font: inherit;
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    outline: none;
-}
-
-.tm-pdf-annotation-panel__input:focus {
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-focus-ring);
-}
-
-.tm-pdf-annotation-panel__actions {
-    display: flex;
-    gap: var(--tm-space-2);
-}
-
-.tm-pdf-annotation-panel__btn {
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-control);
-    padding: 4px 12px;
-    font: inherit;
-    font-size: var(--tm-font-size-xs);
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-
-.tm-pdf-annotation-panel__btn--primary {
-    background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
-}
-
-.tm-pdf-annotation-panel__btn--primary:hover:not(:disabled) {
-    background: var(--tm-color-primary-hover);
-}
-
-.tm-pdf-annotation-panel__btn--ghost {
-    background: transparent;
-    border-color: var(--tm-border-color);
-    color: var(--tm-text-primary);
-}
-
-.tm-pdf-annotation-panel__btn--ghost:hover:not(:disabled) {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-pdf-annotation-panel__btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* ── Empty state ─────────────────────────────────────────────────────────── */
-
-.tm-pdf-annotation-panel__empty {
-    padding: var(--tm-space-6) var(--tm-space-3);
-    text-align: center;
-    color: var(--tm-text-secondary);
-    font-size: 13px;
-}
-
-/* ── Thread list ─────────────────────────────────────────────────────────── */
-
-.tm-pdf-annotation-panel__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.tm-pdf-annotation-panel__item {
-    border-bottom: 1px solid var(--tm-border-color);
-}
-
-.tm-pdf-annotation-panel__item--selected {
-    background: var(--tm-bg-surface);
-}
-
-.tm-pdf-annotation-panel__item--resolved .tm-pdf-annotation-panel__preview {
-    text-decoration: line-through;
-    color: var(--tm-text-secondary);
-}
-
-.tm-pdf-annotation-panel__thread-head {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    width: 100%;
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: none;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.tm-pdf-annotation-panel__thread-head:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-pdf-annotation-panel__badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    border-radius: var(--tm-radius-full);
-    background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary);
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.tm-pdf-annotation-panel__preview {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-pdf-annotation-panel__status {
-    font-size: 11px;
-    color: var(--tm-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-/* ── Thread detail ───────────────────────────────────────────────────────── */
-
-.tm-pdf-annotation-panel__detail {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-2);
-    padding: 0 var(--tm-space-3) var(--tm-space-3);
-}
-
-.tm-pdf-annotation-panel__comment {
-    padding: var(--tm-space-2);
-    border-radius: var(--tm-radius-control);
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-}
-
-.tm-pdf-annotation-panel__comment-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
-    margin-bottom: var(--tm-space-1);
-}
-
-.tm-pdf-annotation-panel__author {
-    font-weight: 600;
-    font-size: var(--tm-font-size-xs);
-}
-
-.tm-pdf-annotation-panel__time {
-    font-size: 11px;
-    color: var(--tm-text-secondary);
-    white-space: nowrap;
-}
-
-.tm-pdf-annotation-panel__comment-body {
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.tm-pdf-annotation-panel__link {
-    align-self: flex-start;
-    margin-top: var(--tm-space-1);
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: var(--tm-color-primary);
-    font: inherit;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.tm-pdf-annotation-panel__link:hover {
-    text-decoration: underline;
-}
-
-/* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* ── Thread list: rendered by the shared TmPdfThreadList (TmPdfThreadList.razor.css) ── */
 
 @media (prefers-reduced-motion: reduce) {
-    .tm-pdf-annotation-panel__btn {
+    .tm-pdf-annotation-panel__close {
         transition: none;
     }
 }

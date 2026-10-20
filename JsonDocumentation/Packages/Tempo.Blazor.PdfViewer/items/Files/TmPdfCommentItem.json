@@ -1,0 +1,57 @@
+{
+  "itemName": "TmPdfCommentItem",
+  "kind": "Component",
+  "category": "Files",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "Shared PDF comment entry used by both annotation panels: a TmAvatar with initials or the author's image, the body with an edited marker, and a \"...\" TmDropdown menu with Edit and Delete in place of an inline link. Editing is an inline textarea with Save/Cancel, Ctrl+Enter and Escape.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfCommentItem.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "ThreadId",
+      "type": "string",
+      "isRequired": false,
+      "description": "Thread that owns the comment; used for edit/delete requests."
+    },
+    {
+      "name": "Comment",
+      "type": "DocumentComment",
+      "isRequired": false,
+      "description": "Comment entry to render."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id, used with DocumentCommentPermissionHelper."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether panel interaction is disabled; hides the action menu."
+    },
+    {
+      "name": "OnEditRequested",
+      "type": "EventCallback<DocumentCommentEditRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when the edited body is saved."
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback<DocumentCommentDeleteRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when the comment is deleted."
+    },
+    {
+      "name": "TestIdBase",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Base of the panel's testid contract (e.g. pdf-annotation or pdf-annotator); internal test ids are derived as {base}-comment, {base}-edit, {base}-delete, {base}-edit-input, {base}-edit-save and {base}-edit-cancel."
+    }
+  ]
+}

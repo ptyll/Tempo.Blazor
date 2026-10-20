@@ -1,0 +1,113 @@
+{
+  "itemName": "TmPdfThreadCard",
+  "kind": "Component",
+  "category": "Files",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "Shared PDF annotation thread card used by both TmPdfAnnotationThreadPanel and TmPdfAnnotatorPanel: a colored badge, plain-case kind label, first-comment preview, author and time, page reference, neutral reply count, a success-subtle resolved chip, and a chevron over an expandable detail region.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadCard.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "ThreadId",
+      "type": "string",
+      "isRequired": false,
+      "description": "Stable thread identifier, exposed as data-thread-id."
+    },
+    {
+      "name": "Number",
+      "type": "int",
+      "isRequired": false,
+      "description": "Ordinal number rendered in the colored badge.",
+      "default": "1"
+    },
+    {
+      "name": "Color",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS color for the badge background. When null the primary token is used."
+    },
+    {
+      "name": "KindLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Localized annotation kind label rendered in normal casing, when present."
+    },
+    {
+      "name": "Preview",
+      "type": "string?",
+      "isRequired": false,
+      "description": "First-comment preview text."
+    },
+    {
+      "name": "AuthorName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Author display name of the initial comment, when known."
+    },
+    {
+      "name": "CreatedAt",
+      "type": "DateTimeOffset",
+      "isRequired": false,
+      "description": "Creation timestamp of the initial comment (absolute until phase 9)."
+    },
+    {
+      "name": "PageNumber",
+      "type": "int",
+      "isRequired": false,
+      "description": "Page number the thread is anchored to.",
+      "default": "1"
+    },
+    {
+      "name": "ReplyCount",
+      "type": "int",
+      "isRequired": false,
+      "description": "Number of replies (comments after the first) in the thread."
+    },
+    {
+      "name": "Resolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the thread is resolved; renders the success-subtle chip."
+    },
+    {
+      "name": "Selected",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the thread is selected (expanded detail, chevron up)."
+    },
+    {
+      "name": "OnToggle",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked when the header is clicked to toggle selection."
+    },
+    {
+      "name": "DetailId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "DOM id of the expandable detail region, referenced by the header's aria-controls."
+    },
+    {
+      "name": "HeaderTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Test id of the header button (panel contract, e.g. pdf-annotation-thread)."
+    },
+    {
+      "name": "DetailTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Test id of the detail region (panel contract, e.g. pdf-annotation-detail)."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Detail content rendered while the thread is selected."
+    }
+  ]
+}

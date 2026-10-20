@@ -343,8 +343,12 @@ public class TmPdfAnnotationTests : LocalizationTestBase
         cut.Render();
         cut.Find("[data-testid='pdf-annotation-detail']").Should().NotBeNull();
 
-        // Delete the first (non-last) comment; the thread survives and stays selected.
+        // Delete the first (non-last) comment via its ⋯ action menu; the thread survives
+        // and stays selected.
+        cut.Find(".tm-pdf-annotation-panel .tm-pdf-comment-item__menu .tm-dropdown-trigger").Click();
         cut.FindAll("[data-testid='pdf-annotation-delete']").First().Click();
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='pdf-annotation-comment']").Should().ContainSingle());
         cut.Render();
 
         cut.Find("[data-testid='pdf-annotation-detail']").Should().NotBeNull();
@@ -405,5 +409,67 @@ public class TmPdfAnnotationTests : LocalizationTestBase
 
         cut.Find("[data-testid='pdf-search-count']").TextContent.Should().Contain("2");
         capturedPage.Should().Be(3);
+    }
+
+    // ── Phase 4 — shared cards: close button and comment edit ────────────────
+
+    [Fact]
+    public void Panel_CloseButton_RaisesCloseRequested_AndViewerHidesPanel()
+    {
+        // Part 1 — the panel itself raises OnCloseRequested when the header ✕ is clicked.
+        var closed = false;
+        var panel = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { TextRangeThread("t1") })
+            .Add(x => x.OnCloseRequested, EventCallback.Factory.Create(this, () => closed = true)));
+        panel.Find("[data-testid='pdf-annotation-close']").Click();
+        closed.Should().BeTrue("the panel's close button raises OnCloseRequested");
+
+        // Part 2 — the viewer hides the annotations panel entirely after the close request.
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(x => x.Url, "https://example.com/test.pdf")
+            .Add(x => x.EnableAnnotations, true));
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(3));
+        cut.Render();
+
+        cut.Find("[data-testid='pdf-annotation-panel']").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotation-close']").Click();
+        cut.Render();
+        cut.FindAll("[data-testid='pdf-annotation-panel']").Should().BeEmpty(
+            "the viewer hides the panel after its close request");
+    }
+
+    [Fact]
+    public async Task Viewer_EditComment_CallsProviderEditAsync_AndRaisesAnnotationsChanged()
+    {
+        var thread = TextRangeThread("t1");
+        thread.Comments[0].CanEdit = true;
+        var provider = new InMemoryPdfAnnotationProvider(new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
+        {
+            ["doc-1"] = [thread]
+        });
+        var changes = 0;
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(x => x.Url, "https://example.com/test.pdf")
+            .Add(x => x.EnableAnnotations, true)
+            .Add(x => x.AnnotationProvider, provider)
+            .Add(x => x.DocumentId, "doc-1")
+            .Add(x => x.AnnotationsChanged, EventCallback.Factory.Create<IReadOnlyList<DocumentCommentThread>>(this, _ => changes++)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(1));
+        cut.Render();
+        var changesAfterLoad = changes;
+
+        cut.Find("[data-testid='pdf-annotation-thread']").Click();
+        cut.Render();
+        cut.Find(".tm-pdf-annotation-panel .tm-pdf-comment-item__menu .tm-dropdown-trigger").Click();
+        cut.WaitForElement("[data-testid='pdf-annotation-edit']").Click();
+        cut.WaitForElement("[data-testid='pdf-annotation-edit-input']").Input("edited body");
+        cut.Find("[data-testid='pdf-annotation-edit-save']").Click();
+
+        var threads = await provider.GetThreadsAsync("doc-1");
+        threads[0].Comments[0].Body.Should().Be("edited body");
+        threads[0].Comments[0].EditedAt.Should().NotBeNull();
+        changes.Should().BeGreaterThan(changesAfterLoad,
+            "the viewer re-raises AnnotationsChanged after persisting the edit");
     }
 }

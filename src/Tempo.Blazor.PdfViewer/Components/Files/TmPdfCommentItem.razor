@@ -1,0 +1,194 @@
+@namespace Tempo.Blazor.Components.Files
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.AspNetCore.Components.Web
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Overlay
+
+@* Shared comment entry (PdfViewer redesign phase 4): TmAvatar with initials or image, the
+    body, and a compact square "⋯" TmDropdown menu (no chevron) with Edit and Delete instead
+    of an inline link. The head splits into two rows — author + menu, then time + "(Edited)".
+    Editing (PD3) is an inline textarea with Save/Cancel, Ctrl+Enter and Escape. Both annotation
+    panels compose this item via the shared TmPdfThreadList; they pass their testid contract
+    through <see cref="TestIdBase"/>. *@
+
+<div class="tm-pdf-comment-item" data-testid="@TestIdFor("comment")">
+    <TmAvatar Name="@Comment.AuthorName"
+              Src="@Comment.AuthorAvatarUrl"
+              Alt="@Comment.AuthorName"
+              Size="AvatarSize.Sm" />
+    <div class="tm-pdf-comment-item__main">
+        @* Row 1: author + action menu; row 2: time + edited marker. The author keeps a minimum
+           width so a long menu can never collapse the name to zero. *@
+        <div class="tm-pdf-comment-item__head">
+            <span class="tm-pdf-comment-item__author">@Comment.AuthorName</span>
+            <span class="tm-pdf-comment-item__head-spacer" aria-hidden="true"></span>
+            @if (CanEditComment || CanDeleteComment)
+            {
+                <div class="tm-pdf-comment-item__menu">
+                    <TmDropdown Text="⋯"
+                                AriaLabel="@Loc["TmPdfThread_MoreActions"]"
+                                Align="OverlayAlign.End"
+                                ShowChevron="false"
+                                Class="tm-pdf-comment-item__dropdown"
+                                OnSelect="HandleMenuAsync">
+                        @if (CanEditComment)
+                        {
+                            <TmDropdownItem Value="edit" data-testid="@TestIdFor("edit")">@Loc["TmPdfThread_Edit"]</TmDropdownItem>
+                        }
+                        @if (CanDeleteComment)
+                        {
+                            <TmDropdownItem Value="delete" data-testid="@TestIdFor("delete")">@Loc["TmPdfThread_Delete"]</TmDropdownItem>
+                        }
+                    </TmDropdown>
+                </div>
+            }
+        </div>
+        <div class="tm-pdf-comment-item__meta">
+            <span class="tm-pdf-comment-item__time">@PdfAnnotationTextHelper.FormatTime(Comment.CreatedAt)</span>
+            @if (Comment.EditedAt is not null)
+            {
+                <span class="tm-pdf-comment-item__edited">(@Loc["TmPdfThread_Edited"])</span>
+            }
+        </div>
+
+        @if (_editing)
+        {
+            <textarea class="tm-pdf-comment-item__edit-input"
+                      data-testid="@TestIdFor("edit-input")"
+                      aria-label="@Loc["TmPdfThread_Edit"]"
+                      @bind="_editBody"
+                      @bind:event="oninput"
+                      @onkeydown="EditKeyDownAsync"></textarea>
+            <div class="tm-pdf-comment-item__edit-actions">
+                <button type="button"
+                        class="tm-pdf-comment-item__btn tm-pdf-comment-item__btn--primary"
+                        data-testid="@TestIdFor("edit-save")"
+                        disabled="@string.IsNullOrWhiteSpace(_editBody)"
+                        @onclick="SaveEditAsync">
+                    @Loc["TmPdfThread_Save"]
+                </button>
+                <button type="button"
+                        class="tm-pdf-comment-item__btn tm-pdf-comment-item__btn--ghost"
+                        data-testid="@TestIdFor("edit-cancel")"
+                        @onclick="CancelEditAsync">
+                    @Loc["TmPdfThread_Cancel"]
+                </button>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(Comment.Body))
+        {
+            <div class="tm-pdf-comment-item__body">@Comment.Body</div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _editing;
+    private string? _editBody;
+
+    /// <summary>The <see cref="Comment.Id"/> seen by the previous parameter pass: the inline edit
+    /// closes when the item is reused for a different comment, so a stale draft never leaks.</summary>
+    private string? _lastCommentId;
+
+    /// <summary>Thread that owns the comment; used for edit/delete requests.</summary>
+    [Parameter] public string ThreadId { get; set; } = string.Empty;
+
+    /// <summary>Comment entry to render.</summary>
+    [Parameter] public DocumentComment Comment { get; set; } = new();
+
+    /// <summary>Current user id, used with <see cref="DocumentCommentPermissionHelper"/>.</summary>
+    [Parameter] public string? CurrentUserId { get; set; }
+
+    /// <summary>Whether panel interaction is disabled; hides the action menu.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Callback invoked when the edited body is saved.</summary>
+    [Parameter] public EventCallback<DocumentCommentEditRequest> OnEditRequested { get; set; }
+
+    /// <summary>Callback invoked when the comment is deleted.</summary>
+    [Parameter] public EventCallback<DocumentCommentDeleteRequest> OnDeleteRequested { get; set; }
+
+    /// <summary>
+    /// Base of the panel's testid contract (e.g. <c>pdf-annotation</c> or
+    /// <c>pdf-annotator</c>); internal test ids are derived as <c>{base}-comment</c>,
+    /// <c>{base}-edit</c>, <c>{base}-delete</c>, <c>{base}-edit-input</c>,
+    /// <c>{base}-edit-save</c> and <c>{base}-edit-cancel</c>.
+    /// </summary>
+    [Parameter] public string? TestIdBase { get; set; }
+
+    private bool CanEditComment
+        => !Disabled && DocumentCommentPermissionHelper.CanEdit(Comment, CurrentUserId);
+
+    private bool CanDeleteComment
+        => !Disabled && DocumentCommentPermissionHelper.CanDelete(Comment, CurrentUserId);
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_lastCommentId, Comment.Id, StringComparison.Ordinal))
+        {
+            _lastCommentId = Comment.Id;
+            _editing = false;
+            _editBody = null;
+        }
+    }
+
+    private string? TestIdFor(string suffix)
+        => string.IsNullOrWhiteSpace(TestIdBase) ? null : $"{TestIdBase}-{suffix}";
+
+    private async Task HandleMenuAsync(string value)
+    {
+        if (value == "edit")
+        {
+            _editBody = Comment.Body;
+            _editing = true;
+        }
+        else if (value == "delete")
+        {
+            await OnDeleteRequested.InvokeAsync(new DocumentCommentDeleteRequest
+            {
+                ThreadId = ThreadId,
+                CommentId = Comment.Id
+            });
+        }
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_editBody))
+        {
+            return;
+        }
+
+        var request = new DocumentCommentEditRequest
+        {
+            ThreadId = ThreadId,
+            CommentId = Comment.Id,
+            Body = _editBody
+        };
+        _editing = false;
+        _editBody = null;
+        await OnEditRequested.InvokeAsync(request);
+    }
+
+    private void CancelEditAsync()
+    {
+        _editing = false;
+        _editBody = null;
+    }
+
+    private async Task EditKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CancelEditAsync();
+        }
+        else if (e.Key == "Enter" && e.CtrlKey)
+        {
+            await SaveEditAsync();
+        }
+    }
+}

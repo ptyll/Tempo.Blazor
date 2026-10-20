@@ -27,6 +27,13 @@
       "description": "Optional leading icon on the trigger button."
     },
     {
+      "name": "ShowChevron",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the trigger renders its trailing chevron. Default is true; compact icon-only triggers (e.g. the PDF comment \"⋯\" action menu) turn it off to keep a square hit area (since 2.9.1)."
+    },
+    {
       "name": "OnSelect",
       "type": "EventCallback<string>",
       "isRequired": false,

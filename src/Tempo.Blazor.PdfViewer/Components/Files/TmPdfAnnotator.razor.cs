@@ -107,6 +107,10 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// <summary>Whether the thread panel is rendered. Default is true.</summary>
     [Parameter] public bool ShowPanel { get; set; } = true;
 
+    /// <summary>Callback invoked when the panel's close button requests to hide the panel
+    /// (two-way <see cref="ShowPanel"/> binding).</summary>
+    [Parameter] public EventCallback<bool> ShowPanelChanged { get; set; }
+
     /// <summary>Whether the underlying viewer toolbar (pagination, zoom) is shown. Default is true.</summary>
     [Parameter] public bool ShowViewerToolbar { get; set; } = true;
 
@@ -128,6 +132,12 @@ public partial class TmPdfAnnotator : TmComponentBase
     private string? _selectedThreadId;
     private bool _showResolved;
     private bool _showResolvedInitialized;
+    private bool _panelVisible = true;
+
+    /// <summary>The <see cref="ShowPanel"/> value seen by the previous parameter pass: the internal
+    /// panel state syncs from the parameter only when it actually changes, so a close from the
+    /// panel's ✕ (or the toolbar toggle) is not undone by an unrelated re-render of an unbound host.</summary>
+    private bool? _lastShowPanelParam;
     private PdfAnnotatorMode _mode;
     private PdfAnnotatorMode _lastModeParam;
     private int _currentPage = 1;
@@ -171,6 +181,12 @@ public partial class TmPdfAnnotator : TmComponentBase
         {
             _lastModeParam = Mode;
             _mode = Mode;
+        }
+
+        if (ShowPanel != _lastShowPanelParam)
+        {
+            _lastShowPanelParam = ShowPanel;
+            _panelVisible = ShowPanel;
         }
 
         if (!_showResolvedInitialized)
@@ -503,6 +519,32 @@ public partial class TmPdfAnnotator : TmComponentBase
             await LoadThreadsAsync();
         }
         catch { }
+    }
+
+    private async Task EditCommentAsync(DocumentCommentEditRequest request)
+    {
+        try
+        {
+            await EffectiveProvider.EditAsync(EffectiveDocumentId, request);
+            await LoadThreadsAsync();
+        }
+        catch { }
+    }
+
+    private async Task ClosePanelAsync()
+    {
+        // Internal state first: an unbound host never echoes ShowPanel back, so the panel must
+        // disappear (and be re-openable by the toolbar toggle) without the parameter changing.
+        _panelVisible = false;
+        await ShowPanelChanged.InvokeAsync(false);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task TogglePanelAsync()
+    {
+        _panelVisible = !_panelVisible;
+        await ShowPanelChanged.InvokeAsync(_panelVisible);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SelectThreadAsync(string? threadId)

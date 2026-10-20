@@ -102,6 +102,12 @@
     background: var(--tm-color-surface-hover);
 }
 
+/* Panel toggle: pressed state mirrors the panel visibility (aria-pressed). */
+.tm-pdf-annotator__panel-toggle[aria-pressed="true"] {
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
+}
+
 /* ── Body ────────────────────────────────────────────────────────────────── */
 
 .tm-pdf-annotator__body {

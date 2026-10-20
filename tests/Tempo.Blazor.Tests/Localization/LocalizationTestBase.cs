@@ -2683,6 +2683,19 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfViewer_SelectionPrompt"] = "Comment on selected text",
         ["TmPdfViewer_MarkerAriaLabel"] = "Comment {0} on page {1} ({2})",
 
+        // TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer (shared PDF thread cards)
+        ["TmPdfThread_Edit"] = "Edit",
+        ["TmPdfThread_Save"] = "Save",
+        ["TmPdfThread_Cancel"] = "Cancel",
+        ["TmPdfThread_Delete"] = "Delete",
+        ["TmPdfThread_MoreActions"] = "More actions",
+        ["TmPdfThread_ReplyCount"] = "Replies: {0}",
+        ["TmPdfThread_PageRef"] = "Page {0}",
+        ["TmPdfThread_ClosePanel"] = "Close panel",
+        ["TmPdfThread_Resolved"] = "Resolved",
+        ["TmPdfThread_Edited"] = "Edited",
+        ["TmPdfAnnotator_PanelToggle"] = "Toggle panel",
+
         // TmLedgerGrid + TmMoneyDisplay
         ["TmKycWizard_AddAddress"] = "Add address",
         ["TmKycWizard_AddChildOwner"] = "Add owner of this owner",
@@ -6565,6 +6578,19 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfViewer_NewCommentPlaceholder"] = "Přidat komentář…",
         ["TmPdfViewer_SelectionPrompt"] = "Okomentovat vybraný text",
         ["TmPdfViewer_MarkerAriaLabel"] = "Komentář {0} na stránce {1} ({2})",
+
+        // TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer (shared PDF thread cards)
+        ["TmPdfThread_Edit"] = "Upravit",
+        ["TmPdfThread_Save"] = "Uložit",
+        ["TmPdfThread_Cancel"] = "Zrušit",
+        ["TmPdfThread_Delete"] = "Smazat",
+        ["TmPdfThread_MoreActions"] = "Další akce",
+        ["TmPdfThread_ReplyCount"] = "Odpovědi: {0}",
+        ["TmPdfThread_PageRef"] = "Str. {0}",
+        ["TmPdfThread_ClosePanel"] = "Zavřít panel",
+        ["TmPdfThread_Resolved"] = "Vyřešeno",
+        ["TmPdfThread_Edited"] = "Upraveno",
+        ["TmPdfAnnotator_PanelToggle"] = "Přepnout panel",
 
         // TmDocumentEditor
         ["TmDocumentEditor_ProviderMissingTitle"] = "Provider dokumentu není nastaven",
