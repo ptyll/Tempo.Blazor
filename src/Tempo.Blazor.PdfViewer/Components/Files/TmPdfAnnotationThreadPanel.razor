@@ -7,29 +7,47 @@
    resolved filter, ✕ close) and the new-thread prompt for the pending selection; the thread
    cards themselves render through the shared TmPdfThreadList (PD4), which composes
    TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer. Comment edits flow through
-   OnEditRequested to the provider. *@
+   OnEditRequested to the provider. ShowChrome=false drops the panel's own title and close
+   button for the responsive sheet presentations (the TmSidePanel sheet owns them there); the
+   resolved filter stays in both presentations. *@
 
-<aside class="tm-pdf-annotation-panel" data-testid="@TestId("pdf-annotation-panel")" aria-label="@Loc["TmPdfViewer_AnnotationsPanelLabel"]">
+<aside class="@PanelClass" data-testid="@TestId("pdf-annotation-panel")" aria-label="@Loc["TmPdfViewer_AnnotationsPanelLabel"]">
 
-    <header class="tm-pdf-annotation-panel__header">
-        <span class="tm-pdf-annotation-panel__title">@Loc["TmPdfViewer_Annotations"]</span>
-        <label class="tm-pdf-annotation-panel__filter">
-            <input type="checkbox"
-                   checked="@ShowResolved"
-                   disabled="@Disabled"
-                   data-testid="@TestId("pdf-annotation-show-resolved")"
-                   @onchange="ToggleResolvedAsync" />
-            @Loc["TmPdfViewer_ShowResolved"]
-        </label>
-        <button type="button"
-                class="tm-pdf-annotation-panel__close"
-                data-testid="@TestId("pdf-annotation-close")"
-                aria-label="@Loc["TmPdfThread_ClosePanel"]"
-                title="@Loc["TmPdfThread_ClosePanel"]"
-                @onclick="() => OnCloseRequested.InvokeAsync()">
-            <TmIcon Name="@IconNames.X" />
-        </button>
-    </header>
+    @if (ShowChrome)
+    {
+        <header class="tm-pdf-annotation-panel__header">
+            <span class="tm-pdf-annotation-panel__title">@Loc["TmPdfViewer_Annotations"]</span>
+            <label class="tm-pdf-annotation-panel__filter">
+                <input type="checkbox"
+                       checked="@ShowResolved"
+                       disabled="@Disabled"
+                       data-testid="@TestId("pdf-annotation-show-resolved")"
+                       @onchange="ToggleResolvedAsync" />
+                @Loc["TmPdfViewer_ShowResolved"]
+            </label>
+            <button type="button"
+                    class="tm-pdf-annotation-panel__close"
+                    data-testid="@TestId("pdf-annotation-close")"
+                    aria-label="@Loc["TmPdfThread_ClosePanel"]"
+                    title="@Loc["TmPdfThread_ClosePanel"]"
+                    @onclick="() => OnCloseRequested.InvokeAsync()">
+                <TmIcon Name="@IconNames.X" />
+            </button>
+        </header>
+    }
+    else
+    {
+        <div class="tm-pdf-annotation-panel__header tm-pdf-annotation-panel__header--sheet">
+            <label class="tm-pdf-annotation-panel__filter">
+                <input type="checkbox"
+                       checked="@ShowResolved"
+                       disabled="@Disabled"
+                       data-testid="@TestId("pdf-annotation-show-resolved")"
+                       @onchange="ToggleResolvedAsync" />
+                @Loc["TmPdfViewer_ShowResolved"]
+            </label>
+        </div>
+    }
 
     @if (PendingSelection is not null && !Disabled)
     {
@@ -71,6 +89,21 @@
 </aside>
 
 @code {
+    /// <summary>
+    /// The panel's class: the base plus the <c>--sheet</c> modifier when the panel renders
+    /// inside a responsive sheet (<see cref="ShowChrome"/> false) — the sheet owns the width
+    /// there, so the docked 280px column and its left border give way.
+    /// </summary>
+    private string PanelClass => ShowChrome ? "tm-pdf-annotation-panel" : "tm-pdf-annotation-panel tm-pdf-annotation-panel--sheet";
+
+    /// <summary>
+    /// Whether the panel renders its own header (title + ✕ close). Default true — the docked
+    /// desktop presentation. When the panel is hosted inside a responsive sheet
+    /// (<c>TmSidePanel</c>), the sheet header owns the title and the close button, so the
+    /// host passes false and the panel renders only the resolved filter and its body.
+    /// </summary>
+    [Parameter] public bool ShowChrome { get; set; } = true;
+
     /// <summary>Annotation threads to render.</summary>
     [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
 

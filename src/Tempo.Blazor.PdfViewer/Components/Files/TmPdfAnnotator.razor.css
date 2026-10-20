@@ -130,8 +130,9 @@
 }
 
 /* The compact fallback row has no viewer trailing wrapper, so this is the row's
-   single end anchor. In the merged toolbar the viewer's
-   `.tm-pdf-viewer__toolbar-trailing` owns the one auto margin. */
+   single end anchor. In the merged toolbar the viewer's trailing section (the
+   core `.tm-toolbar-actions` box, hosting the `export` data-tm-group) owns the
+   one auto margin via the start section's flex: 1. */
 .tm-pdf-annotator__toolbar > .tm-pdf-annotator__toolbar-end {
     margin-inline-start: auto;
 }
@@ -246,7 +247,8 @@
     }
 
     ::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__page-count,
-    ::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__separator {
+    ::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__separator,
+    ::deep .tm-pdf-viewer__toolbar .tm-toolbar-divider {
         display: none;
     }
 }

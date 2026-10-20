@@ -198,6 +198,37 @@ the bar into More instead of squeezing into its touch-target `min-width`) and a 
 buttons and the More trigger a 44px target. Both rules are scoped to `.tm-toolbar`: a standalone
 `TmToolbarButton` (`TmDiagramEditor`, `TmModelingDiagramPreview`) keeps its pre-F4 flex behaviour.
 
+## The stable `data-tm-group` contract
+
+A `TmToolbarGroup` may carry a host-supplied `data-tm-group` attribute (through its
+`AdditionalAttributes`). The attribute is a **stable locator contract**: hosts and tests key off
+`[data-tm-group='…']` scoped from the editor root — never off positional CSS selectors on the
+toolbar's internal DOM. Where a group renders (start of the bar, trailing actions section, or as a
+labelled section of the "More" menu) is a layout detail that may change; the vocabulary below is
+frozen and may only grow.
+
+| Value | Owner |
+|-------|-------|
+| `history` | TmDiagramEditor undo/redo |
+| `clipboard` | TmDiagramEditor copy/paste |
+| `tools` | TmDiagramEditor tool palette; the PDF annotator's mode pills (`TmPdfAnnotator`) |
+| `format` | TmDiagramEditor formatting |
+| `insert` | TmDiagramEditor insertion |
+| `arrange` | TmDiagramEditor z-order/alignment |
+| `search` | TmDiagramEditor search; the PDF viewer's search toggle |
+| `panels` | TmDiagramEditor dock toggles; the PDF viewer's "Pages" (thumbnails) toggle |
+| `zoom` | TmDiagramEditor zoom; the PDF viewer's zoom presets + fit modes |
+| `view` | TmDiagramEditor view settings; the PDF viewer's single/continuous segmented control |
+| `canvas-size` | TmDiagramEditor canvas size |
+| `layout` | TmDiagramEditor auto-layout |
+| `export` | TmDiagramEditor export; the PDF viewer's trailing file links + host `ToolbarEnd` (the PDF annotator's export/print group carries the same value) |
+| `templates` | TmDiagramEditor stencils |
+| `import` | TmDiagramEditor imports |
+| `readonly` | TmDiagramEditor read-only toggle |
+| `navigation` | The PDF viewer's prev / page-input / next group |
+| `rotate` | The PDF viewer's rotation group |
+| `comments` | The PDF viewer's annotations/comments toggle |
+
 ## Labels
 
 * `Inline` (default) puts the text next to the icon; `Below` stacks it under the icon (the ribbon

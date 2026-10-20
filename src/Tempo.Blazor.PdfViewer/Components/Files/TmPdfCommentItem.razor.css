@@ -75,6 +75,15 @@
     border-radius: var(--tm-radius-control);
 }
 
+/* A finger cannot hit a 32px ⋯: the menu trigger meets the shared touch target
+   on a coarse pointer (the sheet presentations are the common case). */
+@media (pointer: coarse) {
+    .tm-pdf-comment-item__menu ::deep .tm-dropdown-trigger {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
 .tm-pdf-comment-item__body {
     white-space: pre-wrap;
     word-break: break-word;

@@ -293,9 +293,8 @@ el => {
         await ScrollContinuousToAsync(page, 2);
         // Lower zoom (1.0 → 0.5): both visible page boxes shrink enough to show the
         // inter-page gap clearly. The in-place scale path repaints the visible pages.
-        var zoomOut = page.Locator($"{SectionSelector} .tm-pdf-viewer__btn[aria-label='Zoom out']").First;
-        await zoomOut.ClickAsync();
-        await zoomOut.ClickAsync();
+        await ClickZoomOutAsync(page);
+        await ClickZoomOutAsync(page);
         await page.WaitForTimeoutAsync(1500); // let the in-place repaint settle
 
         await page.Locator($"{SectionSelector} .tm-pdf-viewer").First.ScreenshotAsync(new LocatorScreenshotOptions
@@ -305,6 +304,25 @@ el => {
             Timeout = 60_000,
         });
         TestContext.AddResultFile(path);
+    }
+
+    /// <summary>
+    /// Clicks the zoom-out command. With the demo's <c>ToolbarLabels=Auto</c> the compact zoom
+    /// buttons may not fit the row and live in the "More" menu instead — the same command is
+    /// offered there, so this falls back to the menu entry.
+    /// </summary>
+    private async Task ClickZoomOutAsync(IPage page)
+    {
+        var zoomOut = page.Locator($"{SectionSelector} .tm-pdf-viewer__btn[aria-label='Zoom out']").First;
+        if (await zoomOut.IsVisibleAsync())
+        {
+            await zoomOut.ClickAsync();
+            return;
+        }
+
+        var more = page.Locator($"{SectionSelector} button.tm-toolbar-more").First;
+        await more.ClickAsync();
+        await page.Locator($"{SectionSelector} [role='menuitem']:has-text('Zoom out')").First.ClickAsync();
     }
 
     private static string FindRepoRoot()

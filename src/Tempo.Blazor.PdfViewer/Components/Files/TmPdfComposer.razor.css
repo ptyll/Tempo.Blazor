@@ -77,6 +77,14 @@
     cursor: not-allowed;
 }
 
+/* A finger cannot hit a 32px action: the composer buttons meet the shared touch
+   target on a coarse pointer (the sheet presentations are the common case). */
+@media (pointer: coarse) {
+    .tm-pdf-composer__btn {
+        min-height: var(--tm-touch-target);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .tm-pdf-composer__btn {
         transition: none;

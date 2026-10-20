@@ -49,11 +49,39 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         var surface = pane.Locator("[data-testid='pdf-annotator-surface']").First;
         await surface.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000, State = WaitForSelectorState.Attached });
         // The interaction surface is kept aligned with the rendered PDF canvas; a pre-render
-        // canvas is 300x150, so wait until the synced size reflects an actual PDF page.
+        // canvas is 300x150, so wait until the synced size reflects an actual PDF page. The
+        // page may be fit-width on a narrow pane (ZoomMode=Auto), so the check is the page's
+        // portrait ratio, not an absolute pane width.
         await surface.Page.WaitForFunctionAsync(
-            "el => el.clientWidth > 350 && el.clientHeight > 400",
+            "el => el.clientHeight > 200 && el.clientWidth > 150 && el.clientHeight > el.clientWidth",
             await surface.ElementHandleAsync(),
             new PageWaitForFunctionOptions { Timeout = 60000 });
+    }
+
+    /// <summary>
+    /// Picks an annotator tool: clicks the toolbar button when it is on the bar, otherwise
+    /// through the pane's "More" menu — on a narrow pane the mode pills overflow into the
+    /// merged toolbar's menu, where each item carries the button's data-tm-toolbar-item id
+    /// as data-action-id (locale-independent).
+    /// </summary>
+    private static async Task ClickToolAsync(ILocator pane, string testId, string menuLabel)
+    {
+        var tool = pane.Locator($"[data-testid='{testId}']").First;
+        if (await tool.IsVisibleAsync() && await tool.IsEnabledAsync())
+        {
+            await tool.ClickAsync();
+            return;
+        }
+
+        var menuId = await tool.GetAttributeAsync("data-tm-toolbar-item");
+        Assert.IsNotNull(menuId, $"the overflowed tool {testId} keeps its toolbar item id");
+
+        var more = pane.Locator("button.tm-toolbar-more").First;
+        await more.ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        var item = pane.Page.Locator($"[data-action-id='{menuId}']").First;
+        await item.ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        // The menu closes on invoke; give the mode switch a beat before the next step.
+        await pane.Page.WaitForTimeoutAsync(200);
     }
 
     // ── Seeded showcase: all four kinds + author colors ──────────────────────
@@ -106,7 +134,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await WaitForSurfaceReadyAsync(bob);
 
         // Alice adds a comment pin.
-        await alice.Locator("[data-testid='pdf-annotator-mode-comment']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-comment", "Add comment");
         await alice.Locator("[data-testid='pdf-annotator-surface']")
             .ClickAsync(new LocatorClickOptions { Position = new Position { X = 150, Y = 120 } });
         var composer = alice.Locator("[data-testid='pdf-annotator-new-input']");
@@ -168,7 +196,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await alice.ScrollIntoViewIfNeededAsync();
         await WaitForSurfaceReadyAsync(alice);
 
-        await alice.Locator("[data-testid='pdf-annotator-mode-comment']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-comment", "Add comment");
         await alice.Locator("[data-testid='pdf-annotator-surface']")
             .ClickAsync(new LocatorClickOptions { Position = new Position { X = 200, Y = 200 } });
         var composer = alice.Locator("[data-testid='pdf-annotator-new-input']");
@@ -209,7 +237,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await WaitForSurfaceReadyAsync(alice);
 
         // Stamp: pick REJECTED from the picker and click the page — created immediately.
-        await alice.Locator("[data-testid='pdf-annotator-mode-stamp']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-stamp", "Place stamp");
         var stampSelect = alice.Locator("[data-testid='pdf-annotator-stamp-select']");
         await stampSelect.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
         await stampSelect.SelectOptionAsync(new SelectOptionValue { Index = 1 });
@@ -223,7 +251,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         // VISIBLE part of the canvas — the page canvas may overflow (and be clipped by) the
         // scrollable canvas wrap when the panel narrows the viewer, and raw mouse coordinates
         // from the surface's full bounding box would then land on the clipped zone.
-        await alice.Locator("[data-testid='pdf-annotator-mode-draw']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-draw", "Draw freehand");
         var p1 = await VisibleSurfacePointAsync(alice, 0.30, 0.45);
         var p2 = await VisibleSurfacePointAsync(alice, 0.55, 0.55);
         var p3 = await VisibleSurfacePointAsync(alice, 0.75, 0.50);
@@ -343,7 +371,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await WaitForSurfaceReadyAsync(alice);
 
         // Edge 1: cancelling a comment draft creates nothing.
-        await alice.Locator("[data-testid='pdf-annotator-mode-comment']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-comment", "Add comment");
         await alice.Locator("[data-testid='pdf-annotator-surface']")
             .ClickAsync(new LocatorClickOptions { Position = new Position { X = 120, Y = 160 } });
         var cancel = alice.Locator("[data-testid='pdf-annotator-new-cancel']");
@@ -356,7 +384,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
 
         // Edge 2: in draw mode a click without dragging (single-point stroke) must not open a draft.
-        await alice.Locator("[data-testid='pdf-annotator-mode-draw']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-draw", "Draw freehand");
         var point = await VisibleSurfacePointAsync(alice, 0.5, 0.4);
         await page.Mouse.MoveAsync((float)point.X, (float)point.Y);
         await page.Mouse.DownAsync();
@@ -393,7 +421,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await WaitForSurfaceReadyAsync(bob);
 
         // Alice adds a comment thread.
-        await alice.Locator("[data-testid='pdf-annotator-mode-comment']").ClickAsync();
+        await ClickToolAsync(alice, "pdf-annotator-mode-comment", "Add comment");
         await alice.Locator("[data-testid='pdf-annotator-surface']")
             .ClickAsync(new LocatorClickOptions { Position = new Position { X = 150, Y = 120 } });
         var composer = alice.Locator("[data-testid='pdf-annotator-new-input']");

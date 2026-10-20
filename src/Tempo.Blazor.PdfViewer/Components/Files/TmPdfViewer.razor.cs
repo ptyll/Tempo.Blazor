@@ -2,7 +2,9 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Toolbar;
 
 namespace Tempo.Blazor.Components.Files;
 
@@ -17,8 +19,9 @@ public enum PdfViewMode
 
 /// <summary>
 /// How the viewer decides the zoom scale. <see cref="TmPdfViewer.ZoomMode"/> drives it;
-/// the <c>Auto</c> value arrives with a later phase of the PDF redesign and is deliberately
-/// not part of the enum yet.
+/// <see cref="Auto"/> (the default since the responsive viewer redesign) resolves to
+/// fit-width on a mobile layout and to the bound <see cref="TmPdfViewer.Scale"/>
+/// everywhere else. Set <see cref="Custom"/> to restore the pre-Auto behavior.
 /// </summary>
 public enum PdfZoomMode
 {
@@ -27,7 +30,13 @@ public enum PdfZoomMode
     /// <summary>The scale is computed so the current page fills the container width.</summary>
     FitWidth,
     /// <summary>The scale is computed so the whole current page fits the container.</summary>
-    FitPage
+    FitPage,
+    /// <summary>
+    /// Default. Fit-width on a mobile layout, the bound scale everywhere else — a resize
+    /// only recomputes the scale while the layout stays mobile, so a zoom preset or button
+    /// still hands control back to the user.
+    /// </summary>
+    Auto
 }
 
 /// <summary>
@@ -85,15 +94,33 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     [Parameter] public EventCallback<PdfViewMode> ViewModeChanged { get; set; }
 
     /// <summary>
-    /// How the zoom scale is decided. <see cref="PdfZoomMode.FitWidth"/> and
+    /// How the zoom scale is decided. Default <see cref="PdfZoomMode.Auto"/>: fit-width on a
+    /// mobile layout, the bound scale everywhere else. <see cref="PdfZoomMode.FitWidth"/> and
     /// <see cref="PdfZoomMode.FitPage"/> let JavaScript compute the scale from the container
     /// size (and keep recomputing it on resize); any zoom button or preset switches the mode
-    /// back to <see cref="PdfZoomMode.Custom"/>. Supports two-way binding. Default is Custom.
+    /// back to <see cref="PdfZoomMode.Custom"/>. Set <see cref="PdfZoomMode.Custom"/> to
+    /// restore the pre-Auto behavior at every width. Supports two-way binding.
     /// </summary>
-    [Parameter] public PdfZoomMode ZoomMode { get; set; } = PdfZoomMode.Custom;
+    [Parameter] public PdfZoomMode ZoomMode { get; set; } = PdfZoomMode.Auto;
 
     /// <summary>Callback when the zoom mode changes.</summary>
     [Parameter] public EventCallback<PdfZoomMode> ZoomModeChanged { get; set; }
+
+    /// <summary>
+    /// Whether the toolbar's icon buttons show their text labels. Default
+    /// <see cref="ToolbarLabels.Icons"/> (the icon-only toolbar of the earlier redesign
+    /// phases); <see cref="ToolbarLabels.Auto"/> shows the labels except on a toolbar
+    /// narrower than the mobile breakpoint, and <see cref="ToolbarLabels.IconsWithText"/>
+    /// always shows them.
+    /// </summary>
+    [Parameter] public ToolbarLabels ToolbarLabels { get; set; } = ToolbarLabels.Icons;
+
+    /// <summary>
+    /// How the viewer decides its responsive layout. <see cref="TmLayoutMode.Auto"/> measures
+    /// the viewer's own container; a forced value renders that layout without measuring, so a
+    /// test — or a host — can pin a mode. Default <see cref="TmLayoutMode.Auto"/>.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Whether to show a document header above the toolbar. Default is false,
     /// which keeps the toolbar-only layout. When true, the Open and Download links move
@@ -149,6 +176,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Additional HTML attributes passed to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>
+    /// The layout context cascaded by an ancestor <see cref="Layout.TmLayoutObserver"/>. A forced
+    /// ancestor decides the layout for this viewer too (same resolution as
+    /// <see cref="Layout.TmEditorShell"/>): its resolved mode wins over the viewer's own
+    /// measurement while <see cref="LayoutMode"/> stays <see cref="TmLayoutMode.Auto"/>.
+    /// </summary>
+    [CascadingParameter] public TmLayoutContext? Parent { get; set; }
 
     // ── Annotation parameters ─────────────────────────────────────────────────
 
@@ -276,6 +311,31 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private List<DocumentCommentThread> _threads = [];
     private InMemoryPdfAnnotationProvider? _fallbackProvider;
 
+    // Responsive state (FZE-7)
+    /// <summary>
+    /// The layout the wrapping <see cref="Tempo.Blazor.Components.Layout.TmLayoutObserver"/> last
+    /// measured (reported through <see cref="OnResolvedLayoutChanged"/>). Null until the first
+    /// report; combined with <see cref="LayoutMode"/> and <see cref="Parent"/> through
+    /// <see cref="TmLayout.Resolve"/>.
+    /// </summary>
+    private TmLayoutMode? _measured;
+    /// <summary>
+    /// The resolved layout the chrome branches on: <see cref="TmLayout.Resolve"/> of the
+    /// <see cref="LayoutMode"/> parameter, the cascaded <see cref="Parent"/> and
+    /// <see cref="_measured"/>. Desktop until the first report.
+    /// </summary>
+    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+    /// <summary>
+    /// Whether the user has touched the panels (thumbnails, comments) since the document was
+    /// loaded. While false, a layout flip re-applies the panel defaults; the user's own choice
+    /// is never overwritten.
+    /// </summary>
+    private bool _panelsTouched;
+    /// <summary>Whether the comments panel is open as a sheet (tablet side sheet / mobile bottom sheet).</summary>
+    private bool _commentsSheetOpen;
+    /// <summary>Whether the thumbnails sheet is open on a mobile layout.</summary>
+    private bool _thumbnailsSheetOpen;
+
     private static readonly double[] _zoomSteps = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
     private IPdfAnnotationProvider EffectiveAnnotationProvider
@@ -309,6 +369,15 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // The chrome branches on TmLayout.Resolve: an explicit LayoutMode wins, then a forced
+        // cascaded ancestor, then the observer's measurement (kept current by its callback) —
+        // the first frame is Desktop. A forced mode also suppresses the measurement, exactly
+        // like the TmEditorShell resolution. The resolution is APPLIED through
+        // ApplyResolvedLayoutAsync (OnParametersSetAsync / OnResolvedLayoutChanged); only a
+        // fresh document takes it directly here, because its from-scratch defaults must not
+        // wait for — and must not double-apply behind — the async pass.
+        var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, TmLayoutMode.Desktop);
+
         if (Url != _lastUrl)
         {
             _lastUrl = Url;
@@ -322,7 +391,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             Rotation = 0;
             _viewMode = ViewMode;
             _zoomMode = ZoomMode;
-            _thumbnailsCollapsed = ThumbnailsCollapsed;
+            _panelsTouched = false;
+            // The panel defaults follow the layout (FZE-7): the docked thumbnails start
+            // collapsed on a tablet layout, the comments panel opens only on desktop.
+            _resolved = resolved;
+            _thumbnailsCollapsed = ThumbnailsCollapsed || _resolved == TmLayoutMode.Tablet;
+            _annotationsPanelVisible = _resolved == TmLayoutMode.Desktop;
+            _commentsSheetOpen = false;
+            _thumbnailsSheetOpen = false;
             _useFallback = false;
             _isLoading = true;
             _loadError = null;
@@ -410,6 +486,72 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     }
 
     /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        // A layout flip that arrives through a parameter — a forced <see cref="LayoutMode"/>
+        // or a cascaded ancestor changing its resolved mode — must re-apply the same defaults
+        // an observer-reported flip does. The fresh document was handled synchronously above
+        // (its _resolved is already the new value, so this is a guarded no-op).
+        if (string.IsNullOrEmpty(Url))
+        {
+            return;
+        }
+
+        var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, TmLayoutMode.Desktop);
+        await ApplyResolvedLayoutAsync(resolved);
+    }
+
+    /// <summary>
+    /// The single mutation point for a resolved-layout change: re-applies the guarded panel
+    /// defaults (until the user has touched the panels themselves, <see cref="_panelsTouched"/>),
+    /// starts the <see cref="PdfZoomMode.Auto"/> fit computation on mobile — or detaches the JS
+    /// fit observer when the layout leaves mobile — and records <paramref name="next"/> as the
+    /// resolved layout the chrome branches on. A no-op when the resolved mode did not change,
+    /// so every caller may invoke it unconditionally.
+    /// </summary>
+    private async Task ApplyResolvedLayoutAsync(TmLayoutMode next)
+    {
+        if (_resolved == next)
+        {
+            return;
+        }
+
+        if (!_panelsTouched)
+        {
+            var reopenThumbnails = _thumbnailsCollapsed && !(ThumbnailsCollapsed || next == TmLayoutMode.Tablet);
+            _thumbnailsCollapsed = ThumbnailsCollapsed || next == TmLayoutMode.Tablet;
+            _annotationsPanelVisible = next == TmLayoutMode.Desktop;
+            if (reopenThumbnails)
+            {
+                // The docked thumbnails reappear in a fresh container: the post-render pass
+                // must rebuild the JS-rendered thumbnails (same as SetThumbnailsCollapsedAsync).
+                _lastThumbnailUrl = null;
+            }
+        }
+
+        _resolved = next;
+
+        // Read AFTER the assignment: the effective mode follows the new layout (Auto resolves
+        // to fit-width on mobile, to the bound scale everywhere else).
+        if (_pdfInitialized && !_useFallback)
+        {
+            if (next == TmLayoutMode.Mobile)
+            {
+                if (EffectiveZoomMode is not PdfZoomMode.Custom && _totalPages > 0)
+                {
+                    _ = ApplyZoomModeAsync();
+                }
+            }
+            else if (_zoomMode == PdfZoomMode.Auto)
+            {
+                _ = ClearFitAsync();
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (string.IsNullOrEmpty(Url)) return;
@@ -490,7 +632,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         if (_fitPending)
         {
             _fitPending = false;
-            if (_zoomMode is not PdfZoomMode.Custom && !_useFallback && _totalPages > 0)
+            if (EffectiveZoomMode is not PdfZoomMode.Custom && !_useFallback && _totalPages > 0)
             {
                 await ApplyZoomModeAsync();
             }
@@ -558,7 +700,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         }
 
         // A fit mode requested before the document existed can only be computed now.
-        if (_zoomMode is not PdfZoomMode.Custom && !_useFallback)
+        if (EffectiveZoomMode is not PdfZoomMode.Custom && !_useFallback)
         {
             _ = ApplyZoomModeAsync();
         }
@@ -566,17 +708,15 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>
-    /// Receives a fit-mode scale computed by JavaScript — either the initial fit request or
-    /// a recompute after the container was resized. Ignored when the mode has since returned
-    /// to <see cref="PdfZoomMode.Custom"/> (a zoom button or preset won the race) or when the
+    /// <summary>Receives a fit-mode scale computed by JavaScript — either the initial fit request or
+    /// a recompute after the container was resized. Ignored when the effective mode has since
+    /// returned to <see cref="PdfZoomMode.Custom"/> (a zoom button or preset won the race) or when the
     /// value is outside the documented clamp range <see cref="MinScale"/>..<see cref="MaxScale"/>
-    /// (the JS side clamps to the same range; this is the defensive second guard).
-    /// </summary>
+    /// (the JS side clamps to the same range; this is the defensive second guard).</summary>
     [JSInvokable]
     public async Task OnFitScaleComputed(double scale)
     {
-        if (_zoomMode is PdfZoomMode.Custom || scale is < MinScale or > MaxScale)
+        if (EffectiveZoomMode is PdfZoomMode.Custom || scale is < MinScale or > MaxScale)
         {
             return;
         }
@@ -604,12 +744,17 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>Handles thumbnail page selection from the JavaScript thumbnail renderer.</summary>
+    /// <summary>Handles thumbnail page selection from the JavaScript thumbnail renderer.
+    /// On a mobile layout the thumbnails live in a bottom sheet, so the selection closes it.</summary>
     [JSInvokable]
     public async Task OnThumbnailClicked(int pageNum)
     {
         if (pageNum < 1 || pageNum > _totalPages) return;
         await NavigateToPageAsync(pageNum);
+        if (_thumbnailsSheetOpen)
+        {
+            await SetThumbnailsSheetAsync(false);
+        }
         try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _rootRef, _currentPage); }
         catch { }
     }
@@ -820,13 +965,24 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         // container ref is still stale here; that pass is harmless (a detached element
         // has no usable box) and the _fitPending pass in OnAfterRenderAsync does the
         // real recompute once the fresh container exists.
-        if (_zoomMode is not PdfZoomMode.Custom && _pdfInitialized && !_useFallback)
+        if (EffectiveZoomMode is not PdfZoomMode.Custom && _pdfInitialized && !_useFallback)
         {
             await ApplyZoomModeAsync();
         }
     }
 
     // ── Zoom ──────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The zoom mode the chrome acts on: an explicit fit mode passes through;
+    /// <see cref="PdfZoomMode.Auto"/> is fit-width on a mobile layout and the bound scale
+    /// (Custom behavior) everywhere else.
+    /// </summary>
+    private PdfZoomMode EffectiveZoomMode => _zoomMode switch
+    {
+        PdfZoomMode.Auto => _resolved == TmLayoutMode.Mobile ? PdfZoomMode.FitWidth : PdfZoomMode.Custom,
+        var mode => mode,
+    };
 
     private async Task ZoomInAsync()
     {
@@ -852,10 +1008,12 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// The ± buttons and the zoom presets hand control back to the user: a pending fit mode
     /// is abandoned (its JS ResizeObserver detached via <see cref="ClearFitAsync"/>) and the
     /// mode reports <see cref="PdfZoomMode.Custom"/> through <see cref="ZoomModeChanged"/>.
+    /// On a desktop/tablet layout <see cref="PdfZoomMode.Auto"/> already behaves like Custom,
+    /// so nothing is demoted there — Auto only demotes once a fit is actually active.
     /// </summary>
     private async Task SwitchToCustomZoomAsync()
     {
-        if (_zoomMode is PdfZoomMode.Custom)
+        if (EffectiveZoomMode is PdfZoomMode.Custom)
         {
             return;
         }
@@ -899,13 +1057,26 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     }
 
     /// <summary>Text shown in the zoom dropdown trigger: the fit-mode label while a fit mode
-    /// is active, otherwise the current percentage.</summary>
-    private string ZoomTriggerText => _zoomMode switch
+    /// is active, otherwise the current percentage. On a mobile layout the trigger is the bare
+    /// percentage — the compact single row has no room for the fit label (the "%" glyph is the
+    /// narrow-width contract; the tooltip/aria-label still name the control).</summary>
+    private string ZoomTriggerText
     {
-        PdfZoomMode.FitWidth => Loc["TmPdfViewer_FitWidth"],
-        PdfZoomMode.FitPage => Loc["TmPdfViewer_FitPage"],
-        _ => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(_scale * 100)}%")
-    };
+        get
+        {
+            if (IsMobileLayout)
+            {
+                return string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(_scale * 100)}%");
+            }
+
+            return EffectiveZoomMode switch
+            {
+                PdfZoomMode.FitWidth => Loc["TmPdfViewer_FitWidth"],
+                PdfZoomMode.FitPage => Loc["TmPdfViewer_FitPage"],
+                _ => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(_scale * 100)}%")
+            };
+        }
+    }
 
     /// <summary>Number of annotation threads that still need attention (shown on the toolbar toggle).</summary>
     private int OpenThreadCount => _threads.Count(thread => thread.Status == DocumentCommentThreadStatus.Open);
@@ -930,12 +1101,12 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// </summary>
     private async Task ApplyZoomModeAsync()
     {
-        if (_zoomMode is PdfZoomMode.Custom)
+        if (EffectiveZoomMode is PdfZoomMode.Custom)
         {
             return;
         }
 
-        var mode = _zoomMode == PdfZoomMode.FitWidth ? "fit-width" : "fit-page";
+        var mode = EffectiveZoomMode == PdfZoomMode.FitWidth ? "fit-width" : "fit-page";
         try
         {
             var container = _viewMode == PdfViewMode.Continuous ? _continuousRef : _canvasWrapRef;
@@ -998,7 +1169,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             // The rotation changes the page aspect ratio, so an active fit mode must
             // recompute (renderAllPages above synced the JS-side rotation the fit math
             // reads). The single-page path refits inside RenderCurrentPageAsync.
-            if (_zoomMode is not PdfZoomMode.Custom && _pdfInitialized && !_useFallback)
+            if (EffectiveZoomMode is not PdfZoomMode.Custom && _pdfInitialized && !_useFallback)
             {
                 await ApplyZoomModeAsync();
             }
@@ -1023,7 +1194,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         // The fit container (canvas wrap vs continuous wrap) is swapped by the
         // re-render that follows this call — its ElementReference is stale right now,
         // so the recompute is deferred to OnAfterRenderAsync via _fitPending.
-        if (_zoomMode is not PdfZoomMode.Custom && _pdfInitialized && !_useFallback)
+        if (EffectiveZoomMode is not PdfZoomMode.Custom && _pdfInitialized && !_useFallback)
         {
             _fitPending = true;
         }
@@ -1107,6 +1278,8 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             return;
         }
 
+        // A user-driven change: the layout defaults must never overwrite it again.
+        _panelsTouched = true;
         _thumbnailsCollapsed = collapsed;
         await ThumbnailsCollapsedChanged.InvokeAsync(collapsed);
         if (!collapsed)
@@ -1370,7 +1543,16 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     private async Task CloseAnnotationsPanelAsync()
     {
-        _annotationsPanelVisible = false;
+        // A user-driven change: the layout defaults must never overwrite it again.
+        _panelsTouched = true;
+        if (_resolved == TmLayoutMode.Desktop)
+        {
+            _annotationsPanelVisible = false;
+        }
+        else
+        {
+            _commentsSheetOpen = false;
+        }
         await InvokeAsync(StateHasChanged);
         await RefreshAnnotationOverlayAsync();
     }
@@ -1414,9 +1596,68 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     private async Task ToggleAnnotationsPanelAsync()
     {
-        _annotationsPanelVisible = !_annotationsPanelVisible;
+        // A user-driven change: the layout defaults must never overwrite it again.
+        _panelsTouched = true;
+        if (_resolved == TmLayoutMode.Desktop)
+        {
+            _annotationsPanelVisible = !_annotationsPanelVisible;
+        }
+        else
+        {
+            _commentsSheetOpen = !_commentsSheetOpen;
+        }
         await InvokeAsync(StateHasChanged);
         await RefreshAnnotationOverlayAsync();
+    }
+
+    /// <summary>Opens or closes the comments sheet (tablet side sheet / mobile bottom sheet)
+    /// from the mobile action bar or the toolbar toggle. The docked desktop panel keeps
+    /// <see cref="_annotationsPanelVisible"/>.</summary>
+    private async Task SetCommentsSheetAsync(bool open)
+    {
+        if (_commentsSheetOpen == open)
+        {
+            return;
+        }
+
+        // A user-driven change: the layout defaults must never overwrite it again.
+        _panelsTouched = true;
+        _commentsSheetOpen = open;
+        await InvokeAsync(StateHasChanged);
+        await RefreshAnnotationOverlayAsync();
+    }
+
+    /// <summary>Opens or closes the mobile thumbnails sheet; opening primes the post-render
+    /// pass to rebuild the JS-rendered thumbnails in the fresh sheet container.</summary>
+    private async Task SetThumbnailsSheetAsync(bool open)
+    {
+        if (_thumbnailsSheetOpen == open)
+        {
+            return;
+        }
+
+        _thumbnailsSheetOpen = open;
+        if (open)
+        {
+            _lastThumbnailUrl = null;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The wrapping <see cref="Layout.TmLayoutObserver"/> reports a measured layout change.
+    /// <see cref="ApplyResolvedLayoutAsync"/> owns the flip: an <see cref="PdfZoomMode.Auto"/>
+    /// zoom follows the layout (fit starts on mobile, the JS observer detaches when it is
+    /// left) and the panel defaults re-apply until the user has touched the panels themselves
+    /// (<see cref="_panelsTouched"/>) — so an <see cref="TmLayoutMode.Auto"/> viewer behaves
+    /// like a forced one. Only the MEASURED value is recorded in <see cref="_measured"/>; the
+    /// resolved mode lives solely in <see cref="_resolved"/>.
+    /// </summary>
+    private Task OnResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        _measured = mode;
+        var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, TmLayoutMode.Desktop);
+        return ApplyResolvedLayoutAsync(resolved);
     }
 
     // ── Public API ────────────────────────────────────────────────────────────

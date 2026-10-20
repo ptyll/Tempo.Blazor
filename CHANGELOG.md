@@ -142,7 +142,118 @@
   `TmPdfAnnotator_ExportGroup`, `TmPdfAnnotator_ToolsGroup` (en/cs/sk/fr + mock). The wireframe
   `TmPdfAnnotator` stencil schema gains `showThumbnails`, `showSearch`, `showHeader` and `title`.
 
+- **TmPdfViewer: responsive viewer for tablet and mobile (FZE-7).** The viewer now resolves its
+  layout from its own container (new `LayoutMode` parameter, `TmLayoutMode`, default `Auto` —
+  a forced value pins the layout so tests and hosts can render a mode without a DOM) and adapts
+  like the tablet/mobile references: **desktop** keeps the docked chrome; **tablet** (640-1023)
+  starts with the thumbnails collapsed (the "Pages" toggle reopens them), renders the comments
+  panel as the one `TmSidePanel` side sheet (closed by default, restoring focus to the toolbar
+  toggle) and drops the toolbar labels below the icons; **mobile** (<640) gets a compact
+  single-row toolbar + "More" (Rotate, Open, Download and the continuous toggle live only
+  there, as `OverflowOnly` priorities), an in-flow `TmMobileActionBar`
+  ("Pages | Hledat | Komentare (N)"), the thumbnails and comments as bottom sheets, the zoom
+  presets as a sheet (`MobilePresentation=Auto` of the core dropdown) and a full-width search
+  row. The default comments-panel visibility follows the layout (desktop open, tablet and
+  mobile closed). New `ToolbarLabels` parameter (`Auto` | `Icons` | `IconsWithText`, default
+  `Icons` = the previous icon-only toolbar; the demo pages use `Auto`); on a tablet layout the
+  labels render below the icons. `.tm-pdf-viewer` is now a named query container
+  (`container-type: inline-size`) and its presentation (page count, dividers, wrapping, search
+  row) adapts to the viewer's own width; every viewer-owned control meets the
+  `--tm-touch-target` (44 px) minimum on a `pointer: coarse` device. `Height="100%"` and
+  `100dvh` now resolve through the flex chain (`min-height: 0`) of the wrapping layout host.
+  New localization keys: `TmPdfViewer_OpenPages`, `TmPdfViewer_OpenComments` (en/cs/sk/fr +
+  mock); the "More" trigger keeps the core `Tm_More`. `TmPdfAnnotationThreadPanel` gains
+  `ShowChrome` (default `true`); the sheet presentations pass `false` so the sheet header owns
+  the title and the close button. The wireframe `TmPdfViewer` stencil gains the `auto` zoom
+  mode (now the default).
+
+- **TmPdfViewer review fixes (FZE-7 follow-up).**
+
+  - **Panel defaults now apply under `LayoutMode=Auto`.** A measured layout flip re-applies
+    the panel defaults — thumbnails re-collapse on tablet, the comments panel closes off
+    desktop — until the user has touched the panels themselves (an internal flag, reset per
+    document load); a user's own choice is never overwritten, and reopening the thumbnails
+    resets the JS thumbnail render cache. Covered by bUnit tests that drive the wrapping
+    observer's `OnLayoutModeChanged("tablet")`.
+  - **A forced cascaded ancestor now decides the layout.** `TmPdfViewer` takes a
+    `[CascadingParameter] TmLayoutContext? Parent` and resolves its layout with the shared
+    `TmLayout.Resolve(LayoutMode, Parent, measured, Desktop)` (the same pattern as
+    `TmEditorShell`): an explicit `LayoutMode` wins, then a forced ancestor, then the viewer's
+    own measurement. A viewer nested in a forced-`Mobile` observer renders the mobile chrome.
+  - **The comments toggle id is a per-instance GUID** (it was a shared constant), used for the
+    side sheet's `RestoreFocusTargetId` — two viewers on one page no longer share a DOM id.
+  - **`downloadUrl` is hardened.** The decision logic moved into a pure
+    `pdf-viewer-download.mjs` (node-tested via `npm run test:pdf-viewer`): the URL is resolved
+    against `document.baseURI`, only `http:`/`https:`/`blob:` are allowed, same-origin and
+    `blob:` URLs take the anchor + `download` path, and any other origin opens a new tab
+    (`noopener,noreferrer`) instead of downloading — a cross-origin `download` attribute is
+    ignored by browsers and must never turn into a navigation.
+  - **Stable `data-tm-group` groups.** The "Pages" toggle (`panels`), the view-mode segment
+    (`view`) and the trailing file links + host `ToolbarEnd` (`export`) are `TmToolbarGroup`s
+    now; the full frozen group vocabulary is documented in [docs/toolbar.md](docs/toolbar.md)
+    (the PDF viewer adds `navigation`, `rotate`, `comments` to the DiagramEditor set).
+  - **TmPdfAnnotator.** `ZoomMode` defaults to `Auto` (consistent with the viewer); the
+    `ToolbarStart` tools and the panel toggle are core `TmToolbarButton`s with priorities
+    (Primary mode pills, Pinned panel toggle), so they overflow into the merged toolbar's
+    "More" menu. All test ids survive. The annotator groups carry `data-tm-group`
+    (`tools`, `export`).
+  - **Mobile presentation.** The compact row keeps the prev chevron + page input + next chevron
+    on one line (`flex-wrap: nowrap`), shows the compact `1/120` count, shortens the zoom
+    trigger to the bare `%` and fits a 320 px viewport in a single row; the mobile search bar
+    no longer wraps (input `flex: 1; min-width: 0`) and always offers a localized ✕ close; the
+    mobile action bar renders a tile only for an enabled feature (Pages/Search/Comments) and
+    disappears entirely when none is enabled. Under `pointer: coarse` the page input, the
+    search input, the file links, the composer actions, the comment ⋯ menu and the panel close
+    meet the `--tm-touch-target` minimum; the sheet-presented comments panel is `width: 100%`
+    with no left border and its title shows the live comment count. The redaction stage claims
+    the full width of the column below 900 px (`align-items: stretch` + `width: 100%`).
+  - **Evidence.** The demo page gains a forced-tablet section (`LayoutMode="TmLayoutMode.Tablet"`)
+    and the E2E lane screenshots the tablet toolbar, the open comments side sheet and the mobile
+    "More" menu (`pdf-viewer/mobile-more-menu.png`); the 44 px touch-target test also covers
+    `input`, `[role=button]` and `a`.
+
+  New localization keys: `TmPdfViewer_CloseSearch` (en/cs/sk/fr + mock).
+
 ### Breaking / Migration
+
+- **TmPdfViewer: the toolbar DOM is now a core `TmToolbar`, and `ZoomMode` defaults to `Auto`
+  (fit-width on mobile).** Two behavior changes in one migration:
+
+  1. **Toolbar DOM.** The hand-rolled `role="toolbar"` row was replaced by the core
+     `TmToolbar` (Overflow=Menu with priority-based "More"). The toolbar root keeps the
+     `.tm-pdf-viewer__toolbar` class, `role="toolbar"`, the `PDF controls` aria-label and the
+     `pdf-viewer-toolbar` test id; the buttons keep `.tm-pdf-viewer__btn` plus their
+     `aria-label`s, the page input/count and the search bar keep their classes and test ids,
+     and the groups keep `role="group"` + their localized labels. What changed: buttons now
+     render as `.tm-toolbar-btn` (with the compact 28 px chrome layered on top), group
+     wrappers carry `data-tm-group` (`navigation`, `zoom`, `rotate`, `search`, `comments`),
+     the trailing file links live in the toolbar's actions section instead of a
+     `.tm-pdf-viewer__toolbar-trailing` wrapper, and the separators are core
+     `.tm-toolbar-divider` elements. Hosts styling the removed internals must move:
+     `.tm-pdf-viewer__group` → `.tm-toolbar-group`, `.tm-pdf-viewer__toolbar-trailing` →
+     `.tm-pdf-viewer__toolbar ::deep .tm-toolbar-actions`, `.tm-pdf-viewer__separator` →
+     `.tm-toolbar-divider`.
+
+  ```razor
+  @* BEFORE — hand-rolled row, always-icon buttons, Scale-driven zoom *@
+  <TmPdfViewer Url="@url" ZoomMode="PdfZoomMode.Custom" />
+
+  @* AFTER — same look as before: icon-only toolbar, scale kept at every width *@
+  <TmPdfViewer Url="@url" ZoomMode="PdfZoomMode.Custom" ToolbarLabels="ToolbarLabels.Icons" />
+  ```
+
+  2. **`ZoomMode` default is `Auto`.** On a mobile layout the viewer now computes the scale so
+     the page fills the container width (and keeps recomputing on resize); on desktop and
+     tablet the bound `Scale` is kept unchanged. Zoom buttons/presets still hand control back
+     to the user (Auto demotes to `Custom`). **To restore the previous behavior at every
+     width, set `ZoomMode="PdfZoomMode.Custom"`.**
+
+  - **Panels move off the bar on tablet/mobile.** On a tablet layout the comments panel is a
+    `TmSidePanel` side sheet closed by default and the thumbnails start collapsed; on mobile
+    the thumbnails and the comments panel are bottom sheets and the "Pages | Hledat |
+    Komentáře (N)" `TmMobileActionBar` drives them. Hosts that relied on the comments panel
+    being open at load on a narrow container should open it themselves
+    (`LayoutMode="TmLayoutMode.Desktop"` pins the docked chrome).
 
 - **TmPdfViewer: annotation overlays in Continuous mode are gone (PD1).** Previously a host that
   enabled annotations and switched the viewer to `Continuous` rendered the annotation overlay and

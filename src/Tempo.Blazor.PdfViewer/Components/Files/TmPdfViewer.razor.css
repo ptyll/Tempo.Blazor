@@ -15,11 +15,19 @@
     overflow: hidden;
     font-family: var(--tm-font-sans);
     color: var(--tm-text-primary);
+
+    /* FZE-7: the viewer is its own query container — everything below the root adapts to the
+       viewer's width, not the viewport's (a narrow Notion column is mobile on a desktop page).
+       The markup branch (compact row, action bar, sheets) resolves from the same width through
+       the wrapping TmLayoutObserver. */
+    container-type: inline-size;
+    container-name: tm-pdf-viewer;
 }
 
-/* ── Toolbar ─────────────────────────────────────────────────────────────── */
-
-.tm-pdf-viewer__toolbar {
+/* ── Toolbar (a core TmToolbar: Overflow=Menu, tm-toolbar.js measures the row) ──
+   The TmToolbar root is a child-component root and carries no viewer scope attribute,
+   so every rule that reaches the toolbar (its root included) goes through ::deep. */
+.tm-pdf-viewer ::deep .tm-pdf-viewer__toolbar {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1);
@@ -27,25 +35,38 @@
     background: var(--tm-color-surface-elevated);
     border-bottom: 1px solid var(--tm-border-color);
     min-height: 40px;
-    flex-wrap: wrap;
+}
+
+/* Keep the previous density: the core row gap is one step wider. */
+.tm-pdf-viewer ::deep .tm-toolbar-start,
+.tm-pdf-viewer ::deep .tm-toolbar-actions {
+    gap: var(--tm-space-1);
 }
 
 /* A toolbar section (Navigation | Zoom | Rotate | Mode || Search | Comments):
    the group owns the flex alignment, its aria-label names it for AT. */
-.tm-pdf-viewer__group {
+.tm-pdf-viewer ::deep .tm-toolbar-group {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1);
 }
 
 /* The toolbar's trailing section (file links in the no-header case + the host's
-   ToolbarEnd slot): the ONE auto margin of the row lives here, so nested groups
-   never push twice. */
-.tm-pdf-viewer__toolbar-trailing {
+   ToolbarEnd slot): the core .tm-toolbar-actions box; the start section's flex: 1
+   provides the push, so nested groups never double it. */
+.tm-pdf-viewer ::deep .tm-toolbar-actions {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1);
-    margin-inline-start: auto;
+}
+
+/* The compact 28px chrome of the previous phases rides the toolbar buttons too while they
+   render icon-only (the core --icon-only modifier flips exactly when a label appears);
+   the comment-count toggle is excluded — it carries data and sizes to its content. */
+.tm-pdf-viewer ::deep button.tm-pdf-viewer__btn.tm-toolbar-btn--icon-only {
+    width: 28px;
+    height: 28px;
+    padding: 0;
 }
 
 .tm-pdf-viewer__file-actions {
@@ -91,14 +112,22 @@
 
 /* ── Zoom dropdown (PD2) ─────────────────────────────────────────────────── */
 
-.tm-pdf-viewer__zoom {
+/* The wrapper reserves the label width (5.5rem) and is never squeezed below it (::deep —
+   the dropdown root is a child component and carries no viewer scope attribute): a squeezed
+   trigger wraps its label onto a second line and grows the row; the shrinkable page input
+   takes the compression instead. */
+.tm-pdf-viewer ::deep .tm-pdf-viewer__zoom {
     min-width: 5.5rem;
+    flex-shrink: 0;
 }
 
-.tm-pdf-viewer__zoom .tm-dropdown-trigger {
+.tm-pdf-viewer ::deep .tm-pdf-viewer__zoom .tm-dropdown-trigger {
     font-size: var(--tm-font-size-sm);
     font-variant-numeric: tabular-nums;
     padding: var(--tm-space-1) var(--tm-space-2);
+    /* One line, always: the "Fit Width" label (or the percentage) must not wrap the
+       toolbar start section onto a second row at a narrow container. */
+    white-space: nowrap;
 }
 
 /* ── View mode segment: inherit the core segmented radio, tightened for the toolbar ── */
@@ -244,6 +273,26 @@
     color: var(--tm-color-primary);
 }
 
+/* FZE-7: a finger cannot hit a 28px icon button — every viewer-owned control meets the
+   shared touch target on a coarse pointer. (Toolbar buttons carry the same minimum through
+   the core .tm-toolbar coarse rule; the compat .tm-pdf-viewer__btn class rides them too.)
+   The page input, the search input and the file links join them: min-height only where a
+   width minimum would fight the flex row. */
+@media (pointer: coarse) {
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__btn,
+    .tm-pdf-viewer__comments-toggle,
+    .tm-pdf-viewer__link,
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom .tm-dropdown-trigger {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-pdf-viewer__page-input,
+    .tm-pdf-viewer__search-input {
+        min-height: var(--tm-touch-target);
+    }
+}
+
 /* ── Search bar ──────────────────────────────────────────────────────────── */
 
 .tm-pdf-viewer__search-bar {
@@ -311,10 +360,10 @@
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    /* Tinted workspace: the page surfaces (canvas) pop against a muted ground.
-       --tm-bg-subtle does not exist in tokens.css — --tm-bg-muted is the muted
-       ground token (gray-100 light / dark-mode override). */
-    background: var(--tm-bg-muted);
+    /* The workspace under the page: --tm-bg-workspace tracks the theme (white light,
+       the indigo off-white, the deep dark) and stays the phase-2 token-propagation
+       contract the theme screenshot test pins; the page surfaces pop against it. */
+    background: var(--tm-bg-workspace);
     padding: var(--tm-space-4);
 }
 
@@ -371,9 +420,9 @@
     scrollbar-gutter: stable;
     flex: 1;
     overflow: auto;
-    /* Tinted workspace, matching the single-page canvas wrap (no --tm-bg-subtle
-       token — --tm-bg-muted is the muted ground). The page surfaces pop against it. */
-    background: var(--tm-bg-muted);
+    /* The workspace under the pages — the same --tm-bg-workspace ground as the
+       single-page canvas wrap, so both modes read as one workspace. */
+    background: var(--tm-bg-workspace);
     padding: var(--tm-space-4);
 }
 
@@ -448,9 +497,7 @@
     flex-direction: column;
     background: var(--tm-color-surface-elevated);
     border-right: 1px solid var(--tm-border-color);
-}
-
-/* Header owns the title + collapse button; the list below scrolls. */
+}/* Header owns the title + collapse button; the list below scrolls. */
 .tm-pdf-viewer__thumbnails-header {
     display: flex;
     align-items: center;
@@ -484,7 +531,8 @@
     border-right: 1px solid var(--tm-border-color);
 }
 
-.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail {
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail {
     cursor: pointer;
     margin-bottom: var(--tm-space-2);
     padding: var(--tm-space-1);
@@ -492,21 +540,25 @@
     transition: background 0.15s;
 }
 
-.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail:hover {
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail:hover,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail:hover {
     background: var(--tm-color-surface-hover);
 }
 
-.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail--active {
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail--active,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail--active {
     background: var(--tm-color-primary-subtle);
 }
 
-.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail > canvas {
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail > canvas,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail > canvas {
     display: block;
     width: 100%;
     border-radius: var(--tm-radius-xs);
 }
 
-.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail__label {
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail__label,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail__label {
     text-align: center;
     margin-top: var(--tm-space-0-5);
     font-size: var(--tm-font-size-xs);
@@ -566,6 +618,77 @@
 .tm-pdf-viewer__loading-text {
     font-size: var(--tm-font-size-sm);
     user-select: none;
+}
+
+/* ── Responsive presentation (container query on the viewer's own width) ────
+   The markup branch (compact row, action bar, sheets) resolves from the wrapping
+   TmLayoutObserver; these rules adapt the presentation inside the same mode. The
+   boundary is the shared TmBreakpoints.Sm literal, half-open. */
+@container tm-pdf-viewer (width < 640px) {
+    /* Compact single row: everything stays on ONE line (flex-wrap: nowrap) — the core
+       TmToolbar overflow moves the lowest-priority buttons into "More" instead, and the
+       host content (annotator tools) wraps inside its own group. The page count stays
+       visible as the compact "1/120" (input + "/N" count) — one glyph less than desktop. */
+    .tm-pdf-viewer__page-count {
+        font-size: var(--tm-font-size-xs);
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar-divider {
+        display: none;
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar-start,
+    .tm-pdf-viewer ::deep .tm-toolbar-actions {
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    /* The page input shares the row: shrinkable, but never below its touch target. */
+    .tm-pdf-viewer__page-input {
+        width: 3rem;
+        min-width: 0;
+        flex-shrink: 1;
+    }
+
+    /* The navigation group must be allowed to compress with it: the group's own min-content
+       would otherwise keep the input's reserved width and overflow a narrow container
+       (::deep — the group root is a child component). Its pinned chevrons cannot shrink, so
+       the input absorbs whatever the row gives up. */
+    .tm-pdf-viewer ::deep .tm-toolbar-group[data-tm-group="navigation"] {
+        min-width: 0;
+    }
+
+    /* The zoom trigger is the "%" glyph on a mobile layout (ZoomTriggerText) — drop the
+       reserved label width so the row keeps its single line. */
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom {
+        min-width: 0;
+    }
+
+    /* Hledání přes celou šířku: the bar stays one row — the input takes the remaining
+       width (min-width: 0 lets it shrink) and the ✕ close button always has its place. */
+    .tm-pdf-viewer__search-bar {
+        flex-wrap: nowrap;
+    }
+
+    .tm-pdf-viewer__search-input {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+/* Ultra-narrow containers (a 320px phone, a narrow Notion column): below ~280px of viewer
+   width the full compact row — two pinned chevrons, the page input, the "/N" count, the zoom
+   trigger and "More" — cannot fit even with the input compressed to zero, so the count
+   yields (the input stays the page indicator) and the row padding tightens a step to keep
+   every touch target on one line. */
+@container tm-pdf-viewer (width < 280px) {
+    .tm-pdf-viewer__page-count {
+        display: none;
+    }
+
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__toolbar {
+        padding-inline: var(--tm-space-2);
+    }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────

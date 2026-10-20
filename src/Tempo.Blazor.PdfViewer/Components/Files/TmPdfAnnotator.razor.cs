@@ -140,8 +140,8 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// <summary>Callback invoked when the thumbnails collapse state changes in the viewer.</summary>
     [Parameter] public EventCallback<bool> ThumbnailsCollapsedChanged { get; set; }
 
-    /// <summary>How the viewer's zoom scale is decided. Supports two-way binding; passed through to the embedded viewer. Default is Custom.</summary>
-    [Parameter] public PdfZoomMode ZoomMode { get; set; } = PdfZoomMode.Custom;
+    /// <summary>How the viewer's zoom scale is decided. Supports two-way binding; passed through to the embedded viewer. Default is <see cref="PdfZoomMode.Auto"/>, consistent with the viewer (fit-width on a mobile layout, the bound scale everywhere else).</summary>
+    [Parameter] public PdfZoomMode ZoomMode { get; set; } = PdfZoomMode.Auto;
 
     /// <summary>Callback when the zoom mode changes in the viewer.</summary>
     [Parameter] public EventCallback<PdfZoomMode> ZoomModeChanged { get; set; }
@@ -204,10 +204,10 @@ public partial class TmPdfAnnotator : TmComponentBase
 
     /// <summary>The zoom mode handed to the viewer; synced from <see cref="ZoomMode"/> only when
     /// it actually changes, so an unbound host keeps the mode the viewer reported back.</summary>
-    private PdfZoomMode _zoomMode = PdfZoomMode.Custom;
+    private PdfZoomMode _zoomMode = PdfZoomMode.Auto;
 
     /// <summary>The <see cref="ZoomMode"/> value seen by the previous parameter pass.</summary>
-    private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Custom;
+    private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Auto;
 
     private IPdfAnnotationProvider EffectiveProvider
         => AnnotationProvider ?? (_fallbackProvider ??= new InMemoryPdfAnnotationProvider());

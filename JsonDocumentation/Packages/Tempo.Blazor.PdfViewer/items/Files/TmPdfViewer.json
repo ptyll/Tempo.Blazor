@@ -1,256 +1,270 @@
 {
-  "itemName": "TmPdfViewer",
-  "kind": "Component",
-  "category": "Files",
-  "description": "A reusable PDF viewer component powered by PDF.js v5. Supports page navigation with an editable page input, zoom presets with fit modes, rotation, text layer, collapsible thumbnails, search, an optional document header, and continuous scroll.",
-  "packageId": "Tempo.Blazor.PdfViewer",
-  "namespace": "Tempo.Blazor.Components.Files",
-  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor",
-  "documentationStatus": "generated",
-  "requiredImports": [
-    "@using Tempo.Blazor.Components.Files"
-  ],
-  "parameters": [
-    {
-      "name": "Url",
-      "type": "string?",
-      "isRequired": false,
-      "description": "URL of the PDF document to display."
-    },
-    {
-      "name": "Page",
-      "type": "int",
-      "isRequired": false,
-      "default": "1",
-      "description": "Current page number (1-based). Supports two-way binding."
-    },
-    {
-      "name": "PageChanged",
-      "type": "EventCallback<int>",
-      "isRequired": false,
-      "description": "Callback when the page changes."
-    },
-    {
-      "name": "Scale",
-      "type": "double",
-      "isRequired": false,
-      "default": "1.0",
-      "description": "Current zoom scale. Supports two-way binding."
-    },
-    {
-      "name": "ScaleChanged",
-      "type": "EventCallback<double>",
-      "isRequired": false,
-      "description": "Callback when the scale changes."
-    },
-    {
-      "name": "ShowToolbar",
-      "type": "bool",
-      "isRequired": false,
-      "default": "true",
-      "description": "Whether to show the toolbar. Default is true."
-    },
-    {
-      "name": "AllowDownload",
-      "type": "bool",
-      "isRequired": false,
-      "default": "true",
-      "description": "Whether to allow downloading the PDF. Default is true."
-    },
-    {
-      "name": "AllowRotation",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to allow rotation. Default is false."
-    },
-    {
-      "name": "ShowTextLayer",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to render a selectable text layer over the canvas. Default is false."
-    },
-    {
-      "name": "ShowThumbnails",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to show a thumbnails sidebar. Default is false."
-    },
-    {
-      "name": "ShowSearch",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to show a search input. Default is false."
-    },
-    {
-      "name": "ShowViewModeToggle",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to show a view mode toggle (single/continuous). Default is false."
-    },
-    {
-      "name": "ViewMode",
-      "type": "PdfViewMode",
-      "isRequired": false,
-      "default": "SinglePage",
-      "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) — selecting a thread returns the viewer to SinglePage on the thread's page."
-    },
-    {
-      "name": "ViewModeChanged",
-      "type": "EventCallback<PdfViewMode>",
-      "isRequired": false,
-      "description": "Callback when the view mode changes."
-    },
-    {
-      "name": "ZoomMode",
-      "type": "PdfZoomMode",
-      "isRequired": false,
-      "default": "Custom",
-      "description": "How the zoom scale is decided. FitWidth and FitPage let JavaScript compute the scale from the container size (and keep recomputing it on resize); any zoom button or preset switches the mode back to Custom. Supports two-way binding. Default is Custom (since 2.9.1)."
-    },
-    {
-      "name": "ZoomModeChanged",
-      "type": "EventCallback<PdfZoomMode>",
-      "isRequired": false,
-      "description": "Callback when the zoom mode changes (since 2.9.1)."
-    },
-    {
-      "name": "ShowHeader",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to show a document header above the toolbar. Default is false, which keeps the toolbar-only layout. When true, the Open and Download links move from the toolbar into the header (since 2.9.1)."
-    },
-    {
-      "name": "Title",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Document title rendered in the header. Used only when ShowHeader is true (since 2.9.1)."
-    },
-    {
-      "name": "Subtitle",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Document subtitle rendered in the header. Used only when ShowHeader is true. When omitted, a neutral page count (\"Pages: N\") is rendered once the document is loaded (since 2.9.1)."
-    },
-    {
-      "name": "ShowOpenLink",
-      "type": "bool",
-      "isRequired": false,
-      "default": "true",
-      "description": "Whether to show an \"Open in new tab\" link. Default is true (since 2.9.1)."
-    },
-    {
-      "name": "ThumbnailsCollapsed",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether the thumbnails sidebar is collapsed. Supports two-way binding; the collapse button in the sidebar header and the toolbar \"Pages\" toggle both drive it. Default is false (since 2.9.1)."
-    },
-    {
-      "name": "ThumbnailsCollapsedChanged",
-      "type": "EventCallback<bool>",
-      "isRequired": false,
-      "description": "Callback when the thumbnails collapse state changes (since 2.9.1)."
-    },
-    {
-      "name": "ToolbarStart",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Content rendered at the very start of the toolbar (before the navigation group), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
-    },
-    {
-      "name": "ToolbarEnd",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Content rendered at the very end of the toolbar (after the built-in groups), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
-    },
-    {
-      "name": "HeaderStart",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Content rendered at the start of the document header. Used only when ShowHeader is true (since 2.9.1)."
-    },
-    {
-      "name": "HeaderActions",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Content rendered at the end of the document header, after the Open/Download links. Used only when ShowHeader is true (since 2.9.1)."
-    },
-    {
-      "name": "Class",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Additional CSS classes for the root element."
-    },
-    {
-      "name": "Height",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Height of the viewer (CSS value). Default is \"600px\"."
-    },
-    {
-      "name": "EnableAnnotations",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether the annotation layer and comments panel are enabled. Default is false."
-    },
-    {
-      "name": "AnnotationProvider",
-      "type": "IPdfAnnotationProvider?",
-      "isRequired": false,
-      "description": "Provider used to load and persist annotation threads when EnableAnnotations is true. When omitted, an in-memory provider keeps annotations for the current session."
-    },
-    {
-      "name": "DocumentId",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Stable document identifier used by the annotation provider. Falls back to Url."
-    },
-    {
-      "name": "CurrentUser",
-      "type": "DocumentCommentUser?",
-      "isRequired": false,
-      "description": "Author applied to annotations created by the current viewer."
-    },
-    {
-      "name": "ShowResolvedAnnotations",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether resolved annotation threads are shown by default. Default is false."
-    },
-    {
-      "name": "Annotations",
-      "type": "IReadOnlyList<DocumentCommentThread>?",
-      "isRequired": false,
-      "description": "Optional seed threads used when no AnnotationProvider is supplied."
-    },
-    {
-      "name": "AnnotationsChanged",
-      "type": "EventCallback<IReadOnlyList<DocumentCommentThread>>",
-      "isRequired": false,
-      "description": "Callback invoked when the loaded annotation set changes."
-    },
-    {
-      "name": "OnTextSelected",
-      "type": "EventCallback<PdfTextSelection>",
-      "isRequired": false,
-      "description": "Callback invoked when text is selected in the viewer text layer."
-    },
-    {
-      "name": "OverlayContent",
-      "type": "RenderFragment?",
-      "isRequired": false,
-      "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer)."
-    },
-    {
-      "name": "OnDocumentLoaded",
-      "type": "EventCallback<int>",
-      "isRequired": false,
-      "description": "Callback invoked with the total page count once the document is loaded."
-    },
-    {
-      "name": "EnableTextSelectionEvents",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Enables text selection events (OnTextSelected) without turning on the built-in annotation layer and panel. Default is false."
-    }
-  ]
+ "itemName": "TmPdfViewer",
+ "kind": "Component",
+ "category": "Files",
+ "description": "A reusable PDF viewer component powered by PDF.js v5. Supports page navigation with an editable page input, zoom presets with fit modes (Auto = fit-width on mobile), rotation, text layer, collapsible thumbnails, search, an optional document header, and continuous scroll. The toolbar is a core TmToolbar with priority-based overflow and optional visible labels; tablet and mobile layouts present the thumbnails and the comments panel as sheets with a mobile action bar.",
+ "packageId": "Tempo.Blazor.PdfViewer",
+ "namespace": "Tempo.Blazor.Components.Files",
+ "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor",
+ "documentationStatus": "generated",
+ "requiredImports": [
+  "@using Tempo.Blazor.Components.Files"
+ ],
+ "parameters": [
+  {
+   "name": "Url",
+   "type": "string?",
+   "isRequired": false,
+   "description": "URL of the PDF document to display."
+  },
+  {
+   "name": "Page",
+   "type": "int",
+   "isRequired": false,
+   "default": "1",
+   "description": "Current page number (1-based). Supports two-way binding."
+  },
+  {
+   "name": "PageChanged",
+   "type": "EventCallback<int>",
+   "isRequired": false,
+   "description": "Callback when the page changes."
+  },
+  {
+   "name": "Scale",
+   "type": "double",
+   "isRequired": false,
+   "default": "1.0",
+   "description": "Current zoom scale. Supports two-way binding."
+  },
+  {
+   "name": "ScaleChanged",
+   "type": "EventCallback<double>",
+   "isRequired": false,
+   "description": "Callback when the scale changes."
+  },
+  {
+   "name": "ShowToolbar",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether to show the toolbar. Default is true."
+  },
+  {
+   "name": "AllowDownload",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether to allow downloading the PDF. Default is true."
+  },
+  {
+   "name": "AllowRotation",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether to allow rotation. Default is false."
+  },
+  {
+   "name": "ShowTextLayer",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether to render a selectable text layer over the canvas. Default is false."
+  },
+  {
+   "name": "ShowThumbnails",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether to show a thumbnails sidebar. Default is false."
+  },
+  {
+   "name": "ShowSearch",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether to show a search input. Default is false."
+  },
+  {
+   "name": "ShowViewModeToggle",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether to show a view mode toggle (single/continuous). Default is false."
+  },
+  {
+   "name": "ViewMode",
+   "type": "PdfViewMode",
+   "isRequired": false,
+   "default": "SinglePage",
+   "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) \u2014 selecting a thread returns the viewer to SinglePage on the thread's page."
+  },
+  {
+   "name": "ViewModeChanged",
+   "type": "EventCallback<PdfViewMode>",
+   "isRequired": false,
+   "description": "Callback when the view mode changes."
+  },
+  {
+   "name": "ZoomMode",
+   "type": "PdfZoomMode",
+   "isRequired": false,
+   "default": "Auto",
+   "description": "How the zoom scale is decided. Default Auto: fit-width on a mobile layout, the bound scale everywhere else. FitWidth and FitPage let JavaScript compute the scale from the container size (and keep recomputing it on resize); any zoom button or preset switches the mode back to Custom. Set Custom to restore the pre-Auto behavior at every width. Supports two-way binding."
+  },
+  {
+   "name": "ZoomModeChanged",
+   "type": "EventCallback<PdfZoomMode>",
+   "isRequired": false,
+   "description": "Callback when the zoom mode changes (since 2.9.1)."
+  },
+  {
+   "name": "ShowHeader",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether to show a document header above the toolbar. Default is false, which keeps the toolbar-only layout. When true, the Open and Download links move from the toolbar into the header (since 2.9.1)."
+  },
+  {
+   "name": "Title",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Document title rendered in the header. Used only when ShowHeader is true (since 2.9.1)."
+  },
+  {
+   "name": "Subtitle",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Document subtitle rendered in the header. Used only when ShowHeader is true. When omitted, a neutral page count (\"Pages: N\") is rendered once the document is loaded (since 2.9.1)."
+  },
+  {
+   "name": "ShowOpenLink",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether to show an \"Open in new tab\" link. Default is true (since 2.9.1)."
+  },
+  {
+   "name": "ThumbnailsCollapsed",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether the thumbnails sidebar is collapsed. Supports two-way binding; the collapse button in the sidebar header and the toolbar \"Pages\" toggle both drive it. Default is false (since 2.9.1)."
+  },
+  {
+   "name": "ThumbnailsCollapsedChanged",
+   "type": "EventCallback<bool>",
+   "isRequired": false,
+   "description": "Callback when the thumbnails collapse state changes (since 2.9.1)."
+  },
+  {
+   "name": "ToolbarStart",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Content rendered at the very start of the toolbar (before the navigation group), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
+  },
+  {
+   "name": "ToolbarEnd",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Content rendered at the very end of the toolbar (after the built-in groups), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
+  },
+  {
+   "name": "ToolbarLabels",
+   "type": "ToolbarLabels",
+   "isRequired": false,
+   "default": "Icons",
+   "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only toolbar of the earlier redesign phases); Auto shows the labels except on a toolbar narrower than the mobile breakpoint, and IconsWithText always shows them."
+  },
+  {
+   "name": "LayoutMode",
+   "type": "TmLayoutMode",
+   "isRequired": false,
+   "default": "Auto",
+   "description": "How the viewer decides its responsive layout. Auto measures the viewer's own container; a forced value renders that layout without measuring, so a test - or a host - can pin a mode."
+  },
+  {
+   "name": "HeaderStart",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Content rendered at the start of the document header. Used only when ShowHeader is true (since 2.9.1)."
+  },
+  {
+   "name": "HeaderActions",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Content rendered at the end of the document header, after the Open/Download links. Used only when ShowHeader is true (since 2.9.1)."
+  },
+  {
+   "name": "Class",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Additional CSS classes for the root element."
+  },
+  {
+   "name": "Height",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Height of the viewer (CSS value). Default is \"600px\"."
+  },
+  {
+   "name": "EnableAnnotations",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether the annotation layer and comments panel are enabled. Default is false."
+  },
+  {
+   "name": "AnnotationProvider",
+   "type": "IPdfAnnotationProvider?",
+   "isRequired": false,
+   "description": "Provider used to load and persist annotation threads when EnableAnnotations is true. When omitted, an in-memory provider keeps annotations for the current session."
+  },
+  {
+   "name": "DocumentId",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Stable document identifier used by the annotation provider. Falls back to Url."
+  },
+  {
+   "name": "CurrentUser",
+   "type": "DocumentCommentUser?",
+   "isRequired": false,
+   "description": "Author applied to annotations created by the current viewer."
+  },
+  {
+   "name": "ShowResolvedAnnotations",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether resolved annotation threads are shown by default. Default is false."
+  },
+  {
+   "name": "Annotations",
+   "type": "IReadOnlyList<DocumentCommentThread>?",
+   "isRequired": false,
+   "description": "Optional seed threads used when no AnnotationProvider is supplied."
+  },
+  {
+   "name": "AnnotationsChanged",
+   "type": "EventCallback<IReadOnlyList<DocumentCommentThread>>",
+   "isRequired": false,
+   "description": "Callback invoked when the loaded annotation set changes."
+  },
+  {
+   "name": "OnTextSelected",
+   "type": "EventCallback<PdfTextSelection>",
+   "isRequired": false,
+   "description": "Callback invoked when text is selected in the viewer text layer."
+  },
+  {
+   "name": "OverlayContent",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer)."
+  },
+  {
+   "name": "OnDocumentLoaded",
+   "type": "EventCallback<int>",
+   "isRequired": false,
+   "description": "Callback invoked with the total page count once the document is loaded."
+  },
+  {
+   "name": "EnableTextSelectionEvents",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Enables text selection events (OnTextSelected) without turning on the built-in annotation layer and panel. Default is false."
+  }
+ ]
 }

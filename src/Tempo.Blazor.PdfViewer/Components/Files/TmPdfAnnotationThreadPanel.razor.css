@@ -28,6 +28,12 @@
     z-index: 2;
 }
 
+/* Sheet presentation (TmSidePanel): the sheet header owns the title and the close button,
+   so the panel's own header carries only the resolved filter, pushed to the end. */
+.tm-pdf-annotation-panel__header--sheet {
+    justify-content: flex-end;
+}
+
 .tm-pdf-annotation-panel__title {
     flex: 1;
     font-weight: 600;
@@ -60,6 +66,23 @@
 .tm-pdf-annotation-panel__close:hover {
     background: var(--tm-color-surface-hover);
     color: var(--tm-text-primary);
+}
+
+/* ── Sheet presentation (ShowChrome=false, hosted by TmSidePanel) ───────────
+   The sheet owns the width and the edge: the docked 280px column and its left
+   border would fight the side sheet (tablet) and the bottom sheet (mobile). */
+.tm-pdf-annotation-panel--sheet {
+    width: 100%;
+    border-left: none;
+}
+
+/* ── Touch targets: a finger cannot hit a 28px close — the panel close, the
+   composer actions and the comment ⋯ menu meet the shared target on coarse. */
+@media (pointer: coarse) {
+    .tm-pdf-annotation-panel__close {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 /* ── New comment composer (shared TmPdfComposer inside the prompt card) ──── */

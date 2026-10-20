@@ -1,6 +1,8 @@
 @namespace Tempo.Blazor.Components.Files
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Toolbar
 
 <div class="tm-pdf-annotator @Class" data-testid="@TestId("pdf-annotator")">
 
@@ -125,57 +127,61 @@
     /// <summary>
     /// The annotator's tool group (mode pills, stamp picker, color indicator) shared by the
     /// merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
+    /// The tools are core <see cref="TmToolbarButton"/>s (Primary priorities), so the merged
+    /// toolbar can move them into its "More" menu when the row runs out of room; the group
+    /// carries the stable <c>data-tm-group</c> contract value.
     /// </summary>
     private RenderFragment ToolsGroup => @<div class="tm-pdf-annotator__tools"
                                                     role="group"
                                                     aria-label="@Loc["TmPdfAnnotator_ToolsGroup"]"
+                                                    data-tm-group="tools"
                                                     data-testid="@TestId("pdf-annotator-tools")">
         <div class="tm-pdf-annotator__modes">
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Browse)"
-                    title="@Loc["TmPdfAnnotator_ModeBrowse"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeBrowse"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Browse ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-browse")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Browse)">
-                <TmIcon Name="mouse-pointer" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Highlight)"
-                    title="@Loc["TmPdfAnnotator_ModeHighlight"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeHighlight"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Highlight ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-highlight")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Highlight)">
-                <TmIcon Name="highlighter" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Comment)"
-                    title="@Loc["TmPdfAnnotator_ModeComment"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeComment"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Comment ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-comment")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Comment)">
-                <TmIcon Name="message-square" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Stamp)"
-                    title="@Loc["TmPdfAnnotator_ModeStamp"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeStamp"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Stamp ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-stamp")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Stamp)">
-                <TmIcon Name="stamp" Size="IconSize.Sm" />
-            </button>
-            <button type="button"
-                    class="@ModeClass(PdfAnnotatorMode.Draw)"
-                    title="@Loc["TmPdfAnnotator_ModeDraw"]"
-                    aria-label="@Loc["TmPdfAnnotator_ModeDraw"]"
-                    aria-pressed="@(_mode == PdfAnnotatorMode.Draw ? "true" : "false")"
-                    data-testid="@TestId("pdf-annotator-mode-draw")"
-                    @onclick="() => SetModeAsync(PdfAnnotatorMode.Draw)">
-                <TmIcon Name="pencil" Size="IconSize.Sm" />
-            </button>
+            <TmToolbarButton Icon="mouse-pointer"
+                             Text="@Loc["TmPdfAnnotator_ModeBrowse"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeBrowse"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="ToolbarLabelPosition.Hidden"
+                             Pressed="@(_mode == PdfAnnotatorMode.Browse)"
+                             Class="@ModeClass(PdfAnnotatorMode.Browse)"
+                             data-testid="@TestId("pdf-annotator-mode-browse")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Browse)" />
+            <TmToolbarButton Icon="highlighter"
+                             Text="@Loc["TmPdfAnnotator_ModeHighlight"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeHighlight"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="ToolbarLabelPosition.Hidden"
+                             Pressed="@(_mode == PdfAnnotatorMode.Highlight)"
+                             Class="@ModeClass(PdfAnnotatorMode.Highlight)"
+                             data-testid="@TestId("pdf-annotator-mode-highlight")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Highlight)" />
+            <TmToolbarButton Icon="message-square"
+                             Text="@Loc["TmPdfAnnotator_ModeComment"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeComment"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="ToolbarLabelPosition.Hidden"
+                             Pressed="@(_mode == PdfAnnotatorMode.Comment)"
+                             Class="@ModeClass(PdfAnnotatorMode.Comment)"
+                             data-testid="@TestId("pdf-annotator-mode-comment")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Comment)" />
+            <TmToolbarButton Icon="stamp"
+                             Text="@Loc["TmPdfAnnotator_ModeStamp"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeStamp"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="ToolbarLabelPosition.Hidden"
+                             Pressed="@(_mode == PdfAnnotatorMode.Stamp)"
+                             Class="@ModeClass(PdfAnnotatorMode.Stamp)"
+                             data-testid="@TestId("pdf-annotator-mode-stamp")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Stamp)" />
+            <TmToolbarButton Icon="pencil"
+                             Text="@Loc["TmPdfAnnotator_ModeDraw"]"
+                             Tooltip="@Loc["TmPdfAnnotator_ModeDraw"]"
+                             Priority="ToolbarButtonPriority.Primary"
+                             LabelPosition="ToolbarLabelPosition.Hidden"
+                             Pressed="@(_mode == PdfAnnotatorMode.Draw)"
+                             Class="@ModeClass(PdfAnnotatorMode.Draw)"
+                             data-testid="@TestId("pdf-annotator-mode-draw")"
+                             OnClick="() => SetModeAsync(PdfAnnotatorMode.Draw)" />
         </div>
 
         @if (_mode == PdfAnnotatorMode.Stamp)
@@ -209,11 +215,12 @@
 
     /// <summary>
     /// The export group (Export / flattened export / Print) as secondary buttons, shared by
-    /// the toolbar end and the header row.
+    /// the toolbar end and the header row. Carries the stable <c>data-tm-group</c> contract value.
     /// </summary>
     private RenderFragment ExportGroup => @<div class="tm-pdf-annotator__export-group"
                                                 role="group"
                                                 aria-label="@Loc["TmPdfAnnotator_ExportGroup"]"
+                                                data-tm-group="export"
                                                 data-testid="@TestId("pdf-annotator-export-group")">
         <button type="button"
                 class="tm-pdf-annotator__action tm-pdf-annotator__action--secondary"
@@ -247,15 +254,17 @@
     /// <summary>
     /// The panel toggle: keeps the panel reachable when <see cref="ShowPanel"/> is unbound —
     /// the ✕ inside the panel only flips the internal state, this button flips it back
-    /// (aria-pressed reflects the current visibility).
+    /// (aria-pressed reflects the current visibility). A core <see cref="TmToolbarButton"/>
+    /// (Pinned — the trailing reopen affordance stays on the bar at every width, exactly like
+    /// the primary Save call to action).
     /// </summary>
-    private RenderFragment PanelToggleButton => @<button type="button"
-                class="tm-pdf-annotator__action tm-pdf-annotator__panel-toggle"
-                title="@Loc["TmPdfAnnotator_TogglePanel"]"
-                aria-label="@Loc["TmPdfAnnotator_TogglePanel"]"
-                aria-pressed="@(_panelVisible ? "true" : "false")"
-                data-testid="@TestId("pdf-annotator-panel-toggle")"
-                @onclick="TogglePanelAsync">
-        <TmIcon Name="@IconNames.PanelRight" Size="IconSize.Sm" />
-    </button>;
+    private RenderFragment PanelToggleButton => @<TmToolbarButton Icon="@IconNames.PanelRight"
+                 Text="@Loc["TmPdfAnnotator_TogglePanel"]"
+                 Tooltip="@Loc["TmPdfAnnotator_TogglePanel"]"
+                 Priority="ToolbarButtonPriority.Pinned"
+                 LabelPosition="ToolbarLabelPosition.Hidden"
+                 Pressed="@_panelVisible"
+                 Class="tm-pdf-annotator__panel-toggle"
+                 data-testid="@TestId("pdf-annotator-panel-toggle")"
+                 OnClick="TogglePanelAsync" />;
 }

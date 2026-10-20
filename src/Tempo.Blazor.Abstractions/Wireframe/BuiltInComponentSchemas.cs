@@ -2208,8 +2208,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["single", "continuous"]),
                 P("showHeader",        "Show Header",        PropType.Bool,   false,          cat: "Appearance"),
                 P("title",             "Title",              PropType.String, cat: "Content"),
-                P("zoomMode",          "Zoom Mode",          PropType.Enum,   "custom",       cat: "State",
-                    opts: ["custom", "fit-width", "fit-page"]),
+                P("zoomMode",          "Zoom Mode",          PropType.Enum,   "auto",         cat: "State",
+                    opts: ["auto", "custom", "fit-width", "fit-page"]),
             ]
         };
 

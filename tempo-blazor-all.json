@@ -28167,6 +28167,13 @@
               "description": "Callback invoked when the selected thread id changes."
             },
             {
+              "name": "ShowChrome",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own header (title + close). Default true - the docked desktop presentation. When the panel is hosted inside a responsive sheet (TmSidePanel), the sheet header owns the title and the close button, so the host passes false and the panel renders only the resolved filter and its body."
+            },
+            {
               "name": "ShowResolved",
               "type": "bool",
               "isRequired": false,
@@ -28401,7 +28408,7 @@
               "name": "ZoomMode",
               "type": "PdfZoomMode",
               "isRequired": false,
-              "default": "PdfZoomMode.Custom",
+              "default": "PdfZoomMode.Auto",
               "description": "How the viewer's zoom scale is decided. Supports two-way binding; passed through to the embedded viewer. Default is Custom."
             },
             {
@@ -29016,7 +29023,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "A reusable PDF viewer component powered by PDF.js v5. Supports page navigation with an editable page input, zoom presets with fit modes, rotation, text layer, collapsible thumbnails, search, an optional document header, and continuous scroll.",
+          "description": "A reusable PDF viewer component powered by PDF.js v5. Supports page navigation with an editable page input, zoom presets with fit modes (Auto = fit-width on mobile), rotation, text layer, collapsible thumbnails, search, an optional document header, and continuous scroll. The toolbar is a core TmToolbar with priority-based overflow and optional visible labels; tablet and mobile layouts present the thumbnails and the comments panel as sheets with a mobile action bar.",
           "packageId": "Tempo.Blazor.PdfViewer",
           "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor",
           "documentationStatus": "merged",
@@ -29102,6 +29109,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Height of the viewer (CSS value). Default is \"600px\"."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "How the viewer decides its responsive layout. Auto measures the viewer's own container; a forced value renders that layout without measuring, so a test - or a host - can pin a mode."
             },
             {
               "name": "OnDocumentLoaded",
@@ -29228,6 +29242,13 @@
               "description": "Content rendered at the very end of the toolbar (after the built-in groups), letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar (since 2.9.1)."
             },
             {
+              "name": "ToolbarLabels",
+              "type": "ToolbarLabels",
+              "isRequired": false,
+              "default": "ToolbarLabels.Icons",
+              "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only toolbar of the earlier redesign phases); Auto shows the labels except on a toolbar narrower than the mobile breakpoint, and IconsWithText always shows them."
+            },
+            {
               "name": "ToolbarStart",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -29256,8 +29277,8 @@
               "name": "ZoomMode",
               "type": "PdfZoomMode",
               "isRequired": false,
-              "default": "PdfZoomMode.Custom",
-              "description": "How the zoom scale is decided. FitWidth and FitPage let JavaScript compute the scale from the container size (and keep recomputing it on resize); any zoom button or preset switches the mode back to Custom. Supports two-way binding. Default is Custom (since 2.9.1)."
+              "default": "PdfZoomMode.Auto",
+              "description": "How the zoom scale is decided. Default Auto: fit-width on a mobile layout, the bound scale everywhere else. FitWidth and FitPage let JavaScript compute the scale from the container size (and keep recomputing it on resize); any zoom button or preset switches the mode back to Custom. Set Custom to restore the pre-Auto behavior at every width. Supports two-way binding."
             },
             {
               "name": "ZoomModeChanged",
@@ -29370,6 +29391,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-download.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-fit.mjs",
           "kind": "JavaScript"
         },
@@ -29402,7 +29427,15 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-download.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-fit.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-generations.test.mjs",
           "kind": "JavaScript"
         },
         {

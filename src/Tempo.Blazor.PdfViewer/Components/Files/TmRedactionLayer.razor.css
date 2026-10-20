@@ -206,6 +206,13 @@
 @media (max-width: 900px) {
     .tm-redaction__body {
         flex-direction: column;
+        /* Stretch (not the default flex-start): the stage must claim the full row width
+           so the page canvas fills the pane on a phone instead of hugging its content. */
+        align-items: stretch;
+    }
+
+    .tm-redaction__stage {
+        width: 100%;
     }
 
     .tm-redaction__panel {

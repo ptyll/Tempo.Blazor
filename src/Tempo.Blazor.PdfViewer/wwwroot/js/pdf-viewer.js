@@ -89,6 +89,21 @@ window.tmPdfViewer = (function () {
         return _continuousModulePromise;
     }
 
+    // The download decision (protocol allow-list, same-origin vs. cross-origin) lives in
+    // pdf-viewer-download.mjs, node-tested the same way; pdf-viewer.js only executes
+    // the decision it returns.
+    let _downloadModule = null;
+    let _downloadModulePromise = null;
+    function _ensureDownloadModule() {
+        if (_downloadModule) return Promise.resolve(_downloadModule);
+        if (!_downloadModulePromise) {
+            _downloadModulePromise = import(_scriptDir + 'pdf-viewer-download.mjs')
+                .then(mod => { _downloadModule = mod; return mod; })
+                .catch(e => { _downloadModulePromise = null; throw e; });
+        }
+        return _downloadModulePromise;
+    }
+
     function _isCancelled(err) {
         return _renderModule ? _renderModule.isRenderingCancelled(err) : false;
     }
@@ -1426,6 +1441,37 @@ window.tmPdfViewer = (function () {
         _docs.delete(rootEl);
     }
 
+    // The mobile "More" menu offers Download as a plain menu item: the click cannot carry an
+    // anchor, so the download is triggered programmatically. The decision (protocol
+    // allow-list, same-origin vs. cross-origin) comes from pdf-viewer-download.mjs:
+    // same-origin and blob: URLs take the anchor + download path; any other origin is
+    // opened in a new tab (a cross-origin `download` attribute is ignored by browsers and
+    // must never turn into a navigation). A module that fails to load downloads nothing.
+    async function downloadUrl(url) {
+        if (!url) return;
+        let decision = null;
+        try {
+            const mod = await _ensureDownloadModule();
+            decision = mod.resolveDownload(url, document.baseURI);
+        } catch {
+            decision = null;
+        }
+        if (!decision || decision.method === 'none') return;
+
+        if (decision.method === 'window') {
+            window.open(decision.href, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        const a = document.createElement('a');
+        a.href = decision.href;
+        a.download = '';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
     return {
         isAvailable,
         init,
@@ -1448,6 +1494,7 @@ window.tmPdfViewer = (function () {
         scrollToPage,
         fitScale,
         clearFit,
+        downloadUrl,
         destroy
     };
 })();

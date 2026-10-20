@@ -1,112 +1,119 @@
 {
-  "itemName": "TmPdfAnnotationThreadPanel",
-  "kind": "Component",
-  "category": "Files",
-  "namespace": "Tempo.Blazor.Components.Files",
-  "description": "Side panel listing PDF annotation threads with per-thread comment detail, reply, resolve/reopen, delete, a resolved filter, and a composer for commenting on the current text selection. Used internally by TmPdfViewer when annotations are enabled.",
-  "packageId": "Tempo.Blazor.PdfViewer",
-  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotationThreadPanel.razor",
-  "documentationStatus": "generated",
-  "requiredImports": [
-    "@using Tempo.Blazor.Components.Files"
-  ],
-  "parameters": [
-    {
-      "name": "Threads",
-      "type": "IReadOnlyList<DocumentCommentThread>",
-      "isRequired": false,
-      "default": "[]",
-      "description": "Annotation threads to render."
-    },
-    {
-      "name": "SelectedThreadId",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Selected thread id."
-    },
-    {
-      "name": "SelectedThreadIdChanged",
-      "type": "EventCallback<string?>",
-      "isRequired": false,
-      "description": "Callback invoked when the selected thread id changes."
-    },
-    {
-      "name": "CurrentUserId",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Current user id used for mention styling and permission checks."
-    },
-    {
-      "name": "ShowResolved",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether resolved threads are shown."
-    },
-    {
-      "name": "ShowResolvedChanged",
-      "type": "EventCallback<bool>",
-      "isRequired": false,
-      "description": "Callback invoked when the resolved filter toggles."
-    },
-    {
-      "name": "PendingSelection",
-      "type": "PdfTextSelection?",
-      "isRequired": false,
-      "description": "Pending text selection awaiting a new comment, when present."
-    },
-    {
-      "name": "Disabled",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether panel interaction is disabled."
-    },
-    {
-      "name": "OnCreateThreadRequested",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Callback invoked with the body of a new thread requested from the pending selection."
-    },
-    {
-      "name": "OnReplyRequested",
-      "type": "EventCallback<DocumentCommentReplyRequest>",
-      "isRequired": false,
-      "description": "Callback invoked when a reply is requested."
-    },
-    {
-      "name": "OnEditRequested",
-      "type": "EventCallback<DocumentCommentEditRequest>",
-      "isRequired": false,
-      "description": "Callback invoked when an existing comment body is edited."
-    },
-    {
-      "name": "OnResolveRequested",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Callback invoked when resolving a thread is requested."
-    },
-    {
-      "name": "OnReopenRequested",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Callback invoked when reopening a thread is requested."
-    },
-    {
-      "name": "OnDeleteRequested",
-      "type": "EventCallback<DocumentCommentDeleteRequest>",
-      "isRequired": false,
-      "description": "Callback invoked when deleting a comment is requested."
-    },
-    {
-      "name": "OnSelectionDismissed",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Callback invoked when the pending selection is dismissed."
-    },
-    {
-      "name": "OnCloseRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Callback invoked when the panel's close button is pressed."
-    }
-  ]
+ "itemName": "TmPdfAnnotationThreadPanel",
+ "kind": "Component",
+ "category": "Files",
+ "namespace": "Tempo.Blazor.Components.Files",
+ "description": "Side panel listing PDF annotation threads with per-thread comment detail, reply, resolve/reopen, delete, a resolved filter, and a composer for commenting on the current text selection. Used internally by TmPdfViewer when annotations are enabled.",
+ "packageId": "Tempo.Blazor.PdfViewer",
+ "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotationThreadPanel.razor",
+ "documentationStatus": "generated",
+ "requiredImports": [
+  "@using Tempo.Blazor.Components.Files"
+ ],
+ "parameters": [
+  {
+   "name": "Threads",
+   "type": "IReadOnlyList<DocumentCommentThread>",
+   "isRequired": false,
+   "default": "[]",
+   "description": "Annotation threads to render."
+  },
+  {
+   "name": "SelectedThreadId",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Selected thread id."
+  },
+  {
+   "name": "SelectedThreadIdChanged",
+   "type": "EventCallback<string?>",
+   "isRequired": false,
+   "description": "Callback invoked when the selected thread id changes."
+  },
+  {
+   "name": "CurrentUserId",
+   "type": "string?",
+   "isRequired": false,
+   "description": "Current user id used for mention styling and permission checks."
+  },
+  {
+   "name": "ShowResolved",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether resolved threads are shown."
+  },
+  {
+   "name": "ShowResolvedChanged",
+   "type": "EventCallback<bool>",
+   "isRequired": false,
+   "description": "Callback invoked when the resolved filter toggles."
+  },
+  {
+   "name": "PendingSelection",
+   "type": "PdfTextSelection?",
+   "isRequired": false,
+   "description": "Pending text selection awaiting a new comment, when present."
+  },
+  {
+   "name": "Disabled",
+   "type": "bool",
+   "isRequired": false,
+   "description": "Whether panel interaction is disabled."
+  },
+  {
+   "name": "ShowChrome",
+   "type": "bool",
+   "isRequired": false,
+   "default": "True",
+   "description": "Whether the panel renders its own header (title + close). Default true - the docked desktop presentation. When the panel is hosted inside a responsive sheet (TmSidePanel), the sheet header owns the title and the close button, so the host passes false and the panel renders only the resolved filter and its body."
+  },
+  {
+   "name": "OnCreateThreadRequested",
+   "type": "EventCallback<string>",
+   "isRequired": false,
+   "description": "Callback invoked with the body of a new thread requested from the pending selection."
+  },
+  {
+   "name": "OnReplyRequested",
+   "type": "EventCallback<DocumentCommentReplyRequest>",
+   "isRequired": false,
+   "description": "Callback invoked when a reply is requested."
+  },
+  {
+   "name": "OnEditRequested",
+   "type": "EventCallback<DocumentCommentEditRequest>",
+   "isRequired": false,
+   "description": "Callback invoked when an existing comment body is edited."
+  },
+  {
+   "name": "OnResolveRequested",
+   "type": "EventCallback<string>",
+   "isRequired": false,
+   "description": "Callback invoked when resolving a thread is requested."
+  },
+  {
+   "name": "OnReopenRequested",
+   "type": "EventCallback<string>",
+   "isRequired": false,
+   "description": "Callback invoked when reopening a thread is requested."
+  },
+  {
+   "name": "OnDeleteRequested",
+   "type": "EventCallback<DocumentCommentDeleteRequest>",
+   "isRequired": false,
+   "description": "Callback invoked when deleting a comment is requested."
+  },
+  {
+   "name": "OnSelectionDismissed",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Callback invoked when the pending selection is dismissed."
+  },
+  {
+   "name": "OnCloseRequested",
+   "type": "EventCallback",
+   "isRequired": false,
+   "description": "Callback invoked when the panel's close button is pressed."
+  }
+ ]
 }
