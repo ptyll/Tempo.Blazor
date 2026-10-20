@@ -1,5 +1,113 @@
 # Changelog
 
+## 2.10.0 (unreleased)
+
+> Email template editor plan (`planning/tm-email-template-editor-2.10.md`). Phases land here as they
+> complete; the full breaking-change summary is B1–B15 in §3.11 of that document.
+
+### Added
+
+- **Template sandbox audit trail (`Tempo.Blazor.EmailTemplates.Abstractions`).**
+  `ITemplateSecurityAuditSink` + `TemplateSecurityEvent` (`Kind`, `Detail`, `TemplateHash`,
+  `TemplateExcerpt`, `Timestamp`) report every refused sandbox operation:
+  `BlockedMember`, `BlockedNamespace`, `BlockedFunction`, `BlockedUrlScheme`, `LimitExceeded`,
+  `Timeout`. `BlockedUrlScheme` is emitted from the URL allow-list in phase 3; the enum value exists
+  from phase 2 so the contract (§3.6) is stable. Register zero to many sinks in DI
+  (`AddTempoEmailTemplateEngine` forwards all
+  `IEnumerable<ITemplateSecurityAuditSink>`) or pass them to the `ScribanTemplateEngine`
+  constructor. `Detail` names only the refused member/namespace/function — never a model value —
+  `TemplateHash` is lowercase hexadecimal SHA-256 of the template, `TemplateExcerpt` is its first
+  200 characters (may contain authored PII, so apply your own retention) and `Timestamp` comes from
+  `TimeProvider`. Audit never breaks a render: a sink that throws is logged and swallowed.
+
+  ```csharp
+  sealed class SecurityLog(ILogger<SecurityLog> logger) : ITemplateSecurityAuditSink
+  {
+      public void OnEvent(TemplateSecurityEvent e) =>
+          logger.LogWarning("template {Hash}: {Kind} {Detail}", e.TemplateHash, e.Kind, e.Detail);
+  }
+
+  services.AddSingleton<ITemplateSecurityAuditSink, SecurityLog>();
+  services.AddTempoEmailTemplateEngine();   // picks every registered sink up automatically
+  ```
+
+- **`TemplateSecurityOptions` hardening limits.** `RegexTimeOut` (default 1 s, protects the `regex`
+  filters against catastrophic backtracking), `ObjectRecursionLimit` (default 20, depth of the
+  object→text conversion) and `LimitToString` (default 1,048,576 chars, single string conversion)
+  join the existing `LoopLimit`, `RecursiveLimit`, `MaxOutputLength` and `Timeout`. Every limit is
+  validated at engine construction and at `AddTempoEmailTemplateEngine`, so a zero/negative value
+  (which Scriban would read as "unlimited") throws `ArgumentOutOfRangeException` instead of silently
+  disabling a guard.
+
+  ```csharp
+  services.AddTempoEmailTemplateEngine(o => o.RegexTimeOut = TimeSpan.FromMilliseconds(200));
+  ```
+
+- **Dependency bumps.** `Scriban` 7.2.4 → 7.5.1 (sandbox `MemberFilter`, `RegexTimeOut`,
+  `ObjectRecursionLimit`, `LimitToString`), `Mjml.Net` 4.11.0 → 4.15.0, `AngleSharp` 1.5.2 → 1.8.5
+  (the HTML sanitizer parses untrusted markup, so it stays on the newest parser). The MJML golden
+  documents are byte-identical after the bump. The test projects that pin AngleSharp transitively
+  (bunit) moved to the same 1.8.5.
+
+  Note on the `AngleSharp` bump: the previously pinned `1.5.2` was **not** affected by
+  [GHSA-pgww-w46g-26qg](https://github.com/advisories/GHSA-pgww-w46g-26qg) (CVE-2026-54570, an mXSS
+  via `annotation-xml` integration points) — that advisory covers all versions before `1.5.0`. The
+  `NU1902` warnings the pins actually silenced came from `bunit` 2.7.2 pulling `AngleSharp` `1.4.0`
+  into the UI test projects. `1.8.5` is simply the newest stable parser line for the sanitizer.
+
+### Breaking / Migration
+
+- **`ScribanTemplateEngine`: one public constructor.** The two public overloads
+  (`(options)` and `(options, auditSinks)`) are merged into
+  `ScribanTemplateEngine(TemplateSecurityOptions? options = null, IEnumerable<ITemplateSecurityAuditSink>? auditSinks = null)`.
+  Source-compatible (existing `new ScribanTemplateEngine()`, `(options)` and `(options, sinks)` calls
+  keep compiling) but **binary-incompatible**: a library compiled against the removed one-parameter
+  overload must be recompiled. Phase 4 extends this same constructor with
+  `functionProviders` — no additional overload is added.
+
+- **The render time budget is enforced even when a template writes no output.** The context now arms
+  Scriban's `CancellationToken` with `TemplateSecurityOptions.Timeout` (and clamps `RegexTimeOut` to
+  it), so a loop whose body only assigns values is aborted at the budget instead of running to
+  completion. A cancelled render reports `Timeout` / `render time budget` — a template that used to
+  grind for minutes now fails at `Timeout`.
+
+- **A refused sandbox operation is now a render error, not an empty string.** Before, a template that
+  reached for reflection (`{{ t.full_name }}`, `{{ user.get_type }}`), a system namespace
+  (`{{ @System.Diagnostics.Process.Start('cmd') }}`, `{{ info.length }}` on a `System.IO` value), an
+  environment/file root (`{{ env.PATH }}`, `{{ file.read 'x' }}`), an evaluating builtin
+  (`{{ "1 + 2" | object.eval }}`, `object.eval_template`) or `include` rendered nothing for that
+  expression and returned success. It now fails the render and reports an audit event, so a host can
+  never mistake a blocked template for one that rendered no data.
+
+  ```text
+  before: Render("{{ user.get_type }}", model) → Success("")          // silent
+  after:  Render("{{ user.get_type }}", model) → Failure("Template is not allowed to access member 'get_type'.")
+  ```
+
+- **The template sandbox member policy is fixed, not configurable.** There is no
+  `AllowReflection` switch: members declared on `System.Type`, `MemberInfo`, `Assembly`, `Module` and
+  on any type from `System.Reflection`, `System.IO`, `System.Diagnostics`, `System.Net`,
+  `System.Runtime*` and `System.Threading` are refused, as are reflection member names (`GetType`,
+  `GetMembers`, `Assembly`, `TypeHandle`, `UnderlyingSystemType`, `InvokeMember`, `DynamicInvoke`, …)
+  on any type. A model that legitimately needs such a value must project it into a plain DTO or a
+  dictionary before handing it to the renderer.
+
+  ```text
+  before: new { Kind = typeof(Order) } shipped to the template → template could read .full_name / .assembly
+  after:  same model → Render fails with BlockedNamespace (System.Type); expose a string instead
+  ```
+
+- **A chained access through a null/undefined target renders empty instead of failing.** PostrionCore
+  parity for legacy templates: `{{ user.name }}` with a model that has no `user` renders `""`
+  (previously "Cannot get the member user.name for a null object."). Set
+  `TemplateSecurityOptions.StrictVariables = true` to keep the strict behaviour for undefined
+  *variables*.
+
+- **A POCO model no longer exposes its public static methods to templates.** Model import now imports
+  readable fields and properties only (and runs the same member policy), so a template cannot call a
+  static helper on the model type. Migration: hand the value in explicitly if a template really needs
+  it.
+
 ## 2.9.1 (unreleased)
 
 ### Fixed

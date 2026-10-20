@@ -59,11 +59,11 @@ public class ScribanSandboxTests
     {
         var engine = new ScribanTemplateEngine();
 
-        // Accessing .NET methods/types yields nothing (no reflection exposed), never the type name.
+        // Fail-closed since the sandbox parity work (contract §3.6): a refused reflection member is a
+        // render error, not an empty string, and the CLR type name never reaches the output.
         var result = engine.Render("[{{ x.get_type }}{{ x.GetType }}]", new { X = 5 });
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("[]");
-        result.Value.Should().NotContain("Int32");
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().NotContain("Int32");
     }
 }

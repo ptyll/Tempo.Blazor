@@ -28,9 +28,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.5.2" />
-    <PackageReference Include="Mjml.Net" Version="4.11.0" />
-    <PackageReference Include="Scriban" Version="7.2.4" />
+    <PackageReference Include="AngleSharp" Version="1.8.5" />
+    <PackageReference Include="Mjml.Net" Version="4.15.0" />
+    <PackageReference Include="Scriban" Version="7.5.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.0" />
@@ -40,6 +40,11 @@
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>Tempo.Blazor.EmailTemplates.Abstractions.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <!-- Phase 6 (D11) moves the sandbox implementation into the Engine package; the moved types stay
+         internal, so the future assembly needs access to the current ones during the extraction. -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Tempo.Blazor.EmailTemplates.Engine</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 

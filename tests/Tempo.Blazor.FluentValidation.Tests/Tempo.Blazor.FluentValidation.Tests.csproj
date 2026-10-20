@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="bunit" Version="2.7.2" />
     <!-- Transitive pin: bunit 2.7.2 pulls AngleSharp 1.4.0 (NU1902 GHSA-pgww-w46g-26qg) -->
-    <PackageReference Include="AngleSharp" Version="1.5.2" />
+    <PackageReference Include="AngleSharp" Version="1.8.5" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="FluentAssertions" Version="8.4.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />

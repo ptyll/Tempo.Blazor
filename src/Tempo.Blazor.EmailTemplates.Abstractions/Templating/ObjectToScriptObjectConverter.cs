@@ -7,10 +7,16 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 /// <summary>
 /// Converts an arbitrary model into a Scriban <see cref="ScriptObject"/>. Dictionaries become script
 /// objects keyed by their entries (so JSON-derived models work), lists are converted element-wise, and
-/// POCO/anonymous objects are imported with the default snake_case member renamer.
+/// POCO/anonymous objects are imported with the explicit standard snake_case member renamer. The import
+/// exposes readable fields and properties only — never methods — and runs the sandbox member policy, so
+/// a blocked name cannot even enter the script scope. Nested POCOs stay live CLR values and are read
+/// through the same policy.
 /// </summary>
 public static class ObjectToScriptObjectConverter
 {
+    private const ScriptMemberImportFlags ImportedMembers =
+        ScriptMemberImportFlags.Field | ScriptMemberImportFlags.Property;
+
     /// <summary>Builds a script object usable as the global scope for rendering.</summary>
     public static ScriptObject ToScriptObject(object? model)
     {
@@ -30,7 +36,11 @@ public static class ObjectToScriptObjectConverter
                     scriptObject[System.Convert.ToString(entry.Key, System.Globalization.CultureInfo.InvariantCulture)!] = Convert(entry.Value);
                 break;
             default:
-                scriptObject.Import(model);
+                scriptObject.Import(
+                    model,
+                    ImportedMembers,
+                    SandboxMemberPolicy.IsMemberAllowed,
+                    StandardMemberRenamer.Default);
                 break;
         }
         return scriptObject;
@@ -41,6 +51,8 @@ public static class ObjectToScriptObjectConverter
         null => null,
         JsonElement json => ConvertJson(json),
         string s => s,
+        // Scriban would invoke a delegate value as a function; data models must not carry host code.
+        Delegate => null,
         IDictionary<string, object?> or IDictionary => ToScriptObject(value),
         IEnumerable enumerable => enumerable.Cast<object?>().Select(Convert).ToList(),
         _ => value,
