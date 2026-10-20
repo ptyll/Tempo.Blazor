@@ -1,4 +1,10 @@
 .tm-redaction {
+    /* The cover of an applied redaction is data, not a theme colour: the export burns the same
+       black rectangles into the rebuilt PDF, so the preview shows the identical pure black in
+       BOTH themes (the lightbox-scrim convention — a theme-invariant literal). The name matches
+       the audit's annotation-data-palette exemption on purpose. */
+    --tm-redaction-annotation-cover: #000;
+
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-2);
@@ -59,7 +65,7 @@
 .tm-redaction__btn--primary {
     background: var(--tm-color-primary);
     border-color: var(--tm-color-primary);
-    color: var(--tm-color-white);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-redaction__btn--primary:hover:not(:disabled) {
@@ -112,17 +118,17 @@
 }
 
 .tm-redaction__rect--marked {
-    background: rgba(239, 68, 68, 0.25);
+    background: color-mix(in srgb, var(--tm-color-danger) 25%, transparent);
     outline: 2px dashed var(--tm-color-danger);
     outline-offset: -1px;
 }
 
 .tm-redaction__rect--applied {
-    background: #000;
+    background: var(--tm-redaction-annotation-cover);
 }
 
 .tm-redaction__rect--active {
-    background: rgba(239, 68, 68, 0.15);
+    background: color-mix(in srgb, var(--tm-color-danger) 15%, transparent);
     outline: 2px solid var(--tm-color-danger);
     outline-offset: -1px;
 }

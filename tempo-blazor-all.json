@@ -28332,7 +28332,7 @@
               "name": "DraftColor",
               "type": "string",
               "isRequired": false,
-              "default": "\"#2563eb\"",
+              "default": "PdfAnnotationColorHelper.DefaultColor",
               "description": "Color used for the draft and the active stroke."
             },
             {
@@ -28404,7 +28404,7 @@
               "name": "DraftColor",
               "type": "string",
               "isRequired": false,
-              "default": "\"#2563eb\"",
+              "default": "PdfAnnotationColorHelper.DefaultColor",
               "description": "Color used for the draft indicator."
             },
             {
@@ -28757,6 +28757,14 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-render.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-size.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer.js",
           "kind": "JavaScript"
         },
@@ -28766,6 +28774,22 @@
         },
         {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf.worker.min.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-classes.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-init.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-render.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-size.test.mjs",
           "kind": "JavaScript"
         }
       ],

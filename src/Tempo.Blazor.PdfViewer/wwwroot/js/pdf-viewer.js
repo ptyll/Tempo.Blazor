@@ -267,26 +267,17 @@ window.tmPdfViewer = (function () {
         const gen = ++state.thumbGen;
         containerEl.innerHTML = '';
         for (let i = 1; i <= pdfDoc.numPages; i++) {
+            // Paint (colors, shadows, radii, hover/active) lives in TmPdfViewer.razor.css under
+            // ::deep — inline styles would beat every stylesheet rule and ignore the themes.
             const thumbWrap = document.createElement('div');
             thumbWrap.className = 'tm-pdf-thumbnail';
             thumbWrap.dataset.page = String(i);
-            thumbWrap.style.cursor = 'pointer';
-            thumbWrap.style.marginBottom = '8px';
-            thumbWrap.style.padding = '4px';
-            thumbWrap.style.borderRadius = '4px';
-            thumbWrap.style.transition = 'background .15s';
 
             const thumbCanvas = document.createElement('canvas');
-            thumbCanvas.style.display = 'block';
-            thumbCanvas.style.width = '100%';
-            thumbCanvas.style.borderRadius = '2px';
 
             const pageNumLabel = document.createElement('div');
+            pageNumLabel.className = 'tm-pdf-thumbnail__label';
             pageNumLabel.textContent = String(i);
-            pageNumLabel.style.textAlign = 'center';
-            pageNumLabel.style.fontSize = '11px';
-            pageNumLabel.style.marginTop = '2px';
-            pageNumLabel.style.color = 'var(--tm-text-muted, #888)';
 
             thumbWrap.appendChild(thumbCanvas);
             thumbWrap.appendChild(pageNumLabel);
@@ -316,8 +307,9 @@ window.tmPdfViewer = (function () {
         if (!rootEl) return;
         rootEl.querySelectorAll('.tm-pdf-thumbnail').forEach(el => {
             const isActive = parseInt(el.dataset.page, 10) === pageNum;
+            // The active fill is the .tm-pdf-thumbnail--active class in TmPdfViewer.razor.css —
+            // an inline background here would override it and pin the palette.
             el.classList.toggle('tm-pdf-thumbnail--active', isActive);
-            el.style.background = isActive ? 'var(--tm-primary-100, #e0f2fe)' : 'transparent';
         });
     }
 
@@ -563,19 +555,16 @@ window.tmPdfViewer = (function () {
         const gen = ++state.renderGen;
         containerEl.innerHTML = '';
         for (let i = 1; i <= state.pdfDoc.numPages; i++) {
+            // Layout and paint come from .tm-pdf-viewer__page in TmPdfViewer.razor.css (::deep) —
+            // the page shadow and radius must follow the theme, not an inline literal.
             const wrap = document.createElement('div');
-            wrap.style.marginBottom = '16px';
-            wrap.style.display = 'flex';
-            wrap.style.justifyContent = 'center';
+            wrap.className = 'tm-pdf-viewer__page';
             // Anchor for scrollToPage: the thumbnail sidebar also carries
             // data-page, so continuous-page wraps must be found through their
             // parent container.
             wrap.dataset.page = String(i);
 
             const pageCanvas = document.createElement('canvas');
-            pageCanvas.style.display = 'block';
-            pageCanvas.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
-            pageCanvas.style.borderRadius = '4px';
             pageCanvas.dataset.page = String(i);
 
             wrap.appendChild(pageCanvas);

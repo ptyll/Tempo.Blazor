@@ -946,6 +946,36 @@
 
 ### Breaking / Migration
 
+- **PDF components no longer read the undefined `--tm-primary`/`--tm-border`/`--tm-*-dark`
+  aliases — they read the core tokens.** `TmPdfViewer`, `TmPdfAnnotator`, `TmPdfAnnotatorPanel`,
+  `TmPdfAnnotationThreadPanel`, `TmPdfAnnotationLayer`, `TmPdfAnnotatorLayer` and
+  `TmRedactionLayer` now paint with the canonical tokens (`--tm-color-primary`,
+  `--tm-border-color`, `--tm-color-surface-elevated`, `--tm-color-surface-hover`,
+  `--tm-text-primary/-secondary`, `--tm-color-on-primary`, `--tm-radius-card/-control`,
+  `--tm-color-warning`, `--tm-bg-workspace`, `--tm-shadow-card`, `--tm-focus-ring`), so the
+  palette, the indigo theme and dark mode propagate into them — the manual
+  `[data-theme="dark"]`/`.tm-dark` blocks and the JS inline colors/shadows/radii of thumbnails
+  and continuous pages are gone (thumbnails/labels/pages now carry the
+  `tm-pdf-thumbnail`/`tm-pdf-thumbnail--active`/`tm-pdf-thumbnail__label`/`tm-pdf-viewer__page`
+  classes styled under `::deep`). Hosts that re-skinned the PDF components by overriding the old
+  undefined aliases must override the canonical tokens instead (see docs/css-token-aliases.md —
+  an override of a `var()`-valued token has to target `:root`, `[data-theme="dark"]` AND
+  `.tm-dark` together):
+  ```css
+  /* before: an alias that was never defined — the components rendered their own hex fallbacks
+     and every theme change was invisible */
+  :root { --tm-primary: #7c3aed; --tm-hover: #ede9fe; }
+  /* after: the tokens the PDF components actually read, overridden for all three theme
+     selectors so a dark region sees it too */
+  :root, [data-theme="dark"], .tm-dark {
+      --tm-color-primary: #7c3aed;
+      --tm-color-surface-hover: #ede9fe;
+  }
+  ```
+  The per-component layout knobs stay component-local: `--tm-pdf-page-shadow` and
+  `--tm-pdf-panel-width` are defined on each component root (viewer thumbnails `140px`,
+  annotator panel `300px`, thread panel `280px`), never as global aliases.
+
 - **`TmDataTable` export menu on phones: sheet → popover.** With the default
   `MobileLayout = DataTableMobileLayout.None` the export dropdown now opens as an anchored
   popover on a phone instead of the bottom sheet. Hosts that relied on the sheet opt back by
