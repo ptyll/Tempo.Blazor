@@ -9831,7 +9831,7 @@
       "kind": "Component",
       "category": "Data Table",
       "namespace": "Tempo.Blazor.Components.DataTable",
-      "description": "Headless column descriptor for TmDataTable.",
+      "description": "Headless column descriptor for TmDataTable that defines header title, field accessor, sorting, filtering, grouping, visibility, alignment, width, custom cell/header templates, and group aggregation.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataTable/TmDataTableColumn.razor",
       "documentationStatus": "merged",
@@ -9887,7 +9887,8 @@
           "name": "Field",
           "type": "Func<TItem, object?>",
           "isRequired": true,
-          "description": "Field accessor that returns the cell value for a given row item."
+          "description": "Field accessor that returns the cell value for a given row item.",
+          "default": "default!"
         },
         {
           "name": "Filterable",
@@ -9899,7 +9900,7 @@
           "name": "FilterOperator",
           "type": "string?",
           "isRequired": false,
-          "description": "Opt-in filter operator sent with this column's filter. Null keeps the historical \"contains\" operator so existing server providers are unchanged."
+          "description": "Opt-in operator sent with this column's filter. Null keeps contains so existing server providers are unchanged."
         },
         {
           "name": "FilterOptions",
@@ -9961,7 +9962,7 @@
           "name": "MobilePinned",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether this column is pinned in responsive scroll layout. The first visible data column is pinned when none is explicitly marked."
+          "description": "Pins this column in responsive scroll mode; otherwise the first visible data column is pinned."
         },
         {
           "name": "Order",
@@ -10012,6 +10013,17 @@
           "type": "string?",
           "isRequired": false,
           "description": "Column width CSS value (e.g. \"200px\", \"20%\")."
+        }
+      ],
+      "cssClasses": [],
+      "examples": [
+        {
+          "title": "Sortable and filterable column",
+          "code": "<TmDataTableColumn Title=\"Name\"\n                   PropertyName=\"FullName\"\n                   Field=\"e => e.FullName\"\n                   Sortable=\"true\"\n                   Filterable=\"true\"\n                   Groupable=\"true\"\n                   Width=\"200px\" />"
+        },
+        {
+          "title": "Column with custom cell template",
+          "code": "<TmDataTableColumn Title=\"Status\" Field=\"e => e.Status\" Filterable=\"true\" FilterType=\"FilterType.Select\" FilterOptions=\"@statusOptions\">\n    <CellTemplate Context=\"item\">\n        <TmBadge Variant=\"GetStatusVariant(item.Status)\">@item.Status</TmBadge>\n    </CellTemplate>\n</TmDataTableColumn>"
         }
       ]
     },
@@ -10681,7 +10693,7 @@
           "name": "OutlineTrigger",
           "type": "bool",
           "isRequired": false,
-          "description": "When true, the trigger also gets tm-btn tm-btn-outline. Default false leaves other hosts unchanged.",
+          "description": "Renders the trigger as an outline button (tm-btn tm-btn-outline). Default false.",
           "default": "false"
         },
         {

@@ -8,7 +8,7 @@
             aria-haspopup="true"
             aria-expanded="@_open.ToString().ToLowerInvariant()"
             @onclick="ToggleOpen">
-        <TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" />
+        <span class="tm-icon-columns"><TmIcon Name="@IconNames.Columns" Size="IconSize.Sm" /></span>
         @Loc["TmDataTable_ColumnPicker"]
         <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
     </button>

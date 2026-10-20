@@ -97,7 +97,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "When true, the trigger also gets tm-btn tm-btn-outline. Default false leaves other hosts unchanged."
+      "description": "Renders the trigger as an outline button (tm-btn tm-btn-outline). Default false."
     }
   ],
   "cssClasses": [

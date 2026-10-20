@@ -250,4 +250,8 @@
   --tm-surface-secondary:          var(--tm-bg-surface-secondary);
   --tm-text-link:                  var(--tm-color-primary);
   --tm-text-muted:                 var(--tm-text-secondary);
+
+  /* Literal shadow; re-declared so a dark tree that does not inherit :root still paints the pin. */
+  --tm-data-table-pin-shadow:      2px 0 3px -2px rgba(0, 0, 0, 0.18);
+  --tm-data-table-pin-shadow-end:  -2px 0 3px -2px rgba(0, 0, 0, 0.18);
 }

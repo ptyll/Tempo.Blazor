@@ -4,7 +4,7 @@
 
 /* Wrapper */
 .tm-data-table-virtual-scroll .tm-data-table tbody tr {
-  height: var(--tm-data-table-row-height, 48px);
+  height: var(--tm-data-table-row-height);
 }
 .tm-data-table__export-item {
   display: flex;
@@ -13,7 +13,7 @@
   gap: var(--tm-space-2);
 }
 .tm-data-table__export-label {
-  font-weight: var(--tm-font-weight-semibold, 600);
+  font-weight: var(--tm-font-weight-semibold);
 }
 .tm-view-modal-helper {
   margin: 0 0 var(--tm-space-3);
@@ -139,7 +139,7 @@
 }
 .tm-data-table th,
 .tm-data-table td {
-  padding: var(--tm-data-table-cell-py, var(--tm-space-3)) var(--tm-data-table-cell-px, var(--tm-space-4));
+  padding: var(--tm-data-table-cell-py) var(--tm-data-table-cell-px);
   text-align: left;
   border-bottom: 1px solid var(--tm-border-color);
 }
@@ -176,7 +176,7 @@
   align-items: center;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -229,13 +229,13 @@
 .tm-data-table td.tm-col-pinned {
   position: sticky;
   z-index: 2;
-  background: var(--tm-bg-surface, #ffffff);
+  background: var(--tm-bg-surface);
 }
 .tm-data-table thead th.tm-col-pinned { z-index: 3; }
 .tm-data-table th.tm-col-pinned-left,
-.tm-data-table td.tm-col-pinned-left { box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18); }
+.tm-data-table td.tm-col-pinned-left { box-shadow: var(--tm-data-table-pin-shadow); }
 .tm-data-table th.tm-col-pinned-right,
-.tm-data-table td.tm-col-pinned-right { box-shadow: -2px 0 3px -2px rgba(0, 0, 0, 0.18); }
+.tm-data-table td.tm-col-pinned-right { box-shadow: var(--tm-data-table-pin-shadow-end); }
 .tm-data-table tbody tr.tm-row-selected td.tm-col-pinned { background: var(--tm-color-primary-subtle); }
 
 /* Column pin toggle
@@ -270,7 +270,7 @@
   height: 1.1rem;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   background: var(--tm-bg-surface-secondary);
   color: var(--tm-text-secondary);
   font-size: 0.75rem;
@@ -292,7 +292,7 @@
 .tm-col-pin-btn:focus-visible,
 .tm-col-pin-btn--active { opacity: 1; }
 .tm-col-pin-btn:hover { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
-.tm-col-pin-btn--active { color: var(--tm-color-primary, #3b82f6); }
+.tm-col-pin-btn--active { color: var(--tm-color-primary); }
 
 /* The library brings its own focus ring instead of borrowing the application's.
    Tempo made the sortable header a focus stop in 2.8.9 but shipped no `:focus`
@@ -302,7 +302,7 @@
 .tm-data-table th:focus-visible,
 .tm-data-table tbody tr:focus-visible,
 .tm-col-pin-btn:focus-visible {
-  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline: 2px solid var(--tm-color-primary);
   outline-offset: -2px;
 }
 /* The sort button's ring is drawn OUTSIDE the box, not over the text: `outline-offset: -2px`
@@ -311,9 +311,9 @@
    rather than a line through it. `color: inherit` keeps the sorted column's accent under focus the
    same way `:hover` does — focus must not repaint the label back to the resting ink. */
 .tm-th-sort:focus-visible {
-  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline: 2px solid var(--tm-color-primary);
   outline-offset: 2px;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   color: inherit;
 }
 
@@ -331,7 +331,7 @@
   user-select: none;
   touch-action: none;
 }
-.tm-col-resize-handle:hover { background: var(--tm-color-primary, #3b82f6); opacity: 0.4; }
+.tm-col-resize-handle:hover { background: var(--tm-color-primary); opacity: 0.4; }
 /* The separator is a tab stop: the focus indicator is the shared ring (the default outline is
    silenced so the two never paint over each other). */
 .tm-col-resize-handle:focus-visible {
@@ -396,7 +396,7 @@
 .tm-row-expander-icon--open::before { transform: rotate(90deg); }
 .tm-data-table tr.tm-row-detail > td {
   background: var(--tm-bg-surface-secondary);
-  padding: var(--tm-space-3, 0.75rem) var(--tm-space-4, 1rem);
+  padding: var(--tm-space-3) var(--tm-space-4);
 }
 @media (prefers-reduced-motion: reduce) {
   .tm-row-expander-icon::before { transition: none; }
@@ -495,8 +495,8 @@
   height: 1rem;
   margin-left: 0.125rem;
   padding: 0 0.2rem;
-  border-radius: var(--tm-radius-full, 999px);
-  background: var(--tm-color-primary, #3b82f6);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
   color: var(--tm-text-inverse);
   font-size: 0.625rem;
   font-weight: 600;
@@ -674,6 +674,7 @@
    ═══════════════════════════════════════════════════════════════ */
 .tm-column-picker { position: relative; }
 .tm-column-picker-toggle { white-space: nowrap; color: var(--tm-color-primary-600); }
+.tm-icon-columns { display: inline-flex; align-items: center; }
 [data-theme="dark"] .tm-column-picker-toggle,
 .tm-dark .tm-column-picker-toggle { color: var(--tm-color-primary-300); }
 /* The panel element is a TmOverlayPanel root: overlay.js positions it in the top layer, so no
@@ -1004,21 +1005,21 @@
   gap: var(--tm-space-2);
   min-height: 2.5rem;
   padding: var(--tm-space-2) var(--tm-space-3);
-  border: 2px dashed var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-surface-secondary, #f9fafb);
+  border: 2px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-surface-secondary);
   margin-bottom: var(--tm-space-3);
   transition: border-color 0.15s, background-color 0.15s;
 }
 
 .tm-data-table-group-zone--dragover {
-  border-color: var(--tm-color-primary, #3b82f6);
-  background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 5%, transparent);
+  border-color: var(--tm-color-primary);
+  background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
 }
 
 .tm-data-table-group-placeholder {
-  color: var(--tm-text-tertiary, #9ca3af);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-tertiary);
+  font-size: var(--tm-font-size-sm);
   font-style: italic;
 }
 
@@ -1030,7 +1031,7 @@
   border-radius: var(--tm-radius-full);
   background: var(--tm-color-primary-subtle);
   color: var(--tm-color-primary-text);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
   cursor: grab;
   user-select: none;
 }
@@ -1074,12 +1075,12 @@
 /* ── Group Rows ─────────────────────────────────────────────── */
 
 .tm-data-table-group-row {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 .tm-data-table-group-row td {
   padding: var(--tm-space-2) var(--tm-space-3);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-data-table-group-level-1 td {
@@ -1098,16 +1099,16 @@
   height: 1.5rem;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: transparent;
-  color: var(--tm-text-secondary, #6b7280);
+  color: var(--tm-text-secondary);
   cursor: pointer;
   margin-right: var(--tm-space-1);
   font-size: 0.75rem;
 }
 
 .tm-data-table-group-toggle:hover {
-  background: var(--tm-bg-surface-secondary, #e5e7eb);
+  background: var(--tm-bg-surface-secondary);
 }
 
 .tm-data-table-group-chevron {
@@ -1126,7 +1127,7 @@
 .tm-data-table-group-count {
   color: var(--tm-text-muted);
   font-weight: normal;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 .tm-data-table-group-aggregates {
@@ -1134,16 +1135,16 @@
   gap: var(--tm-space-3);
   margin-left: var(--tm-space-4);
   font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
-  color: var(--tm-text-secondary, #6b7280);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
 }
 
 /* ── Per-Group Pagination ──────────────────────────────────── */
 
 .tm-data-table-group-pagination td {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-data-table-group-pagination .tm-pagination {
@@ -1151,12 +1152,12 @@
 }
 
 .tm-pagination-compact {
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
   gap: var(--tm-space-2);
 }
 
 .tm-pagination-compact .tm-pagination-info {
-  font-size: var(--tm-font-size-xs, 0.75rem);
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-pagination-compact .tm-page-btn,
@@ -1164,7 +1165,7 @@
   min-width: 1.5rem;
   height: 1.5rem;
   padding: 0 var(--tm-space-1);
-  font-size: var(--tm-font-size-xs, 0.75rem);
+  font-size: var(--tm-font-size-xs);
 }
 
 /* ── Draggable Column Headers ───────────────────────────────── */
@@ -1192,8 +1193,8 @@
   max-height: 10rem;
   overflow-y: auto;
   padding: var(--tm-space-2);
-  border: 1px solid var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1232,10 +1233,10 @@
 
   .tm-data-table-wrapper--card .tm-data-table tbody tr,
   .tm-data-table-wrapper--cards .tm-data-table tbody tr {
-    margin-bottom: var(--tm-space-3, 0.75rem);
-    padding: var(--tm-space-2, 0.5rem);
+    margin-bottom: var(--tm-space-3);
+    padding: var(--tm-space-2);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-lg, 0.5rem);
+    border-radius: var(--tm-radius-lg);
     background: var(--tm-bg-surface);
   }
 
@@ -1244,7 +1245,7 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--tm-space-3, 0.75rem);
+    gap: var(--tm-space-3);
     border: none;
     text-align: right;
   }
@@ -1275,7 +1276,7 @@
   .tm-data-table-wrapper--card .tm-data-table tbody td[data-label]::before,
   .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before {
     content: attr(data-label);
-    font-weight: var(--tm-font-weight-semibold, 600);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-secondary);
     text-align: left;
   }
@@ -1309,12 +1310,7 @@
   left: 0;
   z-index: 3;
 }
-.tm-data-table-wrapper--responsive:has(.tm-col-check) {
-  --tm-data-table-mobile-checkbox-width: 2.75rem;
-}
-.tm-data-table-wrapper--responsive:not(:has(.tm-col-check)) {
-  --tm-data-table-mobile-checkbox-width: 0px;
-}
+
 .tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table th:nth-child(2),
 .tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table td:nth-child(2) {
   position: sticky;
@@ -1333,4 +1329,56 @@
 .tm-data-table-wrapper--cards .tm-data-table__edit-actions {
   min-height: var(--tm-touch-target);
   align-items: center;
+}
+
+/* Markup hooks that phases 3–11 restyle. Minimum real rules so the classes are not frozen
+   exceptions; nothing here changes the default (non-opt-in) surface. */
+.tm-data-table-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+.tm-col-filter-clear-all {
+  background: none;
+  border: none;
+  color: var(--tm-color-primary);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tm-col-filter-clear-all:hover { color: var(--tm-color-primary-hover); }
+.tm-data-table-group-expand-all,
+.tm-data-table-group-collapse-all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+}
+.tm-data-table-row--edit-footer {
+  background: var(--tm-surface-secondary);
+}
+.tm-view-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+}
+.tm-view-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+}
+.tm-view-set-default-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: none;
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  color: var(--tm-text-secondary);
 }

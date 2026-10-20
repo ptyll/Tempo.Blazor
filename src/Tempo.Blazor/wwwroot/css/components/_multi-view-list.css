@@ -35,6 +35,11 @@
   align-items: center;
   gap: var(--tm-space-2);
 }
+.tm-mvl-item-count {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+}
 
 /* External Filters */
 .tm-mvl-external-filters {
@@ -253,15 +258,15 @@
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-3);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: var(--tm-bg-surface);
-  color: var(--tm-text-secondary, #6b7280);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
   cursor: pointer;
 }
 
 .tm-mvl-group-btn:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 .tm-mvl-group-dropdown {
@@ -270,9 +275,9 @@
   min-width: 12rem;
   padding: var(--tm-space-2);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: var(--tm-bg-surface);
-  box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1));
+  box-shadow: var(--tm-shadow-lg);
 }
 
 .tm-mvl-group-option {
@@ -280,13 +285,13 @@
   align-items: center;
   gap: var(--tm-space-2);
   padding: var(--tm-space-1) var(--tm-space-2);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   cursor: pointer;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 .tm-mvl-group-option:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 /* ── Group Sections (Card & List views) ─────────────────────── */
@@ -340,13 +345,13 @@
 }
 
 .tm-mvl-group-row {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
   font-weight: 600;
 }
 
 .tm-mvl-group-row td {
   padding: var(--tm-space-2) var(--tm-space-3);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-toggle:hover {
@@ -358,23 +363,23 @@
 }
 
 .tm-mvl-group-count {
-  color: var(--tm-text-tertiary, #9ca3af);
+  color: var(--tm-text-tertiary);
   font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 /* ── Per-Group Pagination ──────────────────────────────────── */
 
 .tm-mvl-group-pagination {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-pagination td {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-pagination .tm-pagination {
@@ -447,23 +452,23 @@
 
 [data-theme="dark"] .tm-mvl-row--selected,
 .tm-dark .tm-mvl-row--selected {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 [data-theme="dark"] .tm-mvl-row--selected td,
 .tm-dark .tm-mvl-row--selected td {
-  border-bottom-color: rgba(59, 130, 246, 0.15);
+  border-bottom-color: var(--tm-color-primary-subtle);
 }
 
 [data-theme="dark"] .tm-mvl-card--selected,
 .tm-dark .tm-mvl-card--selected {
   border-color: var(--tm-color-primary) !important;
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 [data-theme="dark"] .tm-mvl-list-item--selected,
 .tm-dark .tm-mvl-list-item--selected {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 /* ── Drag source ────────────────────────────────────────────── */

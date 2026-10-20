@@ -74,6 +74,7 @@ public class TmDataTableGroupingTests : LocalizationTestBase
     {
         var cut = RenderGroupableTable(showGrouping: true);
 
+        cut.FindAll(".tm-data-table-group-zone").Count.Should().Be(1);
         cut.Find(".tm-data-table-group-label-prefix").TextContent.Should().Be("Group by");
         cut.FindAll(".tm-data-table-group-placeholder").Should().HaveCount(1);
     }

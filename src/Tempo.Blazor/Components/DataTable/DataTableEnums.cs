@@ -105,7 +105,6 @@ public enum DataToolbarMode
 }
 
 /// <summary>Column-menu affordance mode for a data table.</summary>
-/// <summary>Column-menu affordance mode for a data table.</summary>
 public enum ColumnMenuMode
 {
     /// <summary>Render no extra column menu button.</summary>
@@ -143,9 +142,10 @@ public enum TableCellLayout
     Stacked
 }
 
+/// <summary>Surface style of a data table or multi-view list.</summary>
 public enum DataTableAppearance
 {
-    /// <summary>Today's flat surface. No card class.</summary>
+    /// <summary>Today's flat surface of a data table or multi-view list. No card class.</summary>
     Plain,
 
     /// <summary>Card surface. Adds <c>tm-data-table-wrapper--card-surface</c>.</summary>
@@ -166,7 +166,7 @@ public enum DataTableKeyboardNavigation
     Grid
 }
 
-/// <summary>Semantic role of a column when a data table is rendered as mobile cards.</summary>
+/// <summary>Semantic role of a column when a data table or multi-view list is rendered as cards.</summary>
 public enum DataTableCardRole
 {
     /// <summary>Regular card field.</summary>
