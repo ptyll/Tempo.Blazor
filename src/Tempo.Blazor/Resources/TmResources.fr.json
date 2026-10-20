@@ -3027,6 +3027,7 @@
   "TmMvl_ListView": "Vue liste",
   "TmMvl_ItemCount": "Articles : {0}",
   "TmMvl_TableView": "Vue tableau",
+  "TmMvl_ViewSwitcher": "Affichage",
   "TmNotificationBell_AriaLabel": "Notifications",
   "TmNotificationBell_MarkAllRead": "Tout marquer comme lu",
 "TmNotificationBell_Unread": "Notification non lue",

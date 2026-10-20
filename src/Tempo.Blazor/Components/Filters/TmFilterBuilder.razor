@@ -39,10 +39,10 @@
     @if (_showFieldPicker && _editingFilter is null)
     {
         <div class="tm-filter-field-picker" @onkeydown="OnPickerKey" @onkeydown:stopPropagation>
-            @foreach (var def in FilterDefinitions)
+            @for (var i = 0; i < FilterDefinitions.Count; i++)
             {
-                var d = def;
-                <button type="button" class="tm-filter-field-option" @onclick="() => SelectField(d)">
+                var d = FilterDefinitions[i];
+                <button type="button" class="tm-filter-field-option" @ref="_fieldOption" @onclick="() => SelectField(d)">
                     @ResolveFieldLabel(d)
                 </button>
             }
@@ -157,8 +157,10 @@
         if (_focusPicker)
         {
             _focusPicker = false;
-            try { await JS.InvokeVoidAsync("eval", "document.querySelector('.tm-filter-field-option')?.focus()"); }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+            // The setter keeps the first option. A page-wide querySelector would land in a sibling
+            // builder rendered above this one.
+            try { await _firstFieldOption.FocusAsync(); }
+            catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or JSException or InvalidOperationException) { }
         }
         else if (_restoreAddFocus)
         {
@@ -168,8 +170,13 @@
         }
     }
 
-    [Inject] private IJSRuntime JS { get; set; } = default!;
     private ElementReference _addButton;
+    private ElementReference _firstFieldOption;
+    private ElementReference _fieldOption
+    {
+        get => _firstFieldOption;
+        set => _firstFieldOption = _firstFieldOption.Context is null ? value : _firstFieldOption;
+    }
     private bool _focusPicker;
     private bool _restoreAddFocus;
     private List<ActiveFilter>   _filters          = [];
@@ -194,6 +201,7 @@
     {
         _showFieldPicker    = true;
         _focusPicker        = true;
+        _firstFieldOption   = default;
         _selectedDefinition = null;
         _editingFilter      = null;
         _textValue          = string.Empty;

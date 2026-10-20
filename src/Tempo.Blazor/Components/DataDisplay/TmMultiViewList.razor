@@ -44,7 +44,6 @@
                                         Role="dialog"
                                         Title="@Loc["TmMvl_GroupBy"]"
                                         MobilePresentation="@(Responsive ? PanelPresentation.Auto : PanelPresentation.Popover)"
-                                        RestoreFocusTargetId="@_groupPickerId"
                                         Class="tm-mvl-group-dropdown">
                             @foreach (var field in GroupableFields)
                             {
@@ -60,12 +59,15 @@
                 }
                 @if (ShouldRenderViewSwitcher())
                 {
-                    <div class="tm-mvl-switcher" role="radiogroup" aria-label="@Loc["TmMvl_TableView"]">
+                    <div class="tm-mvl-switcher" role="radiogroup" aria-label="@Loc["TmMvl_ViewSwitcher"]" @ref="_viewSwitcherRef">
                         <button type="button"
                                 class="tm-mvl-switch-table @(Responsive ? "tm-mvl-switch--responsive" : null) @(_viewMode == ListViewMode.Table ? "tm-mvl-switch--active" : "")"
                                 role="radio"
                                 aria-checked="@(_viewMode == ListViewMode.Table ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_TableView"]"
+                                tabindex="@(_viewMode == ListViewMode.Table ? "0" : "-1")"
+                                @key="@($"table-{_viewMode == ListViewMode.Table}")"
+                                @ref="TableViewRef"
                                 @onclick="() => SwitchView(ListViewMode.Table)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9783;</span>
@@ -79,6 +81,9 @@
                                 role="radio"
                                 aria-checked="@(_viewMode == ListViewMode.Card ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_CardView"]"
+                                tabindex="@(_viewMode == ListViewMode.Card ? "0" : "-1")"
+                                @key="@($"card-{_viewMode == ListViewMode.Card}")"
+                                @ref="CardViewRef"
                                 @onclick="() => SwitchView(ListViewMode.Card)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9645;</span>
@@ -92,6 +97,9 @@
                                 role="radio"
                                 aria-checked="@(_viewMode == ListViewMode.List ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_ListView"]"
+                                tabindex="@(_viewMode == ListViewMode.List ? "0" : "-1")"
+                                @key="@($"list-{_viewMode == ListViewMode.List}")"
+                                @ref="ListViewRef"
                                 @onclick="() => SwitchView(ListViewMode.List)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9776;</span>
@@ -321,6 +329,13 @@
 
     /// <summary>Card activation semantics. Defaults to Button.</summary>
     [Parameter] public CardActivation CardActivation { get; set; } = CardActivation.Button;
+
+    /// <summary>
+    /// Href of a card when <see cref="CardActivation"/> is <see cref="DataTable.CardActivation.StretchedLink"/>.
+    /// A non-empty result renders an anchor; null or empty renders a button that raises
+    /// <see cref="OnItemClick"/>. Ignored for <see cref="DataTable.CardActivation.Button"/>.
+    /// </summary>
+    [Parameter] public Func<TItem, string?>? ItemHref { get; set; }
 
     /// <summary>Maps an item to its date value.</summary>
     [Parameter] public Func<TItem, DateTimeOffset?>? DateField { get; set; }
@@ -584,15 +599,64 @@
     private readonly string _groupPickerId = $"tm-mvl-group-{Guid.NewGuid():N}";
     private ElementReference _groupPickerRef;
     private ElementReference _selectAllRef;
+    private ElementReference _viewSwitcherRef;
+    private ElementReference _tableViewRef;
+    private ElementReference _cardViewRef;
+    private ElementReference _listViewRef;
+    private bool _focusViewSwitcher;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (ShouldRenderViewSwitcher())
+        {
+            try
+            {
+                // Arrow keys move the view; they must not also scroll the page. Tab is not in the set.
+                await JS.InvokeVoidAsync("tmDataTable.attachArrowKeyPrevent", _viewSwitcherRef, "[role='radio']");
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        }
+
+        if (_focusViewSwitcher)
+        {
+            _focusViewSwitcher = false;
+            try
+            {
+                await ViewButton(_viewMode).FocusAsync();
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        }
+
         if (!AllowSelection) return;
         try
         {
             await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, IsPartiallySelected());
         }
         catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+    }
+
+    // A field @ref is written before the render that replaces the button, so focusing it targets
+    // the element that just left the DOM. The property setter runs again once the new button exists.
+    private ElementReference TableViewRef { get => _tableViewRef; set => CaptureView(ListViewMode.Table, value); }
+    private ElementReference CardViewRef { get => _cardViewRef; set => CaptureView(ListViewMode.Card, value); }
+    private ElementReference ListViewRef { get => _listViewRef; set => CaptureView(ListViewMode.List, value); }
+
+    private ElementReference ViewButton(ListViewMode mode) => mode switch
+    {
+        ListViewMode.Card => _cardViewRef,
+        ListViewMode.List => _listViewRef,
+        _ => _tableViewRef,
+    };
+
+    private void CaptureView(ListViewMode mode, ElementReference button)
+    {
+        switch (mode)
+        {
+            case ListViewMode.Card: _cardViewRef = button; break;
+            case ListViewMode.List: _listViewRef = button; break;
+            default: _tableViewRef = button; break;
+        }
+
     }
 
     private bool IsPartiallySelected()
@@ -606,11 +670,18 @@
     {
         var modes = new[] { ListViewMode.Table, ListViewMode.Card, ListViewMode.List };
         var index = Array.IndexOf(modes, _viewMode);
-        if (e.Key == "ArrowRight" || e.Key == "ArrowDown")
-            return SwitchView(modes[(index + 1) % modes.Length]);
-        if (e.Key == "ArrowLeft" || e.Key == "ArrowUp")
-            return SwitchView(modes[(index - 1 + modes.Length) % modes.Length]);
-        return Task.CompletedTask;
+        ListViewMode? next = e.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => modes[(index + 1) % modes.Length],
+            "ArrowLeft" or "ArrowUp" => modes[(index - 1 + modes.Length) % modes.Length],
+            _ => null,
+        };
+        if (next is null)
+            return Task.CompletedTask;
+
+        // The new radio is not in the DOM until this render completes, so focus moves after it.
+        _focusViewSwitcher = true;
+        return SwitchView(next.Value);
     }
     private bool IsGrouped => _activeGroupFields.Count > 0 && _groupedData is not null;
     private IReadOnlyDictionary<string, GroupPagination>? _serverGroupPaging;
@@ -1420,70 +1491,107 @@
     {
         var selected = AllowSelection && IsSelected(item);
         var dragging = IsDragging(item);
-        <div class="tm-mvl-card @(selected ? "tm-mvl-card--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
-             role="@(CardActivation == CardActivation.Button ? "button" : null)" tabindex="0"
-             draggable="@(AllowDrag ? "true" : "false")"
-             @onclick="() => OnItemClick.InvokeAsync(item)"
-             @onkeydown="e => HandleItemKeyDownAsync(e, item)"
-             @onkeyup="e => HandleItemKeyUpAsync(e, item)"
-             @ondragstart="() => HandleDragStartAsync(item)"
-             @ondragend="HandleDragEnd">
-            @if (CardActivation == CardActivation.StretchedLink)
+        var stretched = CardActivation == CardActivation.StretchedLink;
+        // StretchedLink mode owns activation on the inner <a>/<button> (docs/keyboard-activation-convention.md):
+        // the card is not a focusable, so it carries no click/keydown/keyup handler at all — a bound handler
+        // plus the native activation would fire OnItemClick twice. The link's ::after covers the card. Drag
+        // stays on the card either way; it is not an activation. The two branches exist so the stretched card
+        // emits none of those event attributes (a conditional null delegate still binds one).
+        @if (stretched)
+        {
+            <div class="tm-mvl-card tm-mvl-card--stretched @(selected ? "tm-mvl-card--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
+                 draggable="@(AllowDrag ? "true" : "false")"
+                 @ondragstart="() => HandleDragStartAsync(item)"
+                 @ondragend="HandleDragEnd">
+                @RenderStretchedActivator(item)
+                @RenderCardBody(item, selected, stretched: true)
+            </div>
+        }
+        else
+        {
+            <div class="tm-mvl-card @(selected ? "tm-mvl-card--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
+                 role="button" tabindex="0"
+                 draggable="@(AllowDrag ? "true" : "false")"
+                 @onclick="() => OnItemClick.InvokeAsync(item)"
+                 @onkeydown="e => HandleItemKeyDownAsync(e, item)"
+                 @onkeyup="e => HandleItemKeyUpAsync(e, item)"
+                 @ondragstart="() => HandleDragStartAsync(item)"
+                 @ondragend="HandleDragEnd">
+                @RenderCardBody(item, selected, stretched: false)
+            </div>
+        }
+    };
+
+    /// <summary>
+    /// The only focusable of a stretched card. An href navigates and also raises
+    /// <see cref="OnItemClick"/> (no preventDefault); without one the title is a button.
+    /// </summary>
+    private RenderFragment RenderStretchedActivator(TItem item) => __builder =>
+    {
+        var href = ItemHref?.Invoke(item);
+        if (!string.IsNullOrEmpty(href))
+        {
+            <a class="tm-stretched-link" href="@href" @onclick="() => OnItemClick.InvokeAsync(item)" @onclick:stopPropagation>@GetTitle(item)</a>
+        }
+        else
+        {
+            <button type="button" class="tm-stretched-link" @onclick="() => OnItemClick.InvokeAsync(item)" @onclick:stopPropagation>@GetTitle(item)</button>
+        }
+    };
+
+    private RenderFragment RenderCardBody(TItem item, bool selected, bool stretched) => __builder =>
+    {
+        @if (CardTemplate is not null)
+        {
+            @if (AllowSelection)
             {
-                <a class="tm-stretched-link" href="#" aria-label="@GetTitle(item)" @onclick:preventDefault @onclick:stopPropagation @onclick="() => OnItemClick.InvokeAsync(item)"></a>
+                <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
+                    <input type="checkbox"
+                           class="tm-mvl-checkbox"
+                           checked="@selected"
+                           @onchange="_ => ToggleSelectionAsync(item)" />
+                </div>
             }
-            @if (CardTemplate is not null)
+            @CardTemplate(item)
+        }
+        else
+        {
+            @if (AllowSelection)
             {
-                @if (AllowSelection)
-                {
-                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
-                        <input type="checkbox"
-                               class="tm-mvl-checkbox"
-                               checked="@selected"
-                               @onchange="_ => ToggleSelectionAsync(item)" />
-                    </div>
-                }
-                @CardTemplate(item)
-            }
-            else
-            {
-                @if (AllowSelection)
-                {
-                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
-                        <input type="checkbox"
-                               class="tm-mvl-checkbox"
-                               checked="@selected"
-                               @onchange="_ => ToggleSelectionAsync(item)" />
-                        @if (!string.IsNullOrEmpty(GetTitle(item)))
-                        {
-                            <div class="tm-mvl-card-title">@GetTitle(item)</div>
-                        }
-                    </div>
-                }
-                @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
-                {
-                    <img class="tm-mvl-card-avatar" src="@GetAvatarUrl(item)" alt="" />
-                }
-                else if (AvatarFallback == AvatarFallback.Initials && !string.IsNullOrWhiteSpace(GetTitle(item)))
-                {
-                    <TmAvatar Name="@GetTitle(item)" />
-                }
-                <div class="tm-mvl-card-body">
-                    @if (!AllowSelection)
+                <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
+                    <input type="checkbox"
+                           class="tm-mvl-checkbox"
+                           checked="@selected"
+                           @onchange="_ => ToggleSelectionAsync(item)" />
+                    @if (!stretched && !string.IsNullOrEmpty(GetTitle(item)))
                     {
                         <div class="tm-mvl-card-title">@GetTitle(item)</div>
                     }
-                    @if (!string.IsNullOrEmpty(GetSubTitle(item)))
-                    {
-                        <div class="tm-mvl-card-subtitle">@GetSubTitle(item)</div>
-                    }
-                    @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
-                    {
-                        <TmBadge Variant="@(GetStatusColor(item) is null ? GetStatusVariant(item) : BadgeVariant.Default)" Class="tm-mvl-status" AdditionalAttributes="@(GetStatusStyle(item) is string css ? new Dictionary<string, object> { ["style"] = css } : null)">@GetStatusLabel(item)</TmBadge>
-                    }
                 </div>
             }
-        </div>
+            @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
+            {
+                <img class="tm-mvl-card-avatar" src="@GetAvatarUrl(item)" alt="" />
+            }
+            else if (AvatarFallback == AvatarFallback.Initials && !string.IsNullOrWhiteSpace(GetTitle(item)))
+            {
+                <TmAvatar Name="@GetTitle(item)" />
+            }
+            <div class="tm-mvl-card-body">
+                @if (!AllowSelection && !stretched)
+                {
+                    <div class="tm-mvl-card-title">@GetTitle(item)</div>
+                }
+                @if (!string.IsNullOrEmpty(GetSubTitle(item)))
+                {
+                    <div class="tm-mvl-card-subtitle">@GetSubTitle(item)</div>
+                }
+                @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
+                {
+                    <TmBadge Variant="@(GetStatusColor(item) is null ? GetStatusVariant(item) : BadgeVariant.Default)" Class="tm-mvl-status" AdditionalAttributes="@(GetStatusStyle(item) is string css ? new Dictionary<string, object> { ["style"] = css } : null)">@GetStatusLabel(item)</TmBadge>
+                }
+            </div>
+        }
     };
 
     private RenderFragment RenderListItem(TItem item) => __builder =>

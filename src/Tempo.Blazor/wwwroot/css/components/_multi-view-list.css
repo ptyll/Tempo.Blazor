@@ -133,6 +133,46 @@
   box-shadow: var(--tm-shadow-md); 
   border-color: var(--tm-border-color-focus);
 }
+/* Stretched link: the title is the only tab stop and its ::after covers the card. The selection
+   checkbox paints above that layer so a click still toggles the row instead of activating it.
+   Scoped under the card so the filter builder's own .tm-stretched-link keeps its color rule. */
+.tm-mvl-card--stretched {
+  position: relative;
+}
+.tm-mvl-card--stretched .tm-stretched-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--tm-color-primary);
+  font-weight: var(--tm-font-weight-semibold);
+  font-size: var(--tm-font-size-sm);
+}
+.tm-mvl-card--stretched .tm-stretched-link:hover {
+  text-decoration: underline;
+}
+.tm-mvl-card--stretched .tm-stretched-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+/* The ring lives on the card, not on the title, so it outlines the whole activatable surface. */
+.tm-mvl-card--stretched .tm-stretched-link:focus-visible {
+  outline: none;
+}
+.tm-mvl-card--stretched:has(.tm-stretched-link:focus-visible) {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: 2px;
+}
+.tm-mvl-card--stretched .tm-mvl-card-select-row,
+.tm-mvl-card--stretched .tm-mvl-checkbox {
+  position: relative;
+  z-index: 1;
+}
 
 /* Card Header */
 .tm-mvl-card-header {

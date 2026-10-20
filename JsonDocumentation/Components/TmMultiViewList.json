@@ -370,7 +370,13 @@
       "type": "CardActivation",
       "isRequired": false,
       "default": "Button",
-      "description": "Opt-in CardActivation behavior; defaults preserve the existing presentation."
+      "description": "Card activation. Button (default) keeps the card as the tab stop. StretchedLink removes the card tab stop and puts the title in a covering link: an anchor when ItemHref returns a URL, otherwise a button that raises OnItemClick."
+    },
+    {
+      "name": "ItemHref",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Href of a card when CardActivation is StretchedLink. A non-empty result renders an anchor; null or empty renders a button that raises OnItemClick. Ignored for Button."
     },
     {
       "name": "GroupHeaderTemplate",

@@ -64,8 +64,6 @@
   font-size: var(--tm-font-size-sm);
   color: var(--tm-text-secondary);
 }
-/* Positioning that makes the card activation link cover its card is phase 5.5.
-   This rule only names the hook so coverage does not freeze it unstyled. */
 .tm-stretched-link {
   color: var(--tm-color-primary);
 }

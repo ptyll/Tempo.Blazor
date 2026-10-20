@@ -325,3 +325,27 @@ test('arrows, Home and End on a focused handle are prevented, other keys are not
     t.root.dispatch('keydown', thKey);
     assert.notEqual(thKey.defaultPrevented, true, 'the <th> keeps its own key handling');
 });
+
+test('attachArrowKeyPrevent cancels arrows on the matching child and leaves Tab alone', () => {
+    const root = el(['tm-mvl-switcher']);
+    const radio = el([], root);
+    radio.matches = (selector) => selector === "[role='radio']";
+    radio.closest = (selector) => (selector === "[role='radio']" ? radio : null);
+    const other = el([], root);
+    other.closest = () => null;
+
+    tmDataTable.attachArrowKeyPrevent(root, "[role='radio']");
+    tmDataTable.attachArrowKeyPrevent(root, "[role='radio']");
+
+    const arrow = { key: 'ArrowRight', target: radio, preventDefault() { arrow.defaultPrevented = true; } };
+    root.dispatch('keydown', arrow);
+    assert.equal(arrow.defaultPrevented, true, 'an arrow on a radio must not scroll the page');
+
+    const tab = { key: 'Tab', target: radio, preventDefault() { tab.defaultPrevented = true; } };
+    root.dispatch('keydown', tab);
+    assert.notEqual(tab.defaultPrevented, true, 'Tab must leave the group');
+
+    const outside = { key: 'ArrowDown', target: other, preventDefault() { outside.defaultPrevented = true; } };
+    root.dispatch('keydown', outside);
+    assert.notEqual(outside.defaultPrevented, true, 'a non-matching target keeps the browser default');
+});

@@ -4,6 +4,19 @@
 
 ### Fixed
 
+- **TmOverlayPanel no longer takes a focus-restore id.** `RestoreFocusTargetId` was removed.
+  Escape returns focus to the anchor inside `overlay.js` (`anchor.focus({ preventScroll: true })`)
+  when focus would otherwise die. An outside click does not: the user clicked somewhere else.
+  Do not pass the old parameter.
+
+- **TmFilterBuilder focuses its own first field option.** Opening the picker no longer runs
+  `document.querySelector` through `eval`, so a second builder on the page focuses its own option.
+  Escape inside an open nested date picker closes that picker and leaves the filter editor open.
+
+- **TmMultiViewList view switcher is a radiogroup.** The group is named "View"
+  (`TmMvl_ViewSwitcher`). Exactly one radio is tabbable; ArrowLeft/Right/Up/Down change the view and move
+  focus, and those arrows no longer scroll the page.
+
 - **TmDataTable grid keyboard.** `KeyboardNavigation="Grid"` now keeps exactly one roving tabindex
   across selection, detail, grouping, virtualization, editing and an empty table. Enter activates
   the row once (cell key events no longer also reach the row), Space toggles selection without
@@ -15,6 +28,10 @@
   `tabindex="-1"` so Tab leaves the grid instead of stepping into them.
 
 ### Added
+
+- **TmMultiViewList `ItemHref`.** With `CardActivation="StretchedLink"` a non-empty href renders the
+  card title as an anchor that covers the card; without one the title is a button that raises
+  `OnItemClick`. The card itself is no longer a tab stop. `Button` (the default) is unchanged.
 
 - **Wireframe:** the `TmDiagramEditor` stencil now mirrors the redesigned editor shell — header,
   command row, shapes palette, Properties|Layers inspector with docked minimap and status bar on
@@ -1065,7 +1082,7 @@
   - A void checkbox renders its closing tag. <!-- snapshot:dt-selectable -->
     Before: `<input type="checkbox" /></th>`
     After: `<input type="checkbox"></input></th>`
-  - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` of `radio` buttons, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
+  - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` named "View" (not "Table view") with one roving `tabindex`, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
     Before: `<span class="tm-mvl-status">Active</span>`
     After: `<span class="tm-badge tm-mvl-status">Active</span>`
   - `ExportSelectedOnly` is now `AllowExportSelected`. Set the new parameter to keep exporting the selection only.

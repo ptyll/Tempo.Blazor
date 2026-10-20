@@ -3036,6 +3036,7 @@
   "TmMvl_ListView": "Zobrazení seznamem",
   "TmMvl_ItemCount": "Položky: {0}",
   "TmMvl_TableView": "Zobrazení tabulkou",
+  "TmMvl_ViewSwitcher": "Zobrazení",
   "TmNotificationBell_AriaLabel": "Oznámení",
   "TmNotificationBell_MarkAllRead": "Označit vše jako přečtené",
 "TmNotificationBell_Unread": "Nepřečtené oznámení",

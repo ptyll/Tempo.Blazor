@@ -266,9 +266,6 @@
     /// </summary>
     [Parameter] public string? Title { get; set; }
 
-    /// <summary>Element id that receives focus when the panel closes by Escape or an outside pointer.</summary>
-    [Parameter] public string? RestoreFocusTargetId { get; set; }
-
     /// <summary>
     /// How the panel presents on a narrow viewport. Default <see cref="PanelPresentation.Popover"/>:
     /// the anchored popover at every width. A surface whose anchor keeps focus (a typeahead, a
@@ -477,20 +474,9 @@
             await OnDismissed.InvokeAsync(reason);
         }
 
-        if (!open && dismissed && !string.IsNullOrEmpty(RestoreFocusTargetId))
-        {
-            try
-            {
-                // preventScroll: restoring focus must not move the page — the trigger is where the
-                // user left it, and a focus-driven scroll jump breaks anchored overlays (and the
-                // E2E contract that dismiss-on-Escape leaves the page scrolled where it was).
-                // The restore rides the overlay.js module (focusById), never eval: the id travels
-                // as a JSON argument, not as an executed script string.
-                _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-                await _module.InvokeVoidAsync("focusById", RestoreFocusTargetId, new { preventScroll = true });
-            }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
-        }
+        // Focus returns to the anchor inside overlay.js (Escape and outside pointerdown both call
+        // anchor.focus({ preventScroll: true }) when focus would otherwise die on <body>). A second
+        // restore from here used to eval an id, which CSP blocks and which raced the anchor restore.
 
         // Uncontrolled mode mutates _internalOpen without a parent re-render, and the
         // JS-invoked dismissal path must marshal back onto the renderer either way.

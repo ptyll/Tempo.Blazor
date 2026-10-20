@@ -301,6 +301,29 @@ window.tmDataTable = (function () {
         gridKeyRoots.set(table, onKey);
     }
 
+    // Arrow keys that scroll the page when a composite widget (a radiogroup) owns them.
+    // Tab is deliberately absent: a blanket preventDefault on the container would trap focus.
+    var ARROW_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+    var arrowKeyRoots = new Map();
+
+    /**
+     * Cancels the page-scroll default of arrow keys on a composite widget. Only a key whose target
+     * matches `selector` (or sits inside one) is cancelled, and only the four arrows — Tab, Enter
+     * and Space keep their browser behaviour. Attaching twice to the same element is a no-op.
+     */
+    function attachArrowKeyPrevent(el, selector) {
+        if (!el || !el.addEventListener || arrowKeyRoots.has(el)) return;
+        var onKey = function (event) {
+            if (event.ctrlKey || event.altKey || event.metaKey) return;
+            if (ARROW_KEYS.indexOf(event.key) === -1) return;
+            var target = event.target;
+            if (selector && target && typeof target.closest === 'function' && !target.closest(selector)) return;
+            event.preventDefault();
+        };
+        el.addEventListener('keydown', onKey);
+        arrowKeyRoots.set(el, onKey);
+    }
+
     function detachGridKeys(table) {
         var onKey = gridKeyRoots.get(table);
         if (!onKey) return;
@@ -342,5 +365,5 @@ window.tmDataTable = (function () {
         }
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex };
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent };
 })();
