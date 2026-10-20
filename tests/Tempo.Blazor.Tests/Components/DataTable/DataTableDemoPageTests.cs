@@ -30,6 +30,8 @@ public class DataTableDemoPageTests : LocalizationTestBase
         var exportSection = cut.Find("[data-testid='dt-export-section']");
         exportSection.QuerySelector("[data-testid='export-table']").Should().NotBeNull();
         exportSection.TextContent.Should().Contain("CSV").And.Contain("XLSX");
+
+        cut.Find("[data-testid='dt-grid-keyboard-section']").Should().NotBeNull();
     }
 
     private sealed class DemoApiHandler : HttpMessageHandler

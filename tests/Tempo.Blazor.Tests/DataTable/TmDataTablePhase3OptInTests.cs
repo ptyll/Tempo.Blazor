@@ -65,7 +65,7 @@ public class TmDataTablePhase3OptInTests : LocalizationTestBase
         var cut = RenderTable(keyboard: DataTableKeyboardNavigation.Grid);
 
         var table = cut.Find("table.tm-data-table");
-        table.GetAttribute("aria-rowcount").Should().Be("1");
+        table.GetAttribute("aria-rowcount").Should().Be("2");
         table.GetAttribute("aria-colcount").Should().Be("1");
         cut.Find("tbody tr").GetAttribute("role").Should().Be("row");
         cut.Find("tbody td").GetAttribute("role").Should().Be("gridcell");

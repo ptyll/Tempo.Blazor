@@ -14,7 +14,7 @@ namespace Tempo.Blazor.Components.DataTable;
 /// A fully-featured data table component with support for sorting, filtering, pagination,
 /// selection, grouping, and view management. Supports both client-side and server-side data.
 /// </summary>
-public partial class TmDataTable<TItem> : IDisposable
+public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
@@ -201,13 +201,20 @@ public partial class TmDataTable<TItem> : IDisposable
         }
     }
 
-    private Task HandleEditKeyDownAsync(KeyboardEventArgs e)
-        => e.Key switch
+    private async Task HandleEditKeyDownAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
         {
-            "Escape" => CancelEditAsync(),
-            "Enter" => CommitEditAsync(),
-            _ => Task.CompletedTask
-        };
+            case "Escape":
+                await CancelEditAsync();
+                if (IsGrid)
+                    _gridFocusPending = true;
+                break;
+            case "Enter":
+                await CommitEditAsync();
+                break;
+        }
+    }
 
     // ── Master-detail expandable rows ─────────────────────────────
     private readonly HashSet<TItem> _expandedRows = new();
@@ -795,7 +802,9 @@ public partial class TmDataTable<TItem> : IDisposable
 
     /// <summary>
     /// Keyboard model. <see cref="DataTableKeyboardNavigation.Rows"/> (default) keeps one Tab stop per row.
-    /// <see cref="DataTableKeyboardNavigation.Grid"/> uses roving tabindex on cells. Grid becomes the default in the next major;
+    /// <see cref="DataTableKeyboardNavigation.Grid"/> uses one roving tabindex on cells: arrows, Home, End,
+    /// PageUp and PageDown move it; Enter activates the row once; Space toggles selection; F2 starts editing.
+    /// Grid becomes the default in the next major;
     /// set <c>KeyboardNavigation="DataTableKeyboardNavigation.Rows"</c> to keep today's behavior after that.
     /// </summary>
     [Parameter] public DataTableKeyboardNavigation KeyboardNavigation { get; set; } = DataTableKeyboardNavigation.Rows;
@@ -1092,6 +1101,11 @@ public partial class TmDataTable<TItem> : IDisposable
                     .OrderBy(c => GetPin(c) switch { ColumnPin.Left => 0, ColumnPin.Right => 2, _ => 1 })
                     .ThenBy(c => c.Order));
         RecomputeSticky();
+        RebuildRenderedCellColumns();
+        // Hiding, reordering or switching layout can drop the column the cursor sits on.
+        // Without this the active column stays past the last rendered cell and the grid
+        // has no tabindex=0.
+        ClampGridCursor();
     }
 
     // ── Column layout (pin + resize) ──────────────────────────────
@@ -1252,6 +1266,9 @@ public partial class TmDataTable<TItem> : IDisposable
             {
             }
         }
+
+        await SyncGridKeysAsync();
+        await FocusActiveGridCellAsync();
     }
 
     /// <summary>Receives live width updates from the JavaScript resize drag (no persistence).</summary>
@@ -1453,6 +1470,16 @@ public partial class TmDataTable<TItem> : IDisposable
         }
         _dotNetRef?.Dispose();
         _dotNetRef = null;
+        if (_gridKeysAttached)
+            _ = DetachGridKeysAsync();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_gridKeysAttached)
+            await DetachGridKeysAsync();
+        Dispose();
     }
 
     private async Task DetachColumnResizeAsync()
@@ -1505,7 +1532,7 @@ public partial class TmDataTable<TItem> : IDisposable
         if (ScrollMode == DataTableScrollMode.Virtualized)
         {
             // Virtualized mode: no pagination, show all items
-            _displayedItems = list;
+            SetDisplayedItems(list);
             _totalPages = 0;
         }
         else if (!ShowPagination)
@@ -1513,7 +1540,7 @@ public partial class TmDataTable<TItem> : IDisposable
             // The pager is the only element that reaches pages 2..N, so slicing is derived from it:
             // with no pager the remaining rows would be in no element at all, and nothing in the UI
             // would say so. ShowPagination=false therefore means "do not slice", not "slice silently".
-            _displayedItems = list;
+            SetDisplayedItems(list);
             _totalPages = 0;
         }
         else
@@ -1525,12 +1552,14 @@ public partial class TmDataTable<TItem> : IDisposable
             else if (_currentPage < 1)
                 _currentPage = 1;
 
-            _displayedItems = list.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+            SetDisplayedItems(list.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList());
         }
 
         // Refresh grouping if active
         if (_groupByColumns.Count > 0)
             RefreshGroupedData();
+
+        ClampGridCursor();
     }
 
     private static IEnumerable<TItem> ApplyClientFilter(
@@ -1601,7 +1630,7 @@ public partial class TmDataTable<TItem> : IDisposable
                     // Server provided pre-grouped data — use directly
                     _groupedData = grouped.Groups.ToList();
                     _totalCount = grouped.TotalCount;
-                    _displayedItems = [];
+                    SetDisplayedItems([]);
                     _serverGroupPaging = grouped.GroupPaging;
 
                     // Set initial expand state
@@ -1615,11 +1644,14 @@ public partial class TmDataTable<TItem> : IDisposable
             // Flat data fetch (non-grouped, or server doesn't support grouping)
             var result = await DataProvider!.GetDataAsync(BuildQuery());
             if (generation != _loadGeneration) return; // superseded while in flight
-            _displayedItems = result.Items.ToList();
+            SetDisplayedItems(result.Items.ToList());
             _totalCount = result.TotalCount;
             _currentPage = result.Page;
             _pageSize = result.PageSize;
             _totalPages = result.TotalPages;
+            // After page size and page count: the clamp reads both, and a call before they are
+            // assigned would clamp against the previous page.
+            ClampGridCursor();
             _serverGroupPaging = null;
 
             // Fallback: group the server-provided items client-side
@@ -2132,9 +2164,55 @@ public partial class TmDataTable<TItem> : IDisposable
     private void ToggleGroupExpansion(DataGroup<TItem> group)
     {
         var id = GetGroupId(group);
-        if (!_expandedGroups.Remove(id))
+        var collapsed = _expandedGroups.Remove(id);
+        if (!collapsed)
             _expandedGroups.Add(id);
+        // Collapsing removes the rows the cursor may be sitting on. Land on the header that
+        // remains and ask the next render to focus it, so the grid never loses its one tab stop.
+        if (IsGrid)
+        {
+            if (collapsed)
+            {
+                var header = GroupHeaderIndex(group);
+                if (header >= 0)
+                    _activeRow = header;
+            }
+            ClampGridCursor();
+            _gridFocusPending = true;
+        }
         StateHasChanged();
+    }
+
+    /// <summary>Visible-row index of a group's header, or -1 when the group is not rendered.</summary>
+    private int GroupHeaderIndex(DataGroup<TItem> group)
+    {
+        if (_groupedData is null) return -1;
+        var cursor = 0;
+        return FindGroupHeaderIndex(_groupedData, group, ref cursor);
+    }
+
+    private int FindGroupHeaderIndex(IReadOnlyList<DataGroup<TItem>> groups, DataGroup<TItem> target, ref int cursor)
+    {
+        foreach (var candidate in groups)
+        {
+            if (ReferenceEquals(candidate, target) || GetGroupId(candidate) == GetGroupId(target))
+                return cursor;
+            cursor++;
+            if (!IsGroupExpanded(candidate))
+                continue;
+            if (candidate.SubGroups.Count > 0)
+            {
+                var nested = FindGroupHeaderIndex(candidate.SubGroups, target, ref cursor);
+                if (nested >= 0)
+                    return nested;
+            }
+            else
+            {
+                cursor += candidate.Items.Count;
+            }
+        }
+
+        return -1;
     }
 
     private bool IsGroupExpanded(DataGroup<TItem> group)
@@ -2224,24 +2302,93 @@ public partial class TmDataTable<TItem> : IDisposable
         }
     }
 
+    private int _groupRowIndex;
+
+    private void AddGridCellAttributes(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, ref int seq, int row, int col, TItem item)
+    {
+        if (!IsGrid) return;
+        builder.AddAttribute(seq++, "role", "gridcell");
+        builder.AddAttribute(seq++, "aria-colindex", col + 1);
+        builder.AddAttribute(seq++, "data-grid-cell", GridCellKey(row, col));
+        builder.AddAttribute(seq++, "tabindex", CellTabIndex(row, col));
+        var capturedRow = row;
+        var capturedCol = col;
+        var capturedItem = item;
+        builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, capturedRow, capturedCol, capturedItem)));
+        builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
+        builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
+    }
+
+    private Task HandleGroupHeaderKeyDownAsync(KeyboardEventArgs e, DataGroup<TItem> group)
+    {
+        if (!IsGrid || e.Repeat)
+            return Task.CompletedTask;
+        if (e.Key is "ArrowDown")
+            return MoveGroupCursorAsync(1);
+        if (e.Key is "ArrowUp")
+            return MoveGroupCursorAsync(-1);
+        if (e.Key is "Enter" or " ")
+            ToggleGroupExpansion(group);
+        // The header spans every column, so a horizontal arrow has nothing to move to — it drives
+        // the group itself. Right expands, left collapses.
+        else if (e.Key == "ArrowRight" && !IsGroupExpanded(group))
+            ToggleGroupExpansion(group);
+        else if (e.Key == "ArrowLeft" && IsGroupExpanded(group))
+            ToggleGroupExpansion(group);
+        return Task.CompletedTask;
+    }
+
+    private Task MoveGroupCursorAsync(int delta)
+    {
+        var count = CountGroupRows(_groupedData);
+        if (count == 0)
+            return Task.CompletedTask;
+        _activeRow = Math.Clamp(_activeRow + delta, 0, count - 1);
+        _activeCol = GridColumnForRow(_activeRow, _activeCol);
+        _gridFocusPending = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private RenderFragment RenderGroupRows(IReadOnlyList<DataGroup<TItem>> groups, int level) => builder =>
     {
+        if (level == 0)
+            _groupRowIndex = 0;
         var seq = 0;
         foreach (var group in groups)
         {
             var g = group;
             var expanded = IsGroupExpanded(g);
 
-            // Group header row
+            // Group header row. In Grid mode the header itself is the roving stop (role=gridcell, aria-colspan):
+            // arrows are a no-op across the colspan, Enter/Space toggle the group.
+            var groupIndex = _groupRowIndex++;
             builder.OpenElement(seq++, "tr");
             builder.AddAttribute(seq++, "class", $"tm-data-table-group-row tm-data-table-group-level-{level}");
+            if (IsGrid)
+            {
+                builder.AddAttribute(seq++, "role", "row");
+                builder.AddAttribute(seq++, "aria-rowindex", groupIndex + GridBodyRowOffset);
+            }
             builder.OpenElement(seq++, "td");
             builder.AddAttribute(seq++, "colspan", ColSpan);
+            if (IsGrid)
+            {
+                builder.AddAttribute(seq++, "role", "gridcell");
+                builder.AddAttribute(seq++, "aria-colspan", ColSpan);
+                builder.AddAttribute(seq++, "tabindex", groupIndex == _activeRow ? "0" : "-1");
+                builder.AddAttribute(seq++, "data-grid-cell", GridCellKey(groupIndex, 0));
+                builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGroupHeaderKeyDownAsync(e, g)));
+                builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
+                builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
+            }
 
-            // Toggle button
+            // Toggle button. In Grid mode it is not its own tab stop: the header cell is.
             builder.OpenElement(seq++, "button");
             builder.AddAttribute(seq++, "type", "button");
             builder.AddAttribute(seq++, "class", "tm-data-table-group-toggle");
+            if (IsGrid)
+                builder.AddAttribute(seq++, "tabindex", "-1");
             builder.AddAttribute(seq++, "aria-expanded", expanded ? "true" : "false");
             builder.AddAttribute(seq++, "aria-label", string.Format(
                 System.Globalization.CultureInfo.CurrentCulture,
@@ -2290,7 +2437,14 @@ public partial class TmDataTable<TItem> : IDisposable
                         builder.AddAttribute(seq++, "class", GetRowClass(rowItem));
                         // Same keyboard contract as the ungrouped rows: a non-native
                         // focusable <tr> offers Enter/Space -> OnRowClick itself.
-                        builder.AddAttribute(seq++, "tabindex", "0");
+                        // Grid mode moves that stop onto the cells.
+                        builder.AddAttribute(seq++, "tabindex", RowTabIndex());
+                        if (IsGrid)
+                        {
+                            builder.AddAttribute(seq++, "role", "row");
+                            builder.AddAttribute(seq++, "aria-rowindex", _groupRowIndex + GridBodyRowOffset);
+                        }
+                        var groupItemRow = _groupRowIndex++;
                         builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleRowClickAsync(rowItem)));
                         builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleRowKeyDownAsync(e, rowItem)));
                         builder.AddAttribute(seq++, "onkeyup", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleRowKeyUpAsync(e, rowItem)));
@@ -2300,6 +2454,7 @@ public partial class TmDataTable<TItem> : IDisposable
                         {
                             builder.OpenElement(seq++, "td");
                             builder.AddAttribute(seq++, "class", "tm-col-expander");
+                            AddGridCellAttributes(builder, ref seq, groupItemRow, 0, rowItem);
                             builder.CloseElement();
                         }
 
@@ -2307,9 +2462,12 @@ public partial class TmDataTable<TItem> : IDisposable
                         {
                             builder.OpenElement(seq++, "td");
                             builder.AddAttribute(seq++, "class", "tm-col-check");
+                            AddGridCellAttributes(builder, ref seq, groupItemRow, HasDetail ? 1 : 0, rowItem);
                             builder.OpenElement(seq++, "input");
                             builder.AddAttribute(seq++, "type", "checkbox");
                             builder.AddAttribute(seq++, "aria-label", Loc["TmDataTable_SelectRow"]);
+                            if (IsGrid)
+                                builder.AddAttribute(seq++, "tabindex", "-1");
                             builder.AddAttribute(seq++, "checked", IsSelected(rowItem));
                             builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => ToggleRowSelectionAsync(rowItem, e)));
                             // Same barriers as the ungrouped checkboxes: the row is a
@@ -2325,11 +2483,13 @@ public partial class TmDataTable<TItem> : IDisposable
                             builder.CloseElement(); // td
                         }
 
-                        foreach (var col in _visibleColumns.Where(c => !IsMobileCards || c.CardRole != DataTableCardRole.Hidden))
+                        var groupCol = GridDefaultColumn;
+                        foreach (var col in _renderedCellColumns)
                         {
                             builder.OpenElement(seq++, "td");
                             builder.AddAttribute(seq++, "class", GetCellClass(col));
                             builder.AddAttribute(seq++, "style", GetColumnStyle(col));
+                            AddGridCellAttributes(builder, ref seq, groupItemRow, groupCol++, rowItem);
                             if (col.CellTemplate is not null)
                                 builder.AddContent(seq++, col.CellTemplate(rowItem));
                             else
@@ -2433,6 +2593,9 @@ public partial class TmDataTable<TItem> : IDisposable
     // keyups so their own activation never reaches these handlers.
     private Task HandleRowKeyDownAsync(KeyboardEventArgs e, TItem item)
     {
+        // Grid cells own activation. A bubbling Enter must not fire the row as well.
+        if (IsGrid)
+            return Task.CompletedTask;
         if (e.Key == "Enter" && !e.Repeat)
             return HandleRowClickAsync(item);
         return Task.CompletedTask;
@@ -2440,6 +2603,8 @@ public partial class TmDataTable<TItem> : IDisposable
 
     private Task HandleRowKeyUpAsync(KeyboardEventArgs e, TItem item)
     {
+        if (IsGrid)
+            return Task.CompletedTask;
         if (e.Key == " ")
             return HandleRowClickAsync(item);
         return Task.CompletedTask;

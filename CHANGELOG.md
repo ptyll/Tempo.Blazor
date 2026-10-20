@@ -2,6 +2,18 @@
 
 ## 2.9.1 (unreleased)
 
+### Fixed
+
+- **TmDataTable grid keyboard.** `KeyboardNavigation="Grid"` now keeps exactly one roving tabindex
+  across selection, detail, grouping, virtualization, editing and an empty table. Enter activates
+  the row once (cell key events no longer also reach the row), Space toggles selection without
+  activating, Home/End include the checkbox and expander columns, and focus follows the active cell.
+  Grid mode `aria-rowcount` now includes the header rows (the column header, and the filter row
+  when one renders), so the last body's `aria-rowindex` is never past the announced count.
+  Collapsing a group, hiding a column, or pressing End on the edit-action column keeps that
+  single tab stop; controls inside a cell (expander, checkbox, edit action, group toggle) are
+  `tabindex="-1"` so Tab leaves the grid instead of stepping into them.
+
 ### Added
 
 - **Wireframe:** the `TmDiagramEditor` stencil now mirrors the redesigned editor shell — header,

@@ -208,18 +208,19 @@
 
     @* ── Table ────────────────────────────────────────────────── *@
     <div class="@GetScrollContainerClass()" style="@GetScrollContainerStyle()">
-        <table class="tm-data-table" role="grid" aria-rowcount="@(IsGrid ? _displayedItems.Count : null)" aria-colcount="@(IsGrid ? GridColumnCount : null)" @ref="_tableRef">
+        <table class="tm-data-table" role="grid" aria-rowcount="@(IsGrid ? GridAriaRowCount : null)" aria-colcount="@(IsGrid ? GridColumnCount : null)" @ref="_tableRef">
             @if (_visibleColumns.Count > 0 || Selectable)
             {
                 <thead>
-                    <tr>
+                    <tr role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? 1 : null)">
                         @if (HasDetail)
                         {
-                            <th class="tm-col-expander" aria-hidden="true"></th>
+                            <th class="tm-col-expander" aria-hidden="@(GridHeaderIsActive ? null : "true")" role="@(GridHeaderIsActive ? "columnheader" : null)" aria-colindex="@(GridHeaderIsActive ? 1 : null)" tabindex="@(GridHeaderIsActive ? HeaderTabIndex(0) : null)" @onkeydown="@(GridHeaderIsActive ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridHeaderKeyDownAsync(e, 0)) : default)" @onkeydown:stopPropagation="@GridHeaderIsActive"></th>
                         }
                         @if (Selectable)
                         {
-                            <th class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)">
+                            var selectCol = HasDetail ? 1 : 0;
+                            <th class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(GridHeaderIsActive ? "columnheader" : null)" aria-colindex="@(GridHeaderIsActive ? selectCol + 1 : null)" tabindex="@(GridHeaderIsActive ? HeaderTabIndex(selectCol) : null)" @onkeydown="@(GridHeaderIsActive ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridHeaderKeyDownAsync(e, selectCol)) : default)" @onkeydown:stopPropagation="@GridHeaderIsActive">
                                 <input type="checkbox"
                                        @ref="_selectAllRef"
                                        aria-label="@Loc["TmDataTable_SelectAll"]"
@@ -227,8 +228,10 @@
                                        @onchange="ToggleSelectAllAsync" />
                             </th>
                         }
-                        @foreach (var col in _visibleColumns)
+                        @{ var headerCol = GridDefaultColumn; }
+                        @foreach (var col in _renderedCellColumns)
                         {
+                            var thisHeaderCol = headerCol++;
                             @* A sortable header's control is a real <button> inside the <th>, not the <th>
                                itself. On a <button> BOTH Enter and Space are native activation — Space
                                included, because a button's default for Space is "click", where on the plain
@@ -244,13 +247,16 @@
                             <th class="@GetHeaderClass(col)"
                                 style="@GetColumnStyle(col)"
                                 data-sortable="@col.Sortable.ToString().ToLower()"
-                                tabindex="@(IsPinOnlyHeader(col) ? "0" : null)"
+                                role="@(GridHeaderIsActive ? "columnheader" : null)"
+                                aria-colindex="@(GridHeaderIsActive ? thisHeaderCol + 1 : null)"
+                                tabindex="@(GridHeaderIsActive ? HeaderTabIndex(thisHeaderCol) : IsPinOnlyHeader(col) ? "0" : null)"
+                                @onkeydown:stopPropagation="@GridHeaderIsActive"
                                 draggable="@(col.Groupable ? "true" : "false")"
                                 aria-sort="@GetAriaSortValue(col)"
                                 aria-keyshortcuts="@(ShowColumnMenu && !col.Sortable ? "P" : null)"
                                 @ondragstart="() => OnColumnDragStart(col.Key)"
                                 @ondragend="OnColumnDragEnd"
-                                @onkeydown="e => HandleHeaderKeyDownAsync(e, col)"
+                                @onkeydown="e => GridHeaderIsActive ? HandleGridHeaderKeyDownAsync(e, thisHeaderCol) : HandleHeaderKeyDownAsync(e, col)"
                                 @onclick="e => SortByAsync(col, HeaderClickRequestsMultiSort(e))">
                                 @if (col.HeaderTemplate is not null)
                                 {
@@ -368,7 +374,7 @@
                     </tr>
                     @if (_visibleColumns.Any(c => c.Filterable))
                     {
-                        <tr class="tm-filter-row">
+                        <tr class="tm-filter-row" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? 2 : null)">
                             @if (HasDetail) { <th></th> }
                             @if (Selectable) { <th></th> }
                             @foreach (var col in _visibleColumns)
@@ -440,21 +446,30 @@
                                 Context="rowItem"
                                 ItemSize="VirtualItemSize"
                                 OverscanCount="VirtualOverscanCount">
+                        @{ var virtualRow = DisplayedIndexOf(rowItem); }
                         <tr class="@GetRowClass(rowItem)"
-                            tabindex="0"
+                            tabindex="@RowTabIndex()"
+                            role="@(IsGrid ? "row" : null)"
+                            aria-rowindex="@(IsGrid ? virtualRow + GridBodyRowOffset : null)"
                             @onclick="() => HandleRowClickAsync(rowItem)"
                             @onkeydown="e => HandleRowKeyDownAsync(e, rowItem)"
                             @onkeyup="e => HandleRowKeyUpAsync(e, rowItem)"
                             @attributes="GetRowAttributes(rowItem)">
                             @if (HasDetail)
                             {
-                                <td class="tm-col-expander"></td>
+                                <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, 0) : null)"
+                                    @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, 0, rowItem)) : default)"
+                                    @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid"></td>
                             }
                             @if (Selectable)
                             {
-                                <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)">
+                                var virtualCheckCol = HasDetail ? 1 : 0;
+                                <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? virtualCheckCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, virtualCheckCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, virtualCheckCol) : null)"
+                                    @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, virtualCheckCol, rowItem)) : default)"
+                                    @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     <input type="checkbox"
                                            aria-label="@Loc["TmDataTable_SelectRow"]"
+                                           tabindex="@(IsGrid ? "-1" : null)"
                                            checked="@IsSelected(rowItem)"
                                            @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
                                            @onkeydown:stopPropagation="true"
@@ -462,9 +477,14 @@
                                            @onclick:stopPropagation="true" />
                                 </td>
                             }
-                            @foreach (var col in _visibleColumns.Where(c => !IsMobileCards || c.CardRole != DataTableCardRole.Hidden))
+                            @{ var virtualCol = GridDefaultColumn; }
+                            @foreach (var col in _renderedCellColumns)
                             {
-                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)">
+                                var cellCol = virtualCol++;
+                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
+                                    role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, cellCol) : null)"
+                                    @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, cellCol, rowItem)) : default)"
+                                    @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     @if (col.CellTemplate is not null)
                                     {
                                         @col.CellTemplate(rowItem)
@@ -487,7 +507,7 @@
                         @if (Editable && IsEditingRow(currentRowIndex))
                         {
                             <CascadingValue Value="_editContext" IsFixed="false">
-                                <tr class="tm-row-editing tm-data-table-row--editing @(_editHasErrors ? "tm-data-table-row--invalid" : null)" data-testid="@TestId("row-editing")" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? currentRowIndex + 1 : null)" @onkeydown="HandleEditKeyDownAsync">
+                                <tr class="tm-row-editing tm-data-table-row--editing @(_editHasErrors ? "tm-data-table-row--invalid" : null)" data-testid="@TestId("row-editing")" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? currentRowIndex + GridBodyRowOffset : null)" @onkeydown="HandleEditKeyDownAsync" @onkeydown:stopPropagation="@IsGrid">
                                     @if (HasDetail)
                                     {
                                         <td class="tm-col-expander"></td>
@@ -496,7 +516,7 @@
                                     {
                                         <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)"></td>
                                     }
-                                    @foreach (var col in _visibleColumns.Where(c => !IsMobileCards || c.CardRole != DataTableCardRole.Hidden))
+                                    @foreach (var col in _renderedCellColumns)
                                     {
                                         <td class="@GetCellClass(col) @(col.Editable && col.EditTemplate is not null ? "tm-data-table-cell--editing" : null)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)">
                                             @if (!HasEditActions && ReferenceEquals(col, _visibleColumns[0]))
@@ -564,7 +584,7 @@
                             <tr class="@GetRowClass(rowItem)"
                                 tabindex="@RowTabIndex()"
                                 role="@(IsGrid ? "row" : null)"
-                                aria-rowindex="@(IsGrid ? currentRowIndex + 1 : null)"
+                                aria-rowindex="@(IsGrid ? currentRowIndex + GridBodyRowOffset : null)"
                                 @ondblclick="() => StartEditAtAsync(currentRowIndex, rowItem)"
                                 @onclick="() => HandleRowClickAsync(rowItem)"
                                 @onkeydown="e => HandleRowKeyDownAsync(e, rowItem)"
@@ -572,10 +592,14 @@
                                 @attributes="GetRowAttributes(rowItem)">
                                 @if (HasDetail)
                                 {
-                                    <td class="tm-col-expander">
+                                    var expanderRow = currentRowIndex;
+                                    <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(expanderRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(expanderRow, 0) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, expanderRow, 0, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-row-expander-btn"
                                                 aria-label="@Loc["TmDataTable_ToggleDetail"]"
                                                 aria-expanded="@IsRowExpanded(rowItem).ToString().ToLowerInvariant()"
+                                                tabindex="@(IsGrid ? "-1" : null)"
                                                 data-testid="@TestId("expander")"
                                                 @onkeydown:stopPropagation="true"
                                                 @onkeyup:stopPropagation="true"
@@ -587,9 +611,14 @@
                                 }
                                 @if (Selectable)
                                 {
-                                    <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)">
+                                    var checkCol = HasDetail ? 1 : 0;
+                                    var checkRow = currentRowIndex;
+                                    <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? checkCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(checkRow, checkCol) : null)" tabindex="@(IsGrid ? CellTabIndex(checkRow, checkCol) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, checkRow, checkCol, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <input type="checkbox"
                                                aria-label="@Loc["TmDataTable_SelectRow"]"
+                                               tabindex="@(IsGrid ? "-1" : null)"
                                                checked="@IsSelected(rowItem)"
                                                @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
                                                @onkeydown:stopPropagation="true"
@@ -598,13 +627,14 @@
                                     </td>
                                 }
                                 @{ var colIndex = (HasDetail ? 1 : 0) + (Selectable ? 1 : 0); }
-                                @foreach (var col in _visibleColumns.Where(c => !IsMobileCards || c.CardRole != DataTableCardRole.Hidden))
+                                @foreach (var col in _renderedCellColumns)
                                 {
                                     var cellCol = colIndex++;
                                     var cellRow = currentRowIndex;
                                     <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
-                                        role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
-                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)) : default)">
+                                        role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(cellRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         @if (col.CellTemplate is not null)
                                         {
                                             @col.CellTemplate(rowItem)
@@ -617,9 +647,15 @@
                                 }
                                 @if (HasEditActions)
                                 {
-                                    <td class="tm-data-table__edit-actions @(IsMobileCards ? "tm-data-table__edit-actions--card-footer" : null)">
+                                    var editCol = GridDefaultColumn + _renderedCellColumns.Count;
+                                    var editRow = currentRowIndex;
+                                    <td class="tm-data-table__edit-actions @(IsMobileCards ? "tm-data-table__edit-actions--card-footer" : null)"
+                                        role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? editCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(editRow, editCol) : null)" tabindex="@(IsGrid ? CellTabIndex(editRow, editCol) : null)"
+                                        @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, editRow, editCol, rowItem)) : default)"
+                                        @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--start"
                                                 aria-label="@Loc["TmDataTable_EditRow"]" title="@Loc["TmDataTable_EditRow"]"
+                                                tabindex="@(IsGrid ? "-1" : null)"
                                                 @onkeydown:stopPropagation="true"
                                                 @onkeyup:stopPropagation="true"
                                                 @onclick:stopPropagation="true"

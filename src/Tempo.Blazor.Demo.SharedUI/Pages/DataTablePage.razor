@@ -637,6 +637,66 @@
     }
 </section>
 
+<!-- Grid keyboard -->
+<section class="demo-section" data-testid="dt-grid-keyboard-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Grid keyboard</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            One roving cell. Arrows move it, Enter activates the row once, Space toggles selection.
+        </p>
+        <TmDataTable TItem="Employee"
+                     Items="_employees"
+                     Selectable="true"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     ViewContext="grid-keyboard-demo"
+                     DefaultPageSize="4"
+                     OnRowClick="OnGridRowClick">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name" />
+                <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
+            </ChildContent>
+        </TmDataTable>
+        <p class="text-sm text-slate-600 mt-3" data-testid="dt-grid-activated">Activated: @(_gridActivated ?? "none")</p>
+    </div>
+    <div class="showcase-card mt-4" data-testid="dt-grid-empty">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">An empty grid keeps the single tab stop on the first column header.</p>
+        <TmDataTable TItem="Employee"
+                     Items="_gridEmpty"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     ViewContext="grid-keyboard-empty"
+                     DefaultPageSize="4">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name" />
+                <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="dt-grid-grouped">
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Arrowing onto a group header from a later column still lands focus on that header.
+        </p>
+        <TmDataTable @ref="_gridGroupedTable"
+                     TItem="Employee"
+                     Items="_gridGrouped"
+                     ShowGrouping="true"
+                     GroupsCollapsedByDefault="false"
+                     ShowColumnMenu="false"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     ViewContext="grid-keyboard-grouped"
+                     ShowPagination="false">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="Dept" PropertyName="Dept" Field="e => e.Dept" Groupable="true" />
+                <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+</section>
+
 <!-- Pagination Demo -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">
@@ -689,6 +749,21 @@
     private bool _loading;
     private bool _showEmpty;
     private Employee? _lastClicked;
+    private string? _gridActivated;
+    private readonly List<Employee> _gridEmpty = [];
+    private readonly List<Employee> _gridGrouped =
+    [
+        new("Alice", "Admin", "Engineering", 90),
+        new("Bob", "User", "Sales", 80)
+    ];
+    private TmDataTable<Employee>? _gridGroupedTable;
+    private bool _gridGroupedApplied;
+
+    private Task OnGridRowClick(Employee employee)
+    {
+        _gridActivated = employee.Name;
+        return Task.CompletedTask;
+    }
     private TmDataTable<Employee>? _rowAttributesGroupedTable;
     private bool _rowAttributesGroupApplied;
     private List<Employee> _selectedEmployees = [];
@@ -819,6 +894,13 @@
         {
             _rowAttributesGroupApplied = true;
             _rowAttributesGroupedTable.AddGroupColumn("Dept");
+            await InvokeAsync(StateHasChanged);
+        }
+
+        if (!_gridGroupedApplied && _gridGroupedTable is not null)
+        {
+            _gridGroupedApplied = true;
+            _gridGroupedTable.AddGroupColumn("Dept");
             await InvokeAsync(StateHasChanged);
         }
     }

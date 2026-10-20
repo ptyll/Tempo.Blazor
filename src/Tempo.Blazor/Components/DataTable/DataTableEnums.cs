@@ -162,7 +162,7 @@ public enum DataTableKeyboardNavigation
     /// <summary>Each data row is a Tab stop. Enter and Space activate the row. Arrow keys do not move cells.</summary>
     Rows,
 
-    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell.</summary>
+    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell; Enter activates the row once and Space toggles selection.</summary>
     Grid
 }
 

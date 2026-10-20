@@ -270,5 +270,77 @@ window.tmDataTable = (function () {
         if (el) el.indeterminate = !!value;
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate };
+    // Navigation keys whose browser default (scroll the page / the cell) must not run while a
+    // grid cell owns the key. Blazor cannot make preventDefault depend on which key was pressed,
+    // so the decision lives here. Ctrl/Alt/Meta combinations stay with the browser.
+    var GRID_NAV_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', ' '];
+    var gridKeyRoots = new Map();
+
+    function isGridEditTarget(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest('input, textarea, select, [contenteditable="true"]');
+    }
+
+    /**
+     * Cancels the page-scroll default of grid navigation keys on a grid cell. A key that lands
+     * inside an editor (inline edit, a filter, the checkbox's own control) is left alone — that
+     * control owns Space and the arrows.
+     */
+    function attachGridKeys(table) {
+        if (!table || !table.addEventListener || gridKeyRoots.has(table)) return;
+        var onKey = function (event) {
+            var target = event.target;
+            if (!target || !target.closest) return;
+            if (!target.closest('td[role="gridcell"], th[role="columnheader"], td[role="rowheader"]')) return;
+            if (event.ctrlKey || event.altKey || event.metaKey) return;
+            if (isGridEditTarget(target)) return;
+            if (GRID_NAV_KEYS.indexOf(event.key) === -1) return;
+            event.preventDefault();
+        };
+        table.addEventListener('keydown', onKey);
+        gridKeyRoots.set(table, onKey);
+    }
+
+    function detachGridKeys(table) {
+        var onKey = gridKeyRoots.get(table);
+        if (!onKey) return;
+        gridKeyRoots.delete(table);
+        table.removeEventListener('keydown', onKey);
+    }
+
+    /**
+     * Brings a not-yet-rendered virtualized row into the scroller so the next render can paint it.
+     * The estimate is the same item size Virtualize uses; the real cell is focused afterwards.
+     */
+    function scrollGridToIndex(table, index, itemSize) {
+        if (!table || !table.closest) return;
+        var scroller = table.closest('.tm-data-table-scroll') || table.parentElement;
+        if (!scroller) return;
+        var top = Math.max(0, Number(index) * Number(itemSize || 0));
+        try { scroller.scrollTo({ top: top }); } catch (e) { scroller.scrollTop = top; }
+    }
+
+    /**
+     * Moves DOM focus onto the roving grid cell Blazor just marked tabindex=0, then scrolls it
+     * into the nearest edge of its scroller. A group header only renders column 0, so a cursor
+     * that kept its previous column falls back to that row's cell before the empty-table header.
+     * A cell that is not in the DOM (a virtualized row that has not rendered) is a no-op.
+     */
+    function focusGridCell(table, row, col) {
+        if (!table || !table.querySelector) return;
+        var key = Number(row) + ':' + Number(col);
+        var cell = table.querySelector('[data-grid-cell="' + key + '"]');
+        if (!cell || typeof cell.focus !== 'function') {
+            cell = table.querySelector('[data-grid-cell^="' + Number(row) + ':"]');
+        }
+        if (!cell || typeof cell.focus !== 'function') {
+            cell = table.querySelector('th[role="columnheader"][tabindex="0"]');
+        }
+        if (cell && typeof cell.focus === 'function') {
+            try { cell.focus({ preventScroll: true }); } catch (e) { cell.focus(); }
+            try { cell.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* no scroller */ }
+        }
+    }
+
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex };
 })();

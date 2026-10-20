@@ -42,7 +42,22 @@ Example:
 
 ## Keyboard navigation
 
-`KeyboardNavigation="DataTableKeyboardNavigation.Grid"` opts into cell-based roving tabindex navigation. The current default, `Rows`, keeps one tab stop per row. Keep `Rows` explicitly when preserving today's behavior is important; Grid is planned to become the default in the next major release.
+`KeyboardNavigation="DataTableKeyboardNavigation.Grid"` opts into ARIA grid navigation with one roving tabindex. The current default, `Rows`, keeps one tab stop per row (Enter activates on keydown, Space on keyup). Keep `Rows` explicitly when preserving today's behavior is important; Grid is planned to become the default in the next major release.
+
+Grid keys:
+
+| Key | Behaviour |
+|---|---|
+| Arrow keys | Move the active cell. ArrowLeft on column 0 and ArrowRight on the last column stay put. |
+| Home / End | First / last column of the current row. With Ctrl, also the first / last row. |
+| PageUp / PageDown | Move 10 rows, clamped to the rendered page. They do not change the page. |
+| Enter | Activates the row once (`OnRowClick`). A held key does not repeat. |
+| Space | Toggles row selection when `Selectable` is set. It never activates the row. |
+| F2 | Starts inline editing when the table is `Editable` and a column has an `EditTemplate`. Escape cancels and returns focus to the cell. |
+
+The expander and the selection checkbox are columns of the grid (`role="gridcell"`, `aria-colindex`, roving tabindex). The active cell starts on the first data column; Home moves onto the checkbox or expander, and Enter or Space there is handed to that control (toggle detail / toggle selection) instead of activating the row. Cell keydown and keyup stop at the cell, so a key never also fires the row handler.
+
+An empty grid keeps the single tab stop on the first column header (`role="columnheader"`); arrows move between headers. A grouped table makes each group header a `gridcell` with `aria-colspan` — Enter or Space toggles it, ArrowRight expands it, ArrowLeft collapses it, and ArrowUp/ArrowDown move between group rows. Data cells keep the same roving contract inside an expanded group. Virtualized mode emits `role="gridcell"` on the cells Virtualize has rendered. PageDown or End past the rendered window scrolls the container by `index * VirtualItemSize` so the row renders, then focus moves onto it. Card layout (`MobileLayout="Cards"`) omits columns whose `CardRole` is `Hidden` from `aria-colcount` and from keyboard movement. While a row is being edited the grid handler returns immediately — arrows belong to the input; Escape cancels the edit and returns focus to the cell. F2, or Enter on an editable column, starts the edit.
 
 ## Surface and filter presentation
 
