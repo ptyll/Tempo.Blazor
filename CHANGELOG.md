@@ -90,7 +90,88 @@
   "author · time · page ref", so the page ref and the reply count are no longer glued
   together); and the composer textarea carries its localized placeholder as `aria-label`.
 
+- **TmPdfAnnotator: pass-through parameters for the viewer chrome.** The annotator gains
+  `ShowThumbnails`, `ShowSearch`, `AllowRotation`, `ThumbnailsCollapsed`/`ThumbnailsCollapsedChanged`
+  (two-way, unbound-host safe), `ZoomMode`/`ZoomModeChanged` (two-way) and `ShowOpenLink`
+  (default `true`) — all forwarded to the embedded viewer — plus an optional header row via
+  `ShowHeader`, `Title`, `Subtitle` and the `HeaderStart`/`HeaderActions` slots (the export
+  group renders as secondary header buttons; host actions slot in after it). The annotator
+  always pins the viewer to single-page mode (PD1) and never offers the continuous toggle.
+  New localization keys: `TmPdfAnnotator_ColorLabel`, `TmPdfAnnotator_TogglePanel`,
+  `TmPdfAnnotator_ExportGroup`, `TmPdfAnnotator_ToolsGroup` (en/cs/sk/fr + mock). The wireframe
+  `TmPdfAnnotator` stencil schema gains `showThumbnails`, `showSearch`, `showHeader` and `title`.
+
 ### Breaking / Migration
+
+- **TmPdfAnnotator: the annotator has ONE toolbar now — its groups are merged into the embedded
+  viewer's toolbar, and the export group moved into an optional header row.** Previously the
+  annotator rendered its own disconnected bar (mode pills, color chip, export buttons, panel
+  toggle) above the viewer's toolbar; now `TmPdfAnnotator` composes its tool group into the
+  viewer toolbar through the `ToolbarStart` slot (before the navigation/zoom groups) and its
+  export group + panel toggle through `ToolbarEnd` (right-aligned after them), so navigation,
+  zoom, rotation, thumbnails and search all live in the same row. The annotator's own
+  `.tm-pdf-annotator__toolbar` row renders only in the compatibility case
+  (`ShowViewerToolbar="false"`, documented below, or no document yet). The export group is a
+  labelled `role="group"` of secondary buttons: it sits at the toolbar end by default and moves
+  into the header row when `ShowHeader="true"` (after the Open link, before the host's
+  `HeaderActions`). The active tool is now a tonal pill (`--tm-color-primary-subtle` +
+  primary content) instead of the filled primary button, the color indicator carries a visible
+  localized label (`TmPdfAnnotator_ColorLabel`), the tool group and the toggle use the new
+  `TmPdfAnnotator_ToolsGroup` / `_TogglePanel` labels, and the mode buttons shrank to the
+  viewer's 28 px chrome. **Every `data-testid` `pdf-annotator-*` is unchanged** (mode pills,
+  stamp select, export, export-flat, print, panel-toggle, surface), so E2E selectors keep
+  working; `pdf-annotator-toolbar` now names only the compact fallback row, and the new
+  `pdf-annotator-tools` / `pdf-annotator-export-group` / `pdf-annotator-color-label` ids are
+  available for hosts. Hosts styling the old internals must move:
+
+  | Old class | New class |
+  |---|---|
+  | `.tm-pdf-annotator__toolbar` (annotator bar) | the viewer's `.tm-pdf-viewer__toolbar` (the annotator row is the fallback only) |
+  | `.tm-pdf-annotator__modes` (group label) | `.tm-pdf-annotator__tools` (labelled group wrapping modes + stamp picker + color) |
+  | `.tm-pdf-annotator__mode--active` (filled primary) | same class, tonal pill (`--tm-color-primary-subtle`) |
+  | `.tm-pdf-annotator__color-chip` (chip only) | `.tm-pdf-annotator__color` wrapper: chip + `.tm-pdf-annotator__color-label` |
+  | `.tm-pdf-annotator__spacer` | gone — right alignment comes from `.tm-pdf-annotator__toolbar-end` (`margin-inline-start: auto`) |
+
+  ```html
+  <!-- BEFORE (two disconnected bars) -->
+  <div class="tm-pdf-annotator__toolbar" role="group">
+      <div class="tm-pdf-annotator__modes">…mode pills…</div>
+      <span class="tm-pdf-annotator__color-chip"></span>
+      <div class="tm-pdf-annotator__spacer"></div>
+      <button class="tm-pdf-annotator__action">Export PDF</button> …
+      <button class="tm-pdf-annotator__action tm-pdf-annotator__panel-toggle">…</button>
+  </div>
+  <div class="tm-pdf-viewer__toolbar">…pagination + zoom…</div>
+
+  <!-- AFTER (one toolbar; annotator groups merged via viewer slots) -->
+  <div class="tm-pdf-viewer__toolbar" role="toolbar">
+      <div class="tm-pdf-annotator__tools" role="group" aria-label="Annotation tools">
+          …mode pills (tonal active)…
+          <div class="tm-pdf-annotator__color"><span class="tm-pdf-annotator__color-chip"></span>
+              <span class="tm-pdf-annotator__color-label">Your annotation color</span></div>
+      </div>
+      …viewer navigation / zoom / rotation groups…
+      <div class="tm-pdf-annotator__toolbar-end">
+          <div class="tm-pdf-annotator__export-group" role="group" aria-label="Export">
+              <button class="tm-pdf-annotator__action tm-pdf-annotator__action--secondary">…</button> …
+          </div>
+          <button class="tm-pdf-annotator__action tm-pdf-annotator__panel-toggle" aria-pressed="true">…</button>
+      </div>
+  </div>
+  ```
+
+  **Migration:** `ShowViewerToolbar` keeps its name but now means "merge into the viewer's
+  single toolbar" (default `true`); with `false` the viewer chrome is hidden and the annotator
+  renders its compact fallback row — exactly one toolbar in both cases, never two.
+
+- **TmPdfAnnotator: localization keys renamed — `TmPdfAnnotator_PanelToggle` →
+  `TmPdfAnnotator_TogglePanel` and `TmPdfAnnotator_YourColor` → `TmPdfAnnotator_ColorLabel`.**
+  The old keys were leftovers that no component used (the annotator's panel toggle speaks
+  `TmPdfAnnotator_TogglePanel`, the color indicator's visible label is
+  `TmPdfAnnotator_ColorLabel`); the dead entries are removed from all four resource tables
+  (en/cs/sk/fr) and from `MockTmLocalizer`. Hosts that supply custom localizer tables must drop
+  the old keys. The color chip itself is now `aria-hidden="true"` (no `role`/`aria-label`) —
+  the visible `.tm-pdf-annotator__color-label` span is the indicator's accessible name.
 
 - **TmPdfAnnotationThreadPanel / TmPdfAnnotatorPanel internal DOM replaced by the shared cards
   (TmPdfThreadCard + TmPdfCommentItem + TmPdfComposer).** The panels' own item/thread classes

@@ -33,13 +33,17 @@ public sealed class PdfRedesignThemeScreenshotTests : WasmTestBase
             ["dark-default"] = "rgb(15, 23, 42)",
             ["dark-indigo"] = "rgb(11, 17, 32)",
         },
-        // The thread badge and the redaction export button paint --tm-color-primary.
+        // The thread badge and the redaction export button paint --tm-color-primary. Since the
+        // annotator's single-toolbar redesign the active tool is a TONAL pill instead
+        // (--tm-color-primary-subtle: the 50 step in light, primary-500 @ 15% in dark — dark
+        // inherits the light primary-500 and the browser serializes the relative colour as
+        // color(srgb …), so both dark forms still track a primary rebrand).
         ["pdf-annotator"] = new Dictionary<string, string>
         {
-            ["light-default"] = "rgb(37, 99, 235)",
-            ["light-indigo"] = "rgb(79, 70, 229)",
-            ["dark-default"] = "rgb(96, 165, 250)",
-            ["dark-indigo"] = "rgb(129, 140, 248)",
+            ["light-default"] = "rgb(239, 246, 255)",
+            ["light-indigo"] = "rgb(238, 242, 255)",
+            ["dark-default"] = "color(srgb 0.231373 0.509804 0.964706 / 0.15)",
+            ["dark-indigo"] = "color(srgb 0.388235 0.4 0.945098 / 0.15)",
         },
         ["redaction"] = new Dictionary<string, string>
         {
@@ -54,8 +58,10 @@ public sealed class PdfRedesignThemeScreenshotTests : WasmTestBase
         new Dictionary<string, string>
         {
             ["pdf-viewer"] = ".tm-pdf-viewer__canvas-wrap",
-            // The active tool paints --tm-color-primary; thread badges carry per-author DATA
-            // colors (PdfAnnotationColorHelper), which intentionally do NOT follow the theme.
+            // The active tool is a TONAL pill since the annotator's single-toolbar redesign
+            // (--tm-color-primary-subtle: the 50 step in light, primary-500 @ 15% in dark),
+            // which still tracks the indigo rebrand and dark mode; thread badges carry
+            // per-author DATA colors (PdfAnnotationColorHelper) that never follow the theme.
             ["pdf-annotator"] = ".tm-pdf-annotator__mode--active",
             ["redaction"] = ".tm-redaction__btn--primary",
         };

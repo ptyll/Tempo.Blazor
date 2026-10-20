@@ -358,7 +358,7 @@
       "kind": "Component",
       "category": "Files",
       "namespace": "Tempo.Blazor.Components.Files",
-      "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools, a comment thread panel with resolve/reopen, per-author or per-role annotation colors, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
+      "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen, per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
       "packageId": "Tempo.Blazor.PdfViewer",
       "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotator.razor",
       "documentationStatus": "merged",
@@ -372,6 +372,12 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether export and print actions are offered. Default is true."
+        },
+        {
+          "name": "AllowRotation",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the viewer's rotation button is offered. Default is false; passed through to the embedded viewer."
         },
         {
           "name": "AnnotationColor",
@@ -422,6 +428,18 @@
           "description": "File name used for the exported PDF. Defaults to the source name with an \"-annotated\" suffix."
         },
         {
+          "name": "HeaderActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Extra host actions rendered at the end of the header row, after the export group. Used only when ShowHeader is true."
+        },
+        {
+          "name": "HeaderStart",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered at the start of the header row. Used only when ShowHeader is true."
+        },
+        {
           "name": "Height",
           "type": "string?",
           "isRequired": false,
@@ -445,6 +463,19 @@
           "type": "IReadOnlyDictionary<string, string>?",
           "isRequired": false,
           "description": "Annotation colors per role, keyed by role."
+        },
+        {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether a header row (title, subtitle, export group and host actions) is rendered above the merged toolbar. Default is false."
+        },
+        {
+          "name": "ShowOpenLink",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the \"Open in new tab\" link is rendered (in the merged toolbar, or in the header row when ShowHeader is true). Default is true."
         },
         {
           "name": "ShowPanel",
@@ -472,17 +503,53 @@
           "description": "Callback invoked when the resolved filter toggles."
         },
         {
+          "name": "ShowSearch",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the viewer's search is offered. Default is false; passed through to the embedded viewer."
+        },
+        {
+          "name": "ShowThumbnails",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the viewer's thumbnails sidebar is offered. Default is false; passed through to the embedded viewer."
+        },
+        {
           "name": "ShowViewerToolbar",
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether the underlying viewer toolbar (pagination, zoom) is shown. Default is true."
+          "description": "Kept for backward compatibility. When true (default) the annotator has no toolbar of its own: its tool groups merge into the embedded viewer's single toolbar through the viewer's ToolbarStart/ToolbarEnd slots, and the export group lives in the header row when ShowHeader is true. When false the viewer's chrome (navigation, zoom, rotation) is hidden and the annotator renders a compact tools row of its own instead."
         },
         {
           "name": "StampOptions",
           "type": "IReadOnlyList<string>?",
           "isRequired": false,
           "description": "Stamp texts offered in stamp mode. Defaults to localized Approved/Rejected/Draft/Confidential."
+        },
+        {
+          "name": "Subtitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Document subtitle rendered in the header row. Used only when ShowHeader is true; when omitted the viewer shows a neutral page count."
+        },
+        {
+          "name": "ThumbnailsCollapsed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the thumbnails sidebar is collapsed. Supports two-way binding; the annotator tracks the state so an unbound host keeps the user's choice. Default is false."
+        },
+        {
+          "name": "ThumbnailsCollapsedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Callback invoked when the thumbnails collapse state changes in the viewer."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Document title rendered in the header row. Used only when ShowHeader is true."
         },
         {
           "name": "Url",
@@ -495,6 +562,19 @@
           "type": "IReadOnlyList<DocumentCommentUser>?",
           "isRequired": false,
           "description": "Known users, used to resolve author roles for role-based colors."
+        },
+        {
+          "name": "ZoomMode",
+          "type": "PdfZoomMode",
+          "isRequired": false,
+          "default": "PdfZoomMode.Custom",
+          "description": "How the viewer's zoom scale is decided. Supports two-way binding; passed through to the embedded viewer. Default is Custom."
+        },
+        {
+          "name": "ZoomModeChanged",
+          "type": "EventCallback<PdfZoomMode>",
+          "isRequired": false,
+          "description": "Callback when the zoom mode changes in the viewer."
         }
       ]
     },

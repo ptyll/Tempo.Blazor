@@ -432,6 +432,72 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         AssertNoBlazorErrors(handle);
     }
 
+    // ── Narrow viewer column (phase 5): toolbar budget, sr-only label, header export ──
+
+    /// <summary>
+    /// Phase 5 round 2: in the two-users section each pane's viewer column is ~285px wide
+    /// (the 300px thread panel takes the rest), so the named <c>tm-pdf-annotator-viewer</c>
+    /// container query fires. Asserts the merged toolbar stays within two 40px rows, the
+    /// color label is visually hidden by the sr-only clip-path technique, and the header
+    /// Print button is visible and inside the pane bounds (icon-only, never clipped).
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Annotator_NarrowViewerColumn_ToolbarAndHeaderExportStayIntact()
+    {
+        const double ToolbarRowMaxHeight = 40;
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
+        await alice.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(alice);
+
+        // Precondition: the viewer column (the named query container) really is narrow.
+        var viewerBox = await alice.Locator(".tm-pdf-annotator__viewer").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The annotator viewer column has no bounding box.");
+        Assert.IsTrue(viewerBox.Width < 520,
+            $"Expected a narrow viewer column for the container query, got {viewerBox.Width}px.");
+
+        // 1) The merged toolbar never grows beyond two 40px rows.
+        var toolbarBox = await alice.Locator(".tm-pdf-viewer__toolbar").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The merged toolbar has no bounding box.");
+        Assert.IsTrue(toolbarBox.Height <= 2 * ToolbarRowMaxHeight,
+            $"The merged toolbar is {toolbarBox.Height}px tall — more than two 40px rows.");
+
+        // 2) The container query fired: the color label is sr-only hidden (clip-path
+        //    inset(50%) on a 1x1 box) while staying announced for assistive tech.
+        var clipPath = await page.EvaluateAsync<string>(
+            "el => getComputedStyle(el).clipPath",
+            await alice.Locator("[data-testid='pdf-annotator-color-label']").First.ElementHandleAsync()
+                ?? throw new InvalidOperationException("The color label was not found."));
+        Assert.AreEqual("inset(50%)", clipPath,
+            $"The color label should be sr-only hidden in the narrow column, got clip-path '{clipPath}'.");
+
+        // 3) The Print button lives in the header export group: visible, icon-only, and
+        //    inside the pane bounds (the header actions wrap instead of clipping it).
+        var print = alice.Locator("[data-testid='pdf-annotator-print']").First;
+        await Assertions.Expect(print).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+        var printBox = await print.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The Print button has no bounding box.");
+        var paneBox = await alice.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The pane has no bounding box.");
+        Assert.IsTrue(printBox.X >= paneBox.X - 1
+            && printBox.X + printBox.Width <= paneBox.X + paneBox.Width + 1
+            && printBox.Y >= paneBox.Y - 1
+            && printBox.Y + printBox.Height <= paneBox.Y + paneBox.Height + 1,
+            $"The Print button ({printBox.Width}x{printBox.Height} at {printBox.X},{printBox.Y}) " +
+            $"escaped the pane bounds ({paneBox.Width}x{paneBox.Height} at {paneBox.X},{paneBox.Y}).");
+        var textDisplay = await page.EvaluateAsync<string>(
+            "el => { const t = el.querySelector('.tm-pdf-annotator__action-text'); return t ? getComputedStyle(t).display : 'missing'; }",
+            await print.ElementHandleAsync());
+        Assert.AreEqual("none", textDisplay,
+            "The icon-only action rule should also apply inside the header (the label text stays hidden).");
+
+        await SaveScreenshotAsync(page, "narrow-viewer-column");
+        AssertNoBlazorErrors(handle);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /// <summary>

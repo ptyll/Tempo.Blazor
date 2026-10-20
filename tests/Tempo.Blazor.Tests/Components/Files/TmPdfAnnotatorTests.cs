@@ -394,9 +394,13 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
     {
         var cut = Render();
 
+        // The chip is decorative; the visible span next to it is the accessible name.
         var chip = cut.Find(".tm-pdf-annotator__color-chip");
-        chip.GetAttribute("aria-label").Should().NotBeNullOrEmpty();
-        chip.HasAttribute("aria-hidden").Should().BeFalse("the color indicator must be announced to screen readers");
+        chip.HasAttribute("aria-hidden").Should().BeTrue("the chip is a visual aid only");
+        chip.GetAttribute("role").Should().BeNull("the visible label carries the name, not the chip");
+        chip.GetAttribute("aria-label").Should().BeNull();
+
+        cut.Find(".tm-pdf-annotator__color-label").TextContent.Should().NotBeEmpty();
     }
 
     // ── Panel: resolve / reopen / reply / delete ─────────────────────────────
@@ -502,6 +506,269 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
         await cut.InvokeAsync(() => cut.Find("[data-testid='pdf-annotator-print']").Click());
 
         cut.WaitForAssertion(() => handler.Invocations.Should().NotBeEmpty());
+    }
+
+    // ── Phase 5 — one toolbar: the annotator groups merge into the viewer toolbar ──
+
+    [Fact]
+    public void SingleToolbar_ViewerToolbarMergedViaSlots_NavigationAndZoomWork()
+    {
+        var cut = Render();
+
+        // The annotator no longer renders its own toolbar row: the viewer's toolbar is THE toolbar.
+        cut.FindAll(".tm-pdf-annotator__toolbar").Should().BeEmpty();
+        var toolbar = cut.Find(".tm-pdf-viewer__toolbar");
+        toolbar.QuerySelector("[data-testid='pdf-annotator-mode-browse']")
+            .Should().NotBeNull("the annotator tools are merged into the viewer toolbar via ToolbarStart");
+        toolbar.QuerySelector("[data-testid='pdf-annotator-panel-toggle']")
+            .Should().NotBeNull("the panel toggle is merged into the viewer toolbar via ToolbarEnd");
+
+        // Navigation works inside the merged toolbar: the document loads, next-page moves on.
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        cut.InvokeAsync(() => viewer.OnPdfLoaded(5));
+        cut.Render();
+        cut.Find("[data-testid='pdf-page-input']").GetAttribute("value").Should().Be("1");
+
+        var next = cut.FindAll(".tm-pdf-viewer__toolbar .tm-pdf-viewer__btn")
+            .First(b => b.GetAttribute("aria-label")?.Contains("Next", StringComparison.Ordinal) == true);
+        next.Click();
+        cut.Find("[data-testid='pdf-page-input']").GetAttribute("value").Should().Be("2");
+
+        // Zoom works inside the merged toolbar: zoom-in steps to the next preset.
+        var zoomIn = cut.FindAll(".tm-pdf-viewer__toolbar .tm-pdf-viewer__btn")
+            .First(b => b.GetAttribute("aria-label")?.Contains("Zoom in", StringComparison.Ordinal) == true);
+        zoomIn.Click();
+        cut.Find(".tm-pdf-viewer__toolbar").TextContent.Should().Contain("125%");
+    }
+
+    [Fact]
+    public void Tools_ActiveToolHasAriaPressedAndTonalClass()
+    {
+        var cut = Render();
+
+        var browse = cut.Find("[data-testid='pdf-annotator-mode-browse']");
+        browse.GetAttribute("aria-pressed").Should().Be("true");
+        browse.ClassList.Should().Contain("tm-pdf-annotator__mode--active");
+
+        cut.Find("[data-testid='pdf-annotator-mode-stamp']").Click();
+
+        var stamp = cut.Find("[data-testid='pdf-annotator-mode-stamp']");
+        stamp.GetAttribute("aria-pressed").Should().Be("true");
+        stamp.ClassList.Should().Contain("tm-pdf-annotator__mode--active");
+        // Only one tool is active at a time, and the inactive ones are pressed=false.
+        cut.Find("[data-testid='pdf-annotator-mode-browse']").GetAttribute("aria-pressed").Should().Be("false");
+        cut.FindAll(".tm-pdf-annotator__mode--active").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ColorIndicator_HasVisibleLabel()
+    {
+        var cut = Render();
+
+        var label = cut.Find(".tm-pdf-annotator__color-label");
+        label.TextContent.Should().NotBeNullOrEmpty("the color indicator carries a visible text label");
+        label.TextContent.Should().Contain("annotation color");
+
+        var chip = cut.Find(".tm-pdf-annotator__color-chip");
+        chip.HasAttribute("aria-hidden").Should().BeTrue("the visible label carries the name, the chip is decorative");
+    }
+
+    [Fact]
+    public void ExportGroup_RendersSecondaryButtons()
+    {
+        var cut = Render();
+
+        var group = cut.Find("[data-testid='pdf-annotator-export-group']");
+        group.QuerySelector("[data-testid='pdf-annotator-export']").Should().NotBeNull();
+        group.QuerySelector("[data-testid='pdf-annotator-export-flat']").Should().NotBeNull();
+        group.QuerySelector("[data-testid='pdf-annotator-print']").Should().NotBeNull();
+        group.QuerySelectorAll("button").Cast<AngleSharp.Dom.IElement>().Should().OnlyContain(
+            b => b.ClassList.Contains("tm-pdf-annotator__action--secondary"),
+            "the export group renders secondary (not primary) buttons");
+
+        // Without a header the group lives at the end of the merged toolbar.
+        cut.Find(".tm-pdf-viewer__toolbar").QuerySelector("[data-testid='pdf-annotator-export-group']")
+            .Should().NotBeNull();
+
+        // With a header the group moves into the header row and leaves the toolbar.
+        var headered = Render(configure: p => p
+            .Add(x => x.ShowHeader, true)
+            .Add(x => x.Title, "Contract"));
+        headered.Find(".tm-pdf-viewer__header").QuerySelector("[data-testid='pdf-annotator-export-group']")
+            .Should().NotBeNull("the export group is a header row group when the header is on");
+        headered.Find(".tm-pdf-viewer__toolbar").QuerySelector("[data-testid='pdf-annotator-export-group']")
+            .Should().BeNull();
+
+        // AllowExport=false removes the group entirely.
+        var noExport = Render(configure: p => p.Add(x => x.AllowExport, false));
+        noExport.FindAll("[data-testid='pdf-annotator-export-group']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PanelToggle_HidesAndShowsPanel_RaisesShowPanelChanged()
+    {
+        var states = new List<bool>();
+        var cut = Render(Seeded(Highlight("h1")), p => p
+            .Add(x => x.ShowPanelChanged, EventCallback.Factory.Create<bool>(this, states.Add)));
+
+        cut.WaitForElement("[data-testid='pdf-annotator-panel-toggle']").Click();
+
+        states.Should().ContainSingle().Which.Should().BeFalse();
+        cut.FindAll("[data-testid='pdf-annotator-panel']").Should().BeEmpty();
+
+        cut.Find("[data-testid='pdf-annotator-panel-toggle']").Click();
+
+        states.Should().HaveCount(2);
+        states[1].Should().BeTrue();
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='pdf-annotator-panel']").Should().HaveCount(1));
+    }
+
+    [Fact]
+    public void ShowThumbnails_PassedToViewer()
+    {
+        var cut = Render(configure: p => p.Add(x => x.ShowThumbnails, true));
+
+        cut.FindComponent<TmPdfViewer>().Instance.ShowThumbnails.Should().BeTrue();
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-pdf-viewer__thumbnails").Should().NotBeNull("the viewer renders the thumbnails sidebar"));
+
+        var off = Render();
+        off.FindComponent<TmPdfViewer>().Instance.ShowThumbnails.Should().BeFalse();
+        off.FindAll(".tm-pdf-viewer__thumbnails").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ShowSearch_PassedToViewer()
+    {
+        var cut = Render(configure: p => p.Add(x => x.ShowSearch, true));
+
+        cut.FindComponent<TmPdfViewer>().Instance.ShowSearch.Should().BeTrue();
+        cut.Find(".tm-pdf-viewer__toolbar")
+            .QuerySelector("button[aria-label='Search']")
+            .Should().NotBeNull("the viewer renders the search toggle inside the merged toolbar");
+
+        var off = Render();
+        off.FindComponent<TmPdfViewer>().Instance.ShowSearch.Should().BeFalse();
+        off.Find(".tm-pdf-viewer__toolbar").QuerySelector("button[aria-label='Search']").Should().BeNull();
+    }
+
+    [Fact]
+    public void AllowRotation_PassedToViewer()
+    {
+        var cut = Render(configure: p => p.Add(x => x.AllowRotation, true));
+
+        cut.FindComponent<TmPdfViewer>().Instance.AllowRotation.Should().BeTrue();
+
+        // The viewer renders its built-in groups once the document is loaded.
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        cut.InvokeAsync(() => viewer.OnPdfLoaded(4));
+        cut.Render();
+        cut.Find(".tm-pdf-viewer__toolbar")
+            .QuerySelector("button[aria-label='Rotate']")
+            .Should().NotBeNull("the viewer renders the rotation button inside the merged toolbar");
+
+        var off = Render();
+        off.FindComponent<TmPdfViewer>().Instance.AllowRotation.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ThumbnailsCollapsed_PassedToViewer_TwoWay()
+    {
+        bool? raised = null;
+        var cut = Render(configure: p => p
+            .Add(x => x.ShowThumbnails, true)
+            .Add(x => x.ThumbnailsCollapsed, true)
+            .Add(x => x.ThumbnailsCollapsedChanged, EventCallback.Factory.Create<bool>(this, v => raised = v)));
+
+        cut.FindAll(".tm-pdf-viewer__thumbnails").Should().BeEmpty("the collapsed sidebar is hidden");
+        cut.Find("[data-testid='pdf-thumbnails-expand']").Click();
+        raised.Should().BeFalse("the annotator forwards the viewer's ThumbnailsCollapsedChanged");
+
+        // Keep-user-choice: an unbound re-render does not reset the expanded sidebar
+        // to the stale ThumbnailsCollapsed=true parameter.
+        cut.Render();
+        cut.FindComponent<TmPdfViewer>().Instance.ThumbnailsCollapsed.Should().BeFalse();
+        cut.FindAll(".tm-pdf-viewer__thumbnails").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ZoomMode_PassedToViewer_TwoWay()
+    {
+        PdfZoomMode? raised = null;
+        var cut = Render(configure: p => p
+            .Add(x => x.ZoomMode, PdfZoomMode.FitWidth)
+            .Add(x => x.ZoomModeChanged, EventCallback.Factory.Create<PdfZoomMode>(this, m => raised = m)));
+
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        cut.InvokeAsync(() => viewer.OnPdfLoaded(4));
+        cut.Render();
+
+        cut.FindComponent<TmPdfViewer>().Instance.ZoomMode.Should().Be(PdfZoomMode.FitWidth,
+            "the annotator forwards the host's ZoomMode to the embedded viewer");
+
+        cut.Find(".tm-pdf-viewer__toolbar button[aria-label='Zoom in']").Click();
+
+        raised.Should().Be(PdfZoomMode.Custom, "zooming in abandons the fit mode and reports Custom");
+        cut.FindComponent<TmPdfViewer>().Instance.ZoomMode.Should().Be(PdfZoomMode.Custom);
+
+        // Keep-user-choice: an unbound re-render does not reset the viewer to the
+        // stale FitWidth parameter.
+        var unbound = Render(configure: p => p.Add(x => x.ZoomMode, PdfZoomMode.FitWidth));
+        var unboundViewer = unbound.FindComponent<TmPdfViewer>().Instance;
+        unbound.InvokeAsync(() => unboundViewer.OnPdfLoaded(4));
+        unbound.Find(".tm-pdf-viewer__toolbar button[aria-label='Zoom in']").Click();
+        unbound.Render();
+        unbound.FindComponent<TmPdfViewer>().Instance.ZoomMode.Should().Be(PdfZoomMode.Custom);
+    }
+
+    [Fact]
+    public void ShowViewerToolbarFalse_RendersCompactFallbackRow_WithoutViewerChrome()
+    {
+        var cut = Render(configure: p => p.Add(x => x.ShowViewerToolbar, false));
+
+        // Exactly one toolbar: the annotator's compact row, no viewer chrome.
+        cut.Find("[data-testid='pdf-annotator-toolbar']").Should().NotBeNull();
+        cut.FindAll(".tm-pdf-viewer__toolbar").Should().BeEmpty();
+        cut.Find("[data-testid='pdf-annotator-mode-browse']").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotator-export']").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotator-panel-toggle']").Should().NotBeNull();
+    }
+
+    // ── PD1: the annotator is a single-page annotator and never offers the continuous toggle ──
+
+    [Fact]
+    public void ViewMode_IsAlwaysSinglePage()
+    {
+        var cut = Render();
+
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        viewer.ViewMode.Should().Be(PdfViewMode.SinglePage);
+        viewer.ShowViewModeToggle.Should().BeFalse("the annotator never passes ShowViewModeToggle (PD1)");
+        cut.Find(".tm-pdf-viewer__toolbar").QuerySelector(".tm-pdf-viewer__view-mode").Should().BeNull();
+    }
+
+    [Fact]
+    public void ShowHeader_RendersTitleAndHeaderActions()
+    {
+        var cut = Render(configure: p => p
+            .Add(x => x.ShowHeader, true)
+            .Add(x => x.Title, "Contract 2024")
+            .Add(x => x.Subtitle, "Final draft")
+            .Add(x => x.HeaderStart, builder => builder.AddMarkupContent(0, "<span data-testid='host-header-start'>S</span>"))
+            .Add(x => x.HeaderActions, builder => builder.AddMarkupContent(0, "<span data-testid='host-header-actions'>H</span>")));
+
+        var header = cut.Find(".tm-pdf-viewer__header");
+        header.TextContent.Should().Contain("Contract 2024");
+        header.TextContent.Should().Contain("Final draft");
+        header.QuerySelector("[data-testid='host-header-start']").Should().NotBeNull();
+        header.QuerySelector("[data-testid='host-header-actions']")
+            .Should().NotBeNull("the host HeaderActions render in the header row after the export group");
+        header.QuerySelector("[data-testid='pdf-annotator-export-group']").Should().NotBeNull();
+
+        // Default (ShowHeader=false) renders no header row at all.
+        var plain = Render();
+        plain.FindAll(".tm-pdf-viewer__header").Should().BeEmpty();
     }
 
     // ── Host-collection safety (regression pattern from K6) ─────────────────

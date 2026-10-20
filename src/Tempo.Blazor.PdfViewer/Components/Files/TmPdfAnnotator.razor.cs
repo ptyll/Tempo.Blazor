@@ -111,8 +111,55 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// (two-way <see cref="ShowPanel"/> binding).</summary>
     [Parameter] public EventCallback<bool> ShowPanelChanged { get; set; }
 
-    /// <summary>Whether the underlying viewer toolbar (pagination, zoom) is shown. Default is true.</summary>
+    /// <summary>
+    /// Kept for backward compatibility. When true (default) the annotator has no toolbar of
+    /// its own: its tool groups merge into the embedded viewer's single toolbar through the
+    /// viewer's <c>ToolbarStart</c>/<c>ToolbarEnd</c> slots, and the export group lives in the
+    /// header row when <see cref="ShowHeader"/> is true. When false the viewer's chrome
+    /// (navigation, zoom, rotation) is hidden and the annotator renders a compact tools row
+    /// of its own instead.
+    /// </summary>
     [Parameter] public bool ShowViewerToolbar { get; set; } = true;
+
+    /// <summary>Whether the "Open in new tab" link is rendered (in the merged toolbar, or in
+    /// the header row when <see cref="ShowHeader"/> is true). Default is true.</summary>
+    [Parameter] public bool ShowOpenLink { get; set; } = true;
+
+    /// <summary>Whether the viewer's thumbnails sidebar is offered. Default is false; passed through to the embedded viewer.</summary>
+    [Parameter] public bool ShowThumbnails { get; set; }
+
+    /// <summary>Whether the viewer's search is offered. Default is false; passed through to the embedded viewer.</summary>
+    [Parameter] public bool ShowSearch { get; set; }
+
+    /// <summary>Whether the viewer's rotation button is offered. Default is false; passed through to the embedded viewer.</summary>
+    [Parameter] public bool AllowRotation { get; set; }
+
+    /// <summary>Whether the thumbnails sidebar is collapsed. Supports two-way binding; the annotator tracks the state so an unbound host keeps the user's choice. Default is false.</summary>
+    [Parameter] public bool ThumbnailsCollapsed { get; set; }
+
+    /// <summary>Callback invoked when the thumbnails collapse state changes in the viewer.</summary>
+    [Parameter] public EventCallback<bool> ThumbnailsCollapsedChanged { get; set; }
+
+    /// <summary>How the viewer's zoom scale is decided. Supports two-way binding; passed through to the embedded viewer. Default is Custom.</summary>
+    [Parameter] public PdfZoomMode ZoomMode { get; set; } = PdfZoomMode.Custom;
+
+    /// <summary>Callback when the zoom mode changes in the viewer.</summary>
+    [Parameter] public EventCallback<PdfZoomMode> ZoomModeChanged { get; set; }
+
+    /// <summary>Whether a header row (title, subtitle, export group and host actions) is rendered above the merged toolbar. Default is false.</summary>
+    [Parameter] public bool ShowHeader { get; set; }
+
+    /// <summary>Document title rendered in the header row. Used only when <see cref="ShowHeader"/> is true.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Document subtitle rendered in the header row. Used only when <see cref="ShowHeader"/> is true; when omitted the viewer shows a neutral page count.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Content rendered at the start of the header row. Used only when <see cref="ShowHeader"/> is true.</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Extra host actions rendered at the end of the header row, after the export group. Used only when <see cref="ShowHeader"/> is true.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
 
     /// <summary>Whether export and print actions are offered. Default is true.</summary>
     [Parameter] public bool AllowExport { get; set; } = true;
@@ -147,11 +194,33 @@ public partial class TmPdfAnnotator : TmComponentBase
     private List<DocumentInkPoint>? _activeStroke;
     private double[]? _surfaceSize;
 
+    /// <summary>The thumbnails collapse state handed to the viewer; synced from the
+    /// <see cref="ThumbnailsCollapsed"/> parameter only when it actually changes, so an
+    /// unbound host keeps the user's choice (same pattern as <see cref="_panelVisible"/>).</summary>
+    private bool _thumbnailsCollapsed;
+
+    /// <summary>The <see cref="ThumbnailsCollapsed"/> value seen by the previous parameter pass.</summary>
+    private bool? _lastThumbnailsCollapsedParam;
+
+    /// <summary>The zoom mode handed to the viewer; synced from <see cref="ZoomMode"/> only when
+    /// it actually changes, so an unbound host keeps the mode the viewer reported back.</summary>
+    private PdfZoomMode _zoomMode = PdfZoomMode.Custom;
+
+    /// <summary>The <see cref="ZoomMode"/> value seen by the previous parameter pass.</summary>
+    private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Custom;
+
     private IPdfAnnotationProvider EffectiveProvider
         => AnnotationProvider ?? (_fallbackProvider ??= new InMemoryPdfAnnotationProvider());
 
     private string EffectiveDocumentId
         => !string.IsNullOrEmpty(DocumentId) ? DocumentId : (Url ?? string.Empty);
+
+    /// <summary>
+    /// Whether the annotator merges its groups into the viewer's single toolbar. False when
+    /// the host disabled the viewer chrome (<see cref="ShowViewerToolbar"/>) or there is no
+    /// document to annotate yet — then the compact fallback row renders instead.
+    /// </summary>
+    private bool UseMergedToolbar => ShowViewerToolbar && !string.IsNullOrEmpty(Url);
 
     private IReadOnlyList<string> EffectiveStampOptions
         => StampOptions is { Count: > 0 }
@@ -187,6 +256,18 @@ public partial class TmPdfAnnotator : TmComponentBase
         {
             _lastShowPanelParam = ShowPanel;
             _panelVisible = ShowPanel;
+        }
+
+        if (ThumbnailsCollapsed != _lastThumbnailsCollapsedParam)
+        {
+            _lastThumbnailsCollapsedParam = ThumbnailsCollapsed;
+            _thumbnailsCollapsed = ThumbnailsCollapsed;
+        }
+
+        if (ZoomMode != _lastZoomModeParam)
+        {
+            _lastZoomModeParam = ZoomMode;
+            _zoomMode = ZoomMode;
         }
 
         if (!_showResolvedInitialized)
@@ -544,6 +625,24 @@ public partial class TmPdfAnnotator : TmComponentBase
     {
         _panelVisible = !_panelVisible;
         await ShowPanelChanged.InvokeAsync(_panelVisible);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Forwards the viewer's thumbnails collapse change: internal state first (an
+    /// unbound host never echoes the parameter), then the two-way callback.</summary>
+    private async Task HandleThumbnailsCollapsedChangedAsync(bool value)
+    {
+        _thumbnailsCollapsed = value;
+        await ThumbnailsCollapsedChanged.InvokeAsync(value);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Forwards the viewer's zoom mode change: internal state first, then the
+    /// two-way callback (a fit mode abandoned by a zoom button reports Custom).</summary>
+    private async Task HandleZoomModeChangedAsync(PdfZoomMode value)
+    {
+        _zoomMode = value;
+        await ZoomModeChanged.InvokeAsync(value);
         await InvokeAsync(StateHasChanged);
     }
 

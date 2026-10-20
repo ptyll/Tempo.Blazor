@@ -38,11 +38,20 @@
     gap: var(--tm-space-1);
 }
 
+/* The toolbar's trailing section (file links in the no-header case + the host's
+   ToolbarEnd slot): the ONE auto margin of the row lives here, so nested groups
+   never push twice. */
+.tm-pdf-viewer__toolbar-trailing {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin-inline-start: auto;
+}
+
 .tm-pdf-viewer__file-actions {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
-    margin-left: auto;
 }
 
 /* ── Page input ──────────────────────────────────────────────────────────── */
@@ -160,6 +169,7 @@
 .tm-pdf-viewer__header-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--tm-space-2);
     margin-left: auto;
 }

@@ -206,23 +206,26 @@
                     </div>
                 }
 
-                @* Without a header the file links stay in the toolbar; Download is the primary
-                   action, Open the secondary one. *@
-                @if (!ShowHeader && (ShowOpenLink || AllowDownload))
-                {
-                    <div class="tm-pdf-viewer__file-actions">
-                        @if (ShowOpenLink)
-                        {
-                            @OpenLink
-                        }
-                        @if (AllowDownload)
-                        {
-                            @DownloadLink
-                        }
-                    </div>
-                }
+                @* The trailing section owns the row's single auto margin: the file links
+                    (no-header case) and the host's ToolbarEnd content push to the row end
+                    together, so nested groups never double the push. *@
+                <div class="tm-pdf-viewer__toolbar-trailing">
+                    @if (!ShowHeader && (ShowOpenLink || AllowDownload))
+                    {
+                        <div class="tm-pdf-viewer__file-actions">
+                            @if (ShowOpenLink)
+                            {
+                                @OpenLink
+                            }
+                            @if (AllowDownload)
+                            {
+                                @DownloadLink
+                            }
+                        </div>
+                    }
 
-                @ToolbarEnd
+                    @ToolbarEnd
+                </div>
 
             </div>
         }

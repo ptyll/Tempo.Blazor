@@ -2694,7 +2694,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfThread_ClosePanel"] = "Close panel",
         ["TmPdfThread_Resolved"] = "Resolved",
         ["TmPdfThread_Edited"] = "Edited",
-        ["TmPdfAnnotator_PanelToggle"] = "Toggle panel",
 
         // TmLedgerGrid + TmMoneyDisplay
         ["TmKycWizard_AddAddress"] = "Add address",
@@ -2980,6 +2979,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_Annotations"] = "Annotations",
         ["TmPdfAnnotator_AnonymousUser"] = "You",
         ["TmPdfAnnotator_Cancel"] = "Cancel",
+        ["TmPdfAnnotator_ColorLabel"] = "Your annotation color",
         ["TmPdfAnnotator_Delete"] = "Delete",
         ["TmPdfAnnotator_DraftComment"] = "New comment",
         ["TmPdfAnnotator_DraftDrawing"] = "New drawing",
@@ -2987,6 +2987,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_DraftStrokes"] = "{0} stroke(s)",
         ["TmPdfAnnotator_Export"] = "Export PDF",
         ["TmPdfAnnotator_ExportFlattened"] = "Export flattened",
+        ["TmPdfAnnotator_ExportGroup"] = "Export",
         ["TmPdfAnnotator_KindComment"] = "Comment",
         ["TmPdfAnnotator_KindDrawing"] = "Drawing",
         ["TmPdfAnnotator_KindHighlight"] = "Highlight",
@@ -3013,8 +3014,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_StampLabel"] = "Stamp",
         ["TmPdfAnnotator_StampRejected"] = "REJECTED",
         ["TmPdfAnnotator_StatusOpen"] = "Open",
+        ["TmPdfAnnotator_TogglePanel"] = "Toggle panel",
         ["TmPdfAnnotator_ToolbarLabel"] = "PDF annotation tools",
-        ["TmPdfAnnotator_YourColor"] = "Your annotation color",
+        ["TmPdfAnnotator_ToolsGroup"] = "Annotation tools",
 
         // TmDocumentEditor
         ["TmDocumentEditor_ProviderMissingTitle"] = "Document provider is not configured",
@@ -6449,6 +6451,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_Annotations"] = "Anotace",
         ["TmPdfAnnotator_AnonymousUser"] = "Vy",
         ["TmPdfAnnotator_Cancel"] = "Zrušit",
+        ["TmPdfAnnotator_ColorLabel"] = "Barva vašich anotací",
         ["TmPdfAnnotator_Delete"] = "Smazat",
         ["TmPdfAnnotator_DraftComment"] = "Nový komentář",
         ["TmPdfAnnotator_DraftDrawing"] = "Nová kresba",
@@ -6456,6 +6459,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_DraftStrokes"] = "Tahy: {0}",
         ["TmPdfAnnotator_Export"] = "Exportovat PDF",
         ["TmPdfAnnotator_ExportFlattened"] = "Exportovat zploštěné",
+        ["TmPdfAnnotator_ExportGroup"] = "Export",
         ["TmPdfAnnotator_KindComment"] = "Komentář",
         ["TmPdfAnnotator_KindDrawing"] = "Kresba",
         ["TmPdfAnnotator_KindHighlight"] = "Zvýraznění",
@@ -6482,8 +6486,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_StampLabel"] = "Razítko",
         ["TmPdfAnnotator_StampRejected"] = "ZAMÍTNUTO",
         ["TmPdfAnnotator_StatusOpen"] = "Otevřené",
+        ["TmPdfAnnotator_TogglePanel"] = "Přepnout panel",
         ["TmPdfAnnotator_ToolbarLabel"] = "Nástroje anotací PDF",
-        ["TmPdfAnnotator_YourColor"] = "Barva vašich anotací",
+        ["TmPdfAnnotator_ToolsGroup"] = "Nástroje anotací",
         ["TmPdfTemplateDesigner_Autodetect"] = "Automaticky rozpoznat pole",
         ["TmPdfTemplateDesigner_Detecting"] = "Rozpoznávám pole...",
         ["TmPdfTemplateDesigner_ContextMenu"] = "Kontextové menu",
@@ -6590,7 +6595,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfThread_ClosePanel"] = "Zavřít panel",
         ["TmPdfThread_Resolved"] = "Vyřešeno",
         ["TmPdfThread_Edited"] = "Upraveno",
-        ["TmPdfAnnotator_PanelToggle"] = "Přepnout panel",
 
         // TmDocumentEditor
         ["TmDocumentEditor_ProviderMissingTitle"] = "Provider dokumentu není nastaven",
