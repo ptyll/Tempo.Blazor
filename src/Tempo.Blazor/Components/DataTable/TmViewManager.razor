@@ -4,7 +4,7 @@
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-view-manager">
-    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline tm-view-manager-toggle"
+    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline @(Compact ? "tm-btn-sm" : null) tm-view-manager-toggle"
             aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog"
             title="@ToggleTitle" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
@@ -132,7 +132,7 @@
                 {
                     <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-btn-block tm-mt-2" @onclick="CreateViewFromCurrentAsync">
                         <TmIcon Name="duplicate" Size="IconSize.Sm" />
-                        <span>@(Loc["TmViewManager_SaveCurrent"])</span>
+                        <span>@Loc["TmViewManager_SaveCurrent"]</span>
                     </button>
                 }
             </div>
@@ -244,7 +244,7 @@
         <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveViewAsync"
                 disabled="@(string.IsNullOrWhiteSpace(_viewName) || !_selectedColumns.Any())">
             @(_saveCurrent
-                ? Loc["TmViewManager_SaveChanges"]
+                ? Loc["TmViewManager_SaveAsCopy"]
                 : _editingView == null
                 ? (Loc["TmViewManager_Create"])
                 : (Loc["TmViewManager_Save"]))

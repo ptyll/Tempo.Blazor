@@ -229,6 +229,10 @@
 .tm-sort-icon.tm-sort-asc::after  { content: '\2191'; }
 .tm-sort-icon.tm-sort-desc::after { content: '\2193'; }
 .tm-sort-icon.tm-sort-none::after { content: '\2195'; }
+/* The idle glyph is a character, so it inherits whatever colour the header happens to have. The
+   secondary text token is the one measured AA on both header surfaces (gray-600 light, #cbd5e1
+   dark), and it is repeated on the pseudo-element so a header colour rule cannot reach past it. */
+.tm-sort-icon.tm-sort-none::after { color: var(--tm-text-secondary); }
 
 /* Pinned (sticky) columns */
 .tm-data-table th.tm-col-pinned,
@@ -237,7 +241,14 @@
   z-index: 2;
   background: var(--tm-bg-surface);
 }
-.tm-data-table thead th.tm-col-pinned { z-index: 3; }
+.tm-data-table thead th.tm-col-pinned {
+  z-index: 3;
+  /* A sticky header scrolls over the body, so it needs the header row's own surface
+     (`.tm-data-table thead tr` uses --tm-bg-surface-secondary) rather than the cell surface
+     (--tm-bg-surface, already set by the shared pinned rule above). On a sorted or hovered
+     column the body rows used to show through the header. */
+  background: var(--tm-bg-surface-secondary);
+}
 .tm-data-table th.tm-col-pinned-left,
 .tm-data-table td.tm-col-pinned-left { box-shadow: var(--tm-data-table-pin-shadow); }
 .tm-data-table th.tm-col-pinned-right,
@@ -607,12 +618,17 @@
   width: 2.5rem;
   padding-left: var(--tm-space-3) !important;
 }
-.tm-col-check input[type='checkbox'] { cursor: pointer; }
+.tm-col-check input[type='checkbox'] {
+  cursor: pointer;
+  /* A native checkbox paints its own blue. The accent token is what the rest of the library uses,
+     so a rebrand and the dark theme both reach it. */
+  accent-color: var(--tm-color-primary);
+}
 
 /* Filter row */
 .tm-filter-row th {
   padding: var(--tm-space-1) var(--tm-space-2);
-  background-color: var(--tm-color-gray-50);
+  background-color: var(--tm-bg-surface-secondary);
   font-weight: normal;
   text-transform: none;
   letter-spacing: 0;
@@ -740,10 +756,17 @@
   background: var(--tm-bg-surface-secondary);
 }
 .tm-page-btn-active {
-  background-color: var(--tm-color-primary);
-  border-color: var(--tm-color-primary);
-  color: var(--tm-text-inverse);
+  /* The on-primary token aliases the page ink, which is near-black in dark mode, so the page
+     number fails AA there. The fixed token stays white in both themes. */
+  background-color: var(--tm-color-primary-solid);
+  border-color: var(--tm-color-primary-solid);
+  color: var(--tm-color-on-primary-fixed);
   font-weight: var(--tm-font-weight-semibold);
+}
+.tm-page-btn:focus-visible,
+.tm-pagination-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
 }
 .tm-pagination-ellipsis { 
   padding: 0 var(--tm-space-1); 
@@ -1517,12 +1540,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--tm-space-1);
-  padding: var(--tm-space-1) var(--tm-space-3);
-  border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md);
-  background: var(--tm-bg-surface);
-  color: var(--tm-text-secondary);
-  font-size: var(--tm-font-size-sm);
   cursor: pointer;
 }
 .tm-data-table-cards-toolbar__sort:focus-visible,

@@ -36,7 +36,14 @@
   transition: background-color var(--tm-transition-fast);
   text-decoration: none;
 }
-.tm-dropdown-item:hover { background-color: var(--tm-color-gray-50); }
+.tm-dropdown-item:hover { background-color: var(--tm-bg-surface-secondary); }
+/* Keyboard focus has to read on its own: hover is pointer-only, and a menu item reached by arrow
+   keys otherwise has no visible state at all. */
+.tm-dropdown-item:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+  background-color: var(--tm-bg-surface-secondary);
+}
 .tm-dropdown-item:disabled, .tm-dropdown-item[disabled],
 .tm-dropdown-item[aria-disabled="true"] { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
 /* Leading check of a menuitemradio. The empty state keeps the same width so labels stay aligned,

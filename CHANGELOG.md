@@ -29,6 +29,17 @@
 
 ### Added
 
+- **Public tokens `--tm-color-primary-solid` and `--tm-color-on-primary-fixed`.**
+  `--tm-color-primary-solid` is `var(--tm-color-primary-600)` in both themes (white on it is 5.17:1;
+  the dark `--tm-color-primary` step is primary-400, and white on that is 2.54:1).
+  `--tm-color-on-primary-fixed` is `var(--tm-color-white)` in both themes. Both are declared in
+  `tokens.css` and re-declared in `tokens-dark.css`, so a wrapper with `data-theme="dark"` does
+  not inherit the finished light colour. The active page button is the first consumer.
+
+- **`TmViewManager.Compact`** (bool, default `false`). When true, the Views toggle adds
+  `tm-btn-sm` so it lines up with the other card-toolbar triggers. `TmDataTable` passes it when
+  `Appearance` is `Card`. The plain toggle is unchanged.
+
 - **Remaining opt-in presentation parameters.** All default `false` or to today's presentation.
   `TmMultiViewList.TableCellLayout.Stacked` drops the subtitle column and renders its value under
   the title (inner `.tm-mvl-cell-stack`; the `td` stays a table cell); `Inline` is unchanged. `TmFilterBuilder.Presentation` of
@@ -549,9 +560,10 @@
 - **TmDiagramEditor: new `MobileSheetInitiallyOpen` parameter (default `false`)** — the opt-out
   that restores the pre-2.9.1 mobile open-on-load sheet (see Breaking / Migration).
 
-- **`TmDropdown.OutlineTrigger`.** Renders the trigger as an outlined button
-  (`tm-btn tm-btn-outline`) instead of the default stealth trigger — the data-table toolbar's
-  export dropdown uses it so the trigger reads as a button inside the row.
+- **`TmDropdown.OutlineTrigger`.** Renders the trigger as a small outlined button
+  (`tm-btn tm-btn-outline tm-btn-sm`) instead of the default stealth trigger — the data-table
+  toolbar's export dropdown uses it so the trigger reads as a button inside the row. The small
+  size applies to every `OutlineTrigger` consumer, not only Card mode. See Breaking / Migration.
 
 - **`TmSigningFormRunner` autosave debounce and `TmModelingEditor` loading delays run on an
   injectable `TimeProvider`.** `AddTempoBlazorSigning` / `AddTempoBlazorModeling` register
@@ -1025,6 +1037,58 @@
 
 ### Breaking / Migration
 
+- **`TmDropdown` outline trigger is now small.** `OutlineTrigger="true"` adds `tm-btn-sm` for
+  every consumer, not only a Card-mode data table.
+  Before: `class="tm-dropdown-trigger tm-btn tm-btn-outline"`
+  After: `class="tm-dropdown-trigger tm-btn tm-btn-outline tm-btn-sm"`
+
+- **`ToolbarMode="SearchOnly"` hides the filter summary and the clear-all buttons.** Search-only
+  owns the search box and nothing else. `TmDataTable` no longer renders
+  `.tm-data-table-filter-summary` or `.tm-col-filter-clear-all` in that mode, and
+  `TmMultiViewList` passes `ShowClearAll="false"` to its filter builder (the inline one and the
+  cards sheet).
+  Before: `ShowClearAll="true"` and the summary rendered whenever filters were active.
+  After: `ShowClearAll="@(!IsContentToolbarMode && !IsSearchToolbarMode)"`, and the summary
+  requires `ShowFilterSummary && !IsContentToolbarMode && !IsSearchToolbarMode`.
+
+- **`TmMultiViewList` avatar column leads the row and turns itself on for initials.** It is now
+  the first column. `AvatarFallback="Initials"` adds it to the visible set on init, and a missing
+  image renders `<span class="tm-mvl-avatar-initials" aria-hidden="true">` instead of an empty cell.
+  Before: the avatar column followed the date column and rendered only `<img alt="">` when a URL
+  was set.
+  After: `@if (_showAvatarColumn) { <th>…</th> }` is the first header, and the cell is
+  `<td>@RenderAvatar(item)</td>`.
+
+- **The active page button uses two new tokens.** `.tm-page-btn-active` no longer paints with the
+  theme-flipping primary step.
+  Before: `background-color: var(--tm-color-primary); color: var(--tm-text-inverse);`
+  After: `background-color: var(--tm-color-primary-solid); color: var(--tm-color-on-primary-fixed);`
+  The new tokens are listed under Added.
+
+- **Dropdown-item hover and the filter-row header use the surface token.**
+  Before: `background-color: var(--tm-color-gray-50);` on `.tm-dropdown-item:hover` and
+  `.tm-filter-row th`.
+  After: `background-color: var(--tm-bg-surface-secondary);` on both. A pinned header uses the
+  same token (`.tm-data-table thead th.tm-col-pinned`), matching `.tm-data-table thead tr`.
+
+- **`TmMultiViewList` item count is a live region.** `.tm-mvl-item-count` now carries
+  `role="status"` and `aria-live="polite"`. The data-table filter summary does not: the result
+  count is already announced by `.tm-data-table-live-count`, and a second polite region on the
+  same filter change spoke twice.
+  Before: `<span class="tm-mvl-item-count">`
+  After: `<span class="tm-mvl-item-count" role="status" aria-live="polite">`
+
+- **Card toolbar sort and filter buttons are small outline buttons.** Their own padding, border
+  and background were removed; the button classes supply them.
+  Before: `<button class="tm-mvl-cards-toolbar__sort">` with
+  `padding: var(--tm-space-1) var(--tm-space-3); border: 1px solid var(--tm-border-color); background: var(--tm-bg-surface);`
+  on `.tm-mvl-cards-toolbar__sort`, `.tm-mvl-cards-toolbar__filter` and
+  `.tm-data-table-cards-toolbar__filter`.
+  After: `<button class="tm-btn tm-btn-outline tm-btn-sm tm-mvl-cards-toolbar__sort">` (the same
+  three classes on the list filter button and `.tm-data-table-cards-toolbar__filter`), and those
+  rules no longer set padding, border or background. `TmViewManager.Compact` (see Added) puts the
+  same classes on the Views toggle when the table appearance is Card.
+
 - **`TmPagination.Compact` no longer hides the page buttons.** It used to replace the page numbers
   with "Page X of Y". It now only adds that label and keeps previous, next and the page buttons.
   Before: `Compact="true"` rendered the label and no `.tm-page-btn`.
@@ -1154,6 +1218,7 @@
   - `TmColumnFilter` names the input with the column title (`Filter: {0}`) when the column has one. <!-- snapshot:dt-filters -->
     Before: `<input placeholder="Filter" aria-label="Filter" />`
     After: `<input placeholder="Filter: Name" aria-label="Filter: Name" />`
+  - `TmDataTable` announces the result count in a visually-hidden polite live region (`div.tm-data-table-live-count`), so a filter or page change is spoken without moving focus. <!-- snapshot:dt-basic --> <!-- snapshot:dt-cardmode --> <!-- snapshot:dt-filters --> <!-- snapshot:dt-grouping --> <!-- snapshot:dt-viewmanager --> <!-- snapshot:dt-paged --> <!-- snapshot:dt-selectable --> <!-- snapshot:dt-export --> <!-- snapshot:dt-virtualized -->
   - A void checkbox renders its closing tag. <!-- snapshot:dt-selectable -->
     Before: `<input type="checkbox" /></th>`
     After: `<input type="checkbox"></input></th>`

@@ -31,6 +31,43 @@ public partial class TmDataTable<TItem>
             .Where(c => !IsMobileCards || c.CardRole != DataTableCardRole.Hidden)
             .ToList();
 
+    /// <summary>
+    /// Everything the row loop used to recompute per cell. A 1000-row table called
+    /// <c>IsMobilePinned</c> and <c>GetCellClass</c> — each of them walking the visible columns —
+    /// once per cell per render. The answers depend only on the column set, the pins and the
+    /// layout, so they are rebuilt with <see cref="RebuildRenderedCellColumns"/>. The header class
+    /// is NOT cached: it carries the sort state, which changes without a column-set rebuild.
+    /// </summary>
+    private void RebuildRowLoopCaches()
+    {
+        _mobilePinnedKeys.Clear();
+        _cellClassByKey.Clear();
+        _hasFilterRow = false;
+        _lastFilterableColumnKey = null;
+
+        foreach (var col in _visibleColumns)
+        {
+            if (IsMobilePinned(col))
+                _mobilePinnedKeys.Add(col.Key);
+            if (col.Filterable)
+            {
+                _hasFilterRow = true;
+                _lastFilterableColumnKey = col.Key;
+            }
+        }
+
+        foreach (var col in _renderedCellColumns)
+            _cellClassByKey[col.Key] = BuildCellClass(col);
+    }
+
+    private readonly HashSet<string> _mobilePinnedKeys = [];
+    private readonly Dictionary<string, string> _cellClassByKey = [];
+    private bool _hasFilterRow;
+    private string? _lastFilterableColumnKey;
+
+    /// <summary>Whether the column carries the mobile pin marker. Reads the cache the row loop needs.</summary>
+    private bool IsColumnMobilePinned(TmDataTableColumn<TItem> col) => _mobilePinnedKeys.Contains(col.Key);
+
     private bool IsGrid => KeyboardNavigation == DataTableKeyboardNavigation.Grid;
 
     /// <summary>Expander + selection checkbox + rendered data columns + the edit-action column when it renders.</summary>

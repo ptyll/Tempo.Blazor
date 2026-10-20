@@ -10454,6 +10454,13 @@
           "description": "Whether the user can create tenant-wide views."
         },
         {
+          "name": "Compact",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, the Views toggle uses the small outline button (tm-btn-sm) so it lines up with the other card-toolbar triggers. Default false keeps the plain toggle. TmDataTable passes this when Appearance is Card.",
+          "default": "false"
+        },
+        {
           "name": "CurrentTenantId",
           "type": "string?",
           "isRequired": false,
@@ -27801,6 +27808,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/dashboard-pointer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-pin.test.mjs",
       "kind": "JavaScript"
     },
     {

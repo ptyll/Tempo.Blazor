@@ -109,6 +109,13 @@
       "isRequired": false,
       "default": "false",
       "description": "When true and a view is active, the toggle shows that view's name (truncated, full name in title) instead of the generic Views label. Default false keeps Views."
+    },
+    {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the Views toggle uses the small outline button (tm-btn-sm) so it lines up with the other card-toolbar triggers. Default false keeps the plain toggle. TmDataTable passes this when Appearance is Card."
     }
   ],
   "cssClasses": [

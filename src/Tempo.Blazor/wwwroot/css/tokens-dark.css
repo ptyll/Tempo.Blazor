@@ -25,7 +25,7 @@
   /* The ACTIVE tone repeats the SAME expression as tokens.css, and that repetition is the point: a
      token declared only on :root substitutes its var() where it is DECLARED, so it would compute with
      the LIGHT --tm-text-primary and then just inherit that finished colour — a theme switched on a
-     PARENT element would never reach it. Same reason --tm-color-on-primary is repeated below.
+     PARENT element would never reach it. Same reason the on-primary token is repeated below.
      Measured here: #f1f5f9 is 16,30:1 on the header surface. */
   --tm-sort-indicator-active: var(--tm-text-primary);
   /* Ink on a primary fill — the SAME expressions as in tokens.css, re-declared here on purpose.
@@ -37,6 +37,10 @@
      2.5.4 fixed. Repeating the expression keeps one source of truth (--tm-text-inverse); repeating a
      VALUE would not. */
   --tm-color-on-primary:     var(--tm-text-inverse);
+  /* Re-declared so a token declared only on :root does not inherit the finished light colour. */
+  --tm-color-on-primary-fixed: var(--tm-color-white);
+  /* Re-declared: a token declared only on :root inherits the finished light colour. */
+  --tm-color-primary-solid: var(--tm-color-primary-600);
   --tm-color-primary-contrast: var(--tm-color-on-primary);
   --tm-control-glyph-color:  var(--tm-color-on-primary);
   /* Hover fill — see tokens.css. A light tint would be BRIGHTER than the checked fill on dark, so

@@ -110,9 +110,9 @@
                         </button>
                     </div>
                 }
-                @if (ShowItemCount)
+                @if (ShouldRenderItemCount())
                 {
-                    <span class="tm-mvl-item-count">@Loc["TmMvl_ItemCount", FilteredItems?.Count ?? _totalCount]</span>
+                    <span class="tm-mvl-item-count" role="status" aria-live="polite">@Loc.Plural("TmMvl_ItemCount", ItemCount)</span>
                 }
                 @if (ShouldRenderViewManager())
                 {
@@ -143,7 +143,7 @@
                              DisplayResolver="DisplayResolver"
                              ShowResultPreview="ShowFilterResultPreview"
                              ResultCountProvider="ResultCountProvider"
-                             ShowClearAll="true" />
+                             ShowClearAll="@(!IsContentToolbarMode && !IsSearchToolbarMode)" />
         </div>
     }
 
@@ -153,14 +153,14 @@
     @if (ShowCardsToolbar)
     {
         <div class="tm-mvl-cards-toolbar">
-            <button type="button" @ref="_cardsSortTrigger" class="tm-mvl-cards-toolbar__sort"
+            <button type="button" @ref="_cardsSortTrigger" class="tm-btn tm-btn-outline tm-btn-sm tm-mvl-cards-toolbar__sort"
                     aria-haspopup="dialog" aria-expanded="@_cardsSortOpen"
                     @onclick="ToggleCardsSortAsync">
                 @Loc["TmDataTable_Sort"]
             </button>
             @if (ShouldRenderExternalFilterBuilder())
             {
-                <button type="button" @ref="_cardsFilterTrigger" class="tm-mvl-cards-toolbar__filter"
+                <button type="button" @ref="_cardsFilterTrigger" class="tm-btn tm-btn-outline tm-btn-sm tm-mvl-cards-toolbar__filter"
                         aria-haspopup="dialog" aria-expanded="@_cardsFilterOpen"
                         @onclick="ToggleCardsFilterAsync">
                     @Loc["TmDataTable_Filter"]
@@ -195,7 +195,7 @@
                              ActiveFilters="_externalFilters"
                              OnFiltersChanged="OnExternalFiltersChanged"
                              DisplayResolver="DisplayResolver"
-                             ShowClearAll="true" />
+                             ShowClearAll="@(!IsContentToolbarMode && !IsSearchToolbarMode)" />
         </TmOverlayPanel>
     }
 
@@ -229,11 +229,11 @@
                                            @onchange="_ => ToggleSelectAllAsync()" />
                                 </th>
                             }
-                            @if (_visibleColumns.Contains(ColumnKeys.Title)) { <th class="@(Responsive ? "tm-mvl-title-column" : null)" style="@TitleColumnStyle">@Loc["TmMvl_ColTitle"]</th> }
-                            @if (!StackTableCells && _visibleColumns.Contains(ColumnKeys.SubTitle)) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
-                            @if (_visibleColumns.Contains(ColumnKeys.Status)) { <th>@Loc["TmMvl_ColStatus"]</th> }
-                            @if (_visibleColumns.Contains(ColumnKeys.Date)) { <th>@Loc["TmMvl_ColDate"]</th> }
-                            @if (_visibleColumns.Contains(ColumnKeys.Avatar)) { <th>@Loc["TmMvl_ColAvatar"]</th> }
+                            @if (_showAvatarColumn) { <th>@Loc["TmMvl_ColAvatar"]</th> }
+                            @if (_showTitleColumn) { <th class="@(Responsive ? "tm-mvl-title-column" : null)" style="@TitleColumnStyle">@Loc["TmMvl_ColTitle"]</th> }
+                            @if (!StackTableCells && _showSubTitleColumn) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
+                            @if (_showStatusColumn) { <th>@Loc["TmMvl_ColStatus"]</th> }
+                            @if (_showDateColumn) { <th>@Loc["TmMvl_ColDate"]</th> }
                         </tr>
                     </thead>
                     <tbody>
@@ -689,6 +689,13 @@
     private int _currentPage = 1;
     private int _pageSize = 25;
     private int _totalCount;
+
+    /// <summary>
+    /// The count the toolbar announces. A provider's page is a slice, so the page length is the
+    /// wrong number — the provider's total is what the reader filtered for. Client-side has no
+    /// provider, and the filtered list IS the total.
+    /// </summary>
+    private int ItemCount => DataProvider is not null ? _totalCount : FilteredItems?.Count ?? 0;
     private int _totalPages;
 
     // ── Grouping state ───────────────────────────────────────────
@@ -697,8 +704,24 @@
     private IReadOnlyList<DataGroup<TItem>>? _groupedData;
     private bool _groupPickerOpen;
     private readonly string _groupPickerId = $"tm-mvl-group-{Guid.NewGuid():N}";
+
+    // One id per rendered group body. A hash of the key is NOT unique: two groups whose keys share
+    // a SHA-256 prefix, and the same group rendered by two lists on one page, both collide — and an
+    // aria-controls that points at the wrong element is worse than none. The counter is per instance.
+    private readonly Dictionary<string, string> _groupBodyIds = new();
+    private int _groupBodyIdSequence;
     private ElementReference _groupPickerRef;
     private ElementReference _selectAllRef;
+
+    /// <summary>Last value handed to <c>setIndeterminate</c>. Null until the first successful call.</summary>
+    private bool? _lastSelectAllIndeterminate;
+    private int _selectableCount;
+    private bool _showAvatarColumn;
+    private bool _showTitleColumn;
+    private bool _showSubTitleColumn;
+    private bool _showStatusColumn;
+    private bool _showDateColumn;
+    private int _selectedVisibleCount;
     private ElementReference _viewSwitcherRef;
     private ElementReference _tableViewRef;
     private ElementReference _cardViewRef;
@@ -728,11 +751,20 @@
         }
 
         if (!AllowSelection) return;
+
+        // Recount here, not only in the toggle handlers. A host's SelectedIds, a search, a view
+        // and a filter all change the visible set without going through those handlers, and a
+        // stale count used to leave the mixed checkbox unchecked. The guard below still skips
+        // the JS call when the mixed state itself did not change.
+        UpdateSelectionCounts();
+        var indeterminate = IsPartiallySelected();
+        if (indeterminate == _lastSelectAllIndeterminate) return;
         try
         {
-            await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, IsPartiallySelected());
+            await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, indeterminate);
+            _lastSelectAllIndeterminate = indeterminate;
         }
-        catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
     }
 
     // A field @ref is written before the render that replaces the button, so focusing it targets
@@ -761,9 +793,39 @@
 
     private bool IsPartiallySelected()
     {
-        var visible = (FilteredItems ?? []).Select(GetSelectionId).Where(id => id is not null).Cast<string>().ToList();
-        var selected = visible.Count(id => _selectedIds.Contains(id));
-        return selected > 0 && selected < visible.Count;
+        // The mixed state is "some, but not all". The counts are refreshed at the start of this
+        // render's selection pass (see OnAfterRenderAsync), so a search or a host's SelectedIds
+        // cannot leave them at zero.
+        var total = _selectableCount;
+        return total > 0 && _selectedVisibleCount > 0 && _selectedVisibleCount < total;
+    }
+
+    /// <summary>Recounts the selectable items and how many of them are selected.</summary>
+    private void UpdateSelectionCounts()
+    {
+        var total = 0;
+        var selected = 0;
+        foreach (var item in FilteredItems ?? [])
+        {
+            var id = GetSelectionId(item);
+            if (id is null) continue;
+            total++;
+            if (_selectedIds.Contains(id))
+                selected++;
+        }
+
+        _selectableCount = total;
+        _selectedVisibleCount = selected;
+    }
+
+    /// <summary>Recomputes the per-row column flags, so a row render does not probe the set five times.</summary>
+    private void RebuildVisibleColumnFlags()
+    {
+        _showAvatarColumn = _visibleColumns.Contains(ColumnKeys.Avatar);
+        _showTitleColumn = _visibleColumns.Contains(ColumnKeys.Title);
+        _showSubTitleColumn = _visibleColumns.Contains(ColumnKeys.SubTitle);
+        _showStatusColumn = _visibleColumns.Contains(ColumnKeys.Status);
+        _showDateColumn = _visibleColumns.Contains(ColumnKeys.Date);
     }
 
     private Task OnViewSwitcherKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
@@ -906,6 +968,40 @@
         SubTitleField is not null ? SubTitleField(item) :
         item is IMultiViewListItem mvl ? mvl.SubTitle : null;
 
+    /// <summary>
+    /// The avatar cell. The column stays even with nothing to show, so the rows keep aligning;
+    /// initials render only when the fallback asks for them and there is no image.
+    /// </summary>
+    private RenderFragment RenderAvatar(TItem item) => __builder =>
+    {
+        var url = GetAvatarUrl(item);
+        if (!string.IsNullOrEmpty(url))
+        {
+            <img class="tm-mvl-list-avatar" src="@url" alt="" />
+        }
+        else if (AvatarFallback == AvatarFallback.Initials)
+        {
+            var initials = GetInitials(item);
+            if (!string.IsNullOrEmpty(initials))
+            {
+                <span class="tm-mvl-avatar-initials" aria-hidden="true">@initials</span>
+            }
+        }
+    };
+
+    /// <summary>Up to two initials from the title, for the avatar fallback.</summary>
+    private string? GetInitials(TItem item)
+    {
+        var title = GetTitle(item);
+        if (string.IsNullOrWhiteSpace(title))
+            return null;
+
+        var parts = title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 1
+            ? parts[0][..1].ToUpperInvariant()
+            : string.Concat(parts[0][..1], parts[^1][..1]).ToUpperInvariant();
+    }
+
     private string? GetAvatarUrl(TItem item) =>
         AvatarUrlField is not null ? AvatarUrlField(item) :
         item is IMultiViewListItem mvl ? mvl.AvatarUrl : null;
@@ -977,6 +1073,7 @@
         if (!_selectedIds.Remove(id))
             _selectedIds.Add(id);
 
+        UpdateSelectionCounts();
         await SelectedIdsChanged.InvokeAsync(_selectedIds);
     }
 
@@ -999,6 +1096,7 @@
                 _selectedIds.Add(id);
         }
 
+        UpdateSelectionCounts();
         await SelectedIdsChanged.InvokeAsync(_selectedIds);
     }
 
@@ -1137,6 +1235,11 @@
         if (_dataLoaded) return;
 
         _pageSize = DefaultPageSize;
+        // The avatar column is hidden by default. Initials have nowhere to render unless it is on,
+        // and a host that set the fallback asked for them.
+        if (AvatarFallback == AvatarFallback.Initials)
+            _visibleColumns.Add(ColumnKeys.Avatar);
+        RebuildVisibleColumnFlags();
         _searchText = SearchText ?? string.Empty;
         _lastSearchTextParam = SearchText;
 
@@ -1231,6 +1334,7 @@
             _currentPage = result.Page;
             _pageSize = result.PageSize;
             _totalPages = result.TotalPages;
+            UpdateSelectionCounts();
 
             // Client-side grouping fallback when server doesn't support it
             if (_activeGroupFields.Count > 0)
@@ -1354,6 +1458,7 @@
         if (view.VisibleColumns?.Count > 0)
         {
             _visibleColumns = new HashSet<string>(view.VisibleColumns);
+            RebuildVisibleColumnFlags();
         }
 
         // Update filters
@@ -1496,8 +1601,20 @@
 
     private string GetGroupKey(DataGroup<TItem> group) => $"{group.FieldName}:{group.Key}";
 
+    /// <summary>Stable id of a group's body, unique within this instance even when keys collide.</summary>
+    private string GroupBodyId(string groupKey)
+    {
+        if (!_groupBodyIds.TryGetValue(groupKey, out var id))
+        {
+            id = $"tm-mvl-group-body-{_groupPickerId}-{++_groupBodyIdSequence}";
+            _groupBodyIds[groupKey] = id;
+        }
+
+        return id;
+    }
+
     private int MvlColSpan => _visibleColumns.Count
-        - (StackTableCells && _visibleColumns.Contains(ColumnKeys.SubTitle) ? 1 : 0)
+        - (StackTableCells && _showSubTitleColumn ? 1 : 0)
         + (AllowSelection ? 1 : 0);
 
     private string GetMvlScrollContainerClass() =>
@@ -1600,14 +1717,18 @@
             }
             else
             {
-                if (_visibleColumns.Contains(ColumnKeys.Title))
+                if (_showAvatarColumn)
+                {
+                    <td>@RenderAvatar(item)</td>
+                }
+                if (_showTitleColumn)
                 {
                     <td class="@TitleCellClass" style="@TitleColumnStyle">
                         @if (StackTableCells)
                         {
                             <div class="tm-mvl-cell-stack">
                                 <span class="tm-mvl-cell-primary">@GetTitle(item)</span>
-                                @if (_visibleColumns.Contains(ColumnKeys.SubTitle) && !string.IsNullOrEmpty(GetSubTitle(item)))
+                                @if (_showSubTitleColumn && !string.IsNullOrEmpty(GetSubTitle(item)))
                                 {
                                     <span class="tm-mvl-cell-secondary">@GetSubTitle(item)</span>
                                 }
@@ -1619,8 +1740,8 @@
                         }
                     </td>
                 }
-                if (!StackTableCells && _visibleColumns.Contains(ColumnKeys.SubTitle)) { <td>@GetSubTitle(item)</td> }
-                if (_visibleColumns.Contains(ColumnKeys.Status))
+                if (!StackTableCells && _showSubTitleColumn) { <td>@GetSubTitle(item)</td> }
+                if (_showStatusColumn)
                 {
                     <td>
                         @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
@@ -1631,16 +1752,7 @@
                         }
                     </td>
                 }
-                if (_visibleColumns.Contains(ColumnKeys.Date)) { <td>@GetDate(item)?.ToString("d")</td> }
-                if (_visibleColumns.Contains(ColumnKeys.Avatar))
-                {
-                    <td>
-                        @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
-                        {
-                            <img class="tm-mvl-list-avatar" src="@GetAvatarUrl(item)" alt="" />
-                        }
-                    </td>
-                }
+                if (_showDateColumn) { <td>@GetDate(item)?.ToString("d")</td> }
             }
         </tr>
     };
@@ -1651,7 +1763,7 @@
         {
             var groupKey = GetGroupKey(group);
             var expanded = IsGroupExpanded(group);
-            var bodyId = $"tm-mvl-group-body-{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(groupKey)))[..12]}";
+            var bodyId = GroupBodyId(groupKey);
 
             <div class="tm-mvl-group-section tm-mvl-group-card tm-mvl-group-level-@level">
                 <div class="tm-mvl-group-header">
@@ -1927,11 +2039,19 @@
         ViewProvider is not null &&
         ExternalFilterDefinitions?.Any() == true;
 
+    /// <summary>
+    /// True when the item count should be rendered. It is a toolbar readout, so it follows the
+    /// same rule as the data table's filter summary: SearchOnly and ContentOnly own no chrome
+    /// beyond the search box, and a count printed beside a lone search box is that chrome.
+    /// </summary>
+    private bool ShouldRenderItemCount() =>
+        ShowItemCount && !IsContentToolbarMode;
+
     /// <summary>Determines whether any toolbar control should be rendered.</summary>
     private bool HasVisibleToolbarControls() =>
         ShouldRenderSearch() ||
         ShouldRenderGroupPicker() ||
         ShouldRenderViewSwitcher() ||
-        ShowItemCount ||
+        ShouldRenderItemCount() ||
         ShouldRenderViewManager();
 }

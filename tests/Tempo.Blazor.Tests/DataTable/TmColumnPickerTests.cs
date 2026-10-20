@@ -83,6 +83,21 @@ public class TmColumnPickerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ColumnPicker_Open_RendersThePanel()
+    {
+        // Open() is the public entry a parent uses. It must open the panel itself — the overlay
+        // reads the same field, so a parent does not also have to click the toggle.
+        var cut = Render<TmColumnPicker>(p => p.Add(c => c.Columns, AllVisible));
+
+        cut.FindAll(".tm-column-picker-panel").Should().BeEmpty();
+
+        cut.InvokeAsync(() => cut.Instance.Open());
+
+        cut.FindAll(".tm-column-picker-panel").Should().NotBeEmpty();
+        cut.Find(".tm-column-picker-toggle").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
     public void ColumnPicker_ClosesWhenClickingOutside()
     {
         var cut = OpenPicker();

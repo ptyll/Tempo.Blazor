@@ -16,6 +16,12 @@ public partial class TmViewManager : ComponentBase
     [Parameter] public bool ShowActiveViewName { get; set; }
 
     /// <summary>
+    /// When true, the Views toggle uses the small outline button so it lines up with the other
+    /// card-toolbar triggers (Choose columns, Export). Default false keeps the plain toggle.
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
+
+    /// <summary>
     /// When true, each non-default view offers Set as default. The choice is persisted through
     /// <see cref="Provider"/> and the list reloads; <see cref="OnSetDefault"/> is notified afterwards.
     /// A failed write is reported in the panel error and does not change the current default.

@@ -11,7 +11,7 @@
 <div @ref="_wrapperRef" class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             @ref="_triggerRef"
-            class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn tm-btn-outline" : "")"
+            class="tm-dropdown-trigger @(OutlineTrigger ? "tm-btn tm-btn-outline tm-btn-sm" : "")"
             disabled="@Disabled"
             aria-expanded="@(Disabled ? null : _isOpen ? "true" : "false")"
             aria-haspopup="true"

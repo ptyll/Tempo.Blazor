@@ -7,7 +7,7 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.DataTable;
 
-internal record SelPerson(string Name, string Role);
+public record SelPerson(string Name, string Role);
 
 public class TmDataTableSelectionTests : LocalizationTestBase
 {

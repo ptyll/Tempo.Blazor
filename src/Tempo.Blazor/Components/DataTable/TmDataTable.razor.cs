@@ -6,6 +6,7 @@ using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
 
@@ -1245,6 +1246,17 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             StartItem: _totalCount == 0 ? 0 : 1,
             EndItem: _totalCount);
 
+    /// <summary>
+    /// What the polite live region announces: the same sentence the visible summary prints, so a
+    /// screen reader hears the count a sighted reader sees. A custom template has no text to lift,
+    /// so the region falls back to the total.
+    /// </summary>
+    private string ResultCountAnnouncement => PaginationInfoTemplate is not null
+        ? Loc.Plural("TmDataTable_TotalItems", _totalCount)
+        : IsRedesigned
+            ? Loc.Plural("TmDataTable_TotalItems", _totalCount)
+            : Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount];
+
     /// <summary>The single condition the paging footer's visibility is decided by.</summary>
     private bool PagerRenders =>
         ShowPagination && _totalPages > 1
@@ -1417,6 +1429,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     private bool IsAllSelected => _displayedItems.Count > 0 && _displayedItems.All(IsSelected);
     private bool IsPartiallySelected => _selectedItems.Count > 0 && !IsAllSelected;
+
+    /// <summary>Last value handed to <c>setIndeterminate</c>. Null until the first successful call.</summary>
+    private bool? _lastSelectAllIndeterminate;
     private ElementReference _selectAllRef;
     private bool IsSelected(TItem item) => _selectedItems.Contains(item);
     private int ColSpan => Math.Max(1, (HasDetail ? 1 : 0) + (Selectable ? 1 : 0) + _visibleColumns.Count + (HasEditActions ? 1 : 0));
@@ -1659,6 +1674,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                     .ThenBy(c => c.Order));
         RecomputeSticky();
         RebuildRenderedCellColumns();
+        RebuildRowLoopCaches();
         // Hiding, reordering or switching layout can drop the column the cursor sits on.
         // Without this the active column stays past the last rendered cell and the grid
         // has no tabindex=0.
@@ -1694,20 +1710,37 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         // Left-pinned columns stack from the container edge. The selection column's width is not
         // reserved here: the stylesheet shifts the stack by --tm-data-table-mobile-checkbox-width
         // when the responsive checkbox column is pinned, so the offset stays RTL-safe.
+        // The pin groups are partitioned once: the old two Where() scans walked every visible
+        // column twice, and the row loop used to scan them again per cell.
+        _leftPinnedColumns.Clear();
+        _rightPinnedColumns.Clear();
+        foreach (var col in _visibleColumns)
+        {
+            switch (GetPin(col))
+            {
+                case ColumnPin.Left: _leftPinnedColumns.Add(col); break;
+                case ColumnPin.Right: _rightPinnedColumns.Add(col); break;
+            }
+        }
+
         var leftOffset = 0;
-        foreach (var col in _visibleColumns.Where(c => GetPin(c) == ColumnPin.Left))
+        foreach (var col in _leftPinnedColumns)
         {
             _stickyLeft[col.Key] = leftOffset;
             leftOffset += GetPixelWidth(col) ?? DefaultPinnedWidth;
         }
 
         var rightOffset = 0;
-        foreach (var col in _visibleColumns.Where(c => GetPin(c) == ColumnPin.Right).Reverse())
+        for (var i = _rightPinnedColumns.Count - 1; i >= 0; i--)
         {
+            var col = _rightPinnedColumns[i];
             _stickyRight[col.Key] = rightOffset;
             rightOffset += GetPixelWidth(col) ?? DefaultPinnedWidth;
         }
     }
+
+    private readonly List<TmDataTableColumn<TItem>> _leftPinnedColumns = [];
+    private readonly List<TmDataTableColumn<TItem>> _rightPinnedColumns = [];
 
     private string GetColumnStyle(TmDataTableColumn<TItem> col)
     {
@@ -1886,13 +1919,20 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
         if (Selectable)
         {
-            try
+            // The mixed state is a DOM property JS has to write, but it only changes when the
+            // selection does — re-rendering a sort or a page change must not pay the interop.
+            var indeterminate = IsPartiallySelected;
+            if (indeterminate != _lastSelectAllIndeterminate)
             {
-                await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, IsPartiallySelected);
-            }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException
-                                   or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
-            {
+                try
+                {
+                    await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, indeterminate);
+                    _lastSelectAllIndeterminate = indeterminate;
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                       or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
+                {
+                }
             }
         }
 
@@ -2371,12 +2411,31 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     // ── Filter / Search ───────────────────────────────────────────
 
-    private async Task ApplyFilterAsync(string columnKey, DataTableFilter? filter)
+    private Task ApplyFilterAsync(string columnKey, DataTableFilter? filter)
+        // The typed callback is the commit. It used to write the map itself while the string callback
+        // removed from it, so the two disagreed about the value; both now end in SetColumnFilterAsync.
+        => SetColumnFilterAsync(columnKey, filter?.Value?.ToString(), filter?.Operator);
+
+    /// <summary>
+    /// The single place a column filter is written. An empty value removes the filter; anything
+    /// else replaces it. <c>TmColumnFilter.ValueChanged</c> is deliberately not bound: it fires on
+    /// every keystroke, and writing there would reload the table twice per committed edit. The
+    /// row reads the value back from the filter map, so the keystroke has nothing to store.
+    /// </summary>
+    private async Task SetColumnFilterAsync(string columnKey, string? value, string? op = null)
     {
-        if (filter is null)
+        if (string.IsNullOrEmpty(value))
+        {
             _activeFilters.Remove(columnKey);
+        }
         else
-            _activeFilters[columnKey] = filter;
+        {
+            var column = _columns.FirstOrDefault(c => c.Key == columnKey);
+            _activeFilters[columnKey] = new DataTableFilter(
+                columnKey,
+                op ?? column?.FilterOperator ?? FilterOperator.Contains.ToString(),
+                value);
+        }
 
         _currentPage = 1;
         if (DataProvider is not null)
@@ -2829,12 +2888,6 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _activeFilters.TryGetValue(columnKey, out var filter)
             ? filter.Value?.ToString() ?? string.Empty
             : string.Empty;
-
-    private void OnColumnFilterValueChanged(string columnKey, string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-            _activeFilters.Remove(columnKey);
-    }
 
     // ── Grouping ────────────────────────────────────────────────────
 
@@ -3560,6 +3613,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     }
 
     private string GetCellClass(TmDataTableColumn<TItem> col)
+        => _cellClassByKey.TryGetValue(col.Key, out var cached) ? cached : BuildCellClass(col);
+
+    private string BuildCellClass(TmDataTableColumn<TItem> col)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(col.CssClass)) parts.Add(col.CssClass);
