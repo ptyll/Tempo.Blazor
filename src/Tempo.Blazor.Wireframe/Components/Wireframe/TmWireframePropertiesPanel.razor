@@ -8,10 +8,98 @@
     @* ── Nothing selected ─────────────────────────────────────────────────── *@
     @if (!_elements.Any() && !_connectors.Any())
     {
-        <div class="tm-wd-props__empty">
-            <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
-            <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
-        </div>
+        var page = Document?.ActivePage;
+        var canvasDisabled = ReadOnly || page is null;
+        var presetId = SelectedPresetId;
+
+        @* ── Canvas: device preset + width / height ───────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="wd-section-canvas">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionCanvas"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_presetId">@Loc["TmWireframeProps_DevicePreset"]</label>
+                    <select id="@_presetId" class="tm-wd-props__select" data-testid="wd-device-preset"
+                            aria-label="@Loc["TmWireframeProps_DevicePreset"]"
+                            disabled="@canvasDisabled"
+                            @onchange="OnDevicePresetChanged">
+                        @foreach (var preset in WireframeDevicePresets.All)
+                        {
+                            <option value="@preset.Id" selected="@(preset.Id == presetId)">@GetPresetLabel(preset)</option>
+                        }
+                    </select>
+                </div>
+                <div class="tm-wd-props__row">
+                    <div class="tm-wd-props__field">
+                        <label class="tm-wd-props__label" for="@_canvasWId">@Loc["TmWireframe_CanvasWidth"]</label>
+                        <input id="@_canvasWId" class="tm-wd-props__input" type="number" min="100" max="9999" step="1"
+                               data-testid="wd-canvas-width"
+                               value="@_canvasWInput" disabled="@canvasDisabled"
+                               @oninput="e => _canvasWInput = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                    <div class="tm-wd-props__field">
+                        <label class="tm-wd-props__label" for="@_canvasHId">@Loc["TmWireframe_CanvasHeight"]</label>
+                        <input id="@_canvasHId" class="tm-wd-props__input" type="number" min="100" max="9999" step="1"
+                               data-testid="wd-canvas-height"
+                               value="@_canvasHInput" disabled="@canvasDisabled"
+                               @oninput="e => _canvasHInput = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                </div>
+                <div class="tm-wd-props__row">
+                    <button type="button" class="tm-wd-editor__btn tm-wd-editor__btn--text"
+                            data-testid="wd-canvas-apply"
+                            disabled="@canvasDisabled"
+                            @onclick="OnApplyCanvasSize">@Loc["TmWireframe_Apply"]</button>
+                </div>
+            </div>
+        </details>
+
+        @* ── Page: name of the active page ────────────────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="wd-section-page">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionPage"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_pageNameId">@Loc["TmWireframeProps_PageName"]</label>
+                    <input id="@_pageNameId" class="tm-wd-props__input" type="text"
+                           data-testid="wd-page-name"
+                           value="@(page?.Name ?? "")" disabled="@canvasDisabled"
+                           @onchange="OnPageNameChanged" />
+                </div>
+            </div>
+        </details>
+
+        @* ── Grid: visibility + snapping size ─────────────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="wd-section-grid">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionGrid"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__toggle">
+                        <input type="checkbox" data-testid="wd-grid-show"
+                               checked="@_showGrid"
+                               @onchange="OnShowGridChanged" />
+                        <span class="tm-wd-props__toggle-track"></span>
+                        <span class="tm-wd-props__toggle-label">@Loc["TmWireframeProps_ShowGrid"]</span>
+                    </label>
+                </div>
+                <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_gridSizeId">@Loc["TmWireframeProps_GridSize"]</label>
+                    <input id="@_gridSizeId" class="tm-wd-props__input" type="number" min="0" max="128" step="1"
+                           data-testid="wd-grid-size"
+                           value="@_gridSize.ToString(CultureInfo.InvariantCulture)"
+                           @onchange="OnGridSizeChanged" />
+                </div>
+            </div>
+        </details>
+
+        @* ── Selection hint ───────────────────────────────────────────────── *@
+        <details class="tm-wd-props__section" open data-testid="wd-section-selection">
+            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionSelection"]</summary>
+            <div class="tm-wd-props__section-body">
+                <div class="tm-wd-props__empty">
+                    <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
+                    <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
+                </div>
+            </div>
+        </details>
     }
     else if (_connectors.Any())
     {
@@ -109,6 +197,15 @@
             @if (!_isMulti)
             {
                 <div class="tm-wd-props__field">
+                    <label class="tm-wd-props__label" for="@_elementNameId">@Loc["TmWireframeProps_ElementName"]</label>
+                    <input id="@_elementNameId" class="tm-wd-props__input" type="text"
+                           data-testid="wd-element-name"
+                           value="@(_elements[0].Name ?? "")"
+                           placeholder="@Loc["TmWireframeProps_ElementNamePlaceholder"]"
+                           disabled="@ReadOnly"
+                           @onchange="OnElementNameChanged" />
+                </div>
+                <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label">@Loc["TmWireframeProps_Type"]</label>
                     <input class="tm-wd-props__input tm-wd-props__input--readonly"
                            value="@_elements[0].Type" readonly />
@@ -176,6 +273,14 @@
                            readonly />
                 </div>
             }
+            <div class="tm-wd-props__field">
+                <button type="button" class="tm-wd-props__delete" data-testid="wd-delete-element"
+                        disabled="@ReadOnly"
+                        @onclick="OnDeleteClicked">
+                    <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
+                    <span>@Loc["TmWireframeProps_DeleteElement"]</span>
+                </button>
+            </div>
         </div>
     </details>
 

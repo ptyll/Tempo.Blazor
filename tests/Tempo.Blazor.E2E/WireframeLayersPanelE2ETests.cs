@@ -341,9 +341,12 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
             await page.Keyboard.PressAsync("Enter");
         }
 
+        // The toolbox lives in the Components tab: insert from there, then return to the Layers tab.
+        await editor.Locator("[data-region='left'] [role='tab']", new() { HasTextString = "Components" }).ClickAsync();
         await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-selection rect",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
+        await editor.Locator("[data-region='left'] [role='tab']", new() { HasTextString = "Layers" }).ClickAsync();
 
         const string PositionScript = "() => document.querySelectorAll('.tm-wd-editor')[0].querySelector('g[data-el-id]').getAttribute('transform')";
         var before = await page.EvaluateAsync<string>(PositionScript);
@@ -406,6 +409,8 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
         await panel.Locator(".tm-wd-layers__item").Nth(1).Locator(".tm-wd-layers__row-menu .tm-context-menu__trigger").ClickAsync();
         await panel.Locator(".tm-wd-layers__item").Nth(1).Locator(".tm-wd-layers__row-menu-item[data-action='rename']")
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5_000 });
+        // The menu fades in: axe must not sample the danger label mid-fade (a half-transparent red fails 4.5:1).
+        await page.EvaluateAsync("async () => { await Promise.all(document.getAnimations().map(a => a.finished.catch(() => { }))); }");
         var menuViolations = await page.EvaluateAsync<string[]>(
             """
             async () => {
@@ -413,7 +418,7 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
                     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                     resultTypes: ['violations']
                 });
-                return result.violations.map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ') + ' <' + n.html.slice(0, 120) + '>').join('; ')})`);
+                return result.violations.map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ') + ' <' + n.html.slice(0, 120) + '> ' + n.any.map(a => a.message).join(' / ')).join('; ')})`);
             }
             """);
         Assert.AreEqual(0, menuViolations.Length, string.Join(Environment.NewLine, menuViolations));
@@ -433,21 +438,38 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
         RegisterContext(context);
 
         var page = await context.NewPageAsync();
-        await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+        // The layout resolves from the editor's CONTAINER and a panel the shell railed at a narrow first measurement stays a rail,
+        // so the demo sidebar / page margin is removed BEFORE the app boots (not after), giving the editor its real width at once.
+        await page.AddInitScriptAsync(
+            """
+            localStorage.setItem('tm-demo-culture', 'en');
+            document.addEventListener('DOMContentLoaded', () => {
+                const style = document.createElement('style');
+                style.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }';
+                document.head.appendChild(style);
+            });
+            """);
         await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
         await WaitForAppReadyAsync(page);
+        // The Layers tab is not the default tab of the left panel (Components is): open it, the tab mounts lazily.
+        await page.WaitForSelectorAsync(".tm-wd-editor [data-region='left'] [role='tab']",
+            new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
+        await page.Locator(".tm-wd-editor [data-region='left'] [role='tab']", new() { HasTextString = "Layers" }).First.ClickAsync();
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-layers__item",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
 
-        // The minimap card and the demo sidebar would cover the capture / intercept clicks.
+        // The minimap card and the demo sidebar would cover the capture / intercept clicks. The sidebar also takes the
+        // editor's container width (the layout resolves from the CONTAINER, not the window): at a 1024 viewport the
+        // editor would measure ~664 px and resolve mobile, so the demo page margin is zeroed to give a real tablet width.
         await page.EvaluateAsync(
             """
             () => {
                 const style = document.createElement('style');
-                style.textContent = '.tm-wd-editor__minimap-wrap { display: none !important; } aside.fixed.inset-y-0.left-0.z-30 { display: none !important; }';
+                style.textContent = '.tm-wd-editor__minimap-wrap { display: none !important; } aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }';
                 document.head.appendChild(style);
             }
             """);
+        await page.WaitForTimeoutAsync(800);
         return page;
     }
 

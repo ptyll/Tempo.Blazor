@@ -1121,9 +1121,9 @@ window.tmWireframeDesigner = {
     _onKeyDown: function (e, inst) {
         // Only handle if SVG or a child has focus (or SVG is inside an active editor)
         if (!inst.svg.closest(':focus-within') && document.activeElement !== document.body) return;
-        // The layers panel owns every key typed inside it (radio roaming, Alt+Arrow reorder, Delete/Escape on a
-        // control): none of them may also act on the canvas selection (nudge, delete, clear).
-        if (e.target.closest?.('.tm-wd-layers')) return;
+        // The layers and pages panels own every key typed inside them (radio roaming, Alt+Arrow reorder, F2,
+        // Delete/Escape on a control): none of them may also act on the canvas selection (nudge, delete, clear).
+        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages')) return;
 
         const ids = [...inst.selectedIds];
 

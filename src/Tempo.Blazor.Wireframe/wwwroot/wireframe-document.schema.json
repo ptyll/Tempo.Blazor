@@ -132,6 +132,10 @@
           "type": "string",
           "description": "Optional library-agnostic UI role requested during authoring, e.g. search-input, data-table, or otp-input."
         },
+        "name": {
+          "type": "string",
+          "description": "Optional human-readable element name, e.g. 'Login button'. Shown in the inspector and used as the element's accessible name/tooltip."
+        },
         "x": {
           "type": "number",
           "description": "X position of the top-left corner in pixels.",

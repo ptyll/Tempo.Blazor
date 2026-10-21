@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Wireframe.Models;
 
 namespace Tempo.Blazor.Components.Wireframe;
@@ -56,14 +57,67 @@ public partial class TmWireframeToolbox : ComponentBase
     private string[]                _allCategories = [];
     private bool                    _hasCustomComponents;
 
+    // Render gate: a parent re-render that changes nothing the toolbox shows must not re-render the
+    // (large) palette; the editor re-renders on every pointer move / selection change.
+    private bool _parentPass;
+    private bool _paramsChanged;
+    private bool _firstRender = true;
+    private bool _readOnlySeen;
+    private string? _classSeen;
+    private WireframeComponentScope? _scopeSeen;
+    private EventCallback<string> _callbackSeen;
+
+    /// <summary>Number of completed renders (test hook for the parent-render gate).</summary>
+    internal int RenderCount { get; private set; }
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    /// <inheritdoc/>
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        _parentPass = true;
+        return base.SetParametersAsync(parameters);
+    }
 
     /// <inheritdoc/>
     protected override void OnParametersSet()
     {
-        _allDefs          = _registry.GetAll(ComponentScope).ToArray();
+        var defs = _registry.GetAll(ComponentScope).ToArray();
+        var registryChanged = !defs.SequenceEqual(_allDefs);
+
+        _allDefs          = defs;
         _allCategories    = _registry.GetCategories(ComponentScope);
         _hasCustomComponents = _allDefs.Any(d => !d.IsBuiltIn);
+
+        var changed = registryChanged
+                      || ReadOnly != _readOnlySeen
+                      || !ReferenceEquals(ComponentScope, _scopeSeen)
+                      || !string.Equals(Class, _classSeen, StringComparison.Ordinal)
+                      || !OnComponentActivated.Equals(_callbackSeen);
+        _readOnlySeen = ReadOnly;
+        _scopeSeen    = ComponentScope;
+        _classSeen    = Class;
+        _callbackSeen = OnComponentActivated;
+        if (changed) _paramsChanged = true;
+    }
+
+    /// <inheritdoc/>
+    protected override bool ShouldRender()
+    {
+        var render = !_parentPass || _paramsChanged || _firstRender;
+        _parentPass = false;
+        _paramsChanged = false;
+        return render;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // ShouldRender is not consulted for the very first render, so the pass flags are also reset here.
+        _firstRender = false;
+        _parentPass = false;
+        _paramsChanged = false;
+        RenderCount++;
     }
 
     /// <inheritdoc/>
@@ -113,6 +167,14 @@ public partial class TmWireframeToolbox : ComponentBase
         => FilteredDefs
             .Where(d => d.Category == category)
             .OrderBy(d => d.DisplayName);
+
+    /// <summary>
+    /// True when the definition names an icon that <see cref="TmIcon"/> can actually draw (built-in or registered).
+    /// An unknown name would paint an empty tile, so such a definition keeps the mini-SVG preview instead.
+    /// </summary>
+    private static bool HasResolvableIcon(WireframeComponentDef def)
+        => !string.IsNullOrEmpty(def.Icon)
+           && (!string.IsNullOrEmpty(TmIcon.GetBuiltInSvg(def.Icon)) || IconRegistry.Contains(def.Icon));
 
     // ── Event handlers ────────────────────────────────────────────────────────
 

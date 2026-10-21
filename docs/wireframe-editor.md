@@ -1,7 +1,7 @@
 # Wireframe package — `TmWireframeEditor` and friends
 
 `Tempo.Blazor.Wireframe` ships the wireframe editor (`TmWireframeEditor`, `TmWireframeDesignerCanvas`,
-`TmWireframeToolbox`, `TmWireframePropertiesPanel`, `TmWireframeLayersPanel`, `TmWireframeExportDialog`) and the
+`TmWireframeToolbox`, `TmWireframePropertiesPanel`, `TmWireframeLayersPanel`, `TmWireframePagesPanel`, `TmWireframeExportDialog`) and the
 stencil renderers behind it. This page records the contracts the redesign plan (`ce19aa8c`) froze phase by phase.
 
 ## Read-only and rulers (phase 1)
@@ -83,7 +83,7 @@ arrows. Icon-only buttons keep an `aria-label` / `title`. All icons used exist i
 
 ## Layers panel (phase 3)
 
-`TmWireframeLayersPanel` stays a public, standalone component (the editor hosts it in the right column). Every
+`TmWireframeLayersPanel` stays a public, standalone component (the editor hosts it as the *Layers* tab of the left panel with `ShowCollapseToggle="false"`). Every
 operation has a non-drag alternative (WCAG 2.5.7) and goes through the editor's undoable command stack:
 
 | Operation | Mouse / touch | Keyboard | Command |
@@ -112,9 +112,51 @@ layer name get their browser default (list scroll) cancelled by a scoped listene
 preventDefault. Keys inside an open row menu do not reach the row shortcuts. Moves are announced with the new position
 ("Layer X moved down, position 3 of 5") so repeated moves are re-announced.
 
+## Editor shell (phase 4)
+
+`TmWireframeEditor` renders through the core `TmEditorShell` ([editor-shell.md](editor-shell.md)) and its command row is one core
+`TmToolbar` ([toolbar.md](toolbar.md)). The editor resolves its layout from its **own container** (`LayoutMode="Auto"`,
+`LayoutBreakpoints` default mobile < 640 / desktop ≥ 860, `data-editor-layout` on the root); `LayoutMode` can pin a mode for tests and hosts.
+
+| Region | Content |
+|---|---|
+| `header` (opt-in) | `HeaderStart` · built-in title (or the `Title` slot) · `HeaderActions`. Rendered when `ShowHeader` is set or any slot is supplied. The editor has **no built-in Save or Open** — the host supplies them (the demo puts "Open…" in `HeaderActions`). Without a header the title sits at the start of the toolbar row (today's look). |
+| `toolbar` | One `TmToolbar` (`Overflow=Menu`, `Labels=Auto`). Groups carry `role="group"` + `aria-label` and `data-tm-group`: `tools` (select / pan / connector), `history`, `arrange` (backward / forward / lock), `group`, `align` (Align and Distribute dropdowns), `snap`, `format` and `view` ("More" only), `zoom`, `file` (**Export** — pinned, primary — and Import). |
+| `left` | `TmWireframeSidePanel` (internal): tabs **Components** (the toolbox) / **Pages** (only with `PageNavigation=Panel`) / **Layers**. `ShowToolbox` and `ShowPropertiesPanel` keep their names: they gate the Components tab and the inspector + Layers tab. |
+| `canvas` | page tabs (`PageNavigation=Tabs`), import banner, rulers, the canvas, the context menu and the minimap card. |
+| `right` | `TmWireframePropertiesPanel` (the inspector). |
+
+**"More" menu.** The format painter (Copy style / Paste style / Paste size — also in the inspector's *Format painter* section), the
+Read-only toggle (absent while the host pins `ReadOnly="true"`), Show rulers and the Components / Properties panel toggles are
+checkable or plain entries of the toolbar's "More" menu (`OverflowOnly`); the bar commands collapse into it by `Priority`
+(Secondary first, the later one first; Export, Import and the zoom value are `Pinned`). The editor caps the menu to the viewport and scrolls it.
+Every former command is still reachable: toolbar, "More", inspector or context menu (guarded by `AllCommands_Reachable`).
+
+**Pages.** `PageNavigation="Tabs"` (default) keeps the horizontal page tabs. `PageNavigation="Panel"` adds the **Pages** tab:
+`TmWireframePagesPanel` — a numbered list, click to switch, a "⋯" menu per row (**Rename**, **Duplicate**, **Move up**, **Move down**,
+**Delete**; no Delete for the last page), **F2** to rename, **Alt+↑ / Alt+↓** to reorder, HTML5 drag as a pointer extra, and
+"+ Add page". It mutates `Document` (page operations are not undoable, like the tabs) and raises `ActivePageChanged` / `DocumentChanged`;
+the editor then switches to that page's own undo history. Read-only keeps navigation, drops every edit.
+The wireframe keydown guard in `wireframe-designer.js` ignores keys typed inside `.tm-wd-layers` **and** `.tm-wd-pages`.
+
+**Inspector.** With nothing selected: **Canvas** (device preset — Desktop 1440×900, Laptop 1280×800, Tablet 1024×768, iPhone 14 390×844,
+Android 360×800, Custom; width / height; **Apply**; all through the undoable `ResizeCanvasCommand`), **Page** (rename the active page) and
+**Grid** (show grid, grid size, 0 = snapping off). With a selection, *Element* has **Name** (`RenameElementCommand`, undoable) and
+**Delete element** (`RemoveElementsCommand`). There is no *Styles* tab and no generic opacity / corner radius. `ShowGrid` / `GridSize`
+follow the never-assigned parameter contract (`ShowGridChanged` / `GridSizeChanged`).
+
+**Element name (WF3).** `WireframeElement.Name` (additive `string?`, JSON `name`): the canvas group gets `aria-label` and a `<title>`
+tooltip, the MCP tools (`addElement`, `updateElement`, the author payload, the implementation brief, the authoring guide) and
+`wireframe-document.schema.json` know it. Page background and description are deliberately **not** modelled.
+
+**Toolbox.** A 3-column grid of tiles; a tile shows the component's `TmIcon` (`WireframeComponentDef.Icon`) and name, the mini stencil SVG is
+the fallback for a missing / undrawable icon. The toolbox re-renders only for its own events or changed parameters (render gate), so a
+left-tab switch and opening "More" leave the canvas and the toolbox alone (`RenderCount` tests).
 ## E2E anchors (stable selectors)
 
-`.tm-wd-editor`, `.tm-wd-editor__toolbar`, `.tm-wd-editor__btn` (`--icon`, `--active`, `--text`),
-`.tm-wd-editor__dropdown(-item)`, `.tm-wd-toolbox__item[data-component-type]`, `.tm-wd-canvas__svg`,
-`.tm-wd-canvas-wrap`, `.tm-wd-props`, `.tm-wd-layers`, `.tm-wd-export-dialog`, `#wd-export-format`,
-`#wd-export-filename`.
+`.tm-wd-editor`, `.tm-wd-editor__toolbar`, `[data-region="left|canvas|right|toolbar|header"]`, the core `.tm-toolbar` /
+`.tm-toolbar-btn` / `button.tm-toolbar-more` and `[data-tm-group]`, `data-testid`s `wd-export`, `wd-export-json|svg|png|pdf`, `wd-align`,
+`wd-distribute`, `wd-import`, `wd-device-preset`, `wd-canvas-width|height|apply`, `wd-page-name`, `wd-grid-show|size`, `wd-element-name`,
+`wd-delete-element`, `wd-page-add`, `wd-page-<id>`, `wd-pages-panel`, `wd-section-canvas|page|grid|selection`,
+`.tm-wd-toolbox__item[data-component-type]`, `.tm-wd-canvas__svg`, `.tm-wd-canvas-wrap`, `.tm-wd-props`, `.tm-wd-layers`, `.tm-wd-pages`,
+`.tm-wd-export-dialog`, `#wd-export-format`, `#wd-export-filename`.

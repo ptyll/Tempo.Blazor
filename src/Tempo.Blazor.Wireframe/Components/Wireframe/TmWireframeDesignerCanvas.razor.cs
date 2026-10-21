@@ -162,6 +162,11 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
         }
     }
 
+    /// <summary>How many times the canvas has rendered (a test seam: a left-tab switch or opening the "More" menu must not move it).</summary>
+    internal int RenderCount { get; private set; }
+
+    protected override void OnAfterRender(bool firstRender) => RenderCount++;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_jsInitialized)

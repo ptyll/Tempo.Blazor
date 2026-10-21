@@ -63,8 +63,15 @@ public sealed class StencilPaperContractTests : LocalizationTestBase
 
         var items = cut.FindAll(".tm-wd-toolbox__item");
         items.Should().NotBeEmpty();
-        items.Should().OnlyContain(item => item.QuerySelector(".tm-wd-toolbox__item-preview-paper > .tm-wd-toolbox__item-preview svg") != null,
-            "the light mini stencil sits on a paper tile, so a dark theme never paints a white box on a dark card");
+        // A definition with an icon shows the icon tile; one without falls back to the mini stencil, which is light
+        // and therefore always sits on a paper tile, so a dark theme never paints a white box on a dark card.
+        items.Should().OnlyContain(item =>
+                item.QuerySelector(".tm-wd-toolbox__item-icon svg") != null
+                || item.QuerySelector(".tm-wd-toolbox__item-preview-paper > .tm-wd-toolbox__item-preview svg") != null,
+            "every tile is either a component icon or a paper-wrapped mini stencil");
+        items.Where(item => item.QuerySelector(".tm-wd-toolbox__item-icon") == null)
+            .Should().OnlyContain(item => item.QuerySelector(".tm-wd-toolbox__item-preview-paper > .tm-wd-toolbox__item-preview svg") != null,
+                "the light mini stencil sits on a paper tile, so a dark theme never paints a white box on a dark card");
     }
 
     private string MarkupOf(Action<RenderTreeBuilder> build)

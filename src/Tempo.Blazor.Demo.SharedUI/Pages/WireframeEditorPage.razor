@@ -29,11 +29,6 @@
             </p>
         </div>
         <div class="flex gap-2">
-            <button class="px-3 py-1.5 text-sm rounded border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
-                    data-testid="wf-open-btn"
-                    @onclick="() => _openDialog = true">
-                Open…
-            </button>
             <button class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                     @onclick="LoadLoginSample">
                 Load Login page
@@ -50,11 +45,21 @@
     </div>
 
     <div style="height: 600px;">
+        @* The editor has no built-in Open/Save: the host supplies its own actions through the header slots (G9). *@
         <TmWireframeEditor Document="@_document"
                            DocumentChanged="@(doc => { _document = doc; _jsonPreview = WireframeSerializer.Serialize(doc); })"
                            ShowGrid="true"
                            GridSize="8"
-                           Class="h-full" />
+                           PageNavigation="WireframePageNavigation.Panel"
+                           Class="h-full">
+            <HeaderActions>
+                <button class="px-3 py-1.5 text-sm rounded border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300"
+                        data-testid="wf-open-btn"
+                        @onclick="() => _openDialog = true">
+                    Open…
+                </button>
+            </HeaderActions>
+        </TmWireframeEditor>
     </div>
 
     <div class="mt-3 flex gap-4 text-sm text-slate-500 dark:text-slate-400">

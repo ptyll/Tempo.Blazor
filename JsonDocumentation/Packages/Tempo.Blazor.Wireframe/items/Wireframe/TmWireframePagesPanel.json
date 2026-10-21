@@ -1,0 +1,74 @@
+{
+  "itemName": "TmWireframePagesPanel",
+  "kind": "Component",
+  "category": "Wireframe",
+  "description": "Vertical numbered list of a wireframe document's pages: the Pages tab of the TmWireframeEditor left panel (PageNavigation=Panel), also usable standalone. Click switches the active page; each row has a \"...\" menu (Rename, Duplicate, Move up, Move down, Delete) and an Add page button sits below the list. Every operation has a non-drag alternative (WCAG 2.5.7): the row menu, F2 to rename, Alt+Up / Alt+Down to reorder; HTML5 drag-and-drop is a pointer-only extra. The panel MUTATES Document (page operations are not undoable, like the page tabs) and reports through ActivePageChanged / DocumentChanged. The Delete key never deletes a page; the last page cannot be deleted. ReadOnly removes add, menu, drag, rename and the shortcuts; selecting a page still works.",
+  "packageId": "Tempo.Blazor.Wireframe",
+  "namespace": "Tempo.Blazor.Components.Wireframe",
+  "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframePagesPanel.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Wireframe"
+  ],
+  "parameters": [
+    {
+      "name": "Document",
+      "type": "WireframeDocument?",
+      "isRequired": false,
+      "description": "Document whose pages are listed. Mutated in place: pages are added, renamed, reordered, duplicated and deleted, and ActivePageId is set when the user switches page."
+    },
+    {
+      "name": "DocumentChanged",
+      "type": "EventCallback<WireframeDocument>",
+      "isRequired": false,
+      "description": "Raised with the (mutated) document after every change: switch, add, rename, duplicate, delete, reorder."
+    },
+    {
+      "name": "ActivePageChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the id of the page that became active after a switch, add, duplicate or delete (not for plain reorder or rename), before DocumentChanged."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "When true the list is view-only: no add button, no row menu, no drag-and-drop and no rename or reorder shortcuts. Selecting a page still works."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class on the panel root."
+    }
+  ],
+  "keyboardShortcuts": [
+    { "key": "F2", "action": "Rename the focused page" },
+    { "key": "Alt+Up / Alt+Down", "action": "Move the focused page up / down" },
+    { "key": "Enter / Escape (rename)", "action": "Commit / cancel the inline rename" }
+  ],
+  "cssClasses": [
+    "tm-wd-pages",
+    "tm-wd-pages__header",
+    "tm-wd-pages__title",
+    "tm-wd-pages__list",
+    "tm-wd-pages__item",
+    "tm-wd-pages__item--active",
+    "tm-wd-pages__item--dragging",
+    "tm-wd-pages__item--drag-over",
+    "tm-wd-pages__index",
+    "tm-wd-pages__select",
+    "tm-wd-pages__name-input",
+    "tm-wd-pages__row-menu",
+    "tm-wd-pages__row-menu-trigger",
+    "tm-wd-pages__row-menu-item",
+    "tm-wd-pages__add"
+  ],
+  "examples": [
+    {
+      "title": "Standalone pages list",
+      "code": "<TmWireframePagesPanel Document=\"_document\"\n                       DocumentChanged=\"OnDocumentChanged\"\n                       ActivePageChanged=\"id => _activePageId = id\" />"
+    }
+  ]
+}

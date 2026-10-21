@@ -2,7 +2,7 @@
   "itemName": "TmWireframeEditor",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "Top-level wireframe editor component. Composes the canvas, toolbox, properties panel, minimap, and toolbar into a fully working editor. Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode, and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is editable from the toolbar. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px).",
+  "description": "Top-level wireframe editor component. Renders through the core TmEditorShell: an optional header (host slots HeaderStart / HeaderActions / Title), ONE command row (a core TmToolbar with named groups - tools, history, arrange, group, align, snap, zoom, file -, per-button Priority, Labels=Auto and Overflow=Menu; Export is the primary, never-collapsing action; the format painter, Read-only, rulers and the panel toggles live in its \"More\" menu), a docked left panel (Components / Pages / Layers tabs, Pages only with PageNavigation=Panel), the canvas with rulers, context menu and minimap, and an inspector (Canvas with device presets, Page and Grid sections on an empty selection; Element with a Name field and Delete element on a selection). Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is edited in the inspector (Canvas section). There is no built-in Save or Open: the host supplies them through the header slots. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
@@ -37,14 +37,14 @@
       "type": "bool",
       "isRequired": false,
       "defaultValue": "true",
-      "description": "Show the component toolbox panel on the left."
+      "description": "Show the component toolbox: the Components tab of the left panel. When no tab is left (no toolbox, no Layers, no Pages) the left panel is not rendered. Collapsing the panel is shell state (the strip toggle or the Components panel entry in the More menu)."
     },
     {
       "name": "ShowPropertiesPanel",
       "type": "bool",
       "isRequired": false,
       "defaultValue": "true",
-      "description": "Show the properties panel on the right."
+      "description": "Show the right-hand inspector and the Layers tab of the left panel. Collapsing the inspector is shell state (the strip toggle or the Properties panel entry in the More menu)."
     },
     {
       "name": "ShowMinimap",
@@ -58,21 +58,33 @@
       "type": "bool",
       "isRequired": false,
       "defaultValue": "true",
-      "description": "Show the top toolbar (title, tool mode, zoom, undo/redo, export/import, canvas size)."
+      "description": "Show the command row (the core TmToolbar: tools, history, arrange, grouping, alignment, snapping, zoom, export/import) and, unless a header is shown, the document title."
     },
     {
       "name": "ShowGrid",
       "type": "bool",
       "isRequired": false,
       "defaultValue": "true",
-      "description": "Show grid lines on the canvas."
+      "description": "Initial / host-driven visibility of the grid lines. Never assigned by the component - the inspector's Grid section flips an internal state and reports it through ShowGridChanged (@bind-ShowGrid)."
+    },
+    {
+      "name": "ShowGridChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new value when the user toggles the grid in the inspector (use @bind-ShowGrid)."
     },
     {
       "name": "GridSize",
       "type": "int",
       "isRequired": false,
       "defaultValue": "8",
-      "description": "Snap-to-grid cell size in pixels. Set to 0 to disable snapping."
+      "description": "Initial / host-driven snap-to-grid cell size in pixels; 0 disables snapping. Never assigned by the component - the inspector's Grid section changes an internal value and reports it through GridSizeChanged (@bind-GridSize)."
+    },
+    {
+      "name": "GridSizeChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised with the new cell size when the user edits the grid size in the inspector (use @bind-GridSize)."
     },
     {
       "name": "Class",
@@ -85,7 +97,52 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Always show page tabs even when there is only one page."
+      "description": "Show the page navigation (the horizontal page tabs, or the Pages tab of the left panel with PageNavigation=Panel), even when there is only one page."
+    },
+    {
+      "name": "PageNavigation",
+      "type": "WireframePageNavigation",
+      "isRequired": false,
+      "defaultValue": "WireframePageNavigation.Tabs",
+      "description": "Where the pages are presented. Tabs (default) keeps the horizontal page tabs above the canvas (Components and Layers tabs in the left panel); Panel adds a Pages tab (TmWireframePagesPanel) to the left panel and drops the horizontal tabs."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "defaultValue": "TmLayoutMode.Auto",
+      "description": "How the editor resolves its layout: Auto (default) measures the editor's own container against LayoutBreakpoints; a forced mode pins the shell presentation (tests, host layouts)."
+    },
+    {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Per-instance layout thresholds for the editor container. null uses the editor default: mobile below 640, desktop from 860."
+    },
+    {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "Show the shell header row. false (default) keeps the pre-shell look: the title sits at the start of the toolbar row and no header renders - unless a host supplies HeaderStart, HeaderActions or Title, which opens the header on its own."
+    },
+    {
+      "name": "HeaderStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content at the start of the header, before the title (G9 slot). The editor has no built-in Save or Open."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content at the end of the header, after the title (G9 slot) - e.g. an Open... or Save button."
+    },
+    {
+      "name": "Title",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host content that replaces the built-in editable document title (G9 slot). Opens the header like HeaderStart."
     },
     {
       "name": "ShowRulers",
@@ -155,12 +212,15 @@
   "cssClasses": [
     "tm-wd-editor",
     "tm-wd-editor__toolbar",
-    "tm-wd-editor__btn",
-    "tm-wd-editor__btn--icon",
-    "tm-wd-editor__btn--active",
+    "tm-wd-editor__shell",
+    "tm-wd-editor__header-bar",
+    "tm-wd-editor__commandbar",
+    "tm-wd-editor__group",
+    "tm-wd-editor__export",
+    "tm-wd-editor__import",
+    "tm-wd-editor__canvas-region",
     "tm-wd-editor__canvas-wrap",
-    "tm-wd-editor__toolbox-wrap",
-    "tm-wd-editor__props-wrap"
+    "tm-wd-side"
   ],
   "cssVariables": [
     { "name": "--tm-wd-accent", "description": "Accent (selection, active button, handles). Alias of --tm-color-primary; follows the default blue, the opt-in indigo theme (data-tm-theme=\"indigo\") and dark mode." },
@@ -187,6 +247,10 @@
     {
       "title": "Editor without grid, custom canvas size",
       "code": "@code {\n    private WireframeDocument _document = new()\n    {\n        Width  = 1920,\n        Height = 1080,\n        Title  = \"Dashboard layout\"\n    };\n}\n\n<TmWireframeEditor @bind-Document=\"_document\"\n                   ShowGrid=\"false\"\n                   GridSize=\"0\" />"
+    },
+    {
+      "title": "Pages as a left-panel tab, host Open action in the header",
+      "code": "<TmWireframeEditor @bind-Document=\"_document\"\n                   PageNavigation=\"WireframePageNavigation.Panel\">\n    <HeaderActions>\n        <button @onclick=\"() => _open = true\">Open…</button>\n    </HeaderActions>\n</TmWireframeEditor>"
     },
     {
       "title": "Persist document to server on every change",

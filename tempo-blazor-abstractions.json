@@ -35863,6 +35863,12 @@
           "description": "Reserved for future collaborative editing – who has this element locked."
         },
         {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional human-readable name of the element (for example \"Login button\"). Purely descriptive and additive: it is shown in the inspector, used as the element's accessible name and tooltip on the canvas and returned by the MCP tools. null (omitted from JSON) means \"unnamed\"."
+        },
+        {
           "name": "Props",
           "kind": "Property",
           "type": "Dictionary<string, JsonElement>",
@@ -35927,6 +35933,11 @@
           "name": "Role",
           "type": "string?",
           "description": "Optional library-agnostic UI role requested during authoring, such as 'search-input' or 'otp-input'. Serialized as 'role' when present."
+        },
+        {
+          "name": "Name",
+          "type": "string?",
+          "description": "Optional human-readable element name (e.g. 'Login button'). Additive and descriptive: shown in the inspector, used as the element's aria-label and tooltip on the canvas and returned by the MCP tools. null (omitted from JSON) means unnamed."
         },
         {
           "name": "X",

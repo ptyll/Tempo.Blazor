@@ -314,4 +314,39 @@ public class TmWireframeDesignerCanvasTests : LocalizationTestBase
         cut.Find(".tm-wd-connector__label").GetAttribute("fill").Should().BeNull();
         cut.Find(".tm-wd-connector__label").GetAttribute("style").Should().Contain("var(--tm-wd-paper-ink)");
         cut.Markup.Should().NotContain("#374151").And.NotContain("#3b82f6");
-    }}
+    }
+
+    // ── Element name = accessible name + tooltip (wireframe redesign phase 4) ──
+
+    [Fact]
+    public void NamedElement_RendersAriaLabelAndTitleTooltip()
+    {
+        Services.AddSingleton(BuildRegistry("TmButton"));
+        var doc = DocWith(("TmButton", 0, 0));
+        doc.Elements[0].Name = "Login button";
+
+        var cut = Render<TmWireframeDesignerCanvas>(p => p.Add(x => x.Document, doc));
+
+        var g = cut.Find("g[data-el-id]");
+        g.GetAttribute("aria-label").Should().Be("Login button");
+        g.FirstElementChild!.TagName.Should().BeEquivalentTo("title");
+        g.FirstElementChild.TextContent.Should().Be("Login button");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UnnamedElement_RendersNeitherAriaLabelNorTitle(string? name)
+    {
+        Services.AddSingleton(BuildRegistry("TmButton"));
+        var doc = DocWith(("TmButton", 0, 0));
+        doc.Elements[0].Name = name;
+
+        var cut = Render<TmWireframeDesignerCanvas>(p => p.Add(x => x.Document, doc));
+
+        var g = cut.Find("g[data-el-id]");
+        g.HasAttribute("aria-label").Should().BeFalse();
+        g.QuerySelector(":scope > title").Should().BeNull();
+    }
+}

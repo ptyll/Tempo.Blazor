@@ -16,9 +16,19 @@ namespace Tempo.Blazor.Tests.Wireframe;
 /// </summary>
 public class TmWireframeEditorBehaviorTests : LocalizationTestBase
 {
-    private const string ReadOnlyOnSelector = "button[aria-label='Switch to read-only mode']";
-    private const string ReadOnlyOffSelector = "button[aria-label='Switch to edit mode']";
-    private const string RulersSelector = "button[aria-label='Show rulers']";
+    // Read-only, rulers and the panel toggles live in the toolbar's "More" menu (phase 4): the entries are checkable
+    // menu items (menuitemcheckbox) that exist while the menu is open.
+    private const string ReadOnlyEntrySelector = "[role='menuitemcheckbox'][data-action-id*='ReadOnly'], [role='menuitemcheckbox']";
+    private const string RulersSelector = "[role='menuitemcheckbox']";
+
+    private static void OpenMore(IRenderedComponent<TmWireframeEditor> cut) => cut.Find("button.tm-toolbar-more").Click();
+
+    private static AngleSharp.Dom.IElement MoreEntry(IRenderedComponent<TmWireframeEditor> cut, string text)
+    {
+        if (cut.FindAll("button.tm-toolbar-more[aria-expanded='false']").Count > 0) OpenMore(cut);
+        return cut.FindAll("[role='menu'] [role='menuitemcheckbox'], [role='menu'] [role='menuitem']")
+                  .First(i => i.TextContent.Trim() == text);
+    }
 
     private static WireframeComponentDef MakeDef(string type, double w = 120, double h = 36)
         => new()
@@ -63,10 +73,10 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
     {
         var cut = RenderEditor();
 
-        cut.Find("button[aria-label='Export']").Click();
-        cut.FindAll("[role='menuitem']").First(b => b.TextContent.Contains("Export PDF")).Click();
+        cut.Find("[data-testid='wd-export'] button.tm-dropdown-trigger").Click();
+        cut.Find("[data-testid='wd-export-pdf']").Click();
 
-        cut.Find(".tm-wd-export-dialog").Should().NotBeNull();
+        cut.WaitForAssertion(() => cut.Find(".tm-wd-export-dialog").Should().NotBeNull());
         cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("pdf");
     }
 
@@ -75,10 +85,10 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
     {
         var cut = RenderEditor();
 
-        cut.Find("button[aria-label='Export']").Click();
-        cut.FindAll("[role='menuitem']").First(b => b.TextContent.Contains("Export PNG")).Click();
+        cut.Find("[data-testid='wd-export'] button.tm-dropdown-trigger").Click();
+        cut.Find("[data-testid='wd-export-png']").Click();
 
-        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("png");
+        cut.WaitForAssertion(() => cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("png"));
     }
 
     // ── Read-only toggle ───────────────────────────────────────────────────────
@@ -90,15 +100,14 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
         var cut = RenderEditor(p => p.Add(c => c.ReadOnlyChanged,
             EventCallback.Factory.Create<bool>(this, v => raised.Add(v))));
 
-        cut.Find(ReadOnlyOnSelector).Click();
+        MoreEntry(cut, "Read-only").Click();
+        cut.WaitForAssertion(() => raised.Should().Equal(true));
 
-        raised.Should().Equal(true);
         cut.Instance.ReadOnly.Should().BeFalse("the [Parameter] is never assigned by the component");
         cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeTrue();
 
-        cut.Find(ReadOnlyOffSelector).Click();
-
-        raised.Should().Equal(true, false);
+        MoreEntry(cut, "Read-only").Click();
+        cut.WaitForAssertion(() => raised.Should().Equal(true, false));
         cut.Instance.ReadOnly.Should().BeFalse();
         cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeFalse();
     }
@@ -108,10 +117,12 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
     {
         var cut = RenderEditor();
 
-        cut.Find(ReadOnlyOnSelector).Click();
+        MoreEntry(cut, "Read-only").Click();
+        cut.WaitForAssertion(() => cut.FindComponent<TmWireframePropertiesPanel>().Instance.ReadOnly.Should().BeTrue());
 
+        // The Layers tab mounts lazily: open it, then it follows the editor state too.
+        cut.FindAll("[data-region='left'] [role='tab']").First(t => t.TextContent.Trim() == "Layers").Click();
         cut.FindComponent<TmWireframeLayersPanel>().Instance.ReadOnly.Should().BeTrue();
-        cut.FindComponent<TmWireframePropertiesPanel>().Instance.ReadOnly.Should().BeTrue();
         cut.FindComponent<TmWireframeContextMenu>().Instance.ReadOnly.Should().BeTrue();
     }
 
@@ -120,9 +131,10 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
     {
         var cut = RenderEditor(p => p.Add(c => c.ReadOnly, true));
 
-        cut.FindAll(ReadOnlyOnSelector).Should().BeEmpty();
-        cut.FindAll(ReadOnlyOffSelector).Should().BeEmpty("a host-pinned read-only editor has no toggle");
+        OpenMore(cut);
+        cut.FindAll("[role='menuitemcheckbox']").Select(i => i.TextContent.Trim()).Should().NotContain("Read-only", "a host-pinned read-only editor has no toggle");
         cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeTrue();
+        cut.FindAll("[data-region='left'] [role='tab']").First(t => t.TextContent.Trim() == "Layers").Click();
         cut.FindComponent<TmWireframeLayersPanel>().Instance.ReadOnly.Should().BeTrue();
         cut.Instance.ReadOnly.Should().BeTrue();
     }
@@ -137,7 +149,8 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
         cut.Render(p => p.Add(c => c.ReadOnly, true));
 
         cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeTrue();
-        cut.FindAll(ReadOnlyOffSelector).Should().HaveCount(1);
+        OpenMore(cut);
+        cut.FindAll("[role='menuitemcheckbox'][aria-checked='true']").Select(i => i.TextContent.Trim()).Should().Contain("Read-only");
     }
 
     [Fact]
@@ -157,12 +170,12 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
     {
         var cut = RenderEditor();
 
-        cut.Find(ReadOnlyOnSelector).Click();
+        MoreEntry(cut, "Read-only").Click();
         cut.WaitForAssertion(() =>
             JSInterop.Invocations.Where(i => i.Identifier == "tmWireframeDesigner.setReadOnly")
                 .Select(i => i.Arguments[1]).Should().Equal(true));
 
-        cut.Find(ReadOnlyOffSelector).Click();
+        MoreEntry(cut, "Read-only").Click();
         cut.WaitForAssertion(() =>
             JSInterop.Invocations.Where(i => i.Identifier == "tmWireframeDesigner.setReadOnly")
                 .Select(i => i.Arguments[1]).Should().Equal(true, false));
@@ -177,15 +190,14 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
             EventCallback.Factory.Create<bool>(this, v => raised.Add(v))));
         cut.FindAll(".tm-wd-ruler").Should().BeEmpty();
 
-        cut.Find(RulersSelector).Click();
+        MoreEntry(cut, "Show rulers").Click();
+        cut.WaitForAssertion(() => raised.Should().Equal(true));
 
-        raised.Should().Equal(true);
         cut.Instance.ShowRulers.Should().BeFalse("the [Parameter] is never assigned by the component");
         cut.FindAll(".tm-wd-ruler").Should().HaveCount(2);
 
-        cut.Find(RulersSelector).Click();
-
-        raised.Should().Equal(true, false);
+        MoreEntry(cut, "Show rulers").Click();
+        cut.WaitForAssertion(() => raised.Should().Equal(true, false));
         cut.FindAll(".tm-wd-ruler").Should().BeEmpty();
     }
 
@@ -262,7 +274,7 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
         cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
         doc.Elements.Should().ContainSingle();
 
-        cut.Find("button[aria-label^='Undo']").Click();
+        cut.Find(".tm-toolbar button.tm-toolbar-btn[aria-label^='Undo']").Click();
 
         doc.Elements.Should().BeEmpty();
     }
@@ -281,7 +293,7 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
         var doc = NewDocument();
         var cut = RenderEditor(null, doc);
 
-        var buttons = cut.FindAll(".tm-wd-editor__btn");
+        var buttons = cut.FindAll(".tm-wd-editor__toolbar .tm-toolbar-btn");
         buttons.Should().NotBeEmpty();
 
         foreach (var button in buttons)
@@ -291,7 +303,7 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
         }
 
         // Every icon-only button of the toolbar row carries an svg icon (and keeps its accessible name).
-        var iconOnly = cut.FindAll(".tm-wd-editor__toolbar .tm-wd-editor__btn--icon");
+        var iconOnly = cut.FindAll(".tm-wd-editor__toolbar .tm-toolbar-btn--icon-only");
         iconOnly.Should().NotBeEmpty();
         foreach (var button in iconOnly)
         {
@@ -307,8 +319,9 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
 
         cut.Find("button[aria-label='Zoom out'] svg.tm-icon").Should().NotBeNull();
         cut.Find("button[aria-label='Zoom in'] svg.tm-icon").Should().NotBeNull();
-        cut.Find("button[aria-label='Hide toolbox'] svg.tm-icon").Should().NotBeNull();
-        cut.Find("button[aria-label='Hide properties panel'] svg.tm-icon").Should().NotBeNull();
+        OpenMore(cut);
+        cut.FindAll("[role='menu'] [role='menuitemcheckbox']").Select(i => i.TextContent.Trim())
+            .Should().Contain(["Components panel", "Properties panel"]);
     }
 
     [Fact]

@@ -29,6 +29,17 @@ public class WireframeAuthoringGuideToolsTests
     }
 
     [Fact]
+    public void GetAuthoringGuide_DocumentsOptionalElementName()
+    {
+        var root = Parse(WireframeAuthoringGuideTools.GetAuthoringGuideScoped(SmallRegistry(), compact: true));
+
+        root.GetProperty("layoutOps").GetProperty("commonParams").EnumerateArray()
+            .Select(p => p.GetString()).Should().Contain("name");
+        root.GetProperty("elementFields").GetProperty("name").GetString()
+            .Should().Contain("human-readable");
+    }
+
+    [Fact]
     public void GetAuthoringGuide_DefaultFull_DoesNotPageWithoutExplicitTake()
     {
         var root = Parse(WireframeAuthoringGuideTools.GetAuthoringGuideScoped(LargeRegistry(205)));

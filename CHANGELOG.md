@@ -69,6 +69,17 @@
 
 ### Added
 
+- **Wireframe editor restructured onto `TmEditorShell` (redesign plan ce19aa8c, phase 4; WF1, WF2, WF3).** The desktop editor follows the
+  reference hierarchy: an opt-in header (`ShowHeader`, `HeaderStart`, `HeaderActions`, `Title` — the host brings its own Open/Save), ONE
+  `TmToolbar` command row (named groups, per-button `Priority`, `Labels=Auto`, `Overflow=Menu`, Export as the pinned primary action), a left
+  panel with *Components* / *Pages* / *Layers* tabs (`TmWireframeSidePanel`, internal; tabs mount lazily so a tab switch never re-renders the
+  canvas or the toolbox), the canvas and an inspector that, with nothing selected, offers **Canvas** (device presets Desktop, Laptop, Tablet,
+  iPhone 14, Android, Custom over the undoable `ResizeCanvasCommand`), **Page** and **Grid**. New parameters: `PageNavigation`
+  (`Tabs` default | `Panel`), `LayoutMode`, `LayoutBreakpoints` (mobile < 640, desktop ≥ 860), `ShowHeader`, `HeaderStart`, `HeaderActions`,
+  `Title`, `ShowGridChanged`, `GridSizeChanged`. New public components/types: `TmWireframePagesPanel`, `WireframePageNavigation`,
+  `RenameElementCommand`. Mobile/tablet presentation of the shell is the next plan phase; the desktop layout is complete.
+- **Wireframe element names (WF3).** `WireframeElement.Name`, the undoable `RenameElementCommand`, the inspector's *Name* field and the canvas
+  `aria-label` / `<title>` tooltip; the MCP tools set and return `name`.
 - **Wireframe layers panel: row menu, non-drag reorder and real semantics (redesign plan ce19aa8c, phase 3).**
   `TmWireframeLayersPanel` can now be driven entirely without a mouse and without dragging (WCAG 2.5.7):
   every row has a "⋯" menu (core `TmContextMenu`: **Rename layer**, **Move up**, **Move down**, **Delete layer**;
@@ -1174,6 +1185,75 @@
 
 ### Breaking / Migration
 
+- **`TmWireframeEditor` renders through the core `TmEditorShell`: new DOM, one `TmToolbar` command row, named groups and visible labels (redesign plan ce19aa8c, phase 4).**
+  Impact: a test, script or stylesheet that targeted the old structure must move. The editor was a flat column of
+  `.tm-wd-editor__toolbar` (≈35 hand-written `.tm-wd-editor__btn` buttons and four hand-rolled dropdowns), the page tabs, and a
+  `.tm-wd-editor__body` holding `__toolbox-wrap`, `__canvas-area` and `__props-wrap` (properties **and** layers stacked). It is
+  now a `TmEditorShell` (`data-region="header|toolbar|main|left|canvas|right"`) whose command row is ONE core `TmToolbar`
+  (`Overflow=Menu`, `Labels=Auto`) with named, labelled groups (`data-tm-group` = `tools`, `history`, `arrange`, `group`,
+  `align`, `snap`, `format`, `view`, `zoom`, `file`, each `role="group"` with an `aria-label`), a `Priority` on every button
+  (the lowest priority leaves the bar first, into the "More" menu), and a pinned **Export** primary button. The classes
+  `.tm-wd-editor`, `__title`, `__canvas-wrap`, `__canvas-area`, `__page-tab*`, `__zoom-label`, `__minimap-wrap`, `__error-banner`, the
+  whole `.tm-wd-toolbox__*`, `.tm-wd-props__*`, `.tm-wd-layers__*` families and `data-el-id` / `.tm-wd-canvas__svg` are unchanged.
+  Removed: `.tm-wd-editor__body`, `__toolbox-wrap`, `__props-wrap`, `__btn` / `__btn--icon` / `__btn--active` / `__btn--text` on the
+  **toolbar** (the buttons are `.tm-toolbar-btn`; the classes stay for the inspector's buttons), `__dropdown*`,
+  `__canvas-size-input`, `__btn--canvas-size`, `__toolbar-sep`. Before / after:
+  ```csharp
+  // before: ToolbarSelector = ".tm-wd-editor__toolbar button[aria-label='Undo']", Export = ".tm-wd-editor__dropdown-wrap:has-text('Export')"
+  page.Locator(".tm-wd-editor__btn[aria-label*='Lock' i]");            // every command was a bar button
+  page.Locator(".tm-wd-editor__dropdown-item", new() { HasText = "PNG" });
+  // after: toolbar buttons are core toolbar buttons, menus are TmDropdown items with data-testid
+  page.Locator(".tm-toolbar button.tm-toolbar-btn[aria-label^='Lock']");   // or the entry in the "More" menu when the bar is narrow
+  page.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger");    // Export (pinned primary button)
+  page.Locator("[data-testid='wd-export-png']");                           // Export ▸ PNG
+  ```
+  Migrate: use `data-testid`s (`wd-export`, `wd-export-json|svg|png|pdf`, `wd-align`, `wd-distribute`, `wd-import`, `wd-device-preset`,
+  `wd-canvas-width|height|apply`, `wd-page-name`, `wd-grid-show|size`, `wd-element-name`, `wd-delete-element`, `wd-page-add`) and the
+  `data-tm-group` groups instead of positional selectors; a command that is not on the bar is in the "More" menu
+  (`button.tm-toolbar-more`), where its entry carries the visible label.
+- **Wireframe editor: format painter, Read-only, rulers and the panel toggles moved into the toolbar's "More" menu; canvas size moved to the inspector.**
+  Impact: the Copy style / Paste style / Paste size buttons, the Read-only/Edit toggle, the rulers toggle and the toolbox /
+  properties toggles are no longer on the bar. They are checkable or plain entries of "More" (`role="menuitemcheckbox"` for Read-only,
+  Show rulers, Components panel, Properties panel — the host-pinned `ReadOnly="true"` still hides the Read-only entry).
+  The format painter also stays in the inspector's *Format painter* section. The `1280×800` canvas-size button with its inline
+  inputs is gone: with an empty selection the inspector's **Canvas** section has the device preset, width/height and **Apply**.
+  Before: `button[aria-label='Switch to read-only mode']`, `button[aria-label='Show rulers']`, `.tm-wd-editor__btn--canvas-size`.
+  After: open `button.tm-toolbar-more` and click the `Read-only` / `Show rulers` entry; use `[data-testid='wd-canvas-width']` etc.
+- **Wireframe editor: `ShowToolbox` / `ShowPropertiesPanel` now drive the shell panels (kept as parameters, now aliases).**
+  `ShowToolbox` = the *Components* tab, `ShowPropertiesPanel` = the right inspector **and** the *Layers* tab (the layers panel
+  moved from the bottom of the right column into the left panel, rendered with `ShowCollapseToggle="false"`). Both parameters keep
+  their names and defaults; collapsing a panel is now shell state (the strip toggles and the More-menu entries). With both off the
+  left panel is not rendered. `TmWireframeLayersPanel` stays public and unchanged outside the editor.
+  Before: `<TmWireframeEditor ShowPropertiesPanel="false" />` hid the inspector and the layers. After: the same markup hides both
+  (the Layers tab with it); `ShowToolbox="false"` alone keeps the Layers tab.
+- **Wireframe editor: the page tabs are one of two presentations (`PageNavigation`), the default is unchanged.**
+  `PageNavigation="Tabs"` (default) keeps the horizontal tabs and the *Components* / *Layers* left tabs. `PageNavigation="Panel"`
+  adds a *Pages* tab (the new public `TmWireframePagesPanel`: numbered list, "⋯" Rename / Duplicate / Move up / Move down / Delete,
+  Alt+↑/↓, drag, "+ Add page") and drops the horizontal tabs. Page operations stay non-undoable. The demo page switched to `Panel`
+  and moved its "Open…" button into the new `HeaderActions` slot. Migrate: nothing, unless you want the panel:
+  ```razor
+  <TmWireframeEditor @bind-Document="doc" PageNavigation="WireframePageNavigation.Panel">
+      <HeaderActions><button @onclick="OpenAsync">Open…</button></HeaderActions>
+  </TmWireframeEditor>
+  ```
+- **Wireframe editor: `ShowGrid` / `GridSize` are no longer assigned by the component and the grid is edited in the inspector.**
+  Same contract as `ReadOnly` / `ShowRulers`: the inspector's *Grid* section keeps an internal state and raises the new
+  `ShowGridChanged` / `GridSizeChanged` (`@bind-ShowGrid`, `@bind-GridSize`); a changed parameter is adopted again. The context menu's
+  *Hide/Show grid* goes through the same path (before it assigned the parameter). Hosts that only set the initial value are unaffected.
+- **Wireframe editor: the left toolbox is a 3-column grid of icon tiles.** `WireframeComponentDef.Icon` is rendered as a `TmIcon`
+  (`.tm-wd-toolbox__item-icon`); the mini stencil SVG (`.tm-wd-toolbox__item-preview-paper`) remains only as the fallback when the
+  icon is missing or not drawable. Search and filters are unchanged. A selector on `.tm-wd-toolbox__item-preview-paper` must accept
+  tiles without it.
+- **Wireframe inspector with an empty selection shows Canvas / Page / Grid instead of a hint (additive).**
+  Device presets (Desktop 1440×900, Laptop 1280×800, Tablet 1024×768, iPhone 14 390×844, Android 360×800, Custom) push the undoable
+  `ResizeCanvasCommand`; the Page section renames the active page; with a selection, *Element* has a **Name** field and a **Delete element**
+  button. New `TmWireframePropertiesPanel` parameters: `ShowGrid` / `ShowGridChanged`, `GridSize` / `GridSizeChanged`, `OnCanvasResized`,
+  `OnDelete` (all optional; without `OnDelete` the panel pushes `RemoveElementsCommand` itself).
+- **New `WireframeElement.Name` (additive, `string?`).** An optional human-readable element name: serialised as `name` (omitted when
+  null, so existing documents are byte-identical), shown in the inspector, used as the canvas element's `aria-label` and tooltip, set and
+  returned by the MCP wireframe tools (`name` on `addElement` / `updateElement` / the author payload, in `wireframe_get_document`, the
+  implementation brief and the authoring guide) and described in `wireframe-document.schema.json`. A strict consumer of the
+  JSON schema that rejected unknown element properties must accept `name`.
 - **`TmWireframeLayersPanel` DOM: the active layer is a `role="radio"` button inside a `radiogroup`, and the
   visibility/lock buttons are toggles.** Impact: a test, script or stylesheet that relied on the old structure
   must move. The list was `role="list"` of `role="listitem"` rows whose "active" control was a plain `<button>`

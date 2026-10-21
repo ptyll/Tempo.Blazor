@@ -75,8 +75,8 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
                 await Shot(page.Locator(".tm-wd-editor").First, WireframeDirectory, $"editor--{tag}");
                 await HideDemoChromeAsync(page);   // the minimap card would intercept the toolbar clicks below
 
-                await editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export') > button").First.ClickAsync();
-                await editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" }).First.ClickAsync();
+                await editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First.ClickAsync();
+                await page.Locator("[data-testid='wd-export-png']").First.ClickAsync();
                 await page.WaitForSelectorAsync(".tm-wd-export-dialog",
                     new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
                 await SettleAnimationsAsync(page);
@@ -149,7 +149,7 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
             """
             () => {
                 const toolbar = document.querySelector('.tm-wd-editor .tm-wd-editor__toolbar');
-                const buttons = [...toolbar.querySelectorAll('.tm-wd-editor__btn--icon')];
+                const buttons = [...toolbar.querySelectorAll('.tm-toolbar-btn--icon-only:not(.tm-toolbar-item--collapsed)')];
                 const heights = buttons.map(b => Math.round(b.getBoundingClientRect().height));
                 const widths = buttons.map(b => Math.round(b.getBoundingClientRect().width));
                 const glyphs = /[\u2196\u270B\u21A9\u21AA\u{1F512}\u{1F4C1}\u{1F4C2}\u{1F9F2}\u{1F4CF}\u{1F3A8}\u{1F58C}\u{1F4D0}\u25E7\u25E8]/u;
@@ -159,15 +159,15 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
             }
             """);
 
-        Assert.IsTrue(metrics.GetProperty("count").GetInt32() >= 10, "the toolbar renders its icon buttons");
-        Assert.AreEqual(32, metrics.GetProperty("min").GetInt32(), "toolbar buttons are 32px (was 26px)");
-        Assert.AreEqual(32, metrics.GetProperty("max").GetInt32());
+        // Phase 4: the command row is a core TmToolbar. Icon-only buttons (zoom) keep a >=32px target and render a TmIcon.
+        Assert.IsTrue(metrics.GetProperty("count").GetInt32() >= 2, "the toolbar renders its icon-only buttons (zoom in / out)");
+        Assert.IsTrue(metrics.GetProperty("min").GetInt32() >= 32, "toolbar icon buttons are at least 32px high");
         Assert.IsTrue(metrics.GetProperty("minW").GetInt32() >= 32, "icon buttons are at least 32px wide");
         Assert.AreEqual(0, metrics.GetProperty("withGlyph").GetInt32(), "no emoji / unicode glyph in a toolbar button");
         Assert.AreEqual(metrics.GetProperty("count").GetInt32(), metrics.GetProperty("withIcon").GetInt32(), "every icon button renders a TmIcon svg");
 
         // Keyboard focus ring: Tab onto a toolbar button paints the core two-layer ring (box-shadow), not nothing.
-        await page.Locator(".tm-wd-editor__toolbar .tm-wd-editor__btn--icon").First.FocusAsync();
+        await page.Locator(".tm-wd-editor__toolbar .tm-toolbar-btn").First.FocusAsync();
         await page.Keyboard.PressAsync("Tab");
         await page.Keyboard.PressAsync("Shift+Tab");
         var ring = await page.EvaluateAsync<string>(
@@ -188,7 +188,8 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
 
         // The second demo editor is host-pinned ReadOnly="true" but hides its toolbox, so the first (editable) editor is
         // switched to read-only with its built-in toggle and ITS toolbox must then be muted.
-        await page.Locator(".tm-wd-editor").First.Locator("button[aria-label='Switch to read-only mode']").First.ClickAsync();
+        await page.Locator(".tm-wd-editor").First.Locator("button.tm-toolbar-more").ClickAsync();
+        await page.Locator("[role='menu'] [role='menuitemcheckbox']").Filter(new() { HasTextString = "Read-only" }).First.ClickAsync();
         var readOnlyItem = page.Locator(".tm-wd-editor").First.Locator(".tm-wd-toolbox__item").First;
         await readOnlyItem.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10_000 });
         Assert.IsTrue(await readOnlyItem.CountAsync() > 0, "the read-only editor must still render its (inert) toolbox items");
@@ -199,7 +200,8 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
         // Back to edit mode, then Space on a focused item of the EDITABLE toolbox: the palette must not scroll (keydown default cancelled)
         // while activation still happens exactly once, on keyup.
         var editor = page.Locator(".tm-wd-editor").First;
-        await editor.Locator("button[aria-label='Switch to edit mode']").First.ClickAsync();
+        await editor.Locator("button.tm-toolbar-more").ClickAsync();
+        await page.Locator("[role='menu'] [role='menuitemcheckbox']").Filter(new() { HasTextString = "Read-only" }).First.ClickAsync();
         var item = editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First;
         await item.FocusAsync();
         var scrollBefore = await editor.Locator(".tm-wd-toolbox__list").EvaluateAsync<double>("el => el.scrollTop");
@@ -258,11 +260,11 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
                 const props = editor.querySelector('.tm-wd-props');
                 const workspace = editor.querySelector('.tm-wd-editor__canvas-wrap');
                 const page = editor.querySelector('.tm-wd-canvas__svg > rect');
-                const preview = editor.querySelector('.tm-wd-toolbox__item-preview-paper');
+                const preview = editor.querySelector('.tm-wd-toolbox__item-preview-paper');   // null when every visible tile shows an icon
                 const bg = el => getComputedStyle(el).backgroundColor;
                 const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); const k = c.startsWith("color(") ? 1 : 1 / 255; return (0.2126*m[0] + 0.7152*m[1] + 0.0722*m[2]) * k; };
                 return {
-                    toolbar: bg(toolbar), toolbox: bg(toolbox.parentElement), props: bg(props.parentElement), workspace: bg(workspace),
+                    toolbar: bg(toolbar), toolbox: bg(toolbox.closest('.tm-editor-shell__panel') ?? toolbox.parentElement), props: bg(props.closest('.tm-editor-shell__panel') ?? props.parentElement), workspace: bg(workspace),
                     pageFill: getComputedStyle(page).fill, preview: preview ? bg(preview) : null,
                     toolbarLum: lum(bg(toolbar)), workspaceLum: lum(bg(workspace)),
                     toolboxHex: getComputedStyle(editor).getPropertyValue('--tm-wd-accent').trim()

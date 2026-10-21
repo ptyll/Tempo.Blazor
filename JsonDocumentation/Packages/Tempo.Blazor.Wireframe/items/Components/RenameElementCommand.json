@@ -1,0 +1,38 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Wireframe.Commands",
+  "description": "Renames a single wireframe element (sets WireframeElement.Name). Undoable - the old name is supplied explicitly so Undo() can restore it; a null or whitespace new name clears the name. Pushed by the properties panel's Name field.",
+  "packageId": "Tempo.Blazor.Wireframe",
+  "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/Commands/RenameElementCommand.cs",
+  "documentationStatus": "generated",
+  "itemName": "RenameElementCommand",
+  "members": [
+    {
+      "name": "RenameElementCommand",
+      "type": "RenameElementCommand(WireframeDocument doc, string elementId, string? oldName, string? newName)",
+      "description": "Creates the command; oldName may be null when the element was unnamed."
+    },
+    {
+      "name": "Name",
+      "type": "string",
+      "description": "Human-readable label shown in undo/redo tooltips."
+    },
+    {
+      "name": "Execute",
+      "type": "void Execute()",
+      "description": "Applies the change to the document."
+    },
+    {
+      "name": "Undo",
+      "type": "void Undo()",
+      "description": "Restores the name captured before Execute() ran."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Use RenameElementCommand",
+      "code": "commandStack.Push(new RenameElementCommand(document, element.Id, element.Name, \"Login button\"));"
+    }
+  ]
+}

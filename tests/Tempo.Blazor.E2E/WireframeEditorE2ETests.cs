@@ -58,6 +58,38 @@ public class WireframeEditorE2ETests : WasmTestBase
 
     private static ILocator FirstEditor(IPage page) => page.Locator(".tm-wd-editor").First;
 
+    /// <summary>
+    /// The third demo editor (custom component provider) keeps the DEFAULT <c>PageNavigation=Tabs</c>: the horizontal
+    /// page tabs of the pre-shell editor. The first editor is the interactive one with <c>PageNavigation=Panel</c>.
+    /// </summary>
+    private static ILocator TabsEditor(IPage page) => page.Locator(".tm-wd-editor").Nth(2);
+
+    /// <summary>Opens a tab (Components / Pages / Layers) of the editor's left panel.</summary>
+    private static async Task OpenLeftTabAsync(IPage page, ILocator editor, string title)
+    {
+        await editor.Locator("[data-region='left'] [role='tab']", new() { HasTextString = title }).ClickAsync();
+        await page.WaitForTimeoutAsync(300);
+    }
+
+    /// <summary>Opens the toolbar "More" menu of the editor.</summary>
+    private static async Task OpenMoreAsync(IPage page, ILocator editor)
+    {
+        await editor.Locator("button.tm-toolbar-more").ClickAsync();
+        await page.Locator("[role='menu']").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+    }
+
+    /// <summary>
+    /// A toolbar command: the bar button (tooltip prefix) while it is on the bar, otherwise its entry in the "More" menu
+    /// (opened here; the menu entry carries the visible label). At a narrow editor width the bar collapses commands into "More".
+    /// </summary>
+    private static async Task<ILocator> CommandAsync(IPage page, ILocator editor, string tooltipPrefix, string menuText)
+    {
+        var bar = editor.Locator($".tm-toolbar button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)[aria-label^='{tooltipPrefix}']");
+        if (await bar.CountAsync() > 0) return bar.First;
+        await OpenMoreAsync(page, editor);
+        return page.Locator("[role='menu'] [role='menuitem'], [role='menu'] [role='menuitemcheckbox']").Filter(new() { HasTextString = menuText }).First;
+    }
+
     /// <summary>Waits until the FIRST editor holds exactly <paramref name="count"/> elements (no fixed sleep).</summary>
     private static Task WaitForElementCountAsync(IPage page, int count) =>
         page.WaitForFunctionAsync(
@@ -163,15 +195,14 @@ public class WireframeEditorE2ETests : WasmTestBase
         var rulers = editor.Locator(".tm-wd-ruler");
         Assert.AreEqual(0, await rulers.CountAsync(), "Rulers should be hidden by default");
 
-        // Toggle on
-        var rulerBtn = editor.Locator("button[aria-label*='Rulers' i], button[title*='Rulers' i]").First;
-        await rulerBtn.ClickAsync();
+        // Toggle on (the rulers toggle lives in the toolbar's "More" menu)
+        await (await CommandAsync(page, editor, "Show rulers", "Show rulers")).ClickAsync();
         await page.WaitForTimeoutAsync(600);
 
         Assert.AreEqual(2, await rulers.CountAsync(), "Should have horizontal and vertical rulers after toggle");
 
         // Toggle off
-        await rulerBtn.ClickAsync();
+        await (await CommandAsync(page, editor, "Show rulers", "Show rulers")).ClickAsync();
         await page.WaitForTimeoutAsync(600);
         Assert.AreEqual(0, await rulers.CountAsync(), "Rulers should be hidden after second toggle");
     }
@@ -189,6 +220,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     public async Task PageLoad_LayersPanelIsVisible()
     {
         var page = await PrepareWireframePageAsync();
+        await OpenLeftTabAsync(page, FirstEditor(page), "Layers");
         var layers = FirstEditor(page).Locator(".tm-wd-layers");
         await layers.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         Assert.IsTrue(await layers.IsVisibleAsync(), "Layers panel should be visible");
@@ -197,10 +229,23 @@ public class WireframeEditorE2ETests : WasmTestBase
     [TestMethod]
     public async Task PageLoad_PageTabsExist()
     {
+        // Default PageNavigation=Tabs (the third demo editor): today's horizontal page tabs, unchanged.
         var page = await PrepareWireframePageAsync();
-        var tabs = FirstEditor(page).Locator(".tm-wd-editor__page-tab");
+        var tabs = TabsEditor(page).Locator(".tm-wd-editor__page-tab");
         var count = await tabs.CountAsync();
         Assert.IsTrue(count >= 1, $"Should have at least one page tab, found {count}");
+        Assert.AreEqual(0, await TabsEditor(page).Locator(".tm-wd-pages").CountAsync(), "Tabs mode renders no Pages panel");
+    }
+
+    [TestMethod]
+    public async Task PageLoad_PagesPanel_ReplacesTheTabs_WhenPageNavigationIsPanel()
+    {
+        // The interactive demo editor uses PageNavigation=Panel: a Pages tab in the left panel, no horizontal tabs.
+        var page = await PrepareWireframePageAsync();
+        var editor = FirstEditor(page);
+        Assert.AreEqual(0, await editor.Locator(".tm-wd-editor__page-tab").CountAsync(), "Panel mode renders no horizontal page tabs");
+        await OpenLeftTabAsync(page, editor, "Pages");
+        Assert.IsTrue(await editor.Locator(".tm-wd-pages__item").CountAsync() >= 1, "the Pages tab lists the pages");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -461,18 +506,16 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var btn = editor.Locator("button[aria-label*='Snap to objects' i], button[title*='Snap to objects' i]").First;
-        await btn.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
-
-        var beforeClass = await btn.GetAttributeAsync("class");
-        var wasActive = beforeClass?.Contains("tm-wd-editor__btn--active") ?? false;
+        // At a narrow editor width Snap leaves the bar for the "More" menu; its checkable entry carries the same state.
+        var btn = await CommandAsync(page, editor, "Snap to objects", "Snap");
+        var wasActive = await btn.GetAttributeAsync("aria-pressed") == "true" || await btn.GetAttributeAsync("aria-checked") == "true";
 
         await btn.ClickAsync();
         await page.WaitForTimeoutAsync(400);
 
-        var afterClass = await btn.GetAttributeAsync("class");
-        var isActive = afterClass?.Contains("tm-wd-editor__btn--active") ?? false;
-        Assert.AreNotEqual(wasActive, isActive, "Snap to objects toggle should change active state");
+        var after = await CommandAsync(page, editor, "Snap to objects", "Snap");
+        var isActive = await after.GetAttributeAsync("aria-pressed") == "true" || await after.GetAttributeAsync("aria-checked") == "true";
+        Assert.AreNotEqual(wasActive, isActive, "Snap to objects toggle should change its pressed state");
     }
 
     [TestMethod]
@@ -490,12 +533,12 @@ public class WireframeEditorE2ETests : WasmTestBase
         await ClickSvgElementAsync(elements.First);
         await page.WaitForTimeoutAsync(300);
 
-        var sendToBackBtn = editor.Locator("button[aria-label*='Send to back' i], button[title*='Send to back' i]").First;
+        var sendToBackBtn = await CommandAsync(page, editor, "Send to back", "Backward");
         await sendToBackBtn.ClickAsync();
         await page.WaitForTimeoutAsync(400);
         Assert.IsTrue(await elements.CountAsync() >= 2, "Elements should still exist after Send to Back");
 
-        var bringToFrontBtn = editor.Locator("button[aria-label*='Bring to front' i], button[title*='Bring to front' i]").First;
+        var bringToFrontBtn = await CommandAsync(page, editor, "Bring to front", "Forward");
         await bringToFrontBtn.ClickAsync();
         await page.WaitForTimeoutAsync(400);
         Assert.IsTrue(await elements.CountAsync() >= 2, "Elements should still exist after Bring to Front");
@@ -509,11 +552,12 @@ public class WireframeEditorE2ETests : WasmTestBase
         await AddElementAsync(page);
         await SelectFirstElementAsync(page);
 
-        var lockBtn = editor.Locator("button[aria-label*='Lock' i], button[title*='Lock' i]").First;
+        var lockBtn = await CommandAsync(page, editor, "Lock", "Lock");
         await lockBtn.ClickAsync();
         await page.WaitForTimeoutAsync(400);
 
-        Assert.IsTrue(await lockBtn.IsVisibleAsync(), "Lock button should still be visible after click");
+        var toggled = await CommandAsync(page, editor, "Unlock", "Unlock");
+        Assert.IsTrue(await toggled.IsVisibleAsync(), "After Lock the command becomes Unlock");
     }
 
     [TestMethod]
@@ -531,7 +575,7 @@ public class WireframeEditorE2ETests : WasmTestBase
         await ShiftClickSvgElementAsync(elements.Nth(1));
         await page.WaitForTimeoutAsync(300);
 
-        var groupBtn = editor.Locator("button[aria-label='Group'], button[title='Group']").First;
+        var groupBtn = await CommandAsync(page, editor, "Group", "Group");
         if (await groupBtn.IsEnabledAsync())
         {
             await groupBtn.ClickAsync();
@@ -559,11 +603,19 @@ public class WireframeEditorE2ETests : WasmTestBase
         await ShiftClickSvgElementAsync(elements.Nth(1));
         await page.WaitForTimeoutAsync(300);
 
-        var alignBtn = editor.Locator("button[aria-label*='Align' i], button[title*='Align' i]").First;
-        await alignBtn.ClickAsync();
-        await page.WaitForTimeoutAsync(300);
+        // Align is a dropdown on the bar, or a group of entries in "More" once the bar runs out of room.
+        var barTrigger = editor.Locator(".tm-toolbar-item:not(.tm-toolbar-item--collapsed) [data-testid='wd-align'] button.tm-dropdown-trigger");
+        if (await barTrigger.CountAsync() > 0)
+        {
+            await barTrigger.ClickAsync();
+            await page.WaitForTimeoutAsync(300);
+        }
+        else
+        {
+            await OpenMoreAsync(page, editor);
+        }
 
-        var alignLeft = editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "Align left" });
+        var alignLeft = page.Locator("[data-testid='wd-align-left'], [role='menu'] [role='menuitem']").Filter(new() { HasTextString = "Align Left" }).First;
         await alignLeft.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 3000 });
         Assert.IsTrue(await alignLeft.IsVisibleAsync(), "Align Left option should be visible");
     }
@@ -586,11 +638,18 @@ public class WireframeEditorE2ETests : WasmTestBase
             await page.WaitForTimeoutAsync(200);
         }
 
-        var distBtn = editor.Locator("button[aria-label*='Distribute' i], button[title*='Distribute' i]").First;
-        await distBtn.ClickAsync();
-        await page.WaitForTimeoutAsync(300);
+        var barTrigger = editor.Locator(".tm-toolbar-item:not(.tm-toolbar-item--collapsed) [data-testid='wd-distribute'] button.tm-dropdown-trigger");
+        if (await barTrigger.CountAsync() > 0)
+        {
+            await barTrigger.ClickAsync();
+            await page.WaitForTimeoutAsync(300);
+        }
+        else
+        {
+            await OpenMoreAsync(page, editor);
+        }
 
-        var distHoriz = editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "Distribute horizontal" });
+        var distHoriz = page.Locator("[data-testid='wd-distribute-horizontal'], [role='menu'] [role='menuitem']").Filter(new() { HasTextString = "Distribute Horizontal" }).First;
         await distHoriz.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 3000 });
         Assert.IsTrue(await distHoriz.IsVisibleAsync(), "Distribute horizontal option should be visible");
     }
@@ -603,12 +662,13 @@ public class WireframeEditorE2ETests : WasmTestBase
         await AddElementAsync(page);
         await SelectFirstElementAsync(page);
 
-        var copyStyleBtn = editor.Locator("button[aria-label*='Copy style' i], button[title*='Copy style' i]").First;
-        await copyStyleBtn.ClickAsync();
+        // Format painter lives in the "More" menu (and in the inspector's Format painter section).
+        await (await CommandAsync(page, editor, "Copy style", "Copy style")).ClickAsync();
         await page.WaitForTimeoutAsync(400);
 
-        var pasteStyleBtn = editor.Locator("button[aria-label*='Paste style' i], button[title*='Paste style' i]").First;
-        Assert.IsTrue(await pasteStyleBtn.IsVisibleAsync(), "Paste style button should be visible");
+        var pasteStyleBtn = await CommandAsync(page, editor, "Paste style", "Paste style");
+        Assert.IsTrue(await pasteStyleBtn.IsVisibleAsync(), "Paste style entry should be reachable");
+        Assert.IsTrue(await pasteStyleBtn.IsEnabledAsync(), "after Copy style, Paste style is enabled");
     }
 
     [TestMethod]
@@ -638,7 +698,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     public async Task AddPage_CreatesNewTab()
     {
         var page = await PrepareWireframePageAsync();
-        var editor = FirstEditor(page);
+        var editor = TabsEditor(page);
         var before = await editor.Locator(".tm-wd-editor__page-tab").CountAsync();
 
         var addBtn = editor.Locator(".tm-wd-editor__page-tab-add");
@@ -653,7 +713,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     public async Task SwitchPage_ChangesActiveTab()
     {
         var page = await PrepareWireframePageAsync();
-        var editor = FirstEditor(page);
+        var editor = TabsEditor(page);
         var addBtn = editor.Locator(".tm-wd-editor__page-tab-add");
         await addBtn.ClickAsync();
         await page.WaitForTimeoutAsync(600);
@@ -673,7 +733,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     public async Task DeletePage_RemovesTab()
     {
         var page = await PrepareWireframePageAsync();
-        var editor = FirstEditor(page);
+        var editor = TabsEditor(page);
         var addBtn = editor.Locator(".tm-wd-editor__page-tab-add");
         await addBtn.ClickAsync();
         await page.WaitForTimeoutAsync(600);
@@ -698,6 +758,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
+        await OpenLeftTabAsync(page, editor, "Layers");
         var before = await editor.Locator(".tm-wd-layers__item").CountAsync();
 
         var addBtn = editor.Locator(".tm-wd-layers__add-btn");
@@ -713,6 +774,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
+        await OpenLeftTabAsync(page, editor, "Layers");
         var visibilityBtn = editor.Locator(".tm-wd-layers__visibility").First;
         await visibilityBtn.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
@@ -727,6 +789,7 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
+        await OpenLeftTabAsync(page, editor, "Layers");
         var addBtn = editor.Locator(".tm-wd-layers__add-btn");
         await addBtn.ClickAsync();
         await page.WaitForTimeoutAsync(600);
@@ -789,11 +852,11 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var exportBtn = editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First;
+        var exportBtn = editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First;
         await exportBtn.ClickAsync();
         await page.WaitForTimeoutAsync(300);
 
-        var pngOption = editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" });
+        var pngOption = page.Locator("[data-testid='wd-export-png']");
         await pngOption.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 3000 });
         Assert.IsTrue(await pngOption.IsVisibleAsync(), "PNG export option should be visible");
     }
@@ -803,11 +866,11 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var exportBtn = editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First;
+        var exportBtn = editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First;
         await exportBtn.ClickAsync();
         await page.WaitForTimeoutAsync(300);
 
-        var pngOption = editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" });
+        var pngOption = page.Locator("[data-testid='wd-export-png']");
         await pngOption.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
@@ -821,9 +884,9 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        await editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First.ClickAsync();
+        await editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First.ClickAsync();
 
-        await editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PDF" }).ClickAsync();
+        await page.Locator("[data-testid='wd-export-pdf']").ClickAsync();
 
         var format = page.Locator("#wd-export-format");
         await format.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
@@ -835,8 +898,8 @@ public class WireframeEditorE2ETests : WasmTestBase
         await page.Locator(".tm-modal button", new() { HasTextString = "Cancel" }).First.ClickAsync();
         await page.Locator(".tm-wd-export-dialog").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
 
-        await editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First.ClickAsync();
-        await editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" }).ClickAsync();
+        await editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First.ClickAsync();
+        await page.Locator("[data-testid='wd-export-png']").ClickAsync();
         await page.Locator("#wd-export-format").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         Assert.AreEqual("png", await page.Locator("#wd-export-format").InputValueAsync());
         Assert.AreNotEqual("typed-by-user", await page.Locator("#wd-export-filename").InputValueAsync(),
@@ -919,11 +982,11 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var exportBtn = editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First;
+        var exportBtn = editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First;
         await exportBtn.ClickAsync();
         await page.WaitForTimeoutAsync(300);
 
-        var pngOption = editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" });
+        var pngOption = page.Locator("[data-testid='wd-export-png']");
         await pngOption.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
@@ -946,11 +1009,11 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var exportBtn = editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First;
+        var exportBtn = editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First;
         await exportBtn.ClickAsync();
         await page.WaitForTimeoutAsync(300);
 
-        var pngOption = editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" });
+        var pngOption = page.Locator("[data-testid='wd-export-png']");
         await pngOption.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
@@ -973,15 +1036,16 @@ public class WireframeEditorE2ETests : WasmTestBase
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var toggleBtn = editor.Locator("button[aria-label*='Read-only' i], button[title*='Read-only' i], button[aria-label*='Edit' i]").First;
-        await toggleBtn.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
-
-        var textBefore = await toggleBtn.TextContentAsync();
-        await toggleBtn.ClickAsync();
+        // Read-only is a checkable entry of the "More" menu.
+        await OpenMoreAsync(page, editor);
+        var entry = page.Locator("[role='menu'] [role='menuitemcheckbox']").Filter(new() { HasTextString = "Read-only" }).First;
+        var before = await entry.GetAttributeAsync("aria-checked");
+        await entry.ClickAsync();
         await page.WaitForTimeoutAsync(600);
 
-        var textAfter = await toggleBtn.TextContentAsync();
-        Assert.AreNotEqual(textBefore, textAfter, "Toggle button text should change when switching read-only mode");
+        await OpenMoreAsync(page, editor);
+        var after = await page.Locator("[role='menu'] [role='menuitemcheckbox']").Filter(new() { HasTextString = "Read-only" }).First.GetAttributeAsync("aria-checked");
+        Assert.AreNotEqual(before, after, "The Read-only entry state should change when switching read-only mode");
     }
 
     [TestMethod]
@@ -1014,18 +1078,16 @@ public class WireframeEditorE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task CanvasSizeButton_OpensInputs()
+    public async Task CanvasSizeInputs_AreInTheInspectorOfAnEmptySelection()
     {
         var page = await PrepareWireframePageAsync();
         var editor = FirstEditor(page);
-        var sizeBtn = editor.Locator(".tm-wd-editor__btn--canvas-size");
-        await sizeBtn.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        var widthInput = editor.Locator("[data-testid='wd-canvas-width']");
+        await widthInput.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
-        await sizeBtn.ClickAsync();
-        await page.WaitForTimeoutAsync(400);
-
-        var widthInput = editor.Locator(".tm-wd-editor__canvas-size-input").First;
-        Assert.IsTrue(await widthInput.IsVisibleAsync(), "Canvas width input should appear");
+        Assert.IsTrue(await widthInput.IsVisibleAsync(), "Canvas width input is in the Canvas section");
+        Assert.IsTrue(await editor.Locator("[data-testid='wd-canvas-height']").IsVisibleAsync());
+        Assert.IsTrue(await editor.Locator("[data-testid='wd-device-preset']").IsVisibleAsync());
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

@@ -73,7 +73,16 @@
                                  @onkeydown="@((e) => OnItemKeyDown(e, def.Type))"
                                  @onkeyup="@((e) => OnItemKeyUp(e, def.Type))">
 
-                                @* SVG preview *@
+                                @if (HasResolvableIcon(def))
+                                {
+                                    @* Component icon (3-column grid tile) *@
+                                    <span class="tm-wd-toolbox__item-icon" aria-hidden="true">
+                                        <TmIcon Name="@def.Icon" Size="IconSize.Md" />
+                                    </span>
+                                }
+                                else
+                                {
+                                @* SVG preview fallback when the definition carries no icon *@
                                 <div class="tm-wd-toolbox__item-preview-paper" aria-hidden="true">
                                 <div class="tm-wd-toolbox__item-preview">
                                     <svg width="56" height="32"
@@ -91,6 +100,7 @@
                                     </svg>
                                 </div>
                                 </div>
+                                }
 
                                 @* Label + badge *@
                                 <span class="tm-wd-toolbox__item-name">@def.DisplayName</span>

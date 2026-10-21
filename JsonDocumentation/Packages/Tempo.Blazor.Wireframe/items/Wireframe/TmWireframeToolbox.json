@@ -2,7 +2,7 @@
   "itemName": "TmWireframeToolbox",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "Draggable component palette for the wireframe editor. Displays all registered WireframeComponentDef entries grouped by category with a search filter. Items are draggable onto TmWireframeDesignerCanvas via HTML drag-and-drop (data-component-type attribute). Custom components registered via IWireframeComponentProvider appear in a separate 'Custom' tab. Typically used as a child of TmWireframeEditor rather than directly.",
+  "description": "Draggable component palette for the wireframe editor. Displays all registered WireframeComponentDef entries grouped by category (a 3-column grid of tiles) with a search filter. A tile shows the component's TmIcon (WireframeComponentDef.Icon) and name; the mini stencil SVG preview is the fallback when the icon is missing or not drawable. Items are draggable onto TmWireframeDesignerCanvas via HTML drag-and-drop (data-component-type attribute). Custom components registered via IWireframeComponentProvider appear in a separate 'Custom' tab. Typically used as a child of TmWireframeEditor rather than directly.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],

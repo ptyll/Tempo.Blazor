@@ -3,16 +3,21 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Net.Http.Json;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Wireframe.Export;
+using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.Diagram.Models;
+using Tempo.Blazor.Components.Icons;
+using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Wireframe.Commands;
 using Tempo.Blazor.Components.Wireframe.Models;
 
 namespace Tempo.Blazor.Components.Wireframe;
 
 /// <summary>
-/// Top-level wireframe editor component. Composes the canvas, toolbox, properties panel,
-/// minimap, and toolbar into a fully working editor.
+/// Top-level wireframe editor component. Renders through the core <c>TmEditorShell</c> (toolbar row, left panel
+/// with Components / Pages / Layers tabs, canvas with rulers and minimap, inspector) and composes the canvas,
+/// toolbox, pages, layers, properties panel, minimap and a core <c>TmToolbar</c> into a fully working editor.
 ///
 /// <para>Creates and owns a <see cref="WireframeCommandStack"/> and exposes it to all child
 /// components via <c>CascadingValue</c>. Each editor instance has an isolated undo history,
@@ -65,10 +70,18 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     /// </summary>
     public bool IsReadOnly => ReadOnly || _userReadOnly;
 
-    /// <summary>Show the component toolbox panel on the left.</summary>
+    /// <summary>
+    /// Show the component toolbox: the Components tab of the left panel. When no tab is left (no toolbox, no Layers, no Pages)
+    /// the left panel is not rendered. Collapsing the panel is shell state: the shell's strip toggle or the Components
+    /// panel entry in the toolbar's "More" menu.
+    /// </summary>
     [Parameter] public bool ShowToolbox { get; set; } = true;
 
-    /// <summary>Show the properties panel on the right.</summary>
+    /// <summary>
+    /// Show the right-hand inspector and the Layers tab of the left panel (the two lived together in the right column
+    /// before the shell restructure). Collapsing the inspector is shell state: the shell's strip toggle or the
+    /// Properties panel entry in the toolbar's "More" menu.
+    /// </summary>
     [Parameter] public bool ShowPropertiesPanel { get; set; } = true;
 
     /// <summary>Show the minimap overlay in the bottom-right corner of the canvas.</summary>
@@ -77,17 +90,68 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     /// <summary>Show the top toolbar (title, zoom, undo/redo, export/import).</summary>
     [Parameter] public bool ShowToolbar { get; set; } = true;
 
-    /// <summary>Show grid lines on the canvas.</summary>
+    /// <summary>
+    /// Initial / host-driven visibility of the grid lines on the canvas. The component NEVER assigns this parameter —
+    /// the inspector's Grid section flips an internal state and reports it through <see cref="ShowGridChanged"/>.
+    /// </summary>
     [Parameter] public bool ShowGrid { get; set; } = true;
 
-    /// <summary>Snap-to-grid cell size. 0 = disabled.</summary>
+    /// <summary>Raised with the new value when the user toggles the grid in the inspector (use <c>@bind-ShowGrid</c>).</summary>
+    [Parameter] public EventCallback<bool> ShowGridChanged { get; set; }
+
+    /// <summary>
+    /// Initial / host-driven snap-to-grid cell size. 0 = snapping off. The component NEVER assigns this parameter — the
+    /// inspector's Grid section changes an internal value and reports it through <see cref="GridSizeChanged"/>.
+    /// </summary>
     [Parameter] public int GridSize { get; set; } = 8;
+
+    /// <summary>Raised with the new cell size when the user edits the grid size in the inspector (use <c>@bind-GridSize</c>).</summary>
+    [Parameter] public EventCallback<int> GridSizeChanged { get; set; }
 
     /// <summary>Additional CSS class on the editor root.</summary>
     [Parameter] public string? Class { get; set; }
 
-    /// <summary>Always show page tabs even when there is only one page.</summary>
+    /// <summary>
+    /// Show the page navigation (the horizontal page tabs, or the Pages tab of the left panel with
+    /// <see cref="PageNavigation"/> = <see cref="WireframePageNavigation.Panel"/>), even when there is only one page.
+    /// </summary>
     [Parameter] public bool ShowPageTabs { get; set; } = true;
+
+    /// <summary>
+    /// Where the pages of the document are presented. <see cref="WireframePageNavigation.Tabs"/> (default) keeps the
+    /// horizontal page tabs above the canvas (the Components and Layers tabs in the left panel);
+    /// <see cref="WireframePageNavigation.Panel"/> adds a Pages tab (<see cref="TmWireframePagesPanel"/>) to the left
+    /// panel and drops the horizontal tabs.
+    /// </summary>
+    [Parameter] public WireframePageNavigation PageNavigation { get; set; } = WireframePageNavigation.Tabs;
+
+    /// <summary>
+    /// How the editor resolves its layout: <see cref="TmLayoutMode.Auto"/> (default) measures the editor's own container
+    /// against <see cref="LayoutBreakpoints"/>; a forced mode pins the shell's presentation (used by tests and host layouts).
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// Per-instance layout thresholds for the editor container. <c>null</c> uses the editor default: mobile below 640,
+    /// desktop from 860 (the docked left panel, the canvas and the inspector need about that much room).
+    /// </summary>
+    [Parameter] public TmLayoutBreakpoints? LayoutBreakpoints { get; set; }
+
+    /// <summary>
+    /// Show the shell header row. <c>false</c> (default) keeps the pre-shell look: the document title sits at the start of
+    /// the toolbar row and no header renders — unless a host supplies <see cref="HeaderStart"/>, <see cref="HeaderActions"/>
+    /// or <see cref="Title"/>, which opens the header on its own. With a header the built-in title moves into it.
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; }
+
+    /// <summary>Host content rendered at the start of the header, before the title (G9 host slot). There is no built-in Save or Open: hosts supply their own actions here.</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Host content rendered at the end of the header, after the title (G9 host slot).</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>Host content that replaces the built-in editable document title (G9 host slot). Opens the header like <see cref="HeaderStart"/>.</summary>
+    [Parameter] public RenderFragment? Title { get; set; }
 
     /// <summary>
     /// Initial / host-driven visibility of the rulers around the canvas. The component NEVER assigns
@@ -144,22 +208,26 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     private double? _rulerCursorX;
     private double? _rulerCursorY;
 
-    private bool _toolboxCollapsed;
-    private bool _propsCollapsed;
-    private bool _exportMenuOpen;
+    // Shell state: the user's collapse of the left / right panel, the tablet "one expanded" rails and the resolved layout.
+    private static readonly TmLayoutBreakpoints EditorBreakpoints = new(640, 860);
+    private bool _leftOpen = true;
+    private bool _rightOpen = true;
+    private EditorShellPanel _collapsedPanels;
+    private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
+
+    // Grid state: seeded from / re-adopted from the [Parameter]s, which are never assigned.
+    private bool _showGrid = true;
+    private int _gridSize = 8;
+    private bool? _lastHostShowGrid;
+    private int? _lastHostGridSize;
+
     private bool _exportDialogOpen;
     private string? _exportDialogFormat;
-    private bool _alignMenuOpen;
-    private bool _distributeMenuOpen;
     private string? _importError;
 
     // Tool mode: 'select' | 'pan' | 'connector'
     private string _toolMode = "select";
 
-    // Canvas size editing
-    private bool   _canvasSizeEditing;
-    private string _canvasWInput = "";
-    private string _canvasHInput = "";
     private bool   _snapToObjects;
     private bool   _hasStyleOnClipboard => WireframeClipboard.HasStyle;
 
@@ -203,6 +271,18 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             _showRulers = ShowRulers;
         }
 
+        if (_lastHostShowGrid != ShowGrid)
+        {
+            _lastHostShowGrid = ShowGrid;
+            _showGrid = ShowGrid;
+        }
+
+        if (_lastHostGridSize != GridSize)
+        {
+            _lastHostGridSize = GridSize;
+            _gridSize = GridSize;
+        }
+
         // If the caller supplies a new Document reference, adopt it and clear stacks.
         if (Document is not null && !ReferenceEquals(Document, _document))
         {
@@ -241,7 +321,19 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     private async Task OnDocumentChanged(WireframeDocument doc)
     {
         _document = doc;
+        PruneCommandStacks();
         await DocumentChanged.InvokeAsync(doc);
+    }
+
+    /// <summary>Drops the undo history of pages that no longer exist (deleted through the page tabs or the Pages panel).</summary>
+    private void PruneCommandStacks()
+    {
+        if (_document is null) return;
+        foreach (var id in _pageCommandStacks.Keys.Where(k => _document.Pages.All(p => p.Id != k)).ToList())
+        {
+            if (_pageCommandStacks.Remove(id, out var stack))
+                stack.OnStackChanged -= OnStackChanged;
+        }
     }
 
     // ── Selection ─────────────────────────────────────────────────────────────
@@ -369,28 +461,6 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     {
         _toolMode = mode;
         StateHasChanged();
-    }
-
-    // ── Toolbar: Canvas size ──────────────────────────────────────────────────
-
-    private void OpenCanvasSize()
-    {
-        _canvasWInput = ((int)(_activePage?.Width  ?? 1280)).ToString();
-        _canvasHInput = ((int)(_activePage?.Height ?? 800)).ToString();
-        _canvasSizeEditing = true;
-    }
-
-    private async Task ApplyCanvasSize()
-    {
-        _canvasSizeEditing = false;
-        if (_activePage is null || IsReadOnly) return;
-        if (!double.TryParse(_canvasWInput, out var w) || w < 100) return;
-        if (!double.TryParse(_canvasHInput, out var h) || h < 100) return;
-        if (Math.Abs(w - _activePage.Width) < 0.5 && Math.Abs(h - _activePage.Height) < 0.5) return;
-
-        _commandStack.Push(new Commands.ResizeCanvasCommand(_document!, _activePage.Width, _activePage.Height, w, h));
-        if (_canvas is not null) await _canvas.UpdateCanvasSize(w, h);
-        await OnDocumentChanged(_document!);
     }
 
     // ── Toolbar: Title ────────────────────────────────────────────────────────
@@ -671,11 +741,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         await RerenderCanvas();
     }
 
-    private async Task ContextMenuToggleGrid()
-    {
-        ShowGrid = !ShowGrid;
-        StateHasChanged();
-    }
+    private async Task ContextMenuToggleGrid() => await OnInspectorShowGridChanged(!_showGrid);
 
     private async Task ContextMenuToggleSnapToObjects()
     {
@@ -709,6 +775,123 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         await RerenderCanvas();
     }
 
+
+    // ── Shell integration (phase 4) ───────────────────────────────────────────
+
+    private bool HasHeader => ShowHeader || HeaderStart is not null || HeaderActions is not null || Title is not null;
+
+    private bool ShowsPageTabs => PageNavigation == WireframePageNavigation.Tabs && ShowPageTabs && _document?.Pages.Count > 0;
+
+    private bool ShowsPagesTab => PageNavigation == WireframePageNavigation.Panel && ShowPageTabs && _document?.Pages.Count > 0;
+
+    /// <summary>The left panel exists while at least one of its tabs (Components, Pages, Layers) is available.</summary>
+    private bool HasLeftContent => ShowToolbox || ShowPropertiesPanel || ShowsPagesTab;
+
+    private bool SelectionLocked => _selectedIds.Length > 0 && IsSelectionLocked();
+
+    private void OnShellResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        _resolvedLayout = mode;
+        StateHasChanged();
+    }
+
+    private void OnShellLeftOpenChanged(bool open) => _leftOpen = open;
+
+    private void OnShellRightOpenChanged(bool open) => _rightOpen = open;
+
+    private void OnShellCollapsedPanelsChanged(EditorShellPanel collapsed) => _collapsedPanels = collapsed;
+
+    private void ToggleLeftPanel() => _leftOpen = !_leftOpen;
+
+    private void ToggleRightPanel() => _rightOpen = !_rightOpen;
+
+    // ── Toolbar: Align / Distribute dropdowns and their "More" entries ────────
+
+    private static readonly (string Value, string LabelKey, string Icon)[] AlignChoices =
+    [
+        ("left", "TmWireframe_AlignLeft", IconNames.AlignLeft),
+        ("centerh", "TmWireframe_AlignCenterH", IconNames.AlignCenter),
+        ("right", "TmWireframe_AlignRight", IconNames.AlignRight),
+        ("top", "TmWireframe_AlignTop", IconNames.ArrowUpFromLine),
+        ("centerv", "TmWireframe_AlignCenterV", IconNames.AlignVerticalDistributeCenter),
+        ("bottom", "TmWireframe_AlignBottom", IconNames.ArrowDownToLine),
+    ];
+
+    private IReadOnlyList<TmActionItem> AlignMenuItems => AlignChoices
+        .Select(c => new TmActionItem
+        {
+            Id = "wd-align-" + c.Value,
+            Label = Loc[c.LabelKey],
+            Icon = c.Icon,
+            Disabled = _selectedIds.Length < 2 || IsReadOnly,
+            OnClick = EventCallback.Factory.Create(this, () => HandleAlignSelect(c.Value)),
+        })
+        .ToList();
+
+    private IReadOnlyList<TmActionItem> DistributeMenuItems =>
+    [
+        new TmActionItem
+        {
+            Id = "wd-distribute-horizontal",
+            Label = Loc["TmWireframe_DistributeHorizontal"],
+            Disabled = _selectedIds.Length < 3 || IsReadOnly,
+            OnClick = EventCallback.Factory.Create(this, () => HandleDistributeSelect("horizontal")),
+        },
+        new TmActionItem
+        {
+            Id = "wd-distribute-vertical",
+            Label = Loc["TmWireframe_DistributeVertical"],
+            Disabled = _selectedIds.Length < 3 || IsReadOnly,
+            OnClick = EventCallback.Factory.Create(this, () => HandleDistributeSelect("vertical")),
+        },
+    ];
+
+    private Task HandleAlignSelect(string value) => value switch
+    {
+        "left" => OnAlign(WireframeAlignment.Left),
+        "centerh" => OnAlign(WireframeAlignment.CenterH),
+        "right" => OnAlign(WireframeAlignment.Right),
+        "top" => OnAlign(WireframeAlignment.Top),
+        "centerv" => OnAlign(WireframeAlignment.CenterV),
+        "bottom" => OnAlign(WireframeAlignment.Bottom),
+        _ => Task.CompletedTask,
+    };
+
+    private Task HandleDistributeSelect(string value) => value switch
+    {
+        "horizontal" => OnDistribute(WireframeDistribution.Horizontal),
+        "vertical" => OnDistribute(WireframeDistribution.Vertical),
+        _ => Task.CompletedTask,
+    };
+
+    // ── Inspector callbacks ───────────────────────────────────────────────────
+
+    private async Task OnInspectorShowGridChanged(bool show)
+    {
+        _showGrid = show;
+        await ShowGridChanged.InvokeAsync(show);
+        StateHasChanged();
+    }
+
+    private async Task OnInspectorGridSizeChanged(int size)
+    {
+        _gridSize = size;
+        if (_canvas is not null)
+            await JS.InvokeVoidAsync("tmWireframeDesigner.setGridSize", _canvas.GetSvgRef(), size);
+        await GridSizeChanged.InvokeAsync(size);
+        StateHasChanged();
+    }
+
+    private async Task OnInspectorCanvasResized((double Width, double Height) size)
+    {
+        if (_canvas is not null) await _canvas.UpdateCanvasSize(size.Width, size.Height);
+        StateHasChanged();
+    }
+
+    private Task OnDeleteFromInspector() => OnDeleteFromContextMenu();
+
+    /// <summary>The Pages tab switched, added, duplicated or deleted-the-active page: follow it (selection, history, layer).</summary>
+    private async Task OnPagesPanelActivePageChanged(string pageId) => await SwitchPage(pageId);
     // ── Toolbar: Zoom ─────────────────────────────────────────────────────────
 
     private static readonly double[] ZoomSteps = [0.25, 0.33, 0.5, 0.67, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
@@ -742,18 +925,19 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     // ── Toolbar: Export ───────────────────────────────────────────────────────
 
-    private void ToggleExportMenu() => _exportMenuOpen = !_exportMenuOpen;
-    private void CloseExportMenu()  => _exportMenuOpen = false;
-
-    private void ToggleAlignMenu() => _alignMenuOpen = !_alignMenuOpen;
-    private void CloseAlignMenu()  => _alignMenuOpen = false;
-
-    private void ToggleDistributeMenu() => _distributeMenuOpen = !_distributeMenuOpen;
-    private void CloseDistributeMenu()  => _distributeMenuOpen = false;
+    private async Task HandleExportSelect(string format)
+    {
+        switch (format)
+        {
+            case "json": await ExportJson(); break;
+            case "svg": await ExportSvg(); break;
+            case "png": ExportPng(); break;
+            case "pdf": ExportPdf(); break;
+        }
+    }
 
     private async Task ExportJson()
     {
-        _exportMenuOpen = false;
         if (_document is null) return;
         var json     = WireframeSerializer.Serialize(_document);
         var fileName = SanitizeFileName(_document.Title) + ".wireframe.json";
@@ -762,7 +946,6 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task ExportSvg()
     {
-        _exportMenuOpen = false;
         if (_canvas is null) return;
         var svg      = await _canvas.ExportSvg();
         var fileName = SanitizeFileName(_document?.Title ?? Loc["TmWireframe_ExportFilename"]) + ".svg";
@@ -778,14 +961,12 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private void ExportPng()
     {
-        _exportMenuOpen = false;
         _exportDialogFormat = "png";
         _exportDialogOpen = true;
     }
 
     private void ExportPdf()
     {
-        _exportMenuOpen = false;
         _exportDialogFormat = "pdf";
         _exportDialogOpen = true;
     }
@@ -935,10 +1116,10 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         var x = vx + vw / 2 - w / 2;
         var y = vy + vh / 2 - h / 2;
 
-        if (GridSize > 0)
+        if (_gridSize > 0)
         {
-            x = Math.Round(x / GridSize) * GridSize;
-            y = Math.Round(y / GridSize) * GridSize;
+            x = Math.Round(x / _gridSize) * _gridSize;
+            y = Math.Round(y / _gridSize) * _gridSize;
         }
 
         var maxX = Math.Max(0, (_activePage?.Width  ?? _document?.Width  ?? 1200) - w);
@@ -955,151 +1136,6 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             "tmWireframeDesigner.scrollTo",
             _canvas.GetSvgRef(),
             args.CentreX, args.CentreY);
-    }
-
-    // ── Page management ───────────────────────────────────────────────────────
-
-    private async Task AddPage()
-    {
-        if (_document is null || IsReadOnly) return;
-
-        var page = new WireframePage
-        {
-            Name = $"{Loc["TmWireframe_Page"]} {_document.Pages.Count + 1}",
-            Width = _activePage?.Width ?? 1280,
-            Height = _activePage?.Height ?? 800,
-        };
-
-        _document.Pages.Add(page);
-        await SwitchPage(page.Id);
-        await OnDocumentChanged(_document);
-    }
-
-    private async Task DuplicatePage()
-    {
-        if (_document is null || _activePage is null || IsReadOnly) return;
-
-        var json = System.Text.Json.JsonSerializer.Serialize(_activePage, WireframeJsonOptions.Default);
-        var copy = System.Text.Json.JsonSerializer.Deserialize<WireframePage>(json, WireframeJsonOptions.Default)!;
-        copy.Id = "p" + Guid.NewGuid().ToString("N")[..7];
-        copy.Name = $"{_activePage.Name} ({Loc["TmWireframe_Copy"]})";
-
-        _document.Pages.Add(copy);
-        await SwitchPage(copy.Id);
-        await OnDocumentChanged(_document);
-    }
-
-    private async Task DeletePage(string pageId)
-    {
-        if (_document is null || IsReadOnly) return;
-        if (_document.Pages.Count <= 1) return;
-
-        var page = _document.Pages.FirstOrDefault(p => p.Id == pageId);
-        if (page is null) return;
-
-        _document.Pages.Remove(page);
-        if (_pageCommandStacks.Remove(pageId, out var stack))
-            stack.OnStackChanged -= OnStackChanged;
-
-        // Switch to nearest page
-        var newActive = _document.Pages.FirstOrDefault();
-        if (newActive is not null)
-            await SwitchPage(newActive.Id);
-
-        await OnDocumentChanged(_document);
-    }
-
-    private async Task SwitchPage(string pageId)
-    {
-        if (_document is null || _activePage?.Id == pageId) return;
-
-        // Clear selection and context menu before switching
-        _selectedIds = [];
-        _ctxMenuOpen = false;
-        if (_canvas is not null)
-            await _canvas.ClearSelection();
-
-        _document.ActivePageId = pageId;
-        _activePage = _document.ActivePage;
-        _activeLayerId = _document.ActiveLayerId;
-
-        // Get or create command stack for the new page
-        if (_activePage is not null)
-        {
-            if (!_pageCommandStacks.TryGetValue(_activePage.Id, out var stack))
-            {
-                stack = new WireframeCommandStack();
-                stack.OnStackChanged += OnStackChanged;
-                _pageCommandStacks[_activePage.Id] = stack;
-            }
-            _commandStack = stack;
-        }
-
-        StateHasChanged();
-        await OnDocumentChanged(_document);
-    }
-
-    private void StartRenamePage(string pageId)
-    {
-        if (IsReadOnly) return;
-        _renamingPageId = pageId;
-        StateHasChanged();
-    }
-
-    private async Task OnPageRenamed(string pageId, ChangeEventArgs e)
-    {
-        if (_document is null || IsReadOnly) return;
-        var page = _document.Pages.FirstOrDefault(p => p.Id == pageId);
-        if (page is null) return;
-        page.Name = e.Value?.ToString() ?? page.Name;
-        _renamingPageId = null;
-        await OnDocumentChanged(_document);
-    }
-
-    private void OnPageDragStart(string pageId)
-    {
-        if (IsReadOnly) return;
-        _draggedPageId = pageId;
-    }
-
-    private void OnPageDrop(string targetPageId)
-    {
-        if (_document is null || IsReadOnly || _draggedPageId is null || _draggedPageId == targetPageId) return;
-
-        var draggedIdx = _document.Pages.FindIndex(p => p.Id == _draggedPageId);
-        var targetIdx = _document.Pages.FindIndex(p => p.Id == targetPageId);
-        if (draggedIdx < 0 || targetIdx < 0) return;
-
-        var page = _document.Pages[draggedIdx];
-        _document.Pages.RemoveAt(draggedIdx);
-        _document.Pages.Insert(targetIdx, page);
-
-        _draggedPageId = null;
-        _ = OnDocumentChanged(_document);
-    }
-
-    private void OnRenameInputKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-            _renamingPageId = null;
-    }
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (_document is null) return;
-
-        if (e.CtrlKey && e.Key == "PageUp")
-        {
-            var idx = _document.Pages.FindIndex(p => p.Id == _activePage?.Id);
-            if (idx > 0)
-                await SwitchPage(_document.Pages[idx - 1].Id);
-        }
-        else if (e.CtrlKey && e.Key == "PageDown")
-        {
-            var idx = _document.Pages.FindIndex(p => p.Id == _activePage?.Id);
-            if (idx >= 0 && idx < _document.Pages.Count - 1)
-                await SwitchPage(_document.Pages[idx + 1].Id);
-        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -3,13 +3,17 @@ using Tempo.Blazor.Components.Wireframe.Models;
 namespace Tempo.Blazor.Mcp.Wireframe;
 
 /// <summary>One placed component in an implementation-brief region.</summary>
-public sealed record BriefElement(string Id, string Type, string? Role, double X, double Y, double W, double H);
+public sealed record BriefElement(
+    string Id, string Type, string? Role, double X, double Y, double W, double H, string? Name = null);
 
 /// <summary>A layout region (header / sidebar / content / footer) derived from element geometry.</summary>
 public sealed record BriefRegion(string Kind, IReadOnlyList<BriefElement> Elements);
 
-/// <summary>A component type and how many times it is used.</summary>
-public sealed record BriefComponent(string Type, string? Role, int Count);
+/// <summary>
+/// A component type and how many times it is used. <paramref name="Names"/> lists the distinct
+/// element names (ordinal order) of the placed elements, or <c>null</c> when none is named.
+/// </summary>
+public sealed record BriefComponent(string Type, string? Role, int Count, IReadOnlyList<string>? Names = null);
 
 /// <summary>A navigation flow between two elements, derived from a connector.</summary>
 public sealed record BriefFlow(
@@ -19,7 +23,9 @@ public sealed record BriefFlow(
     string ToId,
     string? ToType,
     string? ToRole,
-    string? Label);
+    string? Label,
+    string? FromName = null,
+    string? ToName = null);
 
 /// <summary>One page rendered as an implementation section.</summary>
 public sealed record BriefPage(
@@ -51,7 +57,7 @@ public static class WireframeImplementationBrief
             .OrderByDescending(g => g.Count())
             .ThenBy(g => g.Key.Type, StringComparer.Ordinal)
             .ThenBy(g => g.Key.Role, StringComparer.Ordinal)
-            .Select(g => new BriefComponent(g.Key.Type, g.Key.Role, g.Count()))
+            .Select(g => new BriefComponent(g.Key.Type, g.Key.Role, g.Count(), DistinctNames(g)))
             .ToList();
 
         return new WireframeBrief(document.Title, pages, componentsUsed);
@@ -69,23 +75,37 @@ public static class WireframeImplementationBrief
             .Where(x => x.els is not null)
             .Select(x => new BriefRegion(x.kind,
                 x.els!.OrderBy(e => e.Y).ThenBy(e => e.X)
-                    .Select(e => new BriefElement(e.Id, e.Type, e.Role, e.X, e.Y, e.W, e.H)).ToList()))
+                    .Select(e => new BriefElement(e.Id, e.Type, e.Role, e.X, e.Y, e.W, e.H, e.Name)).ToList()))
             .ToList();
 
         var components = page.Elements
             .GroupBy(e => (e.Type, e.Role), BriefComponentKeyComparer.Instance)
             .OrderBy(g => g.Key.Type, StringComparer.Ordinal)
             .ThenBy(g => g.Key.Role, StringComparer.Ordinal)
-            .Select(g => new BriefComponent(g.Key.Type, g.Key.Role, g.Count()))
+            .Select(g => new BriefComponent(g.Key.Type, g.Key.Role, g.Count(), DistinctNames(g)))
             .ToList();
 
         var elementById = page.Elements.ToDictionary(e => e.Id, StringComparer.Ordinal);
         var flows = page.Connectors.Select(c => new BriefFlow(
             c.FromId, elementById.GetValueOrDefault(c.FromId)?.Type, elementById.GetValueOrDefault(c.FromId)?.Role,
             c.ToId, elementById.GetValueOrDefault(c.ToId)?.Type, elementById.GetValueOrDefault(c.ToId)?.Role,
-            c.Label)).ToList();
+            c.Label,
+            elementById.GetValueOrDefault(c.FromId)?.Name,
+            elementById.GetValueOrDefault(c.ToId)?.Name)).ToList();
 
         return new BriefPage(page.Name, page.Width, page.Height, regions, components, flows);
+    }
+
+    private static IReadOnlyList<string>? DistinctNames(IEnumerable<WireframeElement> elements)
+    {
+        var names = elements
+            .Select(e => e.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        return names.Count == 0 ? null : names;
     }
 
     /// <summary>Classifies an element into a layout region from its position on the page.</summary>

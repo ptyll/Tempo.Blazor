@@ -2,11 +2,49 @@
   "itemName": "TmWireframePropertiesPanel",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "Properties panel for the wireframe editor. Shows editable fields for the currently selected element(s). Supports single-select (all PropDef fields grouped by category, plus Layout X/Y/W/H and Element/ZIndex sections) and multi-select (intersection of common props, Mixed indicator when values differ). All mutations are routed through the cascaded WireframeCommandStack when available. Text and number inputs use per-field debounce (350 ms); dropdowns and checkboxes apply immediately. Changing a size prop with SizePresets defined automatically resizes the element.",
+  "description": "Properties panel for the wireframe editor. Shows editable fields for the currently selected element(s). Supports single-select (all PropDef fields grouped by category, plus Layout X/Y/W/H and Element/ZIndex sections) and multi-select (intersection of common props, Mixed indicator when values differ). All mutations are routed through the cascaded WireframeCommandStack when available. Text and number inputs use per-field debounce (350 ms); dropdowns and checkboxes apply immediately. Changing a size prop with SizePresets defined automatically resizes the element. With an EMPTY selection the panel shows the Canvas (device preset select - Desktop 1440x900, Laptop 1280x800, Tablet 1024x768, iPhone 14 390x844, Android 360x800, Custom - plus width/height and Apply, all through the undoable ResizeCanvasCommand), Page (rename of the active page) and Grid (show grid, grid size) sections. The Element section has a Name field (undoable RenameElementCommand; the name is the element's aria-label and tooltip on the canvas) and a Delete element button.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
   "parameters": [
+    {
+      "name": "ShowGrid",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "true",
+      "description": "Whether the grid is shown (the Grid section toggle). Never assigned by the component - it keeps local state, raises ShowGridChanged and re-adopts the host value when the parameter changes."
+    },
+    {
+      "name": "ShowGridChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new value when the user toggles Show grid."
+    },
+    {
+      "name": "GridSize",
+      "type": "int",
+      "isRequired": false,
+      "defaultValue": "8",
+      "description": "Snap-to-grid cell size in pixels (the Grid section input, 0-128; 0 = snapping off). Never assigned by the component."
+    },
+    {
+      "name": "GridSizeChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised with the new cell size when the user edits the grid size."
+    },
+    {
+      "name": "OnCanvasResized",
+      "type": "EventCallback<(double Width, double Height)>",
+      "isRequired": false,
+      "description": "Raised AFTER a ResizeCanvasCommand was pushed (device preset or Apply), so the host can update its canvas."
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Delete element button. With a delegate the host performs the deletion; without one the panel pushes a RemoveElementsCommand itself and raises DocumentChanged."
+    },
     {
       "name": "Document",
       "type": "WireframeDocument?",

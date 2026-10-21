@@ -109,9 +109,9 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             // Export dialog (PDF, via the menu → proves the preselect in the baseline too).
             // DOM-level clicks: on a phone the toolbar overflows its container (baseline finding), so the
             // Export button can sit outside the clickable viewport region while still being rendered.
-            await editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export') > button").First
+            await editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First
                 .DispatchEventAsync("click");
-            await editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PDF" }).First
+            await page.Locator("[data-testid='wd-export-pdf']").First
                 .DispatchEventAsync("click");
             await page.WaitForSelectorAsync(".tm-wd-export-dialog",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
@@ -122,7 +122,9 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             await page.WaitForSelectorAsync(".tm-wd-export-dialog",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
 
-            // Layers panel.
+            // Layers panel (a tab of the left panel since phase 4).
+            await editor.Locator("[data-region='left'] [role='tab']", new() { HasTextString = "Layers" }).First.DispatchEventAsync("click");
+            await page.WaitForTimeoutAsync(400);
             var layers = editor.Locator(".tm-wd-layers").First;
             if (await layers.CountAsync() > 0)
             {

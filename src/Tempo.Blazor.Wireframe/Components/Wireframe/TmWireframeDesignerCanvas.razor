@@ -152,9 +152,16 @@
                    data-locked="@(isLocked ? "true" : "false")"
                    data-group-id="@el.GroupId"
                    data-layer-id="@el.LayerId"
+                   aria-label="@(string.IsNullOrWhiteSpace(el.Name) ? null : el.Name)"
                    class="@(isLocked ? "tm-wd-locked" : "")"
                    transform="translate(@transX, @transY) rotate(@rot, @((el.W / 2).ToString("0.##", CultureInfo.InvariantCulture)), @((el.H / 2).ToString("0.##", CultureInfo.InvariantCulture)))"
                    style="@(ReadOnly || isLocked ? "cursor:default" : "cursor:move")">
+
+                    @if (!string.IsNullOrWhiteSpace(el.Name))
+                    {
+                        @* Element name = SVG tooltip (accessible name is the aria-label above) *@
+                        <title>@el.Name</title>
+                    }
 
                     @* Inner SVG viewport so element coords stay local (0,0) *@
                     <svg width="@w" height="@h"
