@@ -529,8 +529,9 @@
             </div>
 
             @* The mobile action bar (in-flow, bottom of the viewer): Pages | Search | Comments.
-               Only rendered when at least one feature owns a tile. *@
-            @if (IsMobileLayout && MobileBarItems.Count > 0)
+               Only rendered when at least one feature owns a tile and the host did not fold
+               the entries into its own bar (<see cref="ShowMobileActionBar"/> false). *@
+            @if (IsMobileLayout && ShowMobileActionBar && MobileBarItems.Count > 0)
             {
                 <TmMobileActionBar Items="@MobileBarItems"
                                    LayoutMode="TmLayoutMode.Mobile"

@@ -82,6 +82,13 @@
    "description": "Whether to show a search input. Default is false."
   },
   {
+   "name": "ShowMobileActionBar",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the viewer renders its own mobile action bar (Pages | Search | Comments). Hosts that fold these entries into their own action bar (the annotator) pass false and drive the sheets through OpenThumbnailsSheetAsync / OpenSearchAsync."
+  },
+  {
    "name": "ShowViewModeToggle",
    "type": "bool",
    "isRequired": false,
@@ -92,7 +99,7 @@
    "type": "PdfViewMode",
    "isRequired": false,
    "default": "SinglePage",
-   "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) \u2014 selecting a thread returns the viewer to SinglePage on the thread's page."
+   "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) — selecting a thread returns the viewer to SinglePage on the thread's page."
   },
   {
    "name": "ViewModeChanged",

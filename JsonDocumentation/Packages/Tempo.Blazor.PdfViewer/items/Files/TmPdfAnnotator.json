@@ -27,7 +27,7 @@
       "name": "Height",
       "type": "string?",
       "isRequired": false,
-      "description": "Height of the annotator (CSS value). Default is \"600px\"."
+      "description": "Height of the annotator (CSS value). Default is \"600px\". The root owns the height contract; the embedded viewer fills it and shrinks inside it on a mobile layout."
     },
     {
       "name": "Class",
@@ -220,6 +220,18 @@
       "type": "EventCallback<IReadOnlyList<DocumentCommentThread>>",
       "isRequired": false,
       "description": "Callback invoked when the loaded annotation set changes."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "How the annotator decides its responsive layout. Auto measures the annotator's own container through the embedded TmEditorShell; a forced value renders that layout without measuring, so a test — or a host — can pin a mode. Default Auto. The mobile layout is the G2 presentation: viewing plus light edits only."
+    },
+    {
+      "name": "ToolbarLabels",
+      "type": "ToolbarLabels",
+      "isRequired": false,
+      "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only tools of the earlier phases); Auto and IconsWithText show the labels — on a tablet layout under the icons (the ribbon style of the tablet reference). The value is passed through to the embedded viewer's toolbar as well."
     }
   ]
 }

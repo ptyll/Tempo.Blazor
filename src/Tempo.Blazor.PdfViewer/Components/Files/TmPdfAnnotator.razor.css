@@ -14,9 +14,12 @@
     overflow: hidden;
 }
 
-/* ── Compact fallback row ──────────────────────────────────────────────────
-   Only rendered when the annotator does not merge into the viewer's single
-   toolbar (ShowViewerToolbar=false, or no document yet). */
+/* ── Compact fallback row / tablet tools row ───────────────────────────────
+   Rendered when the annotator does not merge into the viewer's single toolbar
+   (ShowViewerToolbar=false, or no document yet) on a desktop layout — and on a
+   TABLET layout always: the phase 8 review moved the tablet tools out of the
+   narrow viewer toolbar's "More" overflow into their own full-width labelled
+   row above the canvas. */
 
 .tm-pdf-annotator__toolbar {
     display: flex;
@@ -26,6 +29,37 @@
     padding: var(--tm-space-2) var(--tm-space-3);
     border-bottom: 1px solid var(--tm-border-color);
     background: var(--tm-color-surface-elevated);
+}
+
+/* The tablet ribbon: the tools + export group are the row's whole width, the
+   pills keep their labels under the icons and nothing overflows into a menu. */
+.tm-pdf-annotator__toolbar--tablet {
+    flex-wrap: wrap;
+    row-gap: var(--tm-space-1);
+}
+
+/* The color indicator never wraps its chip away from its label: the chip alone
+   on a wrapped line reads as a stray dot (phase 8 review 7). */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color {
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+}
+
+/* The labelled pill track wraps within the group too (phase 8 review 12): at a
+   768px pane the five labelled pills + the color indicator exceed one line, and
+   the modes row must break into a second line instead of clipping the last
+   pills out of the ribbon. */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__modes {
+    flex-wrap: wrap;
+}
+
+/* A finger cannot hit the row's pills either — the tablet row sits outside a
+   TmToolbar, so it does not inherit the core coarse-pointer rule. */
+@media (pointer: coarse) {
+    .tm-pdf-annotator__toolbar--tablet .tm-toolbar-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 /* ── Tool group (merged into the viewer toolbar or the fallback row) ─────── */
@@ -223,6 +257,19 @@
         border: 0;
     }
 
+    /* The tablet ribbon keeps its pills labelled at every pane width, so its
+       color label stays visible too — exempt from the sr-only collapse above
+       (phase 8 review 12). A hidden label would leave the chip as a stray dot
+       among the labelled pills; the (0,2,0) specificity beats the (0,1,0) rule. */
+    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        clip: auto;
+        clip-path: none;
+    }
+
     .tm-pdf-annotator__action-text {
         display: none;
     }
@@ -253,21 +300,131 @@
     }
 }
 
-/* ── Body ────────────────────────────────────────────────────────────────── */
+/* ── Body: the shell owns the layout (FZE-8) ─────────────────────────────── */
 
-.tm-pdf-annotator__body {
+/* The shell's canvas region hosts the viewer column; the thread panel is the docked Right
+   aside (or the mobile bottom sheet). The annotator removes the shell's workspace padding so
+   the viewer stays flush with the component border (the pre-shell look); the mobile sheet
+   reserve (padding-block-end) is the shell's own rule and stays untouched. */
+.tm-pdf-annotator ::deep .tm-editor-shell__canvas {
+    padding-block-start: 0;
+    padding-inline: 0;
     display: flex;
-    align-items: stretch;
-    min-height: 0;
+    flex-direction: column;
 }
 
-/* The query container is the viewer COLUMN (toolbar + header + canvas) — not the root,
-   which also contains the 300px thread panel and would never see the pane's real width. */
+.tm-pdf-annotator ::deep .tm-editor-shell {
+    background: var(--tm-bg-surface);
+}
+
+/* The thread panel fills the shell's resizable dock (the aside owns the width), so the
+   panel's own fixed width and left border give way inside it. */
+.tm-pdf-annotator ::deep .tm-editor-shell__panel .tm-pdf-annotator-panel {
+    width: 100%;
+    border-left: none;
+}
+
+/* The query container is the viewer COLUMN (palette + fallback row + canvas) — not the root,
+   which also contains the thread panel and would never see the pane's real width. A column
+   flex box so the viewer shrinks under the palette on a phone instead of overflowing. */
 .tm-pdf-annotator__viewer {
     flex: 1;
     min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     container-type: inline-size;
     container-name: tm-pdf-annotator-viewer;
+}
+
+/* The embedded viewer fills the column under the palette/fallback row and shrinks with it
+   (its inline height is the preferred height; the flex basis takes over). */
+.tm-pdf-annotator__viewer ::deep .tm-pdf-viewer-host {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* ── G2 mobile tool palette ──────────────────────────────────────────────── */
+
+.tm-pdf-annotator__palette {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-color-surface-elevated);
+}
+
+/* The tile track takes exactly its content width and never clips the tiles: both
+   light-edit tiles stay fully visible at every phone width (phase 8 review 10) —
+   the localized hint at the end absorbs the rest (it shrinks first, ellipsized). */
+.tm-pdf-annotator__palette-track {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.tm-pdf-annotator__tile {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    /* flex: 0 0 auto — a tile is never squeezed or pushed out of view. */
+    flex: 0 0 auto;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.tm-pdf-annotator__tile:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* Active tool: the same tonal pill as the desktop mode pills. */
+.tm-pdf-annotator__tile--active {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-pdf-annotator__tile--active:hover {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-pdf-annotator__tile-text {
+    font-size: var(--tm-pdf-annotator-font-size);
+    line-height: 1.2;
+    max-width: 6rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* The hint rides at the end of the palette and yields ALL leftover room to the tiles: it
+   shrinks to zero width (ellipsis) instead of pushing a tile out of the viewport — the two
+   tiles stay fully visible at every phone width (phase 8 review 10). */
+.tm-pdf-annotator__palette-hint {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-pdf-annotator-font-size);
+    color: var(--tm-text-secondary);
+    text-align: end;
 }
 
 /* ── Interaction surface ─────────────────────────────────────────────────── */
@@ -288,6 +445,16 @@
     cursor: crosshair;
 }
 
+/* A finger cannot hit a 28px export/print button: the annotator's secondary actions meet the
+   shared touch target on a coarse pointer (the merged toolbar and the header row alike). The
+   min-* constraints win over the narrow container-query width above. */
+@media (pointer: coarse) {
+    .tm-pdf-annotator__action {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────────────────
    Explicit enumeration of every Tempo.Blazor.PdfViewer animated subject (mirrors the core block in
    animations.css and the DiagramEditor package block, never a universal selector).
@@ -295,7 +462,8 @@
    (the package's uncovered-subject baseline lives in ReducedMotionUncoveredBaseline.json). */
 @media (prefers-reduced-motion: reduce) {
   .tm-pdf-annotator__action,
-  .tm-pdf-annotator__mode {
+  .tm-pdf-annotator__mode,
+  .tm-pdf-annotator__tile {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

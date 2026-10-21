@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Text.Json;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Layout;
+using Tempo.Blazor.Components.Toolbar;
 
 namespace Tempo.Blazor.Components.Files;
 
@@ -59,7 +63,8 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// <summary>Stable document identifier used by the annotation provider. Falls back to <see cref="Url"/>.</summary>
     [Parameter] public string? DocumentId { get; set; }
 
-    /// <summary>Height of the annotator (CSS value). Default is "600px".</summary>
+    /// <summary>Height of the annotator (CSS value). Default is "600px". The root owns the
+    /// height contract; the embedded viewer fills it and shrinks inside it on a mobile layout.</summary>
     [Parameter] public string? Height { get; set; }
 
     /// <summary>Additional CSS classes for the root element.</summary>
@@ -170,9 +175,36 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// <summary>Callback invoked when the loaded annotation set changes.</summary>
     [Parameter] public EventCallback<IReadOnlyList<DocumentCommentThread>> AnnotationsChanged { get; set; }
 
+    /// <summary>
+    /// How the annotator decides its responsive layout. <see cref="TmLayoutMode.Auto"/> measures
+    /// the annotator's own container through the embedded <see cref="Layout.TmEditorShell"/>; a
+    /// forced value renders that layout without measuring, so a test — or a host — can pin a
+    /// mode. Default <see cref="TmLayoutMode.Auto"/>. The mobile layout is the G2 presentation:
+    /// viewing plus light edits only.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// Whether the toolbar's icon buttons show their text labels. Default
+    /// <see cref="ToolbarLabels.Icons"/> (the icon-only tools of the earlier phases);
+    /// <see cref="ToolbarLabels.Auto"/> and <see cref="ToolbarLabels.IconsWithText"/> show the
+    /// labels — on a tablet layout under the icons (the ribbon style of the tablet reference).
+    /// The value is passed through to the embedded viewer's toolbar as well.
+    /// </summary>
+    [Parameter] public ToolbarLabels ToolbarLabels { get; set; } = ToolbarLabels.Icons;
+
     // ── State ────────────────────────────────────────────────────────────────
 
     private ElementReference _surfaceRef;
+
+    /// <summary>The annotator root — the scope of the JS focus helpers (opener restore, the
+    /// sheet composer focus, the selected-card scroll) for the mobile sheet.</summary>
+    private ElementReference _annotatorRef;
+
+    /// <summary>The embedded viewer instance: the annotator folds the viewer's Pages/Search
+    /// entries into its own mobile action bar and drives them through the viewer's public API.</summary>
+    private TmPdfViewer? _viewer;
+
     private List<DocumentCommentThread> _threads = [];
     private InMemoryPdfAnnotationProvider? _fallbackProvider;
     private string? _loadedDocumentId;
@@ -185,6 +217,17 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// panel state syncs from the parameter only when it actually changes, so a close from the
     /// panel's ✕ (or the toolbar toggle) is not undone by an unrelated re-render of an unbound host.</summary>
     private bool? _lastShowPanelParam;
+
+    /// <summary>Whether the host explicitly supplied <see cref="ShowPanel"/> in the current
+    /// parameter set (detected in <see cref="SetParametersAsync"/>). When it did, the mobile
+    /// sheet default (start closed) does not apply — the host owns the state.</summary>
+    private bool _showPanelSupplied;
+
+    /// <summary>Whether the shell's right panel is collapsed to its rail. Two-way shadow of the
+    /// shell's <see cref="TmEditorShell.CollapsedPanels"/> (phase 8 review 2 — the
+    /// collapse chevron was dead without the binding).</summary>
+    private EditorShellPanel _collapsedPanels;
+
     private PdfAnnotatorMode _mode;
     private PdfAnnotatorMode _lastModeParam;
     private int _currentPage = 1;
@@ -208,6 +251,81 @@ public partial class TmPdfAnnotator : TmComponentBase
 
     /// <summary>The <see cref="ZoomMode"/> value seen by the previous parameter pass.</summary>
     private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Auto;
+
+    // ── Responsive layout (FZE-8) ────────────────────────────────────────────
+
+    /// <summary>Peek/half/full snap fractions of the shell stage (the diagram-editor G2 sheet).</summary>
+    private static readonly double[] MobileSheetSnapPoints = [0.35, 0.7, 1.0];
+
+    /// <summary>The snap the sheet lands on when it opens from a marker or a draft (phase 8
+    /// review 12): the HALF snap (0.7) — the composer's input and its Reply + Resolve row must
+    /// sit fully inside the sheet's visible band (the peek's band was too short and the
+    /// reply/resolve pair ended below the fold).</summary>
+    private const int MobileOpenSnapIndex = MobileHalfSnapIndex;
+
+    /// <summary>The snap for the explicit "Comments" (threads) entry: half — the whole thread
+    /// list is readable for browsing.</summary>
+    private const int MobileHalfSnapIndex = 1;
+
+    /// <summary>The sheet snap, recorded from the shell (a two-way shadow, never re-raised).</summary>
+    private int _mobileSnapIndex = MobileHalfSnapIndex;
+
+    /// <summary>The resolved layout. Under a forced <see cref="LayoutMode"/> the parameter is the
+    /// resolution (applied in <see cref="OnParametersSetAsync"/>); under <see cref="TmLayoutMode.Auto"/>
+    /// the embedded shell's callback owns it.</summary>
+    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+
+    /// <summary>Armed when the mobile sheet closes: after the render the JS focus helper returns
+    /// focus to the element that opened the sheet (marker / Comments tile / draft), falling back
+    /// to the first action-bar tile only when that element is gone (phase 8 review 1).</summary>
+    private bool _focusOpenerAfter;
+
+    /// <summary>Armed when the mobile sheet opens from a marker, the Comments tile or a draft:
+    /// after the render the draft textarea (or the selected thread's reply input) is focused
+    /// (phase 8 review 12).</summary>
+    private bool _focusComposerAfter;
+
+    /// <summary>Armed when the mobile sheet opens on a selected thread: the selected card is
+    /// scrolled into view with <c>scrollIntoView({block:'nearest'})</c> (phase 8 review 11).</summary>
+    private bool _scrollSelectedCardAfter;
+
+    /// <summary>Whether the resolved layout is mobile (the G2 presentation).</summary>
+    private bool IsMobileLayout => _resolved == TmLayoutMode.Mobile;
+
+    /// <summary>Whether the resolved layout is tablet (labels below the icons, docked side panel).</summary>
+    private bool IsTabletLayout => _resolved == TmLayoutMode.Tablet;
+
+    /// <summary>The <c>data-editor-layout</c> mirror of the resolved layout (diagram-editor convention).</summary>
+    private string LayoutName => _resolved.ToString().ToLowerInvariant();
+
+    /// <summary>Whether the annotator's groups merge into the viewer toolbar: on a DESKTOP layout
+    /// only — a tablet layout renders the full-width labelled tools row above the canvas (phase 8
+    /// review 7) and a mobile layout renders the G2 palette and the action bar; neither injects
+    /// anything into the viewer's toolbar.</summary>
+    private bool InjectToolbarGroups => UseMergedToolbar && !IsMobileLayout && !IsTabletLayout;
+
+    /// <summary>Where the annotator's tool labels sit: under the icon on a tablet layout, inline
+    /// everywhere else — the exact rule of the embedded viewer's <c>ResolvedLabelPosition</c>
+    /// (phase 8 review 5). <see cref="ToolbarLabels.Icons"/> keeps the buttons icon-only: inside
+    /// the merged toolbar the enclosing <c>TmToolbar</c> decides that; the fallback/tablet rows
+    /// render outside one, so the same visibility rule is mirrored here.</summary>
+    private ToolbarLabelPosition ToolLabelPosition
+        => ToolbarLabels == ToolbarLabels.Icons
+            ? ToolbarLabelPosition.Hidden
+            : IsTabletLayout
+                ? ToolbarLabelPosition.Below
+                : ToolbarLabelPosition.Inline;
+
+    /// <summary>
+    /// The annotator root height. The root OWNS the height contract (the shell's mobile stage
+    /// needs a definite height to lay out against) and the embedded viewer flexes inside it —
+    /// its own <see cref="Height"/> value is the preferred height it shrinks from on a phone.
+    /// </summary>
+    private string RootStyle => $"height:{(string.IsNullOrEmpty(Height) ? "600px" : Height)}";
+
+    /// <summary>The viewer height: it fills the annotator root and shrinks on a mobile layout
+    /// (the flex chain of the shell's canvas region), so the bound value stays the preferred one.</summary>
+    private string ViewerHeight => "100%";
 
     private IPdfAnnotationProvider EffectiveProvider
         => AnnotationProvider ?? (_fallbackProvider ??= new InMemoryPdfAnnotationProvider());
@@ -244,19 +362,33 @@ public partial class TmPdfAnnotator : TmComponentBase
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        // Detect an explicit host ShowPanel BEFORE the sync below: the mobile sheet default
+        // (start closed) must not fight a host that binds the panel state itself (phase 8
+        // review 3).
+        _showPanelSupplied = parameters.TryGetValue<bool>(nameof(ShowPanel), out _);
+        await base.SetParametersAsync(parameters);
+    }
+
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // The panel state syncs from the parameter first: a layout change applied below must
+        // win over it (the mobile default closes the sheet), never the other way round.
+        if (ShowPanel != _lastShowPanelParam)
+        {
+            _lastShowPanelParam = ShowPanel;
+            _panelVisible = ShowPanel;
+        }
+
         if (Mode != _lastModeParam)
         {
             _lastModeParam = Mode;
             _mode = Mode;
         }
 
-        if (ShowPanel != _lastShowPanelParam)
-        {
-            _lastShowPanelParam = ShowPanel;
-            _panelVisible = ShowPanel;
-        }
+        ApplyMobileToolFallback();
 
         if (ThumbnailsCollapsed != _lastThumbnailsCollapsedParam)
         {
@@ -286,6 +418,16 @@ public partial class TmPdfAnnotator : TmComponentBase
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        // A FORCED layout is the resolution: the embedded shell reports changes only, and the
+        // initial resolution is not a change — so a host (or test) that pins a mode must see
+        // that presentation from the first frame. Under Auto the shell's callback owns this
+        // state (it fires on the first container measurement). Awaited, so the mobile sheet
+        // default lands before the first frame renders.
+        if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolved)
+        {
+            await ApplyResolvedLayoutAsync(LayoutMode);
+        }
+
         var documentId = EffectiveDocumentId;
         if (!string.Equals(documentId, _loadedDocumentId, StringComparison.Ordinal))
         {
@@ -323,6 +465,260 @@ public partial class TmPdfAnnotator : TmComponentBase
 
     /// <summary>Reloads annotation threads from the provider (e.g. after an external change).</summary>
     public Task RefreshAsync() => LoadThreadsAsync();
+
+    // ── Responsive layout (FZE-8) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Applies a resolved layout change: the G2 rules ride along — the editing tools do
+    /// not exist on a phone, so an active edit mode falls back to Browse, and the mobile
+    /// sheet STARTS CLOSED on the first resolution to mobile and on every switch from
+    /// desktop/tablet to mobile, unless the host explicitly supplied <see cref="ShowPanel"/>
+    /// (phase 8 review 3).
+    /// </summary>
+    private async Task ApplyResolvedLayoutAsync(TmLayoutMode mode)
+    {
+        if (_resolved == mode)
+        {
+            return;
+        }
+
+        var previous = _resolved;
+        _resolved = mode;
+        ApplyMobileToolFallback();
+
+        if (mode == TmLayoutMode.Mobile
+            && previous != TmLayoutMode.Mobile
+            && !_showPanelSupplied
+            && _panelVisible)
+        {
+            _panelVisible = false;
+            await ShowPanelChanged.InvokeAsync(false);
+        }
+    }
+
+    /// <summary>
+    /// G2: highlight, stamp and draw are tablet+ tools. When the resolved layout is mobile and
+    /// the active mode is one of them, the internal state falls back to Browse (an in-flight
+    /// stroke is dropped). The host's <see cref="Mode"/> parameter keeps its value — the
+    /// fallback is a layout adaptation, not a user action, so no callback is raised.
+    /// </summary>
+    private void ApplyMobileToolFallback()
+    {
+        if (!IsMobileLayout
+            || _mode is not (PdfAnnotatorMode.Highlight or PdfAnnotatorMode.Stamp or PdfAnnotatorMode.Draw))
+        {
+            return;
+        }
+
+        _mode = PdfAnnotatorMode.Browse;
+        _activeStroke = null;
+    }
+
+    /// <summary>Receives the embedded shell's resolved layout (Auto mode) and re-renders.</summary>
+    private async Task OnShellResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        await ApplyResolvedLayoutAsync(mode);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>The F5 mobile action bar. The annotator's own entries (Export PDF | Export
+    /// flattened | Print | the threads entry in the shared "More" menu) are PREPENDED by the
+    /// viewer's Pages/Search entries when those features are enabled (phase 8 review 4): the
+    /// embedded viewer renders no bar of its own (<c>ShowMobileActionBar=false</c>) and the
+    /// entries drive it through its public <c>OpenThumbnailsSheetAsync</c>/<c>OpenSearchAsync</c>
+    /// API. The bar's default budget of three tiles pushes the rest into "More".</summary>
+    private List<TmActionItem> MobileBarItems
+    {
+        get
+        {
+            var items = new List<TmActionItem>(6);
+            if (ShowThumbnails)
+            {
+                items.Add(new TmActionItem
+                {
+                    Id = "pages",
+                    Label = Loc["TmPdfViewer_OpenPages"],
+                    Icon = "panel-left",
+                    OnClick = EventCallback.Factory.Create(this, () => _viewer?.OpenThumbnailsSheetAsync() ?? Task.CompletedTask),
+                });
+            }
+
+            if (ShowSearch)
+            {
+                items.Add(new TmActionItem
+                {
+                    Id = "search",
+                    Label = Loc["TmPdfViewer_Search"],
+                    Icon = "search",
+                    OnClick = EventCallback.Factory.Create(this, () => _viewer?.OpenSearchAsync() ?? Task.CompletedTask),
+                });
+            }
+
+            if (AllowExport)
+            {
+                items.Add(new TmActionItem
+                {
+                    Id = "export",
+                    Label = Loc["TmPdfAnnotator_Export"],
+                    Icon = "file-down",
+                    OnClick = EventCallback.Factory.Create(this, () => ExportAsync(flatten: false)),
+                });
+                items.Add(new TmActionItem
+                {
+                    Id = "export-flat",
+                    Label = Loc["TmPdfAnnotator_ExportFlattened"],
+                    Icon = "layers",
+                    OnClick = EventCallback.Factory.Create(this, () => ExportAsync(flatten: true)),
+                });
+            }
+
+            items.Add(new TmActionItem
+            {
+                Id = "print",
+                Label = Loc["TmPdfAnnotator_Print"],
+                Icon = "printer",
+                OnClick = EventCallback.Factory.Create(this, PrintAsync),
+            });
+            items.Add(new TmActionItem
+            {
+                Id = "threads",
+                Label = Loc["TmPdfAnnotator_OpenThreads"],
+                Icon = "message-square",
+                OnClick = EventCallback.Factory.Create(this, OpenThreadsSheetAsync),
+            });
+            return items;
+        }
+    }
+
+    /// <summary>Opens the threads bottom sheet (from the action bar's More entry): half snap so
+    /// the whole thread list is readable for browsing, the opener is remembered for the close
+    /// restore, and the two-way <see cref="ShowPanel"/> callback learns the state like every
+    /// other open path.</summary>
+    private async Task OpenThreadsSheetAsync()
+    {
+        await RememberOpenerAsync();
+        _panelVisible = true;
+        _mobileSnapIndex = MobileHalfSnapIndex;
+        await ShowPanelChanged.InvokeAsync(true);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Remembers the element that is opening the mobile sheet (a thread marker, the Comments
+    /// tile or a palette tile arming a draft): the JS helper captures
+    /// <c>document.activeElement</c> inside the annotator root, and
+    /// <c>tmPdfAnnotator.focusOpener</c> returns focus there after the sheet closes — falling
+    /// back to the first action-bar tile only when the opener is gone (phase 8 review 1).
+    /// A no-op where JS is unavailable.
+    /// </summary>
+    private async Task RememberOpenerAsync()
+    {
+        if (!IsMobileLayout)
+        {
+            return;
+        }
+
+        try { await JS.InvokeAsync<bool>("tmPdfAnnotator.rememberFocus", _annotatorRef); }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+    }
+
+    /// <summary>The shell's RightOpen two-way bridge: internal state first (an unbound host never
+    /// echoes the callback), then the <see cref="ShowPanelChanged"/> callback. A mobile close
+    /// arms the opener focus restore (the sheet's close button unmounted with the sheet).</summary>
+    private async Task HandleRightOpenChangedAsync(bool open)
+    {
+        _panelVisible = open;
+        if (!open && IsMobileLayout)
+        {
+            _focusOpenerAfter = true;
+        }
+
+        await ShowPanelChanged.InvokeAsync(open);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The shell's CollapsedPanels two-way bridge (phase 8 review 2): the collapse chevron was
+    /// dead because the annotator never echoed the set back. A collapse of the right panel maps
+    /// onto <see cref="HandleRightOpenChangedAsync"/> (false) — the panel hides and the shell's
+    /// slim reopen toggle (the "rail") brings it back through the RightOpen callback.
+    /// </summary>
+    private async Task HandleCollapsedPanelsChangedAsync(EditorShellPanel collapsed)
+    {
+        var rightWasCollapsed = _collapsedPanels.HasFlag(EditorShellPanel.Right);
+        _collapsedPanels = collapsed;
+
+        var rightNowCollapsed = collapsed.HasFlag(EditorShellPanel.Right);
+        if (!rightWasCollapsed && rightNowCollapsed)
+        {
+            await HandleRightOpenChangedAsync(false);
+        }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>Records the sheet snap the user dragged to; never re-raised (the shell owns it).</summary>
+    private Task SilentSnapChangedAsync(int index)
+    {
+        _mobileSnapIndex = index;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The active-state class of a mobile palette tile.</summary>
+    private string PaletteTileClass(PdfAnnotatorMode mode)
+        => _mode == mode
+            ? "tm-pdf-annotator__tile tm-pdf-annotator__tile--active"
+            : "tm-pdf-annotator__tile";
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusOpenerAfter)
+        {
+            _focusOpenerAfter = false;
+            try { await JS.InvokeAsync<bool>("tmPdfAnnotator.focusOpener", _annotatorRef); }
+            catch (JSException) { }
+            catch (JSDisconnectedException) { }
+        }
+
+        if (_focusComposerAfter)
+        {
+            _focusComposerAfter = false;
+            await FocusSheetComposerAsync();
+        }
+
+        if (_scrollSelectedCardAfter)
+        {
+            _scrollSelectedCardAfter = false;
+            try
+            {
+                await JS.InvokeAsync<bool>("tmPdfAnnotator.scrollSelectedCardIntoView", _annotatorRef);
+            }
+            catch (JSException) { }
+            catch (JSDisconnectedException) { }
+        }
+    }
+
+    /// <summary>
+    /// Focuses the sheet composer after the mobile sheet renders: the draft textarea when a
+    /// draft is pending, otherwise the selected thread's reply input (phase 8 review 12).
+    /// Tolerates a missing element and missing JS.
+    /// </summary>
+    private async Task FocusSheetComposerAsync()
+    {
+        try
+        {
+            var selector = _draft is not null
+                ? "[data-testid='pdf-annotator-new-input']"
+                : "[data-testid='pdf-annotator-reply-input']";
+            await JS.InvokeAsync<bool>("tmPdfAnnotator.focusDescendant", _annotatorRef, selector);
+        }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+    }
 
     // ── Mode & toolbar ───────────────────────────────────────────────────────
 
@@ -376,6 +772,23 @@ public partial class TmPdfAnnotator : TmComponentBase
                 Kind = DocumentAnnotationKind.Comment,
                 Anchor = DocumentCommentAnchor.Point(_currentPage, point.Value.X, point.Value.Y)
             };
+
+            // G2: the draft composer lives in the bottom sheet on a phone — opening the sheet
+            // with the draft is part of the tool's action (the tiles are the only entry). The
+            // sheet opens at the HALF snap with the composer pinned to its bottom and focused.
+            if (IsMobileLayout && !_panelVisible)
+            {
+                await RememberOpenerAsync();
+                _panelVisible = true;
+                _mobileSnapIndex = MobileOpenSnapIndex;
+                _focusComposerAfter = true;
+                await ShowPanelChanged.InvokeAsync(true);
+            }
+            else if (IsMobileLayout)
+            {
+                _focusComposerAfter = true;
+            }
+
             await InvokeAsync(StateHasChanged);
         }
         else
@@ -617,6 +1030,12 @@ public partial class TmPdfAnnotator : TmComponentBase
         // Internal state first: an unbound host never echoes ShowPanel back, so the panel must
         // disappear (and be re-openable by the toolbar toggle) without the parameter changing.
         _panelVisible = false;
+        if (IsMobileLayout)
+        {
+            // The sheet's close unmounted the opener's click target context: restore focus.
+            _focusOpenerAfter = true;
+        }
+
         await ShowPanelChanged.InvokeAsync(false);
         await InvokeAsync(StateHasChanged);
     }
@@ -657,6 +1076,24 @@ public partial class TmPdfAnnotator : TmComponentBase
             _currentPage = page;
             ResetPageState();
         }
+
+        // G2: on a phone the panel is the bottom sheet — a tapped thread marker opens it on
+        // that thread (the HALF snap, the selected card scrolled into view and the reply
+        // composer focused), like the diagram editor's selection-driven sheet.
+        if (IsMobileLayout && threadId is not null)
+        {
+            if (!_panelVisible)
+            {
+                await RememberOpenerAsync();
+                _panelVisible = true;
+                _mobileSnapIndex = MobileOpenSnapIndex;
+                await ShowPanelChanged.InvokeAsync(true);
+            }
+
+            _focusComposerAfter = true;
+            _scrollSelectedCardAfter = true;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 

@@ -12,7 +12,9 @@
     of an inline link. The head splits into two rows — author + menu, then time + "(Edited)".
     Editing (PD3) is an inline textarea with Save/Cancel, Ctrl+Enter and Escape. Both annotation
     panels compose this item via the shared TmPdfThreadList; they pass their testid contract
-    through <see cref="TestIdBase"/>. *@
+    through <see cref="TestIdBase"/>. Focus (phase 8 review 12): opening the editor focuses
+    the textarea; Save/Cancel returns focus to the comment's "⋯" trigger — both best-effort
+    (a missing element or missing JS is tolerated). *@
 
 <div class="tm-pdf-comment-item" data-testid="@TestIdFor("comment")">
     <TmAvatar Name="@Comment.AuthorName"
@@ -27,7 +29,7 @@
             <span class="tm-pdf-comment-item__head-spacer" aria-hidden="true"></span>
             @if (CanEditComment || CanDeleteComment)
             {
-                <div class="tm-pdf-comment-item__menu">
+                <div class="tm-pdf-comment-item__menu" @ref="_menuRef">
                     <TmDropdown Text="⋯"
                                 AriaLabel="@Loc["TmPdfThread_MoreActions"]"
                                 Align="OverlayAlign.End"
@@ -59,6 +61,7 @@
             <textarea class="tm-pdf-comment-item__edit-input"
                       data-testid="@TestIdFor("edit-input")"
                       aria-label="@Loc["TmPdfThread_Edit"]"
+                      @ref="_editInputRef"
                       @bind="_editBody"
                       @bind:event="oninput"
                       @onkeydown="EditKeyDownAsync"></textarea>
@@ -88,6 +91,17 @@
 @code {
     private bool _editing;
     private string? _editBody;
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private ElementReference _editInputRef;
+    private ElementReference _menuRef;
+
+    /// <summary>Armed when the edit opens: the textarea is focused after it renders.</summary>
+    private bool _focusEditAfterRender;
+
+    /// <summary>Armed when the edit ends (save or cancel): focus returns to the "⋯" trigger.</summary>
+    private bool _focusMenuAfterRender;
 
     /// <summary>The <see cref="Comment.Id"/> seen by the previous parameter pass: the inline edit
     /// closes when the item is reused for a different comment, so a stale draft never leaks.</summary>
@@ -145,6 +159,7 @@
         {
             _editBody = Comment.Body;
             _editing = true;
+            _focusEditAfterRender = true;
         }
         else if (value == "delete")
         {
@@ -153,6 +168,28 @@
                 ThreadId = ThreadId,
                 CommentId = Comment.Id
             });
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusEditAfterRender)
+        {
+            _focusEditAfterRender = false;
+            try { await _editInputRef.FocusAsync(); }
+            catch (JSException) { }
+            catch (JSDisconnectedException) { }
+        }
+
+        if (_focusMenuAfterRender)
+        {
+            _focusMenuAfterRender = false;
+            // Best-effort: the ⋯ trigger lives inside the TmDropdown, so the restore goes
+            // through a JS helper; a missing element or missing module is tolerated.
+            try { await JS.InvokeAsync<bool>("tmPdfAnnotator.focusDescendant", _menuRef, ".tm-dropdown-trigger"); }
+            catch (JSException) { }
+            catch (JSDisconnectedException) { }
         }
     }
 
@@ -171,6 +208,7 @@
         };
         _editing = false;
         _editBody = null;
+        _focusMenuAfterRender = true;
         await OnEditRequested.InvokeAsync(request);
     }
 
@@ -178,6 +216,7 @@
     {
         _editing = false;
         _editBody = null;
+        _focusMenuAfterRender = true;
     }
 
     private async Task EditKeyDownAsync(KeyboardEventArgs e)

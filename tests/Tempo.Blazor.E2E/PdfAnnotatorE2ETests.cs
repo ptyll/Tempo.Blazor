@@ -232,6 +232,9 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         var handle = await OpenAnnotatorPageAsync();
         var page = handle.Page;
 
+        // The two-user panes are at least tablet width (the demo grid keeps one column until
+        // each pane can hold 768px), so the full editing tools (stamp, freehand draw) are
+        // available on pane-alice; the forced-tablet card stays as extra coverage.
         var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
         await alice.ScrollIntoViewIfNeededAsync();
         await WaitForSurfaceReadyAsync(alice);
@@ -366,9 +369,14 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         var handle = await OpenAnnotatorPageAsync();
         var page = handle.Page;
 
+        // The two-user panes are at least tablet width (the demo grid keeps one column until
+        // each pane can hold 768px), so the full editing flow runs on pane-alice again; the
+        // shared provider starts empty in a fresh context, so the thread counts are absolute
+        // AND relative-safe (nothing is created by these edges).
         var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
         await alice.ScrollIntoViewIfNeededAsync();
         await WaitForSurfaceReadyAsync(alice);
+        var threadsBefore = await alice.Locator("[data-testid='pdf-annotator-thread']").CountAsync();
 
         // Edge 1: cancelling a comment draft creates nothing.
         await ClickToolAsync(alice, "pdf-annotator-mode-comment", "Add comment");
@@ -381,7 +389,7 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-new']"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
         await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-thread']"))
-            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+            .ToHaveCountAsync(threadsBefore, new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
 
         // Edge 2: in draw mode a click without dragging (single-point stroke) must not open a draft.
         await ClickToolAsync(alice, "pdf-annotator-mode-draw", "Draw freehand");
@@ -389,9 +397,10 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await page.Mouse.MoveAsync((float)point.X, (float)point.Y);
         await page.Mouse.DownAsync();
         await page.Mouse.UpAsync();
-        await page.WaitForTimeoutAsync(500);
         await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-new']"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
+        await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-thread']"))
+            .ToHaveCountAsync(threadsBefore, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
 
         // Edge 3: empty panel shows the localized empty state.
         var empty = alice.Locator("[data-testid='pdf-annotator-empty']");
@@ -460,20 +469,19 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         AssertNoBlazorErrors(handle);
     }
 
-    // ── Narrow viewer column (phase 5): toolbar budget, sr-only label, header export ──
+    // ── Two-user panes at tablet width (phase 8 review 6) ─────────────────────
 
     /// <summary>
-    /// Phase 5 round 2: in the two-users section each pane's viewer column is ~285px wide
-    /// (the 300px thread panel takes the rest), so the named <c>tm-pdf-annotator-viewer</c>
-    /// container query fires. Asserts the merged toolbar stays within two 40px rows, the
-    /// color label is visually hidden by the sr-only clip-path technique, and the header
-    /// Print button is visible and inside the pane bounds (icon-only, never clipped).
+    /// The two-user grid keeps ONE column until each pane can hold the 768px tablet breakpoint
+    /// (a <c>min-[1700px]</c> two-column split), so at 1600×1000 both panes render a tablet+
+    /// presentation: the full tool set (highlight/stamp/draw) is offered, the G2 palette is
+    /// absent, the pane has no horizontal overflow and the Print command stays inside the pane
+    /// bounds. The mobile behaviors are covered by PdfAnnotatorResponsiveE2ETests.
     /// </summary>
     [TestMethod]
     [TestCategory("WASM")]
-    public async Task Annotator_NarrowViewerColumn_ToolbarAndHeaderExportStayIntact()
+    public async Task Annotator_TwoUserPanes_TableViewportWidth_FullEditingIntact()
     {
-        const double ToolbarRowMaxHeight = 40;
         var handle = await OpenAnnotatorPageAsync();
         var page = handle.Page;
 
@@ -481,29 +489,24 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await alice.ScrollIntoViewIfNeededAsync();
         await WaitForSurfaceReadyAsync(alice);
 
-        // Precondition: the viewer column (the named query container) really is narrow.
-        var viewerBox = await alice.Locator(".tm-pdf-annotator__viewer").First.BoundingBoxAsync()
-            ?? throw new InvalidOperationException("The annotator viewer column has no bounding box.");
-        Assert.IsTrue(viewerBox.Width < 520,
-            $"Expected a narrow viewer column for the container query, got {viewerBox.Width}px.");
+        // A full-width pane is at or above the tablet breakpoint: not the G2 presentation.
+        var layout = await alice.Locator(".tm-pdf-annotator").First.GetAttributeAsync("data-editor-layout");
+        Assert.AreNotEqual("mobile", layout,
+            $"a full-width two-user pane must resolve tablet+ at 1600x1000, got '{layout}'");
 
-        // 1) The merged toolbar never grows beyond two 40px rows.
-        var toolbarBox = await alice.Locator(".tm-pdf-viewer__toolbar").First.BoundingBoxAsync()
-            ?? throw new InvalidOperationException("The merged toolbar has no bounding box.");
-        Assert.IsTrue(toolbarBox.Height <= 2 * ToolbarRowMaxHeight,
-            $"The merged toolbar is {toolbarBox.Height}px tall — more than two 40px rows.");
+        // The full tool set is offered again (the stamp/draw flows run on this pane).
+        Assert.IsNotNull(await alice.Locator("[data-testid='pdf-annotator-mode-highlight']").First.ElementHandleAsync(),
+            "the editing tools are offered on the tablet+ presentation");
+        Assert.AreEqual(0, await alice.Locator("[data-testid='pdf-annotator-palette']").CountAsync(),
+            "the G2 tool palette belongs to the mobile presentation only");
 
-        // 2) The container query fired: the color label is sr-only hidden (clip-path
-        //    inset(50%) on a 1x1 box) while staying announced for assistive tech.
-        var clipPath = await page.EvaluateAsync<string>(
-            "el => getComputedStyle(el).clipPath",
-            await alice.Locator("[data-testid='pdf-annotator-color-label']").First.ElementHandleAsync()
-                ?? throw new InvalidOperationException("The color label was not found."));
-        Assert.AreEqual("inset(50%)", clipPath,
-            $"The color label should be sr-only hidden in the narrow column, got clip-path '{clipPath}'.");
+        var overflow = await page.EvaluateAsync<bool>(
+            "el => el.scrollWidth > el.clientWidth + 1",
+            await alice.Locator(".tm-pdf-annotator").First.ElementHandleAsync()
+                ?? throw new InvalidOperationException("The annotator root was not found."));
+        Assert.IsFalse(overflow, "the wide pane must not introduce horizontal overflow");
 
-        // 3) The Print button lives in the header export group: visible, icon-only, and
-        //    inside the pane bounds (the header actions wrap instead of clipping it).
+        // Print (bar tile on mobile, secondary button on desktop/tablet) stays inside the pane.
         var print = alice.Locator("[data-testid='pdf-annotator-print']").First;
         await Assertions.Expect(print).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
         var printBox = await print.BoundingBoxAsync()
@@ -516,13 +519,12 @@ public class PdfAnnotatorE2ETests : WasmTestBase
             && printBox.Y + printBox.Height <= paneBox.Y + paneBox.Height + 1,
             $"The Print button ({printBox.Width}x{printBox.Height} at {printBox.X},{printBox.Y}) " +
             $"escaped the pane bounds ({paneBox.Width}x{paneBox.Height} at {paneBox.X},{paneBox.Y}).");
-        var textDisplay = await page.EvaluateAsync<string>(
-            "el => { const t = el.querySelector('.tm-pdf-annotator__action-text'); return t ? getComputedStyle(t).display : 'missing'; }",
-            await print.ElementHandleAsync());
-        Assert.AreEqual("none", textDisplay,
-            "The icon-only action rule should also apply inside the header (the label text stays hidden).");
 
-        await SaveScreenshotAsync(page, "narrow-viewer-column");
+        // The viewer's own toolbar (paging and zoom) is intact inside the pane.
+        var pageInput = alice.Locator(".tm-pdf-viewer__page-input").First;
+        await Assertions.Expect(pageInput).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 15000 });
+
+        await SaveScreenshotAsync(page, "panes-tablet-width");
         AssertNoBlazorErrors(handle);
     }
 

@@ -4095,6 +4095,8 @@
   "TmPdfAnnotator_TogglePanel": "Afficher/Masquer le panneau",
   "TmPdfAnnotator_ToolbarLabel": "Outils d'annotation PDF",
   "TmPdfAnnotator_ToolsGroup": "Outils d'annotation",
+  "TmPdfAnnotator_OpenThreads": "Commentaires",
+  "TmPdfAnnotator_EditOnLargerScreen": "Les outils de surlignage, de tampon et de dessin sont disponibles sur un écran plus grand.",
   "TmPdfTemplateDesigner_Autodetect": "Détecter les champs automatiquement",
   "TmPdfTemplateDesigner_CanvasLabel": "Canevas du modèle",
   "TmPdfTemplateDesigner_ContextMenu": "Menu contextuel",

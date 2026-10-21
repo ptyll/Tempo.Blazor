@@ -4,6 +4,57 @@
 
 ### Added
 
+- **TmPdfAnnotator: the annotator and its panel on tablet and mobile (FZE-8).** The annotator now
+  resolves its layout from its own container through the embedded `TmEditorShell` (new
+  `LayoutMode` parameter, `TmLayoutMode`, default `Auto` — a forced value pins the layout so
+  tests and hosts can render a mode without a DOM) and adapts like the tablet/mobile references:
+  **desktop** keeps the merged toolbar and the docked thread panel; **tablet** renders the tool
+  labels under the icons (new `ToolbarLabels` parameter, `ToolbarLabels`, default `Icons` — the
+  demo pages use `Auto`; the value is passed through to the embedded viewer's toolbar), meets the
+  44px touch target on a coarse pointer for every annotator control (including the export/print
+  buttons and the toolbar pills), keeps the thumbnails collapsible (they start collapsed, as the
+  viewer does) and hosts the thread panel as the shell's docked side region; **mobile** is the
+  G2 presentation — a horizontally scrollable tool-palette tile row with exactly *Browse* and
+  *Add comment* (highlight, stamp and draw are hidden and an active edit mode falls back to
+  *Browse*, with a localized hint that the editing tools need a larger screen), the F5
+  `TmMobileActionBar` ("Export PDF | Export flattened | Print" with the threads entry in the
+  shared "More" menu) and the thread panel as a non-modal bottom sheet (peek/half/full) opened
+  from a thread marker, from "Comments" or from a comment draft, with the draft composer and the
+  reply/resolve buttons sticky at the sheet bottom in one shared row (phase 8 review 12). Paging
+  and zoom on a phone come
+  from the compact viewer toolbar (F7). `TmPdfAnnotatorPanel` gains `ShowChrome` (default `true`);
+  the sheet presentation passes `false` so the sheet header owns the title and the close button.
+  New localization keys: `TmPdfAnnotator_OpenThreads`, `TmPdfAnnotator_EditOnLargerScreen`
+  (en/cs/sk/fr + mock).
+
+  Phase 8 review round: the mobile sheet starts CLOSED at load (and on every switch from
+  desktop/tablet to mobile, unless the host explicitly supplies `ShowPanel`); after a sheet
+  close focus returns to the element that opened it (marker / Comments tile / draft) through
+  `tmPdfAnnotator.rememberFocus`/`focusOpener`, falling back to the first action-bar tile;
+  a sheet opened from a marker or a draft lands on the HALF snap (0.7) with the composer
+  pinned to the sheet bottom (review 12: the reply input and its Resolve secondary must sit
+  fully inside the sheet's visible band — the peek's band was too short and pushed the
+  reply/resolve row below the fold), the selected card `scrollIntoView({block:'end'})`-ed (the
+  sticky
+  reply composer rides at the card's bottom, so the bottom alignment lands it on the sheet's
+  visible band) and the draft textarea / reply input focused; the sheet header is not sticky
+  (the drawer body owns the scrolling) and the composer actions share one row instead of the
+  stacked full-width column; the shell collapse chevron is
+  wired two-way
+  (`CollapsedPanels` — a collapse of the right panel closes it, the reopen toggle restores);
+  `TmPdfViewer` gains `ShowMobileActionBar` (default `true`) plus public
+  `OpenThumbnailsSheetAsync`/`OpenSearchAsync`, and the annotator folds the viewer's Pages and
+  Search entries into its own bar (exactly one bar on a phone); the annotator tools render as
+  their own full-width labelled row above the canvas on tablet (never inside the narrow viewer
+  toolbar overflow, the color chip never wraps as a stray dot; review 12: the labelled pill
+  track wraps within the row and the color label stays visible in it at narrow panes);
+  `ToolbarLabels` follows the
+  viewer's rule (labels under the icons on tablet, inline on desktop); the thumbnails reuse the
+  viewer's guarded tablet default (collapsed unless the host binds them); the panel header ✕,
+  the "Show resolved" target, the card toggles and the palette tiles meet the 44px target on a
+  coarse pointer (both palette tiles stay fully visible at 320px); and editing a comment focuses
+  `pdf-annotator-edit-input`, returning focus to the comment's ⋯ trigger on save/cancel.
+
 - **TmPdfViewer: full continuous mode — lazy rendering, scroll tracking and per-page text/search.**
   `renderAllPages` now builds one placeholder wrap per page (correct aspect ratio, resolved from
   the real page boxes), paints pages lazily through an IntersectionObserver and a serial render
@@ -215,6 +266,26 @@
   New localization keys: `TmPdfViewer_CloseSearch` (en/cs/sk/fr + mock).
 
 ### Breaking / Migration
+
+- **TmPdfAnnotator: the DOM and layout moved onto `TmEditorShell`, and a mobile layout offers
+  light edits only (G2).** The annotator root is still `.tm-pdf-annotator` with the
+  `pdf-annotator` test id and keeps every `pdf-annotator-*` test id, but the two-column
+  `.tm-pdf-annotator__body` wrapper is gone: the viewer now lives in the shell's
+  `data-region="canvas"` region and the thread panel in `data-region="right"` (a docked aside
+  with a resize separator on desktop/tablet, a non-modal bottom sheet on mobile — where the
+  panel renders with `ShowChrome=false`). The annotator root owns the height contract
+  (`Height`, default "600px") and the embedded viewer flexes inside it; a host that relied on
+  the annotator growing past `Height` for the compact fallback row now gets the row inside the
+  same height. On a mobile layout the highlight/stamp/draw tools are not rendered (an active
+  edit mode falls back to Browse), the tool palette is the G2 tile row, the export/print
+  commands live in the F5 action bar and the merged toolbar gets nothing injected. Migration:
+  hosts styling `.tm-pdf-annotator__body` or positioning against it should target
+  `[data-region='canvas']` / `[data-region='right']` instead; a host that needs the full tool
+  set on a phone pins `LayoutMode="TmLayoutMode.Desktop"`; the mobile sheet starts CLOSED at
+  load and on every desktop/tablet→mobile switch, so a host that wants the sheet open on a
+  phone explicitly supplies `ShowPanel="true"` (the desktop default keeps the docked panel
+  open) — and on a tablet the annotator renders its tools as a full-width labelled row instead
+  of merging them into the viewer toolbar.
 
 - **TmPdfViewer: the toolbar DOM is now a core `TmToolbar`, and `ZoomMode` defaults to `Auto`
   (fit-width on mobile).** Two behavior changes in one migration:

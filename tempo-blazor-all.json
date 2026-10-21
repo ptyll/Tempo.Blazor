@@ -28284,7 +28284,14 @@
               "name": "Height",
               "type": "string?",
               "isRequired": false,
-              "description": "Height of the annotator (CSS value). Default is \"600px\"."
+              "description": "Height of the annotator (CSS value). Default is \"600px\". The root owns the height contract; the embedded viewer fills it and shrinks inside it on a mobile layout."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "How the annotator decides its responsive layout. Auto measures the annotator's own container through the embedded TmEditorShell; a forced value renders that layout without measuring, so a test — or a host — can pin a mode. Default Auto. The mobile layout is the G2 presentation: viewing plus light edits only."
             },
             {
               "name": "Mode",
@@ -28391,6 +28398,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Document title rendered in the header row. Used only when ShowHeader is true."
+            },
+            {
+              "name": "ToolbarLabels",
+              "type": "ToolbarLabels",
+              "isRequired": false,
+              "default": "ToolbarLabels.Icons",
+              "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only tools of the earlier phases); Auto and IconsWithText show the labels — on a tablet layout under the icons (the ribbon style of the tablet reference). The value is passed through to the embedded viewer's toolbar as well."
             },
             {
               "name": "Url",
@@ -28600,6 +28614,13 @@
               "type": "EventCallback<string?>",
               "isRequired": false,
               "description": "Callback invoked when the selected thread id changes."
+            },
+            {
+              "name": "ShowChrome",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the panel renders its own header (title + ✕ close). Default true — the docked desktop/tablet presentation. When the panel is hosted inside the annotator's mobile bottom sheet (FZE-8), the sheet header owns the title and the close button, so the host passes false and the panel renders only the resolved filter and its body, with the draft composer pinned to the sheet bottom and its buttons split across one row (phase 8 review 12)."
             },
             {
               "name": "ShowResolved",
@@ -29166,6 +29187,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether to show a document header above the toolbar. Default is false, which keeps the toolbar-only layout. When true, the Open and Download links move from the toolbar into the header (since 2.9.1)."
+            },
+            {
+              "name": "ShowMobileActionBar",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the viewer renders its own mobile action bar (Pages | Search | Comments). Hosts that fold these entries into their own action bar (the annotator) pass false and drive the sheets through OpenThumbnailsSheetAsync / OpenSearchAsync."
             },
             {
               "name": "ShowOpenLink",

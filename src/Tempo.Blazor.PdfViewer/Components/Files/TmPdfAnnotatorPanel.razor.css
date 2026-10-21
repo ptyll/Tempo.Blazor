@@ -108,6 +108,62 @@
 
 /* ── Thread list: rendered by the shared TmPdfThreadList (TmPdfThreadList.razor.css) ── */
 
+/* ── Mobile bottom-sheet presentation (ShowChrome=false, FZE-8) ─────────────
+   The shell's sheet owns the width, the title and the close button; the panel stretches to
+   the full sheet width, drops its left border and pins its composers (draft and reply) to
+   the sheet bottom with the actions split across one row (phase 8 review 12). The thread
+   list flexes so the draft prompt pins to the sheet's bottom edge even at the peek snap
+   (phase 8 review 11). The panel must NOT
+   keep the docked presentation's `overflow-y: auto`: it is taller than the peek snap's
+   visible band, and as the nearest scrollport between the sticky reply composer and the
+   drawer body it would swallow the stickiness — the composer would ride at its natural
+   (unscrolled) position below the sheet band instead of pinning to it. The drawer body owns
+   the sheet's scrolling, so the sticky composer pins against ITS visible band. */
+.tm-pdf-annotator-panel--sheet {
+    width: 100%;
+    border-left: none;
+    overflow-y: visible;
+}
+
+.tm-pdf-annotator-panel--sheet ::deep .tm-pdf-thread-list {
+    flex: 1 1 auto;
+}
+
+.tm-pdf-annotator-panel--sheet .tm-pdf-annotator-panel__new {
+    margin-top: auto;
+}
+
+/* The sheet header is NOT sticky (phase 8 review 12): the panel is taller than the
+   visible band and the drawer body owns the scrolling, so a sticky header would ride
+   over the thread cards while they scroll — the filter scrolls away with the body. */
+.tm-pdf-annotator-panel__header--sheet {
+    justify-content: flex-end;
+    position: static;
+}
+
+/* The sheet composer actions share ONE row (phase 8 review 12): Reply + Resolve sit
+   side by side instead of the stacked full-width column, whose second button ended
+   below the sheet's visible band at the half snap. The buttons split the row
+   (`flex: 1 1 0`) instead of stretching to the full width each. */
+.tm-pdf-annotator-panel--sheet ::deep .tm-pdf-composer__btn {
+    flex: 1 1 0;
+}
+
+/* ── Coarse pointer: 44px touch targets (phase 8 review 9) ──────────────────
+   The header ✕ and the "Show resolved" label — the label is the checkbox's real touch
+   target (the native checkbox keeps its visual size inside the enlarged label). */
+@media (pointer: coarse) {
+    .tm-pdf-annotator-panel__close {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-pdf-annotator-panel__filter {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .tm-pdf-annotator-panel__close {
         transition: none;

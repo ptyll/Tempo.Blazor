@@ -173,4 +173,59 @@ public class TmPdfCommentItemTests : LocalizationTestBase
     /// <summary>Opens the comment's "⋯" action menu.</summary>
     private static void OpenMenu(IRenderedComponent<TmPdfCommentItem> cut)
         => cut.Find(".tm-pdf-comment-item__menu .tm-dropdown-trigger").Click();
+
+    // ── Focus (phase 8 review 12) ────────────────────────────────────────────
+    // Opening the editor focuses the textarea (ElementReference.FocusAsync surfaces in bUnit's
+    // Loose JSInterop as "Blazor._internal.domWrapper.focus"); Save/Cancel returns focus to the
+    // "⋯" trigger through the shared JS helper.
+
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+    private const string FocusDescendantInvocation = "tmPdfAnnotator.focusDescendant";
+
+    [Fact]
+    public void Edit_FocusesTheEditInput()
+    {
+        var cut = Render(Comment(canEdit: true));
+
+        OpenMenu(cut);
+        cut.WaitForElement($"[data-testid='{Base}-edit']").Click();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().BeGreaterThanOrEqualTo(1,
+                "opening the editor focuses the edit textarea"));
+    }
+
+    [Fact]
+    public void EditSave_ReturnsFocusToTheMenuTrigger()
+    {
+        var cut = Render(Comment(canEdit: true));
+
+        OpenMenu(cut);
+        cut.WaitForElement($"[data-testid='{Base}-edit']").Click();
+        cut.WaitForElement($"[data-testid='{Base}-edit-input']").Input("updated body");
+        cut.Find($"[data-testid='{Base}-edit-save']").Click();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusDescendantInvocation).Should().BeGreaterThanOrEqualTo(1));
+        var restore = JSInterop.Invocations.Last(i => i.Identifier == FocusDescendantInvocation);
+        restore.Arguments[^1].Should().Be(".tm-dropdown-trigger",
+            "saving returns focus to the comment's ⋯ trigger");
+    }
+
+    [Fact]
+    public void EditCancel_ReturnsFocusToTheMenuTrigger()
+    {
+        var cut = Render(Comment(canEdit: true));
+
+        OpenMenu(cut);
+        cut.WaitForElement($"[data-testid='{Base}-edit']").Click();
+        cut.WaitForElement($"[data-testid='{Base}-edit-input']").Input("draft");
+        cut.Find($"[data-testid='{Base}-edit-cancel']").Click();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusDescendantInvocation).Should().BeGreaterThanOrEqualTo(1));
+        var restore = JSInterop.Invocations.Last(i => i.Identifier == FocusDescendantInvocation);
+        restore.Arguments[^1].Should().Be(".tm-dropdown-trigger",
+            "cancelling returns focus to the comment's ⋯ trigger");
+    }
 }

@@ -3022,6 +3022,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_TogglePanel"] = "Toggle panel",
         ["TmPdfAnnotator_ToolbarLabel"] = "PDF annotation tools",
         ["TmPdfAnnotator_ToolsGroup"] = "Annotation tools",
+        ["TmPdfAnnotator_OpenThreads"] = "Comments",
+        ["TmPdfAnnotator_EditOnLargerScreen"] = "Highlight, stamp and drawing tools are available on a larger screen.",
 
         // TmDocumentEditor
         ["TmDocumentEditor_ProviderMissingTitle"] = "Document provider is not configured",
@@ -6494,6 +6496,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPdfAnnotator_TogglePanel"] = "Přepnout panel",
         ["TmPdfAnnotator_ToolbarLabel"] = "Nástroje anotací PDF",
         ["TmPdfAnnotator_ToolsGroup"] = "Nástroje anotací",
+        ["TmPdfAnnotator_OpenThreads"] = "Komentáře",
+        ["TmPdfAnnotator_EditOnLargerScreen"] = "Zvýraznění, razítko a kreslení jsou dostupné na větší obrazovce.",
         ["TmPdfTemplateDesigner_Autodetect"] = "Automaticky rozpoznat pole",
         ["TmPdfTemplateDesigner_Detecting"] = "Rozpoznávám pole...",
         ["TmPdfTemplateDesigner_ContextMenu"] = "Kontextové menu",

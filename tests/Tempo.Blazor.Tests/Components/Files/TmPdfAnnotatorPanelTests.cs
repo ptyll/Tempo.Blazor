@@ -55,4 +55,50 @@ public class TmPdfAnnotatorPanelTests : LocalizationTestBase
         cut.Find(".tm-pdf-annotator-panel__dot").GetAttribute("style")
             .Should().Be("background:#0e7490");
     }
+
+    // ── Phase 8 (FZE-8): the mobile sheet presentation ───────────────────────
+
+    [Fact]
+    public void Mobile_DraftButtonsFullWidthSticky()
+    {
+        // ShowChrome=false is the sheet presentation (the annotator passes it on mobile): the
+        // panel drops its own title/close for the sheet header and pins the draft composer to
+        // the sheet bottom; the sheet CSS stretches its buttons to the full width.
+        using var cut = Render<TmPdfAnnotatorPanel>(parameters => parameters
+            .Add(p => p.ShowChrome, false)
+            .Add(p => p.Draft, new PdfAnnotatorDraft { Kind = DocumentAnnotationKind.Comment }));
+
+        cut.Find("[data-testid='pdf-annotator-panel']").ClassList
+            .Should().Contain("tm-pdf-annotator-panel--sheet",
+                "the sheet modifier is the full-width/sticky CSS hook");
+        cut.Find("[data-testid='pdf-annotator-new']").QuerySelector(".tm-pdf-composer")
+            .ClassList.Should().Contain("tm-pdf-composer--sticky",
+                "the draft composer pins to the sheet bottom on mobile");
+        cut.FindAll("[data-testid='pdf-annotator-close']").Should().BeEmpty(
+            "the sheet header owns the close button in the sheet presentation");
+    }
+
+    [Fact]
+    public void Mobile_ReplyResolveFullWidth()
+    {
+        var thread = new DocumentCommentThread
+        {
+            Id = "t1",
+            Anchor = DocumentCommentAnchor.Point(1, 0.5, 0.5),
+            Comments = [new DocumentComment { Id = "t1-c", AuthorId = "alice", AuthorName = "Alice", Body = "note" }]
+        };
+
+        using var cut = Render<TmPdfAnnotatorPanel>(parameters => parameters
+            .Add(p => p.ShowChrome, false)
+            .Add(p => p.SelectedThreadId, "t1")
+            .Add(p => p.Threads, new[] { thread }));
+
+        cut.Find("[data-testid='pdf-annotator-panel']").ClassList
+            .Should().Contain("tm-pdf-annotator-panel--sheet");
+
+        // The expanded thread's sticky reply composer: Reply submits and Resolve is its ghost
+        // secondary — both stretch to the full sheet width through the --sheet hook.
+        cut.Find(".tm-pdf-composer--sticky").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotator-resolve']").Should().NotBeNull();
+    }
 }

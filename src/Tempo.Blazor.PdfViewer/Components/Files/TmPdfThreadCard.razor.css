@@ -149,6 +149,15 @@
     padding: 0 var(--tm-space-3) var(--tm-space-3);
 }
 
+/* A finger cannot hit the card's expand/collapse toggle: the whole header (the chevron's
+   real target) meets the shared touch target on a coarse pointer (phase 8 review 9). */
+@media (pointer: coarse) {
+    .tm-pdf-thread-card__header {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .tm-pdf-thread-card__header {
         transition: none;

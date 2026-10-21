@@ -4106,6 +4106,8 @@
   "TmPdfAnnotator_TogglePanel": "Přepnout panel",
   "TmPdfAnnotator_ToolbarLabel": "Nástroje anotací PDF",
   "TmPdfAnnotator_ToolsGroup": "Nástroje anotací",
+  "TmPdfAnnotator_OpenThreads": "Komentáře",
+  "TmPdfAnnotator_EditOnLargerScreen": "Zvýraznění, razítko a kreslení jsou dostupné na větší obrazovce.",
   "TmPdfTemplateDesigner_Autodetect": "Automaticky rozpoznat pole",
   "TmPdfTemplateDesigner_CanvasLabel": "Plocha šablony",
   "TmPdfTemplateDesigner_ContextMenu": "Kontextové menu",

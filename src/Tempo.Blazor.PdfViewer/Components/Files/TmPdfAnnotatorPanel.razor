@@ -7,29 +7,48 @@
    (resolved filter, ✕ close button — OnCloseRequested, surfaced as two-way ShowPanel on the
    annotator) and the draft prompt; the thread cards themselves render through the shared
    TmPdfThreadList (PD4), which composes TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer.
-   Comment edits flow through OnEditRequested to the provider. *@
+   Comment edits flow through OnEditRequested to the provider. ShowChrome=false drops the
+   panel's own title and close button for the mobile bottom-sheet presentation (the shell's
+   sheet header owns them there, FZE-8); the resolved filter stays in both presentations and
+   the draft composer pins to the sheet bottom with full-width buttons. *@
 
-<aside class="tm-pdf-annotator-panel" data-testid="@TestId("pdf-annotator-panel")" aria-label="@Loc["TmPdfAnnotator_PanelLabel"]">
+<aside class="@PanelClass" data-testid="@TestId("pdf-annotator-panel")" aria-label="@Loc["TmPdfAnnotator_PanelLabel"]">
 
-    <header class="tm-pdf-annotator-panel__header">
-        <span class="tm-pdf-annotator-panel__title">@Loc["TmPdfAnnotator_Annotations"]</span>
-        <label class="tm-pdf-annotator-panel__filter">
-            <input type="checkbox"
-                   checked="@ShowResolved"
-                   disabled="@Disabled"
-                   data-testid="@TestId("pdf-annotator-show-resolved")"
-                   @onchange="ToggleResolvedAsync" />
-            @Loc["TmPdfAnnotator_ShowResolved"]
-        </label>
-        <button type="button"
-                class="tm-pdf-annotator-panel__close"
-                data-testid="@TestId("pdf-annotator-close")"
-                aria-label="@Loc["TmPdfThread_ClosePanel"]"
-                title="@Loc["TmPdfThread_ClosePanel"]"
-                @onclick="() => OnCloseRequested.InvokeAsync()">
-            <TmIcon Name="@IconNames.X" />
-        </button>
-    </header>
+    @if (ShowChrome)
+    {
+        <header class="tm-pdf-annotator-panel__header">
+            <span class="tm-pdf-annotator-panel__title">@Loc["TmPdfAnnotator_Annotations"]</span>
+            <label class="tm-pdf-annotator-panel__filter">
+                <input type="checkbox"
+                       checked="@ShowResolved"
+                       disabled="@Disabled"
+                       data-testid="@TestId("pdf-annotator-show-resolved")"
+                       @onchange="ToggleResolvedAsync" />
+                @Loc["TmPdfAnnotator_ShowResolved"]
+            </label>
+            <button type="button"
+                    class="tm-pdf-annotator-panel__close"
+                    data-testid="@TestId("pdf-annotator-close")"
+                    aria-label="@Loc["TmPdfThread_ClosePanel"]"
+                    title="@Loc["TmPdfThread_ClosePanel"]"
+                    @onclick="() => OnCloseRequested.InvokeAsync()">
+                <TmIcon Name="@IconNames.X" />
+            </button>
+        </header>
+    }
+    else
+    {
+        <div class="tm-pdf-annotator-panel__header tm-pdf-annotator-panel__header--sheet">
+            <label class="tm-pdf-annotator-panel__filter">
+                <input type="checkbox"
+                       checked="@ShowResolved"
+                       disabled="@Disabled"
+                       data-testid="@TestId("pdf-annotator-show-resolved")"
+                       @onchange="ToggleResolvedAsync" />
+                @Loc["TmPdfAnnotator_ShowResolved"]
+            </label>
+        </div>
+    }
 
     @if (Draft is not null && !Disabled)
     {
@@ -49,6 +68,7 @@
             <TmPdfComposer Placeholder="@Loc["TmPdfAnnotator_NotePlaceholder"]"
                            SubmitLabel="@Loc["TmPdfAnnotator_Add"]"
                            AllowEmptySubmit="@(Draft.Kind != DocumentAnnotationKind.Comment)"
+                           Sticky="@(!ShowChrome)"
                            InputTestId="@TestId("pdf-annotator-new-input")"
                            SubmitTestId="@TestId("pdf-annotator-new-submit")"
                            SecondaryLabel="@Loc["TmPdfAnnotator_Cancel"]"
@@ -100,6 +120,16 @@
     /// <summary>Resolves the display color of a thread.</summary>
     [Parameter] public Func<DocumentCommentThread, string>? ColorResolver { get; set; }
 
+    /// <summary>
+    /// Whether the panel renders its own header (title + ✕ close). Default true — the docked
+    /// desktop/tablet presentation. When the panel is hosted inside the annotator's mobile
+    /// bottom sheet (FZE-8), the sheet header owns the title and the close button, so the host
+    /// passes false and the panel renders only the resolved filter and its body, with the draft
+    /// composer pinned to the sheet bottom and its buttons split across one row (phase 8
+    /// review 12).
+    /// </summary>
+    [Parameter] public bool ShowChrome { get; set; } = true;
+
     /// <summary>Pending annotation draft awaiting a note, when present.</summary>
     [Parameter] public PdfAnnotatorDraft? Draft { get; set; }
 
@@ -132,6 +162,15 @@
 
     /// <summary>Callback invoked when the panel's close button is pressed.</summary>
     [Parameter] public EventCallback OnCloseRequested { get; set; }
+
+    /// <summary>
+    /// The panel's class: the base plus the <c>--sheet</c> modifier when the panel renders
+    /// inside the mobile bottom sheet (<see cref="ShowChrome"/> false) — the sheet owns the
+    /// width there, so the docked 300px column and its left border give way.
+    /// </summary>
+    private string PanelClass => ShowChrome
+        ? "tm-pdf-annotator-panel"
+        : "tm-pdf-annotator-panel tm-pdf-annotator-panel--sheet";
 
     private Task CreateAsync(string body) => OnCreateRequested.InvokeAsync(body);
 

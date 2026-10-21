@@ -4084,6 +4084,8 @@
   "TmPdfAnnotator_TogglePanel": "Toggle panel",
   "TmPdfAnnotator_ToolbarLabel": "PDF annotation tools",
   "TmPdfAnnotator_ToolsGroup": "Annotation tools",
+  "TmPdfAnnotator_OpenThreads": "Comments",
+  "TmPdfAnnotator_EditOnLargerScreen": "Highlight, stamp and drawing tools are available on a larger screen.",
   "TmPdfTemplateDesigner_Autodetect": "Autodetect fields",
   "TmPdfTemplateDesigner_CanvasLabel": "Template canvas",
   "TmPdfTemplateDesigner_ContextMenu": "Context menu",

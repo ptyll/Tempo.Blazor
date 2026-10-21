@@ -84,6 +84,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Whether to show a search input. Default is false.</summary>
     [Parameter] public bool ShowSearch { get; set; }
 
+    /// <summary>
+    /// Whether the viewer renders its own mobile action bar (Pages | Search | Comments).
+    /// Default is true. Hosts that fold these entries into their own action bar (such as
+    /// <see cref="TmPdfAnnotator"/>) pass false and drive the sheets through the public
+    /// <see cref="OpenThumbnailsSheetAsync"/> / <see cref="OpenSearchAsync"/> methods instead.
+    /// </summary>
+    [Parameter] public bool ShowMobileActionBar { get; set; } = true;
+
     /// <summary>Whether to show a view mode toggle (single/continuous). Default is false.</summary>
     [Parameter] public bool ShowViewModeToggle { get; set; }
 
@@ -499,6 +507,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
         var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, TmLayoutMode.Desktop);
         await ApplyResolvedLayoutAsync(resolved);
+
+        // A fresh document applies the panel defaults synchronously (above), which the
+        // no-op ApplyResolvedLayoutAsync call skips — report the guarded default to a bound
+        // host here, so the next parameter pass does not override it with a stale value.
+        if (!_panelsTouched && _thumbnailsCollapsed != ThumbnailsCollapsed && ThumbnailsCollapsedChanged.HasDelegate)
+        {
+            await ThumbnailsCollapsedChanged.InvokeAsync(_thumbnailsCollapsed);
+        }
     }
 
     /// <summary>
@@ -526,6 +542,15 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
                 // The docked thumbnails reappear in a fresh container: the post-render pass
                 // must rebuild the JS-rendered thumbnails (same as SetThumbnailsCollapsedAsync).
                 _lastThumbnailUrl = null;
+            }
+
+            // Report the layout default to a bound host: the annotator forwards the callback
+            // into its own two-way shadow, so the next parameter pass carries the same value
+            // back instead of overriding the guarded default with a stale parameter (phase 8
+            // review 8 — the annotator must not fight the viewer's tablet default).
+            if (_thumbnailsCollapsed != ThumbnailsCollapsed && ThumbnailsCollapsedChanged.HasDelegate)
+            {
+                await ThumbnailsCollapsedChanged.InvokeAsync(_thumbnailsCollapsed);
             }
         }
 
@@ -1666,6 +1691,22 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// scrolled into view instead of re-rendering a single canvas. A fit mode recomputes
     /// inside <see cref="RenderCurrentPageAsync"/> for the new page size.</summary>
     public Task GoToPageAsync(int page) => NavigateToPageAsync(page);
+
+    /// <summary>
+    /// Opens the mobile thumbnails sheet. Public API for hosts that fold the viewer's
+    /// Pages entry into their own mobile action bar (<see cref="ShowMobileActionBar"/> false);
+    /// a no-op on desktop/tablet layouts and without <see cref="ShowThumbnails"/>.
+    /// </summary>
+    public Task OpenThumbnailsSheetAsync()
+        => !ShowThumbnails || _useFallback ? Task.CompletedTask : SetThumbnailsSheetAsync(true);
+
+    /// <summary>
+    /// Opens the search input. Public API for hosts that fold the viewer's Search entry
+    /// into their own mobile action bar (<see cref="ShowMobileActionBar"/> false); a no-op
+    /// when the search is not offered (<see cref="ShowSearch"/> false) or already open.
+    /// </summary>
+    public Task OpenSearchAsync()
+        => !ShowSearch || _searchVisible || _useFallback ? Task.CompletedTask : ToggleSearchAsync();
 
     /// <summary>Sets the zoom scale directly. Switches an active fit mode back to
     /// <see cref="PdfZoomMode.Custom"/> — an explicit scale is a user decision.</summary>
