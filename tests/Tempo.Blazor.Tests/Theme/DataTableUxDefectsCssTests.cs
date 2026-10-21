@@ -58,7 +58,7 @@ public sealed class DataTableUxDefectsCssTests
     [Fact]
     public void Rtl_PlainCellsFollowTheWritingDirection()
     {
-        Rule(Css(), "[dir=\"rtl\"] .tm-data-table th:not(.tm-text-right)").Should().Contain("text-align: right");
+        Rule(Css(), "[dir=\"rtl\"] .tm-data-table th:not(.tm-text-right)").Should().Contain("text-align: start");
     }
 
     [Fact]
@@ -117,5 +117,38 @@ public sealed class DataTableUxDefectsCssTests
         Regex.IsMatch(css[..at], @"@container\s+tm-data-table\s*\(width\s*<\s*640px\)\s*\{\s*$", RegexOptions.None, Timeout)
             .Should().BeTrue("the hint disappears only where the cards layout is active (narrow container)");
         css[at..].Should().Contain("display: none");
+    }
+
+    // ── Cleanup round (post-phase 14): the deferred polish items ──
+
+    [Fact]
+    public void Rtl_PinGlyph_IsMirrored()
+    {
+        var body = Rule(Css(), "[dir=\"rtl\"] .tm-col-pin-btn > span");
+        body.Should().Contain("transform: scaleX(-1)",
+            "the pin glyph points at the inline-end edge, which RTL mirrors");
+    }
+
+    [Fact]
+    public void Rtl_PlainCells_AreStartAligned()
+    {
+        Rule(Css(), "[dir=\"rtl\"] .tm-data-table th:not(.tm-text-right):not(.tm-text-center)")
+            .Should().Contain("text-align: start");
+    }
+
+    [Fact]
+    public void CardsMode_EmptyStateCell_IsCentred()
+    {
+        var css = Css();
+        var at = css.IndexOf(".tm-data-table-wrapper--cards .tm-data-table td.tm-data-table-empty-cell", StringComparison.Ordinal);
+        at.Should().BeGreaterThanOrEqualTo(0);
+        var body = css[css.IndexOf('{', at)..css.IndexOf('}', at)];
+        body.Should().Contain("display: block").And.Contain("text-align: center");
+    }
+
+    [Fact]
+    public void LoadingSkeletonRows_CarryASizingRule()
+    {
+        Rule(Css(), ".tm-data-table-loading-row td").Should().Contain("block-size");
     }
 }

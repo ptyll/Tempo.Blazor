@@ -30,7 +30,7 @@ public class DataTableEdgeDemoPageTests : DemoPageLocalizationTestBase
         var section = cut.Find("[data-testid='dt-edge-section']");
         section.QuerySelector("[data-testid='dt-edge-empty'] .tm-empty-state").Should().NotBeNull(
             "an empty table shows its empty state, not a bare header");
-        section.QuerySelector("[data-testid='dt-edge-loading'] .tm-spinner").Should().NotBeNull(
+        section.QuerySelector("[data-testid='dt-edge-loading'] .tm-data-table-loading-row").Should().NotBeNull(
             "IsLoading is pinned on so the loading state can be captured");
         section.QuerySelector("[data-testid='dt-edge-long'] tbody tr").Should().NotBeNull();
         section.QuerySelectorAll("[data-testid='dt-edge-wide'] thead th").Length.Should().BeGreaterThanOrEqualTo(15,

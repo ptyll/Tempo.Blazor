@@ -969,6 +969,7 @@ public abstract class LocalizationTestBase : BunitContext
         // TmDataTable Grouping
         ["TmDataTable_GroupBy"] = "Group by",
         ["TmDataTable_GroupDropPlaceholder"] = "Drag column headers here to group",
+        ["TmDataTable_FilterAll"] = "All",
         ["TmDataTable_ExpandAll"] = "Expand all",
         ["TmDataTable_AddGrouping"] = "Add grouping",
         ["TmDataTable_CollapseAll"] = "Collapse all",
@@ -4913,6 +4914,7 @@ public abstract class LocalizationTestBase : BunitContext
         // TmDataTable Grouping
         ["TmDataTable_GroupBy"] = "Seskupit podle",
         ["TmDataTable_GroupDropPlaceholder"] = "Přetáhněte záhlaví sloupce pro seskupení",
+        ["TmDataTable_FilterAll"] = "Vše",
         ["TmDataTable_ExpandAll"] = "Rozbalit vše",
         ["TmDataTable_AddGrouping"] = "Přidat seskupení",
         ["TmDataTable_CollapseAll"] = "Sbalit vše",

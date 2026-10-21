@@ -257,7 +257,7 @@ public class DataTableRedesignBaselineScreenshots : BaselineGeneratorTestBase
         await ShotAsync(page, search, theme, "edge-no-results");
 
         var loading = page.Locator("[data-testid='dt-edge-loading']");
-        await Assertions.Expect(loading.Locator(".tm-spinner")).ToBeVisibleAsync();
+        await Assertions.Expect(loading.Locator(".tm-data-table-loading-row")).ToBeVisibleAsync();
         await ShotAsync(page, loading, theme, "edge-loading");
 
         var host = page.Locator("[data-testid='dt-edge-long']");

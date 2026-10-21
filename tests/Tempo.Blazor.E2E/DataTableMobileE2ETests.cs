@@ -9,6 +9,9 @@ public class DataTableMobileE2ETests : WasmTestBase
 
     [TestMethod, TestCategory("WASM")]
     public Task ScrollPinnedColumn_Pager_TabletCellsDoNotOverlap() => DataTableSpecs.ScrollPinnedAndPagerAsync(Browser, BaseUrl, RegisterContext);
+
+    [TestMethod, TestCategory("WASM")]
+    public Task PinnedColumns_Tablet1024_NoOverlap_StayPinnedOnScroll() => DataTableSpecs.PinnedColumns_Tablet1024Async(Browser, BaseUrl, RegisterContext);
 }
 
 [TestClass]

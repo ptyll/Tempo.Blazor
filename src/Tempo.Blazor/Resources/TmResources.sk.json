@@ -961,6 +961,7 @@
   "TmDataTable_GroupCount": "Počet: {0}",
   "TmDataTable_GroupBy": "Zoskupiť podľa",
   "TmDataTable_GroupDropPlaceholder": "Presunutím hlavičky stĺpca sem zoskupíte údaje",
+  "TmDataTable_FilterAll": "Všetko",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",
   "TmDataTable_GroupSum": "Súčet",

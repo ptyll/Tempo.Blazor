@@ -2044,9 +2044,13 @@
     /// True when the item count should be rendered. It is a toolbar readout, so it follows the
     /// same rule as the data table's filter summary: SearchOnly and ContentOnly own no chrome
     /// beyond the search box, and a count printed beside a lone search box is that chrome.
+    /// When the external filter builder already shows its own result preview, the item count
+    /// would print the same number twice, so it steps aside while filters are active.
     /// </summary>
     private bool ShouldRenderItemCount() =>
-        ShowItemCount && !IsContentToolbarMode;
+        ShowItemCount &&
+        !IsContentToolbarMode &&
+        !(ShowFilterResultPreview && ShouldRenderExternalFilterBuilder() && _externalFilters.Count > 0);
 
     /// <summary>Determines whether any toolbar control should be rendered.</summary>
     private bool HasVisibleToolbarControls() =>

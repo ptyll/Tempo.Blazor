@@ -9,7 +9,7 @@
                 aria-label="@AccessibleName"
                 @onchange="OnSelectChange"
                 @attributes="InputIdAttribute">
-            <option value=""></option>
+            <option value="">@Loc["TmDataTable_FilterAll"]</option>
             <option value="true">@Loc["Tm_Yes"]</option>
             <option value="false">@Loc["Tm_No"]</option>
         </select>
@@ -30,7 +30,7 @@
                 aria-label="@AccessibleName"
                 @onchange="OnSelectChange"
                 @attributes="InputIdAttribute">
-            <option value=""></option>
+            <option value="">@Loc["TmDataTable_FilterAll"]</option>
             @if (FilterOptions != null)
             {
                 @foreach (var opt in FilterOptions)

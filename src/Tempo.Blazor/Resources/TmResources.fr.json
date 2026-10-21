@@ -954,6 +954,7 @@
   "TmDataTable_GroupCount": "{0} éléments",
   "TmDataTable_GroupBy": "Regrouper par",
   "TmDataTable_GroupDropPlaceholder": "Glissez les en-têtes de colonnes ici pour regrouper",
+  "TmDataTable_FilterAll": "Tous",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",
   "TmDataTable_GroupSum": "Somme",

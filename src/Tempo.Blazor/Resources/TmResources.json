@@ -947,6 +947,7 @@
   "TmDataTable_GroupCount": "{0} items",
   "TmDataTable_GroupBy": "Group by",
   "TmDataTable_GroupDropPlaceholder": "Drag column headers here to group",
+  "TmDataTable_FilterAll": "All",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",
   "TmDataTable_GroupSum": "Sum",

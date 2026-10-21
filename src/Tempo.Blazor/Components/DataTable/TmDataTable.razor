@@ -555,11 +555,33 @@
             <tbody>
                 @if (_isLoading || IsLoading)
                 {
-                    <tr>
-                        <td colspan="@ColSpan">
-                            <TmSpinner />
-                        </td>
-                    </tr>
+                    @* Skeleton rows instead of one colspan spinner cell: the auto table layout
+                       measures one cell per column exactly as it will with data, so the column
+                       widths no longer jump when the rows arrive. Decorative only — aria-hidden,
+                       the surrounding busy state is announced elsewhere. *@
+                    for (var skeletonRow = 0; skeletonRow < 4; skeletonRow++)
+                    {
+                        <tr class="tm-data-table-loading-row" aria-hidden="true">
+                            @if (HasDetail)
+                            {
+                                <td class="tm-col-expander"></td>
+                            }
+                            @if (Selectable)
+                            {
+                                <td class="tm-col-check"></td>
+                            }
+                            @foreach (var col in _renderedCellColumns)
+                            {
+                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)">
+                                    <TmSkeleton Variant="SkeletonVariant.Text" />
+                                </td>
+                            }
+                            @if (HasEditActions)
+                            {
+                                <td class="tm-data-table__edit-actions"></td>
+                            }
+                        </tr>
+                    }
                 }
                 else if (_groupByColumns.Count > 0 && _groupedData is not null)
                 {
@@ -567,7 +589,7 @@
                     @if (_groupedData.Count == 0 && !string.IsNullOrEmpty(EmptyTitle))
                     {
                         <tr>
-                            <td colspan="@ColSpan">
+                            <td colspan="@ColSpan" class="tm-data-table-empty-cell">
                                 <TmEmptyState Title="@EmptyTitle" />
                             </td>
                         </tr>
@@ -582,7 +604,7 @@
                     @if (!string.IsNullOrEmpty(EmptyTitle))
                     {
                         <tr>
-                            <td colspan="@ColSpan">
+                            <td colspan="@ColSpan" class="tm-data-table-empty-cell">
                                 <TmEmptyState Title="@EmptyTitle" />
                             </td>
                         </tr>

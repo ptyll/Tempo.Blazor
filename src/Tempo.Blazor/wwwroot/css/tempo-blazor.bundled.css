@@ -1530,9 +1530,12 @@ th:last-child .tm-col-resize-handle{inset-inline-end:0;}
 .tm-view-set-default-btn{display:inline-flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border:none;background:none;border-radius:var(--tm-radius-md);cursor:pointer;color:var(--tm-text-secondary);}
 .tm-data-table-live-count{white-space:nowrap;}
 .tm-view-radio-label input,.tm-view-column-item input{accent-color:var(--tm-color-primary);}
-[dir="rtl"] .tm-data-table th:not(.tm-text-right):not(.tm-text-center),[dir="rtl"] .tm-data-table td:not(.tm-text-right):not(.tm-text-center){text-align:right;}
+[dir="rtl"] .tm-data-table th:not(.tm-text-right):not(.tm-text-center),[dir="rtl"] .tm-data-table td:not(.tm-text-right):not(.tm-text-center){text-align:start;}
 [dir="rtl"] .tm-data-table th.tm-col-pinned{padding-inline-start:calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));padding-inline-end:calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));}
+[dir="rtl"] .tm-col-pin-btn>span{display:inline-block;transform:scaleX(-1);}
+.tm-data-table-loading-row td{block-size:var(--tm-space-6);}
 @container tm-data-table (width < 640px){.tm-data-table-wrapper--cards .tm-data-table-group-placeholder{display:none;}
+.tm-data-table-wrapper--cards .tm-data-table td.tm-data-table-empty-cell{display:block;text-align:center;}
 }
 .tm-overlay-panel-sheet .tm-col-filter-input,.tm-overlay-panel-sheet .tm-col-filter-select,.tm-overlay-panel-sheet .tm-col-filter-clear,.tm-overlay-panel-sheet .tm-view-item,.tm-overlay-panel-sheet .tm-view-edit-btn,.tm-overlay-panel-sheet .tm-view-delete-btn,.tm-overlay-panel-sheet .tm-view-set-default-btn,.tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn,.tm-overlay-panel-sheet .tm-data-table-cards-sheet__footer .tm-btn{min-block-size:var(--tm-touch-target);}
 .tm-overlay-panel-sheet .tm-col-filter-clear,.tm-overlay-panel-sheet .tm-view-edit-btn,.tm-overlay-panel-sheet .tm-view-delete-btn,.tm-overlay-panel-sheet .tm-view-set-default-btn{min-inline-size:var(--tm-touch-target);}

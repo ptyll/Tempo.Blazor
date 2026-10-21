@@ -45,10 +45,28 @@ themes; dark surfaces use dark tokens (no light-theme colours).
 1. **Hardcoded size:** the RTL pinned-header padding and the pin button now share `--tm-data-table-pin-glyph` / `--tm-data-table-pin-inset` (tokens.css) instead of `1.1rem` / `6px`.
 2. **RTL edge header:** investigated - pinned offsets already use `inset-inline-start/end` (`--tm-pin-left/right`), so the pin sticks to the RTL start edge. The cut `COLUMN 10` was ordinary scroll overflow of the 15-column table (the viewport ends mid-column at the scroller's left edge), not a clipped header. The baseline now scrolls to the scroll end so its edges fall on whole columns; no further CSS change needed.
 
-## Open (deferred, recorded with plan_report_remaining)
+## Fixed in the cleanup round (post-phase 14)
+
+1. **RTL pin glyph:** the pin button's glyph is mirrored with `transform: scaleX(-1)` under
+   `[dir="rtl"]` (`DataTableUxDefectsCssTests.Rtl_PinGlyph_IsMirrored`) and the RTL plain-cell
+   rule now says `text-align: start` instead of a hard-coded `right`.
+2. **"All" in select filters:** the blank option of a `FilterType.Select` / `Boolean` column
+   filter is a localized "All" (`TmDataTable_FilterAll`, en/cs/sk/fr) instead of an unlabeled
+   empty option — the demo's Department filter gets this for free.
+3. **Loading no longer shifts column widths:** the loading state renders four skeleton rows with
+   ONE CELL PER COLUMN (same classes and inline widths as data rows) instead of a single colspan
+   spinner cell, so the auto table layout measures the same columns before and after the data
+   arrives (`TmDataTableBasicTests.TmDataTable_Loading_ShowsSkeletonRows_WithOneCellPerColumn`).
+4. **Duplicate count dropped:** `TmMultiViewList` hides the "Items: N" readout while the filter
+   builder's result preview is showing the same number for active filters
+   (`ItemCount_StepsAsideWhileTheFilterResultPreviewShowsTheSameCount`).
+5. **Empty-cards text centred:** the empty-state cell carries `.tm-data-table-empty-cell` and the
+   cards container rule turns off the card cell's space-between row layout, centring the text
+   like every other empty state (`CardsMode_EmptyStateCell_IsCentred`).
+
+## Open (still deferred, not part of the cleanup scope)
 
 1. **Cards mode:** a card spends a row on an empty checkbox.
-2. **Smaller:** blank Department filter select (no "All"), native white checkboxes in dark, bare empty states (no icon/action),
-   loading state shifts column widths, `Items: 3` duplicates "3 matching records" when both are on, the Views button is
-   taller than its neighbours in the list toolbar, `edge-fifteen-columns` shows 10 of 15 columns, `edge-empty-cards` text is
-   off-centre.
+2. **Smaller:** native white checkboxes in dark, bare empty states (no icon/action), the Views
+   button is taller than its neighbours in the list toolbar, `edge-fifteen-columns` shows 10 of
+   15 columns (scroll position, not a defect of the table itself).

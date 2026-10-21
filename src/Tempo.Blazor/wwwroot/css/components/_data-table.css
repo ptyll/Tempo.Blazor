@@ -1698,16 +1698,34 @@
    wins: it is more specific), and a pinned header reserves the glyph's width on both logical sides. */
 [dir="rtl"] .tm-data-table th:not(.tm-text-right):not(.tm-text-center),
 [dir="rtl"] .tm-data-table td:not(.tm-text-right):not(.tm-text-center) {
-  text-align: right;
+  text-align: start;
 }
 [dir="rtl"] .tm-data-table th.tm-col-pinned {
   padding-inline-start: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
   padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
 }
+/* The pin glyph points at the inline-end edge; under RTL that edge is mirrored, so the glyph
+   mirrors with it instead of pointing "backwards" into the text. */
+[dir="rtl"] .tm-col-pin-btn > span {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+/* Loading: the skeleton rows carry the same per-column cells the data rows will, so the auto
+   table layout measures the same columns before and after the data arrives. */
+.tm-data-table-loading-row td {
+  block-size: var(--tm-space-6);
+}
 
 /* Cards hide the header, so "Drag column headers here to group" points at nothing there. */
 @container tm-data-table (width < 640px) {
   .tm-data-table-wrapper--cards .tm-data-table-group-placeholder { display: none; }
+  /* The empty state must not inherit the card cell's space-between row layout: the cards-mode
+     empty text is centred like every other empty state. */
+  .tm-data-table-wrapper--cards .tm-data-table td.tm-data-table-empty-cell {
+    display: block;
+    text-align: center;
+  }
 }
 
 /* Mobile sheets (filter sheet, views panel): every control is a finger-sized target and neighbours

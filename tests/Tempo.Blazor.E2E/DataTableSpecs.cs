@@ -300,6 +300,49 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.3 mobile ─────────────────────────
 
+    /// <summary>
+    /// Deferred 13.3 carry-forward: at tablet 1024 the pinned columns must not overlap their
+    /// neighbours (measured by bounding boxes) and the first Scroll column must stay pinned
+    /// while the table scrolls horizontally.
+    /// </summary>
+    internal static async Task PinnedColumns_Tablet1024Async(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    {
+        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(1024, 800), register);
+        var host = page.Locator("[data-testid='dt-edge-wide']");
+        await host.ScrollIntoViewIfNeededAsync();
+        var scroller = host.Locator(".tm-data-table-scroll").First;
+        var firstRow = host.Locator("tbody tr").First;
+        var pinned = firstRow.Locator("td.tm-col-pinned-left, td.data-mobile-pinned").First;
+        await pinned.WaitForAsync();
+
+        async Task AssertNoOverlapAsync(string when)
+        {
+            var boxes = await firstRow.Locator("td").EvaluateAllAsync<double[][]>(
+                "els => els.map(e => { const r = e.getBoundingClientRect(); return [r.left, r.right]; })");
+            for (var i = 1; i < boxes.Length; i++)
+            {
+                Assert.IsTrue(boxes[i - 1][1] <= boxes[i][0] + 0.5, $"{when}: cells {i - 1} and {i} overlap ({boxes[i - 1][1]} > {boxes[i][0]})");
+            }
+        }
+
+        await AssertNoOverlapAsync("at rest");
+
+        var pinnedX = (await BoxAsync(pinned)).X;
+        await scroller.EvaluateAsync("el => { el.scrollLeft = el.scrollWidth / 2; }");
+        await page.WaitForTimeoutAsync(250);
+        Assert.IsTrue(await scroller.EvaluateAsync<double>("el => el.scrollLeft") > 0, "the fifteen-column table scrolls horizontally");
+        Assert.AreEqual(pinnedX, (await BoxAsync(pinned)).X, 1.0, "the first column keeps its pinned edge while the table scrolls");
+        // While scrolled the neighbouring cells legitimately slide UNDER the opaque sticky pinned
+        // column, so pairwise bounding boxes would always "overlap"; the contract here is that
+        // the pinned edge holds (asserted above) and the pinned column stays fully visible.
+        var scrolledPinned = await BoxAsync(pinned);
+        var scrolledScroller = await BoxAsync(scroller);
+        Assert.IsTrue(scrolledPinned.X >= scrolledScroller.X - 1, "the pinned column stays visible while scrolled");
+        await scroller.EvaluateAsync("el => { el.scrollLeft = 0; }");
+        await page.WaitForTimeoutAsync(150);
+        await AssertNoOverlapAsync("back at rest");
+    }
+
     internal static async Task MobileCardsAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
     {
         var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(390, 844, Touch: true, IsMobile: true), register);
@@ -464,8 +507,12 @@ internal static class DataTableSpecs
 
         var loading = page.Locator("[data-testid='dt-edge-loading']");
         await loading.ScrollIntoViewIfNeededAsync();
-        await Assertions.Expect(loading.Locator(".tm-spinner")).ToBeVisibleAsync();
+        await Assertions.Expect(loading.Locator(".tm-data-table-loading-row").First).ToBeVisibleAsync();
         Assert.AreEqual(0, await loading.Locator("tbody tr td", new() { HasText = "Ada" }).CountAsync(), "rows are not painted while loading");
+        // The skeleton rows carry one cell per column so the widths do not shift when data arrives.
+        var headerCells = await loading.Locator("thead th").CountAsync();
+        var skeletonCellCount = await loading.Locator(".tm-data-table-loading-row").First.Locator("td").CountAsync();
+        Assert.AreEqual(headerCells, skeletonCellCount, "skeleton rows measure the same columns as data rows");
 
         // Very long cell text and view name: ellipsis, no horizontal page overflow.
         var host = page.Locator("[data-testid='dt-edge-long']");
