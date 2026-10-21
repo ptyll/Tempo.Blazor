@@ -1326,6 +1326,9 @@
     Before: `<input placeholder="Filter" aria-label="Filter" />`
     After: `<input placeholder="Filter: Name" aria-label="Filter: Name" />`
   - `TmDataTable` announces the result count in a visually-hidden polite live region (`div.tm-data-table-live-count`), so a filter or page change is spoken without moving focus. <!-- snapshot:dt-basic --> <!-- snapshot:dt-cardmode --> <!-- snapshot:dt-filters --> <!-- snapshot:dt-grouping --> <!-- snapshot:dt-viewmanager --> <!-- snapshot:dt-paged --> <!-- snapshot:dt-selectable --> <!-- snapshot:dt-export --> <!-- snapshot:dt-virtualized -->
+  - `TmDataTable` with `ShowFilterSummary="true"` makes the active-filter count a polite live region (`span[role="status"][aria-live="polite"]`) and always renders a visually-hidden twin region (`div.tm-data-table-filter-summary-live`) while filters are allowed, so the first filter change is announced too. No golden snapshot renders the summary (it needs the opt-in `ShowFilterSummary`), so the golden files are unchanged.
+    Before: `<div class="tm-data-table-filter-summary"><span>Filters: 1</span>…</div>` (only while a filter was already active; not announced)
+    After: `<div class="tm-data-table-filter-summary"><span role="status" aria-live="polite">Filters: 1</span>…</div>` plus `<div class="tm-data-table-filter-summary-live tm-sr-only" role="status" aria-live="polite"></div>` rendered from the start.
   - A void checkbox renders its closing tag. <!-- snapshot:dt-selectable -->
     Before: `<input type="checkbox" /></th>`
     After: `<input type="checkbox"></input></th>`

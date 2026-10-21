@@ -116,6 +116,25 @@ public class TmDataTablePhase11Tests : LocalizationTestBase
     }
 
     [Fact]
+    public void FilterSummary_Count_IsALiveRegion()
+    {
+        var cut = Render<TmDataTable<SelPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.ShowFilterSummary, true)
+            .AddChildContent<TmDataTableColumn<SelPerson>>(col => col
+                .Add(c => c.Title, "Name")
+                .Add(c => c.PropertyName, nameof(SelPerson.Name))
+                .Add(c => c.Filterable, true)));
+
+        cut.Find(".tm-col-filter input").Input("Alice");
+
+        // 11.5 retro: the plural filter count itself is a polite live region, so adding or
+        // removing a filter is announced as "Filters: N".
+        var live = cut.Find(".tm-data-table-filter-summary [role='status'][aria-live='polite']");
+        live.TextContent.Should().Contain("Filters: 1");
+    }
+
+    [Fact]
     public void CardToolbar_TriggersShareTheSmallOutlineButton()
     {
         var cut = Render<TmDataTable<SelPerson>>(p => p

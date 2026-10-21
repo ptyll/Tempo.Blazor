@@ -187,12 +187,18 @@
         </div>
     }
 
-    @if (ShowFilterSummary && !IsContentToolbarMode && !IsSearchToolbarMode && _activeFilters.Count > 0)
+    @if (ShouldRenderFilterSummary() && _activeFilters.Count > 0)
     {
         <div class="tm-data-table-filter-summary">
-            <span>@Loc.Plural("TmDataTable_ActiveFilters", _activeFilters.Count)</span>
+            <span role="status" aria-live="polite">@Loc.Plural("TmDataTable_ActiveFilters", _activeFilters.Count)</span>
             <button type="button" class="tm-link-button" @onclick="ClearAllFiltersAsync">@Loc["TmDataTable_ClearFilters"]</button>
         </div>
+    }
+    @if (ShouldRenderFilterSummary())
+    {
+        @* Always present so the first filter change is announced too: a live region that is added to
+           the page together with its text is often not spoken at all. *@
+        <div class="tm-data-table-filter-summary-live tm-sr-only" role="status" aria-live="polite">@FilterSummaryAnnouncement</div>
     }
 
     @* ── Selection bar ────────────────────────────────────────── *@
@@ -561,7 +567,7 @@
                                                         FilterOperator="@col.FilterOperator"
                                                         Value="@ColumnFilterValue(col.Key)"
                                                         OnFilterChange="f => ApplyFilterAsync(col.Key, f)" />
-                                        @if (ShowFilterSummary && !IsContentToolbarMode && !IsSearchToolbarMode && _activeFilters.Count > 0 && col.Key == _lastFilterableColumnKey)
+                                        @if (ShouldRenderFilterSummary() && _activeFilters.Count > 0 && col.Key == _lastFilterableColumnKey)
                                         {
                                             <button type="button" class="tm-col-filter-clear-all" @onclick="ClearAllFiltersAsync">
                                                 @Loc["TmDataTable_ClearFilters"]

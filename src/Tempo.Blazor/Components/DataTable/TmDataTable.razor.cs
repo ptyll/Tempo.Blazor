@@ -1292,13 +1292,20 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>
     /// What the polite live region announces: the same sentence the visible summary prints, so a
     /// screen reader hears the count a sighted reader sees. A custom template has no text to lift,
-    /// so the region falls back to the total.
+    /// and the Card appearance prints its own "Total N" sentence instead of the ranged one, so both
+    /// fall back to the total.
     /// </summary>
-    private string ResultCountAnnouncement => PaginationInfoTemplate is not null
+    private string ResultCountAnnouncement => PaginationInfoTemplate is not null || IsRedesigned
         ? Loc.Plural("TmDataTable_TotalItems", _totalCount)
-        : IsRedesigned
-            ? Loc.Plural("TmDataTable_TotalItems", _totalCount)
-            : Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount];
+        : Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount];
+
+    /// <summary>
+    /// What the always-present filter-summary live region carries: empty while no filter is active
+    /// (so the region exists before the text and the first filter change is announced), the plural
+    /// filter count afterwards.
+    /// </summary>
+    private string FilterSummaryAnnouncement =>
+        _activeFilters.Count > 0 ? Loc.Plural("TmDataTable_ActiveFilters", _activeFilters.Count) : string.Empty;
 
     /// <summary>The single condition the paging footer's visibility is decided by.</summary>
     private bool PagerRenders =>
@@ -1590,6 +1597,16 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>True when the redesigned "Add grouping" dropdown should be rendered. Content-only and search-only toolbars keep the drop zone only.</summary>
     private bool ShouldRenderAddGrouping() =>
         ShowGrouping && IsRedesigned && !IsContentToolbarMode && !IsSearchToolbarMode;
+
+    /// <summary>
+    /// True when the active-filter summary and its clear-all link are allowed to render. The number
+    /// of active filters is a data check and stays in the markup, the same way
+    /// <c>TmMultiViewList.ShouldRenderItemCount()</c> keeps data checks separate. The summary renders
+    /// outside the toolbar <c>div</c>, so it is deliberately not counted by
+    /// <see cref="HasVisibleToolbarControls"/>.
+    /// </summary>
+    private bool ShouldRenderFilterSummary() =>
+        ShowFilterSummary && (IsFullToolbarMode || IsActionsToolbarMode);
 
     private bool ShouldRenderExternalFilterBuilder() =>
         IsFullToolbarMode &&
