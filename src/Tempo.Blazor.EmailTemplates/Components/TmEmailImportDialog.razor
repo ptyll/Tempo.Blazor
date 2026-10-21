@@ -22,7 +22,18 @@
                 <ul>@foreach (var e in _errors) { <li>@e</li> }</ul>
             </TmAlert>
         }
-        else if (_preview is not null)
+
+        @* The imported document's own findings (a preheader over the limit, an image without alt text) are
+           warnings, not failures. They go through the same formatter as the validation panel, so a rule that
+           names its threshold shows the number instead of a literal „{0}“. *@
+        @if (_warnings.Count > 0)
+        {
+            <TmAlert Severity="AlertSeverity.Info" data-tm-import-warnings="true">
+                <ul>@foreach (var w in _warnings) { <li>@w</li> }</ul>
+            </TmAlert>
+        }
+
+        @if (_errors.Count == 0 && _preview is not null)
         {
             <p class="tm-email-import__summary" data-tm-import-summary>
                 @Loc["EmailEditor_Import_Summary", _preview.Sections.Count, _warnings.Count]
@@ -94,10 +105,21 @@
         {
             var result = new MjmlImporter().Import(_input);
             _preview = result.Document;
-            _warnings = result.Warnings.Select(w => Loc[w.Key]).ToList();
-            _errors = result.Errors.Select(e => Loc[e.Key]).ToList();
+            _warnings = result.Warnings.Select(MessageText).ToList();
+            _errors = result.Errors.Select(MessageText).ToList();
         }
     }
+
+    /// <summary>
+    /// The localized text of one import diagnostic. A rule key resolves through
+    /// <see cref="ValidationMessageText"/> (its threshold is formatted there); a message that carries a
+    /// detail (an element name, a parse position) formats that detail into the sentence.
+    /// </summary>
+    private string MessageText(ImportMessage message)
+        => string.Equals(message.Key, DocumentValidationKeys.PreheaderTooLong, StringComparison.Ordinal)
+            || message.Detail is null
+                ? ValidationMessageText.Of(Loc, message.Key)
+                : Loc[message.Key, message.Detail];
 
     private async Task ConfirmAsync()
     {

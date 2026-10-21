@@ -26,6 +26,7 @@ public class DocumentHeadEditorTests : BunitContext
     public void DocumentPanel_RendersFontAndStyleEditors()
     {
         var cut = Render<TmEmailPropertyPanel>(p => p.Add(c => c.Document, new EmailTemplateDocument()));
+        cut.Find("#tab-style").Click();
         cut.Find("[data-tm-head=\"fonts\"]").Should().NotBeNull();
         cut.Find("[data-tm-head=\"styles\"]").Should().NotBeNull();
     }
@@ -37,6 +38,7 @@ public class DocumentHeadEditorTests : BunitContext
         var cut = Render<TmEmailPropertyPanel>(p => p
             .Add(c => c.Document, doc).Add(c => c.OnChanged, () => { }));
 
+        cut.Find("#tab-style").Click();
         cut.Find("[data-tm-head=\"fonts\"] [data-tm-list-add]").Click();
 
         doc.Styles.Fonts.Should().ContainSingle();

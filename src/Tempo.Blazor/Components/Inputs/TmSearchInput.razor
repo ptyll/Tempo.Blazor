@@ -8,6 +8,7 @@
             <TmIcon Name="@IconNames.Search" Size="IconSize.Sm" />
         </div>
         <input type="search"
+               @ref="_inputRef"
                aria-label="@(Placeholder ?? Loc["TmSearchInput_Placeholder"])"
                value="@Value"
                placeholder="@(Placeholder ?? Loc["TmSearchInput_Placeholder"])"
@@ -16,7 +17,8 @@
                class="@InputCssClass tm-input-with-right-icon"
                @attributes="AdditionalAttributes"
                @oninput="HandleInputAsync"
-               @onchange="HandleChangeAsync" />
+               @onchange="HandleChangeAsync"
+               @onkeydown="HandleKeyDownAsync" />
         @if (!string.IsNullOrEmpty(Value))
         {
             <button class="tm-search-clear"
@@ -52,11 +54,29 @@
     /// <summary>HTML autocomplete attribute. Defaults to "off" for search inputs. Common values: "on", "off".</summary>
     [Parameter] public string? AutoComplete { get; set; } = "off";
 
+    /// <summary>
+    /// Raised for every key press in the input. A consumer that owns a list under the search (the email
+    /// variable picker) uses it for arrow-key navigation. Additive: it never blocks typing, and nothing is
+    /// prevented by the component itself.
+    /// </summary>
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Additional attributes to be applied to the input element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private ElementReference _inputRef;
+
+    /// <summary>
+    /// Moves keyboard focus to the search input. The component owns the element, so a consumer that is
+    /// opened programmatically (the email variable picker takes focus as its popover opens) cannot reach it
+    /// any other way. Additive: no existing member changes.
+    /// </summary>
+    /// <param name="preventScroll">When true the browser does not scroll the input into view.</param>
+    /// <returns>A task that completes when focus has been moved.</returns>
+    public ValueTask FocusAsync(bool preventScroll = false) => _inputRef.FocusAsync(preventScroll);
 
     /// <summary>
     /// Clock driving the debounce timer. Resolved through <see cref="IServiceProvider"/> so a
@@ -190,6 +210,8 @@
         CancelDebounce();
         await DispatchAsync(e.Value?.ToString() ?? string.Empty);
     }
+
+    private Task HandleKeyDownAsync(KeyboardEventArgs args) => OnKeyDown.InvokeAsync(args);
 
     private async Task ClearValueAsync()
     {

@@ -79,6 +79,7 @@ public class E7E8FollowupTests : BunitContext
         var doc = DocWith(text);
         var cut = Panel(doc, text.Id);
 
+        cut.Find("#tab-style").Click();
         cut.Find("[data-tm-extra] [data-tm-kv-add]").Click();
         var row = cut.Find("[data-tm-extra] [data-tm-kv-row]");
         var inputs = row.QuerySelectorAll("input");
@@ -97,6 +98,7 @@ public class E7E8FollowupTests : BunitContext
         var doc = DocWith(text);
         var cut = Panel(doc, text.Id);
 
+        cut.Find("#tab-style").Click();
         cut.Find("[data-tm-classes] input").Change("promo big");
 
         text.MjClasses.Should().ContainInOrder("promo", "big");
@@ -126,7 +128,8 @@ public class E7E8FollowupTests : BunitContext
         var cut = Render<TmEmailPropertyPanel>(p => p
             .Add(c => c.Document, doc).Add(c => c.Variables, vars).Add(c => c.OnChanged, () => { }));
 
-        cut.Find("[data-tm-variables=\"subject\"] [data-tm-variable=\"first_name\"]").Click();
+        cut.Find("[data-tm-variable-trigger=\"Subject\"] .tm-popover__trigger").Click();
+        cut.Find("[data-tm-variable=\"first_name\"]").Click();
 
         doc.Subject.Should().Be("Hi {{ first_name }}");
     }
@@ -188,6 +191,7 @@ public class E7E8FollowupTests : BunitContext
         var cut = Render<TmEmailPropertyPanel>(p => p
             .Add(c => c.Document, doc).Add(c => c.OnChanged, () => { }));
 
+        cut.Find("#tab-style").Click();
         cut.Find("[data-tm-head=\"classes\"] [data-tm-classes-editor] input").Change("cta");
         cut.Find("[data-tm-head=\"classes\"] [data-tm-class-add]").Click();
 
@@ -203,6 +207,7 @@ public class E7E8FollowupTests : BunitContext
         var cut = Render<TmEmailPropertyPanel>(p => p
             .Add(c => c.Document, doc).Add(c => c.OnChanged, () => { }));
 
+        cut.Find("#tab-style").Click();
         cut.Find("[data-tm-head=\"html-attributes\"] [data-tm-html-add]").Click();
 
         doc.Styles.HtmlAttributes.Should().ContainSingle();

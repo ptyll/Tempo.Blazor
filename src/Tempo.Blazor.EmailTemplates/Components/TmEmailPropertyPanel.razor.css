@@ -1,6 +1,13 @@
-/* The inspector is one control group. Read-only wraps it in `fieldset[disabled]` so the browser (and the
+/* The inspector's control group. Read-only wraps it in `fieldset[disabled]` so the browser (and the
    accessibility tree) makes every control inside inert — the fieldset itself must not disturb the layout,
    hence display: contents. The min-inline-size reset is what fieldset otherwise forces on a flex child. */
+.tm-email-properties {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
 .tm-email-properties__fieldset {
     display: contents;
     border: 0;
@@ -23,8 +30,151 @@
 .tm-email-properties__fieldset[disabled] ::deep input,
 .tm-email-properties__fieldset[disabled] ::deep textarea,
 .tm-email-properties__fieldset[disabled] ::deep select {
-    color: var(--tm-color-text-secondary, #4b5563);
-    -webkit-text-fill-color: var(--tm-color-text-secondary, #4b5563);
-    background: var(--tm-color-surface-muted, #f7f7f8);
+    color: var(--tm-color-text-secondary);
+    -webkit-text-fill-color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
     cursor: default;
+}
+
+/* The sub-editors (table grid, key/value rows, list items) look interactive even when they cannot be
+   touched: read-only renders their affordances as the same flat surface as a disabled input. */
+.tm-email-properties__fieldset[disabled] ::deep button,
+.tm-email-properties__fieldset[disabled] ::deep .tm-email-list-editor__item,
+.tm-email-properties__fieldset[disabled] ::deep .tm-email-key-value-editor__row {
+    cursor: default;
+}
+
+.tm-email-properties__fieldset[disabled] ::deep .tm-email-list-editor__item-actions button,
+.tm-email-properties__fieldset[disabled] ::deep .tm-email-table-editor__rowctl button {
+    opacity: 0.55;
+}
+
+.tm-email-properties__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-properties__title {
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+.tm-email-properties__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+/* Deleting is destructive but it sits in the panel header: a soft danger tint reads as "danger" without
+   shouting like a filled red button would. The class lands on the TmButton's own root (a child component),
+   so the rule needs ::deep — a plain `.tm-email-properties__delete` never got the panel's scope attribute. */
+.tm-email-properties ::deep .tm-email-properties__delete {
+    color: var(--tm-color-danger);
+}
+
+.tm-email-properties ::deep .tm-email-properties__delete:hover {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
+}
+
+.tm-email-properties__subheader {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-properties__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface-secondary);
+}
+
+/* A collapsible group header is a real button (keyboard operable, aria-expanded), not a <details> the
+   inspector cannot remember per block type. */
+.tm-email-properties__group-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    inline-size: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-email-properties__group-toggle:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-email-properties__group-toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-properties__group-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-properties__group-body[hidden] {
+    display: none;
+}
+
+.tm-email-properties__variables {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* The rich-content trigger is a styled span inside the popover's own role=button trigger — never a nested
+   TmButton (two activations per press, invalid markup). */
+.tm-email-properties ::deep .tm-email-properties__variable-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-space-7);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-email-properties ::deep .tm-email-properties__variable-trigger:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface-hover);
+}
+
+/* Two tabs, equal halves: the strip is a switch between two peers, not a leader with a trailing tab. */
+.tm-email-properties__tabs ::deep .tm-tabs__header {
+    display: flex;
+    inline-size: 100%;
+}
+
+.tm-email-properties__tabs ::deep .tm-tab {
+    flex: 1 1 50%;
+    justify-content: center;
+}
+
+/* Same rule as the field trigger: the glyph must never break apart before the label wraps. */
+.tm-email-properties ::deep .tm-email-fields__variable-glyph {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }

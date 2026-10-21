@@ -204,10 +204,15 @@ public class EditorReadOnlyTests : EmailEditorTestBase
         cut.Find($"[data-tm-block-id=\"{socialId}\"]").Click();
         cut.Find("[data-tm-list-action=\"remove\"]").Click();
         cut.Find("[data-tm-list-add]").Click();
+        // Extra attributes live in the Style tab's advanced group (Fáze 7A).
+        SelectInspectorTab(cut, "Style");
         cut.Find("[data-tm-kv-add]").Click();
 
         (EmailTemplateSerializer.Serialize(document) == before).Should().BeTrue(
             "no read-only interaction may change the serialized document");
         cut.Instance.IsDirty.Should().BeFalse();
     }
+
+    private static void SelectInspectorTab(IRenderedComponent<TmEmailTemplateEditor> cut, string title)
+        => cut.Find(title == "Style" ? "#tab-style" : "#tab-content").Click();
 }

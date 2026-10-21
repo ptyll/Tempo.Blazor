@@ -1,7 +1,7 @@
 .tm-email-canvas-doc {
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-3, 0.75rem);
+    gap: var(--tm-space-3);
     inline-size: min(100%, 640px);
     margin-inline: auto;
     outline: none;
@@ -9,24 +9,24 @@
 
 .tm-email-canvas-section {
     border: 1px dashed transparent;
-    border-radius: var(--tm-radius-md, 0.375rem);
-    background: var(--tm-color-surface, #ffffff);
-    padding: var(--tm-space-2, 0.5rem);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    padding: var(--tm-space-2);
     cursor: pointer;
 }
 
 .tm-email-canvas-section:hover {
-    border-color: var(--tm-color-border, #e2e2e2);
+    border-color: var(--tm-color-border);
 }
 
 .tm-email-canvas-section.is-selected {
-    border-color: var(--tm-color-primary, #2563eb);
+    border-color: var(--tm-color-primary);
     border-style: solid;
 }
 
 .tm-email-canvas-section__columns {
     display: flex;
-    gap: var(--tm-space-2, 0.5rem);
+    gap: var(--tm-space-2);
     align-items: stretch;
 }
 
@@ -34,14 +34,14 @@
     min-inline-size: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-2, 0.5rem);
+    gap: var(--tm-space-2);
     border: 1px solid transparent;
-    border-radius: var(--tm-radius-sm, 0.25rem);
-    padding: var(--tm-space-1, 0.25rem);
+    border-radius: var(--tm-radius-sm);
+    padding: var(--tm-space-1);
 }
 
 .tm-email-canvas-column.is-selected {
-    border-color: var(--tm-color-primary, #2563eb);
+    border-color: var(--tm-color-primary);
 }
 
 /* Empty-column drop target. It is ALWAYS present (also during a drag), so the area the
@@ -53,60 +53,60 @@
     justify-content: center;
     min-block-size: 5rem;
     min-inline-size: 0;
-    padding: var(--tm-space-2, 0.5rem);
-    border: 2px dashed var(--tm-color-border, #e2e2e2);
-    border-radius: var(--tm-radius-sm, 0.25rem);
+    padding: var(--tm-space-2);
+    border: 2px dashed var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-sm);
     text-align: center;
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    color: var(--tm-color-text-muted, #6b7280);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-muted);
     overflow-wrap: anywhere;
-    transition: border-color var(--tm-transition-fast, 150ms) ease, background var(--tm-transition-fast, 150ms) ease;
+    transition: border-color var(--tm-transition-fast) ease, background var(--tm-transition-fast) ease;
 }
 
 .tm-email-canvas-column__empty.is-drop-active {
-    border-color: var(--tm-color-primary, #2563eb);
-    background: color-mix(in srgb, var(--tm-color-primary, #2563eb) 8%, transparent);
+    border-color: var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
 }
 
 .tm-email-canvas-column__empty.is-drop-active:hover {
-    border-color: var(--tm-color-primary, #2563eb);
-    background: color-mix(in srgb, var(--tm-color-primary, #2563eb) 18%, transparent);
+    border-color: var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 18%, transparent);
 }
 
 .tm-email-canvas-block {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: var(--tm-space-2, 0.5rem);
-    border: 1px solid var(--tm-color-border, #e2e2e2);
-    border-radius: var(--tm-radius-sm, 0.25rem);
-    background: var(--tm-color-surface, #ffffff);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface);
     cursor: pointer;
 }
 
 .tm-email-canvas-block:hover {
-    border-color: var(--tm-color-primary, #2563eb);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-email-canvas-block.is-selected {
-    border-color: var(--tm-color-primary, #2563eb);
-    box-shadow: var(--tm-shadow-focus, 0 0 0 2px rgba(37, 99, 235, 0.35));
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-focus);
 }
 
 .tm-email-canvas-block:focus-visible {
-    outline: 2px solid var(--tm-color-focus, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 1px;
 }
 
 .tm-email-canvas-block__kind {
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
-    color: var(--tm-color-text-muted, #6b7280);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-email-canvas-block__detail {
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    color: var(--tm-color-text, #1a1a1a);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -124,9 +124,9 @@
     display: none;
     gap: 2px;
     padding: 2px;
-    border-radius: var(--tm-radius-sm, 0.25rem);
-    background: var(--tm-color-surface, #ffffff);
-    box-shadow: var(--tm-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.1));
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface);
+    box-shadow: var(--tm-shadow-sm);
     z-index: 2;
 }
 
@@ -150,17 +150,17 @@
     inline-size: 1.5rem;
     block-size: 1.5rem;
     border: none;
-    border-radius: var(--tm-radius-xs, 0.125rem);
+    border-radius: var(--tm-radius-xs);
     background: transparent;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     cursor: pointer;
 }
 
 .tm-email-canvas-section__toolbar button:hover,
 .tm-email-canvas-block__toolbar button:hover,
 .tm-email-canvas-column__remove:hover {
-    background: var(--tm-color-bg-hover, #f3f4f6);
-    color: var(--tm-color-text, #1a1a1a);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
 }
 
 .tm-email-canvas-column {
@@ -183,16 +183,16 @@
 .tm-email-canvas-dropzone {
     block-size: 1.5rem;
     margin-block: 2px;
-    border-radius: var(--tm-radius-xs, 0.125rem);
-    border: 2px dashed var(--tm-color-border-strong, #cbd5e1);
-    background: var(--tm-color-bg-hover, #f3f4f6);
-    transition: border-color var(--tm-transition-fast, 150ms) ease, background var(--tm-transition-fast, 150ms) ease;
+    border-radius: var(--tm-radius-xs);
+    border: 2px dashed var(--tm-border-color-strong);
+    background: var(--tm-color-surface-hover);
+    transition: border-color var(--tm-transition-fast) ease, background var(--tm-transition-fast) ease;
 }
 
 .tm-email-canvas-dropzone:hover {
     block-size: 2.25rem;
-    border-color: var(--tm-color-primary, #2563eb);
-    background: color-mix(in srgb, var(--tm-color-primary, #2563eb) 18%, transparent);
+    border-color: var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 18%, transparent);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────

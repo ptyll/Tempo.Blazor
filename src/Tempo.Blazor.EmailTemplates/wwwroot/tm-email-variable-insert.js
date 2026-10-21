@@ -1,11 +1,24 @@
-// Tracks the last-focused text input/textarea so the variable picker can insert a token at the
-// caret even after focus moves to the picker button.
+// Tracks the last-focused CONTENT field so the variable picker can insert a token at the caret even after
+// focus moves to the picker button. A search box is never a content field: focusing the picker's own filter
+// (or the palette's block search) used to make the token land in the filter, and a picker-internal input
+// must not be able to steal the remembered target either. The zones are marked with data attributes
+// (`data-tm-variable-picker`, `data-tm-toolbox-search`) so a future text input inside either surface is
+// excluded without touching this module again.
 let lastEditable = null;
 
+const IGNORED_ZONES = '[data-tm-variable-picker],[data-tm-toolbox-search]';
+
+function isEditableTarget(target) {
+    if (!target) return false;
+    if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') return false;
+    if (typeof target.type === 'string' && target.type.toLowerCase() === 'search') return false;
+    if (typeof target.closest === 'function' && target.closest(IGNORED_ZONES)) return false;
+    return true;
+}
+
 document.addEventListener('focusin', (e) => {
-    const t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) {
-        lastEditable = t;
+    if (isEditableTarget(e.target)) {
+        lastEditable = e.target;
     }
 });
 

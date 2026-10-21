@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Layout",
+  "description": "The display order of LayoutSeverity findings: Error first, then Warning, then Info. The enum's numeric values are a serialization contract, so findings are ordered through this rank (D19).",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Layout/LayoutSeverityRank.cs",
+  "documentationStatus": "generated",
+  "itemName": "LayoutSeverityRank"
+}

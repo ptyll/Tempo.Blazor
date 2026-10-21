@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.Inputs;
@@ -362,5 +363,48 @@ public class TmSearchInputTests : LocalizationTestBase
         time.Advance(TimeSpan.FromMilliseconds(DebounceMs + 1));
         await DrainDispatcherAsync(cut);
         delivered.Should().Equal(string.Empty);
+    }
+
+    /// <summary>
+    /// The component owns the input element, so a consumer (the email variable picker, which moves focus into
+    /// its search as the popover opens) needs a public way to focus it — a host cannot reach the internal
+    /// element reference. Additive: nothing existing changes.
+    /// </summary>
+    [Fact]
+    public async Task TmSearchInput_FocusAsync_MovesFocusToTheInput()
+    {
+        var cut = Render<TmSearchInput>(p => p.Add(c => c.Value, "hello"));
+
+        await cut.InvokeAsync(async () => await cut.Instance.FocusAsync());
+
+        JSInterop.Invocations.Should().Contain(invocation =>
+            invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void TmSearchInput_OnKeyDown_DeliversEveryKeyAndDoesNotSwallowTyping()
+    {
+        var keys = new ConcurrentQueue<string>();
+        var cut = Render<TmSearchInput>(p => p
+            .Add(c => c.OnKeyDown, EventCallback.Factory.Create<KeyboardEventArgs>(this, e => keys.Enqueue(e.Key))));
+
+        cut.Find("input").KeyDown("ArrowDown");
+        cut.Find("input").KeyDown("Tab");
+
+        keys.Should().Equal(new[] { "ArrowDown", "Tab" },
+            "every key reaches the consumer, and the component prevents none of them");
+    }
+
+    [Fact]
+    public void TmSearchInput_FocusAsync_IsDocumentedPublicApi()
+    {
+        var method = typeof(TmSearchInput).GetMethod(nameof(TmSearchInput.FocusAsync));
+        method.Should().NotBeNull("a new public method on a core component is documented API");
+
+        // XML docs land in the assembly's .xml file next to the dll; a missing <summary> is the review
+        // finding this guard exists for.
+        var xml = Path.ChangeExtension(typeof(TmSearchInput).Assembly.Location, ".xml");
+        File.Exists(xml).Should().BeTrue();
+        File.ReadAllText(xml).Should().Contain($"M:{typeof(TmSearchInput).FullName}.FocusAsync");
     }
 }

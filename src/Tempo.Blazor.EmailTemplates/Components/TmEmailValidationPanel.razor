@@ -23,10 +23,32 @@
         <ul class="tm-email-validation__list">
             @foreach (var message in _messages)
             {
-                <li class="tm-email-validation__item tm-email-validation__item--@(message.Severity.ToString().ToLowerInvariant())"
+                var severity = message.Severity.ToString().ToLowerInvariant();
+                var nodeId = Guid.TryParse(message.Path, out var id) ? id : (Guid?)null;
+                <li class="tm-email-validation__item tm-email-validation__item--@severity"
                     data-tm-validation-message data-tm-validation-severity="@message.Severity"
                     @onclick="() => NavigateAsync(message.Path)">
-                    @Loc[message.Key]
+                    @* The severity is spoken before the sentence: the icon is decorative and the colour is not
+                       announced, so without this prefix a screen-reader user hears an error and a suggestion
+                       in the same voice. *@
+                    <span class="tm-sr-only">@SeverityText(message.Severity)</span>
+                    <span class="tm-email-validation__icon" data-tm-validation-icon="@severity" aria-hidden="true">
+                        <TmIcon Name="@IconFor(message.Severity)" Size="IconSize.Sm" />
+                    </span>
+                    @if (nodeId is { } target)
+                    {
+                        @* A finding that points at a node is a real button: the row is clickable for a mouse,
+                           but only the button gives a keyboard user a way to jump to the block. *@
+                        <button type="button" class="tm-email-validation__link"
+                                data-tm-validation-link="@severity"
+                                @onclick="() => OnNavigate.InvokeAsync(target)" @onclick:stopPropagation="true">
+                            <span class="tm-email-validation__text">@TextOf(message)</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="tm-email-validation__text">@TextOf(message)</span>
+                    }
                 </li>
             }
         </ul>
@@ -78,8 +100,28 @@
             }
         }
 
-        _messages = messages;
+        // Display order is the explicit rank (Error → Warning → Info), never the enum's numeric value.
+        _messages = messages
+            .OrderBy(message => LayoutSeverityRank.Of(message.Severity))
+            .ToList();
     }
+
+    /// <summary>
+    /// The finding's sentence. Only the preheader rule carries a placeholder — it names the threshold it
+    /// measured, so the message explains itself instead of saying "too long".
+    /// </summary>
+    private string TextOf(DocumentValidationMessage message) => ValidationMessageText.Of(Loc, message.Key);
+
+    /// <summary>The spoken name of a severity (<c>EmailEditor_Validation_Severity_*</c>).</summary>
+    private string SeverityText(LayoutSeverity severity) => Loc[$"EmailEditor_Validation_Severity_{severity}"];
+
+    /// <summary>The icon that names the severity without relying on colour alone.</summary>
+    private static string IconFor(LayoutSeverity severity) => severity switch
+    {
+        LayoutSeverity.Error => IconNames.AlertCircle,
+        LayoutSeverity.Warning => IconNames.AlertTriangle,
+        _ => IconNames.Info,
+    };
 
     private IEnumerable<(string Template, string Path)> TemplateStrings()
     {

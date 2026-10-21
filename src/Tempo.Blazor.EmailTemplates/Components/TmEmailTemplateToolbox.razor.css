@@ -1,22 +1,105 @@
+/* The blocks palette. Token-only styling (no fallbacks, no literal colours — see
+   EmailEditorCssTokenTests), tiles with the icon ABOVE a label that wraps instead of cropping, and a
+   search field that stays reachable while the palette is open. */
+
 .tm-email-toolbox {
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-3, 0.75rem);
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-email-toolbox__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    min-block-size: var(--tm-space-6);
+}
+
+/* The title sits on the LEFT and the collapse arrow on the RIGHT of one row; collapsed, the arrow is all
+   that fits in the rail, so it centres. */
+.tm-email-toolbox__title {
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-email-toolbox--collapsed .tm-email-toolbox__header {
+    justify-content: center;
+}
+
+.tm-email-toolbox--collapsed .tm-email-toolbox__title {
+    display: none;
+}
+
+.tm-email-toolbox__collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-7);
+    block-size: var(--tm-space-7);
+    padding: 0;
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+}
+
+.tm-email-toolbox__collapse:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-email-toolbox__collapse:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-toolbox__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+/* `hidden` has to win over the flex layout: a bare [hidden] attribute loses to `display: flex`. */
+.tm-email-toolbox__body[hidden] {
+    display: none;
+}
+
+.tm-email-toolbox__search {
+    min-inline-size: 0;
+}
+
+.tm-email-toolbox__empty {
+    margin: 0;
+    padding: var(--tm-space-3) var(--tm-space-2);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-toolbox__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
 }
 
 .tm-email-toolbox__group-header {
-    margin-block-end: var(--tm-space-1, 0.25rem);
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--tm-color-text-muted, #6b7280);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
 }
 
 .tm-email-toolbox__items {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--tm-space-1, 0.25rem);
+    /* Two tiles per row in the narrow palette (the reference draws two). 4.75rem is the floor that still
+       fits two columns inside a ~20%-wide panel; below that the grid falls back to one column instead of
+       squeezing the labels into a mid-word break. */
+    grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr));
+    gap: var(--tm-space-2);
 }
 
 .tm-email-toolbox__items--layouts {
@@ -25,50 +108,70 @@
 
 .tm-email-toolbox__item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
-    padding: var(--tm-space-2, 0.5rem);
-    border: 1px solid var(--tm-color-border, #e2e2e2);
-    border-radius: var(--tm-radius-md, 0.375rem);
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #1a1a1a);
-    font-size: var(--tm-font-size-sm, 0.875rem);
+    justify-content: flex-start;
+    gap: var(--tm-space-1);
+    min-block-size: 4.5rem;
+    /* Horizontal padding is tighter than vertical: two tiles share a ~180 px palette, and the label needs
+       the width (a mid-word break like „Oddělova / č" is what a wider padding caused with a fallback font). */
+    padding: var(--tm-space-2) var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
     cursor: grab;
-    text-align: start;
+    text-align: center;
 }
 
 .tm-email-toolbox__item:hover {
-    border-color: var(--tm-color-primary, #2563eb);
-    background: var(--tm-color-bg-hover, #f3f4f6);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-email-toolbox__item:focus-visible {
-    outline: 2px solid var(--tm-color-focus, #2563eb);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 1px;
+}
+
+.tm-email-toolbox__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tm-color-text-secondary);
+}
+
+/* The label is allowed to wrap onto two lines and breaks inside a long word: the narrow palette used to
+   clip "Tabulk…" / "Naviga…". The full name stays in the tile's `title`. */
+.tm-email-toolbox__label {
+    inline-size: 100%;
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
 .tm-email-toolbox__layout-preview {
     display: flex;
-    gap: 2px;
-    inline-size: 2.5rem;
+    gap: var(--tm-space-1);
+    inline-size: 100%;
     block-size: 1.25rem;
-    flex: 0 0 auto;
 }
 
 .tm-email-toolbox__layout-col {
-    background: var(--tm-color-border-strong, #cbd5e1);
-    border-radius: var(--tm-radius-xs, 0.125rem);
+    background: var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-xs);
 }
 
 /* Read-only palette: the tiles stay visible and readable but advertise "not available" with the cursor, the
    native disabled state and aria-disabled — no grab cursor, no hover highlight (nothing would happen). */
 .tm-email-toolbox[data-tm-readonly="true"] .tm-email-toolbox__item {
     cursor: not-allowed;
-    color: var(--tm-color-text-secondary, #4b5563);
-    background: var(--tm-color-surface-muted, #f7f7f8);
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
 }
 
 .tm-email-toolbox[data-tm-readonly="true"] .tm-email-toolbox__item:hover {
-    border-color: var(--tm-color-border, #e2e2e2);
-    background: var(--tm-color-surface-muted, #f7f7f8);
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface-muted);
 }

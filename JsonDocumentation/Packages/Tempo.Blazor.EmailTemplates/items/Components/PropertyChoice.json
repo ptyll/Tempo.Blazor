@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "One option of a Choice or Alignment field: the value stored in the model (e.g. _blank, fluid-height) and the localization key of its label.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/PropertyReflection.cs",
+  "documentationStatus": "generated",
+  "itemName": "PropertyChoice"
+}

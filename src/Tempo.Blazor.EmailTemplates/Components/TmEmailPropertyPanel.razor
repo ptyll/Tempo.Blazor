@@ -2,143 +2,270 @@
 @inject IServiceProvider Services
 
 <div class="tm-email-properties" data-tm-properties-panel data-tm-readonly="@(ReadOnly ? "true" : "false")">
-    @{
-        var block = SelectedId is Guid id ? Document.FindBlock(id) : null;
-        var section = SelectedId is Guid sid ? DocumentTree.AllSections(Document).FirstOrDefault(s => s.Id == sid) : null;
-        var column = SelectedId is Guid cid ? DocumentTree.AllColumns(Document).FirstOrDefault(c => c.Id == cid) : null;
-    }
+    @{ var block = CurrentBlock; var section = CurrentSection; var column = CurrentColumn; }
 
-    @* Read-only: the whole control group is disabled natively. A `disabled` fieldset is what the
-       browser and the accessibility tree read, so nothing inside can be typed, toggled or clicked;
-       display:contents in the scoped CSS keeps the fieldset out of the layout. *@
-    <fieldset class="tm-email-properties__fieldset" disabled="@ReadOnly" data-tm-properties-fieldset>
     @if (block is not null)
     {
-        <header class="tm-email-properties__header" data-tm-prop-target="block">@Loc[$"block.{BlockKey(block)}.name"]</header>
-        <TmEmailObjectFields Target="block" Primary="PrimaryFor(block)" Exclude="ExcludeFor(block)" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        @switch (block)
-        {
-            case EmailTextBlock textBlock:
-                <div class="tm-email-properties__group" data-tm-rich-content>
-                    <header class="tm-email-properties__subheader">@Loc["EmailEditor_Field_Content"]</header>
-                    <TmRichEditorSimple Value="@textBlock.Content" IsDisabled="ReadOnly"
-                                        ValueChanged="@(v => SetAsync(() => textBlock.Content = v))" />
-                </div>
-                <details class="tm-email-properties__group" data-tm-variables="text">
-                    <summary>@Loc["EmailEditor_Variables_Title"]</summary>
-                    <TmEmailVariablePicker Variables="EffectiveVariables"
-                                           ReadOnly="ReadOnly"
-                                           OnInsert="@(t => AppendAsync(textBlock, t))" />
-                </details>
-                break;
-            case EmailRawBlock raw:
-                <TmAlert Severity="AlertSeverity.Warning" data-tm-raw-warning="true">@Loc["EmailEditor_Raw_Warning"]</TmAlert>
-                <TmTextArea Label="@Loc["EmailEditor_Field_Content"]" Rows="8" Value="@raw.Content" Disabled="ReadOnly"
-                            ValueChanged="@(v => SetAsync(() => raw.Content = v))" />
-                break;
-            case EmailImageBlock image:
-                @if (string.IsNullOrWhiteSpace(image.Alt))
-                {
-                    <TmAlert Severity="AlertSeverity.Warning" data-tm-alt-warning="true">@Loc["EmailEditor_Image_AltRequired"]</TmAlert>
-                }
-                @if (OnImageUpload is not null && !ReadOnly)
-                {
-                    <div class="tm-email-properties__group" data-tm-image-upload>
-                        <header class="tm-email-properties__subheader">@Loc["EmailEditor_Image_Upload"]</header>
-                        @if (_imageUploadError is not null)
-                        {
-                            <TmAlert Severity="AlertSeverity.Error" data-tm-image-upload-error="true">@_imageUploadError</TmAlert>
-                        }
-                        <TmFileDropZone Accept="@EffectiveImageUpload.Accept" InputAriaLabel="@Loc["EmailEditor_Image_Upload"]"
-                                        InputTestId="tm-image-upload" OnFilesSelected="e => UploadImageAsync(image, e)" />
-                    </div>
-                }
-                break;
-            case EmailWrapperBlock or EmailGroupBlock:
-                <TmAlert Severity="AlertSeverity.Info" data-tm-nesting-info="true">@Loc["EmailEditor_Nesting_Info"]</TmAlert>
-                break;
-        }
-        @switch (block)
-        {
-            case EmailSocialBlock social:
-                <TmEmailListEditor TItem="EmailSocialElement" Items="social.Elements"
-                                   ItemPrimary="@(new[] { "Name", "Href", "Label" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                break;
-            case EmailNavbarBlock navbar:
-                <TmEmailListEditor TItem="EmailNavbarLink" Items="navbar.Links"
-                                   ItemPrimary="@(new[] { "Text", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                break;
-            case EmailCarouselBlock carousel:
-                <TmEmailListEditor TItem="EmailCarouselImage" Items="carousel.Images"
-                                   ItemPrimary="@(new[] { "Src", "Alt", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                break;
-            case EmailAccordionBlock accordion:
-                <TmEmailListEditor TItem="EmailAccordionItem" Items="accordion.Items"
-                                   ItemPrimary="@(new[] { "Title", "Content" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                break;
-            case EmailTableBlock table:
-                <TmEmailTableEditor Block="table" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                break;
-        }
-        <div class="tm-email-properties__group" data-tm-classes>
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_MjClass_Title"]</header>
-            <TmTextInput Value="@string.Join(' ', block.MjClasses)" Disabled="ReadOnly" data-tm-mjclasses
-                         ValueChanged="@(v => SetAsync(() => block.MjClasses = Split(v)))" />
-        </div>
-        <div class="tm-email-properties__group" data-tm-extra>
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
-            <TmEmailKeyValueEditor Items="block.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
+        var hasDuplicate = OnDuplicate.HasDelegate;
+        var hasDelete = OnDelete.HasDelegate;
+        <header class="tm-email-properties__header" data-tm-prop-target="block">
+            <span class="tm-email-properties__title">@Loc[$"block.{BlockKey(block)}.name"]</span>
+            @if (!ReadOnly && (hasDuplicate || hasDelete))
+            {
+                <span class="tm-email-properties__actions">
+                    @if (hasDuplicate)
+                    {
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="copy"
+                                  AriaLabel="@Loc["EmailEditor_Action_Duplicate"]"
+                                  title="@Loc["EmailEditor_Action_Duplicate"]"
+                                  data-tm-prop-duplicate="true"
+                                  OnClick="() => OnDuplicate.InvokeAsync(block.Id)" />
+                    }
+                    @if (hasDelete)
+                    {
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="trash-2"
+                                  Class="tm-email-properties__delete"
+                                  AriaLabel="@Loc["EmailEditor_Action_Delete"]"
+                                  title="@Loc["EmailEditor_Action_Delete"]"
+                                  data-tm-prop-delete="true"
+                                  OnClick="() => OnDelete.InvokeAsync(block.Id)" />
+                    }
+                </span>
+            }
+        </header>
     }
     else if (section is not null)
     {
-        <header class="tm-email-properties__header" data-tm-prop-target="section">@Loc["EmailEditor_Properties_Section"]</header>
-        <TmEmailObjectFields Target="section" Primary="SectionPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        <div class="tm-email-properties__group" data-tm-extra>
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
-            <TmEmailKeyValueEditor Items="section.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
+        <header class="tm-email-properties__header" data-tm-prop-target="section">
+            <span class="tm-email-properties__title">@Loc["EmailEditor_Properties_Section"]</span>
+        </header>
     }
     else if (column is not null)
     {
-        <header class="tm-email-properties__header" data-tm-prop-target="column">@Loc["EmailEditor_Properties_Column"]</header>
-        <TmEmailObjectFields Target="column" Primary="ColumnPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        <div class="tm-email-properties__group" data-tm-extra>
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
-            <TmEmailKeyValueEditor Items="column.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
+        <header class="tm-email-properties__header" data-tm-prop-target="column">
+            <span class="tm-email-properties__title">@Loc["EmailEditor_Properties_Column"]</span>
+        </header>
     }
     else
     {
-        <header class="tm-email-properties__header" data-tm-prop-target="document">@Loc["EmailEditor_Properties_Document"]</header>
-        <TmEmailObjectFields Target="Document" Primary="DocumentPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        <details class="tm-email-properties__group" data-tm-variables="subject">
-            <summary>@Loc["EmailEditor_Variables_Title"]</summary>
-            <TmEmailVariablePicker Variables="EffectiveVariables"
-                                   ReadOnly="ReadOnly"
-                                   OnInsert="@(t => AppendSubjectAsync(t))" />
-        </details>
-        <TmEmailObjectFields Target="Document.Styles" Primary="StylesPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        <div class="tm-email-properties__group" data-tm-head="fonts">
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Fonts"]</header>
-            <TmEmailListEditor TItem="EmailFont" Items="Document.Styles.Fonts"
-                               ItemPrimary="@(new[] { "Name", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
-        <div class="tm-email-properties__group" data-tm-head="styles">
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Styles"]</header>
-            <TmEmailListEditor TItem="EmailStyle" Items="Document.Styles.Styles"
-                               ItemPrimary="@(new[] { "Css", "Inline" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
-        <div class="tm-email-properties__group" data-tm-head="classes">
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Classes"]</header>
-            <TmEmailClassesEditor Attributes="Document.Styles.Attributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
-        <div class="tm-email-properties__group" data-tm-head="html-attributes">
-            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_HtmlAttributes"]</header>
-            <TmEmailHtmlAttributesEditor Selectors="Document.Styles.HtmlAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-        </div>
+        <header class="tm-email-properties__header" data-tm-prop-target="document">
+            <span class="tm-email-properties__title">@Loc["EmailEditor_Properties_Document"]</span>
+        </header>
     }
-</fieldset>
+
+    @* Two tabs: the content of the block (texts, URLs, alt texts, items) and how it looks. The tab strip
+       stays interactive in ReadOnly — reading a document must not be locked behind the Content tab. *@
+    <div class="tm-email-properties__tabs" data-tm-prop-tabs>
+        <TmTabs ActiveTabId="@_activeTab" ActiveTabIdChanged="OnTabChangedAsync">
+            <TmTabPanel Id="content" Title="@Loc["EmailEditor_Properties_Tab_Content"]">
+                @* Read-only: the control group is disabled natively. A `disabled` fieldset is what the
+                   browser and the accessibility tree read, so nothing inside can be typed or clicked. *@
+                <fieldset class="tm-email-properties__fieldset" disabled="@ReadOnly" data-tm-properties-fieldset>
+                    @if (CurrentBlock is { } block)
+                    {
+                        <TmEmailObjectFields Target="block" Placement="PropertyFieldPlacement.Content"
+                                             Exclude="ExcludeFor(block)" OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                             Variables="EffectiveVariables" State="_state" />
+                        @switch (block)
+                        {
+                            case EmailTextBlock textBlock:
+                                <div class="tm-email-properties__group" data-tm-rich-content>
+                                    <header class="tm-email-properties__subheader">@Loc["EmailEditor_Field_Content"]</header>
+                                    <TmRichEditorSimple Value="@textBlock.Content" IsDisabled="ReadOnly"
+                                                        ValueChanged="@(v => SetAsync(() => textBlock.Content = v))" />
+                                    @if (!ReadOnly)
+                                    {
+                                        <div class="tm-email-properties__variables" data-tm-variables="text"
+                                             data-tm-variable-trigger="Content">
+                                            @* The trigger is a styled span: the popover's own trigger is already the
+                                               role=button activation control, so a nested TmButton would be a
+                                               button inside a button (two activations per press). *@
+                                            <TmPopover Title="@Loc["EmailEditor_Variables_Title"]"
+                                                       IsOpen="_richVariablesOpen"
+                                                       IsOpenChanged="@((bool open) => _richVariablesOpen = open)">
+                                                <TriggerContent>
+                                                    <span class="tm-email-properties__variable-trigger">
+                                                        <span class="tm-email-fields__variable-glyph" aria-hidden="true">{ }</span>
+                                                        @Loc["EmailEditor_Variables_Insert"]
+                                                    </span>
+                                                </TriggerContent>
+                                                <ChildContent>
+                                                    @if (_richVariablesOpen)
+                                                    {
+                                                        <TmEmailVariablePicker Variables="EffectiveVariables"
+                                                                               ReadOnly="ReadOnly"
+                                                                               OnInsert="@(t => InsertVariableAsync(textBlock, t))" />
+                                                    }
+                                                </ChildContent>
+                                            </TmPopover>
+                                        </div>
+                                    }
+                                </div>
+                                break;
+                            case EmailRawBlock raw:
+                                <TmAlert Severity="AlertSeverity.Warning" data-tm-raw-warning="true">@Loc["EmailEditor_Raw_Warning"]</TmAlert>
+                                <TmTextArea Label="@Loc["EmailEditor_Field_Content"]" Rows="8" Value="@raw.Content" Disabled="ReadOnly"
+                                            ValueChanged="@(v => SetAsync(() => raw.Content = v))" />
+                                break;
+                            case EmailImageBlock image:
+                                @if (string.IsNullOrWhiteSpace(image.Alt))
+                                {
+                                    <TmAlert Severity="AlertSeverity.Warning" data-tm-alt-warning="true">@Loc["EmailEditor_Image_AltRequired"]</TmAlert>
+                                }
+                                @if (OnImageUpload is not null && !ReadOnly)
+                                {
+                                    <div class="tm-email-properties__group" data-tm-image-upload>
+                                        <header class="tm-email-properties__subheader">@Loc["EmailEditor_Image_Upload"]</header>
+                                        @if (_imageUploadError is not null)
+                                        {
+                                            <TmAlert Severity="AlertSeverity.Error" data-tm-image-upload-error="true">@_imageUploadError</TmAlert>
+                                        }
+                                        <TmFileDropZone Accept="@EffectiveImageUpload.Accept" InputAriaLabel="@Loc["EmailEditor_Image_Upload"]"
+                                                        InputTestId="tm-image-upload" OnFilesSelected="e => UploadImageAsync(image, e)" />
+                                    </div>
+                                }
+                                break;
+                            case EmailWrapperBlock or EmailGroupBlock:
+                                <TmAlert Severity="AlertSeverity.Info" data-tm-nesting-info="true">@Loc["EmailEditor_Nesting_Info"]</TmAlert>
+                                break;
+                        }
+                        @switch (block)
+                        {
+                            case EmailSocialBlock social:
+                                <TmEmailListEditor TItem="EmailSocialElement" Items="social.Elements"
+                                                   ItemPrimary="@(new[] { "Name", "Href", "Label" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                break;
+                            case EmailNavbarBlock navbar:
+                                <TmEmailListEditor TItem="EmailNavbarLink" Items="navbar.Links"
+                                                   ItemPrimary="@(new[] { "Text", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                break;
+                            case EmailCarouselBlock carousel:
+                                <TmEmailListEditor TItem="EmailCarouselImage" Items="carousel.Images"
+                                                   ItemPrimary="@(new[] { "Src", "Alt", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                break;
+                            case EmailAccordionBlock accordion:
+                                <TmEmailListEditor TItem="EmailAccordionItem" Items="accordion.Items"
+                                                   ItemPrimary="@(new[] { "Title", "Content" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                break;
+                            case EmailTableBlock table:
+                                <TmEmailTableEditor Block="table" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                break;
+                        }
+                    }
+                    else if (CurrentSection is { } section)
+                    {
+                        <TmEmailObjectFields Target="section" Placement="PropertyFieldPlacement.Content"
+                                             OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                             Variables="EffectiveVariables" State="_state" />
+                    }
+                    else if (CurrentColumn is { } column)
+                    {
+                        <TmEmailObjectFields Target="column" Placement="PropertyFieldPlacement.Content"
+                                             OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                             Variables="EffectiveVariables" State="_state" />
+                    }
+                    else
+                    {
+                        <TmEmailObjectFields Target="Document" Placement="PropertyFieldPlacement.Content"
+                                             OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                             Variables="EffectiveVariables" State="_state" />
+                    }
+                </fieldset>
+            </TmTabPanel>
+            <TmTabPanel Id="style" Title="@Loc["EmailEditor_Properties_Tab_Style"]">
+                <fieldset class="tm-email-properties__fieldset" disabled="@ReadOnly" data-tm-properties-fieldset>
+                    <TmEmailObjectFields Target="CurrentTarget" Placement="PropertyFieldPlacement.Style"
+                                         OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                         Variables="EffectiveVariables" State="_state" />
+                    @if (HasPaddingFields)
+                    {
+                        <div class="tm-email-properties__group" data-tm-prop-group="padding">
+                            <button type="button" class="tm-email-properties__group-toggle" data-tm-prop-group-toggle="padding"
+                                    aria-expanded="@AriaExpanded(!IsGroupCollapsed(EmailInspectorState.PaddingGroup))"
+                                    aria-controls="@PaddingBodyId"
+                                    @onclick="() => ToggleGroup(CurrentOwner, EmailInspectorState.PaddingGroup)">
+                                <TmIcon Name="@(IsGroupCollapsed(EmailInspectorState.PaddingGroup) ? "chevron-right" : "chevron-down")" Size="IconSize.Xs" />
+                                <span>@Loc["EmailEditor_Properties_Padding"]</span>
+                            </button>
+                            <div id="@PaddingBodyId" class="tm-email-properties__group-body"
+                                 data-tm-prop-group-body="padding" hidden="@IsGroupCollapsed(EmailInspectorState.PaddingGroup)">
+                                <TmEmailObjectFields Target="CurrentTarget" Placement="PropertyFieldPlacement.Padding"
+                                                     OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                                     Variables="EffectiveVariables" State="_state" />
+                            </div>
+                        </div>
+                    }
+                    @if (HasAdvancedFields)
+                    {
+                        <div class="tm-email-properties__group" data-tm-prop-group="advanced">
+                            <button type="button" class="tm-email-properties__group-toggle" data-tm-prop-group-toggle="advanced"
+                                    aria-expanded="@AriaExpanded(!IsGroupCollapsed(EmailInspectorState.AdvancedGroup))"
+                                    aria-controls="@AdvancedBodyId"
+                                    @onclick="() => ToggleGroup(CurrentOwner, EmailInspectorState.AdvancedGroup)">
+                                <TmIcon Name="@(IsGroupCollapsed(EmailInspectorState.AdvancedGroup) ? "chevron-right" : "chevron-down")" Size="IconSize.Xs" />
+                                <span>@Loc["EmailEditor_Properties_Advanced"]</span>
+                            </button>
+                            <div id="@AdvancedBodyId" class="tm-email-properties__group-body"
+                                 data-tm-prop-group-body="advanced" hidden="@IsGroupCollapsed(EmailInspectorState.AdvancedGroup)">
+                                <TmEmailObjectFields Target="CurrentTarget" Placement="PropertyFieldPlacement.Advanced"
+                                                     OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                                     Variables="EffectiveVariables" State="_state" />
+                            </div>
+                        </div>
+                    }
+                    @if (CurrentBlock is { } block)
+                    {
+                        <div class="tm-email-properties__group" data-tm-classes>
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_MjClass_Title"]</header>
+                            <TmTextInput Value="@string.Join(' ', block.MjClasses)" Disabled="ReadOnly" data-tm-mjclasses
+                                         ValueChanged="@(v => SetAsync(() => block.MjClasses = Split(v)))" />
+                        </div>
+                        <div class="tm-email-properties__group" data-tm-extra>
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
+                            <TmEmailKeyValueEditor Items="block.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                    }
+                    else if (CurrentSection is { } section)
+                    {
+                        <div class="tm-email-properties__group" data-tm-extra>
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
+                            <TmEmailKeyValueEditor Items="section.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                    }
+                    else if (CurrentColumn is { } column)
+                    {
+                        <div class="tm-email-properties__group" data-tm-extra>
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
+                            <TmEmailKeyValueEditor Items="column.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                    }
+                    else
+                    {
+                        <TmEmailObjectFields Target="Document.Styles" Placement="PropertyFieldPlacement.Style"
+                                             OnChanged="OnChanged" ReadOnly="ReadOnly" State="_state" />
+                        <div class="tm-email-properties__group" data-tm-head="fonts">
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Fonts"]</header>
+                            <TmEmailListEditor TItem="EmailFont" Items="Document.Styles.Fonts"
+                                               ItemPrimary="@(new[] { "Name", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                        <div class="tm-email-properties__group" data-tm-head="styles">
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Styles"]</header>
+                            <TmEmailListEditor TItem="EmailStyle" Items="Document.Styles.Styles"
+                                               ItemPrimary="@(new[] { "Css", "Inline" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                        <div class="tm-email-properties__group" data-tm-head="classes">
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Classes"]</header>
+                            <TmEmailClassesEditor Attributes="Document.Styles.Attributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                        <div class="tm-email-properties__group" data-tm-head="html-attributes">
+                            <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_HtmlAttributes"]</header>
+                            <TmEmailHtmlAttributesEditor Selectors="Document.Styles.HtmlAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                        </div>
+                    }
+                </fieldset>
+            </TmTabPanel>
+        </TmTabs>
+    </div>
 </div>
 
 @code {
@@ -150,6 +277,18 @@
 
     /// <summary>Raised after any property changes.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>
+    /// Raised with the selected block id when the header's Duplicate action is used. The editor implements
+    /// it as one history step; without a handler the action is not rendered.
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnDuplicate { get; set; }
+
+    /// <summary>
+    /// Raised with the selected block id when the header's Delete action is used (rendered as a danger
+    /// action). Without a handler the action is not rendered.
+    /// </summary>
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
 
     /// <summary>Host-provided variables, merged with those extracted from the document.</summary>
     [Parameter] public IReadOnlyList<TemplateVariableInfo> Variables { get; set; } = Array.Empty<TemplateVariableInfo>();
@@ -164,12 +303,69 @@
     [Parameter] public ImageUploadOptions? ImageUpload { get; set; }
 
     /// <summary>
-    /// Renders the inspector read-only: every control inside the panel is disabled natively and the
-    /// upload affordance is hidden, so no property change can reach the document.
+    /// Renders the inspector read-only: every control inside the panel is disabled natively, the header
+    /// actions are hidden and the upload affordance is not rendered, so no property change can reach the
+    /// document.
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    private readonly string _instanceId = Guid.NewGuid().ToString("n")[..6];
+    private readonly EmailInspectorState _state = new();
+    private string _activeTab = "content";
+    private bool _richVariablesOpen;
+
+    // The tab panels are rendered by TmTabs from the ChildContent instance it captured on its previous
+    // render, so everything INSIDE a tab must be resolved live (these members), never from a local captured
+    // in the panel's own render — otherwise the inspector is one interaction behind.
+    private EmailBlockBase? CurrentBlock
+        => SelectedId is Guid id ? Document.FindBlock(id) : null;
+
+    private EmailSection? CurrentSection
+        => SelectedId is Guid id ? DocumentTree.AllSections(Document).FirstOrDefault(s => s.Id == id) : null;
+
+    private EmailColumn? CurrentColumn
+        => SelectedId is Guid id ? DocumentTree.AllColumns(Document).FirstOrDefault(c => c.Id == id) : null;
+
+    private object CurrentTarget => (object?)CurrentBlock ?? (object?)CurrentSection ?? (object?)CurrentColumn ?? Document;
+
+    private string CurrentOwner => PropertyReflection.OwnerOf(CurrentTarget);
+
+    private bool IsGroupCollapsed(string group) => _state.IsGroupCollapsed(CurrentOwner, group);
+
+    private static string AriaExpanded(bool expanded) => expanded ? "true" : "false";
+
+    private string PaddingBodyId => $"tm-email-padding-{_instanceId}";
+
+    private string AdvancedBodyId => $"tm-email-advanced-{_instanceId}";
+
+    private bool HasPaddingFields
+        => PropertyReflection.GetFields(CurrentTarget, PropertyFieldPlacement.Padding).Count > 0;
+
+    private bool HasAdvancedFields
+        => PropertyReflection.GetFields(CurrentTarget, PropertyFieldPlacement.Advanced).Count > 0;
     private string? _imageUploadError;
+    private Guid? _lastSelected;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // The remembered field belongs to the previously inspected node: a token must never be inserted
+        // into a field of a block the user has already left.
+        if (_lastSelected != SelectedId)
+        {
+            _lastSelected = SelectedId;
+            _state.ClearFocus();
+        }
+    }
+
+    private Task OnTabChangedAsync(string tabId)
+    {
+        if (string.IsNullOrEmpty(tabId)) return Task.CompletedTask;
+        _activeTab = tabId;
+        return Task.CompletedTask;
+    }
+
+    private void ToggleGroup(string owner, string group) => _state.ToggleGroup(owner, group);
 
     /// <summary>
     /// Applies one inspector mutation unless the panel is read-only, then reports it. A disabled control is
@@ -183,11 +379,25 @@
         return OnChanged.InvokeAsync();
     }
 
-    private Task AppendAsync(EmailTextBlock block, string token)
-        => SetAsync(() => block.Content += token);
+    /// <summary>
+    /// Inserts a variable into the rich-text content. The caret-aware JS path already wrote the token when
+    /// it could; the fallback goes behind the content of the field the user edited last, and only appends
+    /// to the block content when the inspector has no remembered field at all.
+    /// </summary>
+    private Task InsertVariableAsync(EmailTextBlock textBlock, string token)
+    {
+        if (ReadOnly) return Task.CompletedTask;
 
-    private Task AppendSubjectAsync(string token)
-        => SetAsync(() => Document.Subject += token);
+        var focused = _state.LastFocusedField;
+        if (focused is not null)
+        {
+            focused.SetText(focused.GetText() + token);
+            return OnChanged.InvokeAsync();
+        }
+
+        textBlock.Content += token;
+        return OnChanged.InvokeAsync();
+    }
 
     private ImageUploadOptions EffectiveImageUpload => ImageUpload ?? new ImageUploadOptions();
 
@@ -199,17 +409,12 @@
             .OrderBy(v => v.Path, StringComparer.Ordinal)
             .ToList();
 
-    private static readonly string[] DocumentPrimary = { "Name", "Subject", "Preheader", "Language" };
-    private static readonly string[] StylesPrimary = { "ContentWidth", "BackgroundColor", "FontFamily", "Breakpoint" };
-    private static readonly string[] SectionPrimary = { "BackgroundColor", "BackgroundUrl", "Padding", "TextAlign", "FullWidth" };
-    private static readonly string[] ColumnPrimary = { "Width", "VerticalAlign", "BackgroundColor", "Padding" };
-
-    private static readonly string[] ContentOnly = { "Content" };
-
     private static string BlockKey(EmailBlockBase block) => block.Type.ToString().ToLowerInvariant();
 
     private static IReadOnlyList<string> ExcludeFor(EmailBlockBase block) =>
         block is EmailTextBlock or EmailRawBlock ? ContentOnly : Array.Empty<string>();
+
+    private static readonly string[] ContentOnly = { "Content" };
 
     /// <summary>
     /// Validates the picked file against <see cref="ImageUploadOptions"/> <b>before</b> calling the host, and
@@ -298,23 +503,4 @@
 
     private static List<string> Split(string value) =>
         value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-
-    private static IReadOnlyList<string> PrimaryFor(EmailBlockBase block) => block switch
-    {
-        EmailTextBlock => new[] { "Content", "Color", "FontSize", "Align", "FontWeight" },
-        EmailButtonBlock => new[] { "Text", "Href", "BackgroundColor", "Color", "BorderRadius", "Align" },
-        EmailImageBlock => new[] { "Src", "Alt", "Href", "Width", "Align" },
-        EmailDividerBlock => new[] { "BorderColor", "BorderWidth", "BorderStyle", "Width", "Align" },
-        EmailSpacerBlock => new[] { "Height" },
-        EmailRawBlock => new[] { "Content" },
-        EmailTableBlock => new[] { "Width", "Align", "Color", "FontSize" },
-        EmailSocialBlock => new[] { "Mode", "Align", "IconSize", "Color" },
-        EmailNavbarBlock => new[] { "Align", "BaseUrl" },
-        EmailCarouselBlock => new[] { "Align", "Thumbnails", "IconWidth" },
-        EmailAccordionBlock => new[] { "IconPosition", "Border" },
-        EmailHeroBlock => new[] { "Mode", "BackgroundColor", "BackgroundUrl", "Height", "VerticalAlign" },
-        EmailWrapperBlock => new[] { "BackgroundColor", "BackgroundUrl", "TextAlign", "FullWidth" },
-        EmailGroupBlock => new[] { "BackgroundColor", "Direction", "VerticalAlign", "Width" },
-        _ => Array.Empty<string>(),
-    };
 }

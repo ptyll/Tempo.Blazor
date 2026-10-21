@@ -17435,6 +17435,12 @@
               "description": "Disables the search input."
             },
             {
+              "name": "OnKeyDown",
+              "type": "EventCallback<KeyboardEventArgs>",
+              "isRequired": false,
+              "description": "Raised for every key press in the input. A consumer that owns a list under the search (the email variable picker) uses it for arrow-key navigation. Additive: it never blocks typing, and nothing is prevented by the component itself."
+            },
+            {
               "name": "Placeholder",
               "type": "string?",
               "isRequired": false,
@@ -17502,6 +17508,12 @@
               "isRequired": false,
               "default": "true",
               "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
+            },
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the <select> when the component has no visible Label of its own (e.g. the unit of a number + unit row, whose label names the whole row). When null the previous placeholder-derived name applies. Additive: nothing existing changes."
             },
             {
               "name": "ChildContent",
@@ -105458,6 +105470,30 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "LayoutSeverityRank",
+          "kind": "Class",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Layout",
+          "description": "The display order of LayoutSeverity findings: Error first, then Warning, then Info. The enum's numeric values are a serialization contract, so findings are ordered through this rank (D19).",
+          "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Layout/LayoutSeverityRank.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Of",
+              "kind": "Method",
+              "type": "int",
+              "description": "Returns the display rank of severity: Error = 0, Warning = 1, Info = 2.",
+              "parameters": [
+                {
+                  "name": "severity",
+                  "type": "LayoutSeverity"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "itemName": "LayoutValidationKeys",
           "kind": "Class",
           "category": "Layout",
@@ -107958,6 +107994,12 @@
               "description": "An image has no source URL."
             },
             {
+              "name": "PreheaderTooLong",
+              "kind": "Field",
+              "type": "string",
+              "description": "The preheader is longer than MaxPreheaderLength characters, so the inbox truncates it. A recommendation (D9), never a failure."
+            },
+            {
               "name": "TooDeeplyNested",
               "kind": "Field",
               "type": "string",
@@ -108047,6 +108089,12 @@
           "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailDocumentValidator.cs",
           "documentationStatus": "merged",
           "members": [
+            {
+              "name": "MaxPreheaderLength",
+              "kind": "Field",
+              "type": "int",
+              "description": "The longest preheader an inbox reliably shows before truncating it, measured in TEXT ELEMENTS (graphemes) of the SOURCE template — tokens included, because the inbox truncates the rendered text at the same visual width. A longer value is reported as a recommendation (Info), the single recommending rule of D9."
+            },
             {
               "name": "Validate",
               "kind": "Method",
@@ -109169,6 +109217,18 @@
           "documentationStatus": "merged",
           "members": [
             {
+              "name": "Description",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Gets the human-readable description shown next to the token in the variable picker (e.g. \"First name of the user\"). Supplied by the HOST: only the host knows what its data means. Variables extracted from a document leave it null, and the picker then shows the path alone. Participates in record equality (B9)."
+            },
+            {
+              "name": "Group",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Gets the optional group heading the picker sorts and labels rows under (e.g. \"User\", \"Project\"). Host-supplied; extracted variables leave it null and are listed ungrouped. Participates in record equality (B9)."
+            },
+            {
               "name": "Kind",
               "kind": "Property",
               "type": "VariableKind",
@@ -109231,12 +109291,12 @@
         }
       ],
       "summary": {
-        "itemCount": 117,
-        "manualItemCount": 117,
-        "generatedItemCount": 117,
+        "itemCount": 118,
+        "manualItemCount": 118,
+        "generatedItemCount": 118,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 117
+        "publicApiTypeCount": 118
       }
     },
     {
@@ -109282,6 +109342,94 @@
         "dependencies": []
       },
       "items": [
+        {
+          "itemName": "EmailInspectorState",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.EmailTemplates.Components",
+          "description": "State the property inspector remembers for the lifetime of one editor: the collapsible groups the user folded away (per block type) and the field edited last (the target of the caret-less variable insertion fallback).",
+          "packageId": "Tempo.Blazor.EmailTemplates",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailInspectorState.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "AdvancedGroup",
+              "kind": "Field",
+              "type": "string",
+              "description": "The group id of the collapsible \"Advanced\" section."
+            },
+            {
+              "name": "PaddingGroup",
+              "kind": "Field",
+              "type": "string",
+              "description": "The group id of the collapsible \"Spacing\" section."
+            },
+            {
+              "name": "ClearFocus",
+              "kind": "Method",
+              "type": "void",
+              "description": "Forgets the remembered field (e.g. when the inspected target changes)."
+            },
+            {
+              "name": "IsGroupCollapsed",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Whether the group is collapsed for the given owner (block type); groups start expanded.",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "type": "string"
+                },
+                {
+                  "name": "group",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "SetGroupCollapsed",
+              "kind": "Method",
+              "type": "void",
+              "description": "Stores the collapsed state of a group for one owner.",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "type": "string"
+                },
+                {
+                  "name": "group",
+                  "type": "string"
+                },
+                {
+                  "name": "collapsed",
+                  "type": "bool"
+                }
+              ]
+            },
+            {
+              "name": "ToggleGroup",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Flips the collapsed state of a group and returns the new state.",
+              "parameters": [
+                {
+                  "name": "owner",
+                  "type": "string"
+                },
+                {
+                  "name": "group",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "LastFocusedField",
+              "kind": "Property",
+              "type": "PropertyField?",
+              "description": "Gets or sets the field the user last put the caret into. A variable inserted while the caret-aware JS interop is unavailable lands behind this field's content, matching what the JS path would do."
+            }
+          ]
+        },
         {
           "itemName": "EmailPreviewDevice",
           "kind": "Enum",
@@ -109358,6 +109506,16 @@
           ]
         },
         {
+          "itemName": "PropertyChoice",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.EmailTemplates.Components",
+          "description": "One option of a Choice or Alignment field: the value stored in the model (e.g. _blank, fluid-height) and the localization key of its label.",
+          "packageId": "Tempo.Blazor.EmailTemplates",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/PropertyReflection.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "PropertyField",
           "kind": "Class",
           "category": "Components",
@@ -109373,6 +109531,16 @@
           "category": "Components",
           "namespace": "Tempo.Blazor.EmailTemplates.Components",
           "description": "The kind of editor a property maps to.",
+          "packageId": "Tempo.Blazor.EmailTemplates",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/PropertyReflection.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "PropertyFieldPlacement",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.EmailTemplates.Components",
+          "description": "Where a scalar property belongs in the inspector: the Content tab, the Style tab, the collapsible Spacing group or the collapsible Advanced group.",
           "packageId": "Tempo.Blazor.EmailTemplates",
           "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/PropertyReflection.cs",
           "documentationStatus": "merged"
@@ -109639,12 +109807,17 @@
               "description": "Raised after any field changes."
             },
             {
+              "name": "Placement",
+              "type": "PropertyFieldPlacement?",
+              "isRequired": false,
+              "description": "Restricts the fields to one inspector placement (the Content/Style tabs and the Spacing/Advanced groups). null renders every field of the target - the flat form a list-item editor uses."
+            },
+            {
               "name": "Primary",
               "type": "IReadOnlyList<string>",
               "isRequired": false,
               "default": "Array.Empty<string>()",
-              "description": "Property names shown above the \"Advanced\" section, in order.",
-              "editorRequired": true
+              "description": "Property names shown above the advanced group, in order (an ordering hint only)."
             },
             {
               "name": "ReadOnly",
@@ -109653,11 +109826,24 @@
               "description": "Renders every input disabled, so a read-only inspector shows the values but cannot edit them."
             },
             {
+              "name": "State",
+              "type": "EmailInspectorState?",
+              "isRequired": false,
+              "description": "Shared inspector state (remembered group collapse state and the field the user edited last, which is where a variable token lands when caret interop is unavailable). A standalone instance keeps its own."
+            },
+            {
               "name": "Target",
               "type": "object",
               "isRequired": true,
               "description": "The model object whose scalar properties are edited.",
               "editorRequired": true
+            },
+            {
+              "name": "Variables",
+              "type": "IReadOnlyList<TemplateVariableInfo>",
+              "isRequired": false,
+              "default": "Array.Empty<TemplateVariableInfo>()",
+              "description": "Host-provided variables offered next to every template-bearing field."
             }
           ]
         },
@@ -109666,7 +109852,7 @@
           "kind": "Component",
           "category": "Components",
           "namespace": "Tempo.Blazor.EmailTemplates.Components",
-          "description": "Context-sensitive property inspector for the currently selected section, column, or block. Renders the element's common fields plus type-specific editors such as rich-text content, raw HTML, image upload, and variable insertion.",
+          "description": "Context-sensitive property inspector for the currently selected section, column, or block. The header names the element and offers Duplicate/Delete as one-step undo actions; the body splits into an Obsah/Styl tab strip with the Spacing and Advanced fields in collapsible groups, and renders the element's common fields plus type-specific editors such as rich-text content, raw HTML, image upload, and variable insertion.",
           "packageId": "Tempo.Blazor.EmailTemplates",
           "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailPropertyPanel.razor",
           "documentationStatus": "merged",
@@ -109692,6 +109878,18 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised after any property changes."
+            },
+            {
+              "name": "OnDelete",
+              "type": "EventCallback<Guid>",
+              "isRequired": false,
+              "description": "Raised with the selected block id when the header's Delete action is used (rendered as a danger action). Without a handler the action is not rendered."
+            },
+            {
+              "name": "OnDuplicate",
+              "type": "EventCallback<Guid>",
+              "isRequired": false,
+              "description": "Raised with the selected block id when the header's Duplicate action is used. The editor implements it as one history step; without a handler the action is not rendered."
             },
             {
               "name": "OnImageUpload",
@@ -109923,6 +110121,18 @@
               "description": "Optional host actions rendered at the start of the command bar (back, title, …)."
             },
             {
+              "name": "ToolboxCollapsed",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the blocks palette is collapsed. The editor mirrors the state it is given and reports every toggle through ToolboxCollapsedChanged; F8 maps the same parameter onto TmEditorShell.CollapsedPanels (D10)."
+            },
+            {
+              "name": "ToolboxCollapsedChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new state when the user collapses or expands the blocks palette. Bind it back into ToolboxCollapsed for a controlled palette; without a binding the palette toggles on its own (seeded from the parameter)."
+            },
+            {
               "name": "Variables",
               "type": "IReadOnlyList<TemplateVariableInfo>",
               "isRequired": false,
@@ -110012,7 +110222,7 @@
           "kind": "Component",
           "category": "Components",
           "namespace": "Tempo.Blazor.EmailTemplates.Components",
-          "description": "Palette of email building blocks from the block registry, grouped by category, plus a set of column-layout presets. Clicking or dragging a block raises the add/drag callbacks, and choosing a preset inserts a new section.",
+          "description": "Palette of email building blocks from the block registry, grouped by category, plus a set of column-layout presets. A search field filters the tiles by their localized name (diacritics- and case-insensitive) with a localized empty state, tiles show the icon above a wrapping label whose full name is in title, and a collapse toggle folds the palette to its rail. Clicking or dragging a block raises the add/drag callbacks, and choosing a preset inserts a new section.",
           "packageId": "Tempo.Blazor.EmailTemplates",
           "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateToolbox.razor",
           "documentationStatus": "merged",
@@ -110020,6 +110230,18 @@
             "@using Tempo.Blazor.EmailTemplates.Components"
           ],
           "parameters": [
+            {
+              "name": "Collapsed",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the palette is collapsed to its rail. Collapsing hides the search field and the tile groups (the toggle stays, so the panel is never a dead end); the editor maps this to the left panel width and F8 maps it to TmEditorShell.CollapsedPanels (D10)."
+            },
+            {
+              "name": "CollapsedChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new collapsed state when the palette's toggle is used."
+            },
             {
               "name": "OnAddBlock",
               "type": "EventCallback<BlockDescriptor>",
@@ -110043,6 +110265,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true the tiles stay visible but inert: not draggable, aria-disabled, and neither a click nor a keyboard activation raises OnAddBlock/OnAddSection."
+            },
+            {
+              "name": "ShowCollapseToggle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the palette renders its own collapse arrow. Defaults to true; a host that owns the shell chrome (Fáze 8 maps the state onto TmEditorShell.CollapsedPanels) sets it to false so the same state has one control instead of two."
             }
           ]
         },
@@ -110368,15 +110597,19 @@
         {
           "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/__tests__/tm-email-save-shortcut.test.mjs",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/__tests__/tm-email-variable-insert.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 29,
-        "manualItemCount": 29,
-        "generatedItemCount": 29,
+        "itemCount": 32,
+        "manualItemCount": 32,
+        "generatedItemCount": 32,
         "generatedOnlyItemCount": 0,
         "componentCount": 15,
-        "publicApiTypeCount": 14
+        "publicApiTypeCount": 17
       }
     },
     {
@@ -117960,10 +118193,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3265,
-    "manualItemCount": 3265,
+    "itemCount": 3269,
+    "manualItemCount": 3269,
     "generatedOnlyItemCount": 0,
     "componentCount": 475,
-    "publicApiTypeCount": 2737
+    "publicApiTypeCount": 2741
   }
 }

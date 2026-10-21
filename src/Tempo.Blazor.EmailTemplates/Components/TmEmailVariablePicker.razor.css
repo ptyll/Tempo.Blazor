@@ -1,0 +1,105 @@
+/* The variable picker: rows are token chip + collection badge + host description, grouped under the host's
+   group headings. Token-only styling.
+   The row is a two-row grid — "code badge" on top, the description spanning both columns below — so a long
+   path keeps the full width it needs and the description never squeezes it into an ellipsis. */
+
+.tm-email-variables {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    inline-size: min(26rem, 90vw);
+    max-inline-size: 100%;
+    /* ONE scroll container: with several host groups a per-list cap made the popover taller than the
+       viewport (measured 821 px at 1440x900), so the tail of the catalogue was unreachable. */
+    max-block-size: 22rem;
+    overflow-y: auto;
+}
+
+.tm-email-variables__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-email-variables__group-heading {
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-variables__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-email-variables__item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "code badge" "desc desc";
+    align-items: start;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    inline-size: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-email-variables__item:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-email-variables__item:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-variables__item[disabled] {
+    cursor: default;
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
+}
+
+/* A token wraps instead of truncating mid-path: the whole path stays readable, and the row's title
+   carries it too. */
+.tm-email-variables__item code {
+    grid-area: code;
+    min-inline-size: 0;
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-xs);
+    background: var(--tm-color-surface-muted);
+    color: var(--tm-color-text);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.tm-email-variables__description {
+    grid-area: desc;
+    min-inline-size: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-variables__badge {
+    grid-area: badge;
+    color: var(--tm-color-text-secondary);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-email-variables__empty {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}

@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Components",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
-  "description": "Context-sensitive property inspector for the currently selected section, column, or block. Renders the element's common fields plus type-specific editors such as rich-text content, raw HTML, image upload, and variable insertion.",
+  "description": "Context-sensitive property inspector for the currently selected section, column, or block. The header names the element and offers Duplicate/Delete as one-step undo actions; the body splits into an Obsah/Styl tab strip with the Spacing and Advanced fields in collapsible groups, and renders the element's common fields plus type-specific editors such as rich-text content, raw HTML, image upload, and variable insertion.",
   "packageId": "Tempo.Blazor.EmailTemplates",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailPropertyPanel.razor",
   "documentationStatus": "merged",
@@ -29,6 +29,18 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised after any property changes."
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback<Guid>",
+      "isRequired": false,
+      "description": "Raised with the selected block id when the header's Delete action is used (rendered as a danger action). Without a handler the action is not rendered."
+    },
+    {
+      "name": "OnDuplicate",
+      "type": "EventCallback<Guid>",
+      "isRequired": false,
+      "description": "Raised with the selected block id when the header's Duplicate action is used. The editor implements it as one history step; without a handler the action is not rendered."
     },
     {
       "name": "OnImageUpload",

@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Components",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
-  "description": "Palette of email building blocks from the block registry, grouped by category, plus a set of column-layout presets. Clicking or dragging a block raises the add/drag callbacks, and choosing a preset inserts a new section.",
+  "description": "Palette of email building blocks from the block registry, grouped by category, plus a set of column-layout presets. A search field filters the tiles by their localized name (diacritics- and case-insensitive) with a localized empty state, tiles show the icon above a wrapping label whose full name is in title, and a collapse toggle folds the palette to its rail. Clicking or dragging a block raises the add/drag callbacks, and choosing a preset inserts a new section.",
   "packageId": "Tempo.Blazor.EmailTemplates",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateToolbox.razor",
   "documentationStatus": "merged",
@@ -11,6 +11,18 @@
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
   "parameters": [
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the palette is collapsed to its rail. Collapsing hides the search field and the tile groups (the toggle stays, so the panel is never a dead end); the editor maps this to the left panel width and F8 maps it to TmEditorShell.CollapsedPanels (D10)."
+    },
+    {
+      "name": "CollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new collapsed state when the palette's toggle is used."
+    },
     {
       "name": "OnAddBlock",
       "type": "EventCallback<BlockDescriptor>",

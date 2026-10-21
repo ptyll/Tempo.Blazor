@@ -1,0 +1,184 @@
+/* One inspector field: label, control, the optional "Insert variable" affordance and the localized error of
+   a value the typed editor refuses to own. Token-only styling.
+   IMPORTANT: every field element is built with RenderTreeBuilder in @code, so it carries NO CSS-isolation
+   scope attribute. A bare `.tm-email-fields__field` rule therefore matched nothing (the label typography and
+   the number+unit row silently did nothing). The scope ends at the component's own root, hence
+   `.tm-email-fields ::deep .tm-email-fields__X`. */
+
+.tm-email-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-fields ::deep .tm-email-fields__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+/* One typography for every field label, whether the label belongs to a text input, a colour picker or a
+   number + unit row. */
+.tm-email-fields ::deep .tm-email-fields__label {
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    line-height: 1.4;
+}
+
+.tm-email-fields ::deep .tm-email-fields__control {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.tm-email-fields ::deep .tm-email-fields__segments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+}
+
+.tm-email-fields ::deep .tm-email-fields__segment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-space-8);
+    min-block-size: var(--tm-space-7);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-color-border);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-email-fields ::deep .tm-email-fields__segment:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-email-fields ::deep .tm-email-fields__segment--active {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-email-fields ::deep .tm-email-fields__segment:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-fields ::deep .tm-email-fields__segment[disabled] {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.tm-email-fields ::deep .tm-email-fields__length {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+/* The two controls are rendered by child components, so their roots carry THOSE components' scope
+   attribute — the ::deep prefix is what makes the flex sizing reach them (a plain `> :first-child`
+   silently matched nothing and the controls stacked). */
+.tm-email-fields ::deep .tm-email-fields__length .tm-input-wrapper {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
+
+.tm-email-fields ::deep .tm-email-fields__length .tm-select-wrapper {
+    flex: 0 0 5rem;
+}
+
+.tm-email-fields ::deep .tm-email-fields__variables {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* The popover's trigger is the activation control, so its CONTENT is a plain span styled as a ghost
+   button. A nested <button> here would be a button inside a role=button trigger. */
+.tm-email-fields ::deep .tm-email-fields__variable-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-space-7);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-email-fields ::deep .tm-email-fields__variable-trigger:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-email-fields ::deep .tm-popover__trigger:focus-visible .tm-email-fields__variable-trigger {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+/* The glyph is one unbreakable unit: without this the trigger (a flex row) shrank it below its
+   min-content and „{ }“ split into two lines BEFORE the label started wrapping. */
+.tm-email-fields ::deep .tm-email-fields__variable-glyph {
+    flex: 0 0 auto;
+    margin-inline-end: var(--tm-space-1);
+    font-family: var(--tm-font-mono);
+    white-space: nowrap;
+}
+
+.tm-email-fields ::deep .tm-email-fields__error {
+    margin: 0;
+    color: var(--tm-color-danger);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-fields ::deep .tm-email-fields__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-fields ::deep .tm-email-fields__group-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    inline-size: 100%;
+    padding: var(--tm-space-1) 0;
+    border: 0;
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-email-fields ::deep .tm-email-fields__group-toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-fields ::deep .tm-email-fields__group-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-fields ::deep .tm-email-fields__group-body[hidden] {
+    display: none;
+}
+
+/* The colour picker is the value of the whole row: a half-width picker in a full-width inspector read as a
+   small chip instead of the field's control. */
+.tm-email-fields ::deep .tm-email-fields__control .tm-color-picker {
+    inline-size: 100%;
+}

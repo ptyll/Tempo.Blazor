@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "State the property inspector remembers for the lifetime of one editor: the collapsible groups the user folded away (per block type) and the field edited last (the target of the caret-less variable insertion fallback).",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailInspectorState.cs",
+  "documentationStatus": "generated",
+  "itemName": "EmailInspectorState"
+}

@@ -9,24 +9,24 @@
     min-inline-size: 0;
     block-size: 100%;
     min-block-size: 0;
-    background: var(--tm-color-surface, #ffffff);
-    color: var(--tm-color-text, #1a1a1a);
-    font-family: var(--tm-font-sans, system-ui, sans-serif);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font-family: var(--tm-font-sans);
 }
 
 .tm-email-editor__toolbar {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
-    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
-    border-block-end: 1px solid var(--tm-color-border, #e2e2e2);
-    background: var(--tm-color-surface, #ffffff);
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-block-end: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
 }
 
 .tm-email-editor__toolbar-group {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-1, 0.25rem);
+    gap: var(--tm-space-1);
 }
 
 /* The badge and the Save button never wrap apart: the group takes the remaining bar width (basis 0 keeps
@@ -38,44 +38,68 @@
     flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--tm-space-2, 0.5rem);
+    gap: var(--tm-space-2);
     min-inline-size: 0;
 }
 
 .tm-email-editor__status {
     min-inline-size: 6ch;
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    color: var(--tm-color-text-muted, #6b7280);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text-muted);
 }
 
-.tm-email-editor__body {
+/* The splitter is a CHILD component: its root carries the splitter's own scope attribute, so a plain
+   `.tm-email-editor__body` rule silently matched nothing. ::deep from the editor root is what reaches it. */
+.tm-email-editor ::deep .tm-email-editor__body {
     flex: 1 1 auto;
     min-block-size: 0;
+    gap: var(--tm-space-4);
+    background: var(--tm-bg-workspace);
 }
 
+/* Every panel is a CARD (redesign reference): radius-lg, a token border, an inner gap, on the workspace
+   surface. The splitter gutter separates them, so no extra margin is needed. */
 .tm-email-editor__panel {
     display: flex;
     flex-direction: column;
     block-size: 100%;
     min-block-size: 0;
-    background: var(--tm-color-surface-muted, #f7f7f8);
+    min-inline-size: 0;
+    border: var(--tm-border-width) solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-color-surface);
+    overflow: hidden;
 }
 
 .tm-email-editor__panel-header {
-    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--tm-color-text-muted, #6b7280);
-    border-block-end: 1px solid var(--tm-color-border-subtle, #ececec);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-3) var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+    border-block-end: var(--tm-border-width) solid var(--tm-color-border-subtle);
 }
 
 .tm-email-editor__panel-body {
     flex: 1 1 auto;
     min-block-size: 0;
     overflow-y: auto;
-    padding: var(--tm-space-2, 0.5rem);
+    padding: var(--tm-space-3);
+}
+
+/* The collapsed palette keeps its rail (the toggle) reachable in a narrow pane. */
+.tm-email-editor__panel--toolbox .tm-email-editor__panel-header {
+    justify-content: center;
+}
+
+/* The collapsed palette is a narrow rail and its own header carries the toggle, so the panel header above it
+   is hidden — otherwise its title is clipped to "Bl…" in a 56 px pane. The class is set on the editor's own
+   <section> (a `:has()` on the child component's markup would never match the scoped attribute). */
+.tm-email-editor__panel--toolbox-collapsed .tm-email-editor__panel-header {
+    display: none;
 }
 
 .tm-email-editor__canvas {
@@ -83,9 +107,12 @@
     flex-direction: column;
     block-size: 100%;
     min-block-size: 0;
+    min-inline-size: 0;
     overflow: auto;
-    padding: var(--tm-space-4, 1rem);
-    background: var(--tm-color-surface-secondary, #eef0f3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-color-surface-secondary);
 }
 
 /* Preview dialog footer: "Refresh preview" on the left, "Close" + the host's FooterActions on the right.
@@ -124,8 +151,8 @@
 .tm-email-editor__toolbar-sep {
     flex: 0 0 auto;
     inline-size: 1px;
-    block-size: var(--tm-space-4, 1rem);
-    background: var(--tm-color-border, #e2e2e2);
+    block-size: var(--tm-space-4);
+    background: var(--tm-color-border);
 }
 
 /* Icon-only below 1200px — the accessible name comes from the button's aria-label at every width. */
@@ -144,19 +171,19 @@
     display: inline-flex;
     flex: 0 1 auto;
     align-items: center;
-    gap: var(--tm-space-1, 0.25rem);
+    gap: var(--tm-space-1);
     max-inline-size: 44ch;
     min-inline-size: 0;
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid transparent;
-    border-radius: var(--tm-radius-full, 999px);
-    font-size: var(--tm-font-size-xs, 0.75rem);
+    border-radius: var(--tm-radius-full);
+    font-size: var(--tm-font-size-xs);
     line-height: 1.4;
 }
 
 .tm-email-editor__save-label {
     flex: 0 0 auto;
-    font-weight: var(--tm-font-weight-medium, 500);
+    font-weight: var(--tm-font-weight-medium);
     white-space: nowrap;
 }
 
@@ -170,36 +197,36 @@
 }
 
 .tm-email-editor__save-status--dirty {
-    background: var(--tm-color-warning-bg-subtle, #fffbeb);
-    border-color: var(--tm-color-warning-soft-border, #fde68a);
-    color: var(--tm-color-warning-text, #92400e);
+    background: var(--tm-color-warning-bg-subtle);
+    border-color: var(--tm-color-warning-soft-border);
+    color: var(--tm-color-warning-text);
 }
 
 .tm-email-editor__save-status--saving {
-    background: var(--tm-color-surface-muted, #f7f7f8);
-    border-color: var(--tm-color-border, #e2e2e2);
-    color: var(--tm-color-text-muted, #6b7280);
+    background: var(--tm-color-surface-muted);
+    border-color: var(--tm-color-border);
+    color: var(--tm-color-text-muted);
 }
 
 .tm-email-editor__save-status--saved {
-    background: var(--tm-color-success-subtle, #ecfdf5);
-    border-color: var(--tm-color-success-soft-border, #a7f3d0);
-    color: var(--tm-color-success-text, #065f46);
+    background: var(--tm-color-success-subtle);
+    border-color: var(--tm-color-success-soft-border);
+    color: var(--tm-color-success-text);
 }
 
 .tm-email-editor__save-status--failed {
-    background: var(--tm-color-danger-subtle, #fef2f2);
-    border-color: var(--tm-color-danger-soft-border, #fecaca);
-    color: var(--tm-color-danger-text, #991b1b);
+    background: var(--tm-color-danger-subtle);
+    border-color: var(--tm-color-danger-soft-border);
+    color: var(--tm-color-danger-text);
 }
 
 /* A conflict is NOT "unsaved changes": the dirty pill is a light warning tint, so the conflict carries the
    stronger warning border and an alert-triangle icon. Told apart at a glance, not by reading the words. */
 .tm-email-editor__save-status--conflict {
-    background: var(--tm-color-warning-soft, #fffbeb);
-    border-color: var(--tm-color-warning-strong, #b45309);
+    background: var(--tm-color-warning-soft);
+    border-color: var(--tm-color-warning-strong);
     border-inline-start-width: 3px;
-    color: var(--tm-color-warning-text, #92400e);
+    color: var(--tm-color-warning-text);
 }
 
 /* Narrow editor: below ~900px the bar is icon-only (every action hides its label exactly the same way), so
@@ -209,8 +236,8 @@
 @container tm-email-editor (max-width: 900px) {
     .tm-email-editor__save-status {
         flex: 0 0 auto;
-        inline-size: var(--tm-space-6, 1.5rem);
-        min-inline-size: var(--tm-space-6, 1.5rem);
+        inline-size: var(--tm-space-6);
+        min-inline-size: var(--tm-space-6);
         justify-content: center;
         padding-inline: 0;
     }
@@ -229,15 +256,15 @@
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: var(--tm-space-1, 0.25rem);
+    gap: var(--tm-space-1);
     min-inline-size: 0;
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
-    border: 1px solid var(--tm-color-border, #e2e2e2);
-    border-radius: var(--tm-radius-full, 999px);
-    background: var(--tm-color-surface-muted, #f7f7f8);
-    color: var(--tm-color-text-secondary, #4b5563);
-    font-size: var(--tm-font-size-xs, 0.75rem);
-    font-weight: var(--tm-font-weight-medium, 500);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-surface-muted);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
     line-height: 1.4;
     white-space: nowrap;
 }
@@ -248,10 +275,10 @@
 }
 
 .tm-email-editor__readonly-dirty {
-    padding-inline-start: var(--tm-space-1, 0.25rem);
-    border-inline-start: 1px solid var(--tm-color-border, #e2e2e2);
-    color: var(--tm-color-text-secondary, #4b5563);
-    font-weight: var(--tm-font-weight-regular, 400);
+    padding-inline-start: var(--tm-space-1);
+    border-inline-start: 1px solid var(--tm-color-border);
+    color: var(--tm-color-text-secondary);
+    font-weight: var(--tm-font-weight-normal);
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -260,17 +287,18 @@
 
 /* Under the command bar and outside the save chrome: the host's reason is a sentence, not a pill label, and
    the retry action has to stay reachable however long that sentence is. */
-.tm-email-editor__save-alert {
-    margin: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem) 0;
+/* Same child-component rule for TmAlert: the class lands on the alert's own root. */
+.tm-email-editor ::deep .tm-email-editor__save-alert {
+    margin: var(--tm-space-2) var(--tm-space-3) 0;
 }
 
 .tm-email-editor__save-alert-message {
     margin: 0;
-    font-weight: var(--tm-font-weight-medium, 500);
+    font-weight: var(--tm-font-weight-medium);
     overflow-wrap: anywhere;
 }
 
 .tm-email-editor__save-alert-hint {
-    margin: var(--tm-space-1, 0.25rem) 0 var(--tm-space-2, 0.5rem);
-    font-size: var(--tm-font-size-sm, 0.875rem);
+    margin: var(--tm-space-1) 0 var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
 }

@@ -1,3 +1,4 @@
+using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.EmailTemplates.Abstractions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,7 +80,9 @@ public class PropertyPanelTests : BunitContext
         var cut = Render<TmEmailPropertyPanel>(p => p
             .Add(c => c.Document, doc).Add(c => c.SelectedId, button.Id));
 
-        var rendered = cut.FindAll("[data-tm-prop]").Select(e => e.GetAttribute("data-tm-prop")).ToHashSet(StringComparer.Ordinal);
+        // Both inspector tabs together must cover every scalar attribute (Fáze 7A split them).
+        var rendered = cut.FindAll("[data-tm-prop]").Select(e => e.GetAttribute("data-tm-prop"))
+            .Concat(StyleTabFields(cut)).ToHashSet(StringComparer.Ordinal);
         rendered.Should().BeEquivalentTo(expected, "every scalar attribute must have an editor (parity)");
     }
 
@@ -126,9 +129,19 @@ public class PropertyPanelTests : BunitContext
             .Add(c => c.Document, doc).Add(c => c.SelectedId, section.Id)
             .Add(c => c.OnChanged, () => { }));
 
-        cut.Find("[data-tm-prop=\"BackgroundColor\"] input").Change("#abcdef");
+        cut.Find("#tab-style").Click();
+        // Fáze 7A review: a NULLABLE colour is a picker with a clear button, not a text field (an empty value
+        // is a valid "unset" and must not show an error), so the model write is driven through the picker.
+        var picker = cut.FindComponent<TmColorPicker>();
+        cut.InvokeAsync(() => picker.Instance.ValueChanged.InvokeAsync("#abcdef"));
 
         section.BackgroundColor.Should().Be("#abcdef");
+    }
+
+    private static IEnumerable<string> StyleTabFields(IRenderedComponent<TmEmailPropertyPanel> cut)
+    {
+        cut.Find("#tab-style").Click();
+        return cut.FindAll("[data-tm-prop]").Select(e => e.GetAttribute("data-tm-prop")!).ToList();
     }
 
     private sealed class EchoTmLocalizer : ITmLocalizer

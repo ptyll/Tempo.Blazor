@@ -1,54 +1,100 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
 @inject IBlockRegistry Registry
 
-<div class="tm-email-toolbox" data-tm-toolbox-list data-tm-readonly="@(ReadOnly ? "true" : "false")">
-    @foreach (var group in Registry.GetAll().GroupBy(d => d.Category))
-    {
-        <div class="tm-email-toolbox__group">
-            <header class="tm-email-toolbox__group-header">@Loc[$"category.{group.Key}"]</header>
-            <div class="tm-email-toolbox__items">
-                @foreach (var descriptor in group)
-                {
-                    @* ReadOnly (A8/D9 in the diagram editor): the palette stays visible and readable
-                       but every tile is inert — not draggable, aria-disabled and guarded, so no click
-                       or key can insert a block. *@
-                    <button type="button"
-                            class="tm-email-toolbox__item"
-                            data-tm-block="@descriptor.Id"
-                            draggable="@DraggableAttr"
-                            disabled="@ReadOnly"
-                            aria-disabled="@(ReadOnly ? "true" : null)"
-                            @ondragstart="() => StartDragAsync(descriptor)"
-                            @onclick="() => AddBlockAsync(descriptor)">
-                        <TmIcon Name="@descriptor.Icon" Size="IconSize.Sm" />
-                        <span>@Loc[descriptor.NameKey]</span>
-                    </button>
-                }
-            </div>
-        </div>
-    }
+@* The blocks palette: a collapse toggle, a search field that filters the tiles by their LOCALIZED name
+   (diacritics-insensitive), the registry's own categories, and tiles whose icon sits above a label that
+   wraps instead of cropping (the panel is narrow; „Tabulk“/„Naviga“ were the old bug). *@
+<div class="tm-email-toolbox@(Collapsed ? " tm-email-toolbox--collapsed" : "")"
+     data-tm-toolbox-root data-tm-collapsed="@(Collapsed ? "true" : "false")"
+     data-tm-readonly="@(ReadOnly ? "true" : "false")">
+    <div class="tm-email-toolbox__header">
+        <span class="tm-email-toolbox__title">@Loc["EmailEditor_Panel_Blocks"]</span>
+        @if (ShowCollapseToggle)
+        {
+            <button type="button"
+                    class="tm-email-toolbox__collapse"
+                    data-tm-toolbox-collapse
+                    aria-expanded="@AriaExpanded"
+                    aria-controls="@ListId"
+                    aria-label="@Loc[Collapsed ? "EmailEditor_Toolbox_Expand" : "EmailEditor_Toolbox_Collapse"]"
+                    title="@Loc[Collapsed ? "EmailEditor_Toolbox_Expand" : "EmailEditor_Toolbox_Collapse"]"
+                    @onclick="ToggleCollapsedAsync">
+                <TmIcon Name="@(Collapsed ? "chevron-right" : "chevron-left")" Size="IconSize.Sm" />
+            </button>
+        }
+    </div>
 
-    <div class="tm-email-toolbox__group">
-        <header class="tm-email-toolbox__group-header">@Loc["EmailEditor_Toolbox_Layouts"]</header>
-        <div class="tm-email-toolbox__items tm-email-toolbox__items--layouts">
-            @foreach (var preset in LayoutPresets.All)
-            {
-                <button type="button"
-                        class="tm-email-toolbox__item tm-email-toolbox__item--layout"
-                        data-tm-preset="@preset.Preset"
-                        disabled="@ReadOnly"
-                        aria-disabled="@(ReadOnly ? "true" : null)"
-                        @onclick="() => AddSectionAsync(preset.Preset)">
-                    <span class="tm-email-toolbox__layout-preview">
-                        @foreach (var width in preset.Widths)
-                        {
-                            <span class="tm-email-toolbox__layout-col" style="flex-basis:@width"></span>
-                        }
-                    </span>
-                    <span>@Loc[preset.NameKey]</span>
-                </button>
-            }
+    <div id="@ListId" class="tm-email-toolbox__body" data-tm-toolbox-list hidden="@Collapsed">
+        <div class="tm-email-toolbox__search" data-tm-toolbox-search>
+            @* Searching is reading, not editing: a read-only user still needs to find a block. The TILES
+               stay inert (disabled + aria-disabled + guarded handlers). *@
+            <TmTextInput Type="search" LeftIcon="@IconNames.Search"
+                         Placeholder="@Loc["EmailEditor_Toolbox_SearchPlaceholder"]"
+                         Value="@_search" ValueChanged="OnSearchChanged" OnKeyDown="OnSearchKeyDown" />
         </div>
+
+        @if (IsEmpty)
+        {
+            <p class="tm-email-toolbox__empty" data-tm-toolbox-empty>@Loc["EmailEditor_Toolbox_SearchEmpty", _search]</p>
+        }
+        else
+        {
+            @foreach (var group in BlockGroups)
+            {
+                <div class="tm-email-toolbox__group" data-tm-toolbox-group="@group.Category">
+                    <header class="tm-email-toolbox__group-header">@Loc[$"category.{group.Category}"]</header>
+                    <div class="tm-email-toolbox__items">
+                        @foreach (var descriptor in group.Descriptors)
+                        {
+                            @* ReadOnly (A8/D9 in the diagram editor): the palette stays visible and readable
+                               but every tile is inert — not draggable, aria-disabled and guarded, so no click
+                               or key can insert a block. *@
+                            <button type="button"
+                                    class="tm-email-toolbox__item"
+                                    data-tm-block="@descriptor.Id"
+                                    title="@Loc[descriptor.NameKey]"
+                                    draggable="@DraggableAttr"
+                                    disabled="@ReadOnly"
+                                    aria-disabled="@(ReadOnly ? "true" : null)"
+                                    @ondragstart="() => StartDragAsync(descriptor)"
+                                    @onclick="() => AddBlockAsync(descriptor)">
+                                <span class="tm-email-toolbox__icon" aria-hidden="true">
+                                    <TmIcon Name="@descriptor.Icon" Size="IconSize.Md" />
+                                </span>
+                                <span class="tm-email-toolbox__label">@Loc[descriptor.NameKey]</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (Presets.Count > 0)
+            {
+                <div class="tm-email-toolbox__group" data-tm-toolbox-group="layouts">
+                    <header class="tm-email-toolbox__group-header">@Loc["EmailEditor_Toolbox_Layouts"]</header>
+                    <div class="tm-email-toolbox__items tm-email-toolbox__items--layouts">
+                        @foreach (var preset in Presets)
+                        {
+                            <button type="button"
+                                    class="tm-email-toolbox__item tm-email-toolbox__item--layout"
+                                    data-tm-preset="@preset.Preset"
+                                    title="@Loc[preset.NameKey]"
+                                    disabled="@ReadOnly"
+                                    aria-disabled="@(ReadOnly ? "true" : null)"
+                                    @onclick="() => AddSectionAsync(preset.Preset)">
+                                <span class="tm-email-toolbox__layout-preview" aria-hidden="true">
+                                    @foreach (var width in preset.Widths)
+                                    {
+                                        <span class="tm-email-toolbox__layout-col" style="flex-basis:@width"></span>
+                                    }
+                                </span>
+                                <span class="tm-email-toolbox__label">@Loc[preset.NameKey]</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        }
     </div>
 </div>
 
@@ -68,9 +114,64 @@
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Whether the palette is collapsed to its rail. Collapsing hides the search field and the tile groups
+    /// (the toggle stays, so the panel is never a dead end); the editor maps this to the left panel width and
+    /// F8 maps it to <c>TmEditorShell.CollapsedPanels</c> (D10).
+    /// </summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Raised with the new collapsed state when the palette's toggle is used.</summary>
+    [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+
+    /// <summary>
+    /// Whether the palette renders its own collapse arrow. Defaults to <see langword="true"/>; a host that
+    /// owns the shell chrome (Fáze 8 maps the state onto <c>TmEditorShell.CollapsedPanels</c>) sets it to
+    /// <see langword="false"/> so the same state has one control instead of two.
+    /// </summary>
+    [Parameter] public bool ShowCollapseToggle { get; set; } = true;
+
+    private readonly string _instanceId = Guid.NewGuid().ToString("n")[..6];
+    private string _search = string.Empty;
+
+    private string ListId => $"tm-email-toolbox-list-{_instanceId}";
+
+    private string AriaExpanded => Collapsed ? "false" : "true";
+
     // A read-only tile must not advertise a drag affordance at all (draggable="false" is what the
     // browser and the accessibility tree read).
     private string? DraggableAttr => ReadOnly ? null : "true";
+
+    private IReadOnlyList<(string Category, IReadOnlyList<BlockDescriptor> Descriptors)> BlockGroups
+        => Registry.GetAll()
+            .Where(Matches)
+            .GroupBy(descriptor => descriptor.Category)
+            .Select(group => (group.Key, (IReadOnlyList<BlockDescriptor>)group.ToList()))
+            .ToList();
+
+    private IReadOnlyList<LayoutPresetDescriptor> Presets
+        => LayoutPresets.All.Where(preset => Matches(Loc[preset.NameKey])).ToList();
+
+    private bool IsEmpty => BlockGroups.Count == 0 && Presets.Count == 0;
+
+    private bool Matches(BlockDescriptor descriptor) => Matches(Loc[descriptor.NameKey]);
+
+    /// <summary>
+    /// Diacritics- and case-insensitive substring match on the LOCALIZED name: a Czech user typing
+    /// "tlacitko" must find „Tlačítko“. The fold is shared with the variable picker (one behaviour, two
+    /// search boxes).
+    /// </summary>
+    private bool Matches(string localizedName) => EmailSearchText.Contains(localizedName, _search);
+
+    private void OnSearchChanged(string value) => _search = value ?? string.Empty;
+
+    private void OnSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (!string.Equals(args.Key, "Escape", StringComparison.Ordinal) || _search.Length == 0) return;
+        _search = string.Empty;
+    }
+
+    private Task ToggleCollapsedAsync() => CollapsedChanged.InvokeAsync(!Collapsed);
 
     private Task AddBlockAsync(BlockDescriptor descriptor)
         => ReadOnly ? Task.CompletedTask : OnAddBlock.InvokeAsync(descriptor);

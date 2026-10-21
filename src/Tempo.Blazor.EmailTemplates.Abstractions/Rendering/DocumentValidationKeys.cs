@@ -23,4 +23,10 @@ public static class DocumentValidationKeys
 
     /// <summary>Blocks are nested deeper than the configured import limit allows.</summary>
     public const string TooDeeplyNested = "validation.limits.nesting";
+
+    /// <summary>
+    /// The preheader is longer than <see cref="EmailDocumentValidator.MaxPreheaderLength"/> characters, so
+    /// the inbox truncates it. A recommendation (D9), never a failure.
+    /// </summary>
+    public const string PreheaderTooLong = "validation.preheader.too_long";
 }

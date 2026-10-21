@@ -78,7 +78,8 @@
 }
 
 .tm-email-preview__stage:focus-visible {
-    outline: var(--tm-focus-ring-width, 2px) solid var(--tm-color-focus-ring, var(--tm-color-primary));
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
     outline-offset: var(--tm-space-1);
 }
 

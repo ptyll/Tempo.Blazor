@@ -21,7 +21,7 @@
                 aria-required="@(Required ? "true" : null)"
                 aria-invalid="@(IsInvalid ? "true" : null)"
                 aria-describedby="@DescribedBy"
-                aria-label="@(string.IsNullOrEmpty(Label) && !string.IsNullOrEmpty(Placeholder) && !PlaceholderSelectable ? Placeholder : null)"
+                aria-label="@(AriaLabel ?? (string.IsNullOrEmpty(Label) && !string.IsNullOrEmpty(Placeholder) && !PlaceholderSelectable ? Placeholder : null))"
                 @onchange="HandleChangeAsync">
             @if (!string.IsNullOrEmpty(Placeholder))
             {
@@ -114,6 +114,13 @@
 
     /// <summary>Marks the select as required. Shows a required marker on the label and sets aria-required on the &lt;select&gt; element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as "no selection" and native validation reports the field as missing.</summary>
     [Parameter] public bool Required { get; set; }
+
+    /// <summary>
+    /// Accessible name of the &lt;select&gt; when the component has no visible <see cref="Label"/> of its own
+    /// (e.g. the unit of a number + unit row, whose label names the whole row). When null the previous
+    /// placeholder-derived name applies. Additive: nothing existing changes.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>Additional attributes applied to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }

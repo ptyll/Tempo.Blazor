@@ -201,7 +201,12 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
         (await page.Locator("[data-tm-section-action]").CountAsync()).Should().Be(0);
         (await page.Locator("[data-tm-block-id]").First.GetAttributeAsync("draggable")).Should().BeNull();
 
-        // Inspector: every control is inside a natively disabled fieldset.
+        // Inspector: every control is inside a natively disabled fieldset. Since Fáze 7A the panel has
+        // Content/Style tabs, and a text block's Content tab holds only the rich editor (no <input>), so the
+        // Style tab is where a text control proves the disabled state — and switching tabs must still work,
+        // because reading a document is not editing it.
+        await page.Locator("#tab-style").ClickAsync();
+        await page.WaitForSelectorAsync("#tab-style[aria-selected='true']", new() { Timeout = 15000 });
         (await page.Locator("[data-tm-properties-panel] fieldset[disabled]").CountAsync())
             .Should().Be(1, "a disabled fieldset is what makes a whole control group read-only");
         (await page.Locator("[data-tm-properties-panel] input").First.IsDisabledAsync())

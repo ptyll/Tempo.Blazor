@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
 
-<div class="tm-email-canvas-doc" data-tm-canvas-doc tabindex="0"
+<div class="tm-email-canvas-doc" data-tm-canvas-doc tabindex="0" @ref="_rootRef"
      role="list" aria-label="@Loc["EmailEditor_Panel_Blocks"]"
      data-tm-readonly="@(ReadOnly ? "true" : "false")"
      @onkeydown="HandleKeyDownAsync">
@@ -91,6 +91,7 @@
                                          @ondrop:stopPropagation="true"></div>
                                 }
                                 <div class="tm-email-canvas-block @SelectedClass(block.Id)"
+                                     @ref="_blockRefs[block.Id]"
                                      data-tm-block-id="@block.Id" role="listitem" tabindex="0"
                                      draggable="@(ReadOnly ? null : "true")"
                                      aria-label="@Loc[$"block.{BlockKey(block)}.name"]"
@@ -171,6 +172,26 @@
     /// available so the inspector can still show what is selected).
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
+
+    private ElementReference _rootRef;
+    private readonly Dictionary<Guid, ElementReference> _blockRefs = new();
+
+    /// <summary>
+    /// Moves keyboard focus into the canvas: to <paramref name="blockId"/> when that block is still rendered,
+    /// otherwise to the canvas root (a programmatic focus target, so focus never falls to <c>&lt;body&gt;</c>
+    /// after a structural delete).
+    /// </summary>
+    /// <param name="blockId">The block to focus, or <see langword="null"/> for the canvas root.</param>
+    public async ValueTask FocusAsync(Guid? blockId = null)
+    {
+        if (blockId is { } id && _blockRefs.TryGetValue(id, out var block))
+        {
+            await block.FocusAsync();
+            return;
+        }
+
+        await _rootRef.FocusAsync();
+    }
 
     private bool IsSelected(Guid id) => SelectedId == id;
 

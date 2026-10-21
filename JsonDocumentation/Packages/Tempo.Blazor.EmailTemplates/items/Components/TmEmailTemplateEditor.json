@@ -99,6 +99,18 @@
       "description": "Optional host actions rendered at the start of the command bar (back, title, …)."
     },
     {
+      "name": "ToolboxCollapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the blocks palette is collapsed. The editor mirrors the state it is given and reports every toggle through ToolboxCollapsedChanged; F8 maps the same parameter onto TmEditorShell.CollapsedPanels (D10)."
+    },
+    {
+      "name": "ToolboxCollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new state when the user collapses or expands the blocks palette. Bind it back into ToolboxCollapsed for a controlled palette; without a binding the palette toggles on its own (seeded from the parameter)."
+    },
+    {
       "name": "Variables",
       "type": "IReadOnlyList<TemplateVariableInfo>",
       "isRequired": false,

@@ -75,18 +75,22 @@
     }
 
     <TmSplitter Orientation="SplitterOrientation.Horizontal" AdditionalCssClass="tm-email-editor__body">
-        <TmSplitterPane Size="20%" MinSize="160px">
-            <section class="tm-email-editor__panel" data-tm-toolbox aria-label="@Loc["EmailEditor_Panel_Blocks"]">
-                <header class="tm-email-editor__panel-header">@Loc["EmailEditor_Panel_Blocks"]</header>
+        @* No panel header here: the palette itself pairs its title with the collapse arrow on one row, so a
+           title above it would be a second heading for the same surface (and it clipped in the rail). *@
+        <TmSplitterPane Size="@(ToolboxCollapsedEffective ? "56px" : "20%")" MinSize="@(ToolboxCollapsedEffective ? "56px" : "152px")">
+            <section class="tm-email-editor__panel tm-email-editor__panel--toolbox@(ToolboxCollapsedEffective ? " tm-email-editor__panel--toolbox-collapsed" : "")"
+                     data-tm-toolbox aria-label="@Loc["EmailEditor_Panel_Blocks"]">
                 <div class="tm-email-editor__panel-body">
                     <TmEmailTemplateToolbox OnAddBlock="AddBlockAsync" OnAddSection="AddSectionAsync"
-                                            OnDragBlockStart="StartBlockDragAsync" ReadOnly="ReadOnly" />
+                                            OnDragBlockStart="StartBlockDragAsync" ReadOnly="ReadOnly"
+                                            Collapsed="ToolboxCollapsedEffective"
+                                            CollapsedChanged="OnToolboxCollapsedChangedAsync" />
                 </div>
             </section>
         </TmSplitterPane>
-        <TmSplitterPane Size="60%" MinSize="320px">
+        <TmSplitterPane Size="60%" MinSize="260px">
             <section class="tm-email-editor__canvas" data-tm-canvas aria-label="@Loc["EmailEditor_Toolbar_Preview"]">
-                <TmEmailTemplateCanvas Document="_document" SelectedId="_selectedId"
+                <TmEmailTemplateCanvas @ref="_canvas" Document="_document" SelectedId="_selectedId"
                                        SelectedIdChanged="OnSelectionChangedAsync"
                                        OnDocumentChanged="OnStructuralChangeAsync"
                                        DragActive="!ReadOnly && _dragPayload is not null"
@@ -102,6 +106,7 @@
                     <TmEmailPropertyPanel Document="_document" SelectedId="_selectedId"
                                           Variables="Variables" OnImageUpload="OnImageUpload"
                                           ImageUpload="ImageUpload" ReadOnly="ReadOnly"
+                                          OnDuplicate="DuplicateSelectedAsync" OnDelete="DeleteSelectedAsync"
                                           OnChanged="OnPropertyChangeAsync" />
                 </div>
             </section>
@@ -229,6 +234,20 @@
     [Parameter] public RenderFragment? FooterActions { get; set; }
 
     /// <summary>
+    /// Whether the blocks palette is collapsed. The editor mirrors the state it is given and reports every
+    /// toggle through <see cref="ToolboxCollapsedChanged"/>; F8 maps the same parameter onto
+    /// <c>TmEditorShell.CollapsedPanels</c> (D10).
+    /// </summary>
+    [Parameter] public bool ToolboxCollapsed { get; set; }
+
+    /// <summary>
+    /// Raised with the new state when the user collapses or expands the blocks palette. Bind it back into
+    /// <see cref="ToolboxCollapsed"/> for a controlled palette; without a binding the palette toggles on its
+    /// own (seeded from the parameter).
+    /// </summary>
+    [Parameter] public EventCallback<bool> ToolboxCollapsedChanged { get; set; }
+
+    /// <summary>
     /// Gets whether the document differs from the last state the host confirmed (or the document it handed
     /// over). Owned by the editor — it is not a <c>[Parameter]</c>, so <c>@bind-IsDirty</c> is not used;
     /// observe changes through <see cref="IsDirtyChanged"/>.
@@ -273,6 +292,7 @@
     private EmailTemplateDocument? _emittedDocument;
 
     private Guid? _selectedId;
+    private bool? _toolboxCollapsedInternal;
     private object? _dragPayload;
     private ITimer? _autoSaveTimer;
     private ITimer? _savedAgeTimer;
@@ -285,6 +305,7 @@
     private DateTimeOffset? _lastSavedAt;
     private bool _autoSavePaused;
     private string _announcement = string.Empty;
+    private TmEmailTemplateCanvas? _canvas;
     private ITmRelativeTimeFormatter? _relativeTime;
 
     private ElementReference _rootRef;
@@ -1075,6 +1096,82 @@
 
         _selectedId = copy.Id;
         await CommitAsync();
+    }
+
+    // ── Inspector header actions ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The collapsed state the palette renders: the host's parameter while a
+    /// <see cref="ToolboxCollapsedChanged"/> handler is bound (controlled), otherwise the state the palette
+    /// itself reported, seeded from the parameter (uncontrolled).
+    /// </summary>
+    private bool ToolboxCollapsedEffective
+        => ToolboxCollapsedChanged.HasDelegate ? ToolboxCollapsed : (_toolboxCollapsedInternal ?? ToolboxCollapsed);
+
+    private async Task OnToolboxCollapsedChangedAsync(bool collapsed)
+    {
+        _toolboxCollapsedInternal = collapsed;
+        await ToolboxCollapsedChanged.InvokeAsync(collapsed);
+        StateHasChanged();
+    }
+
+    /// <summary>Duplicates the selected block as ONE history step (the inspector's header action).</summary>
+    private async Task DuplicateSelectedAsync(Guid blockId)
+    {
+        if (ReadOnly) return;
+        if (_document.DuplicateBlock(blockId) is not { } copy) return;
+        _selectedId = copy.Id;
+        await CommitAsync();
+    }
+
+    /// <summary>
+    /// Deletes the selected block as ONE history step (the inspector's danger action). The deleted block took
+    /// the focused Delete button with it, so focus is handed back into the canvas (a neighbouring block when
+    /// one is left, the canvas root otherwise) and the polite live region names the outcome with the undo
+    /// chord — a silent disappearance is indistinguishable from a crash.
+    /// </summary>
+    private async Task DeleteSelectedAsync(Guid blockId)
+    {
+        if (ReadOnly) return;
+        if (_document.FindBlock(blockId) is null) return;
+        var neighbour = NeighbourOf(blockId);
+        _selectedId = neighbour;
+        _document.RemoveBlock(blockId);
+        _announcement = Loc["EmailEditor_Announce_BlockDeleted"];
+        await CommitAsync();
+        await FocusAfterDeleteAsync(neighbour);
+    }
+
+    /// <summary>
+    /// The block that visually follows the deleted one in its column, else the one before it. Returns null
+    /// when the column becomes empty (or the block lived in a non-column container).
+    /// </summary>
+    private Guid? NeighbourOf(Guid blockId)
+    {
+        var column = _document.FindParentColumn(blockId);
+        if (column is null) return null;
+
+        var index = column.Blocks.ToList().FindIndex(block => block.Id == blockId);
+        if (index < 0) return null;
+        if (index + 1 < column.Blocks.Count) return column.Blocks[index + 1].Id;
+        return index > 0 ? column.Blocks[index - 1].Id : null;
+    }
+
+    /// <summary>
+    /// Moves focus back into the canvas after a structural delete. Focus runs after the re-render so the
+    /// element reference points at a live node; the canvas focuses the neighbouring block or its own root.
+    /// </summary>
+    private async Task FocusAfterDeleteAsync(Guid? neighbour)
+    {
+        if (_canvas is null) return;
+        try
+        {
+            await _canvas.FocusAsync(neighbour);
+        }
+        catch (JSDisconnectedException)
+        {
+            // A disconnected circuit has no focus to move.
+        }
     }
 
     private static int IndexOf<T>(IList<T> items, Predicate<T> predicate)

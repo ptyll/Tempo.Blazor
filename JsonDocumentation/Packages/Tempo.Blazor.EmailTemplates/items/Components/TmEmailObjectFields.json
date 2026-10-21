@@ -25,12 +25,17 @@
       "description": "Raised after any field changes."
     },
     {
+      "name": "Placement",
+      "type": "PropertyFieldPlacement?",
+      "isRequired": false,
+      "description": "Restricts the fields to one inspector placement (the Content/Style tabs and the Spacing/Advanced groups). null renders every field of the target - the flat form a list-item editor uses."
+    },
+    {
       "name": "Primary",
       "type": "IReadOnlyList<string>",
       "isRequired": false,
       "default": "Array.Empty<string>()",
-      "description": "Property names shown above the \"Advanced\" section, in order.",
-      "editorRequired": true
+      "description": "Property names shown above the advanced group, in order (an ordering hint only)."
     },
     {
       "name": "ReadOnly",
@@ -39,11 +44,23 @@
       "description": "Renders every input disabled, so a read-only inspector shows the values but cannot edit them."
     },
     {
+      "name": "State",
+      "type": "EmailInspectorState?",
+      "isRequired": false,
+      "description": "Shared inspector state (remembered group collapse state and the field the user edited last, which is where a variable token lands when caret interop is unavailable). A standalone instance keeps its own."
+    },
+    {
       "name": "Target",
       "type": "object",
       "isRequired": true,
-      "description": "The model object whose scalar properties are edited.",
-      "editorRequired": true
+      "editorRequired": true,
+      "description": "The model object whose scalar properties are edited."
+    },
+    {
+      "name": "Variables",
+      "type": "IReadOnlyList<TemplateVariableInfo>",
+      "isRequired": false,
+      "description": "Host-provided variables offered next to every template-bearing field."
     }
   ]
 }

@@ -35,6 +35,9 @@
 }
 
 .tm-email-validation__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
     padding: var(--tm-space-2) var(--tm-space-3);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface-secondary);
@@ -42,10 +45,58 @@
     cursor: pointer;
 }
 
+.tm-email-validation__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-text-secondary);
+}
+
+/* Fáze 7A: every finding carries an icon, so the severity is not signalled by colour alone. Info is a
+   recommendation — it reads as "worth improving", never as a warning colour. */
 .tm-email-validation__item--warning {
-    border-inline-start: var(--tm-space-1) solid var(--tm-color-warning);
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-warning-strong);
 }
 
 .tm-email-validation__item--error {
     border-inline-start: var(--tm-space-1) solid var(--tm-color-danger);
+}
+
+.tm-email-validation__item--info {
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-info-strong);
+}
+
+/* The pale fill colours (--tm-color-warning, --tm-color-info) carry a background tint, not text: as the
+   icon colour they measured ~2.3:1 and ~2.9:1 against the surface. The `-strong` tokens are the ones with
+   accessible contrast (>= 4.5:1) in both themes. */
+.tm-email-validation__item--warning .tm-email-validation__icon {
+    color: var(--tm-color-warning-strong);
+}
+
+.tm-email-validation__item--error .tm-email-validation__icon {
+    color: var(--tm-color-danger);
+}
+
+.tm-email-validation__item--info .tm-email-validation__icon {
+    color: var(--tm-color-info-strong);
+}
+
+/* A finding that points at a node is a button: it must look like the row it sits in, and it must be the
+   keyboard target (the row keeps its pointer handler). */
+.tm-email-validation__link {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-email-validation__link:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }

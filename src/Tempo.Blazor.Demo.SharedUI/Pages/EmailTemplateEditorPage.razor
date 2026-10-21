@@ -47,7 +47,8 @@
                                    IsDirtyChanged="OnIsDirtyChanged"
                                    ReadOnly="_readOnly"
                                    AutoSave="_autoSave"
-                                   ImageUpload="_imageUpload" />
+                                   ImageUpload="_imageUpload"
+                                   Variables="_variables" />
         </div>
     }
 </div>
@@ -64,6 +65,27 @@
     private bool _isDirty;
     private string _simulation = "real";
     private readonly AutoSaveOptions _autoSave = new() { Enabled = true, Interval = TimeSpan.FromSeconds(3) };
+
+    /// <summary>
+    /// The host's variable catalogue (Fáze 7A): descriptions and groups are HOST metadata — the document only
+    /// knows paths. The picker searches both and shows them next to the token, which is what makes the feature
+    /// usable for someone who does not know the token by heart.
+    /// </summary>
+    private static readonly IReadOnlyList<TemplateVariableInfo> _variables =
+    [
+        new("user.first_name", VariableKind.Scalar) { Description = "First name of the user", Group = "User" },
+        new("user.last_name", VariableKind.Scalar) { Description = "Last name of the user", Group = "User" },
+        new("user.email", VariableKind.Scalar) { Description = "E-mail address of the user", Group = "User" },
+        new("user.company", VariableKind.Scalar) { Description = "Company of the user", Group = "User" },
+        new("user.roles", VariableKind.Collection) { Description = "Roles of the user", Group = "User" },
+        new("order.number", VariableKind.Scalar) { Description = "Order number", Group = "Order" },
+        new("order.total", VariableKind.Scalar) { Description = "Order total with currency", Group = "Order" },
+        new("order.items", VariableKind.Collection) { Description = "Items of the order", Group = "Order" },
+        new("order.due_date", VariableKind.Scalar) { Description = "Date the order is due", Group = "Order" },
+        new("project.name", VariableKind.Scalar) { Description = "Name of the project", Group = "Project" },
+        new("project.url", VariableKind.Scalar) { Description = "Link to the project", Group = "Project" },
+        new("company.support_email", VariableKind.Scalar) { Description = "Support e-mail of the company", Group = "Company" },
+    ];
     private readonly ImageUploadOptions _imageUpload = new() { Accept = "image/*", MaxBytes = 2 * 1024 * 1024 };
 
     protected override async Task OnParametersSetAsync()

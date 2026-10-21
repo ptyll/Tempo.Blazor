@@ -1105,6 +1105,30 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "LayoutSeverityRank",
+      "kind": "Class",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Layout",
+      "description": "The display order of LayoutSeverity findings: Error first, then Warning, then Info. The enum's numeric values are a serialization contract, so findings are ordered through this rank (D19).",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Layout/LayoutSeverityRank.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Of",
+          "kind": "Method",
+          "type": "int",
+          "description": "Returns the display rank of severity: Error = 0, Warning = 1, Info = 2.",
+          "parameters": [
+            {
+              "name": "severity",
+              "type": "LayoutSeverity"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "LayoutValidationKeys",
       "kind": "Class",
       "category": "Layout",
@@ -3605,6 +3629,12 @@
           "description": "An image has no source URL."
         },
         {
+          "name": "PreheaderTooLong",
+          "kind": "Field",
+          "type": "string",
+          "description": "The preheader is longer than MaxPreheaderLength characters, so the inbox truncates it. A recommendation (D9), never a failure."
+        },
+        {
           "name": "TooDeeplyNested",
           "kind": "Field",
           "type": "string",
@@ -3694,6 +3724,12 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailDocumentValidator.cs",
       "documentationStatus": "merged",
       "members": [
+        {
+          "name": "MaxPreheaderLength",
+          "kind": "Field",
+          "type": "int",
+          "description": "The longest preheader an inbox reliably shows before truncating it, measured in TEXT ELEMENTS (graphemes) of the SOURCE template — tokens included, because the inbox truncates the rendered text at the same visual width. A longer value is reported as a recommendation (Info), the single recommending rule of D9."
+        },
         {
           "name": "Validate",
           "kind": "Method",
@@ -4816,6 +4852,18 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Gets the human-readable description shown next to the token in the variable picker (e.g. \"First name of the user\"). Supplied by the HOST: only the host knows what its data means. Variables extracted from a document leave it null, and the picker then shows the path alone. Participates in record equality (B9)."
+        },
+        {
+          "name": "Group",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Gets the optional group heading the picker sorts and labels rows under (e.g. \"User\", \"Project\"). Host-supplied; extracted variables leave it null and are listed ungrouped. Participates in record equality (B9)."
+        },
+        {
           "name": "Kind",
           "kind": "Property",
           "type": "VariableKind",
@@ -4878,11 +4926,11 @@
     }
   ],
   "summary": {
-    "itemCount": 117,
-    "manualItemCount": 117,
-    "generatedItemCount": 117,
+    "itemCount": 118,
+    "manualItemCount": 118,
+    "generatedItemCount": 118,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 117
+    "publicApiTypeCount": 118
   }
 }

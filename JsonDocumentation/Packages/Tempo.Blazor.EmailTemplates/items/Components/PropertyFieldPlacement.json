@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Where a scalar property belongs in the inspector: the Content tab, the Style tab, the collapsible Spacing group or the collapsible Advanced group.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/PropertyReflection.cs",
+  "documentationStatus": "generated",
+  "itemName": "PropertyFieldPlacement"
+}

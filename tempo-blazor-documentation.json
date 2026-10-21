@@ -17433,6 +17433,12 @@
           "description": "Disables the search input."
         },
         {
+          "name": "OnKeyDown",
+          "type": "EventCallback<KeyboardEventArgs>",
+          "isRequired": false,
+          "description": "Raised for every key press in the input. A consumer that owns a list under the search (the email variable picker) uses it for arrow-key navigation. Additive: it never blocks typing, and nothing is prevented by the component itself."
+        },
+        {
           "name": "Placeholder",
           "type": "string?",
           "isRequired": false,
@@ -17500,6 +17506,12 @@
           "isRequired": false,
           "default": "true",
           "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the <select> when the component has no visible Label of its own (e.g. the unit of a number + unit row, whose label names the whole row). When null the previous placeholder-derived name applies. Additive: nothing existing changes."
         },
         {
           "name": "ChildContent",

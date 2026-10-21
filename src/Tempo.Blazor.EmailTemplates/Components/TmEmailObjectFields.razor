@@ -1,19 +1,33 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
+@using Tempo.Blazor.Abstractions.Models
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.AspNetCore.Components.Web
 
-<div class="tm-email-fields">
+@* One field renderer for the whole inspector. The editor kind, the placement (Content/Style tab,
+   Spacing/Advanced group) and the option list all come from PropertyReflection's single metadata
+   table, so adding a property never means touching this markup — only the localization tables. *@
+<div class="tm-email-fields" data-tm-fields="@(Placement?.ToString().ToLowerInvariant())">
     @foreach (var field in _primary)
     {
         @RenderField(field)
     }
     @if (_advanced.Count > 0)
     {
-        <details class="tm-email-fields__advanced">
-            <summary>@Loc["EmailEditor_Properties_Advanced"]</summary>
-            @foreach (var field in _advanced)
-            {
-                @RenderField(field)
-            }
-        </details>
+        var bodyId = $"tm-email-fields-advanced-{_instanceId}";
+        <div class="tm-email-fields__group" data-tm-fields-advanced>
+            <button type="button" class="tm-email-fields__group-toggle" data-tm-fields-advanced-toggle
+                    aria-expanded="@(AdvancedCollapsed ? "false" : "true")" aria-controls="@bodyId"
+                    @onclick="ToggleAdvanced">
+                <TmIcon Name="@(AdvancedCollapsed ? "chevron-right" : "chevron-down")" Size="IconSize.Xs" />
+                <span>@Loc["EmailEditor_Properties_Advanced"]</span>
+            </button>
+            <div id="@bodyId" class="tm-email-fields__group-body" hidden="@AdvancedCollapsed">
+                @foreach (var field in _advanced)
+                {
+                    @RenderField(field)
+                }
+            </div>
+        </div>
     }
 </div>
 
@@ -21,7 +35,7 @@
     /// <summary>The model object whose scalar properties are edited.</summary>
     [Parameter, EditorRequired] public object Target { get; set; } = default!;
 
-    /// <summary>Property names shown above the "Advanced" section, in order.</summary>
+    /// <summary>Property names shown above the advanced group, in order (an ordering hint only).</summary>
     [Parameter] public IReadOnlyList<string> Primary { get; set; } = Array.Empty<string>();
 
     /// <summary>Property names to omit (rendered by a dedicated editor elsewhere).</summary>
@@ -33,80 +47,657 @@
     /// <summary>Renders every input disabled, so a read-only inspector shows the values but cannot edit them.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Restricts the fields to one inspector placement (the Content/Style tabs and the Spacing/Advanced
+    /// groups). <see langword="null"/> renders every field of the target — the flat form a list-item editor
+    /// uses.
+    /// </summary>
+    [Parameter] public PropertyFieldPlacement? Placement { get; set; }
+
+    /// <summary>Host-provided variables offered next to every template-bearing field.</summary>
+    [Parameter] public IReadOnlyList<TemplateVariableInfo> Variables { get; set; } = Array.Empty<TemplateVariableInfo>();
+
+    /// <summary>
+    /// Shared inspector state (remembered group collapse state and the field the user edited last, which is
+    /// where a variable token lands when caret interop is unavailable). A standalone instance keeps its own.
+    /// </summary>
+    [Parameter] public EmailInspectorState? State { get; set; }
+
+    private readonly string _instanceId = Guid.NewGuid().ToString("n")[..6];
+    private readonly EmailInspectorState _ownState = new();
+    private readonly Dictionary<string, string> _errors = new(StringComparer.Ordinal);
     private List<PropertyField> _primary = new();
     private List<PropertyField> _advanced = new();
+
+    private EmailInspectorState InspectorState => State ?? _ownState;
+
+    private string Owner => _primary.Count > 0 ? _primary[0].Owner : _advanced.Count > 0 ? _advanced[0].Owner : string.Empty;
+
+    private bool AdvancedCollapsed => InspectorState.IsGroupCollapsed(Owner, EmailInspectorState.AdvancedGroup);
+
+    private IReadOnlyList<SelectOption<string>> UnitOptions
+        => new List<SelectOption<string>>
+        {
+            new("px", Loc["EmailEditor_Length_Unit_Px"]),
+            new("%", Loc["EmailEditor_Length_Unit_Percent"]),
+            new("em", Loc["EmailEditor_Length_Unit_Em"]),
+            new("rem", Loc["EmailEditor_Length_Unit_Rem"]),
+            new("pt", Loc["EmailEditor_Length_Unit_Pt"]),
+        };
+
+    private object? _lastTarget;
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        var fields = PropertyReflection.GetFields(Target).Where(f => !Exclude.Contains(f.Name)).ToList();
+        if (!ReferenceEquals(_lastTarget, Target))
+        {
+            _lastTarget = Target;
+            _errors.Clear();
+        }
+
+        var fields = PropertyReflection.GetFields(Target).Where(field => !Exclude.Contains(field.Name)).ToList();
+        if (Placement is { } placement) fields = fields.Where(field => field.Placement == placement).ToList();
+
+        // A placement-filtered render (the tabs) shows every field of the placement: the panel owns the
+        // group chrome there, so nothing is folded away twice.
+        if (Placement is not null)
+        {
+            _primary = Order(fields);
+            _advanced = new List<PropertyField>();
+            return;
+        }
+
         _primary = Primary
-            .Select(name => fields.FirstOrDefault(f => f.Name == name))
-            .Where(f => f is not null)
-            .Select(f => f!)
+            .Select(name => fields.FirstOrDefault(field => field.Name == name))
+            .Where(field => field is not null)
+            .Select(field => field!)
             .ToList();
-        _advanced = fields.Where(f => !Primary.Contains(f.Name)).ToList();
+        _advanced = fields.Where(field => !Primary.Contains(field.Name)).ToList();
     }
+
+    private List<PropertyField> Order(List<PropertyField> fields)
+    {
+        if (Primary.Count == 0) return fields;
+
+        return Primary
+            .Select(name => fields.FirstOrDefault(field => field.Name == name))
+            .Where(field => field is not null)
+            .Select(field => field!)
+            .Concat(fields.Where(field => !Primary.Contains(field.Name)))
+            .ToList();
+    }
+
+    private void ToggleAdvanced() => InspectorState.ToggleGroup(Owner, EmailInspectorState.AdvancedGroup);
+
+    // ── Labels ───────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resolves a field label from the JSON tables: the owner-specific key first, then the shared key.
+    /// A key that does not resolve comes back as the key itself (JsonStringLocalizer's documented
+    /// behaviour) — never as an English name derived from the property (B11).
+    /// </summary>
+    private string LabelOf(PropertyField field) => ResolveLabel(field.LabelKey, field.SharedLabelKey);
+
+    private string ResolveLabel(params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var value = Loc[key];
+            if (!string.Equals(value, key, StringComparison.Ordinal)) return value;
+        }
+
+        return keys[^1];
+    }
+
+    private string ElementId(PropertyField field) => $"tm-email-field-{_instanceId}-{field.Name}";
+
+    // ── Writes ───────────────────────────────────────────────────────────────────────────────
+
+    private async Task SetTextAsync(PropertyField field, string? value)
+    {
+        if (ReadOnly) return;
+        field.SetText(value);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task SetBoolAsync(PropertyField field, bool value)
+    {
+        if (ReadOnly) return;
+        field.SetBool(value);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task SetNumberAsync(PropertyField field, int? value)
+    {
+        if (ReadOnly) return;
+        field.SetNumber(value);
+        await OnChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Writes a choice only when the field accepts it. <see cref="PropertyField.SetChoice"/> is the single
+    /// validator (it throws on a token outside the option set), so this renderer cannot drift from the rule.
+    /// </summary>
+    private Task SetChoiceAsync(PropertyField field, string? value)
+    {
+        if (ReadOnly || string.IsNullOrEmpty(value)) return Task.CompletedTask;
+        try
+        {
+            field.SetChoice(value);
+        }
+        catch (ArgumentException)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Writes a colour from the picker: empty clears a nullable field (and is ignored on a required one),
+    /// an invalid value never reaches the document.
+    /// </summary>
+    private async Task SetColorAsync(PropertyField field, string? value)
+    {
+        if (ReadOnly) return;
+
+        var trimmed = (value ?? string.Empty).Trim();
+        if (trimmed.Length == 0)
+        {
+            if (field.IsNullable()) await SetTextAsync(field, null);
+            return;
+        }
+
+        if (!PropertyReflection.IsValidColor(trimmed)) return;
+        await SetTextAsync(field, trimmed);
+    }
+
+    /// <summary>
+    /// Writes a length only when the composed value is one CSS length — an invalid entry leaves the
+    /// document untouched (the field keeps showing the stored value, with its localized error).
+    /// </summary>
+    private async Task SetValidatedTextAsync(PropertyField field, string? value, Func<string, bool> isValid)
+    {
+        if (ReadOnly || !isValid(value ?? string.Empty)) return;
+        await SetTextAsync(field, value);
+    }
+
+    private async Task SetLengthUnitAsync(PropertyField field, string? unit)
+    {
+        if (ReadOnly || string.IsNullOrEmpty(unit)) return;
+        if (!field.TryGetLength(out var number, out _)) return;
+        var value = PropertyReflection.FormatLength(number, unit);
+        if (!PropertyReflection.TryParseLength(value, out _, out _)) return;
+        _errors.Remove(field.Name);
+        await SetTextAsync(field, value);
+    }
+
+    /// <summary>
+    /// Inserts a token when the caret-aware JS interop is unavailable: it goes behind the content of the
+    /// field the user edited LAST (the same field the JS path would target), never blindly to the end of
+    /// the block content.
+    /// </summary>
+    private async Task InsertFallbackAsync(PropertyField owner, string token)
+    {
+        if (ReadOnly) return;
+        var target = InspectorState.LastFocusedField ?? owner;
+        target.SetText(target.GetText() + token);
+        await OnChanged.InvokeAsync();
+    }
+
+    private void TrackFocus(PropertyField field) => InspectorState.LastFocusedField = field;
+
+    private string LengthUnit(PropertyField field)
+        => field.TryGetLength(out _, out var unit) ? unit : "px";
+
+    /// <summary>
+    /// Whether a stored length value may be shown in the typed editor: empty is valid only when the property
+    /// may be unset, otherwise the value must parse as one CSS length.
+    /// </summary>
+    private static bool IsValidLengthText(PropertyField field, string text)
+        => string.IsNullOrEmpty(text)
+            ? field.IsNullable()
+            : PropertyReflection.TryParseLength(text, out _, out _);
+
+    /// <summary>Whether a colour value may be shown in the picker: empty only on a nullable property.</summary>
+    private static bool IsValidColorText(PropertyField field, string text)
+        => string.IsNullOrEmpty(text) ? field.IsNullable() : PropertyReflection.IsValidColor(text);
+
+    private IReadOnlyList<SelectOption<string>> ChoiceOptions(PropertyField field)
+        => field.Choices.Select(choice => new SelectOption<string>(choice.Value, Loc[choice.LabelKey])).ToList();
+
+    // ── Field markup ─────────────────────────────────────────────────────────────────────────
 
     private RenderFragment RenderField(PropertyField field) => builder =>
     {
-        var label = Humanize(field.Name);
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "tm-email-fields__field");
         builder.AddAttribute(2, "data-tm-prop", field.Name);
+        builder.AddAttribute(3, "data-tm-field-kind", field.Kind.ToString());
+        builder.AddAttribute(4, "data-tm-field-placement", field.Placement.ToString());
 
         switch (field.Kind)
         {
             case PropertyFieldKind.Text:
-                builder.OpenComponent<TmTextInput>(10);
-                builder.AddComponentParameter(11, nameof(TmTextInput.Label), label);
-                builder.AddComponentParameter(14, nameof(TmTextInput.Disabled), ReadOnly);
-                builder.AddComponentParameter(12, nameof(TmTextInput.Value), field.GetText());
-                builder.AddComponentParameter(13, nameof(TmTextInput.ValueChanged),
-                    EventCallback.Factory.Create<string>(this, async v => { if (ReadOnly) return; field.SetText(v); await OnChanged.InvokeAsync(); }));
-                builder.CloseComponent();
+                RenderText(field, builder, multiline: false);
                 break;
             case PropertyFieldKind.MultilineText:
-                builder.OpenComponent<TmTextArea>(20);
-                builder.AddComponentParameter(21, nameof(TmTextArea.Label), label);
-                builder.AddComponentParameter(24, nameof(TmTextArea.Disabled), ReadOnly);
-                builder.AddComponentParameter(22, nameof(TmTextArea.Value), field.GetText());
-                builder.AddComponentParameter(23, nameof(TmTextArea.ValueChanged),
-                    EventCallback.Factory.Create<string>(this, async v => { if (ReadOnly) return; field.SetText(v); await OnChanged.InvokeAsync(); }));
-                builder.CloseComponent();
+                RenderText(field, builder, multiline: true);
                 break;
             case PropertyFieldKind.Bool:
-                builder.OpenComponent<TmToggle>(30);
-                builder.AddComponentParameter(31, nameof(TmToggle.Label), label);
-                builder.AddComponentParameter(34, nameof(TmToggle.Disabled), ReadOnly);
-                builder.AddComponentParameter(32, nameof(TmToggle.Value), field.GetBool());
-                builder.AddComponentParameter(33, nameof(TmToggle.ValueChanged),
-                    EventCallback.Factory.Create<bool>(this, async v => { if (ReadOnly) return; field.SetBool(v); await OnChanged.InvokeAsync(); }));
-                builder.CloseComponent();
+                RenderBool(field, builder);
                 break;
             case PropertyFieldKind.Number:
-                builder.OpenComponent<TmNumberInput>(40);
-                builder.AddComponentParameter(41, nameof(TmNumberInput.Label), label);
-                builder.AddComponentParameter(44, nameof(TmNumberInput.Disabled), ReadOnly);
-                builder.AddComponentParameter(42, nameof(TmNumberInput.Value), field.GetNumber());
-                builder.AddComponentParameter(43, nameof(TmNumberInput.ValueChanged),
-                    EventCallback.Factory.Create<int?>(this, async v => { if (ReadOnly) return; field.SetNumber(v); await OnChanged.InvokeAsync(); }));
-                builder.CloseComponent();
+                RenderNumber(field, builder);
+                break;
+            case PropertyFieldKind.Color:
+                RenderColor(field, builder);
+                break;
+            case PropertyFieldKind.Alignment:
+                RenderAlignment(field, builder);
+                break;
+            case PropertyFieldKind.Choice:
+                RenderChoice(field, builder);
+                break;
+            case PropertyFieldKind.Length:
+                RenderLength(field, builder);
                 break;
         }
 
+        RenderVariableTrigger(field, builder);
         builder.CloseElement();
     };
 
-    private static string Humanize(string name)
+    /// <summary>
+    /// The visible field label. It carries an id so a composite editor (colour picker, alignment segments,
+    /// number + unit) can be named by it through <c>aria-labelledby</c> — one name, not a duplicated string.
+    /// </summary>
+    private void RenderLabel(PropertyField field, RenderTreeBuilder builder, int sequence)
     {
-        var sb = new System.Text.StringBuilder(name.Length + 4);
-        for (var i = 0; i < name.Length; i++)
+        builder.OpenElement(sequence, "span");
+        builder.AddAttribute(sequence + 1, "class", "tm-email-fields__label");
+        builder.AddAttribute(sequence + 2, "id", LabelId(field));
+        builder.AddContent(sequence + 3, LabelOf(field));
+        builder.CloseElement();
+    }
+
+    private string LabelId(PropertyField field) => $"{ElementId(field)}-label";
+
+    private void RenderText(PropertyField field, RenderTreeBuilder builder, bool multiline)
+    {
+        if (multiline)
         {
-            var c = name[i];
-            if (i > 0 && char.IsUpper(c)) sb.Append(' ').Append(char.ToLowerInvariant(c));
-            else sb.Append(i == 0 ? char.ToUpperInvariant(c) : c);
+            builder.OpenComponent<TmTextArea>(10);
+            builder.AddComponentParameter(11, nameof(TmTextArea.Label), LabelOf(field));
+            builder.AddComponentParameter(12, nameof(TmTextArea.Value), field.GetText());
+            builder.AddComponentParameter(13, nameof(TmTextArea.ValueChanged),
+                EventCallback.Factory.Create<string>(this, value => SetTextAsync(field, value)));
+            builder.AddComponentParameter(14, nameof(TmTextArea.Disabled), ReadOnly);
+            builder.CloseComponent();
+            return;
         }
-        return sb.ToString();
+
+        builder.OpenComponent<TmTextInput>(20);
+        builder.AddComponentParameter(21, nameof(TmTextInput.Label), LabelOf(field));
+        builder.AddComponentParameter(22, nameof(TmTextInput.Value), field.GetText());
+        builder.AddComponentParameter(23, nameof(TmTextInput.ValueChanged),
+            EventCallback.Factory.Create<string>(this, value => SetTextAsync(field, value)));
+        builder.AddComponentParameter(24, nameof(TmTextInput.Disabled), ReadOnly);
+        builder.AddComponentParameter(25, nameof(TmTextInput.Id), ElementId(field));
+        builder.AddComponentParameter(26, nameof(TmTextInput.OnFocus),
+            EventCallback.Factory.Create<FocusEventArgs>(this, () => TrackFocus(field)));
+        builder.CloseComponent();
+    }
+
+    private void RenderBool(PropertyField field, RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TmToggle>(30);
+        builder.AddComponentParameter(31, nameof(TmToggle.Label), LabelOf(field));
+        builder.AddComponentParameter(32, nameof(TmToggle.Value), field.GetBool());
+        builder.AddComponentParameter(33, nameof(TmToggle.ValueChanged),
+            EventCallback.Factory.Create<bool>(this, value => SetBoolAsync(field, value)));
+        builder.AddComponentParameter(34, nameof(TmToggle.Disabled), ReadOnly);
+        builder.CloseComponent();
+    }
+
+    private void RenderNumber(PropertyField field, RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TmNumberInput>(40);
+        builder.AddComponentParameter(41, nameof(TmNumberInput.Label), LabelOf(field));
+        builder.AddComponentParameter(42, nameof(TmNumberInput.Value), field.GetNumber());
+        builder.AddComponentParameter(43, nameof(TmNumberInput.ValueChanged),
+            EventCallback.Factory.Create<int?>(this, value => SetNumberAsync(field, value)));
+        builder.AddComponentParameter(44, nameof(TmNumberInput.Disabled), ReadOnly);
+        builder.CloseComponent();
+    }
+
+    /// <summary>
+    /// A colour is a picker with a swatch and the hex value. An EMPTY value is a valid "unset" on a nullable
+    /// property (a section's background colour, say) and must not be reported as an error; garbage from an
+    /// import stays in the text editor WITH the localized error, so it is visible and fixable.
+    /// </summary>
+    private void RenderColor(PropertyField field, RenderTreeBuilder builder)
+    {
+        var stored = field.GetText();
+        if (!IsValidColorText(field, stored))
+        {
+            RenderInvalidText(
+                field, builder, "EmailEditor_Validation_InvalidColor", text => IsValidColorText(field, text));
+            return;
+        }
+
+        RenderLabel(field, builder, 50);
+
+        builder.OpenElement(52, "div");
+        builder.AddAttribute(53, "class", "tm-email-fields__control");
+        builder.AddAttribute(54, "role", "group");
+        builder.AddAttribute(55, "aria-labelledby", LabelId(field));
+
+        builder.OpenComponent<TmColorPicker>(60);
+        builder.AddComponentParameter(61, nameof(TmColorPicker.Value), stored);
+        builder.AddComponentParameter(62, nameof(TmColorPicker.Disabled), ReadOnly);
+        builder.AddComponentParameter(63, nameof(TmColorPicker.ShowAlpha), false);
+        builder.AddComponentParameter(64, nameof(TmColorPicker.Format), ColorFormat.Hex);
+        builder.AddComponentParameter(65, nameof(TmColorPicker.ShowClearButton), field.IsNullable());
+        builder.AddComponentParameter(66, nameof(TmColorPicker.ValueChanged),
+            EventCallback.Factory.Create<string?>(this, value => SetColorAsync(field, value)));
+        builder.AddComponentParameter(67, "data-tm-color-picker", field.Name);
+        builder.CloseComponent();
+
+        builder.CloseElement();
+    }
+
+    private void RenderAlignment(PropertyField field, RenderTreeBuilder builder)
+    {
+        RenderLabel(field, builder, 70);
+        builder.OpenElement(80, "div");
+        builder.AddAttribute(81, "class", "tm-email-fields__segments");
+        builder.AddAttribute(82, "role", "group");
+        builder.AddAttribute(83, "aria-labelledby", LabelId(field));
+
+        var current = field.GetText();
+        var sequence = 84;
+        foreach (var choice in field.Choices)
+        {
+            var active = string.Equals(choice.Value, current, StringComparison.Ordinal);
+            var label = Loc[choice.LabelKey];
+            builder.OpenElement(sequence++, "button");
+            builder.AddAttribute(sequence++, "type", "button");
+            builder.AddAttribute(sequence++, "class", active
+                ? "tm-email-fields__segment tm-email-fields__segment--active"
+                : "tm-email-fields__segment");
+            builder.AddAttribute(sequence++, "data-tm-align-option", choice.Value);
+            builder.AddAttribute(sequence++, "aria-pressed", active ? "true" : "false");
+            builder.AddAttribute(sequence++, "aria-label", label);
+            builder.AddAttribute(sequence++, "title", label);
+            builder.AddAttribute(sequence++, "disabled", ReadOnly);
+            builder.AddAttribute(sequence++, "onclick",
+                EventCallback.Factory.Create<MouseEventArgs>(this, () => SetChoiceAsync(field, choice.Value)));
+            builder.OpenComponent<TmIcon>(sequence++);
+            builder.AddComponentParameter(sequence++, nameof(TmIcon.Name), AlignmentIcon(choice.Value));
+            builder.AddComponentParameter(sequence++, nameof(TmIcon.Size), IconSize.Sm);
+            builder.CloseComponent();
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    }
+
+    /// <summary>The icon of an alignment option — the button is never only a letter, so the meaning reads at a glance.</summary>
+    private static string AlignmentIcon(string value) => value switch
+    {
+        "center" => IconNames.AlignCenter,
+        "right" => IconNames.AlignRight,
+        "justify" => IconNames.AlignJustify,
+        _ => IconNames.AlignLeft,
+    };
+
+    /// <summary>
+    /// A choice is a select with localized option labels. A stored value that is NOT among the options (an
+    /// import may carry <c>font-weight="600"</c>, or an <c>oblique</c> style) keeps a plain text editor:
+    /// the value is never silently dropped and never rejected just because this release has no label for it.
+    /// </summary>
+    private void RenderChoice(PropertyField field, RenderTreeBuilder builder)
+    {
+        var stored = field.GetText();
+        var known = stored.Length == 0
+            || field.Choices.Any(choice => string.Equals(choice.Value, stored, StringComparison.Ordinal));
+
+        if (!known)
+        {
+            builder.OpenComponent<TmTextInput>(96);
+            builder.AddComponentParameter(97, nameof(TmTextInput.Label), LabelOf(field));
+            builder.AddComponentParameter(98, nameof(TmTextInput.Value), stored);
+            builder.AddComponentParameter(99, nameof(TmTextInput.Disabled), ReadOnly);
+            builder.AddComponentParameter(100, nameof(TmTextInput.Id), ElementId(field));
+            builder.AddComponentParameter(101, nameof(TmTextInput.ValueChanged),
+                EventCallback.Factory.Create<string>(this, value => SetTextAsync(field, value)));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<TmSelect<string>>(90);
+        builder.AddComponentParameter(91, nameof(TmSelect<string>.Label), LabelOf(field));
+        builder.AddComponentParameter(92, nameof(TmSelect<string>.Options), ChoiceOptions(field));
+        builder.AddComponentParameter(93, nameof(TmSelect<string>.Value), stored);
+        builder.AddComponentParameter(94, nameof(TmSelect<string>.Disabled), ReadOnly);
+        builder.AddComponentParameter(95, nameof(TmSelect<string>.ValueChanged),
+            EventCallback.Factory.Create<string?>(this, value => SetChoiceAsync(field, value)));
+        builder.CloseComponent();
+    }
+
+    /// <summary>
+    /// A length is a number plus a unit. The number is a plain decimal text field on purpose: a fixed-decimal
+    /// numeric input showed stored "13px" as "13,00" and could not display an imported "33.33%" without
+    /// rounding it, so the value the user sees is exactly the number the document holds.
+    /// </summary>
+    private void RenderLength(PropertyField field, RenderTreeBuilder builder)
+    {
+        if (!IsValidLengthText(field, field.GetText()))
+        {
+            RenderInvalidText(
+                field, builder, "EmailEditor_Validation_InvalidLength", text => IsValidLengthText(field, text));
+            return;
+        }
+
+        RenderLabel(field, builder, 100);
+
+        builder.OpenElement(110, "div");
+        builder.AddAttribute(111, "class", "tm-email-fields__length");
+        builder.AddAttribute(112, "role", "group");
+        builder.AddAttribute(113, "aria-labelledby", LabelId(field));
+
+        builder.OpenComponent<TmTextInput>(114);
+        builder.AddComponentParameter(115, nameof(TmTextInput.Value), LengthNumberText(field));
+        builder.AddComponentParameter(116, nameof(TmTextInput.Disabled), ReadOnly);
+        builder.AddComponentParameter(117, nameof(TmTextInput.Id), ElementId(field));
+        builder.AddComponentParameter(118, nameof(TmTextInput.ValueChanged),
+            EventCallback.Factory.Create<string>(this, value => SetLengthTextAsync(field, value)));
+        builder.AddComponentParameter(119, "inputmode", "decimal");
+        builder.AddComponentParameter(120, "data-tm-length-number", field.Name);
+        builder.AddComponentParameter(121, "aria-labelledby", LabelId(field));
+        builder.CloseComponent();
+
+        builder.OpenComponent<TmSelect<string>>(122);
+        builder.AddComponentParameter(123, nameof(TmSelect<string>.Options), UnitOptions);
+        builder.AddComponentParameter(124, nameof(TmSelect<string>.Value), LengthUnit(field));
+        builder.AddComponentParameter(125, nameof(TmSelect<string>.Disabled), ReadOnly);
+        builder.AddComponentParameter(126, nameof(TmSelect<string>.ValueChanged),
+            EventCallback.Factory.Create<string?>(this, value => SetLengthUnitAsync(field, value)));
+        builder.AddComponentParameter(127, "data-tm-length-unit", field.Name);
+        builder.AddComponentParameter(128, nameof(TmSelect<string>.AriaLabel),
+            Loc["EmailEditor_Length_UnitAria", LabelOf(field)]);
+        builder.CloseComponent();
+
+        builder.CloseElement();
+
+        if (_errors.TryGetValue(field.Name, out var error))
+        {
+            builder.OpenElement(127, "p");
+            builder.AddAttribute(128, "class", "tm-email-fields__error");
+            builder.AddAttribute(129, "data-tm-field-error", field.Name);
+            builder.AddAttribute(130, "role", "alert");
+            builder.AddContent(131, error);
+            builder.CloseElement();
+        }
+    }
+
+    /// <summary>The number part of the stored length, formatted with the current culture and no padding.</summary>
+    private static string LengthNumberText(PropertyField field)
+        => field.TryGetLength(out var number, out _)
+            ? number.ToString("0.####", System.Globalization.CultureInfo.CurrentCulture)
+            : string.Empty;
+
+    /// <summary>
+    /// Writes the composed length only when the typed number parses and the composition is one CSS length.
+    /// An empty number clears a nullable property and is an error on a required one.
+    /// </summary>
+    private async Task SetLengthTextAsync(PropertyField field, string? text)
+    {
+        if (ReadOnly) return;
+        var trimmed = (text ?? string.Empty).Trim();
+
+        if (trimmed.Length == 0)
+        {
+            if (!field.IsNullable())
+            {
+                _errors[field.Name] = Loc["EmailEditor_Validation_InvalidLength"];
+                return;
+            }
+
+            _errors.Remove(field.Name);
+            await SetTextAsync(field, null);
+            return;
+        }
+
+        if (!TryParseNumber(trimmed, field.AllowsNegative, out var number))
+        {
+            _errors[field.Name] = Loc["EmailEditor_Validation_InvalidLength"];
+            return;
+        }
+
+        try
+        {
+            field.SetLength(number, LengthUnit(field));
+        }
+        catch (ArgumentException)
+        {
+            _errors[field.Name] = Loc["EmailEditor_Validation_InvalidLength"];
+            return;
+        }
+
+        _errors.Remove(field.Name);
+        await OnChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Parses the typed number with the CURRENT culture first and the invariant one second, accepting only
+    /// an optional sign and a decimal point. A thousands separator is deliberately not a number separator
+    /// here: in <c>en-US</c> a typed "1,5" would silently become 15 (or be read as a grouped thousand), so
+    /// the field reports an error instead of writing a value the user did not mean.
+    /// </summary>
+    private static bool TryParseNumber(string text, bool allowNegative, out decimal number)
+    {
+        const System.Globalization.NumberStyles styles =
+            System.Globalization.NumberStyles.AllowDecimalPoint | System.Globalization.NumberStyles.AllowLeadingSign;
+
+        var parsed = decimal.TryParse(text, styles, System.Globalization.CultureInfo.CurrentCulture, out number)
+            || decimal.TryParse(text, styles, System.Globalization.CultureInfo.InvariantCulture, out number);
+
+        return parsed && (allowNegative || number >= 0);
+    }
+
+    /// <summary>
+    /// A stored value the typed editor refuses to own (garbage from an import) is shown in a plain text
+    /// input WITH a localized error, and it is written back only once it validates — so fixing the value is
+    /// possible without ever storing a half-typed invalid one.
+    /// </summary>
+    private void RenderInvalidText(
+        PropertyField field, RenderTreeBuilder builder, string errorKey, Func<string, bool> isValid)
+    {
+        builder.OpenComponent<TmTextInput>(130);
+        builder.AddComponentParameter(131, nameof(TmTextInput.Label), LabelOf(field));
+        builder.AddComponentParameter(132, nameof(TmTextInput.Disabled), ReadOnly);
+        builder.AddComponentParameter(133, nameof(TmTextInput.Id), ElementId(field));
+        builder.AddComponentParameter(134, nameof(TmTextInput.Value), field.GetText());
+        builder.AddComponentParameter(135, nameof(TmTextInput.ValueChanged),
+            EventCallback.Factory.Create<string>(this, value => SetValidatedTextAsync(field, value, isValid)));
+        builder.AddComponentParameter(136, "aria-invalid", "true");
+        builder.CloseComponent();
+
+        builder.OpenElement(140, "p");
+        builder.AddAttribute(141, "class", "tm-email-fields__error");
+        builder.AddAttribute(142, "data-tm-field-error", field.Name);
+        builder.AddAttribute(143, "role", "alert");
+        builder.AddContent(144, Loc[errorKey]);
+        builder.CloseElement();
+    }
+
+    /// <summary>
+    /// The "Insert variable" affordance. The trigger is a styled SPAN, not a nested button: the popover's own
+    /// trigger is already the activation control (role=button, keyboard operable), so a button inside it would
+    /// be a button inside a button — invalid markup and two activations per press.
+    /// </summary>
+    private void RenderVariableTrigger(PropertyField field, RenderTreeBuilder builder)
+    {
+        if (!field.SupportsTemplate || ReadOnly) return;
+
+        builder.OpenElement(150, "div");
+        builder.AddAttribute(151, "class", "tm-email-fields__variables");
+        builder.AddAttribute(152, "data-tm-variable-trigger", field.Name);
+
+        builder.OpenComponent<TmPopover>(160);
+        builder.AddComponentParameter(161, nameof(TmPopover.Title), Loc["EmailEditor_Variables_Title"]);
+        // Controlled open state: the picker inside is rendered only while open (an eagerly mounted catalogue
+        // would put a focus target in every closed popover), which needs the owner to know the state.
+        builder.AddComponentParameter(165, nameof(TmPopover.IsOpen), _openVariablesField == field.Name);
+        builder.AddComponentParameter(162, nameof(TmPopover.TriggerContent), (RenderFragment)(trigger =>
+        {
+            trigger.OpenElement(0, "span");
+            trigger.AddAttribute(1, "class", "tm-email-fields__variable-trigger");
+            trigger.AddAttribute(2, "data-tm-insert-variable", field.Name);
+
+            trigger.OpenElement(3, "span");
+            trigger.AddAttribute(4, "class", "tm-email-fields__variable-glyph");
+            trigger.AddAttribute(5, "aria-hidden", "true");
+            trigger.AddContent(6, "{ }");
+            trigger.CloseElement();
+            trigger.AddContent(7, Loc["EmailEditor_Variables_Insert"]);
+            trigger.CloseElement();
+        }));
+        builder.AddComponentParameter(163, nameof(TmPopover.IsOpenChanged),
+            EventCallback.Factory.Create<bool>(this, open => OnVariablesOpenChanged(field.Name, open)));
+        builder.AddComponentParameter(164, nameof(TmPopover.ChildContent), (RenderFragment)(body =>
+        {
+            // An OPEN picker is the only state that needs the catalogue: rendering it eagerly would mount a
+            // dozen search/focus targets per block, and the focus-into-search contract below would fire for a
+            // panel nobody can see.
+            if (_openVariablesField != field.Name) return;
+
+            body.OpenComponent<TmEmailVariablePicker>(0);
+            body.AddComponentParameter(1, nameof(TmEmailVariablePicker.Variables), Variables);
+            body.AddComponentParameter(2, nameof(TmEmailVariablePicker.ReadOnly), ReadOnly);
+            body.AddComponentParameter(3, nameof(TmEmailVariablePicker.OnInsert),
+                EventCallback.Factory.Create<string>(this, token => InsertFallbackAsync(field, token)));
+            body.CloseComponent();
+        }));
+        builder.CloseComponent();
+
+        builder.CloseElement();
+    }
+
+    private string? _openVariablesField;
+
+    private void OnVariablesOpenChanged(string field, bool open)
+    {
+        if (open)
+        {
+            _openVariablesField = field;
+        }
+        else if (_openVariablesField == field)
+        {
+            _openVariablesField = null;
+        }
     }
 }

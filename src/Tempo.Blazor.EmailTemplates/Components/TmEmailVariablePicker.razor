@@ -2,31 +2,61 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
+@* The variable catalogue: every row is the token in a code chip plus — when the host supplied one — the
+   human description, grouped under the host's group heading. Search covers BOTH the path and the
+   description (diacritics folded), so a user who does not know the token can find it by what it means.
+   Keyboard: the search takes focus when the picker opens, ArrowDown reaches the first row and
+   ArrowUp/ArrowDown walk a roving tabindex; Enter activates the row natively. *@
 <div class="tm-email-variables" data-tm-variable-picker>
-    <TmSearchInput Value="_search" ValueChanged="OnSearchChanged" Disabled="ReadOnly"
-                   Placeholder="@Loc["EmailEditor_Variables_Search"]" />
-    @if (Filtered.Count == 0)
+    <TmSearchInput @ref="_searchField" Value="@_search" ValueChanged="OnSearchChanged" Disabled="ReadOnly"
+                   Placeholder="@Loc["EmailEditor_Variables_Search"]" OnKeyDown="OnSearchKeyDown" />
+
+    @if (Variables.Count == 0)
     {
-        <p class="tm-email-variables__empty">@Loc["EmailEditor_Variables_Empty"]</p>
+        <p class="tm-email-variables__empty" data-tm-variable-empty>@Loc["EmailEditor_Variables_Empty"]</p>
+    }
+    else if (Rows.Count == 0)
+    {
+        <p class="tm-email-variables__empty" data-tm-variable-nomatch>@Loc["EmailEditor_Variables_NoMatch", _search]</p>
     }
     else
     {
-        <ul class="tm-email-variables__list">
-            @foreach (var variable in Filtered)
-            {
-                var path = variable.Path;
-                <li>
-                    <button type="button" class="tm-email-variables__item" data-tm-variable="@path"
-                            disabled="@ReadOnly" @onclick="() => InsertAsync(path)">
-                        <code>@Token(path)</code>
-                        @if (variable.Kind == VariableKind.Collection)
-                        {
-                            <span class="tm-email-variables__badge">[]</span>
-                        }
-                    </button>
-                </li>
-            }
-        </ul>
+        var rowIndex = 0;
+        @foreach (var group in Groups)
+        {
+            <div class="tm-email-variables__group" data-tm-variable-group="@group.Heading">
+                @if (!string.IsNullOrEmpty(group.Heading))
+                {
+                    <header class="tm-email-variables__group-heading">@group.Heading</header>
+                }
+                <ul class="tm-email-variables__list">
+                    @foreach (var variable in group.Variables)
+                    {
+                        var path = variable.Path;
+                        var index = rowIndex++;
+                        var height = index;
+                        <li>
+                            <button type="button" class="tm-email-variables__item" data-tm-variable="@path"
+                                    @ref="_rowRefs[path]"
+                                    tabindex="@(height == _focusIndex ? "0" : "-1")"
+                                    title="@Token(path)" disabled="@ReadOnly"
+                                    @onclick="() => InsertAsync(path)"
+                                    @onkeydown="args => OnRowKeyDownAsync(args, height)">
+                                <code>@Token(path)</code>
+                                @if (variable.Kind == VariableKind.Collection)
+                                {
+                                    <span class="tm-email-variables__badge">[]</span>
+                                }
+                                @if (!string.IsNullOrEmpty(variable.Description))
+                                {
+                                    <span class="tm-email-variables__description">@variable.Description</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
     }
 </div>
 
@@ -43,17 +73,102 @@
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
-    private string _search = string.Empty;
-
-    private IReadOnlyList<TemplateVariableInfo> Filtered =>
-        string.IsNullOrWhiteSpace(_search)
-            ? Variables
-            : Variables.Where(v => v.Path.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
-
     private const string ModulePath = "./_content/Tempo.Blazor.EmailTemplates/tm-email-variable-insert.js";
-    private IJSObjectReference? _module;
 
-    private void OnSearchChanged(string value) => _search = value;
+    private string _search = string.Empty;
+    private IJSObjectReference? _module;
+    private TmSearchInput? _searchField;
+    private readonly Dictionary<string, ElementReference> _rowRefs = new(StringComparer.Ordinal);
+    private int _focusIndex;
+    private bool _focusPending;
+
+    /// <summary>The filtered catalogue in display order; the roving tabindex walks THIS list.</summary>
+    private IReadOnlyList<TemplateVariableInfo> Rows
+        => string.IsNullOrWhiteSpace(_search)
+            ? Variables
+            : Variables
+                .Where(variable =>
+                    EmailSearchText.Contains(variable.Path, _search)
+                    || EmailSearchText.Contains(variable.Description, _search))
+                .ToList();
+
+    private sealed record VariableGroup(string Heading, IReadOnlyList<TemplateVariableInfo> Variables);
+
+    private IReadOnlyList<VariableGroup> Groups
+    {
+        get
+        {
+            var filtered = Rows;
+            if (filtered.Count == 0) return Array.Empty<VariableGroup>();
+
+            var grouped = filtered
+                .GroupBy(variable => variable.Group)
+                .OrderBy(group => group.Key is null ? 1 : 0)
+                .ThenBy(group => group.Key, StringComparer.CurrentCulture)
+                .ToList();
+
+            // A single unnamed bucket needs no heading at all: a picker with no host metadata stays a flat
+            // list, exactly as before.
+            if (grouped.Count == 1 && grouped[0].Key is null)
+                return new[] { new VariableGroup(string.Empty, grouped[0].OrderBy(v => v.Path, StringComparer.Ordinal).ToList()) };
+
+            return grouped
+                .Select(group => new VariableGroup(
+                    group.Key ?? Loc["EmailEditor_Variables_Group_Other"],
+                    group.OrderBy(v => v.Path, StringComparer.Ordinal).ToList()))
+                .ToList();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _searchField is not null)
+        {
+            // A picker that opens on a keyboard shortcut must be usable without a mouse: the caret starts in
+            // the filter, and one ArrowDown reaches the catalogue.
+            await _searchField.FocusAsync();
+        }
+
+        if (_focusPending && Rows.Count > 0)
+        {
+            _focusPending = false;
+            var path = Rows[Math.Clamp(_focusIndex, 0, Rows.Count - 1)].Path;
+            if (_rowRefs.TryGetValue(path, out var row)) await row.FocusAsync();
+        }
+    }
+
+    private void OnSearchChanged(string value)
+    {
+        _search = value ?? string.Empty;
+        _focusIndex = 0;
+    }
+
+    private Task OnSearchKeyDown(KeyboardEventArgs args)
+        => string.Equals(args.Key, "ArrowDown", StringComparison.Ordinal) ? FocusRowAsync(0) : Task.CompletedTask;
+
+    private Task OnRowKeyDownAsync(KeyboardEventArgs args, int index) => args.Key switch
+    {
+        "ArrowDown" => FocusRowAsync(index + 1),
+        "ArrowUp" => FocusRowAsync(index - 1),
+        "Home" => FocusRowAsync(0),
+        "End" => FocusRowAsync(int.MaxValue),
+        _ => Task.CompletedTask,
+    };
+
+    /// <summary>
+    /// Roving tabindex: exactly one row is the tab stop, and the arrow keys move focus through the list with
+    /// <see cref="ElementReference.FocusAsync"/> (no JS, no scroll maths — focus scrolls the row into view).
+    /// </summary>
+    private Task FocusRowAsync(int index)
+    {
+        if (Rows.Count == 0) return Task.CompletedTask;
+
+        _focusIndex = Math.Clamp(index, 0, Rows.Count - 1);
+        _focusPending = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
     private static string Token(string path) => "{{ " + path + " }}";
 

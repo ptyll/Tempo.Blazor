@@ -397,7 +397,83 @@
   `OnImageUpload` runs; a rejected file, a handler exception and an empty URL all produce a localized error
   in the panel and leave the block's `Src` untouched.
 
+- **Inspector metadata types (Fáze 7A, additive — contract §3.10).** `PropertyFieldPlacement`
+  (`Content`/`Style`/`Padding`/`Advanced`: which tab and which collapsible group a field belongs to),
+  `PropertyChoice` (`Value` + `LabelKey` of one `Choice`/`Alignment` option), and `EmailInspectorState`
+  (the state one editor remembers: the folded groups **per block type** plus `LastFocusedField`, the target
+  of the caret-less variable insertion). `PropertyFieldKind` gained `Color`, `Alignment`, `Choice` and
+  `Length`; `PropertyField` gained `Owner`, `Placement`, `Choices`, `SupportsTemplate`, `LabelKey`
+  (`EmailEditor_Field_{Owner}_{Property}`), `SharedLabelKey` (`EmailEditor_Field_{Property}`),
+  `IsNullable()` (the nullable annotation decides whether an empty value means "unset"),
+  `AllowsNegative` (only letter spacing) and `SetChoice`/`TryGetLength`/`SetLength`; the alias `GetChoice`
+  and the static `PropertyReflection.IsRequiredLength` were removed while the API is still unreleased —
+  ask the field instead of a helper (contract §3.10). `PropertyReflection` gained
+  `GetFields(target, placement)`, `OwnerOf`, `TryParseLength`, `FormatLength` and `IsValidColor`.
+  `EmailInspectorState` is public because it is the type of a parameter of the public
+  `TmEmailObjectFields`, not because a host is expected to build one — a standalone instance keeps its
+  own state, so existing markup needs no change.
+  Also additive: `LayoutSeverityRank.Of` (the one sanctioned display order of `LayoutSeverity`),
+  `EmailDocumentValidator.MaxPreheaderLength` and `DocumentValidationKeys.PreheaderTooLong` (the threshold
+  the recommending rule measures and names), `TmEmailTemplateToolbox.Collapsed`/`CollapsedChanged`/
+  `ShowCollapseToggle`, and `TmEmailPropertyPanel.OnDuplicate`/`OnDelete`. Nothing on the document model or
+  the save contract changed.
+
 ### Fixed
+
+- **Inspector (Fáze 7A review): an optional colour can be unset; the required one is never cleared.** A
+  nullable colour property (a section's `BackgroundColor`, say) now renders the picker for an EMPTY value
+  instead of a text field with a false "enter a color" error, the picker offers its clear button
+  (`ShowClearButton` follows `PropertyField.IsNullable()`) and clearing it stores `null`. Clearing a
+  required colour (`EmailTextBlock.Color`) keeps the stored value, and an invalid value from the picker is
+  never written. Lengths parse with `AllowDecimalPoint | AllowLeadingSign` in the current culture and then
+  invariant — a thousands separator (en-US „1,5“) is rejected instead of silently becoming 15, negative
+  numbers are refused everywhere except letter spacing, and `font-style`/`font-weight`/`text-decoration`
+  became localized Choice editors while a stored value outside the option set (`600`, `oblique`) stays an
+  editable text field instead of disappearing. `Rel` moved to the Advanced group.
+
+- **Inspector CSS actually applies now (Fáze 7A review).** The field markup is built with
+  `RenderTreeBuilder`, so its elements never carry the component's CSS-isolation scope attribute — every
+  `.tm-email-fields__*` rule silently matched nothing (the label typography and the number + unit row
+  measured as if unstyled). All rules are now `.tm-email-fields ::deep .tm-email-fields__*`, labels share
+  one typography (`--tm-font-size-sm`, `--tm-font-weight-medium`, `--tm-text-primary`), the unit sits beside
+  the number, and the Delete action of the inspector header stays danger-tinted.
+
+- **Validation panel: severity is spoken, findings are operable, Info/Warning meet contrast (Fáze 7A
+  review).** Every finding carries a screen-reader-only severity word
+  (`EmailEditor_Validation_Severity_{Error|Warning|Info}` — Error/Warning/Suggestion), a finding that
+  points at a node is a real `<button class="tm-email-validation__link">` (the row keeps its pointer
+  handler), and the Info/Warning icon and strip use the accessible `--tm-color-info-strong` /
+  `--tm-color-warning-strong` tokens instead of the pale fill colours (~2.3:1 measured).
+
+- **Import dialog: the preheader warning names the limit, not „{0}“ (Fáze 7A review).** Import warnings
+  were rendered with the one-argument localizer indexer, so a rule that carries its threshold printed a
+  literal placeholder. Both the validation panel and the import dialog now resolve such keys through
+  `ValidationMessageText.Of` (internal), the dialog shows the warnings at all
+  (`[data-tm-import-warnings]`), and a message with a detail formats that detail.
+
+- **Variable picker (Fáze 7A review): keyboard, diacritics, width and a non-button trigger.** The search
+  folds diacritics through the shared `EmailSearchText.Fold` („krestni“ finds „Křestní jméno“, „uzivatel“
+  finds the group), an empty result says `EmailEditor_Variables_NoMatch` with the searched term, the search
+  takes focus when the picker opens, ArrowDown reaches the first row and ArrowUp/ArrowDown walk a roving
+  tabindex (one Tab stop; `<TmSearchInput>` gained `FocusAsync` and an `OnKeyDown` callback, additively).
+  Rows are a `1fr auto` grid (`code badge` / `desc desc`) with a wrapping token and the token colour from
+  `--tm-color-text`, the panel is `min(26rem, 90vw)` wide, and the "Insert variable" affordance is a styled
+  span inside the popover's own trigger — never a nested `<button>`.
+
+- **Deleting a block announces itself and keeps focus (Fáze 7A review).** The editor's live region says
+  `EmailEditor_Announce_BlockDeleted` (with the undo chord) and focus moves to the neighbouring block, or
+  to the canvas root when the column is now empty, instead of falling to `<body>` with the removed header.
+
+- **Palette (Fáze 7A review): the Spacer and Social tiles have icons, the search works read-only, and the
+  title pairs with the arrow.** The registry named two icons the core set does not ship (`move-vertical`,
+  `share-2`), so those tiles rendered an empty box; they now use `between-horizontal-start` and `share`.
+  Searching is reading, not editing, so it stays enabled in `ReadOnly` (the tiles stay inert), the palette
+  header carries its title plus the collapse arrow on one row (`ShowCollapseToggle=false` for a host that
+  owns the shell chrome), and the editor no longer renders a second panel header above it.
+
+- **A long preheader is measured in graphemes of the source template.** `EmailDocumentValidator` counted
+  UTF-16 code units, so a preheader of 100 skin-toned emoji (200 code units) was flagged as too long.
+  `StringInfo.LengthInTextElements` now counts what the inbox shows.
 
 - **Every key the packages hand to the localizer now resolves (en / cs / sk / fr) — previously the bare
   key was rendered.** The editor showed the *key* for the diagnostics phases 2–4 introduced: the import
@@ -778,6 +854,75 @@
     `Resources/TmEmailResources.<culture>.json`.
   * Slovak (`sk`) now ships for both tables; `cs`/`sk`/`fr` are guaranteed to carry exactly the English
     key set with identical `{0}` placeholders (`TmEmailResourcesParityTests`).
+
+- **Inspector field labels are localized keys, not `Humanize(property.Name)` (B11).** Every field of
+  `TmEmailPropertyPanel` now resolves its label from the JSON tables: the owner-specific key
+  `EmailEditor_Field_{Owner}_{Property}` first (e.g. `EmailEditor_Field_Button_Text` → „Text tlačítka“),
+  then the shared `EmailEditor_Field_{Property}` for a field whose meaning does not depend on the owner
+  (e.g. `EmailEditor_Field_FontSize`). A key that does not resolve renders as the key, never as an English
+  name derived from the property, and `TmEmailFieldLocalizationParityTests` proves every field of every
+  registered block — plus the document, section, column, document styles and the list-item types — has a
+  key in all four tables.
+
+  ```text
+  before: BackgroundColor → "Background color"   (derived from the property name, English only)
+  after:  BackgroundColor → "Barva pozadí" (cs) / "Farbe des Hintergrunds"… (the shipped table)
+  ```
+
+  Migration: a host (or a host test) that selected inspector fields by their **English visible label**
+  must use the stable `[data-tm-prop="<Property>"]` attribute instead (unchanged) or the translated text.
+  Nothing on the document model or the save contract changed.
+
+- **The inspector is split into Obsah/Styl tabs and its field surface moved (B11, same phase).** The
+  property panel now renders a `TmTabs` strip (`#tab-content` / `#tab-style`) whose Content tab holds
+  texts, URLs, alt texts and the item editors, and whose Style tab holds colours, fonts, alignment,
+  dimensions, the collapsible „Odsazení“ (spacing) and „Pokročilé“ (advanced) groups, `mj-class` and the
+  extra attributes. Consequences:
+  * `TmEmailObjectFields` gained `Placement` (Content/Style/Spacing/Advanced), `Variables` and `State`;
+    `Primary` (ordering hint) and `Exclude` keep working, so a host that renders the field list directly
+    only has to add `Placement` when it wants the tab split. The editor kind, the tab and the default order
+    now come from the single `PropertyReflection` table instead of a per-call property list.
+  * Fields that used to be found without interaction now live in the Style tab, so a selector such as
+    `[data-tm-prop="BackgroundColor"] input` only matches after the tab switch. `data-tm-prop`,
+    `data-tm-list-*`, `data-tm-kv-*`, `data-tm-head`, `data-tm-mjclasses`, `data-tm-extra`,
+    `data-tm-rich-content`, `data-tm-table-*` and the panel root `data-tm-properties` are unchanged.
+  * The panel's „Advanced“ `<details>` became two real disclosure buttons (`[data-tm-prop-group-toggle]`
+    with `aria-expanded`, remembered per block type for the editor's lifetime), because a `<details>` cannot
+    remember its state per selection.
+  * `TmEmailPropertyPanel` gained `OnDuplicate` / `OnDelete` (rendered only when the host handles them; the
+    editor wires them to one undo step each) and `TmEmailTemplateEditor` gained `ToolboxCollapsed` /
+    `ToolboxCollapsedChanged` (D10) — Fáze 8 maps the same parameter onto `TmEditorShell.CollapsedPanels`.
+
+- **Typed inspector editors: a stored value the editor refuses is now visible (B11, same phase).** A colour
+  is edited with `TmColorPicker` (swatch + hex), alignment with a `[data-tm-align-option]` toggle group
+  (`aria-pressed`), enum-like MJML attributes (`Mode`, `BorderStyle`, `IconPosition`, `Direction`,
+  `VerticalAlign`, `Target`) with a `TmSelect`, and a length as number + unit. A stored value that is not
+  a valid colour/length (garbage from an import) is shown in a plain text field with a localized
+  `[data-tm-field-error]` and is **not** written back until it validates, so the document never receives a
+  half-typed value. A host that relied on the old free-text field for these properties now gets the
+  validated editor — the stored string format (`13px`, `#1a1a1a`, `left`) is unchanged.
+
+- **The blocks palette gained search, wrapping tiles and a collapse toggle (same phase).** The toolbox
+  renders a search field (`[data-tm-toolbox-search]`, placeholder „Hledat bloky…“) that filters tiles by
+  their **localized** name with diacritics and case folded, a localized empty state
+  (`[data-tm-toolbox-empty]`), Escape clears the filter, tiles show the icon above a wrapping label whose
+  full name is in `title`, and `Collapsed` / `CollapsedChanged` fold the palette away. `data-tm-block`,
+  `data-tm-preset` and `data-tm-toolbox-list` are preserved; the component root is
+  `[data-tm-toolbox-root]` (the editor's panel keeps `data-tm-toolbox`).
+
+- **`LayoutSeverity.Info` is a new severity and the preheader has the first recommending rule (B5, D9).**
+  `Warning = 0` and `Error = 1` keep their numbers; `Info = 2` is appended, so a `switch` over the enum
+  without a `default` arm is the only source-breaking case. Display order comes from
+  `LayoutSeverityRank.Of` (Error → Warning → Info), never from the numeric value. One rule uses it: a
+  preheader longer than `EmailDocumentValidator.MaxPreheaderLength` (100) characters is reported as
+  `validation.preheader.too_long` with `Info` severity, and the validation dialog now renders an icon per
+  finding (`[data-tm-validation-icon]`) so severity is not colour-only.
+
+- **`TemplateVariableInfo.Description` / `Group` are part of the record's equality (B9).** Host-supplied
+  metadata for the variable picker (the picker searches both, and shows the description next to the
+  token); variables extracted from a document keep them `null`. A host that compared `TemplateVariableInfo`
+  instances or used them as dictionary keys sees a different `Equals`/`GetHashCode` than before — the
+  compiler-visible shape is unchanged.
 
 ## 2.9.1 (unreleased)
 
