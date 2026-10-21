@@ -234,6 +234,10 @@ public partial class TmEmailTemplateEditor
     private bool _rightOpen = true;
     // Set by a structural change, consumed in OnAfterRenderAsync: the block the caller wants focused.
     private Guid? _focusBlockAfterRender;
+    // Set by a rail expansion, consumed in OnAfterRenderAsync: which expanded panel's toggle takes the
+    // focus the unmounted rail button lost. Only the inspector rail is host-owned — the palette rail is
+    // the shell's own toggle, and the shell restores that focus itself.
+    private string? _focusPanelToggleAfterRender;
     // The layout generation the collapse bridge compares against (U2): a raise "in the layout's batch"
     // is a layout state. See Layout.cs.
     private TmLayoutMode? _layoutModeParamSeen;
@@ -255,6 +259,7 @@ public partial class TmEmailTemplateEditor
 
     private ElementReference _rootRef;
     private IJSObjectReference? _shortcutModule;
+    private IJSObjectReference? _panelFocusModule;
 
     private bool _showExport;
     private bool _showImport;
@@ -364,6 +369,14 @@ public partial class TmEmailTemplateEditor
             await FocusCanvasAsync(target);
         }
 
+        // A rail expansion armed the focus recovery for the panel's own toggle: the rail button is gone
+        // by now, and the expanded toggle only exists after this render (review item 18c).
+        if (_focusPanelToggleAfterRender is { } panelSide)
+        {
+            _focusPanelToggleAfterRender = null;
+            await FocusExpandedPanelToggleAsync(panelSide);
+        }
+
         SettleLayoutGeneration();
     }
 
@@ -392,6 +405,7 @@ public partial class TmEmailTemplateEditor
         }
 
         DetachSaveShortcut();
+        DisposePanelFocus();
     }
 
     /// <summary>One queued save request and the caller waiting for its result.</summary>

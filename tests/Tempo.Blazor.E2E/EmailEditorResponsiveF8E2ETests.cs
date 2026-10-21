@@ -229,6 +229,53 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
     }
 
     [TestMethod]
+    public async Task Tablet_1024_keyboard_expansion_moves_focus_to_the_expanded_panels_toggle()
+    {
+        var page = await OpenEditorAsync(1024, 800, touch: true);
+        await ExpandEditorToViewportAsync(page);
+        await WaitForLayoutAsync(page, "tablet");
+        (await page.Locator("[data-region='rail-left']").CountAsync()).Should().Be(1,
+            "the inspector wins the tablet by default (F6-SHELL-PANEL-STATES)");
+
+        // ── The palette's rail: Enter on the rail toggle expands the docked panel ────────────
+        await page.Locator("[data-region='rail-left'] button").First.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForSelectorAsync("[data-region='left'] [data-tm-toolbox]", new() { Timeout = 15000 });
+
+        // Review item 18c: the focused rail button unmounted with the rail, so the focus follows the
+        // panel it opened — onto the expanded panel's own collapse toggle, never onto <body>.
+        (await ExpandedPanelToggleFocusedAsync(page, "left")).Should().BeTrue(
+            "Enter on the palette's rail toggle must land the focus on the expanded left panel's toggle");
+
+        // ── The inspector's rail: the same trip for the panel the host owns ─────────────────
+        var expandProperties = page.Locator("[data-tm-properties-rail] [data-tm-expand-properties]");
+        (await expandProperties.CountAsync()).Should().Be(1,
+            "the now-railed inspector offers its own way back (review item 15)");
+        await expandProperties.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForSelectorAsync("aside.tm-editor-shell__panel--right", new() { Timeout = 15000 });
+
+        (await ExpandedPanelToggleFocusedAsync(page, "right")).Should().BeTrue(
+            "Enter on the inspector's rail button must land the focus on the expanded right panel's toggle");
+    }
+
+    /// <summary>
+    /// Whether the focus sits on the EXPANDED panel's toggle for <paramref name="side"/>: the toggle class
+    /// with <c>aria-expanded="true"</c>, outside any rail (the rail's own toggle reports collapsed).
+    /// </summary>
+    private static async Task<bool> ExpandedPanelToggleFocusedAsync(IPage page, string side)
+        => await page.EvaluateAsync<bool>(
+            $$"""
+            () => {
+                const a = document.activeElement;
+                if (!a) return false;
+                return a.classList.contains('tm-editor-shell__panel-toggle--{{side}}')
+                    && a.getAttribute('aria-expanded') === 'true'
+                    && !a.closest('[data-region^="rail"]');
+            }
+            """);
+
+    [TestMethod]
     public async Task Tablet_1024_dark_mode_keeps_the_docked_chrome_readable()
     {
         // Auto layout (the demo seeds no forced mode): the shell measures its own container at 1024 px.

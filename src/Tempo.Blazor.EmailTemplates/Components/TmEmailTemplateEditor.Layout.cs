@@ -89,6 +89,9 @@ public partial class TmEmailTemplateEditor
     private async Task ExpandPropertiesPanelAsync()
     {
         _rightOpen = true;
+        // The button that raised this unmounts with the rail: arm the focus recovery for the expanded
+        // panel's own toggle (review item 18c — a keyboard user must not land on <body>).
+        _focusPanelToggleAfterRender = "right";
         if (!ToolboxCollapsedEffective)
         {
             _toolboxCollapsedInternal = true;

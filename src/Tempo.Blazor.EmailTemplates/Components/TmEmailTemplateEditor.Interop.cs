@@ -29,6 +29,7 @@ namespace Tempo.Blazor.EmailTemplates.Components;
 public partial class TmEmailTemplateEditor
 {
     private const string SaveShortcutModulePath = "./_content/Tempo.Blazor.EmailTemplates/tm-email-save-shortcut.js";
+    private const string PanelFocusModulePath = "./_content/Tempo.Blazor.EmailTemplates/tm-email-panel-focus.js";
 
     // ── JS interop: cancel the browser's own Ctrl/⌘+S -----------------------------------------
 
@@ -92,6 +93,66 @@ public partial class TmEmailTemplateEditor
         }
         catch (JSException)
         {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    // ── JS interop: focus after a host-owned rail expansion ------------------------------------
+
+    /// <summary>
+    /// Moves the focus the unmounted rail button lost onto the EXPANDED panel's toggle (the shell does
+    /// this for its own rail toggle, but <c>[data-tm-expand-properties]</c> is the host's button, so the
+    /// core cannot know the target). Runs after the render that swapped the rail for the panel; the JS
+    /// helper refuses to steal a focus the user placed on another live control.
+    /// </summary>
+    private async Task FocusExpandedPanelToggleAsync(string side)
+    {
+        try
+        {
+            _panelFocusModule ??= await JS.InvokeAsync<IJSObjectReference>("import", PanelFocusModulePath);
+            if (_disposed || _panelFocusModule is null) return;
+            await _panelFocusModule.InvokeVoidAsync(
+                "focusRailExpandedToggle", _rootRef, $".tm-editor-shell__panel-toggle--{side}");
+        }
+        catch (JSException)
+        {
+            // Interop is unavailable (prerendering, tests): no focus to recover.
+        }
+        catch (InvalidOperationException)
+        {
+            // No JS runtime during prerendering.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; the focus target is gone with it.
+        }
+        catch (TaskCanceledException)
+        {
+            // The render was cancelled (navigation/disposal mid-import).
+        }
+    }
+
+    private void DisposePanelFocus()
+    {
+        var module = _panelFocusModule;
+        _panelFocusModule = null;
+        if (module is null) return;
+        _ = DisposePanelFocusCoreAsync(module);
+    }
+
+    private static async Task DisposePanelFocusCoreAsync(IJSObjectReference module)
+    {
+        try
+        {
+            await module.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {

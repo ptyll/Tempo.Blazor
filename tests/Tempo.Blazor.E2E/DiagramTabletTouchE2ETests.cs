@@ -418,12 +418,18 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
 
         var before = await GetNodeSizeAsync(page, nodeId!);
+        // The step comes from the editor instance the demo configured (GridSize="20" on the page, carried
+        // into the canvas instance as gridSize), never from a literal here: the assertion below is about
+        // the SNAP, so it must follow whatever grid the document actually has.
+        var gridStep = await GetGridStepAsync(page);
         await MouseResizeAsync(page, nodeId!, "se", 60);
         var after = await GetNodeSizeAsync(page, nodeId!);
-        // The model snaps to the document GRID (20 units), so a 60 px drag lands on the next grid steps and
-        // the exact delta is not the assertion's business — one full grid step proves the mouse path ran.
-        Assert.IsTrue(after.w >= before.w + 20,
+        // The mouse path must still resize, and the model snaps to the document grid: the delta is a whole
+        // number of grid steps (a weakening "at least one step" would accept a resize that skipped the snap).
+        Assert.IsTrue(after.w > before.w,
             $"the mouse resize path must keep working at desktop (before {before.w}, after {after.w})");
+        Assert.AreEqual(0, (after.w - before.w) % gridStep,
+            $"the resize width must land exactly on the document grid (step {gridStep}, before {before.w}, after {after.w})");
     }
 
     [TestMethod]
@@ -591,6 +597,26 @@ public sealed class DiagramTabletTouchE2ETests : WasmTestBase
         Assert.IsNotNull(json, $"node {nodeId} must exist");
         using var doc = System.Text.Json.JsonDocument.Parse(json!);
         return (doc.RootElement.GetProperty("w").GetDouble(), doc.RootElement.GetProperty("h").GetDouble());
+    }
+
+    /// <summary>
+    /// The document grid the demo configured for this editor, read from the live canvas instance (the
+    /// <c>GridSize="20"</c> the page passes to TmDiagramEditor ends up as <c>inst.gridSize</c>) — the snap
+    /// assertions derive the step from the document instead of hardcoding 20 in the spec.
+    /// </summary>
+    private static async Task<double> GetGridStepAsync(IPage page)
+    {
+        var step = await page.EvaluateAsync<double?>(
+            """
+            () => {
+                const canvas = document.querySelector('.tm-diagram-canvas');
+                if (!canvas || !canvas.id || !window.tmDiagramEditor) return null;
+                const inst = window.tmDiagramEditor.instances.get(canvas.id);
+                return inst && typeof inst.gridSize === 'number' && inst.gridSize > 0 ? inst.gridSize : null;
+            }
+            """);
+        Assert.IsNotNull(step, "the diagram document must expose a grid step (the demo configures GridSize)");
+        return step!.Value;
     }
 
     /// <summary>Dispatches a synthetic touch-pointer drag on the node's SE resize hit rect.</summary>

@@ -602,7 +602,7 @@ Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`
 - `Tempo.Blazor.Signing`: `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js` (loaded by `TmPdfTemplateDesigner` as an ES module)
-- `Tempo.Blazor.EmailTemplates`: `_content/Tempo.Blazor.EmailTemplates/tm-email-save-shortcut.js` (loaded by `TmEmailTemplateEditor` as an ES module; cancels the browser's Save-page default for Ctrl/⌘+S only, one listener per editor element) and `tm-email-variable-insert.js` (caret insertion for the variable picker). Its `__tests__/*.test.mjs` files live inside `wwwroot` (the packages' node lanes import the modules directly) and are excluded from the published static web assets by the csproj.
+- `Tempo.Blazor.EmailTemplates`: `_content/Tempo.Blazor.EmailTemplates/tm-email-save-shortcut.js` (loaded by `TmEmailTemplateEditor` as an ES module; cancels the browser's Save-page default for Ctrl/⌘+S only, one listener per editor element), `tm-email-variable-insert.js` (caret insertion for the variable picker) and `tm-email-panel-focus.js` (focus recovery onto the expanded panel's toggle after a host-owned rail button, e.g. the inspector rail, unmounts). Its `__tests__/*.test.mjs` files live inside `wwwroot` (the packages' node lanes import the modules directly) and are excluded from the published static web assets by the csproj.
 
 ## Security Considerations
 
