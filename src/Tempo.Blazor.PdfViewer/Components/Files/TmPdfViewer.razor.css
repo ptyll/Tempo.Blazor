@@ -384,6 +384,9 @@
     top: var(--tm-space-4);
     left: 50%;
     transform: translateX(-50%);
+    /* PDF.js rotation contract: the layer rotates around its layout top-left corner
+       (the official .textLayer origin), never around its center. */
+    transform-origin: 0 0;
     pointer-events: auto;
     /* PDF.js v5 TextLayer contract: the layer is one line-box tall per glyph row and
        clips the (invisible) span boxes to the page — the mirror of the official
@@ -391,6 +394,26 @@
     line-height: 1;
     overflow: hidden;
     text-align: initial;
+}
+
+/* Rotation (PDF.js `data-main-rotation`): the TextLayer container keeps the UNROTATED
+   page box — setLayerDimensions writes pageWidth × pageHeight × --total-scale-factor
+   inline and tags data-main-rotation — while the canvas is re-rendered at the rotated
+   viewport size. The CSS rotation maps the unrotated box back onto that canvas. The
+   single-page layer is anchored at the canvas center-x (left: 50%), so the pre-rotation
+   shifts below are halves of the UNROTATED box: after the rotate(90/270) the -50%
+   Y-shift lands as the exact ±(rotated width / 2) centering, which a translateX(-50%)
+   prepend could not express (its percentage resolves against the unrotated width). */
+.tm-pdf-viewer__text-layer[data-main-rotation="90"] {
+    transform: rotate(90deg) translateY(-50%);
+}
+
+.tm-pdf-viewer__text-layer[data-main-rotation="180"] {
+    transform: rotate(180deg) translate(-50%, -100%);
+}
+
+.tm-pdf-viewer__text-layer[data-main-rotation="270"] {
+    transform: rotate(270deg) translate(-100%, -50%);
 }
 
 /* The TextLayer spans paint nothing (FZE-9: no doubled glyphs under the canvas) but stay
@@ -512,7 +535,27 @@
     top: 0;
     left: 0;
     transform: none;
+    /* The per-page layers are built by pdf-viewer.js and never carry the Blazor scope
+       attribute, so the scoped base rule above cannot give them the rotation origin —
+       without it they would spin around their center instead of the page corner. */
+    transform-origin: 0 0;
     z-index: 1;
+}
+
+/* Rotation for the continuous per-page layers (JS-built DOM → ::deep). These layers sit
+   at the page-inner's top-left corner — exactly the official PDF.js inset:0 placement —
+   so the official [data-main-rotation] transforms apply unchanged: each maps the
+   unrotated page box onto the rotated canvas box. */
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="90"] {
+    transform: rotate(90deg) translateY(-100%);
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="180"] {
+    transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="270"] {
+    transform: rotate(270deg) translateX(-100%);
 }
 
 .tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__search-layer {

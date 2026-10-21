@@ -142,6 +142,8 @@
                      ShowToolbar="true"
                      ShowViewModeToggle="true"
                      ShowSearch="true"
+                     ShowTextLayer="true"
+                     AllowRotation="true"
                      ViewMode="PdfViewMode.Continuous"
                      AllowDownload="true"
                      ToolbarLabels="ToolbarLabels.Auto"
@@ -158,10 +160,12 @@
 
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Rotate the document in 90° increments (0° → 90° → 180° → 270°).
+            Rotate the document in 90° increments (0° → 90° → 180° → 270°). The selectable
+            text layer stays aligned with the rotated canvas at every angle.
         </p>
         <TmPdfViewer Url="@_demoPdfUrl"
                      ShowToolbar="true"
+                     ShowTextLayer="true"
                      AllowRotation="true"
                      AllowDownload="true"
                      ToolbarLabels="ToolbarLabels.Auto"

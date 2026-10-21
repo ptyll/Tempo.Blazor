@@ -146,7 +146,13 @@ clamped to the absolute 0.1–5 bounds. Every zoom button, preset and pinch **de
 ### Text layer, search and touch
 
 `ShowTextLayer` renders a selectable text layer (`color: transparent` — never element opacity, so
-the native selection highlight and touch handles stay full strength). Text selection reports
+the native selection highlight and touch handles stay full strength). PDF.js v5 builds the layer
+in the page's **unrotated** coordinate space (`setLayerDimensions` writes the unscaled page box
+and a `data-main-rotation` attribute on the container), so rotation stays pure CSS: the package
+maps the unrotated box onto the rotated canvas with `[data-main-rotation="90|180|270"]`
+transforms (`transform-origin: 0 0`) — the centered single-page layer uses pre-rotation
+half-box shifts, the continuous per-page layers (JS-built DOM, `::deep`) the official PDF.js
+inset forms. Text selection reports
 through `OnTextSelected` (`EnableTextSelectionEvents` without annotations); the report fires on
 `selectionchange` + `pointerup`, and a pending selection pins the sticky comment CTA on tablet
 and mobile. Search (`ShowSearch`) returns per-page matches, highlights them, and scrolls the
