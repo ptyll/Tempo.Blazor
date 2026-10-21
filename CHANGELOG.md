@@ -340,7 +340,7 @@
   group contract), while the search control received the standard toolbar-group chrome. The
   Modeling preview hides it with `ShowTitle="false"`.
 
-- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` (renamed from `ExportSelectedOnly`; it filters the exported rows to the checked selection), `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation.
+- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` (it filters the exported rows to the checked selection; see Breaking / Migration), `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation.
 
 - **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
 
@@ -1247,6 +1247,27 @@
   - `TmViewManager` items are buttons inside `.tm-view-item-row`, the panel is a `TmOverlayPanel` (the `.tm-overlay` backdrop is gone) and the toggle is `tm-btn-outline` with `aria-expanded` / `aria-haspopup="dialog"`. <!-- snapshot:dt-viewmanager -->
     Before: `<button class="tm-btn tm-btn-secondary tm-view-manager-toggle">`
     After: `<button class="tm-btn tm-btn-outline tm-view-manager-toggle" aria-expanded="true" aria-haspopup="dialog">`
+    View item before/after (exact markup from `git show 259f900a:src/Tempo.Blazor/Components/DataTable/TmViewManager.razor`):
+    Before:
+    ```html
+    <div class="tm-view-item tm-view-item--active" @onclick="() => ApplyViewAsync(view)">
+      <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+    </div>
+    ```
+    After:
+    ```html
+    <div class="tm-view-item-row">
+      <button type="button" class="tm-view-item tm-view-item--active" aria-current="true" @onclick="() => ApplyViewAsync(view)">
+        <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+      </button>
+    </div>
+    ```
+    Backdrop before/after (exact markup from the same commit):
+    Before:
+    ```html
+    <div class="tm-overlay" @onclick="CloseDropdown"></div>
+    ```
+    After: no backdrop element — the panel renders as a `TmOverlayPanel` in the browser top layer (click-outside closing is handled by the overlay panel).
   - Group toggles and the group-chip remove control use `TmIcon` plus `aria-expanded` / `aria-label` instead of `▼`, `▶` and `×`. <!-- snapshot:dt-grouping --> <!-- snapshot:mvl-grouped -->
     Before: `<button class="tm-data-table-group-chip-remove">×</button>`
     After: `<button class="tm-data-table-group-chip-remove" aria-label="Remove grouping by Role"><svg class="tm-icon">…</svg></button>`
@@ -1264,8 +1285,41 @@
   - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` named "View" (not "Table view") with one roving `tabindex`, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
     Before: `<span class="tm-mvl-status">Active</span>`
     After: `<span class="tm-badge tm-mvl-status">Active</span>`
-  - `ExportSelectedOnly` was renamed to `AllowExportSelected`. Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
-  - `TmOverlayPanel.RestoreFocusTargetId` was removed. Focus returns to the anchor; do not pass the old parameter.
+  - View switcher before/after (exact markup from `git show 259f900a:src/Tempo.Blazor/Components/DataDisplay/TmMultiViewList.razor`):
+    Before:
+    ```html
+    <div class="tm-mvl-switcher">
+      <button type="button" class="tm-mvl-switch-table tm-mvl-switch--active" aria-label="Table view" @onclick="…"><span>☐</span></button>
+    ```
+    After:
+    ```html
+    <div class="tm-mvl-switcher" role="radiogroup" aria-label="View">
+      <button type="button" class="tm-mvl-switch-table tm-mvl-switch--active" role="radio" aria-checked="true" aria-label="Table view" tabindex="0" @onclick="…" @onkeydown="…"><span>☐</span></button>
+    ```
+    The group label changed from the per-button "Table view" phrasing to one group label "View" (`TmMvl_ViewSwitcher`), and exactly one button carries `tabindex="0"` (roving tabindex).
+
+- **`ExportSelectedOnly` was renamed to `AllowExportSelected`.** <!-- snapshot:dt-export -->
+  Before:
+  ```razor
+  <TmDataTable Data="_items" Selectable="true" ExportSelectedOnly="true" … />
+  ```
+  After:
+  ```razor
+  <TmDataTable Data="_items" Selectable="true" AllowExportSelected="true" … />
+  ```
+  Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
+
+- **`TmOverlayPanel.RestoreFocusTargetId` was removed.** Focus returns to the anchor; do not pass the old parameter.
+  Before:
+  ```razor
+  <TmButton @ref="_trigger">Options</TmButton>
+  <TmOverlayPanel Anchor="@_trigger" RestoreFocusTargetId="options-trigger" … />
+  ```
+  After:
+  ```razor
+  <TmButton @ref="_trigger">Options</TmButton>
+  <TmOverlayPanel Anchor="@_trigger" … />
+  ```
 
 - **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below
   768px now renders the dedicated mobile layout, replacing the old `max-width: 640px` viewport
