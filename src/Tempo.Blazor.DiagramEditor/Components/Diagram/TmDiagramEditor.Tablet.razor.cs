@@ -101,9 +101,30 @@ public partial class TmDiagramEditor
     {
         if (_resolvedLayout == mode) return Task.CompletedTask;
         ApplyResolvedLayout(mode);
+        // 2.10.0 (U2/D27): the shell raises this BEFORE CollapsedPanelsChanged, so the collapse raise that
+        // follows in the SAME batch is the rail the LAYOUT imposed (a flip, the tablet single-dock rule) —
+        // never a user hide/show. The generation makes that decidable here, exactly like the e-mail editor.
+        _layoutGeneration++;
         StateHasChanged();
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// The layout-change generation: bumped by every layout SIGNAL (<see cref="OnShellResolvedLayoutChanged"/>
+    /// — which the shell raises first — and a change of the forced <see cref="LayoutMode"/> parameter, which
+    /// resolves on the parameter pass before the shell's own collapse raise). Compared with
+    /// <see cref="_layoutGenerationAtRender"/> it answers "did the layout change in THIS batch?".
+    /// </summary>
+    private int _layoutGeneration;
+
+    /// <summary>The generation the last render served: the raise is "in the layout's batch" while the counter is ahead.</summary>
+    private int _layoutGenerationAtRender;
+
+    /// <summary>True while a layout change has been signalled and no render has settled yet.</summary>
+    private bool LayoutChangedInThisBatch => _layoutGeneration != _layoutGenerationAtRender;
+
+    /// <summary>Marks the generation the render settled (called from <c>OnAfterRenderAsync</c>).</summary>
+    private void SettleLayoutGeneration() => _layoutGenerationAtRender = _layoutGeneration;
 
     /// <summary>Enters/exits the tablet presentation around the resolved layout.</summary>
     /// <remarks>
@@ -208,8 +229,13 @@ public partial class TmDiagramEditor
     /// </summary>
     private Task OnShellCollapsedPanelsChanged(EditorShellPanel collapsed)
     {
+        // A raise that belongs to the layout change of THIS batch (the shell raises the layout first) is
+        // the layout's own rail: mirror the set, but never read it as the user hiding a panel on desktop —
+        // that turned every flip into "the user closed the inspector", dropped the node selection and left
+        // the canvas without its resize handles (measured in the 1440 desktop regression spec).
+        var layoutCaused = LayoutChangedInThisBatch;
         _shellCollapsed = collapsed;
-        if (_resolvedLayout != TmLayoutMode.Tablet)
+        if (!layoutCaused && _resolvedLayout != TmLayoutMode.Tablet)
         {
             if (ShowToolbox) _toolboxCollapsed = collapsed.HasFlag(EditorShellPanel.Left);
             if (collapsed.HasFlag(EditorShellPanel.Right))

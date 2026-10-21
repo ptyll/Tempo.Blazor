@@ -297,6 +297,10 @@ public partial class TmDiagramEditor
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        // The render served the layout generation it was rendered with: from here on a collapse raise is a
+        // USER action again (U2/D27).
+        SettleLayoutGeneration();
+
         // UX review: the minimap overlay collapse/reopen and the mobile "⋯" menu actions re-assert
         // focus on the control that owns the map next — through the element reference, so a layout
         // flip that unmounted the target simply skips (TryFocusAsync).

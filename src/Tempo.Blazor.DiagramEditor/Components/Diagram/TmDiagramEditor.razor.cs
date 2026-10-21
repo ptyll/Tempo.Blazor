@@ -350,6 +350,9 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
         {
             ApplyResolvedLayout(LayoutMode);
+            // The forced mode resolves on THIS pass, before the shell's own collapse raise: mark the
+            // generation so that raise is read as a layout state (U2/D27), like the shell callback path.
+            _layoutGeneration++;
         }
 
         // Every effective read-only change (host parameter or user toggle) applies its transition
