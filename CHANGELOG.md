@@ -4,6 +4,27 @@
 
 ### Added
 
+- **PdfViewer & Annotator redesign — plan summary (phases 1–10).** `Tempo.Blazor.PdfViewer`
+  (`TmPdfViewer`, `TmPdfAnnotator`, the two thread panels and the annotation layers) was rebuilt
+  against the reference mockups: wave-0 bug/a11y fixes independent of the redesign (phase 1 —
+  JS document state keyed per root element instead of per canvas, visible loading/error states,
+  HiDPI with a DPR cap of 2, per-instance listeners, thumbnail reuse of the open document, aria
+  wiring), tokenization from the removed undefined aliases to the canonical core tokens so the
+  palette, the indigo theme and dark mode propagate (phase 2), the grouped toolbar with an
+  editable page input, zoom presets with Fit width/Fit page, the optional document header and
+  collapsible thumbnails (phase 3), the shared thread cards for both panels with comment editing
+  and a panel close (phase 4, PD3/PD4), the annotator on ONE toolbar with pass-through viewer
+  parameters (phase 5), the full continuous mode — lazy render queue, canvas release outside the
+  viewport band, scroll-tracked page, per-page text layer and search (phase 6; PD1 keeps
+  annotations and `OverlayContent` single-page only), the labelled and responsive viewer for
+  tablet and mobile on container queries + `TmLayoutMode` + the core sheets (phase 7), the
+  annotator's tablet/mobile G2 presentation (phase 8) and touch — pinch zoom, touch text
+  selection, pen priority, relative time and plural keys (phase 9) on the shared core gesture
+  helpers. The full contract — fit modes, header/slots, toolbar `data-tm-group` vocabulary,
+  responsive behavior, touch and the migration notes — is documented in
+  [docs/pdf-viewer.md](docs/pdf-viewer.md); every breaking DOM/CSS change is listed under
+  Breaking / Migration below.
+
 - **TmPdfAnnotator: the annotator and its panel on tablet and mobile (FZE-8).** The annotator now
   resolves its layout from its own container through the embedded `TmEditorShell` (new
   `LayoutMode` parameter, `TmLayoutMode`, default `Auto` — a forced value pins the layout so

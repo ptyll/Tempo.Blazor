@@ -467,6 +467,8 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 |-----------|-------------|
 | `TmFileDropZone` | Drag & drop file upload zone |
 | `TmAttachmentManager` | Attachment list with upload/download/delete |
+| `TmPdfViewer` | PDF.js v5 viewer — responsive toolbar, zoom presets + fit modes, thumbnails, search, text layer, continuous scroll, optional annotations ([docs/pdf-viewer.md](docs/pdf-viewer.md)) |
+| `TmPdfAnnotator` | PDF annotator — one merged toolbar (highlight/comment/stamp/draw), export/print, comment threads, desktop/tablet/mobile layouts ([docs/pdf-viewer.md](docs/pdf-viewer.md)) |
 | `TmImageGallery` | Image gallery with grid/gallery views |
 | `TmLightbox` | Full-screen image lightbox with keyboard nav |
 

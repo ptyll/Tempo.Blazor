@@ -22,7 +22,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 12. [DataTable](#datatable) — TmDataTable, TmDataTableColumn, TmPagination, TmColumnPicker, TmViewManager, TmFilterBuilder, TmFilterChip, TmBulkActionBar
 13. [Spreadsheet](#spreadsheet) — TmSpreadsheet
 14. [Layout](#layout) — TmDrawer, TmSidebar, TmTopBar, TmBreadcrumbs, TmCommandPalette, TmSection, TmKeyboardShortcutsHelp
-15. [Soubory a přílohy](#soubory-a-přílohy) — TmFileDropZone, TmAttachmentManager, TmPdfViewer
+15. [Soubory a přílohy](#soubory-a-přílohy) — TmFileDropZone, TmAttachmentManager, TmPdfViewer, TmPdfAnnotator
 16. [Galerie](#galerie) — TmImageGallery, TmLightbox
 17. [Import/Export](#importexport) — TmExportOptions, TmImportWizard, TmImportPreview
 18. [Grafy](#grafy) — TmChart, TmStockChart, TmSparkline, TmGauge
@@ -4629,47 +4629,60 @@ Správa příloh entity (nahrávání, seznam, mazání).
 
 ### TmPdfViewer
 
-PDF prohlížeč postavený na PDF.js v5. Podporuje navigaci stránkami, zoom, rotaci, miniaturu sidebar, full-text vyhledávání, textovou vrstvu a kontinuální scroll.
+PDF prohlížeč postavený na PDF.js v5 (balíček `Tempo.Blazor.PdfViewer`). Podporuje navigaci stránkami, zoom presety a fit režimy, rotaci, miniatury, full-text vyhledávání, textovou vrstvu, responzivní layout (desktop/tablet/mobil z vlastního kontejneru) a plnohodnotný kontinuální scroll. Kompletní smlouva: [docs/pdf-viewer.md](docs/pdf-viewer.md).
 
-#### CSS třídy
+#### Rozložení (layout modes)
 
-| Třída | Popis |
-|-------|-------|
-| `tm-pdf-viewer` | Kořenový kontejner |
-| `tm-pdf-viewer__toolbar` | Panel nástrojů |
-| `tm-pdf-viewer__pagination` | Navigace stránek |
-| `tm-pdf-viewer__zoom` | Ovládání zoomu |
-| `tm-pdf-viewer__rotation` | Rotace |
-| `tm-pdf-viewer__view-mode` | Přepínání režimu zobrazení |
-| `tm-pdf-viewer__file-actions` | Akce souboru (otevřít, stáhnout) |
-| `tm-pdf-viewer__search-bar` | Vyhledávací panel |
-| `tm-pdf-viewer__search-input` | Vyhledávací pole |
-| `tm-pdf-viewer__body` | Tělo prohlížeče |
-| `tm-pdf-viewer__thumbnails` | Sidebar s miniaturami |
-| `tm-pdf-viewer__canvas-wrap` | Obal canvasu (SinglePage) |
-| `tm-pdf-viewer__canvas` | Canvas element |
-| `tm-pdf-viewer__text-layer` | Textová vrstva nad canvasem |
-| `tm-pdf-viewer__continuous-wrap` | Scroll kontejner (Continuous) |
-| `tm-pdf-viewer__embed` | Fallback embed |
-| `tm-pdf-viewer__empty` | Prázdný stav (bez URL) |
+| Režim | Chování |
+|-------|---------|
+| Desktop (≥1024) | Ukotvený chrome: toolbar, volitelná hlavička, miniatury, panel komentářů |
+| Tablet (640–1023) | Miniatury sbalené („Stránky“ je znovu otevře), popisky pod ikonami, komentáře jako `TmSidePanel` (zavřený) |
+| Mobil (<640) | Komprimo­vaný toolbar + „Více“ menu, `TmMobileActionBar` (Stránky \| Hledat \| Komentáře), sheet-y, `ZoomMode=Auto` → fit-width |
+
+`LayoutMode` (default `Auto`) nebo forcing `TmLayoutContext` předka režim pinne.
+
+#### Skupiny toolbaru (`data-tm-group`)
+
+`navigation` · `zoom` · `rotate` · `view` · `panels` · `search` · `comments` · `export` — hosté se klíčí na `data-tm-group`, ne na poziční selektory. Složitější skladba přes sloty `ToolbarStart` / `ToolbarEnd`.
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Url` | `string?` | `null` | URL PDF dokumentu |
-| `Page` / `PageChanged` | `int` / `EventCallback<int>` | `1` | Aktuální stránka (two-way) |
+| `Page` / `PageChanged` | `int` / `EventCallback<int>` | `1` | Aktuální stránka (two-way; v Continuous sleduje scroll) |
 | `Scale` / `ScaleChanged` | `double` / `EventCallback<double>` | `1.0` | Zoom (two-way) |
 | `ViewMode` / `ViewModeChanged` | `PdfViewMode` / `EventCallback<PdfViewMode>` | `SinglePage` | Režim zobrazení (two-way) |
+| `ZoomMode` / `ZoomModeChanged` | `PdfZoomMode` / `EventCallback<PdfZoomMode>` | `Auto` | `Auto` (fit-width na mobilu), `Custom`, `FitWidth`, `FitPage`; tlačítka/presety/pinch přepnou na `Custom` |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Responzivní layout (pin režimu) |
+| `ToolbarLabels` | `ToolbarLabels` | `Icons` | `Icons`, `Auto`, `IconsWithText` |
 | `ShowToolbar` | `bool` | `true` | Zobrazit toolbar |
 | `ShowThumbnails` | `bool` | `false` | Zobrazit sidebar s miniaturami |
 | `ShowSearch` | `bool` | `false` | Zobrazit vyhledávání |
 | `ShowTextLayer` | `bool` | `false` | Zobrazit textovou vrstvu |
 | `ShowViewModeToggle` | `bool` | `false` | Zobrazit přepínač režimu |
+| `ShowMobileActionBar` | `bool` | `true` | Mobilní akční lišta (Stránky \| Hledat \| Komentáře) |
 | `AllowRotation` | `bool` | `false` | Povolit rotaci |
-| `AllowDownload` | `bool` | `true` | Povolit stahování |
+| `AllowDownload` | `bool` | `true` | Stahování (primární akce) |
+| `ShowOpenLink` | `bool` | `true` | Odkaz „Otevřít v nové kartě“ |
+| `ShowHeader` | `bool` | `false` | Hlavička dokumentu nad toolbarem (přesune tam Otevřít/Stáhnout) |
+| `Title` / `Subtitle` | `string?` | `null` | Text hlavičky; titulek defaultně „Stránky: N“ |
+| `ThumbnailsCollapsed` / `…Changed` | `bool` / `EventCallback<bool>` | `false` | Sbalené miniatury (two-way) |
 | `Height` | `string?` | `"600px"` | Výška prohlížeče |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `EnableAnnotations` | `bool` | `false` | Anotační vrstva a panel komentářů (jen SinglePage, PD1) |
+| `AnnotationProvider` | `IPdfAnnotationProvider?` | `null` | Perzistence anotací (default in-memory) |
+| `DocumentId` | `string?` | `null` | ID dokumentu pro providera (fallback `Url`) |
+| `CurrentUser` | `DocumentCommentUser?` | `null` | Autor anotací |
+| `ShowResolvedAnnotations` | `bool` | `false` | Zobrazit vyřešená vlákna |
+| `Annotations` / `AnnotationsChanged` | `IReadOnlyList<DocumentCommentThread>?` | `null` | Seed vlákna bez providera |
+| `OnTextSelected` | `EventCallback<PdfTextSelection>` | — | Výběr textu (s `EnableTextSelectionEvents`) |
+| `EnableTextSelectionEvents` | `bool` | `false` | Události výběru bez anotační vrstvy |
+| `OverlayContent` | `RenderFragment?` | `null` | Overlay zarovnaný s canvasem (jen SinglePage, PD1) |
+| `OnDocumentLoaded` | `EventCallback<int>` | — | Počet stránek po načtení |
+| `ToolbarStart` / `ToolbarEnd` | `RenderFragment?` | `null` | Sloty pro hostské skupiny v toolbaru |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Sloty hlavičky |
+| `SelectionCtaContent` | `RenderFragment?` | `null` | Obsah sticky CTA řádku výběru (mimo scroll plochu) |
 
 #### Příklady
 
@@ -4677,19 +4690,73 @@ PDF prohlížeč postavený na PDF.js v5. Podporuje navigaci stránkami, zoom, r
 <!-- Základní použití -->
 <TmPdfViewer Url="https://example.com/doc.pdf" />
 
-<!-- S miniaturami a vyhledáváním -->
+<!-- Responzivní prohlížeč s hlavičkou a fit režimy -->
 <TmPdfViewer Url="@pdfUrl"
+             ToolbarLabels="ToolbarLabels.Auto"
              ShowThumbnails="true"
              ShowSearch="true"
              ShowTextLayer="true"
+             ShowViewModeToggle="true"
              AllowRotation="true"
+             ShowHeader="true"
+             Title="Smlouva"
              Height="600px" />
 
+<!-- Fit šířce na všech šířkách (opt-out z defaultu Auto) -->
+<TmPdfViewer Url="@pdfUrl" ZoomMode="PdfZoomMode.FitWidth" />
+
 <!-- Kontinuální scroll -->
-<TmPdfViewer Url="@pdfUrl"
-             ShowViewModeToggle="true"
-             ViewMode="PdfViewMode.Continuous"
-             Height="700px" />
+<TmPdfViewer Url="@pdfUrl" ShowViewModeToggle="true" ViewMode="PdfViewMode.Continuous" />
+```
+
+### TmPdfAnnotator
+
+Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky nástrojů (Browse / Highlight / Comment / Stamp / Draw) se barva a přepínač panelu slučují do toolbaru vloženého prohlížeče přes `ToolbarStart`/`ToolbarEnd`; skupina exportu žije v hlavičce. Pass-through parametry prohází do prohlížeče; prohlížeč je trvale pinnutý na SinglePage (PD1). Na mobilu G2: prohlížení + lehké úpravy (pouze Browse a Přidat komentář, panel jako bottom sheet). Detail: [docs/pdf-viewer.md](docs/pdf-viewer.md).
+
+#### Parametry
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Url` | `string?` | `null` | URL PDF dokumentu |
+| `DocumentId` | `string?` | `null` | ID dokumentu pro providera (fallback `Url`) |
+| `Height` | `string?` | `"600px"` | Výška anotátoru (viewer se vejde dovnitř) |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AnnotationProvider` | `IPdfAnnotationProvider?` | `null` | Perzistence anotací (default in-memory) |
+| `CurrentUser` | `DocumentCommentUser?` | `null` | Autor anotací |
+| `Users` | `IReadOnlyList<DocumentCommentUser>?` | `null` | Uživatelé pro role-based barvy |
+| `AuthorColors` / `RoleColors` | `IReadOnlyDictionary<string, string>?` | `null` | Barvy anotací podle autora / role |
+| `AnnotationColor` | `string?` | `null` | Explicitní barva nových anotací |
+| `Mode` / `ModeChanged` | `PdfAnnotatorMode` / `EventCallback<PdfAnnotatorMode>` | `Browse` | Aktivní nástroj (two-way) |
+| `StampOptions` | `IReadOnlyList<string>?` | `null` | Texty razítek (default lokalizované) |
+| `ShowResolved` / `ShowResolvedChanged` | `bool` / `EventCallback<bool>` | `false` | Filtr vyřešených (two-way) |
+| `ShowPanel` / `ShowPanelChanged` | `bool` / `EventCallback<bool>` | `true` | Panel vláken (two-way; ✕ funguje i bez bindingu) |
+| `ShowViewerToolbar` | `bool` | `true` | Kompatibilita: `false` skryje chrome vieweru a vykreslí kompaktní řadu nástrojů |
+| `ShowOpenLink` | `bool` | `true` | Odkaz „Otevřít“ |
+| `ShowThumbnails` | `bool` | `false` | Pass-through: miniatury |
+| `ShowSearch` | `bool` | `false` | Pass-through: hledání |
+| `AllowRotation` | `bool` | `false` | Pass-through: rotace |
+| `ThumbnailsCollapsed` / `…Changed` | `bool` / `EventCallback<bool>` | `false` | Pass-through: sbalené miniatury (two-way) |
+| `ZoomMode` / `ZoomModeChanged` | `PdfZoomMode` | `Auto` | Pass-through: zoom režim (two-way) |
+| `ShowHeader` | `bool` | `false` | Hlavička s exportní skupinou |
+| `Title` / `Subtitle` | `string?` | `null` | Text hlavičky |
+| `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Sloty hlavičky |
+| `AllowExport` | `bool` | `true` | Export a tisk |
+| `ExportFileName` | `string?` | `null` | Název exportovaného PDF (default „*-annotated“) |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Responzivní layout (mobil = G2) |
+| `ToolbarLabels` | `ToolbarLabels` | `Icons` | Popisky nástrojů (na tabletu pod ikonami) |
+
+#### Příklady
+
+```razor
+<!-- Základní anotátor s hlavičkou a exportem -->
+<TmPdfAnnotator Url="@pdfUrl"
+                ShowHeader="true"
+                Title="Smlouva k anotaci"
+                AllowExport="true"
+                AnnotationProvider="@provider" />
+
+<!-- Vynucený desktop layout na telefonu (plná sada nástrojů) -->
+<TmPdfAnnotator Url="@pdfUrl" LayoutMode="TmLayoutMode.Desktop" />
 ```
 
 ---
