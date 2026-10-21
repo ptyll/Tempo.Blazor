@@ -12,6 +12,9 @@ public class DataTableMobileE2ETests : WasmTestBase
 
     [TestMethod, TestCategory("WASM")]
     public Task PinnedColumns_Tablet1024_NoOverlap_StayPinnedOnScroll() => DataTableSpecs.PinnedColumns_Tablet1024Async(Browser, BaseUrl, RegisterContext);
+
+    [TestMethod, TestCategory("WASM")]
+    public Task CardsWide_ColumnMenuFilter_FocusesHeaderFilter_NoSheet() => DataTableSpecs.CardsWideColumnMenuFilterFocusesHeaderAsync(Browser, BaseUrl, RegisterContext);
 }
 
 [TestClass]

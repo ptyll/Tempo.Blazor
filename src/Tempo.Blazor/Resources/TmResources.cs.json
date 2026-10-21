@@ -974,6 +974,8 @@
   "TmDataTable_MobileFilters_One": "Filtr ({0})",
   "TmDataTable_MobileFilters_Other": "Filtrů ({0})",
   "TmDataTable_MobileSort": "Řazení",
+  "TmDataTable_MobileSortAscending": "{0} – vzestupně",
+  "TmDataTable_MobileSortDescending": "{0} – sestupně",
   "TmDataTable_MultiSortHint": "Shift+Enter nebo Shift+kliknutí přidá tento sloupec do řazení",
   "TmDataTable_NoResults": "Žádné výsledky",
   "TmDataTable_PageSize": "Položek na stránku",

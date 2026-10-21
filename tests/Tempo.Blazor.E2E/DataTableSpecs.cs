@@ -122,6 +122,33 @@ internal static class DataTableSpecs
 
     // ───────────────────────── 13.6 column menu ─────────────────────────
 
+    /// <summary>
+    /// Cards at a WIDE container (1200px): the header and its filter row are visible even though
+    /// the layout is Cards, so the column menu's "Filter…" must focus the header filter and never
+    /// open a sheet anchored to the display:none toolbar trigger.
+    /// </summary>
+    internal static async Task CardsWideColumnMenuFilterFocusesHeaderAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    {
+        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(1200, 900), register);
+        await SelectAsync(page, "dt-redesign-mobile-layout", "Cards");
+        await SelectAsync(page, "dt-redesign-column-menu", "Menu");
+        var table = Redesign(page);
+        await table.ScrollIntoViewIfNeededAsync();
+        await SettleAsync(page);
+
+        Assert.AreNotEqual("none", await table.Locator("thead").EvaluateAsync<string>("el => getComputedStyle(el).display"),
+            "the wide container keeps the header even in Cards");
+
+        await table.Locator(".tm-data-table-col-menu[data-column-key='Name']").First.ClickAsync();
+        await table.Locator("[data-action='filter']").ClickAsync();
+
+        await page.WaitForFunctionAsync(
+            "() => { const a = document.activeElement; return !!a && /-col-filter-Name$/.test(a.id || ''); }",
+            null, Wait);
+        Assert.AreEqual(0, await table.Locator(".tm-overlay-panel-sheet").CountAsync(),
+            "the wide container never opens the cards sheet from the column menu");
+    }
+
     internal static async Task ColumnMenuAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
     {
         var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
@@ -372,7 +399,7 @@ internal static class DataTableSpecs
 
         // Sort dropdown.
         await table.Locator(".tm-data-table-cards-toolbar__sort .tm-dropdown-trigger").ClickAsync();
-        await page.Locator("[role='menuitemradio'], [role='menuitem']", new() { HasText = "Sort by Name — Sort descending" }).First.ClickAsync();
+        await page.Locator("[role='menuitemradio'], [role='menuitem']", new() { HasText = "Name (Z→A / descending)" }).First.ClickAsync();
         await Assertions.Expect(table.Locator("tbody tr").First).ToContainTextAsync("Katherine Johnson");
 
         // Filters (N) opens a full-width sheet; filtering changes the data and the count in the button.
@@ -381,6 +408,9 @@ internal static class DataTableSpecs
         await filters.ClickAsync();
         var sheet = page.Locator(".tm-drawer--bottom");
         await Assertions.Expect(sheet).ToBeVisibleAsync();
+        // The drawer header's Done is the only one: the footer's copy exists for the popover only.
+        Assert.AreEqual(1, await sheet.GetByRole(AriaRole.Button, new() { Name = "Done" }).CountAsync(),
+            "a sheet shows exactly one Done button");
         var sheetBox = await BoxAsync(sheet);
         Assert.AreEqual(390, sheetBox.Width, 1, "the filter sheet is full width");
         await sheet.Locator("input[type='text'], input:not([type])").First.FillAsync("Ada");

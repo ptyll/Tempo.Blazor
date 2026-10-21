@@ -967,6 +967,8 @@
   "TmDataTable_MobileFilters_One": "Filtre ({0})",
   "TmDataTable_MobileFilters_Other": "Filtres ({0})",
   "TmDataTable_MobileSort": "Trier",
+  "TmDataTable_MobileSortAscending": "{0} – croissant",
+  "TmDataTable_MobileSortDescending": "{0} – décroissant",
   "TmDataTable_MultiSortHint": "Maj+Entrée ou Maj+clic ajoute cette colonne au tri",
   "TmDataTable_NoResults": "Aucun résultat",
   "TmDataTable_PageSize": "Éléments par page",

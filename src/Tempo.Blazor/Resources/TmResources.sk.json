@@ -975,6 +975,8 @@
   "TmDataTable_MobileFilters_One": "Filter ({0})",
   "TmDataTable_MobileFilters_Other": "Filtrov ({0})",
   "TmDataTable_MobileSort": "Zoradenie",
+  "TmDataTable_MobileSortAscending": "{0} – vzostupne",
+  "TmDataTable_MobileSortDescending": "{0} – zostupne",
   "TmDataTable_MultiSortHint": "Shift+Enter alebo Shift+kliknutie pridá tento stĺpec do poradia zoradenia",
   "TmDataTable_NoResults": "Žiadne výsledky",
   "TmDataTable_PageSize": "Položiek na stranu",

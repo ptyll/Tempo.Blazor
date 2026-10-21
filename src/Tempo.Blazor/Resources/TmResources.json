@@ -959,6 +959,8 @@
   "TmDataTable_MobileFilters_One": "Filters ({0})",
   "TmDataTable_MobileFilters_Other": "Filters ({0})",
   "TmDataTable_MobileSort": "Sort",
+  "TmDataTable_MobileSortAscending": "{0} (A→Z / ascending)",
+  "TmDataTable_MobileSortDescending": "{0} (Z→A / descending)",
   "TmDataTable_MultiSortHint": "Shift+Enter or Shift+click adds this column to the sort order",
   "TmDataTable_NoResults": "No results found",
   "TmDataTable_PageSize": "Items per page",

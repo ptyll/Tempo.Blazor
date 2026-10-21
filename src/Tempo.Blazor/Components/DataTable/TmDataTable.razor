@@ -74,10 +74,13 @@
                         @foreach (var col in CardsSortableColumns)
                         {
                             <TmDropdownItem Value="@($"{col.Key}|asc")" Checked="@IsCardSortChecked(col, descending: false)">
-                                @Loc["TmDataTable_SortBy", col.Title, Loc["TmDataTable_SortAscending"]]
+                                @* The menu sits under a button already labelled "Sort", so the items carry
+                                   only the column and the direction — repeating the verb in every entry
+                                   doubled the list's length for scanning and for screen readers. *@
+                                @Loc["TmDataTable_MobileSortAscending", col.Title]
                             </TmDropdownItem>
                             <TmDropdownItem Value="@($"{col.Key}|desc")" Checked="@IsCardSortChecked(col, descending: true)">
-                                @Loc["TmDataTable_SortBy", col.Title, Loc["TmDataTable_SortDescending"]]
+                                @Loc["TmDataTable_MobileSortDescending", col.Title]
                             </TmDropdownItem>
                         }
                         <TmDropdownItem Value="@("clear")">@Loc["TmDataTable_ColumnMenu_ClearSort"]</TmDropdownItem>
@@ -86,7 +89,7 @@
                 @if (ShouldRenderMobileFilters())
                 {
                     <button type="button" @ref="_cardsFilterTrigger" class="tm-btn tm-btn-outline tm-btn-sm tm-data-table-cards-toolbar__filter tm-data-table-mobile-only"
-                            aria-haspopup="dialog" aria-expanded="@_cardsFilterOpen"
+                            aria-haspopup="dialog" aria-expanded="@(_cardsFilterOpen ? "true" : "false")"
                             @onclick="OpenCardsFilterAsync">
                         @Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)
                     </button>
@@ -266,7 +269,10 @@
        carries its own fields; the toolbar button opens it, and so does the column menu's Filter item. *@
     @if (ShouldRenderMobileFilters())
     {
-        <TmOverlayPanel Anchor="_cardsFilterTrigger" IsOpen="_cardsFilterOpen" IsOpenChanged="SetCardsFilterOpenAsync"
+        @* The sheet input gets its own id family (CardsFilterId): the header filter row stays in the
+           DOM (only display:none) while the sheet is open, so reusing ColumnFilterId here would put
+           the same id on two elements and could point TmFormField's label at the hidden header input. *@
+        <TmOverlayPanel @ref="_cardsSheet" Anchor="_cardsFilterTrigger" IsOpen="_cardsFilterOpen" IsOpenChanged="SetCardsFilterOpenAsync"
                         Placement="OverlayPlacement.Bottom" Align="OverlayAlign.Start" Offset="4"
                         MobilePresentation="PanelPresentation.Auto" Role="dialog"
                         AriaLabel="@Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)"
@@ -274,9 +280,9 @@
                         Class="tm-data-table-cards-sheet">
             @foreach (var col in CardsFilterableColumns)
             {
-                <TmFormField Label="@col.Title" For="@ColumnFilterId(col.Key)">
+                <TmFormField Label="@col.Title" For="@CardsFilterId(col.Key)">
                     <TmColumnFilter ColumnKey="@col.Key"
-                                    InputId="@ColumnFilterId(col.Key)"
+                                    InputId="@CardsFilterId(col.Key)"
                                     ColumnTitle="@col.Title"
                                     FilterType="@col.FilterType"
                                     FilterOptions="@col.FilterOptions"
@@ -289,9 +295,15 @@
                 <button type="button" class="tm-btn tm-btn-outline" @onclick="ClearAllFiltersAsync">
                     @Loc["TmDataTable_ClearAll"]
                 </button>
-                <button type="button" class="tm-btn tm-btn-primary tm-data-table-cards-sheet__done" @onclick="() => SetCardsFilterOpenAsync(false)">
-                    @Loc["Tm_Done"]
-                </button>
+                @* The sheet presentation already carries a Done button in the drawer header; rendering
+                   the footer's one too put two identical "Done" controls on a phone. The footer Done
+                   exists only for the anchored popover. *@
+                @if (_cardsSheet is null || !_cardsSheet.IsSheet)
+                {
+                    <button type="button" class="tm-btn tm-btn-primary tm-data-table-cards-sheet__done" @onclick="() => SetCardsFilterOpenAsync(false)">
+                        @Loc["Tm_Done"]
+                    </button>
+                }
             </div>
         </TmOverlayPanel>
     }

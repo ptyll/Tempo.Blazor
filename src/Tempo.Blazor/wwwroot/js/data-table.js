@@ -507,6 +507,28 @@ window.tmDataTable = (function () {
         }
     }
 
+    /**
+     * Focuses the header filter input the column menu's "Filter" item names — but only when that
+     * input is actually visible. A Cards table in a WIDE container keeps its header (the trigger
+     * button is display:none, the header is not), so the sheet must stay closed and the header
+     * filter takes the focus. Returns true when the input was focused; false tells Blazor to open
+     * the cards filter sheet instead. `checkVisibility` is the honest test; `offsetParent` covers
+     * engines without it (display:none on an ancestor makes offsetParent null).
+     */
+    function focusColumnFilterOrOpenSheet(inputId) {
+        var input = document.getElementById(inputId);
+        if (!input) return false;
+        var visible = typeof input.checkVisibility === 'function'
+            ? input.checkVisibility({ checkVisibilityCSS: true })
+            : input.offsetParent !== null;
+        if (!visible) return false;
+        if (typeof input.focus === 'function') {
+            try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+            try { input.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* no scroller */ }
+        }
+        return true;
+    }
+
     // wrapper element -> { observer, timer }. A WeakMap so a removed table is collectable.
     var pinObservers = new WeakMap();
 
@@ -565,5 +587,5 @@ window.tmDataTable = (function () {
         pinObservers.delete(wrapper);
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, focusRowEditor, attachGridKeys, detachGridKeys, attachColumnMenuKeys, detachColumnMenuKeys, scrollGridToIndex, attachArrowKeyPrevent, detachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader, observePinnedOffsets, disposePinnedOffsets };
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, focusRowEditor, attachGridKeys, detachGridKeys, attachColumnMenuKeys, detachColumnMenuKeys, scrollGridToIndex, attachArrowKeyPrevent, detachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusColumnFilterOrOpenSheet, focusHeader, observePinnedOffsets, disposePinnedOffsets };
 })();

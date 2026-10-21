@@ -105,6 +105,13 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     private string ColumnFilterId(string columnKey) => $"{_idBase}-col-filter-{ColumnIdFragment(columnKey)}";
 
+    /// <summary>
+    /// The cards sheet's filter inputs must not share ids with the header filter row: the thead is
+    /// only <c>display:none</c> while the sheet is open, so both inputs are in the DOM at once and
+    /// a duplicate id is invalid HTML (and could point a label at the hidden header input).
+    /// </summary>
+    private string CardsFilterId(string columnKey) => $"{_idBase}-cards-filter-{ColumnIdFragment(columnKey)}";
+
     private Task ToggleColumnMenuAsync(TmDataTableColumn<TItem> col)
     {
         _openColumnMenuKey = IsColumnMenuOpen(col.Key) ? null : col.Key;
@@ -244,17 +251,12 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                 await OnToggleColumnAsync(col.Key);
                 break;
             case "filter":
-                // Cards hide the header, so the filter row the menu would focus does not exist.
-                // The same action opens the cards filter sheet and focuses that column's filter.
-                if (MobileLayout == DataTableMobileLayout.Cards)
-                {
-                    _cardsFilterOpen = CardsFilterableColumns.Any();
-                    _cardsFilterFocusKey = col.Key;
-                }
-                else
-                {
-                    _columnMenuFocusKey = col.Key;
-                }
+                // The choice between the header filter and the cards sheet cannot be made from the
+                // layout flags alone: a Cards table in a WIDE container still shows the header and
+                // its filter row, and only the narrow container hides them. The action names the
+                // header filter unconditionally; OnAfterRenderAsync asks the browser whether that
+                // input is actually visible and falls back to the cards sheet when it is not.
+                _columnMenuFocusKey = col.Key;
                 break;
         }
     }
@@ -315,6 +317,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private bool _cardsFilterOpen;
     private string? _cardsFilterFocusKey;
     private ElementReference _cardsFilterTrigger;
+    private TmOverlayPanel? _cardsSheet;
 
     /// <summary>The cards sort control exists for Cards alone, and never in a content-only toolbar.</summary>
     private bool ShouldRenderMobileSort() =>
@@ -1939,21 +1942,43 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         }
 
         // "Filter" closes the menu first; the control it names is focused once the menu is gone,
-        // so focus never lands inside a panel that is about to unmount.
-        if (_columnMenuFocusKey is { } focusKey || _cardsFilterFocusKey is { } _)
+        // so focus never lands inside a panel that is about to unmount. The browser decides which
+        // surface the focus goes to: the header filter when it is actually visible (a Cards table
+        // in a wide container keeps its header), otherwise the cards filter sheet.
+        if (_columnMenuFocusKey is { } focusKey)
         {
-            var target = _cardsFilterFocusKey ?? _columnMenuFocusKey;
             _columnMenuFocusKey = null;
-            _cardsFilterFocusKey = null;
             try
             {
-                await JS.InvokeVoidAsync("tmDataTable.focusColumnFilter", ColumnFilterId(target!));
+                var headerVisible = await JS.InvokeAsync<bool>(
+                    "tmDataTable.focusColumnFilterOrOpenSheet", ColumnFilterId(focusKey));
+                if (!headerVisible && CardsFilterableColumns.Any())
+                {
+                    _cardsFilterOpen = true;
+                    _cardsFilterFocusKey = focusKey;
+                    StateHasChanged();
+                }
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException
                                    or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
             {
-                // No JS (tests, prerender): the filter row is already rendered, so the control is
-                // reachable by Tab. The id contract is what the tests assert.
+                // No JS (tests, prerender): the header filter row is already rendered, so the
+                // control is reachable by Tab. The id contract is what the tests assert.
+            }
+        }
+        else if (_cardsFilterFocusKey is { } cardsFocusKey)
+        {
+            _cardsFilterFocusKey = null;
+            try
+            {
+                // The sheet's inputs carry their own id family — the header row is still in the
+                // DOM (only display:none), so the header id here would resolve to the wrong input.
+                await JS.InvokeVoidAsync("tmDataTable.focusColumnFilter", CardsFilterId(cardsFocusKey));
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                   or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+            {
+                // No JS (tests, prerender): the sheet is rendered, so the control is reachable.
             }
         }
 

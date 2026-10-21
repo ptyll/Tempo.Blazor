@@ -332,4 +332,122 @@ public class TmDataTableMobileModeTests : LocalizationTestBase
 
     private static List<BasicPerson> People(int count) =>
         Enumerable.Range(1, count).Select(i => new BasicPerson($"Person {i}", i, "Role")).ToList();
+
+    // ── Retrospective review fixes (phase 10) ─────────────────────
+
+    private static Action<ComponentParameterCollectionBuilder<TmDataTable<BasicPerson>>> CardsFilterTable(
+        Action<ComponentParameterCollectionBuilder<TmDataTable<BasicPerson>>>? extra = null) => p =>
+    {
+        p.Add(c => c.Items, People(3))
+         .Add(c => c.MobileLayout, DataTableMobileLayout.Cards)
+         .Add(c => c.ColumnMenuMode, ColumnMenuMode.Menu)
+         .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+             .Add(x => x.Title, "Name")
+             .Add(x => x.PropertyName, "name")
+             .Add(x => x.Sortable, true)
+             .Add(x => x.Filterable, true)
+             .Add(x => x.Field, person => person.Name));
+        extra?.Invoke(p);
+    };
+
+    [Fact]
+    public void Cards_FilterTrigger_AriaExpandedIsARealBooleanString()
+    {
+        // A bound bool renders as an EMPTY attribute when true and vanishes when false, so a screen
+        // reader never hears the state; the attribute must be the literal "true"/"false".
+        var cut = Render(CardsFilterTable());
+
+        cut.Find(".tm-data-table-cards-toolbar__filter").GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find(".tm-data-table-cards-toolbar__filter").Click();
+
+        cut.Find(".tm-data-table-cards-toolbar__filter").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void Cards_SortMenuItems_StateColumnAndDirectionWithoutRepeatingTheVerb()
+    {
+        var cut = Render(CardsFilterTable());
+
+        cut.Find(".tm-dropdown-trigger").Click();
+
+        var choices = cut.FindAll("[role='menuitemradio']").Select(item => item.TextContent.Trim()).ToList();
+        choices.Should().BeEquivalentTo("Name (A→Z / ascending)", "Name (Z→A / descending)");
+        // The trigger is already labelled "Sort"; the items must not repeat it.
+        choices.Should().OnlyContain(text => !text.Contains("Sort", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Cards_SheetMode_RendersExactlyOneDoneButton()
+    {
+        // In sheet mode the drawer header already carries "Done"; the footer's copy must not exist
+        // in the DOM, not merely be hidden. The viewport cascade forces the sheet presentation.
+        var cut = Render<TmDataTable<BasicPerson>>(p =>
+        {
+            CardsFilterTable()(p);
+            p.AddCascadingValue(Tempo.Blazor.Abstractions.Layout.TmLayoutScopes.Viewport,
+                new Tempo.Blazor.Abstractions.Layout.TmLayoutContext(
+                    Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Auto,
+                    Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile));
+        });
+
+        cut.Find(".tm-data-table-cards-toolbar__filter").Click();
+
+        // Forced mobile: the panel presents as the drawer sheet (whose root carries
+        // tm-overlay-panel-sheet; the consumer class stays on the popover).
+        cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
+        cut.FindAll("button").Count(b => b.TextContent.Trim() == "Done")
+            .Should().Be(1, "the sheet header's Done is the only one");
+        cut.Find(".tm-data-table-cards-sheet__footer").TextContent.Should().Contain("Clear all");
+    }
+
+    [Fact]
+    public void Cards_SheetOpen_DoesNotDuplicateAnyElementId()
+    {
+        // The header filter row is only display:none while the sheet is open, so the sheet's inputs
+        // need their own id family — a repeated id is invalid HTML and can point a label at the
+        // hidden header input.
+        var cut = Render(CardsFilterTable());
+
+        cut.Find(".tm-data-table-cards-toolbar__filter").Click();
+
+        var ids = Regex.Matches(cut.Markup, "id=\"([^\"]+)\"")
+            .Select(m => m.Groups[1].Value)
+            .ToList();
+        ids.Should().OnlyHaveUniqueItems("the sheet and the hidden header row share the DOM");
+        cut.Markup.Should().Contain("-cards-filter-name", "the sheet input carries the cards id family");
+    }
+
+    [Fact]
+    public void ColumnMenuFilter_FocusesTheHeaderFilterWhenItIsVisible()
+    {
+        // A Cards table in a WIDE container keeps its header: "Filter…" must focus the header
+        // filter, not open a sheet anchored to a hidden button.
+        JSInterop.Setup<bool>("tmDataTable.focusColumnFilterOrOpenSheet", _ => true).SetResult(true);
+
+        var cut = Render(CardsFilterTable());
+        cut.Find(".tm-data-table-col-menu-btn").Click();
+        cut.Find("[data-action='filter']").Click();
+
+        var invocation = JSInterop.Invocations["tmDataTable.focusColumnFilterOrOpenSheet"].Single();
+        ((string)invocation.Arguments[0]!).Should().EndWith("-col-filter-name");
+        cut.Markup.Should().NotContain("tm-overlay-panel-sheet", "the wide container never opens the sheet from the menu");
+    }
+
+    [Fact]
+    public void ColumnMenuFilter_OpensTheSheetWhenTheHeaderFilterIsHidden()
+    {
+        // Below 640px the header is display:none; the browser reports the input invisible and C#
+        // falls back to the cards sheet, focusing the sheet's own (cards-family) input.
+        var cut = Render(CardsFilterTable());
+
+        cut.Find(".tm-data-table-col-menu-btn").Click();
+        cut.Find("[data-action='filter']").Click();
+
+        var routing = JSInterop.Invocations["tmDataTable.focusColumnFilterOrOpenSheet"].Single();
+        ((string)routing.Arguments[0]!).Should().EndWith("-col-filter-name");
+        cut.WaitForAssertion(() => cut.Find(".tm-data-table-cards-sheet").Should().NotBeNull());
+        var focus = JSInterop.Invocations["tmDataTable.focusColumnFilter"].Single();
+        ((string)focus.Arguments[0]!).Should().EndWith("-cards-filter-name", "the header row's id would resolve to the hidden input");
+    }
 }
