@@ -226,12 +226,27 @@ public sealed class DataTableUxDefectsCssTests
         // the generic dropdown fade (opacity .5) must lift off the whole scope item and the
         // description must keep its full-strength secondary ink (>=4.5:1 in both themes).
         var css = Css();
-        Rule(css, ".tm-data-table__export-scope[aria-disabled=\"true\"]")
+        Rule(css, ".tm-dropdown-item.tm-data-table__export-scope[aria-disabled=\"true\"]")
             .Should().Contain("opacity: 1");
-        Rule(css, ".tm-data-table__export-scope[aria-disabled=\"true\"] .tm-data-table__export-label")
+        Rule(css, ".tm-dropdown-item.tm-data-table__export-scope[aria-disabled=\"true\"] .tm-data-table__export-label")
             .Should().Contain("color: var(--tm-text-muted)");
-        Rule(css, ".tm-data-table__export-scope[aria-disabled=\"true\"] .tm-data-table__export-description")
+        Rule(css, ".tm-dropdown-item.tm-data-table__export-scope[aria-disabled=\"true\"] .tm-data-table__export-description")
             .Should().Contain("color: var(--tm-text-secondary)");
+    }
+
+    [Fact]
+    public void DisabledExportScope_OpacityRule_OutspecifiesTheGenericDropdownFade()
+    {
+        // The generic fade is `.tm-dropdown-item[aria-disabled="true"]` (0,2,0) in _dropdown.css,
+        // which is imported AFTER this file — an override with the same specificity loses on
+        // source order and the disabled "Selected rows" item stays faded. The override must
+        // compound the item class (0,3,0) so `opacity: 1` really lands on the rendered item.
+        var match = Regex.Matches(Css(), @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.None, Timeout)
+            .FirstOrDefault(m => m.Groups["sel"].Value.Contains(".tm-data-table__export-scope[aria-disabled=\"true\"]", StringComparison.Ordinal)
+                && m.Groups["body"].Value.Contains("opacity: 1", StringComparison.Ordinal));
+        match.Should().NotBeNull("the readable disabled-scope override must ship");
+        match!.Groups["sel"].Value.Should().Contain(".tm-dropdown-item",
+            "the override must outrank the later-imported .tm-dropdown-item[aria-disabled=\"true\"] fade");
     }
 
     [Fact]

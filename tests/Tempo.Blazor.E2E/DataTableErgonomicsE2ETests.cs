@@ -277,7 +277,10 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
     {
         // WCAG 1.4.3: the unavailable CONTROL may fade, the instructional text must not. The
         // "Select rows to export them" hint has to keep opacity 1 and >=4.5:1 contrast against
-        // the menu surface in both themes while the option is aria-disabled.
+        // the menu surface in both themes while the option is aria-disabled. Opacity is read
+        // from the export-scope ITEM (the element the generic dropdown fade actually targets) —
+        // opacity does not inherit, so the description span's own computed value would read 1
+        // even while its ancestor fades it out of visibility.
         var page = await OpenPageAsync();
         var section = page.Locator("[data-testid='dt-export-section']");
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
@@ -288,6 +291,8 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
             () => {
                 const description = document.querySelector("[data-export-scope='selected'] .tm-data-table__export-description");
                 if (!description) return null;
+                const scope = description.closest('[data-export-scope]');
+                if (!scope) return null;
                 const parse = value => (value.match(/[\d.]+/g) ?? []).map(Number);
                 const channel = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
                 const luminance = rgb => 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
@@ -301,7 +306,7 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
                 const ink = parse(getComputedStyle(description).color).slice(0, 3);
                 const l1 = luminance(ink), l2 = luminance(background);
                 const contrast = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-                return JSON.stringify({ opacity: getComputedStyle(description).opacity, contrast });
+                return JSON.stringify({ opacity: getComputedStyle(scope).opacity, contrast });
             }
             """;
 

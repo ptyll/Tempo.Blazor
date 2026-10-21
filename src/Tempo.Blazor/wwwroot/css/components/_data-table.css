@@ -38,10 +38,11 @@
    CONTROL, not the instructional text that tells the user what to do. The generic dropdown
    disabled fade (opacity: var(--tm-opacity-disabled)) lifts off the whole item so the hint keeps
    its full-strength ink (>=4.5:1 in both themes); the empty check and `cursor: not-allowed`
-   still mark the option as unavailable. */
-.tm-data-table__export-scope[aria-disabled="true"] { opacity: 1; }
-.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-label { color: var(--tm-text-muted); }
-.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-description { color: var(--tm-text-secondary); }
+   still mark the option as unavailable. The `.tm-dropdown-item` compound keeps these overrides
+   (0,3,0) ahead of the later-imported `.tm-dropdown-item[aria-disabled="true"]` fade (0,2,0). */
+.tm-dropdown-item.tm-data-table__export-scope[aria-disabled="true"] { opacity: 1; }
+.tm-dropdown-item.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-label { color: var(--tm-text-muted); }
+.tm-dropdown-item.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-description { color: var(--tm-text-secondary); }
 .tm-data-table-wrapper--card-surface {
   border-radius: var(--tm-radius-card);
   box-shadow: var(--tm-shadow-card);
