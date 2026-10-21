@@ -15,11 +15,14 @@ public class TmDataTableGroupingAccessibilityTests : LocalizationTestBase
         new("Diana", "Marketing", "Active", 75000m),
     ];
 
-    private IRenderedComponent<TmDataTable<GroupPerson>> RenderTable(DataToolbarMode mode = DataToolbarMode.Full) =>
+    private IRenderedComponent<TmDataTable<GroupPerson>> RenderTable(
+        DataToolbarMode mode = DataToolbarMode.Full,
+        DataTableAppearance appearance = DataTableAppearance.Plain) =>
         Render<TmDataTable<GroupPerson>>(p =>
         {
             p.Add(c => c.Items, People);
             p.Add(c => c.ShowGrouping, true);
+            p.Add(c => c.Appearance, appearance);
             p.Add(c => c.GroupsCollapsedByDefault, true);
             p.Add(c => c.ToolbarMode, mode);
             p.AddChildContent(b =>
@@ -63,7 +66,7 @@ public class TmDataTableGroupingAccessibilityTests : LocalizationTestBase
     [Fact]
     public async Task AddGrouping_AddsGroupWithoutDrag()
     {
-        var cut = RenderTable();
+        var cut = RenderTable(appearance: DataTableAppearance.Card);
         cut.Find(".tm-data-table-add-grouping button").Click();
         cut.Find(".tm-dropdown-item").Click();
 

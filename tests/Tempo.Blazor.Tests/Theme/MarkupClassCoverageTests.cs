@@ -103,9 +103,6 @@ public sealed class MarkupClassCoverageTests
         "tm-chat__system-text",
         "tm-chat__thread-input",
         "tm-chip__label",
-        // Data-table catch-up: the redesigned TmColumnFilter clear-all button emits this hook
-        // with no rule (the toolbar row styles it through its parent).
-        "tm-col-filter-clear-all",
         "tm-color-gradient-hue-fill",
         "tm-comment-cancel-btn",
         "tm-comment-delete-btn",
@@ -124,13 +121,8 @@ public sealed class MarkupClassCoverageTests
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
-        // Data-table catch-up (2.9.1 opt-in modes): hooks the redesigned toolbar, group headers,
-        // row edit footer and filter summary emit without rules of their own — styled through
-        // their parents (or semantic hooks styled by the surrounding table chrome).
-        "tm-data-table-filter-summary",
-        "tm-data-table-group-collapse-all",
-        "tm-data-table-group-expand-all",
-        "tm-data-table-row--edit-footer",
+        // ("tm-data-table__export-scope" left the inventory: the disabled-state rules
+        // (.tm-data-table__export-scope[aria-disabled=…] in _data-table.css) now style it.)
         "tm-date-today-btn",
         "tm-datetime-range-end",
         "tm-datetime-range-start",
@@ -159,9 +151,6 @@ public sealed class MarkupClassCoverageTests
         "tm-file-versions__header",
         "tm-filter-chip-label",
         "tm-filter-chip-value",
-        // Data-table catch-up: the filter result preview line is a semantics hook styled through
-        // its container.
-        "tm-filter-result-preview",
         "tm-form-group",
         "tm-gantt-portfolio__project-name",
         "tm-gantt-task-panel__attachment-item",
@@ -193,16 +182,12 @@ public sealed class MarkupClassCoverageTests
         "tm-mvl-list-subtitle",
         "tm-mvl-list-title",
         "tm-mvl-loading",
-        // Data-table catch-up: the multi-view list item count badge is styled through its card.
-        "tm-mvl-item-count",
         // ("tm-overlay" left the markup with the overlay migration — TmModal's overlay is
         // .tm-modal-overlay, TmOverlayPanel's is .tm-overlay-panel — so its entry is struck off.)
         // F3 review round 1: the sheet content wrapper (T2) is a semantics/ARIA hook — it carries
         // role/id/aria-labelledby and the consumer's AdditionalAttributes — and needs no paint.
         "tm-overlay-panel-sheet__content",
         "tm-pagination-controls",
-        "tm-pagination-next",
-        "tm-pagination-prev",
         "tm-query-input__overlay-text",
         "tm-rating__star--empty",
         // F10 moved the RTE dialogs onto TmModal: the footer buttons became TmButtons whose
@@ -232,8 +217,6 @@ public sealed class MarkupClassCoverageTests
         "tm-spinner--sm",
         "tm-split-button__text",
         "tm-splitter__pane--collapsible",
-        // Data-table catch-up: the TmCard stretched-link span is an invisible click-surface hook.
-        "tm-stretched-link",
         "tm-stock-chart__ohlc",
         "tm-text-secondary",
         "tm-time-range-from",
@@ -264,13 +247,6 @@ public sealed class MarkupClassCoverageTests
         "tm-user-picker__status",
         "tm-validated-field",
         "tm-view-error",
-        // Data-table catch-up: the TmViewManager create/edit dialog presents through TmModal, so
-        // its legacy frame/footer/button classes carry no rules of their own — and
-        // "tm-icon-columns" left the markup entirely (the column picker's icon button is gone),
-        // so its recorded entry is struck off.
-        "tm-view-modal",
-        "tm-view-modal-footer",
-        "tm-view-set-default-btn",
     ];
 
     /// <summary>
@@ -424,7 +400,11 @@ public sealed class MarkupClassCoverageTests
             // DiagramEditor redesign phase 6 (X2): TmEditorShell's extra sheet tabpanel id prefix
             // ("tm-editor-shell-extra-panel-{Guid…}") lives in the new TmEditorShell.Extra.razor.cs
             // partial — 47 → 48.
-            ExpectedUnmeasurableStems: 48),
+            // AllowExportSelected: the empty-selection explanation id is per table
+            // ("tm-data-table-export-scope-empty-" + Guid), so two tables on one page do not share
+            // an id. The sweep counts the prefix — 48 → 49. (The 50th stem,
+            // "tm-dashboard-mobile-rename-", comes from the dashboard work, not this phase.)
+            ExpectedUnmeasurableStems: 50),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

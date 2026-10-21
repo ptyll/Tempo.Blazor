@@ -458,8 +458,9 @@ function focusWentNowhere(entry, active) {
         || entry.panel.contains(active);
 }
 
-// Restores focus to an element by id — the dismissal focus-restore path
-// (TmOverlayPanel.RestoreFocusTargetId). preventScroll defaults to true: restoring focus must
+// Restores focus to an element by id. TmOverlayPanel no longer calls this on dismiss: Escape and
+// an outside pointer return focus to the anchor. Dialogs that still name a restore target do.
+// preventScroll defaults to true: restoring focus must
 // not move the page, the trigger is where the user left it and a focus-driven scroll jump
 // breaks anchored overlays (and the contract that dismiss-on-Escape leaves the page scrolled
 // where it was).
@@ -470,16 +471,12 @@ export function focusById(id, { preventScroll = true } = {}) {
     }
 }
 
-// Outside pointerdown: give focus back to the anchor ONLY when the pointerdown target cannot
-// take focus itself. A click into a field/button earns its focus through the browser's own
-// mousedown — pulling it back to the anchor would steal it (B1). For dead-space clicks the
-// browser drops focus to <body> after our capture-phase run, so the restore is deferred past
-// the mousedown and then applies only when focus truly went nowhere (or is still sitting
-// inside the doomed panel).
-function maybeRestoreAnchorFocus(entry, target) {
-    if (target instanceof Element && target.closest(FOCUSABLE)) {
-        return;
-    }
+// Called only from the anchor-hidden path (place(), when focus sits inside a panel whose anchor
+// scrolled fully out of the viewport). That dismissal has no pointer target — the caller passes
+// null — so this always restores the anchor. Escape returns focus through dismiss('escape')
+// instead; an outside pointerdown does not restore at all (the user clicked somewhere else, and
+// pulling focus back would undo that click).
+function maybeRestoreAnchorFocus(entry, _target) {
     const anchorEl = resolveAnchor(entry);
     if (!anchorEl || typeof anchorEl.focus !== 'function') {
         return;
@@ -551,7 +548,6 @@ function onKeyDown(e) {
 
 function onPointerDown(e) {
     const target = e.target;
-    let topmostDismissed = null;
     for (const entry of [...tracked.values()].reverse()) {
         if (!entry.options.closeOnOutsidePointerDown) {
             continue;
@@ -565,12 +561,9 @@ function onPointerDown(e) {
         if (anchorEl && typeof anchorEl.contains === 'function' && anchorEl.contains(target)) {
             continue;
         }
-        if (dismiss(entry, 'outside')) {
-            topmostDismissed ??= entry;
-        }
-    }
-    if (topmostDismissed) {
-        maybeRestoreAnchorFocus(topmostDismissed, target);
+        // Close every panel the pointer landed outside. Do not restore the anchor: the user
+        // clicked somewhere else, and pulling focus back would undo that click.
+        dismiss(entry, 'outside');
     }
 }
 

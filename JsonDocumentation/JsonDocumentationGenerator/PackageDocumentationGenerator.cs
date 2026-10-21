@@ -733,7 +733,11 @@ internal sealed class PackageDocumentationComposer
                 node["documentationStatus"] ??= "manual";
 
                 var key = DocumentationItemNames.BaseName(itemName);
-                results.TryAdd(key, new ExistingDocumentationItem(key, node, file));
+                if (!results.TryAdd(key, new ExistingDocumentationItem(key, node, file)))
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate documentation overlay '{key}': {results[key].SourceFile} and {file}");
+                }
             }
         }
 

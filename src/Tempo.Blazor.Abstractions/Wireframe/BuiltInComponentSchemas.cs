@@ -1136,6 +1136,12 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title",      "Title",       PropType.String, "Items", cat: "Content"),
                 P("showSearch", "Show Search", PropType.Bool,   true,    cat: "Appearance"),
+                P("view",       "View",        PropType.Enum,   "list",  cat: "Appearance",
+                    opts: ["table","cards","list"]),
+                P("responsive", "Responsive",  PropType.Bool,   false,   cat: "Appearance"),
+                P("showItemCount", "Item Count", PropType.Bool, false,   cat: "Appearance"),
+                P("viewSwitcherLabels", "Switcher Labels", PropType.Enum, "icons", cat: "Appearance",
+                    opts: ["icons","icons-and-text"]),
             ]
         };
 
@@ -1178,6 +1184,13 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showSearch",      "Show Search",       PropType.Bool,       true,  cat: "Appearance"),
                 P("showPagination",  "Show Pagination",   PropType.Bool,       true,  cat: "Appearance"),
                 P("showBulkActions", "Show Bulk Actions", PropType.Bool,       false, cat: "Appearance"),
+                P("appearance",      "Appearance",        PropType.Enum,       "plain", cat: "Appearance",
+                    opts: ["plain","card"]),
+                P("mobileLayout",    "Mobile Layout",     PropType.Enum,       "none",  cat: "Appearance",
+                    opts: ["none","scroll","cards"]),
+                P("showFilterSummary", "Filter Summary",  PropType.Bool,       false,   cat: "Appearance"),
+                P("columnMenu",      "Column Menu",       PropType.Bool,       false,   cat: "Appearance"),
+                P("exportSelected",  "Export Selected",   PropType.Bool,       false,   cat: "Appearance"),
             ]
         };
 
@@ -1226,6 +1239,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("viewName",       "View Name",        PropType.String, "Default view", cat: "Content"),
                 P("showSaveButton", "Show Save Button", PropType.Bool,   true,           cat: "Appearance"),
+                P("open",           "Panel Open",       PropType.Bool,   false,          cat: "State"),
             ]
         };
     }
@@ -2111,6 +2125,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("conditions",    "Conditions",     PropType.Int,  3,     cat: "Appearance"),
                 P("groupOperator", "Group Operator", PropType.Enum, "AND", cat: "Appearance",
                     opts: ["AND","OR"]),
+                P("presentation",  "Presentation",   PropType.Enum, "inline", cat: "Appearance",
+                    opts: ["inline","popover","auto"]),
             ]
         };
 

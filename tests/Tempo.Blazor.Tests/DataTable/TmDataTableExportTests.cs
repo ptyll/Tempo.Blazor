@@ -264,9 +264,9 @@ public class TmDataTableExportTests : LocalizationTestBase
             i.Identifier == "TempoFileManager.downloadFileFromStream").Subject;
         invocation.Arguments[0].Should().Be("people.csv");
         invocation.Arguments[1].Should().BeOfType<DotNetStreamReference>();
-        completed.Should().Be(new DataTableExportResult(DataTableExportFormat.Csv, "people.csv", 2));
+        completed.Should().Be(new DataTableExportResult(DataTableExportFormat.Csv, "people.csv", 2, DataTableExportScope.All));
 
-        var csv = new CsvDataTableExporter(";", writeBom: true).Export(await cut.InvokeAsync(cut.Instance.BuildExportDataAsync));
+        var csv = new CsvDataTableExporter(";", writeBom: true).Export(await cut.InvokeAsync(() => cut.Instance.BuildExportDataAsync()));
         csv.Take(3).Should().Equal(0xEF, 0xBB, 0xBF);
         Encoding.UTF8.GetString(csv).Should().Contain("\"Ann; \"\"A\"\"\"");
         Encoding.UTF8.GetString(csv).Should().Contain("\"Bob\nB\"");
@@ -281,6 +281,7 @@ public class TmDataTableExportTests : LocalizationTestBase
             p.Add(c => c.ViewContext, "export-menu");
             p.Add(c => c.Items, new List<Person> { new("Ann", 30) });
             p.Add(c => c.ShowExport, true);
+            p.Add(c => c.Appearance, DataTableAppearance.Card);
             p.AddChildContent(b =>
             {
                 var seq = 0;
@@ -326,6 +327,358 @@ public class TmDataTableExportTests : LocalizationTestBase
         var invocation = JSInterop.Invocations.Should().ContainSingle(i =>
             i.Identifier == "TempoFileManager.downloadFileFromStream").Subject;
         invocation.Arguments[0].Should().Be("people.xlsx");
-        completed.Should().Be(new DataTableExportResult(DataTableExportFormat.Xlsx, "people.xlsx", 1));
+        completed.Should().Be(new DataTableExportResult(DataTableExportFormat.Xlsx, "people.xlsx", 1, DataTableExportScope.All));
+    }
+
+    // ── Selected-only export (AllowExportSelected) ────────────────────────────
+
+    private IRenderedComponent<TmDataTable<Person>> RenderSelectableExport(
+        List<Person> items,
+        bool allowExportSelected = true,
+        bool selectable = true,
+        Action<DataTableExportResult>? onCompleted = null,
+        IDataTableXlsxExporter? xlsx = null)
+    {
+        if (xlsx is not null)
+        {
+            Services.AddSingleton(xlsx);
+        }
+
+        return Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.ViewContext, "people");
+            p.Add(c => c.Items, items);
+            p.Add(c => c.ShowSearch, false);
+            p.Add(c => c.ShowColumnPicker, false);
+            p.Add(c => c.ShowPagination, false);
+            p.Add(c => c.ShowExport, true);
+            p.Add(c => c.Selectable, selectable);
+            p.Add(c => c.AllowExportSelected, allowExportSelected);
+            if (onCompleted is not null)
+            {
+                p.Add(c => c.OnExportCompleted,
+                    EventCallback.Factory.Create<DataTableExportResult>(this, onCompleted));
+            }
+
+            p.AddChildContent(b =>
+            {
+                var seq = 0;
+                AddCol(b, ref seq, "Name", x => x.Name);
+                AddCol(b, ref seq, "Age", x => x.Age);
+            });
+        });
+    }
+
+    [Fact]
+    public void ExportScope_EmptySelection_DisablesSelected_AndShowsDescription()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = RenderSelectableExport(people);
+
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        cut.FindAll("[data-export-scope]").Should().HaveCount(2);
+        var selected = cut.Find("[data-export-scope='selected']");
+        selected.HasAttribute("disabled").Should().BeFalse("an empty selection stays focusable");
+        selected.GetAttribute("aria-disabled").Should().Be("true");
+        selected.ClassList.Should().Contain("tm-dropdown-item-disabled");
+        selected.GetAttribute("role").Should().Be("menuitemradio");
+        selected.GetAttribute("aria-checked").Should().Be("false");
+        var describedBy = selected.GetAttribute("aria-describedby");
+        describedBy.Should().StartWith("tm-data-table-export-scope-empty-");
+        selected.TextContent.Should().Contain("Selected rows (0)");
+        var description = selected.QuerySelector(".tm-data-table__export-description")!;
+        description.GetAttribute("id").Should().Be(describedBy);
+        description.TextContent.Should().Contain("Select rows to export them");
+        var all = cut.Find("[data-export-scope='all']");
+        all.HasAttribute("disabled").Should().BeFalse();
+        all.GetAttribute("aria-checked").Should().Be("true");
+        all.TextContent.Should().Contain("All rows (5)");
+    }
+
+    [Fact]
+    public async Task ExportScope_TwoOfFive_CsvContainsHeaderAndThoseTwoRowsInOrder()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = RenderSelectableExport(people);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[1].Change(true);
+        cut.FindAll("tbody tr td input[type='checkbox']")[3].Change(true);
+
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+        var selected = cut.Find("[data-export-scope='selected']");
+        selected.HasAttribute("disabled").Should().BeFalse();
+        selected.TextContent.Should().Contain("Selected rows (2)");
+
+        await cut.Find("[data-export-scope='selected']").ClickAsync(new());
+        cut.FindAll(".tm-dropdown-menu").Should().NotBeEmpty("a scope choice leaves the menu open");
+        await cut.Find("[data-export-format='csv']").ClickAsync(new());
+
+        var data = await cut.InvokeAsync(() => cut.Instance.BuildExportDataAsync(DataTableExportScope.Selected));
+        var csv = Encoding.UTF8.GetString(new CsvDataTableExporter(writeBom: false).Export(data));
+        var lines = csv.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
+        lines.Should().Equal("Name,Age", "P2,2", "P4,4");
+    }
+
+    [Fact]
+    public async Task ExportScope_TwoOfFive_XlsxExporterReceivesTwoRows()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var xlsx = new RecordingXlsxExporter();
+        var cut = RenderSelectableExport(people, xlsx: xlsx);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[0].Change(true);
+        cut.FindAll("tbody tr td input[type='checkbox']")[4].Change(true);
+
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(DataTableExportFormat.Xlsx, DataTableExportScope.Selected));
+
+        xlsx.Received.Should().ContainSingle();
+        xlsx.Received[0].Rows.Should().HaveCount(2);
+        xlsx.Received[0].Rows.Select(row => row[0]).Should().Equal("P1", "P5");
+    }
+
+    private sealed class RecordingJsonExporter : IDataTableExporter
+    {
+        public List<DataTableExportData> Received { get; } = [];
+
+        public string Format => "json";
+        public string ContentType => "application/json";
+        public string FileExtension => "json";
+
+        public byte[] Export(DataTableExportData data)
+        {
+            Received.Add(data);
+            return Encoding.UTF8.GetBytes("{}");
+        }
+    }
+
+    [Fact]
+    public async Task ExportScope_CustomExporterWithSelectedScope_ReceivesTwoOfFiveRows()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var exporter = new RecordingJsonExporter();
+        var cut = RenderSelectableExport(people);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[1].Change(true);
+        cut.FindAll("tbody tr td input[type='checkbox']")[3].Change(true);
+
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(exporter, DataTableExportScope.Selected));
+
+        exporter.Received.Should().ContainSingle();
+        exporter.Received[0].Rows.Should().HaveCount(2, "the custom exporter sees only the checked rows");
+        exporter.Received[0].Rows.Select(row => row[0]).Should().Equal("P2", "P4");
+    }
+
+    [Fact]
+    public async Task ExportScope_CustomExporterWithoutScope_DelegatesToAllRows()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var exporter = new RecordingJsonExporter();
+        var cut = RenderSelectableExport(people);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[1].Change(true);
+
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(exporter, "people.json"));
+
+        exporter.Received.Should().ContainSingle();
+        exporter.Received[0].Rows.Should().HaveCount(5, "the exporter-less scope defaults to All");
+    }
+
+    [Fact]
+    public void ExportScope_AllowExportSelectedFalse_HasNoScopeSection()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = RenderSelectableExport(people, allowExportSelected: false);
+
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        cut.FindAll("[data-export-scope]").Should().BeEmpty();
+        cut.FindAll("[role='separator']").Should().BeEmpty();
+        cut.Find("[data-export-format='csv']").TextContent.Should().Contain("CSV file");
+    }
+
+    [Fact]
+    public void ExportScope_SelectableFalse_HasNoScopeSection()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = RenderSelectableExport(people, selectable: false);
+
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        cut.FindAll("[data-export-scope]").Should().BeEmpty();
+        cut.FindAll("tbody tr td input[type='checkbox']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExportScope_OnExportCompleted_ReportsSelected()
+    {
+        DataTableExportResult? completed = null;
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = RenderSelectableExport(people, onCompleted: result => completed = result);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[2].Change(true);
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(DataTableExportFormat.Csv, DataTableExportScope.Selected));
+
+        completed.Should().NotBeNull();
+        completed!.Scope.Should().Be(DataTableExportScope.Selected);
+        completed.RowCount.Should().Be(1);
+        completed.Format.Should().Be(DataTableExportFormat.Csv);
+    }
+
+    [Fact]
+    public async Task ExportScope_ClearingTheSelection_ReturnsToAll()
+    {
+        var people = Enumerable.Range(1, 3).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = RenderSelectableExport(people);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[0].Change(true);
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+        await cut.Find("[data-export-scope='selected']").ClickAsync(new());
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[0].Change(false);
+        cut.FindAll(".tm-dropdown-menu").Should().NotBeEmpty("a scope choice leaves the menu open");
+
+        cut.Find("[data-export-scope='all']").GetAttribute("aria-checked").Should().Be("true");
+        cut.Find("[data-export-scope='selected']").GetAttribute("aria-checked").Should().Be("false");
+    }
+
+    [Fact]
+    public async Task ExportAsync_FormatOnly_StillExportsAllRows()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        DataTableExportResult? completed = null;
+        var cut = RenderSelectableExport(people, onCompleted: result => completed = result);
+        cut.FindAll("tbody tr td input[type='checkbox']")[0].Change(true);
+
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(DataTableExportFormat.Csv));
+
+        completed!.Scope.Should().Be(DataTableExportScope.All);
+        completed.RowCount.Should().Be(5);
+    }
+
+    [Fact]
+    public void ExportScope_PagedClientData_AllRowsCountIsFilteredTotal_NotThePage()
+    {
+        var people = Enumerable.Range(1, 10).Select(i => new Person($"P{i}", i)).ToList();
+        var cut = Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.Items, people);
+            p.Add(c => c.ShowSearch, false);
+            p.Add(c => c.ShowColumnPicker, false);
+            p.Add(c => c.ShowPagination, true);
+            p.Add(c => c.DefaultPageSize, 5);
+            p.Add(c => c.ShowExport, true);
+            p.Add(c => c.Selectable, true);
+            p.Add(c => c.AllowExportSelected, true);
+            p.AddChildContent(b =>
+            {
+                var seq = 0;
+                AddCol(b, ref seq, "Name", x => x.Name);
+            });
+        });
+
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        cut.Find("[data-export-scope='all']").TextContent.Should().Contain("All rows (10)");
+        cut.FindAll("tbody tr").Should().HaveCount(5, "the table itself still pages");
+    }
+
+    [Fact]
+    public async Task ExportScope_CheckedRowHiddenBySearch_IsStillExportedAfterTheVisibleOnes()
+    {
+        var people = Enumerable.Range(1, 4).Select(i => new Person($"P{i}", i)).ToList();
+        var search = string.Empty;
+        var cut = Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.Items, people);
+            p.Add(c => c.SearchText, search);
+            p.Add(c => c.ShowSearch, false);
+            p.Add(c => c.ShowColumnPicker, false);
+            p.Add(c => c.ShowPagination, false);
+            p.Add(c => c.ShowExport, true);
+            p.Add(c => c.Selectable, true);
+            p.Add(c => c.AllowExportSelected, true);
+            p.AddChildContent(b =>
+            {
+                var seq = 0;
+                AddCol(b, ref seq, "Name", x => x.Name);
+            });
+        });
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[0].Change(true);
+        cut.FindAll("tbody tr td input[type='checkbox']")[2].Change(true);
+
+        search = "P2";
+        cut.Render(p => p.Add(c => c.SearchText, search));
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(1));
+
+        var data = await cut.InvokeAsync(() => cut.Instance.BuildExportDataAsync(DataTableExportScope.Selected));
+
+        data.Rows.Select(row => row[0]).Should().Equal("P1", "P3");
+    }
+
+    [Fact]
+    public async Task ExportScope_ProviderReturnsNewInstances_StillExportsTheCheckedRows()
+    {
+        var people = Enumerable.Range(1, 4).Select(i => new Person($"P{i}", i)).ToList();
+        var provider = new FreshInstanceProvider(people);
+        var cut = Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.DataProvider, provider);
+            p.Add(c => c.ShowSearch, false);
+            p.Add(c => c.ShowColumnPicker, false);
+            p.Add(c => c.ShowPagination, false);
+            p.Add(c => c.ShowExport, true);
+            p.Add(c => c.Selectable, true);
+            p.Add(c => c.AllowExportSelected, true);
+            p.AddChildContent(b =>
+            {
+                var seq = 0;
+                AddCol(b, ref seq, "Name", x => x.Name);
+                AddCol(b, ref seq, "Age", x => x.Age);
+            });
+        });
+
+        cut.WaitForState(() => cut.FindAll("tbody tr").Count == 4);
+        cut.FindAll("tbody tr td input[type='checkbox']")[1].Change(true);
+        cut.FindAll("tbody tr td input[type='checkbox']")[3].Change(true);
+
+        var data = await cut.InvokeAsync(() => cut.Instance.BuildExportDataAsync(DataTableExportScope.Selected));
+
+        provider.Queries.Should().NotContain(query => query.PageSize == int.MaxValue,
+            "a selected export must not re-query the provider");
+        data.Rows.Select(row => row[0]).Should().Equal("P2", "P4");
+    }
+
+    /// <summary>Every query returns new record instances, the way a real provider materializes rows.</summary>
+    private sealed class FreshInstanceProvider(IReadOnlyList<Person> allRows) : IDataTableDataProvider<Person>
+    {
+        public List<DataTableQuery> Queries { get; } = [];
+
+        public Task<PagedResult<Person>> GetDataAsync(DataTableQuery query, CancellationToken ct = default)
+        {
+            Queries.Add(query);
+            var rows = (query.PageSize == int.MaxValue ? allRows : allRows.Take(query.PageSize))
+                .Select(row => row with { })
+                .ToList();
+            return Task.FromResult(new PagedResult<Person>
+            {
+                Items = rows,
+                TotalCount = allRows.Count,
+                Page = query.Page,
+                PageSize = query.PageSize
+            });
+        }
+    }
+
+    private sealed class RecordingXlsxExporter : IDataTableXlsxExporter
+    {
+        public List<DataTableExportData> Received { get; } = [];
+
+        public byte[] Export(DataTableExportData data)
+        {
+            Received.Add(data);
+            return [1, 2, 3];
+        }
     }
 }

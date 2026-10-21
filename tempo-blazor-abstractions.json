@@ -13245,6 +13245,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "DataTableExportScope",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "Which rows a data-table export includes. All (the default) exports every row matching the current filter and sort, paging bypassed. Selected exports only the checked rows and requires a selectable table. TmDataTable offers the choice only when AllowExportSelected is true.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DataTableExport.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "DataTableFilter",
       "kind": "Record",
       "category": "Models",
@@ -37297,11 +37307,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1489,
-    "manualItemCount": 1489,
-    "generatedItemCount": 1472,
+    "itemCount": 1490,
+    "manualItemCount": 1490,
+    "generatedItemCount": 1473,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1472
+    "publicApiTypeCount": 1473
   }
 }

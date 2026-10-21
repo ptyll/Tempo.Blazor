@@ -13,9 +13,9 @@ public class TmDataTableVirtualRowHeightTests : LocalizationTestBase
         var cut = Render<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, new List<BasicPerson> { new("Ada", 1, "User") })
             .Add(c => c.ScrollMode, DataTableScrollMode.Virtualized)
-            .Add(c => c.VirtualItemSize, 48f));
+            .Add(c => c.VirtualItemSize, 64f));
 
         cut.Find(".tm-data-table-virtual-scroll").GetAttribute("style")
-            .Should().Contain("--tm-data-table-row-height: 48px");
+            .Should().Contain("--tm-data-table-row-height: 64px");
     }
 }

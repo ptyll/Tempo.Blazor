@@ -1,0 +1,10 @@
+{
+  "itemName": "ColumnMenuMode",
+  "kind": "Enum",
+  "category": "Data Table",
+  "description": "Column-menu affordance mode for a data table.",
+  "values": [
+    {"name":"None","description":"Render no extra column menu button."},
+    {"name":"Menu","description":"Render a kebab menu in each data column header (sort, pin, group, hide, filter). Replaces the standalone pin button; the toolbar is unchanged."}
+  ]
+}

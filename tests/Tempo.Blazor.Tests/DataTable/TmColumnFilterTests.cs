@@ -73,6 +73,29 @@ public class TmColumnFilterTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ColumnFilter_Select_BlankOptionIsALocalizedAll()
+    {
+        var cut = Render<TmColumnFilter>(p => p
+            .Add(c => c.ColumnKey, "Dept")
+            .Add(c => c.FilterType, FilterType.Select)
+            .Add(c => c.FilterOptions, new List<SelectOption<string>> { new() { Value = "eng", Label = "Engineering" } }));
+
+        var blank = cut.Find("select.tm-col-filter-select option[value='']");
+        blank.TextContent.Trim().Should().Be("All",
+            "a blank select gives no affordance — the empty value is an explicit All");
+    }
+
+    [Fact]
+    public void ColumnFilter_Boolean_BlankOptionIsALocalizedAll()
+    {
+        var cut = Render<TmColumnFilter>(p => p
+            .Add(c => c.ColumnKey, "IsActive")
+            .Add(c => c.FilterType, FilterType.Boolean));
+
+        cut.Find("select.tm-col-filter-select option[value='']").TextContent.Trim().Should().Be("All");
+    }
+
+    [Fact]
     public void ColumnFilter_OnChange_FiresCallbackWithFilter()
     {
         DataTableFilter? received = null;

@@ -352,4 +352,106 @@ public class TmDropdownTests : LocalizationTestBase
         cut.FindAll("[data-tm-toolbar-control]").Should().HaveCount(1, "only the bar trigger carries the hook");
         cut.Find("[role='menuitem']").HasAttribute("data-tm-toolbar-control").Should().BeFalse();
     }
+
+    [Fact]
+    public void Item_CheckedNull_StaysMenuitem_Checked_BecomesRadio()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDropdownItem>(0);
+                b.AddAttribute(1, nameof(TmDropdownItem.Value), "csv");
+                b.AddAttribute(2, nameof(TmDropdownItem.ChildContent), (RenderFragment)(inner => inner.AddContent(0, "CSV")));
+                b.CloseComponent();
+
+                b.OpenComponent<TmDropdownItem>(3);
+                b.AddAttribute(4, nameof(TmDropdownItem.Value), "all");
+                b.AddAttribute(5, nameof(TmDropdownItem.Checked), true);
+                b.AddAttribute(6, nameof(TmDropdownItem.ChildContent), (RenderFragment)(inner => inner.AddContent(0, "All")));
+                b.CloseComponent();
+            })));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        cut.FindAll("[role='menuitem']").Should().ContainSingle()
+            .Which.HasAttribute("aria-checked").Should().BeFalse();
+        var radio = cut.Find("[role='menuitemradio']");
+        radio.GetAttribute("aria-checked").Should().Be("true");
+        radio.TextContent.Should().Contain("All");
+        radio.QuerySelector(".tm-dropdown-item__check svg").Should().NotBeNull("a checked radio shows a check");
+    }
+
+    [Fact]
+    public void Item_CheckedFalse_ReservesAnEmptyCheckSlot()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDropdownItem>(0);
+                b.AddAttribute(1, nameof(TmDropdownItem.Value), "selected");
+                b.AddAttribute(2, nameof(TmDropdownItem.Checked), false);
+                b.AddAttribute(3, nameof(TmDropdownItem.ChildContent), (RenderFragment)(inner => inner.AddContent(0, "Selected")));
+                b.CloseComponent();
+            })));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        var slot = cut.Find(".tm-dropdown-item__check");
+        slot.GetAttribute("aria-hidden").Should().Be("true");
+        slot.QuerySelector("svg").Should().BeNull("an unchecked radio keeps the slot empty");
+    }
+
+    [Fact]
+    public async Task Item_AriaDisabled_StaysFocusable_AndDoesNotSelect()
+    {
+        string? selected = null;
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.OnSelect, EventCallback.Factory.Create<string>(this, value => selected = value))
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDropdownItem>(0);
+                b.AddAttribute(1, nameof(TmDropdownItem.Value), "selected");
+                b.AddAttribute(2, nameof(TmDropdownItem.AriaDisabled), true);
+                b.AddAttribute(3, nameof(TmDropdownItem.ChildContent), (RenderFragment)(inner => inner.AddContent(0, "Selected")));
+                b.CloseComponent();
+            })));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        var item = cut.Find(".tm-dropdown-item");
+        item.HasAttribute("disabled").Should().BeFalse("aria-disabled must stay in the focus order");
+        item.GetAttribute("aria-disabled").Should().Be("true");
+        item.ClassList.Should().Contain("tm-dropdown-item-disabled");
+
+        await item.ClickAsync(new());
+
+        selected.Should().BeNull();
+        cut.FindAll(".tm-dropdown-menu").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task Item_KeepOpen_LeavesTheMenuOpen_AndStillSelects()
+    {
+        string? selected = null;
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.OnSelect, EventCallback.Factory.Create<string>(this, value => selected = value))
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDropdownItem>(0);
+                b.AddAttribute(1, nameof(TmDropdownItem.Value), "all");
+                b.AddAttribute(2, nameof(TmDropdownItem.KeepOpen), true);
+                b.AddAttribute(3, nameof(TmDropdownItem.ChildContent), (RenderFragment)(inner => inner.AddContent(0, "All")));
+                b.CloseComponent();
+            })));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        await cut.Find(".tm-dropdown-item").ClickAsync(new());
+
+        selected.Should().Be("all");
+        cut.FindAll(".tm-dropdown-menu").Should().NotBeEmpty("KeepOpen skips the close");
+    }
 }

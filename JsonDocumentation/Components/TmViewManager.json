@@ -95,20 +95,34 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation."
+      "description": "When true, each non-default view offers Set as default. The choice is persisted through Provider.SetDefaultViewAsync, the list reloads, and OnSetDefault fires with the reloaded view. A failed write is shown in the panel and leaves the current default unchanged. Default false hides the action."
     },
     {
       "name": "OnSetDefault",
       "type": "EventCallback<DataTableView>",
       "isRequired": false,
-      "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+      "description": "Raised after SetDefaultViewAsync succeeds and the view list reloads, with the persisted view."
     },
     {
       "name": "ShowActiveViewName",
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation."
+      "description": "When true and a view is active, the toggle shows that view's name (truncated, full name in title) instead of the generic Views label. Default false keeps Views."
+    },
+    {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the Views toggle uses the small outline button (tm-btn-sm) so it lines up with the other card-toolbar triggers. Default false keeps the plain toggle. TmDataTable passes this when Appearance is Card."
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "PanelPresentation.Popover",
+      "description": "How the Views panel presents on a narrow viewport. Popover (default) keeps the anchored panel; Auto turns it into a full-width bottom sheet on a mobile viewport. TmDataTable passes Auto when MobileLayout is not None and TmMultiViewList when Responsive is on."
     }
   ],
   "cssClasses": [

@@ -105,23 +105,25 @@ public enum DataToolbarMode
 }
 
 /// <summary>Column-menu affordance mode for a data table.</summary>
-/// <summary>Column-menu affordance mode for a data table.</summary>
 public enum ColumnMenuMode
 {
     /// <summary>Render no extra column menu button.</summary>
     None,
-    /// <summary>Render an accessible column menu button.</summary>
+    /// <summary>
+    /// Render a kebab menu in each data column header, offering sort, pin, group, hide and filter
+    /// according to the column's own capabilities. Replaces the standalone pin button.
+    /// </summary>
     Menu
 }
 
 /// <summary>Presentation of inline row edit actions.</summary>
 public enum EditActionsMode
 {
-    /// <summary>Icon actions, preserving current markup.</summary>
+    /// <summary>Icon actions in the edited row. The default; preserves current markup.</summary>
     Icons,
-    /// <summary>Localized text buttons.</summary>
+    /// <summary>Localized text buttons in the edited row. Mobile cards always use this.</summary>
     Text,
-    /// <summary>Actions in a separate footer row.</summary>
+    /// <summary>Save and Cancel in the following row, spanning every rendered column.</summary>
     Footer
 }
 
@@ -137,15 +139,16 @@ public enum CardActivation
 /// <summary>Cell content layout for multi-view lists.</summary>
 public enum TableCellLayout
 {
-    /// <summary>Inline layout.</summary>
+    /// <summary>Title and subtitle each keep their own table column. The default.</summary>
     Inline,
-    /// <summary>Stack cell content.</summary>
+    /// <summary>The subtitle column is dropped and its value renders under the title in the same cell.</summary>
     Stacked
 }
 
+/// <summary>Surface style of a data table or multi-view list.</summary>
 public enum DataTableAppearance
 {
-    /// <summary>Today's flat surface. No card class.</summary>
+    /// <summary>Today's flat surface of a data table or multi-view list. No card class.</summary>
     Plain,
 
     /// <summary>Card surface. Adds <c>tm-data-table-wrapper--card-surface</c>.</summary>
@@ -162,11 +165,11 @@ public enum DataTableKeyboardNavigation
     /// <summary>Each data row is a Tab stop. Enter and Space activate the row. Arrow keys do not move cells.</summary>
     Rows,
 
-    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell.</summary>
+    /// <summary>One cell has tabindex 0. Arrows, Home, End and PageUp/PageDown move that cell; Enter activates the row once and Space toggles selection.</summary>
     Grid
 }
 
-/// <summary>Semantic role of a column when a data table is rendered as mobile cards.</summary>
+/// <summary>Semantic role of a column when a data table or multi-view list is rendered as cards.</summary>
 public enum DataTableCardRole
 {
     /// <summary>Regular card field.</summary>
@@ -203,10 +206,10 @@ public enum FilterBuilderPresentation
     /// <summary>The picker and editor render in the document flow.</summary>
     Inline,
 
-    /// <summary>The picker and editor render as an anchored popover.</summary>
+    /// <summary>The picker and editor open in a <c>TmOverlayPanel</c> anchored to Add filter, as a popover at every width.</summary>
     Popover,
 
-    /// <summary>Same as <see cref="Inline"/> until a host opts into a breakpoint rule.</summary>
+    /// <summary>Same anchored panel as <see cref="Popover"/>, becoming a sheet on a narrow viewport.</summary>
     Auto
 }
 

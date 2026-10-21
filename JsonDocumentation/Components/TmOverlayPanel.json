@@ -145,12 +145,6 @@
       "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Also names the popover: when neither AriaLabel nor AriaLabelledBy is set, the popover emits this as its aria-label (since 2.9.1)."
     },
     {
-      "name": "RestoreFocusTargetId",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Element id that receives focus when the panel closes by Escape or an outside pointer."
-    },
-    {
       "name": "MobilePresentation",
       "type": "PanelPresentation",
       "isRequired": false,

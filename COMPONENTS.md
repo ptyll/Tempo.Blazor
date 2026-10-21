@@ -1696,8 +1696,21 @@ Seznam s přepínáním zobrazení (tabulka/karty/seznam) a filtry.
 | `OnItemClick` | `EventCallback<TItem>` | — | Klik na položku |
 | `EmptyTitle` | `string?` | `null` | Prázdný stav |
 | `ScrollMode` | `DataTableScrollMode` | `Pagination` | Scrollovací režim |
+| `Appearance` | `DataTableAppearance` | `Card` | `Card` = karta, `Plain` = plochá plocha. Brána povrchu, ne ostatních voleb |
+| `ViewSwitcherLabels` | `ViewSwitcherLabels` | `IconsOnly` | `IconsAndText` přidá k ikoně lokalizovaný název |
+| `AvatarFallback` | `AvatarFallback` | `None` | `Initials` vykreslí iniciály, když položka nemá URL avataru |
+| `ShowItemCount` | `bool` | `false` | Počet položek v toolbaru |
+| `Responsive` | `bool` | `false` | Responzivní chování tabulky a seznamu |
+| `TableCellLayout` | `TableCellLayout` | `Inline` | `Stacked` dá podtitulek pod titulek ve stejné buňce |
+| `CardActivation` | `CardActivation` | `Button` | `StretchedLink` vyžaduje `ItemHref` |
+| `ItemHref` | `Func<TItem, string?>?` | `null` | URL pro natažený odkaz karty |
+| `MaxCardColumns` | `int?` | `null` | Strop sloupců mřížky karet |
+| `StatusVariantField` | `Func<TItem, BadgeVariant>?` | `null` | Varianta status badge; bez něj `Default` |
+| `GroupHeaderTemplate` | `RenderFragment<DataGroup<TItem>>?` | `null` | Nahradí vestavěné záhlaví skupiny |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+
+> Volby na vyžádání (výchozí hodnoty, `Appearance` jako brána povrchu, klávesy mřížky, mobilní sheety, rozsah exportu, náhled výsledků) popisuje [docs/data-table-redesign.md](docs/data-table-redesign.md).
 
 #### Příklady
 
@@ -3593,6 +3606,17 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `OnRowClick` | `EventCallback<TItem>` | — | Klik na řádek |
 | `OnSelectionChanged` | `EventCallback<IReadOnlyList<TItem>>` | — | Změna výběru |
 | `ViewContext` | `string` | **povinný** | Unikátní ID pro ukládání view |
+| `Appearance` | `DataTableAppearance` | `Plain` | `Plain` = dnešní plocha, `Card` přidá `tm-data-table-wrapper--card-surface`. Brána povrchu — ostatní volby ji nepřepínají |
+| `MobileLayout` | `DataTableMobileLayout` | `None` | `Scroll` (vodorovný posuv, `MobilePinned`) nebo `Cards` (řádky jako karty, `CardRole`) |
+| `KeyboardNavigation` | `DataTableKeyboardNavigation` | `Rows` | `Grid` = jeden roving tabindex, šipky mezi buňkami |
+| `ColumnMenuMode` | `ColumnMenuMode` | `None` | `Menu` nahradí pin tlačítko kebabem v záhlaví sloupce |
+| `EditActionsMode` | `EditActionsMode` | `Icons` | `Text` nebo `Footer` pro Uložit/Zrušit; mobilní karty vždy `Text` |
+| `AllowExportSelected` | `bool` | `false` | S `Selectable` přidá do exportu rozsah Všechny/Vybrané řádky |
+| `ShowFilterSummary` | `bool` | `false` | Lokalizovaný počet aktivních filtrů a vymazání |
+| `ShowFilterResultPreview` | `bool` | `false` | Počet záznamů odpovídajících filtru, včetně rozepsaného |
+| `ShowActiveViewName` | `bool` | `false` | Přepínač pohledů ukáže název aktivního pohledu |
+| `AllowSetDefault` | `bool` | `false` | Akce „Nastavit jako výchozí" (vyžaduje `ViewProvider`) |
+| `GroupHeaderTemplate` | `RenderFragment<DataGroup<TItem>>?` | `null` | Nahradí vestavěné záhlaví skupiny |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 | `TestIdPrefix` | `string?` | `null` | Prefix pro `data-testid` tabulky; **propaguje se i do vestavěné `TmPagination`** |
 | `DataTestId` | `string?` | `null` | Přebije `data-testid` kořenového prvku |
@@ -3841,6 +3865,9 @@ Správa uložených pohledů (filtry, řazení, sloupce).
 | `CurrentUserId` | `string?` | `null` | Aktuální uživatel |
 | `CurrentTenantId` | `string?` | `null` | Aktuální tenant |
 | `Disabled` | `bool` | `false` | Zakáže správce pohledů |
+| `ShowActiveViewName` | `bool` | `false` | Přepínač ukáže název aktivního pohledu |
+| `AllowSetDefault` | `bool` | `false` | Akce „Nastavit jako výchozí"; vyžaduje `OnSetDefault` |
+| `OnSetDefault` | `EventCallback<DataTableView>` | — | Uloží výchozí pohled přes `IDataTableViewProvider.SetDefaultViewAsync` |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -3876,6 +3903,7 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `tm-filter-select` | Select pole |
 | `tm-filter-value-input` | Input hodnoty |
 | `tm-filter-apply` | Tlačítko aplikace |
+| `tm-filter-result-preview` | Náhled počtu odpovídajících záznamů (`aria-live="polite"`) |
 
 #### Parametry
 
@@ -3885,6 +3913,9 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `ActiveFilters` | `IReadOnlyList<ActiveFilter>` | `[]` | Aktuální filtry |
 | `OnFiltersChanged` | `EventCallback<IReadOnlyList<ActiveFilter>>` | — | Změna filtrů |
 | `ShowClearAll` | `bool` | `true` | Zobrazit "Smazat vše" |
+| `Presentation` | `FilterBuilderPresentation` | `Inline` | `Inline` = na místě, `Popover` = panel, `Auto` = popover, pod 640 px bottom sheet |
+| `ShowResultPreview` | `bool` | `false` | Zobrazí živý počet záznamů odpovídajících filtrům včetně rozpracovaného filtru v editoru; region se renderuje jen spolu s `ResultCountProvider` |
+| `ResultCountProvider` | `Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?` | `null` | Vrátí počet záznamů odpovídajících zadaným filtrům, nebo `null` když je neznámý. Volá se s debounce 300 ms, dokud je `ShowResultPreview` true |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `Disabled` | `bool` | `false` | Zakáže builder filtrů |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |

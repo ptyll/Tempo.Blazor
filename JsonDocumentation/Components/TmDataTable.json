@@ -299,6 +299,13 @@
       "description": "When true and column filters are active, shows a localized active-filter count and clear-filters control. Default: false."
     },
     {
+      "name": "ShowFilterResultPreview",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the inline filter builder shows how many records match the current filters. A DataProvider is asked with PageSize 1 and the preview reads TotalCount; without one the in-memory rows are counted with the table's own filter rules. Default: false."
+    },
+    {
       "name": "ExternalFilterDefinitions",
       "type": "List<FilterDefinition>",
       "isRequired": false,
@@ -367,7 +374,7 @@
       "type": "DataTableKeyboardNavigation",
       "isRequired": false,
       "default": "Rows",
-      "description": "Rows (default) keeps one Tab stop per row. Grid is opt-in roving tabindex: arrows, Home, End, PageUp and PageDown move the active cell. Grid becomes the default in the next major; set Rows to keep today's behavior."
+      "description": "Rows (default) keeps one Tab stop per row: Enter activates on keydown, Space on keyup. Grid is opt-in ARIA grid roving tabindex. Arrows, Home, End, PageUp and PageDown move the single active cell (PageUp/PageDown move 10 rows inside the rendered page and do not change the page). Enter activates the row once; Space toggles selection and never activates; F2 starts inline editing when Editable — in Grid mode editing works only in the flat paged body (not virtualized or grouped, where no editor renders). Enter or Space on the edit-actions cell starts the row edit. Clicking or focusing a cell moves the roving stop onto it. The expander and the selection checkbox are grid columns — Home lands on them and Enter/Space is handed to that control. An empty grid keeps the tab stop on the column header; a group header is a colspan gridcell that Enter/Space toggles and ArrowRight/ArrowLeft expands or collapses. Virtualized mode addresses rendered cells, scrolls `index * VirtualItemSize` and retries until the target cell is painted, so focus lands on it; the Ctrl+Home/Ctrl+End document scroll default is cancelled. While a row is being edited the grid handler returns immediately; Escape cancels and returns focus to the cell. Card layout omits CardRole.Hidden columns from the grid. Grid becomes the default in the next major; set Rows to keep today's behavior."
     },
     {
       "name": "Appearance",
@@ -437,47 +444,47 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation."
+      "description": "Passed to the embedded TmViewManager. When true, each non-default view offers Set as default, persisted through the view provider. Default false hides the action."
     },
     {
       "name": "ColumnMenuMode",
       "type": "ColumnMenuMode",
       "isRequired": false,
       "default": "None",
-      "description": "Opt-in ColumnMenuMode behavior; defaults preserve the existing presentation."
+      "description": "Column-menu affordance. None (default) keeps the pin toggle; Menu renders a kebab in each data column header offering sort, pin, group, hide and filter, and removes the pin button."
     },
     {
       "name": "EditActionsMode",
       "type": "EditActionsMode",
       "isRequired": false,
       "default": "Icons",
-      "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
+      "description": "How an edited row presents Save and Cancel. Icons (default) shows icon buttons in the row. Text shows labeled buttons in the row. Footer moves them into a following row whose cell spans every rendered column (expander, checkbox, data columns and the edit-action column). Mobile cards always use Text."
     },
     {
-      "name": "ExportSelectedOnly",
+      "name": "AllowExportSelected",
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in ExportSelectedOnly behavior; defaults preserve the existing presentation."
+      "description": "When true and the table is Selectable, the export menu offers All rows or Selected rows (N). The selected choice is disabled while nothing is checked. Default false keeps the format-only menu."
     },
     {
       "name": "GroupHeaderTemplate",
       "type": "RenderFragment<DataGroup<TItem>>?",
       "isRequired": false,
-      "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+      "description": "Replaces the default group header (column title, value and count). The context is the DataGroup. Omit it to keep the built-in header."
     },
     {
       "name": "OnSetDefault",
       "type": "EventCallback<DataTableView>",
       "isRequired": false,
-      "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+      "description": "Passed to the embedded TmViewManager. Raised after the default view is persisted and the list reloads."
     },
     {
       "name": "ShowActiveViewName",
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation."
+      "description": "Passed to the embedded TmViewManager. When true, the toggle shows the active view's name (truncated, full name in title) instead of Views."
     }
   ],
   "cssClasses": [

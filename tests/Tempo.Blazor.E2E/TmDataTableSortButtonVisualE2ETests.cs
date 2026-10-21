@@ -73,7 +73,7 @@ public class TmDataTableSortButtonVisualE2ETests : WasmTestBase
 
         var index = await TabToSortButtonIndexAsync(page);
         Assert.IsTrue(index >= 0,
-            "Tab navigation must land on a .tm-th-sort inside the ergonomics table within 40 presses");
+            "Tab navigation must land on a .tm-th-sort inside the ergonomics table within 40 presses from the section");
 
         var sortedButton = section.Locator("button.tm-th-sort").Nth(index);
         var sortedHeader = sortedButton.Locator("xpath=..");
@@ -151,12 +151,25 @@ public class TmDataTableSortButtonVisualE2ETests : WasmTestBase
     }
 
     /// <summary>
-    /// Tabs forward until the focused element is a <c>.tm-th-sort</c> inside the ergonomics
-    /// section, then returns its index among that section's sort buttons (DOM order == tab order).
-    /// Returns -1 when no sort button is reached within the press budget.
+    /// Focuses the ergonomics section FIRST (scripted focus on a container does not claim
+    /// <c>:focus-visible</c>, and the subsequent real Tab press establishes keyboard modality for
+    /// everything it lands on), then Tabs forward until the focused element is a
+    /// <c>.tm-th-sort</c> inside that section and returns its index among the section's sort
+    /// buttons (DOM order == tab order). Returns -1 when no sort button is reached within the
+    /// press budget — which stays small because the walk STARTS inside the section instead of
+    /// counting sidebar links from the top of the page.
     /// </summary>
     private static async Task<int> TabToSortButtonIndexAsync(IPage page)
     {
+        await page.EvaluateAsync(
+            """
+            () => {
+                const section = document.querySelector("[data-testid='dt-ergonomics-section']");
+                section.tabIndex = -1;
+                section.focus();
+            }
+            """);
+
         for (var tab = 0; tab < 40; tab++)
         {
             await page.Keyboard.PressAsync("Tab");

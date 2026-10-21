@@ -85,7 +85,10 @@ bottom sheet on a mobile one. The host contract every action surface must honour
   anchor), carries `aria-haspopup="menu"`, `aria-expanded` and `aria-controls` pointing at the
   panel's stable `Id`, and the menu renders `role="menu"` / `role="menuitem"`.
 - The initial focus moves to the first **enabled** menuitem (never a disabled one — `focus()`
-  on a disabled button is a no-op and would leave focus on `<body>`); when every overflow item
+  on a disabled button is a no-op and would leave focus on `<body>`); "enabled" here means
+  neither native `disabled` nor `aria-disabled="true"` — an item that is only `aria-disabled`
+  keeps its roving place but is skipped as the OPENING focus, and a menu whose every item is
+  `aria-disabled` falls back to its first item. When every overflow item
   is disabled, the trigger renders disabled instead of opening an inert menu. A menu that OPENED
   while its anchor was scrolled out of the viewport is parked `visibility:hidden` and the first
   `focus()` no-ops — overlay.js reports the panel's first real visibility once per open (only
@@ -101,8 +104,11 @@ bottom sheet on a mobile one. The host contract every action surface must honour
   `tm-menu-nav.js` to every `Role="menu"` panel (the popover element or the sheet's content
   wrapper) once per open — ArrowDown/ArrowUp rove through the enabled items and wrap, Home/End
   jump to the ends, typeahead focuses the next label that starts with the typed characters
-  (diacritics and case ignored), and the focused item is the only tab stop. Disabled and hidden
-  items are skipped; Enter/Space stay with the native `<button>` (one activation per press) and
+  (diacritics and case ignored), and the focused item is the only tab stop. Native `disabled`
+  and hidden items are skipped everywhere; an `aria-disabled="true"` item stays in the roving
+  order (a screen reader can land on it and hear its `aria-describedby` explanation) but the
+  initial focus still prefers a fully enabled item. Enter/Space stay with the native
+  `<button>` (one activation per press) and
   Escape stays with the overlay. `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both
   overflow menus get it from the one owner of the role.
 - `KeepMenuOpen="true"` is for actions that open another surface (a confirm dialog): the menu

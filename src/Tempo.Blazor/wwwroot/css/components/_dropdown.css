@@ -2,6 +2,13 @@
    matched anything, so this also fixes a dead rule. */
 .tm-dropdown-wrapper { position: relative; display: inline-flex; }
 
+/* A trigger without OutlineTrigger is a bare button: it inherits the host page's ink (Tailwind
+   preflight sets color: inherit), which in dark mode was the page's light-theme colour and failed
+   contrast. The trigger follows the theme's text token instead. */
+.tm-dropdown-trigger {
+  color: var(--tm-text-primary);
+}
+
 /* A disabled dropdown greys out its trigger (the wrapper class comes from TmDropdown.Disabled;
    the native `disabled` attribute blocks the click, this only paints the state). */
 .tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger {
@@ -36,8 +43,29 @@
   transition: background-color var(--tm-transition-fast);
   text-decoration: none;
 }
-.tm-dropdown-item:hover { background-color: var(--tm-color-gray-50); }
-.tm-dropdown-item:disabled, .tm-dropdown-item[disabled] { opacity: 0.5; cursor: not-allowed; }
+/* An aria-disabled item is unavailable: it must not light up like an active choice on hover. */
+.tm-dropdown-item[aria-disabled="true"]:hover { background-color: transparent; }
+.tm-dropdown-item:hover { background-color: var(--tm-bg-surface-secondary); }
+/* Keyboard focus has to read on its own: hover is pointer-only, and a menu item reached by arrow
+   keys otherwise has no visible state at all. */
+.tm-dropdown-item:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+  background-color: var(--tm-bg-surface-secondary);
+}
+.tm-dropdown-item:disabled, .tm-dropdown-item[disabled],
+.tm-dropdown-item[aria-disabled="true"] { opacity: var(--tm-opacity-disabled); cursor: not-allowed; }
+/* Leading check of a menuitemradio. The empty state keeps the same width so labels stay aligned,
+   and the icon (not the tint) is the non-colour cue. */
+.tm-dropdown-item__check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-space-4);
+  height: var(--tm-space-4);
+  color: var(--tm-color-primary);
+}
 .tm-dropdown-item-danger { color: var(--tm-color-danger); }
 .tm-dropdown-item-danger:hover { background-color: var(--tm-color-danger-subtle); }
 .tm-dropdown-sep { height: 1px; background-color: var(--tm-border-color); margin: var(--tm-space-1) 0; }

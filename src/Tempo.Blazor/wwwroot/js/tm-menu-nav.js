@@ -10,7 +10,10 @@
 //     (repeating one character cycles the matches), diacritics and case are ignored (cs/fr labels);
 //   - roving tabindex: once focus is inside the menu the focused item is the only tabbable one, so
 //     Tab leaves the menu instead of walking every entry.
-// Disabled (`disabled` / `aria-disabled="true"`) and hidden items are skipped everywhere. A key
+// Natively disabled (`disabled`) and hidden items are skipped everywhere. `aria-disabled="true"`
+// stays in the roving order: the item is still focusable, so a screen reader can land on it and
+// hear the explanation `aria-describedby` points at. Activation stays with the item itself.
+// A key
 // pressed inside a text-entry element (a filter input in the menu) is never intercepted. Nothing
 // here activates an item - Enter/Space stay with the native <button> (one activation per press,
 // docs/keyboard-activation-convention.md) - and Escape stays with overlay.js / the sheet trap.
@@ -66,7 +69,6 @@ export function typeaheadMatch(labels, current, typed) {
 
 function isEnabled(item) {
     if (item.disabled) return false;
-    if (item.getAttribute?.('aria-disabled') === 'true') return false;
     if (item.hidden || item.hasAttribute?.('hidden')) return false;
     return true;
 }
@@ -225,15 +227,20 @@ export function isAttached(menu) {
 }
 
 /**
- * Moves focus to the first enabled menu item inside a host element (the dropdown wrapper: the popover
- * stays in its DOM, so does the sheet). Returns whether something was focused.
+ * Moves focus to the first menu item inside a host element (the dropdown wrapper: the popover
+ * stays in its DOM, so does the sheet). An item that is neither natively disabled nor hidden is
+ * preferred; `aria-disabled="true"` items stay in the roving order (a screen reader must be able
+ * to land on them and hear the `aria-describedby` explanation), but the INITIAL focus still skips
+ * them so a freshly opened menu does not open on an unavailable choice. Falls back to the first
+ * roving item when every item is `aria-disabled`. Returns whether something was focused.
  * @param {ParentNode|null} root the element that contains the open role=menu
  */
 export function focusFirst(root) {
     const menu = root?.querySelector?.('[role="menu"]');
     if (!menu) return false;
-    const first = enabledItems(menu)[0];
-    if (!first) return false;
+    const items = enabledItems(menu);
+    if (items.length === 0) return false;
+    const first = items.find(el => el.getAttribute?.('aria-disabled') !== 'true') ?? items[0];
     first.focus();
     return true;
 }

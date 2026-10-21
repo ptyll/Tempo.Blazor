@@ -1,45 +1,42 @@
 using Microsoft.Playwright;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Tempo.Blazor.E2E.DataTableE2EKit;
 
 namespace Tempo.Blazor.E2E;
 
+/// <summary>
+/// Phase 13 (13.1): this class used to write full-page PNGs picked with <c>.First</c>, asserting nothing.
+/// It now asserts the STATE each of those pictures claimed to show (grouped rows present, export menu
+/// open with its scope switch, the tablet ergonomics table laid out without overflow). The PNG baselines
+/// moved to <see cref="DataTableRedesignBaselineScreenshots"/>, which is gated by TM_WRITE_BASELINES.
+/// </summary>
 [TestClass]
 public sealed class DataTablePhase4ScreenshotTests : WasmTestBase
 {
     [TestMethod]
     [TestCategory("WASM")]
-    public async Task Phase4_CapturesGroupedExportAndTablet()
+    public async Task Phase4_GroupedRowsExportMenuAndTabletLayout_AreInTheExpectedState()
     {
-        var page = await CreatePageAsync();
-        await page.SetViewportSizeAsync(1440, 900);
-        await page.GotoAsync(BaseUrl + "/data-table");
-        await page.WaitForSelectorAsync(".tm-data-table", new PageWaitForSelectorOptions { Timeout = 30000 });
+        var page = await OpenAsync(Browser, BaseUrl, "/data-table", new Options(1440, 900), RegisterContext);
 
-        await Shot(page, "[data-testid='datatable-rowattrs-grouped']", "grouped-desktop-1440.png");
-        await page.Locator("[data-testid='export-table'] .tm-data-table__export button").First.ClickAsync();
-        await page.WaitForSelectorAsync(".tm-data-table__export-item");
-        await Shot(page, "[data-testid='export-table']", "export-menu-desktop-1440.png");
+        var grouped = page.Locator("[data-testid='datatable-rowattrs-grouped']");
+        await grouped.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(grouped.Locator("tr.tm-data-table-group-row").First).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
-        await page.SetViewportSizeAsync(1024, 800);
-        await Shot(page, "[data-testid='dt-ergonomics-section'] .tm-data-table-wrapper", "tablet-1024.png");
-    }
+        var export = page.Locator("[data-testid='export-table']");
+        await export.ScrollIntoViewIfNeededAsync();
+        await export.Locator(".tm-data-table__export .tm-dropdown-trigger").ClickAsync();
+        var menu = page.Locator(".tm-dropdown-menu");
+        await Assertions.Expect(menu).ToBeVisibleAsync();
+        await Assertions.Expect(menu.Locator("[data-export-scope='all']")).ToBeVisibleAsync();
+        await Assertions.Expect(menu.Locator("[data-export-format='csv']")).ToBeVisibleAsync();
+        await page.Keyboard.PressAsync("Escape");
 
-    private static async Task Shot(IPage page, string selector, string name)
-    {
-        var directory = Path.Combine(FindRoot(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "data-table-redesign");
-        Directory.CreateDirectory(directory);
-        await page.Locator(selector).First.ScreenshotAsync(new LocatorScreenshotOptions
-        {
-            Path = Path.Combine(directory, name),
-            Timeout = 30000
-        });
-    }
-
-    private static string FindRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx")))
-            dir = dir.Parent;
-        return dir?.FullName ?? Directory.GetCurrentDirectory();
+        await SetViewportAsync(page, 1024, 800);
+        var section = page.Locator("[data-testid='dt-ergonomics-section'] .tm-data-table-wrapper");
+        await section.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(section.Locator("thead th.tm-col-pinned-left").First).ToBeVisibleAsync();
+        var box = await BoxAsync(section);
+        Assert.IsTrue(box.Width <= 1024, "the table fits the tablet viewport");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), "no page-level horizontal overflow");
     }
 }

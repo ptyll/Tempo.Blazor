@@ -990,6 +990,33 @@ public sealed class TokenContrastTests
         return alpha >= 1.0 ? hex : ThemeCss.Composite(hex, alpha, background);
     }
 
+    /// <summary>
+    /// The active page number, the idle sort glyph and the checkbox accent, measured in both themes.
+    /// The dark primary fill is primary-400 and the on-primary token aliases the page ink there, so
+    /// the page number cannot use it — primary-900 is the ink that clears 4.5:1 against both fills.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Phase11Chrome_KeepsAaContrast(bool dark)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-color-on-primary-fixed)", tokens),
+                ThemeCss.ResolveColour("var(--tm-color-primary-solid)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5, "active page number, {0}", dark ? "dark" : "light");
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens), surface)
+            .Should().BeGreaterThanOrEqualTo(4.5, "idle sort glyph, {0}", dark ? "dark" : "light");
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-color-primary)", tokens), surface)
+            .Should().BeGreaterThanOrEqualTo(3, "checkbox accent, {0}", dark ? "dark" : "light");
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

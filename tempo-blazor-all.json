@@ -4533,7 +4533,7 @@
             },
             {
               "name": "Menu",
-              "description": "Render an accessible column menu button."
+              "description": "Render a kebab menu in each data column header (sort, pin, group, hide, filter). Replaces the standalone pin button; the toolbar is unchanged."
             }
           ]
         },
@@ -8559,7 +8559,7 @@
               "type": "CardActivation",
               "isRequired": false,
               "default": "CardActivation.Button",
-              "description": "Opt-in CardActivation behavior; defaults preserve the existing presentation."
+              "description": "Card activation. Button (default) keeps the card as the tab stop. StretchedLink removes the card tab stop and puts the title in a covering link: an anchor when ItemHref returns a URL, otherwise a button that raises OnItemClick."
             },
             {
               "name": "CardTemplate",
@@ -8633,7 +8633,7 @@
               "name": "GroupHeaderTemplate",
               "type": "RenderFragment<DataGroup<TItem>>?",
               "isRequired": false,
-              "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+              "description": "Replaces the default group header (label and count) in every view. The context is the DataGroup. Omit it to keep the built-in header."
             },
             {
               "name": "GroupsCollapsedByDefault",
@@ -8649,6 +8649,12 @@
               "description": "Maps an item to its unique identifier."
             },
             {
+              "name": "ItemHref",
+              "type": "Func<TItem, string?>?",
+              "isRequired": false,
+              "description": "Href of a card when CardActivation is StretchedLink. A non-empty result renders an anchor; null or empty renders a button that raises OnItemClick. Ignored for Button."
+            },
+            {
               "name": "Items",
               "type": "IReadOnlyList<TItem>?",
               "isRequired": false,
@@ -8659,6 +8665,12 @@
               "type": "RenderFragment<TItem>?",
               "isRequired": false,
               "description": "Custom list item template. When set, overrides default list rendering."
+            },
+            {
+              "name": "MaxCardColumns",
+              "type": "int?",
+              "isRequired": false,
+              "description": "Maximum number of card columns. Null (default) keeps auto-fill with the minimum card width. Values below 1 are ignored. A value of 1 or more adds tm-mvl-card-grid--capped and sets --tm-mvl-card-columns-max."
             },
             {
               "name": "OnDragStart",
@@ -8736,6 +8748,13 @@
               "description": "When true and a ViewProvider is set, shows the inline FilterBuilder for external filtering. Default: true. Set to false when the surrounding page owns the filtering UI to avoid duplicate filters."
             },
             {
+              "name": "ShowFilterResultPreview",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, the inline filter builder shows how many records match the current filters. A DataProvider is asked with PageSize 1 and the preview reads TotalCount; without one the in-memory items are counted with the list's own filter rules. Default: false.",
+              "default": "false"
+            },
+            {
               "name": "ShowItemCount",
               "type": "bool",
               "isRequired": false,
@@ -8793,7 +8812,7 @@
               "name": "StatusVariantField",
               "type": "Func<TItem, Tempo.Blazor.Components.DataDisplay.BadgeVariant>?",
               "isRequired": false,
-              "description": "Opt-in StatusVariantField behavior; defaults preserve the existing presentation."
+              "description": "Maps an item to the status badge variant (success, warning, and the other BadgeVariant values). Omit it and every status badge uses the default variant."
             },
             {
               "name": "SubTitleField",
@@ -8806,7 +8825,7 @@
               "type": "TableCellLayout",
               "isRequired": false,
               "default": "TableCellLayout.Inline",
-              "description": "Opt-in TableCellLayout behavior; defaults preserve the existing presentation."
+              "description": "Table-view cell layout. Inline (default) keeps title and subtitle in their own columns. Stacked drops the subtitle column and renders its value under the title in the same cell."
             },
             {
               "name": "TableRowTemplate",
@@ -9141,6 +9160,12 @@
               "description": "Control kind. Defaults to text."
             },
             {
+              "name": "InputId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of the filter control, so a column menu can move focus to it. Left unset, the control renders no id and the default markup is unchanged."
+            },
+            {
               "name": "OnFilterChange",
               "type": "EventCallback<DataTableFilter?>",
               "isRequired": false,
@@ -9254,10 +9279,17 @@
           ],
           "parameters": [
             {
+              "name": "AllowExportSelected",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true and the table is Selectable, the export menu offers All rows or Selected rows (N). The selected choice is disabled while nothing is checked. Default false keeps the format-only menu.",
+              "default": "false"
+            },
+            {
               "name": "AllowSetDefault",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation.",
+              "description": "Passed to the embedded TmViewManager. When true, each non-default view offers Set as default, persisted through the view provider. Default false hides the action.",
               "default": "false"
             },
             {
@@ -9290,7 +9322,7 @@
               "type": "ColumnMenuMode",
               "isRequired": false,
               "default": "ColumnMenuMode.None",
-              "description": "Opt-in ColumnMenuMode behavior; defaults preserve the existing presentation."
+              "description": "Column-menu affordance. None (default) keeps the pin toggle; Menu renders a kebab in each data column header offering sort, pin, group, hide and filter, and removes the pin button."
             },
             {
               "name": "CsvDelimiter",
@@ -9360,20 +9392,13 @@
               "type": "EditActionsMode",
               "isRequired": false,
               "default": "EditActionsMode.Icons",
-              "description": "Opt-in EditActionsMode behavior; defaults preserve the existing presentation."
+              "description": "How an edited row presents Save and Cancel. Icons (default) shows icon buttons in the row. Text shows labeled buttons in the row. Footer moves them into a following row whose cell spans every rendered column (expander, checkbox, data columns and the edit-action column). Mobile cards always use Text."
             },
             {
               "name": "EmptyTitle",
               "type": "string?",
               "isRequired": false,
               "description": "Heading shown in the empty state when no items are available."
-            },
-            {
-              "name": "ExportSelectedOnly",
-              "type": "bool",
-              "isRequired": false,
-              "description": "Opt-in ExportSelectedOnly behavior; defaults preserve the existing presentation.",
-              "default": "false"
             },
             {
               "name": "ExternalFilterDefinitions",
@@ -9386,7 +9411,7 @@
               "name": "GroupHeaderTemplate",
               "type": "RenderFragment<DataGroup<TItem>>?",
               "isRequired": false,
-              "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+              "description": "Replaces the default group header (column title, value and count). The context is the DataGroup. Omit it to keep the built-in header."
             },
             {
               "name": "GroupsCollapsedByDefault",
@@ -9412,7 +9437,7 @@
               "type": "DataTableKeyboardNavigation",
               "isRequired": false,
               "default": "DataTableKeyboardNavigation.Rows",
-              "description": "Rows (default) keeps one Tab stop per row. Grid is opt-in roving tabindex: arrows, Home, End, PageUp and PageDown move the active cell. Grid becomes the default in the next major; set Rows to keep today's behavior."
+              "description": "Rows (default) keeps one Tab stop per row: Enter activates on keydown, Space on keyup. Grid is opt-in ARIA grid roving tabindex. Arrows, Home, End, PageUp and PageDown move the single active cell (PageUp/PageDown move 10 rows inside the rendered page and do not change the page). Enter activates the row once; Space toggles selection and never activates; F2 starts inline editing when Editable — in Grid mode editing works only in the flat paged body (not virtualized or grouped, where no editor renders). Enter or Space on the edit-actions cell starts the row edit. Clicking or focusing a cell moves the roving stop onto it. The expander and the selection checkbox are grid columns — Home lands on them and Enter/Space is handed to that control. An empty grid keeps the tab stop on the column header; a group header is a colspan gridcell that Enter/Space toggles and ArrowRight/ArrowLeft expands or collapses. Virtualized mode addresses rendered cells, scrolls `index * VirtualItemSize` and retries until the target cell is painted, so focus lands on it; the Ctrl+Home/Ctrl+End document scroll default is cancelled. While a row is being edited the grid handler returns immediately; Escape cancels and returns focus to the cell. Card layout omits CardRole.Hidden columns from the grid. Grid becomes the default in the next major; set Rows to keep today's behavior."
             },
             {
               "name": "LayoutChanged",
@@ -9497,7 +9522,7 @@
               "name": "OnSetDefault",
               "type": "EventCallback<DataTableView>",
               "isRequired": false,
-              "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+              "description": "Passed to the embedded TmViewManager. Raised after the default view is persisted and the list reloads."
             },
             {
               "name": "PageSize",
@@ -9589,7 +9614,7 @@
               "name": "ShowActiveViewName",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation.",
+              "description": "Passed to the embedded TmViewManager. When true, the toggle shows the active view's name (truncated, full name in title) instead of Views.",
               "default": "false"
             },
             {
@@ -9625,6 +9650,13 @@
               "isRequired": false,
               "default": "true",
               "description": "When true and a ViewProvider is set, shows the inline FilterBuilder for external filtering. Default: true. Set to false when the surrounding page owns the filtering UI to avoid duplicate filters."
+            },
+            {
+              "name": "ShowFilterResultPreview",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, the inline filter builder shows how many records match the current filters. A DataProvider is asked with PageSize 1 and the preview reads TotalCount; without one the in-memory rows are counted with the table's own filter rules. Default: false.",
+              "default": "false"
             },
             {
               "name": "ShowFilterSummary",
@@ -9833,7 +9865,7 @@
           "kind": "Component",
           "category": "Data Table",
           "namespace": "Tempo.Blazor.Components.DataTable",
-          "description": "Headless column descriptor for TmDataTable.",
+          "description": "Headless column descriptor for TmDataTable that defines header title, field accessor, sorting, filtering, grouping, visibility, alignment, width, custom cell/header templates, and group aggregation.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataTable/TmDataTableColumn.razor",
           "documentationStatus": "merged",
@@ -9889,7 +9921,8 @@
               "name": "Field",
               "type": "Func<TItem, object?>",
               "isRequired": true,
-              "description": "Field accessor that returns the cell value for a given row item."
+              "description": "Field accessor that returns the cell value for a given row item.",
+              "default": "default!"
             },
             {
               "name": "Filterable",
@@ -9901,7 +9934,7 @@
               "name": "FilterOperator",
               "type": "string?",
               "isRequired": false,
-              "description": "Opt-in filter operator sent with this column's filter. Null keeps the historical \"contains\" operator so existing server providers are unchanged."
+              "description": "Opt-in operator sent with this column's filter. Null keeps contains so existing server providers are unchanged."
             },
             {
               "name": "FilterOptions",
@@ -9963,7 +9996,7 @@
               "name": "MobilePinned",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether this column is pinned in responsive scroll layout. The first visible data column is pinned when none is explicitly marked."
+              "description": "Pins this column in responsive scroll mode; otherwise the first visible data column is pinned."
             },
             {
               "name": "Order",
@@ -10014,6 +10047,17 @@
               "type": "string?",
               "isRequired": false,
               "description": "Column width CSS value (e.g. \"200px\", \"20%\")."
+            }
+          ],
+          "cssClasses": [],
+          "examples": [
+            {
+              "title": "Sortable and filterable column",
+              "code": "<TmDataTableColumn Title=\"Name\"\n                   PropertyName=\"FullName\"\n                   Field=\"e => e.FullName\"\n                   Sortable=\"true\"\n                   Filterable=\"true\"\n                   Groupable=\"true\"\n                   Width=\"200px\" />"
+            },
+            {
+              "title": "Column with custom cell template",
+              "code": "<TmDataTableColumn Title=\"Status\" Field=\"e => e.Status\" Filterable=\"true\" FilterType=\"FilterType.Select\" FilterOptions=\"@statusOptions\">\n    <CellTemplate Context=\"item\">\n        <TmBadge Variant=\"GetStatusVariant(item.Status)\">@item.Status</TmBadge>\n    </CellTemplate>\n</TmDataTableColumn>"
             }
           ]
         },
@@ -10387,7 +10431,7 @@
               "name": "AllowSetDefault",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in AllowSetDefault behavior; defaults preserve the existing presentation.",
+              "description": "When true, each non-default view offers Set as default. The choice is persisted through Provider.SetDefaultViewAsync, the list reloads, and OnSetDefault fires with the reloaded view. A failed write is shown in the panel and leaves the current default unchanged. Default false hides the action.",
               "default": "false"
             },
             {
@@ -10410,6 +10454,13 @@
               "isRequired": false,
               "default": "true",
               "description": "Whether the user can create tenant-wide views."
+            },
+            {
+              "name": "Compact",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, the Views toggle uses the small outline button (tm-btn-sm) so it lines up with the other card-toolbar triggers. Default false keeps the plain toggle. TmDataTable passes this when Appearance is Card.",
+              "default": "false"
             },
             {
               "name": "CurrentTenantId",
@@ -10449,6 +10500,13 @@
               "description": "Callback to get current view state."
             },
             {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the Views panel presents on a narrow viewport. Popover (default) keeps the anchored panel; Auto turns it into a full-width bottom sheet on a mobile viewport. TmDataTable passes Auto when MobileLayout is not None and TmMultiViewList when Responsive is on."
+            },
+            {
               "name": "OnCreateView",
               "type": "EventCallback<DataTableView>",
               "isRequired": false,
@@ -10458,7 +10516,7 @@
               "name": "OnSetDefault",
               "type": "EventCallback<DataTableView>",
               "isRequired": false,
-              "description": "Opt-in OnSetDefault behavior; defaults preserve the existing presentation."
+              "description": "Raised after SetDefaultViewAsync succeeds and the view list reloads, with the persisted view."
             },
             {
               "name": "OnViewApplied",
@@ -10477,7 +10535,7 @@
               "name": "ShowActiveViewName",
               "type": "bool",
               "isRequired": false,
-              "description": "Opt-in ShowActiveViewName behavior; defaults preserve the existing presentation.",
+              "description": "When true and a view is active, the toggle shows that view's name (truncated, full name in title) instead of the generic Views label. Default false keeps Views.",
               "default": "false"
             },
             {
@@ -10689,7 +10747,7 @@
               "name": "OutlineTrigger",
               "type": "bool",
               "isRequired": false,
-              "description": "When true, the trigger also gets tm-btn tm-btn-outline. Default false leaves other hosts unchanged.",
+              "description": "Renders the trigger as an outline button (tm-btn tm-btn-outline). Default false.",
               "default": "false"
             },
             {
@@ -10751,6 +10809,18 @@
           ],
           "parameters": [
             {
+              "name": "AriaDisabled",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Marks the item aria-disabled=true and paints the disabled style while leaving it focusable, so a keyboard or screen-reader user can land on it and hear its explanation. A click does nothing. Unlike Disabled, the native disabled attribute is not set."
+            },
+            {
+              "name": "Checked",
+              "type": "bool?",
+              "isRequired": false,
+              "description": "When set, the item is a radio choice (role=menuitemradio) and this is its checked state. Null keeps the plain menuitem. A non-null value also renders a leading check indicator, so the choice is not announced by colour alone."
+            },
+            {
               "name": "ChildContent",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -10775,6 +10845,12 @@
               "description": "Optional leading icon."
             },
             {
+              "name": "KeepOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, choosing this item does not close the menu and focus stays on the item. Use it for a choice the user makes before picking another item, such as a radio scope."
+            },
+            {
               "name": "Value",
               "type": "string",
               "isRequired": false,
@@ -10785,7 +10861,8 @@
           "cssClasses": [
             "tm-dropdown-item",
             "tm-dropdown-item-disabled",
-            "tm-dropdown-item-danger"
+            "tm-dropdown-item-danger",
+            "tm-dropdown-item__check"
           ],
           "examples": [
             {
@@ -13026,7 +13103,7 @@
           "kind": "Component",
           "category": "Filters",
           "namespace": "Tempo.Blazor.Components.Filters",
-          "description": "Interactive filter builder UI that lets users add, edit, and remove filters using field definitions. Renders active filters as TmFilterChip components with a field picker, operator selector, and value input. Supports text, number, date, boolean, select, and multi-select field types. The add button and clear-all labels are localized via TmFilterBuilder_AddFilter and TmFilterBuilder_ClearAll keys; both buttons keep their text on a single line with white-space: nowrap.",
+          "description": "Interactive filter builder UI that lets users add, edit, and remove filters using field definitions. Renders active filters as TmFilterChip components with a field picker, operator selector, and value input. Supports text, number, date, boolean, select, and multi-select field types. The add button and clear-all labels are localized via TmFilterBuilder_AddFilter and TmFilterBuilder_ClearAll keys; both buttons keep their text on a single line with white-space: nowrap. When ShowResultPreview is true and ResultCountProvider is set, a debounced (300 ms) preview shows how many records match the applied filters plus a valid in-progress editor filter, pluralized through TmFilterBuilder_ResultPreview and announced in a role=\"status\" region with aria-live=\"polite\". The region is in the document as soon as both are set. While the first count is in flight it shows a spinner and TmFilterBuilder_ResultPreviewLoading; a later refresh keeps the previous count and sets aria-busy. A null count or a thrown exception leaves the region empty.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Filters/TmFilterBuilder.razor",
           "documentationStatus": "merged",
@@ -13071,7 +13148,19 @@
               "type": "FilterBuilderPresentation",
               "isRequired": false,
               "default": "FilterBuilderPresentation.Inline",
-              "description": "Inline (default) keeps today's layout, including PickersPage. Popover anchors the field picker and editor. Hosts must opt in."
+              "description": "Inline (default) keeps the field picker and editor in the document flow, including PickersPage. Popover and Auto open both through TmOverlayPanel anchored to Add filter: Popover stays a popover at every width, Auto becomes a sheet on a narrow viewport. Hosts must opt in."
+            },
+            {
+              "name": "ResultCountKey",
+              "type": "object?",
+              "isRequired": false,
+              "description": "Changing this value re-runs the count; hosts pass a token covering inputs outside ActiveFilters (search text, column filters, a reloaded data set). Compare by value, so an incrementing version counter works."
+            },
+            {
+              "name": "ResultCountProvider",
+              "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
+              "isRequired": false,
+              "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down."
             },
             {
               "name": "ShowClearAll",
@@ -13084,7 +13173,7 @@
               "name": "ShowResultPreview",
               "type": "bool",
               "isRequired": false,
-              "description": "Show a localized placeholder result preview; does not compute matching records.",
+              "description": "Shows a live count of the records matching the filters, including a valid in-progress editor filter. Renders only while ResultCountProvider is also set.",
               "default": "false"
             }
           ],
@@ -13101,7 +13190,8 @@
             "tm-filter-select",
             "tm-filter-apply",
             "tm-filter-cancel",
-            "tm-filter-clear-all"
+            "tm-filter-clear-all",
+            "tm-filter-result-preview"
           ],
           "examples": [
             {
@@ -21349,12 +21439,6 @@
               "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
             },
             {
-              "name": "RestoreFocusTargetId",
-              "type": "string?",
-              "isRequired": false,
-              "description": "Element id that receives focus when the panel closes by Escape or an outside pointer."
-            },
-            {
               "name": "Role",
               "type": "string?",
               "isRequired": false,
@@ -27752,6 +27836,18 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/dashboard-pointer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-grid-keys.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-menu-keys.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-pin.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -78613,6 +78709,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "DataTableExportScope",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "Which rows a data-table export includes. All (the default) exports every row matching the current filter and sort, paging bypassed. Selected exports only the checked rows and requires a selectable table. TmDataTable offers the choice only when AllowExportSelected is true.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DataTableExport.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "DataTableFilter",
           "kind": "Record",
           "category": "Models",
@@ -102665,12 +102771,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1489,
-        "manualItemCount": 1489,
-        "generatedItemCount": 1472,
+        "itemCount": 1490,
+        "manualItemCount": 1490,
+        "generatedItemCount": 1473,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1472
+        "publicApiTypeCount": 1473
       }
     },
     {
@@ -117180,10 +117286,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3236,
-    "manualItemCount": 3236,
+    "itemCount": 3237,
+    "manualItemCount": 3237,
     "generatedOnlyItemCount": 0,
     "componentCount": 479,
-    "publicApiTypeCount": 2704
+    "publicApiTypeCount": 2705
   }
 }

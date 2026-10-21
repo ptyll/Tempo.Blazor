@@ -1,13 +1,15 @@
 @namespace Tempo.Blazor.Components.DataTable
+@implements IAsyncDisposable
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Filters
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-view-manager">
-    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline tm-view-manager-toggle"
-            aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog" @onclick="ToggleDropdownAsync">
+    <button type="button" id="@_toggleId" @ref="_toggleRef" data-tm-id="@_toggleId" class="tm-btn tm-btn-outline @(Compact ? "tm-btn-sm" : null) tm-view-manager-toggle"
+            aria-expanded="@(_isOpen ? "true" : "false")" aria-haspopup="dialog"
+            title="@ToggleTitle" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
-        <span>@(ShowActiveViewName && _activeView is not null ? _activeView.Name : Loc["TmViewManager_Views"])</span>
+        <span class="@(ShowActiveViewName && _activeView is not null ? "tm-view-manager-toggle-name" : null)">@(ShowActiveViewName && _activeView is not null ? _activeView.Name : Loc["TmViewManager_Views"])</span>
         <TmIcon Name="chevron-down" />
     </button>
 
@@ -18,12 +20,14 @@
                     Align="OverlayAlign.End"
                     Role="dialog"
                     Title="@Loc["TmViewManager_Views"]"
-                    RestoreFocusTargetId="@_toggleId"
+                    MobilePresentation="MobilePresentation"
                     Class="tm-view-manager-panel">
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
                 <div class="tm-view-error" role="alert">@_errorMessage</div>
             }
+            @* Announces the completed Set-as-default for screen readers (the ★ itself is aria-hidden). *@
+            <div class="tm-sr-only" role="status" aria-live="polite">@_statusMessage</div>
 
             @* Personal Views Section *@
             <div class="tm-view-section">
@@ -35,17 +39,19 @@
                     @foreach (var view in _views.Where(v => v.Scope == ViewScope.Personal))
                     {
                         <div class="tm-view-item-row">
-                            <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                            <button type="button" id="@($"{_toggleId}-view-{view.Id}")" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                 aria-current="@(_activeView?.Id == view.Id ? "true" : null)"
                                  @onclick="() => ApplyViewAsync(view)">
                                 <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
                                 @if (view.IsDefault)
                                 {
-                                    <span class="tm-view-item-badge">★</span>
+                                    <span class="tm-view-item-badge" aria-hidden="true">★</span>
+                                    <span class="tm-sr-only">@Loc["TmViewManager_DefaultView"]</span>
                                 }
                             </button>
                             @if (AllowSetDefault && !view.IsDefault)
                             {
-                                <button type="button" aria-label="@Loc["TmViewManager_SetDefault"]" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                                <button type="button" aria-label="@SetDefaultLabel(view)" title="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
                             }
                             @if (CanEditView(view))
                             {
@@ -82,19 +88,21 @@
                         @foreach (var view in _views.Where(v => v.Scope == ViewScope.Tenant))
                         {
                             <div class="tm-view-item-row">
-                                <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                <button type="button" id="@($"{_toggleId}-view-{view.Id}")" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                     aria-current="@(_activeView?.Id == view.Id ? "true" : null)"
                                      @onclick="() => ApplyViewAsync(view)">
                                     <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
                                     @if (view.IsDefault)
                                     {
-                                        <span class="tm-view-item-badge">★</span>
+                                        <span class="tm-view-item-badge" aria-hidden="true">★</span>
+                                        <span class="tm-sr-only">@Loc["TmViewManager_DefaultView"]</span>
                                     }
                                 </button>
                                 @if (AllowSetDefault && !view.IsDefault)
-                            {
-                                <button type="button" aria-label="@Loc["TmViewManager_SetDefault"]" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
-                            }
-                            @if (CanEditView(view))
+                                {
+                                    <button type="button" aria-label="@SetDefaultLabel(view)" title="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                                }
+                                @if (CanEditView(view))
                                 {
                                     <button type="button" class="tm-view-edit-btn" aria-label="@string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_EditNamed"], view.Name)" @onclick="() => OpenEditModal(view)">
                                         <TmIcon Name="edit" Size="IconSize.Sm" />
@@ -128,7 +136,7 @@
                 {
                     <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-btn-block tm-mt-2" @onclick="CreateViewFromCurrentAsync">
                         <TmIcon Name="duplicate" Size="IconSize.Sm" />
-                        <span>@(Loc["TmViewManager_SaveCurrent"])</span>
+                        <span>@Loc["TmViewManager_SaveCurrent"]</span>
                     </button>
                 }
             </div>
@@ -144,7 +152,7 @@
          ShowCloseButton="true"
          InitialFocusTargetId="@_nameId"
          RestoreFocusTargetId="@_toggleId"
-         MobilePresentation="MobilePresentation.Auto">
+         MobilePresentation="Tempo.Blazor.Components.Feedback.MobilePresentation.Auto">
     <ChildContent>
         <div class="tm-view-modal">
                 @if (_saveCurrent)
@@ -240,7 +248,7 @@
         <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveViewAsync"
                 disabled="@(string.IsNullOrWhiteSpace(_viewName) || !_selectedColumns.Any())">
             @(_saveCurrent
-                ? Loc["TmViewManager_SaveChanges"]
+                ? Loc["TmViewManager_SaveAsCopy"]
                 : _editingView == null
                 ? (Loc["TmViewManager_Create"])
                 : (Loc["TmViewManager_Save"]))

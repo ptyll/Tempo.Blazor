@@ -29,4 +29,23 @@ public sealed class TmDataTableMobileOverlayTests : LocalizationTestBase
         var exportDropdown = cut.FindComponent<TmDropdown>();
         Assert.Equal(expected, exportDropdown.Instance.MobilePresentation);
     }
+
+    [Fact]
+    public void CardsSortTrigger_IsAnOutlineButton_LikeItsToolbarNeighbours()
+    {
+        var cut = Render<TmDataTable<string>>(p => p
+            .Add(c => c.ViewContext, "items")
+            .Add(c => c.Items, new[] { "A" })
+            .Add(c => c.MobileLayout, DataTableMobileLayout.Cards)
+            .AddChildContent<TmDataTableColumn<string>>(c => c
+                .Add(x => x.Title, "Value")
+                .Add(x => x.PropertyName, "Value")
+                .Add(x => x.Sortable, true)
+                .Add(x => x.Filterable, true)));
+
+        // The Filters button next to it is tm-btn-outline; a bare text trigger made the row three different heights/styles.
+        var sort = cut.Find(".tm-data-table-cards-toolbar__sort .tm-dropdown-trigger");
+        Assert.Contains("tm-btn-outline", sort.ClassName);
+        Assert.Contains("tm-btn-sm", sort.ClassName);
+    }
 }

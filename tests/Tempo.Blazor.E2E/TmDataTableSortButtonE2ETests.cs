@@ -136,10 +136,10 @@ public class TmDataTableSortButtonE2ETests : WasmTestBase
     /// </summary>
     private async Task AssertHeaderDragGroupsAsync(IPage page)
     {
-        // The page ships two grouping zones — one pre-grouped (row-attributes demo, "Dept ×") and
-        // one empty (the persons table, placeholder "Drag column headers here to group"). Scope by
-        // the placeholder: the empty zone is the one a drag can still create a group in.
-        var table = page.Locator(".tm-data-table-wrapper").Filter(
+        // The page ships several grouping zones — this spec drags in the redesign table ("Dept ×"
+        // target), whose empty zone carries the "Drag column headers here to group" placeholder.
+        // Scope by the table's test id: other tables on the page ship the same placeholder.
+        var table = page.Locator("[data-testid='dt-redesign-table']").Locator(".tm-data-table-wrapper").Filter(
             new LocatorFilterOptions { Has = page.Locator(".tm-data-table-group-placeholder") });
         var zone = table.Locator(".tm-data-table-group-zone");
         await zone.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });

@@ -8,6 +8,13 @@
   border-radius: var(--tm-radius-lg);
   padding: var(--tm-space-4);
 }
+/* The responsive opt-in is its own container, so the list adapts to its width, not the viewport. */
+.tm-multi-view-list--container {
+  container-type: inline-size;
+  container-name: tm-multi-view-list;
+  /* inline-size keeps a shrink-to-fit parent from collapsing the container to nothing. */
+  inline-size: 100%;
+}
 .tm-multi-view-list--plain {
   background: transparent;
   border: 0;
@@ -34,6 +41,24 @@
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
+}
+.tm-mvl-item-count {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+}
+
+/* The Views toggle is a .tm-btn (38px); the switcher next to it was content-height, so the
+   toolbar looked uneven. Both controls now share the small input height (and both grow to the
+   44px touch target together on coarse pointers via the responsive rules). */
+.tm-mvl-toolbar-right .tm-view-manager-toggle {
+  block-size: var(--tm-input-height-sm);
+  min-block-size: var(--tm-input-height-sm);
+}
+.tm-mvl-switch-table,
+.tm-mvl-switch-card,
+.tm-mvl-switch-list {
+  min-block-size: var(--tm-input-height-sm);
 }
 
 /* External Filters */
@@ -96,16 +121,32 @@
   padding: var(--tm-space-2) var(--tm-space-3); 
   border-bottom: 1px solid var(--tm-border-color); 
 }
+/* TableCellLayout.Stacked: the subtitle sits under the title inside the cell, never on the td itself. */
+.tm-mvl-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+}
+.tm-mvl-cell-primary {
+  font-weight: var(--tm-font-weight-medium);
+}
+.tm-mvl-cell-secondary {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
 
 /* Card Grid */
 .tm-mvl-card-grid {
   --tm-mvl-card-min: 16rem;
   display: grid;
   gap: var(--tm-space-4);
-  grid-template-columns: repeat(auto-fill, minmax(max(var(--tm-mvl-card-min), calc((100% - 2 * var(--tm-space-4)) / 3)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--tm-mvl-card-min), 1fr));
 }
 .tm-mvl-card-grid--virtualized {
   grid-template-columns: 1fr;
+}
+.tm-mvl-card-grid--capped {
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--tm-mvl-card-min), calc((100% - (var(--tm-mvl-card-columns-max) - 1) * var(--tm-space-4)) / var(--tm-mvl-card-columns-max))), 1fr));
 }
 
 /* Card */
@@ -124,6 +165,46 @@
 .tm-mvl-card:hover { 
   box-shadow: var(--tm-shadow-md); 
   border-color: var(--tm-border-color-focus);
+}
+/* Stretched link: the title is the only tab stop and its ::after covers the card. The selection
+   checkbox paints above that layer so a click still toggles the row instead of activating it.
+   Scoped under the card so the filter builder's own .tm-stretched-link keeps its color rule. */
+.tm-mvl-card--stretched {
+  position: relative;
+}
+.tm-mvl-card--stretched .tm-stretched-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--tm-color-primary);
+  font-weight: var(--tm-font-weight-semibold);
+  font-size: var(--tm-font-size-sm);
+}
+.tm-mvl-card--stretched .tm-stretched-link:hover {
+  text-decoration: underline;
+}
+.tm-mvl-card--stretched .tm-stretched-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+/* The ring lives on the card, not on the title, so it outlines the whole activatable surface. */
+.tm-mvl-card--stretched .tm-stretched-link:focus-visible {
+  outline: none;
+}
+.tm-mvl-card--stretched:has(.tm-stretched-link:focus-visible) {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: 2px;
+}
+.tm-mvl-card--stretched .tm-mvl-card-select-row,
+.tm-mvl-card--stretched .tm-mvl-checkbox {
+  position: relative;
+  z-index: 1;
 }
 
 /* Card Header */
@@ -253,15 +334,15 @@
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-3);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: var(--tm-bg-surface);
-  color: var(--tm-text-secondary, #6b7280);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
   cursor: pointer;
 }
 
 .tm-mvl-group-btn:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 .tm-mvl-group-dropdown {
@@ -270,9 +351,9 @@
   min-width: 12rem;
   padding: var(--tm-space-2);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: var(--tm-bg-surface);
-  box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1));
+  box-shadow: var(--tm-shadow-lg);
 }
 
 .tm-mvl-group-option {
@@ -280,13 +361,13 @@
   align-items: center;
   gap: var(--tm-space-2);
   padding: var(--tm-space-1) var(--tm-space-2);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   cursor: pointer;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 .tm-mvl-group-option:hover {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 /* ── Group Sections (Card & List views) ─────────────────────── */
@@ -312,6 +393,14 @@
   font-weight: 600;
 }
 
+/* In the grouped card view the header must read as a header: secondary surface, a hairline
+   under it, and no gap against the card's own edge. */
+.tm-mvl-group-card > .tm-mvl-group-header {
+  background: var(--tm-surface-secondary);
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
 .tm-mvl-group-toggle {
   display: inline-flex;
   align-items: center;
@@ -326,12 +415,16 @@
   cursor: pointer;
 }
 
+.tm-mvl-group-toggle[aria-expanded="true"] .tm-icon {
+  transform: rotate(90deg);
+}
+
 .tm-mvl-group-card .tm-mvl-group-toggle {
   justify-content: flex-start;
   gap: var(--tm-space-2);
   width: 100%;
   height: auto;
-  text-align: left;
+  text-align: start;
   font: inherit;
 }
 
@@ -340,13 +433,13 @@
 }
 
 .tm-mvl-group-row {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
   font-weight: 600;
 }
 
 .tm-mvl-group-row td {
   padding: var(--tm-space-2) var(--tm-space-3);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-toggle:hover {
@@ -358,23 +451,23 @@
 }
 
 .tm-mvl-group-count {
-  color: var(--tm-text-tertiary, #9ca3af);
+  color: var(--tm-text-tertiary);
   font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 /* ── Per-Group Pagination ──────────────────────────────────── */
 
 .tm-mvl-group-pagination {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-pagination td {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-mvl-group-pagination .tm-pagination {
@@ -390,9 +483,68 @@
 /* ── Multi-select ───────────────────────────────────────────── */
 
 /* Checkbox cell in table */
+/* The title column sticks while the row scrolls. The offset is a custom property, so RTL flips it. */
+.tm-mvl-title-column {
+  position: sticky;
+  inset-inline-start: var(--tm-pin-left, 0);
+  z-index: 1;
+  background: var(--tm-bg-surface);
+}
+
+/* Cards & list sort/filter toolbar — these views have no header to sort from. */
+.tm-mvl-cards-toolbar {
+  display: flex;
+  gap: var(--tm-space-2);
+}
+.tm-mvl-cards-toolbar__sort,
+.tm-mvl-cards-toolbar__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  cursor: pointer;
+}
+.tm-mvl-cards-toolbar__sort:focus-visible,
+.tm-mvl-cards-toolbar__filter:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+@media (pointer: coarse) {
+  .tm-mvl-cards-toolbar__sort,
+  .tm-mvl-cards-toolbar__filter {
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
+@container tm-multi-view-list (width < 640px) {
+  .tm-mvl-toolbar { flex-direction: column; align-items: stretch; }
+}
+
 .tm-mvl-col-select {
   width: 2.5rem;
   padding-left: var(--tm-space-3) !important;
+}
+/* One width for the selection column and the title offset, so the two neither gap nor overlap. */
+.tm-multi-view-list--responsive {
+  --tm-mvl-select-column: var(--tm-touch-target);
+}
+.tm-multi-view-list--responsive .tm-mvl-col-select {
+  width: var(--tm-mvl-select-column);
+}
+
+/* Initials stand in for a missing avatar. The circle is the same size as the avatar image so a
+   column of mixed images and initials stays aligned. */
+.tm-mvl-avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tm-space-8);
+  height: var(--tm-space-8);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary-text);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
 }
 
 /* Generic checkbox style used across all views */
@@ -447,23 +599,23 @@
 
 [data-theme="dark"] .tm-mvl-row--selected,
 .tm-dark .tm-mvl-row--selected {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 [data-theme="dark"] .tm-mvl-row--selected td,
 .tm-dark .tm-mvl-row--selected td {
-  border-bottom-color: rgba(59, 130, 246, 0.15);
+  border-bottom-color: var(--tm-color-primary-subtle);
 }
 
 [data-theme="dark"] .tm-mvl-card--selected,
 .tm-dark .tm-mvl-card--selected {
   border-color: var(--tm-color-primary) !important;
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 [data-theme="dark"] .tm-mvl-list-item--selected,
 .tm-dark .tm-mvl-list-item--selected {
-  background: rgba(59, 130, 246, 0.15) !important;
+  background: var(--tm-color-primary-subtle) !important;
 }
 
 /* ── Drag source ────────────────────────────────────────────── */

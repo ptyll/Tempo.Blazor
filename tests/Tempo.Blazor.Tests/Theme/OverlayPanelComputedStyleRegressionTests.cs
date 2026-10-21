@@ -122,6 +122,14 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // no hardcoded fallbacks (CSS-tokens-only audit).
         new("TmMultiViewList.razor", "tm-mvl-group-dropdown",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
+        // ColumnMenuMode.Menu anchors one panel per data column header. The surface rides the
+        // tokens directly, so the zero-specificity overlay reset cannot win it.
+        new("TmDataTable.razor", "tm-data-table-col-menu-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
+        // FilterBuilderPresentation.Popover/Auto anchors the field picker and editor. The panel
+        // owns only the surface; overlay.js owns position and stacking.
+        new("TmFilterBuilder.razor", "tm-filter-builder-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>
@@ -429,6 +437,19 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         ".tm-overlay-panel-sheet .tm-notification-bell__header",
         ".tm-overlay-panel-sheet .tm-notification-bell__item",
         ".tm-overlay-panel-sheet .tm-notification-bell__actions",
+        // Phase 13 fix round 1: finger-sized sheet controls of the data table (descendants of the sheet only).
+        ".tm-overlay-panel-sheet .tm-col-filter-input",
+        ".tm-overlay-panel-sheet .tm-col-filter-select",
+        ".tm-overlay-panel-sheet .tm-col-filter-clear",
+        ".tm-overlay-panel-sheet .tm-view-item",
+        ".tm-overlay-panel-sheet .tm-view-edit-btn",
+        ".tm-overlay-panel-sheet .tm-view-delete-btn",
+        ".tm-overlay-panel-sheet .tm-view-set-default-btn",
+        ".tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn",
+        ".tm-overlay-panel-sheet .tm-data-table-cards-sheet__footer .tm-btn",
+        ".tm-overlay-panel-sheet .tm-view-item-row",
+        ".tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn + .tm-btn",
+        ".tm-overlay-panel-sheet .tm-btn.tm-data-table-cards-sheet__done",
     ];
 
     /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>

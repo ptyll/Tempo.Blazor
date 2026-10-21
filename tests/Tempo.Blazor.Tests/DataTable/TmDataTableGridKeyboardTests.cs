@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Tests.Localization;
@@ -19,8 +20,8 @@ public class TmDataTableGridKeyboardTests : LocalizationTestBase
         Render<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People)
             .Add(c => c.KeyboardNavigation, mode)
-            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, p => p.Name))
-            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Role").Add(x => x.Field, p => p.Role)));
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Role").Add(x => x.Field, person => person.Role)));
 
     [Fact]
     public void Rows_KeepsRowTabStops()
@@ -56,11 +57,543 @@ public class TmDataTableGridKeyboardTests : LocalizationTestBase
             .Add(c => c.Items, People)
             .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
             .Add(c => c.OnRowClick, _ => clicks++)
-            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, p => p.Name)));
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
 
         cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
         clicks.Should().Be(0);
         cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
         clicks.Should().Be(1);
+    }
+
+    [Fact]
+    public void Grid_RowKeyDown_DoesNotActivate()
+    {
+        // bUnit does not bubble, so the row handler is invoked directly. In Grid mode it must
+        // be a no-op: the cell owns activation, and a bubbling Enter must not fire twice.
+        var clicks = 0;
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.OnRowClick, _ => clicks++)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        cut.Find("tbody tr").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        clicks.Should().Be(0);
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        clicks.Should().Be(1);
+    }
+
+    [Fact]
+    public void Grid_Space_TogglesSelection_WithoutRowClick()
+    {
+        var clicks = 0;
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.Selectable, true)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.OnRowClick, _ => clicks++)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        var active = cut.Find("td[data-grid-cell][tabindex='0']");
+        active.KeyDown(new KeyboardEventArgs { Key = " " });
+
+        clicks.Should().Be(0);
+        cut.FindAll("tbody tr.tm-row-selected").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Grid_SelectableAndDetail_HasExactlyOneTabStop_DefaultingToFirstDataColumn()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.Selectable, true)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.DetailTemplate, (RenderFragment<BasicPerson>)(_ => b => b.AddContent(0, "detail")))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        var stops = cut.FindAll("[data-grid-cell][tabindex='0']");
+        stops.Should().ContainSingle();
+        stops[0].GetAttribute("aria-colindex").Should().Be("3");
+        cut.FindAll("td.tm-col-expander[role='gridcell']").Should().NotBeEmpty();
+        cut.FindAll("td.tm-col-check[role='gridcell']").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Grid_Home_MovesToCheckboxColumn()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.Selectable, true)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "Home" });
+
+        var active = cut.Find("td[tabindex='0']");
+        active.ClassList.Should().Contain("tm-col-check");
+        active.GetAttribute("aria-colindex").Should().Be("1");
+    }
+
+    [Fact]
+    public void Grid_ArrowLeftOnFirstColumn_Stays()
+    {
+        var cut = RenderGrid(DataTableKeyboardNavigation.Grid);
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+
+        var active = cut.Find("td[tabindex='0']");
+        active.GetAttribute("aria-colindex").Should().Be("1");
+        cut.FindAll("td[tabindex='0']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Grid_PageShrink_KeepsExactlyOneTabStop()
+    {
+        var items = Enumerable.Range(1, 30).Select(i => new BasicPerson($"P{i}", i, "User")).ToList();
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, items)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.DefaultPageSize, 25)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        for (var i = 0; i < 24; i++)
+            cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.FindAll("td[tabindex='0']").Should().ContainSingle();
+
+        cut.Render(p => p.Add(c => c.PageSize, 10));
+
+        cut.FindAll("td[data-grid-cell][tabindex='0']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Grid_Empty_HeaderIsTheTabStop()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, Array.Empty<BasicPerson>())
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.EmptyTitle, "Nothing here")
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        cut.FindAll("td[tabindex='0']").Should().BeEmpty();
+        cut.FindAll("th[role='columnheader'][tabindex='0']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Grid_Grouped_HeaderIsNavigable_AndEnterCollapses()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ShowGrouping, true)
+            .Add(c => c.GroupsCollapsedByDefault, false)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Role")
+                .Add(x => x.PropertyName, "Role")
+                .Add(x => x.Field, person => person.Role)
+                .Add(x => x.Groupable, true)));
+
+        await cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Role"));
+
+        var header = cut.Find("tr.tm-data-table-group-row td[role='gridcell']");
+        header.GetAttribute("tabindex").Should().Be("0");
+        header.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.Find("tr.tm-data-table-group-row button").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void Grid_Virtualized_CellsAreGridCells()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ScrollMode, DataTableScrollMode.Virtualized)
+            .Add(c => c.VirtualScrollHeight, "200px")
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, person => person.Name)));
+
+        cut.FindAll("td[role='gridcell']").Should().NotBeEmpty();
+        cut.FindAll("td[tabindex='0']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Grid_F2_StartsEdit_EscapeReturns()
+    {
+        var people = new List<EditableGridPerson> { new() { Name = "Alice" } };
+        var cut = Render<TmDataTable<EditableGridPerson>>(p => p
+            .Add(c => c.Items, people)
+            .Add(c => c.Editable, true)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />")))));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+        cut.FindAll("tr.tm-row-editing").Should().ContainSingle();
+
+        cut.Find("tr.tm-row-editing").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.FindAll("tr.tm-row-editing").Should().BeEmpty();
+        cut.FindAll("td[tabindex='0']").Should().ContainSingle();
+    }
+
+    private IRenderedComponent<TmDataTable<EditableGridPerson>> RenderEditableGrid(DataTableKeyboardNavigation keyboard)
+        => Render<TmDataTable<EditableGridPerson>>(p => p
+            .Add(c => c.Items, new List<EditableGridPerson> { new() { Name = "Alice" } })
+            .Add(c => c.Editable, true)
+            .Add(c => c.KeyboardNavigation, keyboard)
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />")))));
+
+    [Fact]
+    public void Grid_F2_MovesFocusIntoTheEditor()
+    {
+        var cut = RenderEditableGrid(DataTableKeyboardNavigation.Grid);
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+
+        // The editing row renders no grid cells, so without an explicit move focus drops to the page and
+        // Escape (answered on the editing row) never reaches the table.
+        cut.WaitForAssertion(() => JSInterop.VerifyInvoke("tmDataTable.focusRowEditor"));
+    }
+
+    [Fact]
+    public void Grid_EditEnd_ReturnsFocusToTheCell()
+    {
+        var cut = RenderEditableGrid(DataTableKeyboardNavigation.Grid);
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+        var focusCallsWhileEditing = JSInterop.Invocations["tmDataTable.focusGridCell"].Count();
+
+        cut.Find("tr.tm-row-editing").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.WaitForAssertion(() => JSInterop.Invocations["tmDataTable.focusGridCell"].Count().Should().BeGreaterThan(focusCallsWhileEditing,
+            "committing the edit hands focus back to the roving cell"));
+    }
+
+    [Fact]
+    public void Rows_Mode_DoesNotMoveFocusIntoTheEditor()
+    {
+        var cut = RenderEditableGrid(DataTableKeyboardNavigation.Rows);
+
+        cut.Find("tbody tr").DoubleClick();
+
+        cut.FindAll("tr.tm-row-editing").Should().ContainSingle();
+        JSInterop.VerifyNotInvoke("tmDataTable.focusRowEditor");
+    }
+    [Fact]
+    public void Grid_CardLayout_ColumnCountIgnoresHidden()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.MobileLayout, DataTableMobileLayout.Cards)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.CardRole, DataTableCardRole.Title))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Secret")
+                .Add(x => x.Field, person => person.Role)
+                .Add(x => x.CardRole, DataTableCardRole.Hidden)));
+
+        cut.Find("table").GetAttribute("aria-colcount").Should().Be("1");
+        cut.FindAll("td[role='gridcell']").Should().HaveCount(3);
+    }
+
+    [Fact]
+    public void Grid_End_WithEditActions_KeepsExactlyOneTabStop()
+    {
+        var people = new List<EditableGridPerson> { new() { Name = "Alice" }, new() { Name = "Bob" } };
+        var cut = Render<TmDataTable<EditableGridPerson>>(p => p
+            .Add(c => c.Items, people)
+            .Add(c => c.Editable, true)
+            .Add(c => c.EditActionsMode, EditActionsMode.Icons)
+            .Add(c => c.ShowColumnMenu, false)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />")))));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "End" });
+
+        var stops = cut.FindAll("[tabindex='0']");
+        stops.Should().ContainSingle();
+        stops[0].ClassList.Should().Contain("tm-data-table__edit-actions");
+        stops[0].GetAttribute("role").Should().Be("gridcell");
+        cut.Find("button.tm-data-table__edit-action--start").GetAttribute("tabindex").Should().Be("-1");
+    }
+
+    [Fact]
+    public async Task Grid_CollapseGroup_KeepsExactlyOneTabStop()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ShowColumnMenu, false)
+            .Add(c => c.ShowGrouping, true)
+            .Add(c => c.GroupsCollapsedByDefault, false)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Role")
+                .Add(x => x.PropertyName, "Role")
+                .Add(x => x.Field, person => person.Role)
+                .Add(x => x.Groupable, true))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)));
+
+        await cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Role"));
+
+        // The first group header is the initial stop. Move onto an item below it, then collapse
+        // the group that contains that item. The cursor must not stay on a row that no longer renders.
+        cut.Find("[data-grid-cell][tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find("[data-grid-cell][tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find("tr.tm-data-table-group-row button").Click();
+
+        cut.FindAll("[tabindex='0']").Should().ContainSingle();
+        cut.Find("tr.tm-data-table-group-row [tabindex='0']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Grid_HideColumn_KeepsExactlyOneTabStop()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ShowColumnMenu, false)
+            .Add(c => c.ShowToolbar, true)
+            .Add(c => c.ShowColumnPicker, true)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.PropertyName, "name")
+                .Add(x => x.Field, person => person.Name))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c
+                .Add(x => x.Title, "Role")
+                .Add(x => x.PropertyName, "role")
+                .Add(x => x.Field, person => person.Role)));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "End" });
+        cut.Find("td[tabindex='0']").GetAttribute("aria-colindex").Should().Be("2");
+
+        cut.Find(".tm-column-picker-toggle").Click();
+        cut.Find(".tm-column-picker-item input[data-key='role']").Change(false);
+
+        cut.FindAll("[tabindex='0']").Should().ContainSingle();
+        cut.Find("table").GetAttribute("aria-colcount").Should().Be("1");
+    }
+
+    [Fact]
+    public void Grid_InnerControls_AreNotTabStops()
+    {
+        var people = new List<EditableGridPerson> { new() { Name = "Alice", Role = "Admin" }, new() { Name = "Bob", Role = "User" } };
+        var cut = Render<TmDataTable<EditableGridPerson>>(p => p
+            .Add(c => c.Items, people)
+            .Add(c => c.Selectable, true)
+            .Add(c => c.Editable, true)
+            .Add(c => c.EditActionsMode, EditActionsMode.Icons)
+            .Add(c => c.ShowColumnMenu, false)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ShowGrouping, true)
+            .Add(c => c.GroupsCollapsedByDefault, false)
+            .Add(c => c.DetailTemplate, (RenderFragment<EditableGridPerson>)(_ => b => b.AddContent(0, "detail")))
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Role")
+                .Add(x => x.PropertyName, "Role")
+                .Add(x => x.Field, person => person.Role)
+                .Add(x => x.Groupable, true)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input value=\"{item.Role}\" />"))))
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)));
+
+        cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Role")).GetAwaiter().GetResult();
+
+        cut.FindAll("[tabindex='0']").Should().ContainSingle();
+        var controls = cut.FindAll("tbody button, tbody input");
+        controls.Should().NotBeEmpty();
+        controls.Should().OnlyContain(c => c.GetAttribute("tabindex") == "-1");
+    }
+
+    [Fact]
+    public void Grid_AriaRowCount_IncludesHeaderRows()
+    {
+        var cut = RenderGrid(DataTableKeyboardNavigation.Grid);
+        // Header is aria-rowindex 1; body rows continue from GridBodyRowOffset, so three items
+        // announce a count of 4 and the last rendered body row is index 3.
+        cut.Find("table").GetAttribute("aria-rowcount").Should().Be("4");
+        cut.FindAll("tbody tr").Last().GetAttribute("aria-rowindex").Should().Be("3");
+    }
+
+    [Fact]
+    public async Task Grid_ArrowRight_FocusesMovedCell()
+    {
+        var cut = RenderGrid(DataTableKeyboardNavigation.Grid);
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+
+        cut.WaitForAssertion(() =>
+            JSInterop.VerifyInvoke("tmDataTable.focusGridCell").Should().NotBeNull());
+        await Task.CompletedTask;
+    }
+
+    public sealed class EditableGridPerson
+    {
+        public string Name { get; set; } = "";
+        public string Role { get; set; } = "";
+    }
+
+    private sealed record DuplicateGridPerson(string Name);
+
+    private IRenderedComponent<TmDataTable<EditableGridPerson>> RenderEditableGridWith(
+        Action<ComponentParameterCollectionBuilder<TmDataTable<EditableGridPerson>>> configure)
+    {
+        return Render<TmDataTable<EditableGridPerson>>(p =>
+        {
+            p.Add(c => c.Items, new List<EditableGridPerson> { new() { Name = "Alice" }, new() { Name = "Bob" } });
+            p.Add(c => c.Editable, true);
+            p.Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid);
+            p.Add(c => c.ShowColumnMenu, false);
+            p.AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />"))));
+            configure(p);
+        });
+    }
+
+    [Fact]
+    public void Grid_Virtualized_F2_DoesNotStartEdit_AndArrowsStillMove()
+    {
+        var editStarts = 0;
+        var cut = RenderEditableGridWith(p => p
+            .Add(c => c.ScrollMode, DataTableScrollMode.Virtualized)
+            .Add(c => c.VirtualScrollHeight, "200px")
+            .Add(c => c.OnRowEditStart, _ => { editStarts++; return Task.CompletedTask; }));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+        cut.FindAll("tr.tm-row-editing").Should().BeEmpty();
+        editStarts.Should().Be(0, "the virtualized branch renders no editor, so F2 must not lock the keyboard");
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find("[data-grid-cell='1:0'][tabindex='0']").Should().NotBeNull();
+        cut.FindAll("[tabindex='0']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Grid_Grouped_F2_DoesNotStartEdit_AndArrowsStillMove()
+    {
+        var editStarts = 0;
+        var cut = Render<TmDataTable<EditableGridPerson>>(p => p
+            .Add(c => c.Items, new List<EditableGridPerson>
+            {
+                new() { Name = "Alice", Role = "Admin" },
+                new() { Name = "Bob", Role = "Admin" }
+            })
+            .Add(c => c.Editable, true)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ShowColumnMenu, false)
+            .Add(c => c.ShowGrouping, true)
+            .Add(c => c.GroupsCollapsedByDefault, false)
+            .Add(c => c.OnRowEditStart, _ => { editStarts++; return Task.CompletedTask; })
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Role")
+                .Add(x => x.PropertyName, "Role")
+                .Add(x => x.Field, person => person.Role)
+                .Add(x => x.Groupable, true))
+            .AddChildContent<TmDataTableColumn<EditableGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<EditableGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />")))));
+
+        cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Role")).GetAwaiter().GetResult();
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+        cut.FindAll("tr.tm-row-editing").Should().BeEmpty();
+        editStarts.Should().Be(0, "the grouped branch renders no editor, so F2 must not lock the keyboard");
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.FindAll("[tabindex='0']").Should().ContainSingle();
+        cut.Find("[data-grid-cell='1:0'][tabindex='0']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Grid_EnterOnEditActionsCell_StartsEdit_NotRowClick()
+    {
+        var clicks = 0;
+        var cut = RenderEditableGridWith(p => p
+            .Add(c => c.EditActionsMode, EditActionsMode.Icons)
+            .Add(c => c.OnRowClick, _ => clicks++));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "End" });
+        cut.Find("td[tabindex='0']").ClassList.Should().Contain("tm-data-table__edit-actions");
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll("tr.tm-row-editing").Should().ContainSingle();
+        clicks.Should().Be(0, "Enter on the edit-actions cell starts the edit instead of activating the row");
+
+        cut.Find("tr.tm-row-editing").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.FindAll("tr.tm-row-editing").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Grid_SpaceOnEditActionsCell_StartsEdit_NotRowClick()
+    {
+        var clicks = 0;
+        var cut = RenderEditableGridWith(p => p
+            .Add(c => c.EditActionsMode, EditActionsMode.Icons)
+            .Add(c => c.OnRowClick, _ => clicks++));
+
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = "End" });
+        cut.Find("td[tabindex='0']").KeyDown(new KeyboardEventArgs { Key = " " });
+
+        cut.FindAll("tr.tm-row-editing").Should().ContainSingle();
+        clicks.Should().Be(0);
+    }
+
+    [Fact]
+    public void Grid_FocusIn_MovesTheRovingStopToTheClickedCell()
+    {
+        var cut = RenderGrid(DataTableKeyboardNavigation.Grid);
+
+        cut.Find("[data-grid-cell='2:1']").TriggerEvent("onfocusin", new FocusEventArgs());
+
+        cut.Find("[data-grid-cell='2:1'][tabindex='0']").Should().NotBeNull();
+        cut.FindAll("td[tabindex='0']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Grid_F2_OnValueEqualDuplicateRows_EditsTheSecondRow()
+    {
+        var people = new List<DuplicateGridPerson> { new("Alice"), new("Alice") };
+        var cut = Render<TmDataTable<DuplicateGridPerson>>(p => p
+            .Add(c => c.Items, people)
+            .Add(c => c.Editable, true)
+            .Add(c => c.KeyboardNavigation, DataTableKeyboardNavigation.Grid)
+            .Add(c => c.ShowColumnMenu, false)
+            .AddChildContent<TmDataTableColumn<DuplicateGridPerson>>(c => c
+                .Add(x => x.Title, "Name")
+                .Add(x => x.Field, person => person.Name)
+                .Add(x => x.Editable, true)
+                .Add(x => x.EditTemplate, (RenderFragment<DuplicateGridPerson>)(item => b =>
+                    b.AddMarkupContent(0, $"<input class=\"name-editor\" value=\"{item.Name}\" />")))));
+
+        cut.Find("[data-grid-cell='1:1']").KeyDown(new KeyboardEventArgs { Key = "F2" });
+
+        var rows = cut.FindAll("tbody tr");
+        rows[1].ClassList.Should().Contain("tm-row-editing",
+            "editing tracks the rendered row index, not the first value-equal match");
+        rows[0].ClassList.Should().NotContain("tm-row-editing");
+        cut.FindAll("tr.tm-row-editing").Should().ContainSingle();
     }
 }

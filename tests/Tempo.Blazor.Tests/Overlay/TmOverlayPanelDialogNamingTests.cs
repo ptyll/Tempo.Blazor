@@ -8,6 +8,7 @@ using NSubstitute;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.DataDisplay;
+using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
@@ -35,6 +36,8 @@ namespace Tempo.Blazor.Tests.Overlay;
 public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
 {
     private sealed record Product(int Id, string Name, string Category);
+
+    private sealed record DialogPerson(string Name);
 
     public TmOverlayPanelDialogNamingTests()
     {
@@ -178,6 +181,20 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
     private Dictionary<string, Func<IElement>> PanelRenderers() =>
         new(StringComparer.Ordinal)
         {
+            ["TmDataTable"] = () =>
+            {
+                var cut = Render<TmDataTable<DialogPerson>>(p => p
+                    .Add(c => c.Items, [new DialogPerson("Ada")])
+                    .Add(c => c.MobileLayout, DataTableMobileLayout.Cards)
+                    .Add(c => c.ColumnMenuMode, ColumnMenuMode.Menu)
+                    .AddChildContent<TmDataTableColumn<DialogPerson>>(col => col
+                        .Add(x => x.Title, "Name")
+                        .Add(x => x.PropertyName, "Name")
+                        .Add(x => x.Sortable, true)
+                        .Add(x => x.Filterable, true)));
+                cut.Find(".tm-data-table-cards-toolbar__filter").Click();
+                return cut.Find("[role='dialog']");
+            },
             ["TmColumnPicker"] = () =>
             {
                 var cut = Render<TmColumnPicker>(p => p.Add(c => c.Columns,
@@ -280,6 +297,18 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                     .Add(c => c.Provider, provider)
                     .Add(c => c.ViewContext, "naming-sweep"));
                 cut.Find(".tm-view-manager-toggle").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // FilterBuilderPresentation.Popover opens the field picker in a named dialog.
+            ["TmFilterBuilder"] = () =>
+            {
+                var cut = Render<TmFilterBuilder>(p => p
+                    .Add(c => c.Presentation, FilterBuilderPresentation.Popover)
+                    .Add(c => c.FilterDefinitions, new[]
+                    {
+                        new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+                    }));
+                cut.Find(".tm-filter-builder-add").Click();
                 return cut.Find("[role='dialog']");
             },
         };

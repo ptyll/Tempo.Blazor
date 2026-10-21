@@ -4,16 +4,22 @@
 
 /* Wrapper */
 .tm-data-table-virtual-scroll .tm-data-table tbody tr {
-  height: var(--tm-data-table-row-height, 48px);
+  height: var(--tm-data-table-row-height);
 }
 .tm-data-table__export-item {
+  white-space: nowrap;
+}
+/* Rich (Card) export items: icon + label + description on a wrapping flex row. The dropdown
+   panel may render in the top layer outside the wrapper, so the layout is keyed on the
+   modifier class the Card branch adds, not on the wrapper. */
+.tm-data-table__export-item--rich {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--tm-space-2);
 }
-.tm-data-table__export-label {
-  font-weight: var(--tm-font-weight-semibold, 600);
+.tm-data-table__export-item--rich .tm-data-table__export-label {
+  font-weight: var(--tm-font-weight-semibold);
 }
 .tm-view-modal-helper {
   margin: 0 0 var(--tm-space-3);
@@ -25,6 +31,18 @@
   color: var(--tm-text-muted);
   font-size: var(--tm-font-size-sm);
 }
+.tm-data-table__export-scope--selected {
+  background: var(--tm-color-primary-subtle);
+}
+/* The aria-disabled "Selected rows" scope must stay readable: WCAG 1.4.3 exempts the unavailable
+   CONTROL, not the instructional text that tells the user what to do. The generic dropdown
+   disabled fade (opacity: var(--tm-opacity-disabled)) lifts off the whole item so the hint keeps
+   its full-strength ink (>=4.5:1 in both themes); the empty check and `cursor: not-allowed`
+   still mark the option as unavailable. The `.tm-dropdown-item` compound keeps these overrides
+   (0,3,0) ahead of the later-imported `.tm-dropdown-item[aria-disabled="true"]` fade (0,2,0). */
+.tm-dropdown-item.tm-data-table__export-scope[aria-disabled="true"] { opacity: 1; }
+.tm-dropdown-item.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-label { color: var(--tm-text-muted); }
+.tm-dropdown-item.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-description { color: var(--tm-text-secondary); }
 .tm-data-table-wrapper--card-surface {
   border-radius: var(--tm-radius-card);
   box-shadow: var(--tm-shadow-card);
@@ -34,8 +52,11 @@
 .tm-data-table-wrapper--container {
   container-type: inline-size;
   container-name: tm-data-table;
+  /* inline-size keeps a shrink-to-fit parent from collapsing the container to nothing. */
+  inline-size: 100%;
 }
 .tm-data-table-wrapper {
+  --tm-data-table-mobile-checkbox-width: var(--tm-touch-target);
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-4);
@@ -139,7 +160,7 @@
 }
 .tm-data-table th,
 .tm-data-table td {
-  padding: var(--tm-data-table-cell-py, var(--tm-space-3)) var(--tm-data-table-cell-px, var(--tm-space-4));
+  padding: var(--tm-data-table-cell-py) var(--tm-data-table-cell-px);
   text-align: left;
   border-bottom: 1px solid var(--tm-border-color);
 }
@@ -176,7 +197,7 @@
   align-items: center;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -223,19 +244,30 @@
 .tm-sort-icon.tm-sort-asc::after  { content: '\2191'; }
 .tm-sort-icon.tm-sort-desc::after { content: '\2193'; }
 .tm-sort-icon.tm-sort-none::after { content: '\2195'; }
+/* The idle glyph is a character, so it inherits whatever colour the header happens to have. The
+   secondary text token is the one measured AA on both header surfaces (gray-600 light, #cbd5e1
+   dark), and it is repeated on the pseudo-element so a header colour rule cannot reach past it. */
+.tm-sort-icon.tm-sort-none::after { color: var(--tm-text-secondary); }
 
 /* Pinned (sticky) columns */
 .tm-data-table th.tm-col-pinned,
 .tm-data-table td.tm-col-pinned {
   position: sticky;
   z-index: 2;
-  background: var(--tm-bg-surface, #ffffff);
+  background: var(--tm-bg-surface);
 }
-.tm-data-table thead th.tm-col-pinned { z-index: 3; }
+.tm-data-table thead th.tm-col-pinned {
+  z-index: 3;
+  /* A sticky header scrolls over the body, so it needs the header row's own surface
+     (`.tm-data-table thead tr` uses --tm-bg-surface-secondary) rather than the cell surface
+     (--tm-bg-surface, already set by the shared pinned rule above). On a sorted or hovered
+     column the body rows used to show through the header. */
+  background: var(--tm-bg-surface-secondary);
+}
 .tm-data-table th.tm-col-pinned-left,
-.tm-data-table td.tm-col-pinned-left { box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18); }
+.tm-data-table td.tm-col-pinned-left { box-shadow: var(--tm-data-table-pin-shadow); }
 .tm-data-table th.tm-col-pinned-right,
-.tm-data-table td.tm-col-pinned-right { box-shadow: -2px 0 3px -2px rgba(0, 0, 0, 0.18); }
+.tm-data-table td.tm-col-pinned-right { box-shadow: var(--tm-data-table-pin-shadow-end); }
 .tm-data-table tbody tr.tm-row-selected td.tm-col-pinned { background: var(--tm-color-primary-subtle); }
 
 /* Column pin toggle
@@ -261,16 +293,16 @@
 .tm-col-pin-btn {
   position: absolute;
   top: 50%;
-  inset-inline-end: 6px;
+  inset-inline-end: var(--tm-data-table-pin-inset);
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.1rem;
-  height: 1.1rem;
+  width: var(--tm-data-table-pin-glyph);
+  height: var(--tm-data-table-pin-glyph);
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   background: var(--tm-bg-surface-secondary);
   color: var(--tm-text-secondary);
   font-size: 0.75rem;
@@ -292,7 +324,7 @@
 .tm-col-pin-btn:focus-visible,
 .tm-col-pin-btn--active { opacity: 1; }
 .tm-col-pin-btn:hover { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
-.tm-col-pin-btn--active { color: var(--tm-color-primary, #3b82f6); }
+.tm-col-pin-btn--active { color: var(--tm-color-primary); }
 
 /* The library brings its own focus ring instead of borrowing the application's.
    Tempo made the sortable header a focus stop in 2.8.9 but shipped no `:focus`
@@ -301,8 +333,10 @@
    turns an element into a control owns that element's focus indicator. */
 .tm-data-table th:focus-visible,
 .tm-data-table tbody tr:focus-visible,
+.tm-data-table td[role="gridcell"]:focus-visible,
+.tm-data-table td[role="gridcell"][aria-colspan]:focus-visible,
 .tm-col-pin-btn:focus-visible {
-  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline: 2px solid var(--tm-color-primary);
   outline-offset: -2px;
 }
 /* The sort button's ring is drawn OUTSIDE the box, not over the text: `outline-offset: -2px`
@@ -311,9 +345,9 @@
    rather than a line through it. `color: inherit` keeps the sorted column's accent under focus the
    same way `:hover` does — focus must not repaint the label back to the resting ink. */
 .tm-th-sort:focus-visible {
-  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline: 2px solid var(--tm-color-primary);
   outline-offset: 2px;
-  border-radius: var(--tm-radius-sm, 3px);
+  border-radius: var(--tm-radius-sm);
   color: inherit;
 }
 
@@ -331,7 +365,7 @@
   user-select: none;
   touch-action: none;
 }
-.tm-col-resize-handle:hover { background: var(--tm-color-primary, #3b82f6); opacity: 0.4; }
+.tm-col-resize-handle:hover { background: var(--tm-color-primary); opacity: 0.4; }
 /* The separator is a tab stop: the focus indicator is the shared ring (the default outline is
    silenced so the two never paint over each other). */
 .tm-col-resize-handle:focus-visible {
@@ -369,8 +403,116 @@
 }
 .tm-data-table th { position: relative; }
 
+/* Column menu (ColumnMenuMode.Menu)
+   ------------------------------------------------------------------
+   The kebab replaces the pin button, so it follows the same reveal contract: invisible at rest,
+   visible the moment the pointer OR the keyboard is on the header, and visible while its own
+   menu is open. A focus stop that paints nothing is a WCAG 2.4.7 failure, so :focus-within and
+   the trigger's own aria-expanded state are required, not optional. The hit area grows to the
+   touch target on a coarse pointer — the button stays out of the Tab order (tabindex=-1, reached
+   with M), so the larger target is for the finger, not for another Tab stop. */
+.tm-data-table-col-menu,
+.tm-data-table-col-menu-btn {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: var(--tm-space-2);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-space-7);
+  block-size: var(--tm-space-7);
+  min-inline-size: var(--tm-space-7);
+  min-block-size: var(--tm-space-7);
+  padding: 0;
+  border: var(--tm-border-width) solid transparent;
+  border-radius: var(--tm-radius-sm);
+  background: var(--tm-bg-surface-secondary);
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.tm-data-table th:hover .tm-data-table-col-menu,
+.tm-data-table th:focus-within .tm-data-table-col-menu,
+.tm-data-table-col-menu:focus-visible,
+.tm-data-table-col-menu[aria-expanded="true"] { opacity: 1; }
+
+@media (hover: hover) {
+  .tm-data-table-col-menu { opacity: 0; }
+
+  .tm-data-table th:hover .tm-data-table-col-menu,
+  .tm-data-table th:focus-within .tm-data-table-col-menu,
+  .tm-data-table-col-menu:focus-visible,
+  .tm-data-table-col-menu[aria-expanded="true"] { opacity: 1; }
+}
+
+.tm-data-table-col-menu:hover,
+.tm-data-table-col-menu[aria-expanded="true"] {
+  background: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+}
+
+.tm-data-table-col-menu:focus-visible {
+  outline: 2px solid var(--tm-color-primary);
+  outline-offset: 2px;
+}
+
+/* The kebab overlays the inline end of its header, so the th reserves its width — the same
+   reservation the RTL pinned header makes for the pin glyph. Without it the (opaque) kebab
+   painted over the tail of the label, the sort arrow and the multi-sort index; worst on a
+   right-aligned or narrow column (WCAG 1.4.10 Reflow / 2.5.8 Target Size). */
+.tm-data-table th.tm-col-has-menu {
+  padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-space-7) + var(--tm-space-2));
+}
+
+@media (pointer: coarse) {
+  .tm-data-table-col-menu {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+    inset-inline-end: var(--tm-space-3);
+    opacity: 1;
+  }
+
+  /* The 44px kebab clears the widened resize handle (inset --tm-space-3) the way the pin
+     button does, and the reservation grows with it. On the LAST column the handle stays
+     inside the cell (inset 0, 24px wide), so the kebab slides past it entirely. */
+  .tm-data-table th .tm-data-table-col-menu { inset-inline-end: var(--tm-space-3); }
+  .tm-data-table th:last-child .tm-data-table-col-menu { inset-inline-end: var(--tm-space-6); }
+
+  .tm-data-table th.tm-col-has-menu {
+    padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-touch-target) + var(--tm-space-3));
+  }
+}
+
+@media (forced-colors: active) {
+  .tm-data-table-col-menu {
+    border-color: ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .tm-data-table-col-menu:focus-visible { outline-color: Highlight; }
+}
+
+/* Chrome only — no position/inset/z-index: the panel is positioned by overlay.js (see the
+   contract in _overlay-panel.css and .tm-view-manager-panel above). */
+.tm-data-table-col-menu-panel {
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-md);
+  min-inline-size: 12rem;
+  padding: var(--tm-space-1);
+}
+
+.tm-data-table-col-menu-panel[role="menu"] .tm-dropdown-item { min-block-size: var(--tm-touch-target); }
+
 @media (prefers-reduced-motion: reduce) {
-  .tm-col-pin-btn { transition: none; }
+  .tm-col-pin-btn,
+  .tm-data-table-col-menu { transition: none; }
 }
 
 /* Master-detail expandable rows */
@@ -396,7 +538,7 @@
 .tm-row-expander-icon--open::before { transform: rotate(90deg); }
 .tm-data-table tr.tm-row-detail > td {
   background: var(--tm-bg-surface-secondary);
-  padding: var(--tm-space-3, 0.75rem) var(--tm-space-4, 1rem);
+  padding: var(--tm-space-3) var(--tm-space-4);
 }
 @media (prefers-reduced-motion: reduce) {
   .tm-row-expander-icon::before { transition: none; }
@@ -437,7 +579,7 @@
   transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast), border-color var(--tm-transition-fast);
 }
 .tm-data-table__edit-action + .tm-data-table__edit-action {
-  margin-left: var(--tm-space-1);
+  margin-inline-start: var(--tm-space-1);
 }
 .tm-data-table__edit-action:hover {
   background: var(--tm-bg-muted);
@@ -484,6 +626,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tm-data-table__edit-action { transition: none; }
+  .tm-view-set-default-btn { transition: none; }
 }
 
 /* Multi-sort precedence badge */
@@ -495,8 +638,8 @@
   height: 1rem;
   margin-left: 0.125rem;
   padding: 0 0.2rem;
-  border-radius: var(--tm-radius-full, 999px);
-  background: var(--tm-color-primary, #3b82f6);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary);
   color: var(--tm-text-inverse);
   font-size: 0.625rem;
   font-weight: 600;
@@ -509,12 +652,17 @@
   width: 2.5rem;
   padding-left: var(--tm-space-3) !important;
 }
-.tm-col-check input[type='checkbox'] { cursor: pointer; }
+.tm-col-check input[type='checkbox'] {
+  cursor: pointer;
+  /* A native checkbox paints its own blue. The accent token is what the rest of the library uses,
+     so a rebrand and the dark theme both reach it. */
+  accent-color: var(--tm-color-primary);
+}
 
 /* Filter row */
 .tm-filter-row th {
   padding: var(--tm-space-1) var(--tm-space-2);
-  background-color: var(--tm-color-gray-50);
+  background-color: var(--tm-bg-surface-secondary);
   font-weight: normal;
   text-transform: none;
   letter-spacing: 0;
@@ -642,10 +790,17 @@
   background: var(--tm-bg-surface-secondary);
 }
 .tm-page-btn-active {
-  background-color: var(--tm-color-primary);
-  border-color: var(--tm-color-primary);
-  color: var(--tm-text-inverse);
+  /* The on-primary token aliases the page ink, which is near-black in dark mode, so the page
+     number fails AA there. The fixed token stays white in both themes. */
+  background-color: var(--tm-color-primary-solid);
+  border-color: var(--tm-color-primary-solid);
+  color: var(--tm-color-on-primary-fixed);
   font-weight: var(--tm-font-weight-semibold);
+}
+.tm-page-btn:focus-visible,
+.tm-pagination-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
 }
 .tm-pagination-ellipsis { 
   padding: 0 var(--tm-space-1); 
@@ -674,6 +829,7 @@
    ═══════════════════════════════════════════════════════════════ */
 .tm-column-picker { position: relative; }
 .tm-column-picker-toggle { white-space: nowrap; color: var(--tm-color-primary-600); }
+.tm-icon-columns { display: inline-flex; align-items: center; }
 [data-theme="dark"] .tm-column-picker-toggle,
 .tm-dark .tm-column-picker-toggle { color: var(--tm-color-primary-300); }
 /* The panel element is a TmOverlayPanel root: overlay.js positions it in the top layer, so no
@@ -755,6 +911,12 @@
   display: inline-flex; 
   align-items: center;
   gap: var(--tm-space-1);
+}
+.tm-view-manager-toggle-name {
+  max-inline-size: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .tm-view-manager-panel {
   /* Positioning contract: the panel is a top-layer popover positioned by overlay.js in viewport
@@ -926,6 +1088,14 @@
   color: var(--tm-text-primary);
   background: var(--tm-bg-surface);
 }
+/* A long placeholder or value ends in an ellipsis instead of being cut at the field edge. */
+.tm-col-filter-input,
+.tm-col-filter-input::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tm-col-filter-input { min-inline-size: 0; }
 .tm-col-filter-input:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-col-filter-clear {
   position: absolute;
@@ -951,14 +1121,21 @@
 .tm-col-filter-select:focus { outline: none; border-color: var(--tm-color-primary); }
 
 /* ═══════════════════════════════════════════════════════════════
-   Responsive
+   Responsive — two scopes, because a container query cannot see a table
+   that never became a container.
+   A default table (MobileLayout=None) has no --container class, so its
+   narrow padding and stacking stay on the viewport, at the 768px the
+   library always used. Cards and Scroll opt into the named container and
+   adapt to their OWN width at the mobile breakpoint.
+   The container query never targets the container element itself: a
+   container cannot match itself, so every rule below styles a descendant.
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
+@media (width < 768px) {
   .tm-data-table-wrapper {
     padding: var(--tm-space-2);
     gap: var(--tm-space-3);
   }
-  
+
   .tm-data-table-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -970,6 +1147,12 @@
   .tm-data-table-toolbar-right {
     width: 100%;
     max-width: none;
+  }
+
+  /* Five controls (columns, views, sort, filters, export) do not fit a phone card on one line:
+     the group wraps instead of running off the card edge. */
+  .tm-data-table-toolbar-right {
+    flex-wrap: wrap;
   }
   
   .tm-data-table-toolbar-center {
@@ -995,6 +1178,47 @@
   }
 }
 
+/* Cards and Scroll only: the opt-in wrapper is the container, so the same
+   stacking follows the table's own width instead of the viewport. */
+@container tm-data-table (width < 640px) {
+  .tm-data-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-3);
+  }
+
+  .tm-data-table-toolbar-left,
+  .tm-data-table-toolbar-center,
+  .tm-data-table-toolbar-right {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Five controls (columns, views, sort, filters, export) do not fit a phone card on one line:
+     the group wraps instead of running off the card edge. */
+  .tm-data-table-toolbar-right {
+    flex-wrap: wrap;
+  }
+
+  .tm-data-table-toolbar-center {
+    order: -1;
+  }
+
+  .tm-pagination-container {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-3);
+    text-align: center;
+  }
+
+  .tm-pagination-info,
+  .tm-pagination-center,
+  .tm-pagination-right {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ── Grouping Drop Zone ─────────────────────────────────────── */
 
 .tm-data-table-group-zone {
@@ -1004,33 +1228,34 @@
   gap: var(--tm-space-2);
   min-height: 2.5rem;
   padding: var(--tm-space-2) var(--tm-space-3);
-  border: 2px dashed var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
-  background: var(--tm-surface-secondary, #f9fafb);
+  border: 2px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-surface-secondary);
   margin-bottom: var(--tm-space-3);
   transition: border-color 0.15s, background-color 0.15s;
 }
 
 .tm-data-table-group-zone--dragover {
-  border-color: var(--tm-color-primary, #3b82f6);
-  background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 5%, transparent);
+  border-color: var(--tm-color-primary);
+  background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
 }
 
 .tm-data-table-group-placeholder {
-  color: var(--tm-text-tertiary, #9ca3af);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-tertiary);
+  font-size: var(--tm-font-size-sm);
   font-style: italic;
 }
 
+/* Default chip: the original solid primary chip, expressed with tokens. */
 .tm-data-table-group-chip {
   display: inline-flex;
   align-items: center;
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-2);
-  border-radius: var(--tm-radius-full);
-  background: var(--tm-color-primary-subtle);
-  color: var(--tm-color-primary-text);
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-color-primary);
+  color: var(--tm-text-inverse);
+  font-size: var(--tm-font-size-sm);
   cursor: grab;
   user-select: none;
 }
@@ -1048,14 +1273,30 @@
   padding: 0;
   border: none;
   border-radius: var(--tm-radius-full);
-  background: transparent;
-  color: inherit;
+  background: color-mix(in srgb, var(--tm-text-inverse) 25%, transparent);
+  color: var(--tm-text-inverse);
   font-size: 0.75rem;
   cursor: pointer;
   line-height: 1;
 }
 
 .tm-data-table-group-chip-remove:hover {
+  background: color-mix(in srgb, var(--tm-text-inverse) 40%, transparent);
+}
+
+/* The Card (opt-in) redesign keeps the subtle pill. The chip always lives inside the
+   group zone, so the zone modifier is a safe scope even for drag previews. */
+.tm-data-table-group-zone--card .tm-data-table-group-chip {
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary-text);
+}
+
+.tm-data-table-group-zone--card .tm-data-table-group-chip-remove {
+  background: transparent;
+}
+
+.tm-data-table-group-zone--card .tm-data-table-group-chip-remove:hover {
   background: var(--tm-color-primary);
   color: var(--tm-text-inverse);
 }
@@ -1074,12 +1315,12 @@
 /* ── Group Rows ─────────────────────────────────────────────── */
 
 .tm-data-table-group-row {
-  background: var(--tm-surface-secondary, #f9fafb);
+  background: var(--tm-surface-secondary);
 }
 
 .tm-data-table-group-row td {
   padding: var(--tm-space-2) var(--tm-space-3);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-data-table-group-level-1 td {
@@ -1098,16 +1339,16 @@
   height: 1.5rem;
   padding: 0;
   border: none;
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border-radius: var(--tm-radius-md);
   background: transparent;
-  color: var(--tm-text-secondary, #6b7280);
+  color: var(--tm-text-secondary);
   cursor: pointer;
   margin-right: var(--tm-space-1);
   font-size: 0.75rem;
 }
 
 .tm-data-table-group-toggle:hover {
-  background: var(--tm-bg-surface-secondary, #e5e7eb);
+  background: var(--tm-bg-surface-secondary);
 }
 
 .tm-data-table-group-chevron {
@@ -1115,6 +1356,12 @@
 }
 
 .tm-data-table-group-chevron--open {
+  transform: rotate(90deg);
+}
+
+/* TmIcon has no Class parameter, so the modifier above never reaches the SVG: the rotation follows
+   the toggle's own aria-expanded instead (the state assistive technology reads as well). */
+.tm-data-table-group-toggle[aria-expanded="true"] .tm-icon {
   transform: rotate(90deg);
 }
 
@@ -1126,7 +1373,7 @@
 .tm-data-table-group-count {
   color: var(--tm-text-muted);
   font-weight: normal;
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
 }
 
 .tm-data-table-group-aggregates {
@@ -1134,16 +1381,16 @@
   gap: var(--tm-space-3);
   margin-left: var(--tm-space-4);
   font-weight: 400;
-  font-size: var(--tm-font-size-sm, 0.875rem);
-  color: var(--tm-text-secondary, #6b7280);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
 }
 
 /* ── Per-Group Pagination ──────────────────────────────────── */
 
 .tm-data-table-group-pagination td {
   padding: var(--tm-space-1) var(--tm-space-3);
-  background: var(--tm-surface-secondary, #f9fafb);
-  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+  background: var(--tm-surface-secondary);
+  border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-data-table-group-pagination .tm-pagination {
@@ -1151,12 +1398,12 @@
 }
 
 .tm-pagination-compact {
-  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-size: var(--tm-font-size-sm);
   gap: var(--tm-space-2);
 }
 
 .tm-pagination-compact .tm-pagination-info {
-  font-size: var(--tm-font-size-xs, 0.75rem);
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-pagination-compact .tm-page-btn,
@@ -1164,7 +1411,7 @@
   min-width: 1.5rem;
   height: 1.5rem;
   padding: 0 var(--tm-space-1);
-  font-size: var(--tm-font-size-xs, 0.75rem);
+  font-size: var(--tm-font-size-xs);
 }
 
 /* ── Draggable Column Headers ───────────────────────────────── */
@@ -1192,21 +1439,24 @@
   max-height: 10rem;
   overflow-y: auto;
   padding: var(--tm-space-2);
-  border: 1px solid var(--tm-border-color, #d1d5db);
-  border-radius: var(--tm-radius-md, 0.375rem);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
 }
 
 /* ═══════════════════════════════════════════════════════════════
    Opt-in card mode (CardMode="true")
-   On narrow viewports each row collapses into a labeled card. Scoped
-   entirely under .tm-data-table-wrapper--card, so tables without the
-   opt-in class are byte-identical to before. Each data cell shows its
-   column label via `data-label` (emitted only when CardMode is on).
+   Below the mobile breakpoint each row collapses into a labeled card. The
+   breakpoint is the table's own width, not the viewport, and the rules are
+   scoped under the card wrappers, so a table without the opt-in class is
+   byte-identical to before. Each data cell shows its column label via
+   `data-label` (emitted only when CardMode is on).
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 640px) {
-  /* Visually hide the header row; labels move into each cell. */
-  .tm-data-table-wrapper--card .tm-data-table thead,
-  .tm-data-table-wrapper--cards .tm-data-table thead {
+@container tm-data-table (width < 640px) {
+  /* Visually hide the header row; labels move into each cell. Cards drop the
+     header from the tab order entirely — a 1px clip kept every header control
+     reachable while nothing on screen showed it. The CardMode alias keeps the
+     clip, because its header is still the sort surface. */
+  .tm-data-table-wrapper--card .tm-data-table thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1216,6 +1466,10 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  .tm-data-table-wrapper--cards .tm-data-table thead {
+    display: none;
   }
 
   .tm-data-table-wrapper--card .tm-data-table,
@@ -1232,10 +1486,10 @@
 
   .tm-data-table-wrapper--card .tm-data-table tbody tr,
   .tm-data-table-wrapper--cards .tm-data-table tbody tr {
-    margin-bottom: var(--tm-space-3, 0.75rem);
-    padding: var(--tm-space-2, 0.5rem);
+    margin-bottom: var(--tm-space-3);
+    padding: var(--tm-space-2);
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-lg, 0.5rem);
+    border-radius: var(--tm-radius-lg);
     background: var(--tm-bg-surface);
   }
 
@@ -1244,7 +1498,7 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--tm-space-3, 0.75rem);
+    gap: var(--tm-space-3);
     border: none;
     text-align: right;
   }
@@ -1252,7 +1506,7 @@
   .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-data-table-cell--card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    text-align: left;
+    text-align: start;
   }
 
   .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Title"] {
@@ -1265,19 +1519,41 @@
     grid-column: 1 / -1;
   }
 
-  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-col-check,
   .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-data-table__edit-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
     min-height: var(--tm-touch-target);
   }
 
+  /* The row checkbox must not spend a whole card row on itself: it docks into the card's
+     inline-end corner (the row is the positioning context), and the title row reserves that
+     corner so its text cannot run underneath the 44px hit target. */
+  .tm-data-table-wrapper--card .tm-data-table tbody tr,
+  .tm-data-table-wrapper--cards .tm-data-table tbody tr {
+    position: relative;
+  }
+  .tm-data-table-wrapper--card .tm-data-table tbody td.tm-col-check,
+  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-col-check {
+    position: absolute;
+    inset-block-start: var(--tm-space-2);
+    inset-inline-end: var(--tm-space-2);
+    /* the generic card-cell rule sets width:100%; the docked checkbox must shrink to fit */
+    inline-size: auto;
+    min-height: var(--tm-touch-target);
+    min-width: var(--tm-touch-target);
+    align-items: center;
+    justify-content: center;
+  }
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Title"] {
+    padding-inline-end: calc(var(--tm-touch-target) + var(--tm-space-1));
+  }
+
   .tm-data-table-wrapper--card .tm-data-table tbody td[data-label]::before,
   .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before {
     content: attr(data-label);
-    font-weight: var(--tm-font-weight-semibold, 600);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-secondary);
-    text-align: left;
+    text-align: start;
   }
 
   .tm-data-table-wrapper--cards .tm-data-table tbody td[data-label]::before {
@@ -1296,32 +1572,105 @@
 .tm-data-table-wrapper--responsive th.data-mobile-pinned,
 .tm-data-table-wrapper--responsive td.data-mobile-pinned {
   position: sticky;
-  left: 0;
+  inset-inline-start: 0;
   z-index: 2;
   background: var(--tm-bg-surface);
 }
 .tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) th.data-mobile-pinned,
-.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) td.data-mobile-pinned {
-  left: var(--tm-touch-target);
+.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) td.data-mobile-pinned,
+.tm-data-table-wrapper--responsive:has(.tm-col-check--mobile-pinned) .tm-col-pinned-left {
+  inset-inline-start: calc(var(--tm-pin-left, 0px) + var(--tm-data-table-mobile-checkbox-width));
 }
 .tm-data-table-wrapper--responsive .tm-col-check--mobile-pinned {
   position: sticky;
-  left: 0;
+  inset-inline-start: 0;
   z-index: 3;
 }
-.tm-data-table-wrapper--responsive:has(.tm-col-check) {
-  --tm-data-table-mobile-checkbox-width: 2.75rem;
+
+/* A pinned column's offset is a custom property the component sets, so the same rule sticks the
+   column to the correct edge in both writing directions. The fallback keeps a column stuck before
+   its offset has been measured. */
+.tm-col-pinned { position: sticky; }
+.tm-col-pinned-left { inset-inline-start: var(--tm-pin-left, 0); }
+.tm-col-pinned-right { inset-inline-end: var(--tm-pin-right, 0); }
+
+/* Text cells clip instead of wrapping, but only inside an opt-in responsive
+   wrapper and only while that wrapper is narrow. A default table, a card cell
+   and a cell being edited keep the wrapping they always had. */
+@container tm-data-table (width < 640px) {
+  .tm-data-table-wrapper--responsive .tm-data-table td:not(.tm-data-table-cell--card):not(.tm-data-table-cell--editing):not(.tm-col-wrap):not(:has(input)):not(:has(button)):not(:has(select)):not(:has(textarea)) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-inline-size: 60cqi;
+  }
 }
-.tm-data-table-wrapper--responsive:not(:has(.tm-col-check)) {
-  --tm-data-table-mobile-checkbox-width: 0px;
+
+/* The mobile sort and filter buttons exist in the markup whenever Cards is on,
+   and only a narrow container reveals them. A wide container keeps the header. */
+.tm-data-table-mobile-only { display: none; }
+@container tm-data-table (width < 640px) {
+  .tm-data-table-mobile-only { display: inline-flex; }
 }
-.tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table th:nth-child(2),
-.tm-multi-view-list--responsive .tm-mvl-table-scroll .tm-mvl-table td:nth-child(2) {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--tm-bg-surface);
+
+/* "Page X of Y" is revealed by the container, never by a parameter. Below the
+   breakpoint the page numbers and the range text go, leaving previous/next and
+   the label — and those two buttons grow to the touch target. */
+.tm-data-table-page-label { display: none; }
+@container tm-data-table (width < 640px) {
+  .tm-data-table-pager--responsive > .tm-data-table-page-label { display: inline; }
+  .tm-data-table-pager--responsive .tm-page-btn,
+  .tm-data-table-pager--responsive .tm-pagination-ellipsis,
+  .tm-data-table-pager--responsive .tm-pagination-info {
+    display: none;
+  }
+  .tm-data-table-pager--responsive .tm-pagination-prev,
+  .tm-data-table-pager--responsive .tm-pagination-next {
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
 }
+
+/* Cards sort/filter toolbar — the header is clipped, so these are the only way in. */
+.tm-data-table-cards-toolbar {
+  display: flex;
+  gap: var(--tm-space-2);
+}
+.tm-data-table-cards-toolbar__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  cursor: pointer;
+}
+.tm-data-table-cards-toolbar__sort:focus-visible,
+.tm-data-table-cards-toolbar__filter:focus-visible,
+.tm-data-table-cards-toolbar__sort .tm-dropdown-trigger:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+.tm-data-table-cards-sheet__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+  margin-top: var(--tm-space-3);
+}
+
+/* A coarse pointer needs a 44px target; the visual size stays as it is. */
+@media (pointer: coarse) {
+  .tm-data-table-group-chip-remove,
+  .tm-filter-builder-add,
+  .tm-col-pin-btn,
+  .tm-data-table-col-menu-btn,
+  .tm-pagination-btn,
+  .tm-page-btn,
+  .tm-data-table-cards-toolbar__sort,
+  .tm-data-table-cards-toolbar__filter,
+  .tm-data-table-cards-toolbar__sort .tm-dropdown-trigger {
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
 .tm-multi-view-list--responsive .tm-mvl-toolbar-left--responsive {
   flex: 1 1 100%;
   width: 100%;
@@ -1334,3 +1683,195 @@
   min-height: var(--tm-touch-target);
   align-items: center;
 }
+
+/* Markup hooks that phases 3–11 restyle. Minimum real rules so the classes are not frozen
+   exceptions; nothing here changes the default (non-opt-in) surface. */
+.tm-data-table-filter-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+.tm-col-filter-clear-all {
+  background: none;
+  border: none;
+  color: var(--tm-color-primary);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tm-col-filter-clear-all:hover { color: var(--tm-color-primary-hover); }
+/* Default Expand all / Collapse all: original outlined mini-buttons. */
+.tm-data-table-group-expand-all,
+.tm-data-table-group-collapse-all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+}
+.tm-data-table-group-expand-all:hover,
+.tm-data-table-group-collapse-all:hover {
+  background: var(--tm-surface-secondary);
+}
+.tm-data-table-group-expand-all:focus-visible,
+.tm-data-table-group-collapse-all:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+/* In the Card (opt-in) redesign the buttons render tm-link-button, which owns the look. */
+.tm-data-table-group-zone--card .tm-data-table-group-expand-all,
+.tm-data-table-group-zone--card .tm-data-table-group-collapse-all {
+  border: none;
+  background: none;
+  padding: 0;
+}
+.tm-data-table-row--edit-footer {
+  background: var(--tm-surface-secondary);
+}
+.tm-data-table-row--edit-footer > td {
+  padding: var(--tm-space-2) var(--tm-data-table-cell-px);
+  background: var(--tm-surface-secondary);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+/* EditActionsMode.Footer: flex lives on the inner wrapper so colspan on the td is honored. */
+.tm-data-table__edit-footer-actions {
+  display: flex;
+  gap: var(--tm-space-2);
+  justify-content: flex-end;
+}
+/* Footer actions carry a visible label next to the icon, so the icon-only 32px square from the
+   in-row cells must not squeeze them: the box grows to the label instead. The base sibling margin
+   would double the flex gap, so it is reset here. */
+.tm-data-table__edit-footer-actions .tm-data-table__edit-action {
+  width: auto;
+  min-block-size: var(--tm-space-8);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  gap: var(--tm-space-1);
+}
+.tm-data-table__edit-footer-actions .tm-data-table__edit-action + .tm-data-table__edit-action {
+  margin-inline-start: 0;
+}
+/* Mobile cards: the action cell is not in a table, so flex on the cell itself is fine. */
+.tm-data-table__edit-actions--card-footer {
+  display: flex;
+  gap: var(--tm-space-2);
+  justify-content: flex-end;
+  padding: var(--tm-space-2) var(--tm-data-table-cell-px);
+  background: var(--tm-surface-secondary);
+}
+.tm-view-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+}
+.tm-view-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+}
+.tm-view-set-default-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: none;
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+/* The bare grey star gave no affordance: the same hover feedback the edit/delete buttons have. */
+.tm-view-set-default-btn:hover {
+  background-color: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+}
+
+/* Screen-reader-only live region announcing the visible row count; the hiding comes from .tm-sr-only (base.css). */
+.tm-data-table-live-count { white-space: nowrap; }
+
+/* Portaled chrome (view dialog, column picker): native radios and checkboxes follow the theme's
+   primary, not the browser default that shows up as an unthemed white square in dark mode. */
+.tm-view-radio-label input,
+.tm-view-column-item input,
+.tm-column-picker-item input {
+  accent-color: var(--tm-color-primary);
+}
+
+/* RTL: the pin glyph sits on the inline-end edge, which is the physical LEFT, exactly where the
+   base rule's hard-coded text-align: left starts the header text - so it overlapped the first
+   letter. Plain cells and headers follow the writing direction instead (an explicit Align class still
+   wins: it is more specific), and a pinned header reserves the glyph's width on both logical sides. */
+[dir="rtl"] .tm-data-table th:not(.tm-text-right):not(.tm-text-center),
+[dir="rtl"] .tm-data-table td:not(.tm-text-right):not(.tm-text-center) {
+  text-align: start;
+}
+[dir="rtl"] .tm-data-table th.tm-col-pinned {
+  padding-inline-start: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
+  padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
+}
+/* A pinned header that also carries the kebab keeps BOTH reservations: this rule outranks
+   the plain .tm-col-has-menu reservation above, so the menu's space must be added here too. */
+[dir="rtl"] .tm-data-table th.tm-col-pinned.tm-col-has-menu {
+  padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset) + var(--tm-space-7) + var(--tm-space-2));
+}
+/* The pin glyph points at the inline-end edge; under RTL that edge is mirrored, so the glyph
+   mirrors with it instead of pointing "backwards" into the text. */
+[dir="rtl"] .tm-col-pin-btn > span {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+/* Loading: the skeleton rows carry the same per-column cells the data rows will, so the auto
+   table layout measures the same columns before and after the data arrives. */
+.tm-data-table-loading-row td {
+  block-size: var(--tm-space-6);
+}
+
+/* Cards hide the header, so "Drag column headers here to group" points at nothing there. */
+@container tm-data-table (width < 640px) {
+  .tm-data-table-wrapper--cards .tm-data-table-group-placeholder { display: none; }
+  /* The empty state must not inherit the card cell's space-between row layout: the cards-mode
+     empty text is centred like every other empty state. */
+  .tm-data-table-wrapper--cards .tm-data-table td.tm-data-table-empty-cell {
+    display: block;
+    text-align: center;
+  }
+}
+
+/* Mobile sheets (filter sheet, views panel): every control is a finger-sized target and neighbours
+   do not touch. The sheet root carries .tm-overlay-panel-sheet; the popover keeps its compact sizes. */
+.tm-overlay-panel-sheet .tm-col-filter-input,
+.tm-overlay-panel-sheet .tm-col-filter-select,
+.tm-overlay-panel-sheet .tm-col-filter-clear,
+.tm-overlay-panel-sheet .tm-view-item,
+.tm-overlay-panel-sheet .tm-view-edit-btn,
+.tm-overlay-panel-sheet .tm-view-delete-btn,
+.tm-overlay-panel-sheet .tm-view-set-default-btn,
+.tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn,
+.tm-overlay-panel-sheet .tm-data-table-cards-sheet__footer .tm-btn {
+  min-block-size: var(--tm-touch-target);
+}
+.tm-overlay-panel-sheet .tm-col-filter-clear,
+.tm-overlay-panel-sheet .tm-view-edit-btn,
+.tm-overlay-panel-sheet .tm-view-delete-btn,
+.tm-overlay-panel-sheet .tm-view-set-default-btn {
+  min-inline-size: var(--tm-touch-target);
+}
+.tm-overlay-panel-sheet .tm-view-item-row { gap: var(--tm-space-2); }
+.tm-overlay-panel-sheet .tm-view-manager-footer .tm-btn + .tm-btn { margin-block-start: var(--tm-space-2); }
+
+/* The sheet header already carries Done, so the footer's second Done is redundant there; the popover
+   has no header action and keeps it. */
+.tm-overlay-panel-sheet .tm-btn.tm-data-table-cards-sheet__done { display: none; }

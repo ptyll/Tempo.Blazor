@@ -7,7 +7,7 @@
    at BOTH the label and the displayed value, so the announced name is "{label}, {value-or-placeholder}".
    `aria-*` keys in AdditionalAttributes are splatted onto the trigger (the element assistive tech
    names and operates); `data-*` and everything else stays on the root, where test ids live. *@
-<div class="tm-date-picker @Class" @attributes="RootAttributes">
+<div class="tm-date-picker @Class" @attributes="RootAttributes" @onkeydown="OnKeyDown" @onkeydown:stopPropagation="_isOpen">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId"
@@ -151,6 +151,18 @@
         }
     }
 
+    /// <summary>
+    /// Escape while the calendar is open closes only this picker. stopPropagation is bound to
+    /// <see cref="_isOpen"/> so the key does not also dismiss a parent editor (the filter builder).
+    /// overlay.js still owns the gesture when it is loaded; this handler is the fallback the
+    /// parent can rely on when the script has already been stopped or is absent (bUnit).
+    /// </summary>
+    private void OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (_isOpen && e.Key == "Escape")
+            _isOpen = false;
+    }
+
     private void ToggleCalendar()
     {
         if (!Disabled) _isOpen = !_isOpen;
@@ -186,7 +198,8 @@
         await ValueChanged.InvokeAsync(today);
     }
 
-    // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
-    // and routes it through TmOverlayPanel.NotifyDismissedAsync — a bubbling handler on this
-    // div could never run in a real browser (dead-branch sweep, N169 follow-up).
+    // overlay.js consumes Escape in the window capture phase when it is loaded and routes it
+    // through TmOverlayPanel.NotifyDismissedAsync. OnKeyDown is the fallback for a host that has
+    // not loaded the module (and for bUnit): it closes this picker and, while open, stops the key
+    // so a parent editor does not treat the same Escape as its own cancel.
 }

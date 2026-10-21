@@ -168,6 +168,12 @@
       "description": "Estimated card height for card view virtualization."
     },
     {
+      "name": "MaxCardColumns",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum number of card columns. Null (default) keeps auto-fill with the minimum card width. Values below 1 are ignored. A value of 1 or more adds tm-mvl-card-grid--capped and sets --tm-mvl-card-columns-max."
+    },
+    {
       "name": "VirtualListItemHeight",
       "type": "float",
       "isRequired": false,
@@ -323,6 +329,13 @@
       "description": "When true and a ViewProvider is set, shows the inline FilterBuilder for external filtering. Default: true. Set to false when the surrounding page owns the filtering UI to avoid duplicate filters."
     },
     {
+      "name": "ShowFilterResultPreview",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, the inline filter builder shows how many records match the current filters. A DataProvider is asked with PageSize 1 and the preview reads TotalCount; without one the in-memory items are counted with the list's own filter rules. Default: false."
+    },
+    {
       "name": "ExternalFilterDefinitions",
       "type": "List<FilterDefinition>",
       "isRequired": false,
@@ -364,26 +377,32 @@
       "type": "CardActivation",
       "isRequired": false,
       "default": "Button",
-      "description": "Opt-in CardActivation behavior; defaults preserve the existing presentation."
+      "description": "Card activation. Button (default) keeps the card as the tab stop. StretchedLink removes the card tab stop and puts the title in a covering link: an anchor when ItemHref returns a URL, otherwise a button that raises OnItemClick."
+    },
+    {
+      "name": "ItemHref",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Href of a card when CardActivation is StretchedLink. A non-empty result renders an anchor; null or empty renders a button that raises OnItemClick. Ignored for Button."
     },
     {
       "name": "GroupHeaderTemplate",
       "type": "RenderFragment<DataGroup<TItem>>?",
       "isRequired": false,
-      "description": "Opt-in GroupHeaderTemplate behavior; defaults preserve the existing presentation."
+      "description": "Replaces the default group header (label and count) in every view. The context is the DataGroup. Omit it to keep the built-in header."
     },
     {
       "name": "StatusVariantField",
       "type": "Func<TItem, BadgeVariant>?",
       "isRequired": false,
-      "description": "Opt-in StatusVariantField behavior; defaults preserve the existing presentation."
+      "description": "Maps an item to the status badge variant (success, warning, and the other BadgeVariant values). Omit it and every status badge uses the default variant."
     },
     {
       "name": "TableCellLayout",
       "type": "TableCellLayout",
       "isRequired": false,
       "default": "Inline",
-      "description": "Opt-in TableCellLayout behavior; defaults preserve the existing presentation."
+      "description": "Table-view cell layout. Inline (default) keeps title and subtitle in their own columns. Stacked drops the subtitle column and renders its value under the title in the same cell."
     }
   ],
   "cssClasses": [
