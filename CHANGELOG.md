@@ -116,7 +116,10 @@
   leaves the menu open. `ExportAsync(format)` still
   exports every matching row; `ExportAsync(format, DataTableExportScope.Selected)` exports the
   selection, and `OnExportCompleted` reports the scope on `DataTableExportResult.Scope` (default
-  `All`). The default menu is unchanged.
+  `All`). A custom `IDataTableExporter` takes the scope too: the new
+  `ExportAsync(exporter, DataTableExportScope, string?)` exports the requested rows through any
+  format (JSON, PDF, …) with the same download plumbing; `ExportAsync(exporter)` keeps exporting
+  all rows. The default menu is unchanged.
 
 - **TmDataTable `ColumnMenuMode.Menu`.** Opt-in kebab menu in each data column header
   (`aria-label` "Column options: {column}", `aria-haspopup="menu"`, `aria-expanded`). Items follow
@@ -951,7 +954,8 @@
   `ActionOverflowLayout.Partition` honours the pins for both the action bar and the toolbar.
 - **Menu keyboard for every `role=menu` surface.** `tm-menu-nav.js`, attached by
   `TmOverlayPanel` to each `Role="menu"` panel (popover or sheet): ArrowUp/ArrowDown/Home/End
-  roving over the enabled items, typeahead (diacritic- and case-insensitive) and a roving tabindex —
+  roving (native `disabled` and hidden items are skipped; see the Breaking / Migration entry on
+  `aria-disabled` items), typeahead (diacritic- and case-insensitive) and a roving tabindex —
   `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both overflow menus get the keys from the panel. A menu
   opened from the keyboard also needs its first item focused: `TmDropdown`, `TmSplitButton` and `TmContextMenu`
   each wire `OnOpened` → `focusFirst` through the shared `MenuNavInterop`, and a `TmContextMenu` item activation
@@ -1077,6 +1081,20 @@
   translations in an application (registered after `AddTempoBlazor()`).
 
 ### Breaking / Migration
+
+- **`tm-menu-nav` roving now includes `aria-disabled="true"` items.** Arrow keys, Home/End and
+  typeahead reach an item that is only `aria-disabled` (not natively `disabled`), so its
+  explanation stays reachable for a screen reader. Only items with the native `disabled`
+  attribute or `hidden` are skipped. This module serves every `role=menu` surface
+  (`TmDropdown`, `TmSplitButton`, `TmContextMenu`, overflow menus), not just the data table.
+  The initial focus (`focusFirst`) still skips an `aria-disabled` first item and falls back to
+  the first item only when every item is `aria-disabled`.
+  Before: `aria-disabled="true"` items were skipped by arrow/Home/End/typeahead roving and by the initial focus.
+  After: the menu opens on the first item that is not disabled in either way, and arrow keys
+  stop on the `aria-disabled` item too.
+  Migration: set the native `disabled` (`TmDropdownItem.Disabled`) on items that must stay out
+  of the keyboard order entirely; keep `aria-disabled` only for focusable-but-unavailable
+  choices that carry an explanation.
 
 - **`TmDropdown` outline trigger is now small.** `OutlineTrigger="true"` adds `tm-btn-sm` for
   every consumer, not only a Card-mode data table.

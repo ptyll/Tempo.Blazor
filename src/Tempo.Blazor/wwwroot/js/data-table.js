@@ -439,12 +439,20 @@ window.tmDataTable = (function () {
      * top layer (TmOverlayPanel), so it is looked up by id on the document, not inside the table.
      * Arrow / Home / End navigation is owned by tm-menu-nav.js, which TmOverlayPanel attaches to
      * every role="menu" panel — this only moves the initial focus. Sort items are menuitemradio;
-     * every other item is menuitem, so the selector matches both.
+     * every other item is menuitem, so the selector matches both. An `aria-disabled="true"` item
+     * stays in the roving order but must not take the OPENING focus: the first candidate that is
+     * not disabled wins, and an all-disabled menu falls back to the first focusable item.
      */
     function focusColumnMenu(menuId) {
         var menu = document.getElementById(menuId);
         if (!menu) return;
-        var item = menu.querySelector('[role^="menuitem"]:not([disabled])');
+        var focusable = menu.querySelectorAll('[role^="menuitem"]:not([disabled])');
+        if (!focusable.length) return;
+        var item = null;
+        for (var i = 0; i < focusable.length; i++) {
+            if (focusable[i].getAttribute('aria-disabled') !== 'true') { item = focusable[i]; break; }
+        }
+        if (!item) item = focusable[0];
         if (item && typeof item.focus === 'function') {
             try { item.focus({ preventScroll: true }); } catch (e) { item.focus(); }
         }

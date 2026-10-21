@@ -266,6 +266,21 @@ test('focusFirst focuses the first ENABLED item of the open menu inside the host
     assert.equal(items[0].focusCalls, 0);
 });
 
+test('focusFirst skips an aria-disabled first item but keeps it as the last-resort fallback', () => {
+    const items = [item('Selected', { ariaDisabled: true }), item('All'), item('Csv')];
+    const menuEl = { querySelectorAll: () => items };
+    const host = { querySelector: selector => (selector === '[role="menu"]' ? menuEl : null) };
+
+    assert.equal(focusFirst(host), true);
+    assert.equal(items[1].focusCalls, 1, 'initial focus lands on the first non-disabled item');
+    assert.equal(items[0].focusCalls, 0, 'the aria-disabled choice is not the opening focus');
+
+    const onlyAriaDisabled = [item('Selected', { ariaDisabled: true })];
+    const onlyMenu = { querySelectorAll: () => onlyAriaDisabled };
+    assert.equal(focusFirst({ querySelector: () => onlyMenu }), true);
+    assert.equal(onlyAriaDisabled[0].focusCalls, 1, 'when every item is aria-disabled the first still takes focus');
+});
+
 test('focusFirst does nothing when the menu is not open or has no enabled item', () => {
     assert.equal(focusFirst({ querySelector: () => null }), false);
     assert.equal(focusFirst(null), false);

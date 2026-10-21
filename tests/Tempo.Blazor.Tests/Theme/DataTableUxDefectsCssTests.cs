@@ -220,6 +220,29 @@ public sealed class DataTableUxDefectsCssTests
     }
 
     [Fact]
+    public void DisabledExportScope_KeepsItsInstructionalTextReadable()
+    {
+        // WCAG 1.4.3 exempts the unavailable CONTROL, not the hint that tells the user what to do:
+        // the generic dropdown fade (opacity .5) must lift off the whole scope item and the
+        // description must keep its full-strength secondary ink (>=4.5:1 in both themes).
+        var css = Css();
+        Rule(css, ".tm-data-table__export-scope[aria-disabled=\"true\"]")
+            .Should().Contain("opacity: 1");
+        Rule(css, ".tm-data-table__export-scope[aria-disabled=\"true\"] .tm-data-table__export-label")
+            .Should().Contain("color: var(--tm-text-muted)");
+        Rule(css, ".tm-data-table__export-scope[aria-disabled=\"true\"] .tm-data-table__export-description")
+            .Should().Contain("color: var(--tm-text-secondary)");
+    }
+
+    [Fact]
+    public void AriaDisabledDropdownItem_DoesNotLightUpOnHover()
+    {
+        Rule(ThemeCss.ComponentCss("_dropdown.css"), ".tm-dropdown-item[aria-disabled=\"true\"]:hover")
+            .Should().Contain("background-color: transparent",
+                "an unavailable choice must not paint the active hover surface");
+    }
+
+    [Fact]
     public void BareDropdownTrigger_FollowsTheThemeTextToken()
     {
         Rule(ThemeCss.ComponentCss("_dropdown.css"), ".tm-dropdown-trigger")

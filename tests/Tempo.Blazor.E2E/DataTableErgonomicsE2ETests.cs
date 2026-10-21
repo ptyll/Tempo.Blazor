@@ -228,6 +228,59 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await Assertions.Expect(section.Locator("[data-testid='dt-inline-save-result']")).ToContainTextAsync("OnRowSave");
     }
 
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task DataTable_ExportSelected_DisabledScopeHint_StaysReadable()
+    {
+        // WCAG 1.4.3: the unavailable CONTROL may fade, the instructional text must not. The
+        // "Select rows to export them" hint has to keep opacity 1 and >=4.5:1 contrast against
+        // the menu surface in both themes while the option is aria-disabled.
+        var page = await OpenPageAsync();
+        var section = page.Locator("[data-testid='dt-export-section']");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+        var trigger = section.Locator(".tm-data-table__export .tm-dropdown-trigger");
+
+        const string probe = """
+            () => {
+                const description = document.querySelector("[data-export-scope='selected'] .tm-data-table__export-description");
+                if (!description) return null;
+                const parse = value => (value.match(/[\d.]+/g) ?? []).map(Number);
+                const channel = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+                const luminance = rgb => 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+                let node = description, background = null;
+                while (node && node !== document.documentElement) {
+                    const c = parse(getComputedStyle(node).backgroundColor);
+                    if (c.length >= 3 && (c.length < 4 || c[3] > 0)) { background = c.slice(0, 3); break; }
+                    node = node.parentElement;
+                }
+                if (!background) return null;
+                const ink = parse(getComputedStyle(description).color).slice(0, 3);
+                const l1 = luminance(ink), l2 = luminance(background);
+                const contrast = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+                return JSON.stringify({ opacity: getComputedStyle(description).opacity, contrast });
+            }
+            """;
+
+        foreach (var (theme, dark) in new[] { ("light", false), ("dark", true) })
+        {
+            if (dark) await ToggleDarkModeAsync(page);
+
+            await trigger.ClickAsync();
+            var state = await page.WaitForFunctionAsync(
+                probe, null, new PageWaitForFunctionOptions { Timeout = 10000 });
+            var json = await state.JsonValueAsync<string>();
+
+            Assert.IsNotNull(json, $"the disabled scope hint was not rendered in {theme} mode");
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            Assert.AreEqual("1", doc.RootElement.GetProperty("opacity").GetString(),
+                $"hint opacity must stay 1 in {theme} mode (the disabled fade must not cover the hint)");
+            var contrast = doc.RootElement.GetProperty("contrast").GetDouble();
+            Assert.IsTrue(contrast >= 4.5, $"hint contrast must be >= 4.5:1 in {theme} mode, got {contrast:0.00}");
+            await page.Keyboard.PressAsync("Escape");
+        }
+    }
+
     private static async Task SaveScreenshotAsync(IPage page, string fileName)
     {
         var dir = Path.Combine(FindRepoRoot().FullName,

@@ -837,10 +837,24 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>Exports the current filter/sort result set (all pages) and triggers a browser download.</summary>
     /// <param name="exporter">Format-specific exporter (CSV, XLSX, …).</param>
     /// <param name="fileName">Optional file name; defaults to the view context plus the exporter extension.</param>
-    public async Task ExportAsync(IDataTableExporter exporter, string? fileName = null)
+    public Task ExportAsync(IDataTableExporter exporter, string? fileName = null)
+        => ExportAsync(exporter, DataTableExportScope.All, fileName);
+
+    /// <summary>
+    /// Exports rows of the requested scope with a custom exporter (JSON, PDF, …) and triggers a
+    /// browser download.
+    /// </summary>
+    /// <param name="exporter">Format-specific exporter.</param>
+    /// <param name="scope">
+    /// <see cref="DataTableExportScope.All"/> exports every row matching the current filter and
+    /// sort; <see cref="DataTableExportScope.Selected"/> exports the checked rows, sorted like the
+    /// current view, with any row no longer in that view appended in the order it was checked.
+    /// </param>
+    /// <param name="fileName">Optional file name; defaults to the view context plus the exporter extension.</param>
+    public async Task ExportAsync(IDataTableExporter exporter, DataTableExportScope scope, string? fileName = null)
     {
         ArgumentNullException.ThrowIfNull(exporter);
-        var data = await BuildExportDataAsync();
+        var data = await BuildExportDataAsync(scope);
         var bytes = exporter.Export(data);
         var name = fileName ?? $"{ViewContext}.{exporter.FileExtension}";
         try

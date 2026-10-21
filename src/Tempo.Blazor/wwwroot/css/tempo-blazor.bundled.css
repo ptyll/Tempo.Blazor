@@ -1255,6 +1255,9 @@ to{opacity:1;transform:scaleX(1);}
 .tm-view-modal-helper{margin:0 0 var(--tm-space-3);color:var(--tm-text-muted);font-size:var(--tm-font-size-sm);}
 .tm-data-table__export-description{flex-basis:100%;color:var(--tm-text-muted);font-size:var(--tm-font-size-sm);}
 .tm-data-table__export-scope--selected{background:var(--tm-color-primary-subtle);}
+.tm-data-table__export-scope[aria-disabled="true"]{opacity:1;}
+.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-label{color:var(--tm-text-muted);}
+.tm-data-table__export-scope[aria-disabled="true"] .tm-data-table__export-description{color:var(--tm-text-secondary);}
 .tm-data-table-wrapper--card-surface{border-radius:var(--tm-radius-card);box-shadow:var(--tm-shadow-card);border:1px solid var(--tm-border-color);background:var(--tm-bg-surface);}
 .tm-data-table-wrapper--container{container-type:inline-size;container-name:tm-data-table;inline-size:100%;}
 .tm-data-table-wrapper{--tm-data-table-mobile-checkbox-width:var(--tm-touch-target);display:flex;flex-direction:column;gap:var(--tm-space-4);padding:var(--tm-space-4);background:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-lg);}
@@ -1864,6 +1867,7 @@ to{transform:translateY(0);opacity:1;}
 .tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger{opacity:var(--tm-opacity-disabled);cursor:not-allowed;}
 .tm-dropdown-menu{min-width:10rem;background-color:var(--tm-bg-surface);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-lg);box-shadow:var(--tm-shadow-lg);padding:var(--tm-space-1);animation:tm-fade-in var(--tm-transition-fast);}
 .tm-dropdown-item{display:flex;align-items:center;gap:var(--tm-space-2);width:100%;padding:var(--tm-space-2) var(--tm-space-3);font-size:var(--tm-font-size-sm);color:var(--tm-text-primary);background:none;border:none;border-radius:var(--tm-radius-md);cursor:pointer;text-align:left;transition:background-color var(--tm-transition-fast);text-decoration:none;}
+.tm-dropdown-item[aria-disabled="true"]:hover{background-color:transparent;}
 .tm-dropdown-item:hover{background-color:var(--tm-bg-surface-secondary);}
 .tm-dropdown-item:focus-visible{outline:2px solid transparent;box-shadow:var(--tm-focus-ring);background-color:var(--tm-bg-surface-secondary);}
 .tm-dropdown-item:disabled,.tm-dropdown-item[disabled],.tm-dropdown-item[aria-disabled="true"]{opacity:var(--tm-opacity-disabled);cursor:not-allowed;}

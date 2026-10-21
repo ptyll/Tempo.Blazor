@@ -108,7 +108,7 @@ The menu offers only what the column can do:
 - **All rows** exports every row matching the current filter and sort, paging bypassed — the same set `ExportAsync(format)` has always exported.
 - **Selected rows (N)** exports the checked rows, sorted like the current view, with any checked row a later filter hid appended in the order it was checked. While nothing is checked the choice is `aria-disabled` (still focusable) and its description reads "Select rows to export them". Picking a scope leaves the menu open.
 
-`ExportAsync(format, DataTableExportScope.Selected)` exports the selection directly, and `OnExportCompleted` reports which scope ran on `DataTableExportResult.Scope` (default `All`, so existing handlers keep compiling). The first overload of `IDataTableExporter` is unchanged.
+`ExportAsync(format, DataTableExportScope.Selected)` exports the selection directly, and `OnExportCompleted` reports which scope ran on `DataTableExportResult.Scope` (default `All`, so existing handlers keep compiling). A custom `IDataTableExporter` (JSON, PDF, …) takes the same scope: `ExportAsync(exporter, DataTableExportScope.Selected)` builds the selected-rows snapshot and runs the download plumbing — no need to call `BuildExportDataAsync(scope)` and redo the download yourself. `ExportAsync(exporter)` keeps exporting all rows. The first overload of `IDataTableExporter` is unchanged.
 
 ```razor
 <TmDataTable TItem="Person" Items="people" Selectable="true" ShowExport="true" AllowExportSelected="true">

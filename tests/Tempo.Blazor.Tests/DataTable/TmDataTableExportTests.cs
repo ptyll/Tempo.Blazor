@@ -437,6 +437,53 @@ public class TmDataTableExportTests : LocalizationTestBase
         xlsx.Received[0].Rows.Select(row => row[0]).Should().Equal("P1", "P5");
     }
 
+    private sealed class RecordingJsonExporter : IDataTableExporter
+    {
+        public List<DataTableExportData> Received { get; } = [];
+
+        public string Format => "json";
+        public string ContentType => "application/json";
+        public string FileExtension => "json";
+
+        public byte[] Export(DataTableExportData data)
+        {
+            Received.Add(data);
+            return Encoding.UTF8.GetBytes("{}");
+        }
+    }
+
+    [Fact]
+    public async Task ExportScope_CustomExporterWithSelectedScope_ReceivesTwoOfFiveRows()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var exporter = new RecordingJsonExporter();
+        var cut = RenderSelectableExport(people);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[1].Change(true);
+        cut.FindAll("tbody tr td input[type='checkbox']")[3].Change(true);
+
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(exporter, DataTableExportScope.Selected));
+
+        exporter.Received.Should().ContainSingle();
+        exporter.Received[0].Rows.Should().HaveCount(2, "the custom exporter sees only the checked rows");
+        exporter.Received[0].Rows.Select(row => row[0]).Should().Equal("P2", "P4");
+    }
+
+    [Fact]
+    public async Task ExportScope_CustomExporterWithoutScope_DelegatesToAllRows()
+    {
+        var people = Enumerable.Range(1, 5).Select(i => new Person($"P{i}", i)).ToList();
+        var exporter = new RecordingJsonExporter();
+        var cut = RenderSelectableExport(people);
+
+        cut.FindAll("tbody tr td input[type='checkbox']")[1].Change(true);
+
+        await cut.InvokeAsync(() => cut.Instance.ExportAsync(exporter, "people.json"));
+
+        exporter.Received.Should().ContainSingle();
+        exporter.Received[0].Rows.Should().HaveCount(5, "the exporter-less scope defaults to All");
+    }
+
     [Fact]
     public void ExportScope_AllowExportSelectedFalse_HasNoScopeSection()
     {
