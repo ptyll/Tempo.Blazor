@@ -64,4 +64,79 @@ public class TmDataTableColumnMenuE2ETests : WasmTestBase
         var header = section.Locator("th:has(.tm-data-table-col-menu[data-column-key='Name']) .tm-th-sort");
         await Assertions.Expect(header).ToBeFocusedAsync(new() { Timeout = 5000 });
     }
+
+    private const string Section = "[data-testid='dt-column-menu-section']";
+
+    private async Task<IPage> OpenAsync(int width, int height, bool touch)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = touch,
+            IsMobile = touch,
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/data-table",
+            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var section = page.Locator(Section);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await page.EvaluateAsync(
+            "() => document.querySelector(\"[data-testid='dt-column-menu-section'] .tm-data-table\").scrollIntoView({ block: 'center', behavior: 'instant' })");
+        await page.WaitForTimeoutAsync(300);
+        return page;
+    }
+
+    /// <summary>Rects of two locators must not overlap (bounding-box intersection test).</summary>
+    private static async Task AssertNoOverlapAsync(ILocator a, ILocator b, string because)
+    {
+        var ab = await a.BoundingBoxAsync() ?? throw new AssertFailedException($"{because}: first rect missing");
+        var bb = await b.BoundingBoxAsync() ?? throw new AssertFailedException($"{because}: second rect missing");
+        var overlaps = ab.X < bb.X + bb.Width && bb.X < ab.X + ab.Width
+                    && ab.Y < bb.Y + bb.Height && bb.Y < ab.Y + ab.Height;
+        Assert.IsFalse(overlaps, because);
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task ColumnMenu_Kebab_DoesNotCoverTheSortButton_OnARightAlignedColumn()
+    {
+        var page = await OpenAsync(1440, 1100, touch: false);
+
+        // Sorted, right-aligned column: the worst case for the overlaying kebab (ux finding 1+3).
+        var scoreHeader = page.Locator($"{Section} th:has(.tm-data-table-col-menu[data-column-key='Score'])");
+        await scoreHeader.Locator(".tm-data-table-col-menu[data-column-key='Score']").ClickAsync();
+        await page.Locator("[role='menu']").WaitForAsync();
+        await page.Locator("[role='menu'] [data-action='sort-asc']").ClickAsync();
+        await scoreHeader.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+        Assert.IsTrue((await scoreHeader.GetAttributeAsync("class"))!.Contains("tm-col-has-menu"));
+
+        await AssertNoOverlapAsync(
+            scoreHeader.Locator(".tm-th-sort"),
+            scoreHeader.Locator(".tm-data-table-col-menu[data-column-key='Score']"),
+            "the kebab must not intersect the sort button of a sorted, right-aligned column");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task ColumnMenu_Kebab_DoesNotCoverSortButtonOrResizeHandle_OnCoarsePointer()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+
+        var scoreHeader = page.Locator($"{Section} th:has(.tm-data-table-col-menu[data-column-key='Score'])");
+        await scoreHeader.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+
+        await AssertNoOverlapAsync(
+            scoreHeader.Locator(".tm-th-sort"),
+            scoreHeader.Locator(".tm-data-table-col-menu[data-column-key='Score']"),
+            "on touch the always-visible 44px kebab must not cover the sort button");
+
+        await AssertNoOverlapAsync(
+            scoreHeader.Locator(".tm-data-table-col-menu[data-column-key='Score']"),
+            scoreHeader.Locator(".tm-col-resize-handle"),
+            "on touch the kebab and the widened resize handle must be separate touch targets");
+    }
 }

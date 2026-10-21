@@ -90,6 +90,44 @@ public class TmDataTableColumnMenuTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Menu_mode_headers_reserve_the_kebab_space_via_tm_col_has_menu()
+    {
+        var cut = RenderTable(ColumnMenuMode.Menu);
+
+        cut.Find(".tm-data-table-col-menu[data-column-key='Name']").ParentElement!.ClassList
+            .Should().Contain("tm-col-has-menu",
+                "the th must reserve the kebab's width so it never covers the label or sort arrow");
+
+        // Without the menu (pin mode) the reservation class is not needed and must not appear.
+        var plain = RenderTable(ColumnMenuMode.None);
+        plain.FindAll(".tm-data-table-col-menu").Should().BeEmpty();
+        plain.Find(".tm-data-table thead th").ClassList.Should().NotContain("tm-col-has-menu");
+    }
+
+    [Fact]
+    public void Sorted_direction_shows_a_visible_check_in_the_menu()
+    {
+        var cut = RenderTable(ColumnMenuMode.Menu);
+        OpenMenu(cut, "Name");
+        ClickAction(cut, "sort-asc");
+        OpenMenu(cut, "Name");
+
+        var ascending = cut.Find("[role='menu'] [data-action='sort-asc']");
+        ascending.QuerySelector(".tm-dropdown-item__check svg").Should().NotBeNull(
+            "the sighted counterpart of aria-checked=true is a check icon (WCAG 1.3.1/1.4.1)");
+        cut.Find("[role='menu'] [data-action='sort-desc']").QuerySelector(".tm-dropdown-item__check svg")
+            .Should().BeNull("only the active direction carries the check");
+
+        // Every item renders the check slot (empty for plain menuitems) so all labels align.
+        var items = MenuItems(cut);
+        cut.FindAll("[role='menu'] .tm-dropdown-item > .tm-dropdown-item__check")
+            .Should().HaveCount(items.Count);
+        items.Where(i => i.GetAttribute("role") == "menuitem")
+            .Should().OnlyContain(i => i.QuerySelector(".tm-dropdown-item__check svg") == null,
+                "plain menuitems keep an empty slot for label alignment");
+    }
+
+    [Fact]
     public void Sort_ascending_item_sets_the_sort_and_re_queries_the_provider()
     {
         var provider = Substitute.For<IDataTableDataProvider<Person>>();

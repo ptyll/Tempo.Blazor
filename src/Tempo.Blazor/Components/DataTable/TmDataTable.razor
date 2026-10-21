@@ -461,6 +461,16 @@
                                                     data-action="@action"
                                                     @onclick="() => RunColumnMenuActionAsync(col, action)"
                                                     @onclick:stopPropagation="true">
+                                                @* The leading check slot is the sighted counterpart of
+                                                   aria-checked (WCAG 1.3.1/1.4.1): it renders on EVERY
+                                                   item — empty on the plain menuitems — so all labels
+                                                   share one alignment edge (see _dropdown.css). *@
+                                                <span class="tm-dropdown-item__check" aria-hidden="true">
+                                                    @if (isSortDirection && isCurrentSort)
+                                                    {
+                                                        <TmIcon Name="@IconNames.Check" Size="IconSize.Sm" />
+                                                    }
+                                                </span>
                                                 @Loc[ColumnMenuActionKey(action)]
                                             </button>
                                         }

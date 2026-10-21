@@ -450,14 +450,32 @@
   outline-offset: 2px;
 }
 
+/* The kebab overlays the inline end of its header, so the th reserves its width — the same
+   reservation the RTL pinned header makes for the pin glyph. Without it the (opaque) kebab
+   painted over the tail of the label, the sort arrow and the multi-sort index; worst on a
+   right-aligned or narrow column (WCAG 1.4.10 Reflow / 2.5.8 Target Size). */
+.tm-data-table th.tm-col-has-menu {
+  padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-space-7) + var(--tm-space-2));
+}
+
 @media (pointer: coarse) {
   .tm-data-table-col-menu {
     inline-size: var(--tm-touch-target);
     block-size: var(--tm-touch-target);
     min-inline-size: var(--tm-touch-target);
     min-block-size: var(--tm-touch-target);
-    inset-inline-end: var(--tm-space-1);
+    inset-inline-end: var(--tm-space-3);
     opacity: 1;
+  }
+
+  /* The 44px kebab clears the widened resize handle (inset --tm-space-3) the way the pin
+     button does, and the reservation grows with it. On the LAST column the handle stays
+     inside the cell (inset 0, 24px wide), so the kebab slides past it entirely. */
+  .tm-data-table th .tm-data-table-col-menu { inset-inline-end: var(--tm-space-3); }
+  .tm-data-table th:last-child .tm-data-table-col-menu { inset-inline-end: var(--tm-space-6); }
+
+  .tm-data-table th.tm-col-has-menu {
+    padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-touch-target) + var(--tm-space-3));
   }
 }
 
@@ -1774,6 +1792,11 @@
 [dir="rtl"] .tm-data-table th.tm-col-pinned {
   padding-inline-start: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
   padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset));
+}
+/* A pinned header that also carries the kebab keeps BOTH reservations: this rule outranks
+   the plain .tm-col-has-menu reservation above, so the menu's space must be added here too. */
+[dir="rtl"] .tm-data-table th.tm-col-pinned.tm-col-has-menu {
+  padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-data-table-pin-glyph) + var(--tm-data-table-pin-inset) + var(--tm-space-7) + var(--tm-space-2));
 }
 /* The pin glyph points at the inline-end edge; under RTL that edge is mirrored, so the glyph
    mirrors with it instead of pointing "backwards" into the text. */

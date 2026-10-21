@@ -3635,6 +3635,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         var parts = new List<string>();
         if (IsMobilePinned(col)) parts.Add("data-mobile-pinned");
+        // The kebab overlays the inline end of the header; the th must reserve its width so it
+        // never paints over the label, the sort arrow or the multi-sort index.
+        if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu) parts.Add("tm-col-has-menu");
         if (col.Sortable) parts.Add("tm-col-sortable");
         if (col.Groupable) parts.Add("tm-col-groupable");
         var headerSort = GetColumnSort(col.Key);

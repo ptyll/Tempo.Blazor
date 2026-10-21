@@ -62,6 +62,25 @@ public sealed class DataTableUxDefectsCssTests
     }
 
     [Fact]
+    public void ColumnMenuHeader_ReservesTheKebabWidth_OnBothSides()
+    {
+        var css = Css();
+
+        // Desktop: the th reserves the 28px kebab so it never paints over label / sort arrow / index.
+        Rule(css, ".tm-data-table th.tm-col-has-menu")
+            .Should().Contain("padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-space-7) + var(--tm-space-2))");
+
+        // Coarse pointer: the 44px target clears the widened resize handle (the pin button's inset).
+        css.Should().Contain("padding-inline-end: calc(var(--tm-data-table-cell-px) + var(--tm-touch-target) + var(--tm-space-3))");
+        css.Should().Contain(".tm-data-table th .tm-data-table-col-menu { inset-inline-end: var(--tm-space-3); }");
+
+        // RTL pinned header keeps BOTH reservations (pin glyph + kebab).
+        Rule(css, "[dir=\"rtl\"] .tm-data-table th.tm-col-pinned.tm-col-has-menu")
+            .Should().Contain("--tm-data-table-pin-glyph")
+            .And.Contain("--tm-space-7");
+    }
+
+    [Fact]
     public void ScrollLayoutCells_EndInAnEllipsisAndTheCapIsContainerRelative()
     {
         var css = Css();
