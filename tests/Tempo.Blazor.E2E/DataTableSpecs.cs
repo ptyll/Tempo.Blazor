@@ -585,4 +585,64 @@ internal static class DataTableSpecs
             Assert.IsTrue(box.Width >= 43.5 && box.Height >= 43.5, $"{selector} is {box.Width}×{box.Height}, expected ≥ 44px on a coarse pointer");
         }
     }
+
+    /// <summary>
+    /// Review fix: the default (Plain) surface keeps the pre-redesign group zone and export
+    /// look — solid-primary chip, outlined Expand/Collapse buttons and single-line export
+    /// items; the Card surface keeps the redesign styling.
+    /// </summary>
+    internal static async Task DefaultAppearanceGroupZoneAndExportAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    {
+        var page = await OpenAsync(browser, baseUrl, "/data-table", new Options(), register);
+        var table = Redesign(page);
+        await table.ScrollIntoViewIfNeededAsync();
+
+        // The default export items are single-line (nowrap), like before the redesign.
+        await table.Locator(".tm-data-table__export .tm-dropdown-trigger").ClickAsync();
+        var csv = table.Locator("[data-export-format='csv']");
+        await Assertions.Expect(csv).ToBeVisibleAsync();
+        Assert.AreEqual("nowrap", await csv.EvaluateAsync<string>("el => getComputedStyle(el).whiteSpace"),
+            "a default export item does not wrap onto two lines");
+        await page.Keyboard.PressAsync("Escape");
+
+        // Group via the Card-only "Add grouping" dropdown, then flip back to the default look.
+        await SelectAsync(page, "dt-redesign-appearance", "Card");
+        await table.Locator(".tm-data-table-add-grouping .tm-dropdown-trigger").ClickAsync();
+        await table.Locator(".tm-dropdown-item").First.ClickAsync();
+        var chip = table.Locator(".tm-data-table-group-chip").First;
+        await Assertions.Expect(chip).ToBeVisibleAsync();
+        await SelectAsync(page, "dt-redesign-appearance", "Plain");
+        await Assertions.Expect(chip).ToBeVisibleAsync();
+
+        const string colorProbe =
+            "() => { const probe = document.createElement('div'); probe.style.display = 'none'; document.body.appendChild(probe);" +
+            "const read = t => { probe.style.color = 'var(' + t + ')'; return getComputedStyle(probe).color; };" +
+            "const zone = document.querySelector(\"[data-testid='dt-redesign-table'] .tm-data-table-group-zone\");" +
+            "const chip = zone.querySelector('.tm-data-table-group-chip');" +
+            "const expand = zone.querySelector('.tm-data-table-group-expand-all');" +
+            "const out = [getComputedStyle(chip).backgroundColor, read('--tm-color-primary'), read('--tm-color-primary-subtle')," +
+            "getComputedStyle(expand).borderStyle, expand.className]; probe.remove(); return out; }";
+
+        // Default: solid primary chip and the original outlined mini-buttons.
+        var plain = await page.EvaluateAsync<string[]>(colorProbe);
+        Assert.AreEqual(plain[1], plain[0], "the default chip background is the primary colour");
+        Assert.AreNotEqual(plain[2], plain[0], "the default chip is not the subtle pill");
+        Assert.AreNotEqual("none", plain[3], "the default Expand all button keeps its border");
+        Assert.IsFalse(plain[4].Contains("tm-link-button"), "the default buttons are not link-buttons");
+
+        await PrepareForCaptureAsync(page);
+        var dir = Path.Combine(FindRoot(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "data-table-redesign", "light");
+        Directory.CreateDirectory(dir);
+        await table.Locator(".tm-data-table-group-zone").ScreenshotAsync(new LocatorScreenshotOptions
+        {
+            Path = Path.Combine(dir, "dt-default-group-zone.png"),
+            Timeout = 30_000
+        });
+
+        // Card (opt-in): the subtle pill comes back and tm-link-button owns the buttons.
+        await SelectAsync(page, "dt-redesign-appearance", "Card");
+        var card = await page.EvaluateAsync<string[]>(colorProbe);
+        Assert.AreEqual(card[2], card[0], "the Card chip uses the subtle primary");
+        Assert.IsTrue(card[4].Contains("tm-link-button"), "the Card buttons are link-buttons");
+    }
 }

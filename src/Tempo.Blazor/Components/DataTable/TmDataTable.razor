@@ -130,7 +130,7 @@
                             {
                                 <TmDropdownItem Value="csv"
                                                 Icon="@IconNames.FileText"
-                                                Class="tm-data-table__export-item"
+                                                Class="tm-data-table__export-item tm-data-table__export-item--rich"
                                                 AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "csv" })">
                                     <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportCsvShort"]</span>
                                     <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportCsvDescription"]</span>
@@ -139,7 +139,7 @@
                                 {
                                     <TmDropdownItem Value="xlsx"
                                                     Icon="@IconNames.Table"
-                                                    Class="tm-data-table__export-item"
+                                                    Class="tm-data-table__export-item tm-data-table__export-item--rich"
                                                     AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "xlsx" })">
                                         <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportXlsxShort"]</span>
                                         <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportXlsxDescription"]</span>

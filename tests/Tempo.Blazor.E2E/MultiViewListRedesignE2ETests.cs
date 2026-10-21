@@ -12,6 +12,9 @@ public class MultiViewListRedesignE2ETests : WasmTestBase
 
     [TestMethod, TestCategory("WASM")]
     public Task Edge_EmptyAndVeryLongTitles() => MultiViewListSpecs.EdgeAsync(Browser, BaseUrl, RegisterContext);
+
+    [TestMethod, TestCategory("WASM")]
+    public Task GroupedCardHeader_DiffersFromBody_LightAndDark() => MultiViewListSpecs.GroupedCardHeaderDiffersFromBodyAsync(Browser, BaseUrl, RegisterContext);
 }
 
 [TestClass]

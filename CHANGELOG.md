@@ -4,6 +4,20 @@
 
 ### Fixed
 
+- **Default (Plain) `TmDataTable` group zone and export menu lost their pre-redesign CSS.** The opt-in gating
+  (`Appearance=Card`) had moved the markup but the stylesheet still styled the default: the group chip rendered
+  as the redesign's subtle pill instead of the original solid primary chip, Expand all / Collapse all had no
+  styling at all (raw browser buttons), and export items were wrapping flex rows instead of single-line
+  `white-space: nowrap` items. The original rules are back as the defaults (tokens instead of the old hex
+  values); the redesign styling is scoped to the Card surface via `.tm-data-table-group-zone--card` and the new
+  `tm-data-table__export-item--rich` modifier that the Card export items carry. Guarded by bUnit
+  (`TmDataTablePhase3OptInTests`) and the `DefaultAppearance_GroupZoneAndExport_KeepTheOriginalLook` E2E.
+
+- **`TmMultiViewList` grouped-card header blended into the card body.** `.tm-mvl-group-header` painted the same
+  surface as `.tm-mvl-group-card` and left a margin gap inside the bordered card. Inside a group card the header
+  now uses `var(--tm-surface-secondary)` with a hairline bottom border and no gap. Guarded by the
+  `GroupedCardHeader_DiffersFromBody_LightAndDark` E2E (light and dark).
+
 - **`TmDataTable` UX defects from the phase 13 screenshot review.** RTL pinned headers reserve the pin glyph (logical padding), long filter placeholders and Scroll cells end in an ellipsis, filter and views sheets use 44px targets and show one Done, and the cards layout drops the "Drag column headers here to group" hint.
 
 - **`TmDataTable` column menu opens with Alt+ArrowDown in a real browser.** The chord was announced (`aria-keyshortcuts`) and

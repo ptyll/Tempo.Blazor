@@ -393,6 +393,14 @@
   font-weight: 600;
 }
 
+/* In the grouped card view the header must read as a header: secondary surface, a hairline
+   under it, and no gap against the card's own edge. */
+.tm-mvl-group-card > .tm-mvl-group-header {
+  background: var(--tm-surface-secondary);
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
 .tm-mvl-group-toggle {
   display: inline-flex;
   align-items: center;

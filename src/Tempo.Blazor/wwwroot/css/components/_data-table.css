@@ -7,12 +7,18 @@
   height: var(--tm-data-table-row-height);
 }
 .tm-data-table__export-item {
+  white-space: nowrap;
+}
+/* Rich (Card) export items: icon + label + description on a wrapping flex row. The dropdown
+   panel may render in the top layer outside the wrapper, so the layout is keyed on the
+   modifier class the Card branch adds, not on the wrapper. */
+.tm-data-table__export-item--rich {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--tm-space-2);
 }
-.tm-data-table__export-label {
+.tm-data-table__export-item--rich .tm-data-table__export-label {
   font-weight: var(--tm-font-weight-semibold);
 }
 .tm-view-modal-helper {
@@ -1212,14 +1218,15 @@
   font-style: italic;
 }
 
+/* Default chip: the original solid primary chip, expressed with tokens. */
 .tm-data-table-group-chip {
   display: inline-flex;
   align-items: center;
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-2);
-  border-radius: var(--tm-radius-full);
-  background: var(--tm-color-primary-subtle);
-  color: var(--tm-color-primary-text);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-color-primary);
+  color: var(--tm-text-inverse);
   font-size: var(--tm-font-size-sm);
   cursor: grab;
   user-select: none;
@@ -1238,14 +1245,30 @@
   padding: 0;
   border: none;
   border-radius: var(--tm-radius-full);
-  background: transparent;
-  color: inherit;
+  background: color-mix(in srgb, var(--tm-text-inverse) 25%, transparent);
+  color: var(--tm-text-inverse);
   font-size: 0.75rem;
   cursor: pointer;
   line-height: 1;
 }
 
 .tm-data-table-group-chip-remove:hover {
+  background: color-mix(in srgb, var(--tm-text-inverse) 40%, transparent);
+}
+
+/* The Card (opt-in) redesign keeps the subtle pill. The chip always lives inside the
+   group zone, so the zone modifier is a safe scope even for drag previews. */
+.tm-data-table-group-zone--card .tm-data-table-group-chip {
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary-text);
+}
+
+.tm-data-table-group-zone--card .tm-data-table-group-chip-remove {
+  background: transparent;
+}
+
+.tm-data-table-group-zone--card .tm-data-table-group-chip-remove:hover {
   background: var(--tm-color-primary);
   color: var(--tm-text-inverse);
 }
@@ -1653,11 +1676,35 @@
   text-underline-offset: 3px;
 }
 .tm-col-filter-clear-all:hover { color: var(--tm-color-primary-hover); }
+/* Default Expand all / Collapse all: original outlined mini-buttons. */
 .tm-data-table-group-expand-all,
 .tm-data-table-group-collapse-all {
   display: inline-flex;
   align-items: center;
   gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-surface);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+}
+.tm-data-table-group-expand-all:hover,
+.tm-data-table-group-collapse-all:hover {
+  background: var(--tm-surface-secondary);
+}
+.tm-data-table-group-expand-all:focus-visible,
+.tm-data-table-group-collapse-all:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+/* In the Card (opt-in) redesign the buttons render tm-link-button, which owns the look. */
+.tm-data-table-group-zone--card .tm-data-table-group-expand-all,
+.tm-data-table-group-zone--card .tm-data-table-group-collapse-all {
+  border: none;
+  background: none;
+  padding: 0;
 }
 .tm-data-table-row--edit-footer {
   background: var(--tm-surface-secondary);

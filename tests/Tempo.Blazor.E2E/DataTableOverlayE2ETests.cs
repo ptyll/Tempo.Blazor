@@ -18,6 +18,9 @@ public class DataTableOverlayE2ETests : WasmTestBase
 
     [TestMethod, TestCategory("WASM")]
     public Task MultiViewList_GroupPicker_AnchoredAndFocusRules() => MultiViewListSpecs.GroupPickerFocusAsync(Browser, BaseUrl, RegisterContext);
+
+    [TestMethod, TestCategory("WASM")]
+    public Task DefaultAppearance_GroupZoneAndExport_KeepTheOriginalLook() => DataTableSpecs.DefaultAppearanceGroupZoneAndExportAsync(Browser, BaseUrl, RegisterContext);
 }
 
 [TestClass]

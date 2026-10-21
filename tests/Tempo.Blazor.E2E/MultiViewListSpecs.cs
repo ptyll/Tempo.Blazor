@@ -102,6 +102,38 @@ internal static class MultiViewListSpecs
         Assert.IsFalse(await button.EvaluateAsync<bool>("el => el === document.activeElement"), "an outside click does not return focus to the trigger");
     }
 
+    internal static async Task GroupedCardHeaderDiffersFromBodyAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
+    {
+        var page = await OpenAsync(browser, baseUrl, "/multi-view-list", new Options(), register);
+        var cards = page.Locator("[data-testid='mvl-redesign-cards']");
+        await cards.ScrollIntoViewIfNeededAsync();
+
+        // Group the card list by its groupable field via the group picker.
+        await cards.Locator(".tm-mvl-group-btn").ClickAsync();
+        await cards.Locator(".tm-mvl-group-option").First.ClickAsync();
+        var group = cards.Locator(".tm-mvl-group-card").First;
+        await Assertions.Expect(group).ToBeVisibleAsync();
+
+        await AssertHeaderDiffersFromBodyAsync(page, "light");
+
+        // Dark theme follows the same tokens, so the header stays distinct there too.
+        await page.EvaluateAsync(
+            "() => { document.documentElement.setAttribute('data-theme', 'dark'); document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', 'dark')); }");
+        await AssertHeaderDiffersFromBodyAsync(page, "dark");
+    }
+
+    private static async Task AssertHeaderDiffersFromBodyAsync(IPage page, string theme)
+    {
+        var colors = await page.EvaluateAsync<string[]>(
+            "() => { const card = document.querySelector('[data-testid=mvl-redesign-cards] .tm-mvl-group-card');" +
+            "const header = card.querySelector(':scope > .tm-mvl-group-header');" +
+            "const body = card.querySelector('.tm-mvl-group-body');" +
+            "return [getComputedStyle(header).backgroundColor, getComputedStyle(body).backgroundColor, getComputedStyle(card).backgroundColor]; }");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", colors[0], $"{theme}: the group header paints a real background");
+        Assert.AreNotEqual(colors[2], colors[0], $"{theme}: the group header background differs from the card");
+        Assert.AreNotEqual(colors[1], colors[0], $"{theme}: the group header background differs from the body");
+    }
+
     internal static async Task EdgeAsync(IBrowser browser, string baseUrl, Action<IBrowserContext> register)
     {
         var page = await OpenAsync(browser, baseUrl, "/multi-view-list", new Options(), register);
