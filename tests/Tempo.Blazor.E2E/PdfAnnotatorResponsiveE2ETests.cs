@@ -155,10 +155,11 @@ el => {
         Assert.IsTrue(labeledTools >= 5,
             $"the five annotator tools render labels below the icons, found {labeledTools}");
 
-        // Phase 8 review 12: all five tool pills fall fully inside the ribbon's bounding box —
-        // the labelled modes row wraps within the group instead of clipping the last pills out
-        // of the row — and the color chip shares its line with its VISIBLE label (the sr-only
-        // collapse would leave the chip as a stray dot among the labelled pills).
+        // Phase 8 review 12 + UX4 (FZE-9 review): all five tool pills fall fully inside the
+        // ribbon's bounding box. On a WIDE ribbon the color chip shares its line with its
+        // VISIBLE label; at a NARROW container the labelled tablet tools collapse to icons —
+        // and the chip's label collapses with them (a lone chip among icon-only pills would
+        // read as a stray dot).
         var rowReport = await section.EvaluateAsync<string>(@"
 el => {
     const row = el.querySelector('[data-testid=""pdf-annotator-toolbar""]');
@@ -179,14 +180,20 @@ el => {
     const chip = el.querySelector('.tm-pdf-annotator__color-chip');
     const label = el.querySelector('.tm-pdf-annotator__color-label');
     if (!chip || !label) return (bad.length ? bad.join(', ') + '; ' : '') + 'missing-color';
+    const modeTexts = [...row.querySelectorAll('.tm-pdf-annotator__modes .tm-toolbar-btn-text')];
+    const collapsed = modeTexts.length > 0 && modeTexts.every(t => getComputedStyle(t).display === 'none');
     const c = chip.getBoundingClientRect(), l = label.getBoundingClientRect();
-    const overlap = Math.min(c.bottom, l.bottom) - Math.max(c.top, l.top);
-    if (overlap < c.height / 2) bad.push('chip-label-not-on-one-line:' + Math.round(overlap) + 'px overlap');
-    if (l.width < 8 || l.height < 8) bad.push('color-label-hidden:' + Math.round(l.width) + 'x' + Math.round(l.height));
+    if (collapsed) {
+        if (l.width >= 8 && l.height >= 8) bad.push('color-label-visible-while-collapsed:' + Math.round(l.width) + 'x' + Math.round(l.height));
+    } else {
+        const overlap = Math.min(c.bottom, l.bottom) - Math.max(c.top, l.top);
+        if (overlap < c.height / 2) bad.push('chip-label-not-on-one-line:' + Math.round(overlap) + 'px overlap');
+        if (l.width < 8 || l.height < 8) bad.push('color-label-hidden:' + Math.round(l.width) + 'x' + Math.round(l.height));
+    }
     return bad.length === 0 ? 'ok' : bad.join(', ');
     }");
         Assert.AreEqual("ok", rowReport,
-            $"every tool pill must sit fully inside the tablet ribbon and the color chip must share its line with a visible label; got '{rowReport}'");
+            $"every tool pill must sit fully inside the tablet ribbon, and the color chip's label must be visible on a wide ribbon or collapsed with the icon-only tools on a narrow one; got '{rowReport}'");
 
         // The thread panel is the shell's side region (docked), not an inline column squeeze.
         var sidePanel = section.Locator("[data-region='right'] [data-testid='pdf-annotator-panel']").First;

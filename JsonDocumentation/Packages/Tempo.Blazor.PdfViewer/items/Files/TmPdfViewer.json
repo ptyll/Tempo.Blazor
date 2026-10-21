@@ -196,6 +196,12 @@
    "description": "Content rendered at the end of the document header, after the Open/Download links. Used only when ShowHeader is true (since 2.9.1)."
   },
   {
+   "name": "SelectionCtaContent",
+   "type": "RenderFragment?",
+   "isRequired": false,
+   "description": "Content rendered in the in-flow sticky selection CTA row, outside the scroll area (since 2.9.1). Hosts (the annotator) supply their own sticky selection actions here; the viewer's own comment CTA is independent and may render in the same row."
+  },
+  {
    "name": "Class",
    "type": "string?",
    "isRequired": false,

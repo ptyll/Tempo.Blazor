@@ -68,11 +68,55 @@ public class TmPdfThreadCardTests : LocalizationTestBase
         header.TextContent.Should().Contain("Alena");
         header.TextContent.Should().Contain("·", "author and time are joined by an interpunct");
         header.TextContent.Should().Contain("Page 3", "the page reference uses the localized TmPdfThread_PageRef format");
-        header.TextContent.Should().Contain("Replies: 2", "the reply count uses the neutral TmPdfThread_ReplyCount format");
+        header.TextContent.Should().Contain("2 replies", "the reply count uses the TmPdfThread_ReplyCount plural family");
 
-        // The neutral reply count is a single formatted string, not an upper-cased label.
+        // The pluralized reply count is a single formatted string, not an upper-cased label.
         var replies = cut.Find(".tm-pdf-thread-card__replies");
         replies.TextContent.Should().Contain("2");
+    }
+
+    // ── FZE-9: the reply count renders natural plural forms per language ─────
+
+    /// <summary>Renders the card without the shared helper's default ReplyCount/CreatedAt,
+    /// so a test can drive those two parameters itself.</summary>
+    private IRenderedComponent<TmPdfThreadCard> RenderBare(Action<Bunit.ComponentParameterCollectionBuilder<TmPdfThreadCard>> configure)
+        => Render<TmPdfThreadCard>(p =>
+        {
+            p.Add(x => x.ThreadId, "t1");
+            p.Add(x => x.Number, 1);
+            p.Add(x => x.PageNumber, 1);
+            p.Add(x => x.CreatedAt, DateTimeOffset.UtcNow);
+            configure(p);
+        });
+
+    [Fact]
+    public void ReplyCount_UsesPluralForms_Cs_1_2_5()
+    {
+        UseCzechLocalization();
+
+        string Count(int replyCount) => RenderBare(p => p.Add(x => x.ReplyCount, replyCount))
+            .Find(".tm-pdf-thread-card__replies").TextContent;
+
+        Count(1).Should().Be("1 odpověď", "Czech 1 → One");
+        Count(2).Should().Be("2 odpovědi", "Czech 2–4 → Few");
+        Count(5).Should().Be("5 odpovědí", "Czech 5+ → Other");
+    }
+
+    [Fact]
+    public void ReplyCount_ZeroUsesOtherForm()
+    {
+        RenderBare(p => p.Add(x => x.ReplyCount, 0))
+            .Find(".tm-pdf-thread-card__replies").TextContent.Should().Be("0 replies");
+    }
+
+    [Fact]
+    public void TimeStamp_IsRelativeTimeWithAbsoluteTitle()
+    {
+        var stamp = RenderBare(p => p.Add(x => x.ReplyCount, 1)).Find(".tm-pdf-thread-card__time");
+        stamp.TextContent.Should().Be("Just now",
+            "the card header shows the shared relative-time formatter's stamp");
+        stamp.GetAttribute("title").Should().NotBeNullOrEmpty("the absolute time is the tooltip");
+        stamp.GetAttribute("datetime").Should().NotBeNullOrEmpty("the machine-readable instant rides along");
     }
 
     [Fact]

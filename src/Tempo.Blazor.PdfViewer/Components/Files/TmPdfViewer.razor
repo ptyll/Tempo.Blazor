@@ -528,6 +528,38 @@
                 }
             </div>
 
+            @* FZE-9: the sticky selection CTA (tablet + mobile). On the touch layouts the
+               comments panel is a sheet that starts closed, so a fresh text selection would
+               be invisible — the CTA pins above the action bar, opens the sheet and can be
+               dismissed. The docked desktop panel hosts the prompt without a CTA. The row is
+               in-flow (outside the scroll wrap) and also carries the host's own sticky
+               selection actions through SelectionCtaContent (M4) — the annotator's tablet
+               Highlight CTA rides here, never inside the scroll area. *@
+            @if ((EnableAnnotations && !_useFallback && !IsDesktopLayout && _pendingSelection is not null) || SelectionCtaContent is not null)
+            {
+                <div class="tm-pdf-viewer__selection-cta" data-testid="@TestId("pdf-viewer-selection-cta")">
+                    @if (EnableAnnotations && !_useFallback && !IsDesktopLayout && _pendingSelection is not null)
+                    {
+                        <button type="button"
+                                class="tm-pdf-viewer__selection-cta-button"
+                                data-testid="@TestId("pdf-viewer-selection-cta-comment")"
+                                @onclick="OpenSelectionComposerAsync">
+                            <TmIcon Name="message-square" Size="IconSize.Sm" />
+                            <span>@Loc["TmPdfViewer_SelectionPrompt"]</span>
+                        </button>
+                        <button type="button"
+                                class="tm-pdf-viewer__selection-cta-dismiss"
+                                data-testid="@TestId("pdf-viewer-selection-cta-dismiss")"
+                                aria-label="@Loc["TmPdfViewer_DismissSelection"]"
+                                title="@Loc["TmPdfViewer_DismissSelection"]"
+                                @onclick="DismissSelectionAsync">
+                            <TmIcon Name="x" Size="IconSize.Sm" />
+                        </button>
+                    }
+                    @SelectionCtaContent
+                </div>
+            }
+
             @* The mobile action bar (in-flow, bottom of the viewer): Pages | Search | Comments.
                Only rendered when at least one feature owns a tile and the host did not fold
                the entries into its own bar (<see cref="ShowMobileActionBar"/> false). *@
@@ -632,8 +664,9 @@
     /// <summary>Whether the comments panel is currently presented as open (docked on desktop, sheet elsewhere).</summary>
     private bool CommentsPanelOpen => IsDesktopLayout ? _annotationsPanelVisible : _commentsSheetOpen;
 
-    /// <summary>The comments toolbar toggle's label: the live open-thread count (the accessible name).</summary>
-    private string CommentsToggleText => string.Format(Loc["TmPdfViewer_CommentsCount"], OpenThreadCount);
+    /// <summary>The comments toolbar toggle's label: the live open-thread count in natural
+    /// plural forms (FZE-9 — the phase-4 neutral "Comments (N)" became a Loc.Plural family).</summary>
+    private string CommentsToggleText => Loc.Plural("TmPdfViewer_CommentsCount", OpenThreadCount);
 
     /// <summary>
     /// The mobile action bar: Pages | Search | Comments (N) — each tile only when its feature

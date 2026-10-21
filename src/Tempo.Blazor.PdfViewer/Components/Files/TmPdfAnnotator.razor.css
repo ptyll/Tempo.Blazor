@@ -54,9 +54,10 @@
 }
 
 /* A finger cannot hit the row's pills either — the tablet row sits outside a
-   TmToolbar, so it does not inherit the core coarse-pointer rule. */
+   TmToolbar, so it does not inherit the core coarse-pointer rule. ::deep reaches
+   the core TmToolbarButton roots (the same convention as the viewer's toolbar). */
 @media (pointer: coarse) {
-    .tm-pdf-annotator__toolbar--tablet .tm-toolbar-btn {
+    .tm-pdf-annotator__toolbar--tablet ::deep .tm-toolbar-btn {
         min-width: var(--tm-touch-target);
         min-height: var(--tm-touch-target);
     }
@@ -257,19 +258,6 @@
         border: 0;
     }
 
-    /* The tablet ribbon keeps its pills labelled at every pane width, so its
-       color label stays visible too — exempt from the sr-only collapse above
-       (phase 8 review 12). A hidden label would leave the chip as a stray dot
-       among the labelled pills; the (0,2,0) specificity beats the (0,1,0) rule. */
-    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color-label {
-        position: static;
-        width: auto;
-        height: auto;
-        margin: 0;
-        clip: auto;
-        clip-path: none;
-    }
-
     .tm-pdf-annotator__action-text {
         display: none;
     }
@@ -297,6 +285,31 @@
     ::deep .tm-pdf-viewer__toolbar .tm-pdf-viewer__separator,
     ::deep .tm-pdf-viewer__toolbar .tm-toolbar-divider {
         display: none;
+    }
+}
+
+/* UX4 (FZE-9 review): at a narrow container width (the docked tablet panel squeezes
+   the canvas region) the labelled tablet tools collapse to icons — the ribbon keeps
+   ONE row and the canvas keeps its vertical room, so a drawn stroke stays in view.
+   The pills keep their title/aria-label; only the visual label hides. The color chip
+   label collapses with them (a lone chip among icon-only pills reads as a stray dot,
+   the same rule the phase 8 review applied to the merged row). */
+@container tm-pdf-annotator-viewer (max-width: 699.98px) {
+    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__modes ::deep .tm-toolbar-btn-text {
+        display: none;
+    }
+
+    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
     }
 }
 
@@ -435,14 +448,58 @@
     pointer-events: none;
 }
 
+/* FZE-9 (review fix): touch-action NONE belongs to Draw mode only. An active comment or
+   stamp surface used to claim the whole gesture space, which blocked one-finger scrolling
+   and the pinch on a phone — a tap is not a drag, so Comment/Stamp keep the native
+   pan/pinch behaviour of the viewer wrap beneath them. */
 .tm-pdf-annotator__surface--active {
     pointer-events: auto;
+    cursor: crosshair;
+}
+
+/* Draw owns the gesture: one finger (or the pen) draws through the pointer events, two
+   fingers hand over to the viewer's core pinch, and the browser must not pan mid-stroke. */
+.tm-pdf-annotator__surface--draw {
     cursor: crosshair;
     touch-action: none;
 }
 
-.tm-pdf-annotator__surface--draw {
-    cursor: crosshair;
+/* ── Sticky highlight CTA (FZE-9, tablet only) ───────────────────────────── */
+
+/* M4: rides the viewer's in-flow SelectionCtaContent row (outside the scroll wrap) —
+   a plain flex item there, never absolutely positioned over the canvas: a zoom or a
+   scroll would carry an overlay CTA away, and the row owns the touch stacking. */
+.tm-pdf-annotator__selection-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-surface-elevated);
+    color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-card);
+    font-size: var(--tm-pdf-annotator-font-size);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+/* UX2 (FZE-9 review): the full label stays visible on a narrow tablet — the span wraps
+   to a second line instead of being cut by an ellipsis. */
+.tm-pdf-annotator__selection-cta span {
+    min-width: 0;
+    overflow-wrap: break-word;
+    text-align: center;
+    white-space: normal;
+}
+
+.tm-pdf-annotator__selection-cta:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* A finger cannot hit a 28px export/print button: the annotator's secondary actions meet the

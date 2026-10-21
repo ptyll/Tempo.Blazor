@@ -265,7 +265,85 @@
 
   New localization keys: `TmPdfViewer_CloseSearch` (en/cs/sk/fr + mock).
 
+- **TmPdfViewer + TmPdfAnnotator: touch interaction (FZE-9).** The viewer now supports touch
+  end to end through the shared core gesture helpers (never a package-local copy):
+  - **Pinch-zoom & two-finger pan.** `pdf-viewer.js` attaches the core sibling
+    `pointer-gesture.js` (`attachPinch`, imported relatively across the split-package static
+    asset boundary) to the active scroll wrap. The live gesture is a CSS transform around the
+    fingers' start centre; on release the transform is cleared, the two-finger pan becomes
+    scroll and the committed absolute scale (clamped to 0.1–5.0) arrives at the new
+    `[JSInvokable] OnPinchZoomEnded`, which hands the zoom mode to the user
+    (`ZoomMode=Custom`, detaching any active fit observer) and re-renders once. The zoom
+    dropdown and the ± buttons remain the WCAG 2.5.7 non-drag alternative, and ctrl+wheel
+    (trackpad pinch) zooms around the cursor through the same commit path. The wraps claim
+    `touch-action: pan-x pan-y` so one finger still scrolls while the JS pinch owns the zoom.
+  - **Touch text selection.** The selection reports on `selectionchange` + `pointerup`
+    (previously `mouseup`, which never fires for a touch drag) and the text layer paints its
+    text with `color: transparent` instead of an element opacity, so the native selection
+    highlight and its touch handles render at full strength (the highlight color is the
+    scoped `::selection` rule). New sticky CTA on tablet and mobile:
+    a pending selection pins an in-flow bar ("Comment on selected text" + a dismiss) that
+    opens the comments sheet, where the docked desktop panel's prompt would be unreachable —
+    `TmPdfViewer_DismissSelection` is new (en/cs/sk/fr + mock).
+  - **The shared pinch helper grew one opt-out.** `attachPinch` gains
+    `captureSinglePointer` (default `true`, the previous behaviour): a host whose gesture
+    surface is a DESCENDANT listener inside the pinch element (the annotator's ink surface)
+    passes `false`, so a lone finger keeps reaching the surface's own pointer events and the
+    capture happens once the pinch actually starts (a document-level capture listener prunes a
+    finger that ended elsewhere). See docs/touch-interaction.md.
+  - **Drawing vs. gestures.** In the annotator's Draw mode one finger or the pen draws and
+    two fingers hand over to the pinch (the in-progress stroke is cancelled on the second
+    finger — the same event the pinch's `onStart` fires on — and only the stroke's own
+    pointer may extend or commit it); a `pen` landing replaces a live finger stroke (the pen
+    has priority). **Review fix:** `touch-action: none` moved from the active annotator
+    surface to the Draw modifier only — an active Comment/Stamp surface used to block
+    one-finger scrolling and the pinch on a phone. The tablet-only sticky "Highlight" CTA
+    (`TmPdfAnnotator_HighlightSelection`, new) surfaces a touch selection's highlight draft
+    when the panel is closed or out of reach.
+
+- **TmPdfViewer + TmPdfAnnotator: relative time and natural plurals (FZE-9).** The annotation
+  cards' timestamps are now relative ("5 min ago", "yesterday at 16:20"…) through the shared
+  `ITmRelativeTimeFormatter` (`TmRelativeTime.Resolve`) — the absolute time rides in the
+  `<time datetime>` machine-readable instant and the `title` tooltip. The counted texts became
+  `Loc.Plural` families: `TmPdfThread_ReplyCount` ("2 replies" / cs "2 odpovědi" / …),
+  `TmPdfViewer_CommentsCount` (the toolbar toggle's live count) and
+  `TmPdfAnnotator_DraftStrokes` (en/cs/sk/fr + mock, with the forms each language's grammar
+  needs per docs/localization-plurals.md).
+
 ### Breaking / Migration
+
+- **TmPdfViewer + TmPdfAnnotator: the annotation-card time stamps and counted texts changed
+  format (FZE-9).** `TmPdfThread_ReplyCount` is no longer the neutral `"Replies: {0}"`
+  (cs `"Odpovědi: {0}"`) but a `Loc.Plural` family — English `"{0} reply"`/`"{0} replies"`,
+  Czech `"{0} odpověď"`/`"{0} odpovědi"`/`"{0} odpovědí"` — and the same happened to
+  `TmPdfViewer_CommentsCount` and `TmPdfAnnotator_DraftStrokes`. The card/comment time stamps
+  render RELATIVE text ("5 min ago") with the absolute time in the `<time datetime>`
+  attribute and the `title` tooltip (previously an absolute "g" string in the text, no
+  tooltip). Hosts that override these keys must provide the plural forms their language needs
+  (see docs/localization-plurals.md) and that expect the absolute text in the element body
+  should read `title` (or their own formatter) instead.
+
+```razor
+@* BEFORE — absolute text, neutral count *@
+<span class="tm-pdf-comment-item__time">@PdfAnnotationTextHelper.FormatTime(Comment.CreatedAt)</span>
+<span class="tm-pdf-thread-card__replies">@Loc["TmPdfThread_ReplyCount", ReplyCount]</span>
+
+@* AFTER — relative stamp + absolute tooltip, natural plural *@
+<time class="tm-pdf-comment-item__time" datetime="@stamp" title="@absolute">@relative</time>
+<span class="tm-pdf-thread-card__replies">@Loc.Plural("TmPdfThread_ReplyCount", ReplyCount)</span>
+```
+
+- **TmPdfAnnotator: the interaction surface no longer claims `touch-action: none` outside Draw
+  mode (FZE-9 review fix).** `.tm-pdf-annotator__surface--active` (Comment/Stamp) keeps only
+  `pointer-events: auto` + the crosshair cursor, so one-finger scrolling and the pinch work
+  over the page on a phone; the `touch-action: none` claim moved to
+  `.tm-pdf-annotator__surface--draw`, where the pointer events own the gesture. A host that
+  styled the active modifier expecting the old behavior should target the `--draw` modifier.
+
+- **TmPdfViewer: the scroll wraps now claim `touch-action: pan-x pan-y` (FZE-9).** One finger
+  still scrolls the pages, but the browser's native page pinch over the canvas is blocked so
+  the shared JS pinch owns the zoom. A host overlaying its own gesture surface on the canvas
+  wrap should mirror that value (or go tighter, like the annotator's Draw mode).
 
 - **TmPdfAnnotator: the DOM and layout moved onto `TmEditorShell`, and a mobile layout offers
   light edits only (G2).** The annotator root is still `.tm-pdf-annotator` with the

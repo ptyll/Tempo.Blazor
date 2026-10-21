@@ -63,7 +63,7 @@
             }
             @if (Draft.Kind == DocumentAnnotationKind.Drawing)
             {
-                <div class="tm-pdf-annotator-panel__meta">@(string.Format(Loc["TmPdfAnnotator_DraftStrokes"], Draft.Strokes.Count))</div>
+                <div class="tm-pdf-annotator-panel__meta">@Loc.Plural("TmPdfAnnotator_DraftStrokes", Draft.Strokes.Count)</div>
             }
             <TmPdfComposer Placeholder="@Loc["TmPdfAnnotator_NotePlaceholder"]"
                            SubmitLabel="@Loc["TmPdfAnnotator_Add"]"

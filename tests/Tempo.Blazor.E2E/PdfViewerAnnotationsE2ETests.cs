@@ -75,8 +75,8 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         var wrap = section.Locator(".tm-pdf-viewer__continuous-wrap").First;
         await wrap.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
 
-        // At least one page canvas must exist once the document has loaded.
-        var firstCanvas = wrap.Locator("canvas").First;
+        // At least one page canvas must exist AND be painted once the document has loaded.
+        var firstCanvas = wrap.Locator("canvas[data-rendered='1']").First;
         await firstCanvas.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
         var canvasCount = await wrap.Locator("canvas").CountAsync();
         Assert.IsTrue(canvasCount > 0,
@@ -101,9 +101,10 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
             await WaitForAppReadyAsync(dprPage);
             var dprSection = dprPage.Locator("section:has(h2:has-text('Continuous Scroll'))");
             await dprSection.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+            await dprSection.ScrollIntoViewIfNeededAsync();
             var dprWrap = dprSection.Locator(".tm-pdf-viewer__continuous-wrap").First;
             await dprWrap.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
-            var dprCanvas = dprWrap.Locator("canvas").First;
+            var dprCanvas = dprWrap.Locator("canvas[data-rendered='1']").First;
             await dprCanvas.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
             var sharpness = await dprCanvas.EvaluateAsync<string>(
                 "el => JSON.stringify({ backing: el.width, css: Math.round(el.getBoundingClientRect().width) })");
@@ -111,7 +112,12 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
             Assert.IsNotNull(probe);
             Assert.IsTrue(probe["backing"] >= probe["css"] * 2 - 2,
                 $"At deviceScaleFactor=2 the backing store ({probe["backing"]}px) should be ~2x the CSS size ({probe["css"]}px).");
-            await SaveScreenshotAsync(dprPage, "continuous-start-dpr2");
+
+            // The lazy continuous renderer is still painting the queued pages when the
+            // sharpness probe returns; a screenshot fired right then races the pump and
+            // starves its own rAF wait. Let the queue drain first.
+            await dprPage.WaitForTimeoutAsync(2000);
+            await SaveScreenshotAsync(dprPage, "continuous-start-dpr2", fullPage: false);
         }
         finally
         {
@@ -206,13 +212,15 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
             "aria-busy must clear once the document has loaded.");
     }
 
-    private static async Task SaveScreenshotAsync(IPage page, string fileName)
+    private static async Task SaveScreenshotAsync(IPage page, string fileName, bool fullPage = true)
     {
         var dir = Path.Combine(FindRepoRoot().FullName,
             "tests", "Tempo.Blazor.E2E", "__screenshots__", "pdf-viewer");
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"{fileName}.png");
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = true });
+        // The DPR-2 reference shot stays in the viewport: a full-page capture at device
+        // scale 2 (a ~12k-px-tall bitmap) regularly blew the screenshot's own timeout.
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = fullPage, Timeout = 60_000 });
     }
 
     private static DirectoryInfo FindRepoRoot()

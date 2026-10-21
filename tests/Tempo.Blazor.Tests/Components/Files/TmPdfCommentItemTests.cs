@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using FluentAssertions;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Files;
@@ -227,5 +228,43 @@ public class TmPdfCommentItemTests : LocalizationTestBase
         var restore = JSInterop.Invocations.Last(i => i.Identifier == FocusDescendantInvocation);
         restore.Arguments[^1].Should().Be(".tm-dropdown-trigger",
             "cancelling returns focus to the comment's ⋯ trigger");
+    }
+
+    // ── FZE-9: relative time through the shared ITmRelativeTimeFormatter ──
+
+    private sealed class StubRelativeTimeFormatter(string relative, string absolute) : Tempo.Blazor.Localization.ITmRelativeTimeFormatter
+    {
+        public string Format(DateTimeOffset value, DateTimeOffset? now = null, TimeZoneInfo? timeZone = null) => relative;
+
+        public string Absolute(DateTimeOffset value, TimeZoneInfo? timeZone = null) => absolute;
+    }
+
+    [Fact]
+    public void UsesRelativeTimeFormatter_WithAbsoluteTitle()
+    {
+        var createdAt = new DateTimeOffset(2025, 6, 1, 9, 0, 0, TimeSpan.Zero);
+        Services.AddSingleton<Tempo.Blazor.Localization.ITmRelativeTimeFormatter>(
+            new StubRelativeTimeFormatter("5 min ago", "1. 6. 2025 9:00"));
+
+        var cut = Render<TmPdfCommentItem>(p =>
+        {
+            p.Add(x => x.ThreadId, "t1");
+            p.Add(x => x.Comment, new DocumentComment
+            {
+                Id = "c1",
+                AuthorId = "author-1",
+                AuthorName = "Alena Nováková",
+                Body = "original body",
+                CreatedAt = createdAt
+            });
+            p.Add(x => x.CurrentUserId, "user-2");
+            p.Add(x => x.TestIdBase, Base);
+        });
+
+        var time = cut.Find(".tm-pdf-comment-item__time");
+        time.TextContent.Should().Be("5 min ago", "the stamp comes from the shared relative-time formatter");
+        time.GetAttribute("title").Should().Be("1. 6. 2025 9:00", "the absolute time is the tooltip");
+        time.GetAttribute("datetime").Should().Be("2025-06-01T09:00:00+00:00",
+            "the machine-readable instant stays in the datetime attribute");
     }
 }

@@ -8,7 +8,8 @@
    count sits top-right next to the resolved chip and chevron); the detail region hosts the
    list's comments and composer when the thread is selected. A selected card is marked by its
    border + subtle primary header background — the focus ring stays reserved for
-   :focus-visible. Time formatting goes through PdfAnnotationTextHelper.FormatTime. *@
+   :focus-visible. Since FZE-9 the time is the shared relative formatter's stamp (absolute in
+   the <time> instant + title) and the reply count is a Loc.Plural family. *@
 
 <li class="@CardClass">
     <button type="button"
@@ -29,7 +30,7 @@
             {
                 <span class="tm-pdf-thread-card__chip tm-pdf-thread-card__chip--success">@Loc["TmPdfThread_Resolved"]</span>
             }
-            <span class="tm-pdf-thread-card__replies">@Loc["TmPdfThread_ReplyCount", ReplyCount]</span>
+            <span class="tm-pdf-thread-card__replies">@Loc.Plural("TmPdfThread_ReplyCount", ReplyCount)</span>
             <span class="tm-pdf-thread-card__chevron" aria-hidden="true">
                 <TmIcon Name="@(Selected ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Sm" />
             </span>
@@ -41,7 +42,11 @@
                 <span class="tm-pdf-thread-card__author">@AuthorName</span>
                 <span class="tm-pdf-thread-card__sep" aria-hidden="true">·</span>
             }
-            <span class="tm-pdf-thread-card__time">@PdfAnnotationTextHelper.FormatTime(CreatedAt)</span>
+            @* FZE-9: the stamp is relative through the shared ITmRelativeTimeFormatter; the
+               absolute time rides in the <time datetime> instant and the title tooltip. *@
+            <time class="tm-pdf-thread-card__time"
+                  datetime="@DateTimeStamp(CreatedAt)"
+                  title="@AbsoluteTime(CreatedAt)">@RelativeTime(CreatedAt)</time>
             <span class="tm-pdf-thread-card__sep" aria-hidden="true">·</span>
             <span class="tm-pdf-thread-card__page">@Loc["TmPdfThread_PageRef", PageNumber]</span>
         </span>
@@ -56,6 +61,23 @@
 </li>
 
 @code {
+    /// <summary>The service provider, for the shared relative-time formatter's fallback resolution.</summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>FZE-9: the relative stamp comes from the one shared formatter (never a private copy).</summary>
+    private string RelativeTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(value);
+
+    /// <summary>The absolute time for the stamp's title tooltip.</summary>
+    private string AbsoluteTime(DateTimeOffset value)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(value);
+
+    /// <summary>The machine-readable instant of the <c>&lt;time&gt;</c> element.</summary>
+    private static string DateTimeStamp(DateTimeOffset value)
+        => value.ToString("yyyy-MM-dd'T'HH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>Stable thread identifier, exposed as <c>data-thread-id</c>.</summary>
     [Parameter] public string ThreadId { get; set; } = string.Empty;
 

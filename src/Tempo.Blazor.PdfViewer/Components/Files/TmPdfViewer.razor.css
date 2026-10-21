@@ -352,11 +352,15 @@
 
 /* ── Canvas wrap ─────────────────────────────────────────────────────────── */
 
+/* FZE-9 touch: pan-x/pan-y keeps the one-finger scroll AND blocks the native page
+   pinch-zoom, which the core pointer-gesture.js pinch (a JS pointer gesture) owns instead.
+   The annotator's draw surface tightens this to touch-action: none for the ink stroke. */
 .tm-pdf-viewer__canvas-wrap {
     scrollbar-gutter: stable;
     position: relative;
     flex: 1;
     overflow: auto;
+    touch-action: pan-x pan-y;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
@@ -381,6 +385,13 @@
     left: 50%;
     transform: translateX(-50%);
     pointer-events: auto;
+}
+
+/* FZE-9 touch selection: pdf-viewer.js paints the layer text invisible (color: transparent,
+   not an element opacity, which would fade the highlight too) — the native selection renders
+   at full strength and the touch handles stay visible. */
+.tm-pdf-viewer__text-layer ::deep div::selection {
+    background: color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 /* ── Search highlight layer (children injected by JS) ────────────────────── */
@@ -420,6 +431,9 @@
     scrollbar-gutter: stable;
     flex: 1;
     overflow: auto;
+    /* FZE-9 touch: same contract as the canvas wrap — one finger scrolls, the core
+       pinch owns the zoom. */
+    touch-action: pan-x pan-y;
     /* The workspace under the pages — the same --tm-bg-workspace ground as the
        single-page canvas wrap, so both modes read as one workspace. */
     background: var(--tm-bg-workspace);
@@ -689,6 +703,74 @@
     .tm-pdf-viewer ::deep .tm-pdf-viewer__toolbar {
         padding-inline: var(--tm-space-2);
     }
+}
+
+/* ── Sticky selection CTA (FZE-9, tablet + mobile) ───────────────────────── */
+
+.tm-pdf-viewer__selection-cta {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-top: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
+}
+
+/* The one action row of a touch layout: a prominent primary-tinted call to action and a
+   compact dismiss. Both meet the shared touch target on a coarse pointer. */
+.tm-pdf-viewer__selection-cta-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    text-align: center;
+    cursor: pointer;
+}
+
+/* UX2 (FZE-9 review): the full label stays visible at 390px — the span wraps to a
+   second line instead of being cut by the ellipsis (centered, reduced horizontal
+   padding so two lines still meet the touch target comfortably). */
+.tm-pdf-viewer__selection-cta-button span {
+    min-width: 0;
+    padding: 0 var(--tm-space-1);
+    overflow-wrap: break-word;
+    text-align: center;
+    white-space: normal;
+}
+
+.tm-pdf-viewer__selection-cta-button:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-pdf-viewer__selection-cta-dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-pdf-viewer__selection-cta-dismiss:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────

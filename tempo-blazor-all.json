@@ -29183,6 +29183,12 @@
               "description": "Callback when the scale changes."
             },
             {
+              "name": "SelectionCtaContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content rendered in the in-flow sticky selection CTA row, outside the scroll area (since 2.9.1). Hosts (the annotator) supply their own sticky selection actions here; the viewer's own comment CTA is independent and may render in the same row."
+            },
+            {
               "name": "ShowHeader",
               "type": "bool",
               "isRequired": false,
@@ -29467,11 +29473,19 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-gesture.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-init.test.mjs",
           "kind": "JavaScript"
         },
         {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-render.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-selection.test.mjs",
           "kind": "JavaScript"
         },
         {

@@ -89,9 +89,8 @@ window.tmPdfViewer = (function () {
         return _continuousModulePromise;
     }
 
-    // The download decision (protocol allow-list, same-origin vs. cross-origin) lives in
-    // pdf-viewer-download.mjs, node-tested the same way; pdf-viewer.js only executes
-    // the decision it returns.
+    // Pure download-decision logic lives in pdf-viewer-download.mjs, node-tested the
+    // same way; pdf-viewer.js only executes the decision it returns.
     let _downloadModule = null;
     let _downloadModulePromise = null;
     function _ensureDownloadModule() {
@@ -102,6 +101,21 @@ window.tmPdfViewer = (function () {
                 .catch(e => { _downloadModulePromise = null; throw e; });
         }
         return _downloadModulePromise;
+    }
+
+    // ── FZE-9: the pinch lives in the CORE sibling module ───────────────────
+    // Multi-pointer gestures are never copied into a package (docs/touch-interaction.md,
+    // "Multi-pointer gestures"). Referenced packages' static web assets are served as
+    // siblings, so the import walks up from this script's own directory — a relative
+    // URL that keeps <base href> and the MapStaticAssets fingerprint intact.
+    const _pinchModuleUrl = new URL('../../Tempo.Blazor/js/pointer-gesture.js', _scriptDir).href;
+    let _pinchModulePromise = null;
+    function _ensurePinchModule() {
+        if (!_pinchModulePromise) {
+            _pinchModulePromise = import(_pinchModuleUrl)
+                .catch(e => { _pinchModulePromise = null; throw e; });
+        }
+        return _pinchModulePromise;
     }
 
     function _isCancelled(err) {
@@ -258,6 +272,9 @@ window.tmPdfViewer = (function () {
             if (_isCancelled(err)) return; // superseded by a newer render for this canvas
             console.error('tmPdfViewer.renderPage', err);
         }
+        // M5: a pinch commit re-rendered the page — restore the content point that sat
+        // under the fingers and clear the anchor.
+        _applyPinchAnchor(state, state._pinchEl);
     }
 
     function getTotalPages(rootEl) {
@@ -305,7 +322,12 @@ window.tmPdfViewer = (function () {
                 div.style.whiteSpace = 'pre';
                 div.style.userSelect = 'text';
                 div.style.cursor = 'text';
-                div.style.opacity = '0.2';
+                // FZE-9 touch selection: the text itself paints nothing (no doubled glyphs
+                // under the canvas) but stays fully opaque so the native selection highlight
+                // — and its touch handles — render at full strength (an `opacity` on the div
+                // would fade the highlight too). The highlight color is the scoped
+                // `.tm-pdf-viewer__text-layer ::deep div::selection` rule.
+                div.style.color = 'transparent';
                 el.appendChild(div);
             }
         } catch (err) {
@@ -379,6 +401,29 @@ window.tmPdfViewer = (function () {
 
     // ── Text selection ──────────────────────────────────────────────────────
 
+    // FZE-9 review (M3): `selectionchange` fires for every DOM mutation of the live
+    // selection; reporting each would spam the Blazor dispatcher. The report is
+    // debounced; `pointerup` always flushes immediately.
+    const SELECTION_DEBOUNCE_MS = 120;
+
+    /**
+     * The identity of a selection report — text | page | rects. A report whose key equals
+     * the previous one is skipped: the handlers fire for many DOM reasons, and only a
+     * changed selection is worth a dispatcher round-trip. Pure (node-tested).
+     */
+    function _selectionKey(text, page, flat) {
+        return `${text ?? ''}|${page}|${(flat ?? []).join(',')}`;
+    }
+
+    /** Clears the DOM selection and resets the report dedupe key (the CTA dismiss path). */
+    function clearSelection(rootEl) {
+        const state = _docs.get(rootEl);
+        if (state) state._lastSelectionKey = null;
+        try {
+            window.getSelection()?.removeAllRanges();
+        } catch { /* no selection API (test harness) */ }
+    }
+
     function enableSelection(rootEl, textLayerEl, dotNetRef) {
         if (!rootEl || !textLayerEl) return;
         const state = _docs.get(rootEl);
@@ -390,13 +435,16 @@ window.tmPdfViewer = (function () {
         state.abort ??= new AbortController();
         state.overlayObservers ??= new Map();
 
-        // Per-instance document listener: re-bind if called again, and always
+        // Per-instance document listeners: re-bind if called again, and always
         // unregister in destroy() so multiple viewers on one page (Notion
         // blocks) don't leak document-level listeners.
         if (state._selectionHandler) {
-            document.removeEventListener('mouseup', state._selectionHandler);
+            document.removeEventListener('selectionchange', state._selectionHandler);
+            document.removeEventListener('pointerup', state._pointerUpHandler ?? state._selectionHandler);
         }
-        const handler = () => {
+        clearTimeout(state._selectionDebounce);
+
+        const report = () => {
             // Read the live state so a later document (Url) change — which
             // re-inits the root — is honoured.
             const doc = _docs.get(rootEl);
@@ -424,10 +472,152 @@ window.tmPdfViewer = (function () {
             }
             if (flat.length === 0) return;
 
+            // M3: an unchanged selection (same text, page and rects) reports nothing —
+            // the handlers also fire after clearSelection, on unrelated reflows.
+            const key = _selectionKey(sel.toString(), doc.currentPage, flat);
+            if (key === doc._lastSelectionKey) return;
+            doc._lastSelectionKey = key;
+
             doc.dotNetRef.invokeMethodAsync('OnTextSelectionChanged', sel.toString(), doc.currentPage, flat).catch(() => { });
         };
-        state._selectionHandler = handler;
-        document.addEventListener('mouseup', handler, { signal: state.abort?.signal });
+        state._selectionHandler = () => {
+            // M3: the live selection streams — debounce the report; the final state
+            // comes through the pointerup flush.
+            clearTimeout(state._selectionDebounce);
+            state._selectionDebounce = setTimeout(report, SELECTION_DEBOUNCE_MS);
+        };
+        state._pointerUpHandler = () => {
+            // M3: the gesture ended — flush immediately (no debounce on the commit).
+            clearTimeout(state._selectionDebounce);
+            report();
+        };
+        // FZE-9 touch selection: `selectionchange` streams the selection while the finger
+        // drags or the native handles move it (there is no `mouseup` on touch), and
+        // `pointerup` reports the final state once the gesture ends — both pointer types.
+        document.addEventListener('selectionchange', state._selectionHandler, { signal: state.abort?.signal });
+        document.addEventListener('pointerup', state._pointerUpHandler, { signal: state.abort?.signal });
+    }
+
+    // ── Pinch zoom (FZE-9) ───────────────────────────────────────────────────
+
+    // The absolute scale bounds, shared with TmPdfViewer.MinScale/MaxScale: the JS side
+    // clamps the committed scale before it reaches .NET, which guards it again.
+    const PINCH_MIN_SCALE = 0.1;
+    const PINCH_MAX_SCALE = 5.0;
+
+    function _clearPinchTransform(el) {
+        el.style.transform = '';
+        el.style.transformOrigin = '';
+    }
+
+    /**
+     * FZE-9 review (M5): the pinch commit re-renders the page(s) at the new scale, which
+     * replaces the CSS transform with real layout — the point that sat under the fingers
+     * would drift. The commit records a scroll anchor (`state._pinchAnchor`: the transform
+     * origin in wrap coordinates + the scale ratio); the next renderPage /
+     * updateContinuousScale completion applies it — the content point under the fingers
+     * keeps its position (scroll grows/shrinks around the origin) — and clears the anchor.
+     */
+    function _applyPinchAnchor(state, scrollEl) {
+        const anchor = state?._pinchAnchor;
+        if (!anchor || !scrollEl || !scrollEl.isConnected) return;
+        state._pinchAnchor = null;
+        if (!Number.isFinite(anchor.ratio) || anchor.ratio <= 0) return;
+        if (typeof scrollEl.scrollLeft === 'number') {
+            scrollEl.scrollLeft = (scrollEl.scrollLeft + anchor.originX) * anchor.ratio - anchor.originX;
+        }
+        if (typeof scrollEl.scrollTop === 'number') {
+            scrollEl.scrollTop = (scrollEl.scrollTop + anchor.originY) * anchor.ratio - anchor.originY;
+        }
+    }
+
+    /**
+     * Wires the two-finger pinch/pan zoom onto `gestureEl` — the scroll wrap that owns the
+     * page(s) (canvas wrap or continuous wrap). The live gesture is a CSS transform
+     * (translate + scale around the fingers' start centre); the commit clears it, turns the
+     * two-finger pan into scroll and reports the final ABSOLUTE scale through
+     * `OnPinchZoomEnded`, which re-renders at the new scale and flips the zoom mode to
+     * Custom. `touchAction` stays null on purpose: CSS owns `touch-action` (pan-x pan-y on
+     * the wrap keeps the one-finger scroll and blocks the native page pinch), and the
+     * annotator's draw surface claims `touch-action: none` for the ink stroke.
+     * A call with a fresh element (a view-mode swap) detaches the previous pinch.
+     */
+    function enablePinchZoom(rootEl, gestureEl, dotNetRef) {
+        const state = _docs.get(rootEl);
+        // The wrap exists only after the layout rendered and the document loaded; the
+        // component re-runs its one-shot setup once OnPdfLoaded fires.
+        if (!state || state.pending || !gestureEl || gestureEl === state._pinchEl) return;
+        state.dotNetRef = dotNetRef ?? state.dotNetRef;
+        state.abort ??= new AbortController();
+        state._pinchEl = gestureEl;
+        state._pinch?.detach();
+
+        _ensurePinchModule().then(({ attachPinch }) => {
+            // A destroy() or a newer re-bind may have happened while the module loaded.
+            if (_docs.get(rootEl) !== state || state._pinchEl !== gestureEl) return;
+            // M6: iOS Safari still runs the native two-finger page zoom on the wrap even
+            // with `touch-action` set. A non-passive listener bound to the instance abort
+            // signal blocks the default while two fingers are down (the pinch owns the
+            // gesture) and never interferes with the one-finger scroll.
+            gestureEl.addEventListener('touchmove', (e) => {
+                if (e.touches.length >= 2) e.preventDefault();
+            }, { passive: false, signal: state.abort.signal });
+            state._pinch = attachPinch(gestureEl, {
+                pointerTypes: ['touch'],   // mouse/pen cannot pinch; ctrl+wheel covers trackpads
+                wheel: true,               // ctrl+wheel (trackpad pinch) zooms around the cursor
+                touchAction: null,         // CSS owns touch-action; the helper must not touch it
+                // FZE-9: the annotator's ink surface is a DESCENDANT listener inside this wrap —
+                // capturing a lone finger here would retarget its move/up away from the surface
+                // and the stroke would die. The capture happens once the pinch actually starts.
+                captureSinglePointer: false,
+                minScale: 0,
+                maxScale: Infinity,        // the ABSOLUTE clamp below owns the bounds
+                onStart({ centerX, centerY }) {
+                    const rect = gestureEl.getBoundingClientRect();
+                    state._pinchLive = { originX: centerX - rect.left, originY: centerY - rect.top };
+                    // M2: the pinch owns the surface from here on — the annotator discards
+                    // its live ink stroke (never commits it) through this notification.
+                    state.dotNetRef?.invokeMethodAsync('OnPinchStarted').catch(() => { });
+                },
+                onChange({ scale, dx, dy }) {
+                    if (!state._pinchLive) return;
+                    gestureEl.style.transformOrigin = `${state._pinchLive.originX}px ${state._pinchLive.originY}px`;
+                    gestureEl.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+                },
+                onEnd({ scale, dx, dy }) {
+                    const origin = state._pinchLive;
+                    state._pinchLive = null;
+                    _clearPinchTransform(gestureEl);
+                    // The two-finger pan survives the transform being replaced by the
+                    // re-render at the committed scale: the applied pan becomes scroll.
+                    if (dx || dy) {
+                        gestureEl.scrollLeft -= dx;
+                        gestureEl.scrollTop -= dy;
+                    }
+                    const doc = _docs.get(rootEl);
+                    if (!doc?.dotNetRef) return;
+                    const next = Math.min(PINCH_MAX_SCALE, Math.max(PINCH_MIN_SCALE, (doc.scale ?? 1) * scale));
+                    // M5: remember where the fingers were; the render completion restores
+                    // the point under them and clears the anchor.
+                    if (origin) {
+                        state._pinchAnchor = {
+                            originX: origin.originX,
+                            originY: origin.originY,
+                            ratio: next / (doc.scale ?? 1)
+                        };
+                    }
+                    doc.dotNetRef.invokeMethodAsync('OnPinchZoomEnded', next).catch(() => { });
+                },
+                onCancel() {
+                    state._pinchLive = null;
+                    _clearPinchTransform(gestureEl);
+                },
+            });
+        }).catch(err => {
+            // The core gesture module is unavailable (offline bundle, CSP): the zoom
+            // dropdown and the ± buttons remain the WCAG 2.5.7 alternative.
+            console.warn('tmPdfViewer: pointer-gesture.js unavailable, pinch zoom disabled', err);
+        });
     }
 
     // ── Overlay positioning ──────────────────────────────────────────────────
@@ -1162,6 +1352,10 @@ window.tmPdfViewer = (function () {
             _applyScrollAnchor(state, containerEl, { page: restorePage, offsetRatio: 0 });
         }
 
+        // M5: a pinch commit may have gone through this full rebuild (updateContinuousScale's
+        // fallback path) — restore the content point that sat under the fingers.
+        _applyPinchAnchor(state, state._pinchEl?.isConnected ? state._pinchEl : containerEl);
+
         // Sync the visible page (and aria-current) after the rebuild.
         _syncAriaCurrent(state, containerEl);
     }
@@ -1226,6 +1420,10 @@ window.tmPdfViewer = (function () {
                 _collectPageMetas(containerEl), anchor, containerEl.clientHeight);
             if (restored !== null) containerEl.scrollTop = restored;
         }
+
+        // M5: a pinch commit re-rendered at the new scale — restore the content point
+        // that sat under the fingers and clear the anchor.
+        _applyPinchAnchor(state, state._pinchEl?.isConnected ? state._pinchEl : containerEl);
 
         // Re-queue the pages the resized (and re-anchored) layout puts in the
         // viewport — measured AFTER the resize, the pre-resize boxes are stale —
@@ -1402,9 +1600,17 @@ window.tmPdfViewer = (function () {
         // signal, overlay observers or a selection handler attached before the delete are
         // released instead of leaking on a keyed-by-root re-init.
         if (state._selectionHandler) {
-            document.removeEventListener('mouseup', state._selectionHandler);
+            document.removeEventListener('selectionchange', state._selectionHandler);
+            document.removeEventListener('pointerup', state._pointerUpHandler ?? state._selectionHandler);
+            clearTimeout(state._selectionDebounce);
             state._selectionHandler = null;
+            state._pointerUpHandler = null;
         }
+        // The pinch handle (and its touch-action restore) detaches with the instance.
+        state._pinch?.detach();
+        state._pinch = null;
+        state._pinchEl = null;
+        state._pinchLive = null;
         // Removes every document listener bound with the instance signal and
         // stops overlay alignment observers.
         state.abort?.abort();
@@ -1483,6 +1689,7 @@ window.tmPdfViewer = (function () {
         renderThumbnails,
         highlightThumbnail,
         enableSelection,
+        enablePinchZoom,
         syncOverlay,
         search,
         searchNext,
@@ -1494,6 +1701,9 @@ window.tmPdfViewer = (function () {
         scrollToPage,
         fitScale,
         clearFit,
+        clearSelection,
+        // Internal (test surface): the pure selection-report identity (M3).
+        _selectionKey,
         downloadUrl,
         destroy
     };

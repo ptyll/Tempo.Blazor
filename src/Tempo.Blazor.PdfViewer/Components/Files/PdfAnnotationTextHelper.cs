@@ -1,4 +1,3 @@
-using System.Globalization;
 using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Files;
@@ -6,8 +5,9 @@ namespace Tempo.Blazor.Components.Files;
 /// <summary>
 /// Shared text and formatting helpers of the PDF annotation cards (PdfViewer redesign
 /// phase 4). One implementation serves both annotation panels: thread previews, thread
-/// numbering and quoted-text truncation live here, and <see cref="FormatTime"/> is the
-/// single time formatter used by both the thread card header and the comment item.
+/// numbering and quoted-text truncation live here. (Since FZE-9 the time stamps render
+/// through the shared <see cref="Tempo.Blazor.Localization.ITmRelativeTimeFormatter"/> and
+/// the counted texts through <c>Loc.Plural</c>, so this class carries no formatting of its own.)
 /// </summary>
 internal static class PdfAnnotationTextHelper
 {
@@ -48,13 +48,4 @@ internal static class PdfAnnotationTextHelper
 
         return 1;
     }
-
-    /// <summary>
-    /// The single time formatter of the PDF annotation cards: local time in the current
-    /// culture's short date/time pattern ("g"). Used by the thread card header and the
-    /// comment item so both rows render timestamps the same way (absolute until phase 9).
-    /// </summary>
-    /// <param name="value">Timestamp to format.</param>
-    public static string FormatTime(DateTimeOffset value)
-        => value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 }

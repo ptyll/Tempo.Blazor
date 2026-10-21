@@ -230,14 +230,19 @@ test('enableSelection and syncOverlay no-op while pending, then apply to the loa
     assert.equal(env.registry.resizeObservers[0].observations[0], canvas);
 
     env.viewer.enableSelection(rootEl, textLayer, env.dotNet);
-    assert.equal(env.registry.listeners.added.length, 1);
-    assert.equal(env.registry.listeners.added[0].type, 'mouseup');
+    assert.equal(env.registry.listeners.added.length, 2,
+        'touch selection binds both the selectionchange and the pointerup listeners');
+    assert.deepEqual(env.registry.listeners.added.map(l => l.type), ['selectionchange', 'pointerup'],
+        'FZE-9: touch selection reports on selectionchange + pointerup (not mouseup)');
     assert.equal(env.registry.listeners.added[0].options.signal, env.registry.abortControllers[0].signal,
         'the selection handler must bind to the instance signal created at init time');
+    assert.equal(env.registry.listeners.added[1].options.signal, env.registry.abortControllers[0].signal,
+        'both selection listeners share the instance signal');
 
     env.viewer.destroy(rootEl);
-    assert.equal(env.registry.listeners.removed.length, 1, 'destroy removes the selection handler');
+    assert.equal(env.registry.listeners.removed.length, 2, 'destroy removes the selection handlers');
     assert.equal(env.registry.listeners.removed[0].handler, env.registry.listeners.added[0].handler);
+    assert.equal(env.registry.listeners.removed[1].handler, env.registry.listeners.added[1].handler);
     assert.equal(env.registry.resizeObservers[0].disconnected, true, 'destroy disconnects overlay observers');
 });
 

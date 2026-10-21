@@ -20,6 +20,13 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <!-- The viewer's internal extension points (the PinchStarted event) are asserted by the test suite. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Tempo.Blazor.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
   <!-- Keep the node test suites out of the NuGet package (mirrors the other packages). -->
   <ItemGroup>
     <Content Remove="wwwroot\js\**\*.test.mjs" />

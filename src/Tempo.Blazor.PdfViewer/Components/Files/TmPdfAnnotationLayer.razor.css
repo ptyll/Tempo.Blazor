@@ -34,8 +34,11 @@
     box-shadow: inset 0 0 0 2px var(--tm-color-warning);
 }
 
+/* UX1 (FZE-9 review): a pending selection paints its DraftAnchor rects as a filled
+   band (~30% primary over the page) so the finger's selection stays visible while
+   the composer/CTA waits — not just a dashed outline. */
 .tm-pdf-annotation-layer__highlight--draft {
-    background: color-mix(in srgb, var(--tm-color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
     outline: 1px dashed var(--tm-color-primary);
 }
 

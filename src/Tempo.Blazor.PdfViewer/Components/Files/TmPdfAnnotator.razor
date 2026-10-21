@@ -286,8 +286,26 @@
                      @onpointerdown:preventDefault="true"
                      @onpointermove="HandlePointerMoveAsync"
                      @onpointerup="HandlePointerUpAsync"
+                     @onpointercancel="HandlePointerCancel"
                      @onpointerleave="HandlePointerLeaveAsync"></div>
             </OverlayContent>
+            @* FZE-9 review (M4/UX3): the sticky Highlight CTA (tablet only — G2 keeps the edit
+               tools off a phone) rides the viewer's in-flow SelectionCtaContent row, OUTSIDE
+               the scroll area, so a zoom or a scroll never carries it away. The touch
+               selection creates the draft; the CTA is the finger-sized path to its composer
+               when the panel is closed or out of reach. *@
+            <SelectionCtaContent>
+                @if (IsTabletLayout && _mode == PdfAnnotatorMode.Highlight && _draft?.Kind == DocumentAnnotationKind.Highlight)
+                {
+                    <button type="button"
+                            class="tm-pdf-annotator__selection-cta"
+                            data-testid="@TestId("pdf-annotator-highlight-cta")"
+                            @onclick="OpenDraftComposerAsync">
+                        <TmIcon Name="highlighter" Size="IconSize.Sm" />
+                        <span>@Loc["TmPdfAnnotator_HighlightSelection"]</span>
+                    </button>
+                }
+            </SelectionCtaContent>
         </TmPdfViewer>
     </div>;
 
