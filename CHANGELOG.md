@@ -425,6 +425,58 @@
   no action would be an unreachable set of commands). The email template editor sets it to `4` so
   its D20 actions (Zpět / Znovu / Náhled / Validovat) sit on the bar instead of behind "More".
 
+- **Dialog item editing + table-cell link/background (Fáze 9, `Tempo.Blazor.EmailTemplates`).**
+  `EmailItemEditingMode { Inline, Dialog }` and `[Parameter] ItemEditingMode` on
+  `TmEmailTemplateEditor` and `TmEmailPropertyPanel` (default `Inline` = the 2.9.x behaviour). In
+  `Dialog`, the social / navbar / carousel / accordion block renders a compact list
+  (`TmEmailItemList`: preview + move up / move down / edit / remove) and Edit opens
+  `TmEmailItemDialog` over a **copy** of the item: Save applies it as one change (one undo step),
+  Cancel / Escape / an overlay click change nothing, and the core `TmModal` (a full-height bottom
+  sheet with the sticky footer on a phone) restores focus to the opening button. The dialog
+  validates through `Tempo.Blazor.FluentValidation` with the editor's own localizer
+  (`EmailSocialElementValidator`, `EmailNavbarLinkValidator`, `EmailCarouselImageValidator`,
+  `EmailAccordionItemValidator`, `EmailTableCellValidator`): a blocked URL scheme, a missing required
+  text/source/alt/title, an unparsable span or a colour outside the allow-list is reported **at the
+  field** (`aria-invalid` + `aria-describedby`, no pre-flagging of an untouched form) and Save — which
+  is always enabled — applies nothing and moves the focus to the first invalid field; only failures
+  without a field reach the dialog's `role="alert"` summary. A new item is a copy too: Add opens the
+  dialog and the item is inserted only on Save, so Cancel leaves the document and the undo history
+  alone. The list names its item in every row action, announces a removal in a live region and shows an
+  empty state. The accordion content and a text block's content are sanitized with the pipeline's own
+  `IHtmlContentSanitizer` **before** the rich editor hands them to `innerHTML` (fail-closed: with no
+  sanitizer the editor receives nothing, never the raw markup).
+
+- **`EmailTableCell.Href` + `EmailTableCell.BackgroundColor` and the policies behind them
+  (`Tempo.Blazor.EmailTemplates.Abstractions`, additive — `SchemaVersion` stays `1`).**
+  `Href` is emitted as `<a href>` around the cell text, `BackgroundColor` as the `bgcolor`
+  attribute. Both follow the phase-3 rules: `EmailUrlPolicy` (the public view of the one URL
+  allow-list — `http`/`https`/`mailto`/`tel`, a relative path without an authority, `#`; anything
+  else becomes `#` with a `render.url.blocked_scheme` warning and a `BlockedUrlScheme` audit event)
+  and `EmailColorPolicy` (`#rgb`, `#rrggbb`, or a named colour from a fixed safe set — an invalid
+  value is **never written**, the attribute is omitted and the render reports
+  `RenderKeys.InvalidTableCellColor`, a warning). `MjmlGenerator.Generate(document, options,
+  diagnostics)` is the new additive overload that collects those warnings; `MjmlImporter` reads the
+  anchor and `bgcolor` back and `TextVersionGenerator` writes a linked cell as `text (url)`. The
+  generator replaces a blocked cell link with `#` on its own, so the MJML export that runs **without**
+  the Engine package (WASM) cannot hand out a live `javascript:`/`data:` link either. On import a cell
+  whose `<a>` is not its whole content keeps its full text and no link, an invalid `bgcolor` is dropped
+  and a blocked link is kept for editing — both reported as `ImportKeys.InvalidTableColor` /
+  `ImportKeys.BlockedTableLink` warnings. Colours of MJML **attributes** (navbar link, accordion
+  item/title, social element) follow the inspector's `PropertyReflection.IsValidColor` (hex, `rgb()`/
+  `hsl()`, keyword); `EmailColorPolicy` stays the narrower allow-list of the cell `bgcolor`, and
+  `TextVersionGenerator` never prints a blocked link.
+
+- **Table grid: accessible, sectioned, scrollable (`TmEmailTableEditor`).** The grid is now a
+  `<table>` with a `<caption>`, a localized `aria-label` on every cell ("Row {0}, column {1}"), a
+  pinned control column (`position: sticky`), a visually distinct header row, a "Header" section with
+  the "First row is a header" toggle, a "Rows and columns" section, and an "Edit cell" button on every
+  cell that opens `TmEmailTableCellDialog` (text, link, colspan, rowspan, alignment, background, the
+  row's header flag, plus a mini table preview with the edited cell highlighted) — in both item
+  editing modes. The block ships its own scoped `TmEmailTableEditor.razor.css` (design tokens only),
+  the actions wrap into a grid at a narrow width and the icon controls are at least 32 px
+  (`--tm-touch-target` on a coarse pointer).
+
+
 ### Changed
 
 - **`TmEditorShell` raises `ResolvedLayoutChanged` BEFORE `CollapsedPanelsChanged` (jádro, behaviour).**
@@ -459,6 +511,13 @@
   `<div class="tm-editor-shell__rail" role="group" aria-label="…">` (the panel's own title, `LeftTitle` /
   `RightTitle` or their localized default), so the strip of block icons it may carry is announced as the
   palette's group instead of a run of unnamed buttons.
+
+- **The table grid's DOM and styling (Fáze 9).** `TmEmailTableEditor` gained a `<caption>`, a
+  header section, per-cell edit buttons and a scoped stylesheet; the cell input keeps
+  `[data-tm-table-cell]` and the row controls keep `[data-tm-table-row-remove]` /
+  `[data-tm-table-add-row]` / `[data-tm-table-add-col]` / `[data-tm-table-remove-col]`. A host that
+  styled the old bare `<table>` needs to target the new BEM classes (see Breaking / Migration).
+
 
 ### Fixed
 
@@ -1135,6 +1194,26 @@
   `ToolboxCollapsed` / `ToolboxCollapsedChanged` stay the public API for the palette (D10) and are now
   the mapping onto `TmEditorShell.CollapsedPanels` (`EditorShellPanel.Left`); a collapse the shell
   imposes itself (the tablet one-expanded-panel rule) raises `ToolboxCollapsedChanged` too.
+
+- **`TmEmailTableEditor` markup and stylesheet (Fáze 9).** The grid is no longer a bare `<table>`:
+  it is a `<table>` with a `<caption>`, a sticky first `<th scope="row">` control column, one
+  "Edit cell" action per `<td>`, a header section and a rows-and-columns section, all inside
+  `.tm-email-table-editor__scroll`. The package now ships `.razor.css` scoped styles for it, so the
+  grid no longer inherits a host's `table` rules.
+
+  ```css
+  /* before — a host could style the bare table of the inspector */
+  .tm-email-properties table td input { … }
+
+  /* after — target the grid's own BEM classes (the data attributes are unchanged) */
+  .tm-email-table-editor__cell, .tm-email-table-editor__rowctl { … }
+  ```
+
+  Migration: a host that styled the old bare table should target `.tm-email-table-editor__*`, and a
+  host that counted `td` children to locate a cell should use the stable
+  `[data-tm-table-cell]` / `[data-tm-table-cell-edit]` / `[data-tm-table-row]` attributes. The item
+  editing default stays `EmailItemEditingMode.Inline`, so nothing else about the inspector changes.
+
 
 
 ## 2.9.1 (unreleased)

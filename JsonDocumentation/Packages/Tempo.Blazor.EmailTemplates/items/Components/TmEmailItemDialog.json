@@ -1,0 +1,66 @@
+{
+  "itemName": "TmEmailItemDialog",
+  "kind": "Component",
+  "category": "Components",
+  "description": "Dialog shell of the item and table-cell editors (Fáze 9): one core TmModal (a full-height bottom sheet with a sticky footer on a phone), the type-specific fields, the localized validation messages and a live preview of the item being edited.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailItemDialog.razor",
+  "documentationStatus": "merged",
+  "requiredImports": [
+    "@using Tempo.Blazor.EmailTemplates.Components"
+  ],
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the dialog is shown."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The localized dialog title."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The type-specific fields, bound to the caller's copy."
+    },
+    {
+      "name": "PreviewContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The live preview of the edited copy (optional)."
+    },
+    {
+      "name": "Errors",
+      "type": "IReadOnlyList<string>",
+      "isRequired": false,
+      "default": "Array.Empty<string>()",
+      "description": "The localized validation messages; an invalid item cannot be saved."
+    },
+    {
+      "name": "OnSave",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user saves the copy (only reachable while the form is valid)."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised on Cancel, Escape and an overlay click — the copy is thrown away."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the dialog read-only: Save is disabled and the copy can never be applied."
+    }
+  ]
+}

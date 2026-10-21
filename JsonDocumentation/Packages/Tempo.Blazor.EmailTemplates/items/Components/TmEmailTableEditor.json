@@ -2,7 +2,7 @@
   "itemName": "TmEmailTableEditor",
   "kind": "Component",
   "category": "Components",
-  "description": "Grid editor for a table block's cells. Lets the user edit each cell's text, mark rows as header rows, and add or remove rows and columns.",
+  "description": "Grid editor for a table block's cells. Lets the user edit each cell's text inline, mark rows (or just the first row) as header rows, and add or remove rows and columns. The grid lives in a horizontal scroll container with a pinned control column, labels every cell for assistive technology, and each cell opens the full cell dialog (text, link, spans, alignment, background).",
   "packageId": "Tempo.Blazor.EmailTemplates",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTableEditor.razor",

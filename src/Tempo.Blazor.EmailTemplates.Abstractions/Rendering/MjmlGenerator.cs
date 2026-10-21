@@ -37,7 +37,24 @@ public sealed class MjmlGenerator
 
     /// <summary>Generates MJML for the document using the given options (render-safe by default).</summary>
     public string Generate(EmailTemplateDocument document, MjmlGeneratorOptions? options = null)
+        => Generate(document, options, null);
+
+    /// <summary>
+    /// Generates MJML and reports the values it had to drop, so a render can surface them as
+    /// <see cref="RenderError"/>s. Only the checks the markup guard cannot see land here: a table cell's
+    /// <c>bgcolor</c> is a model colour, not a URL in the markup, so the colour allow-list
+    /// (<see cref="EmailColorPolicy"/>) has to report it here. Blocked links are silent on purpose — the
+    /// value already becomes <c>#</c> in the markup and the renderer audits the model link itself (§3.7a).
+    /// </summary>
+    /// <param name="document">The document to generate.</param>
+    /// <param name="options">Generation options, <see cref="MjmlGeneratorOptions.Default"/> when null.</param>
+    /// <param name="diagnostics">Optional collector for the warnings of the generation.</param>
+    public string Generate(
+        EmailTemplateDocument document,
+        MjmlGeneratorOptions? options,
+        ICollection<RenderError>? diagnostics)
     {
+        ArgumentNullException.ThrowIfNull(document);
         options ??= MjmlGeneratorOptions.Default;
         var sb = new StringBuilder();
         var lang = string.IsNullOrEmpty(document.Language) ? null : document.Language;
@@ -47,7 +64,7 @@ public sealed class MjmlGenerator
         sb.Append(">\n");
 
         WriteHead(sb, document, options);
-        WriteBody(sb, document);
+        WriteBody(sb, document, diagnostics);
 
         sb.Append("</mjml>\n");
         return sb.ToString();
@@ -131,7 +148,7 @@ public sealed class MjmlGenerator
 
     // ── Body / layout ─────────────────────────────────────────────────────────────────────────
 
-    private void WriteBody(StringBuilder sb, EmailTemplateDocument document)
+    private void WriteBody(StringBuilder sb, EmailTemplateDocument document, ICollection<RenderError>? diagnostics)
     {
         var width = document.Styles.ContentWidth;
         sb.Append("<mj-body");
@@ -139,12 +156,12 @@ public sealed class MjmlGenerator
         sb.Append(" background-color=\"").Append(MjmlEscape.Attribute(document.Styles.BackgroundColor)).Append("\">\n");
 
         foreach (var section in document.Sections)
-            WriteSection(sb, section);
+            WriteSection(sb, section, diagnostics);
 
         sb.Append("</mj-body>\n");
     }
 
-    private void WriteSection(StringBuilder sb, EmailSection section)
+    private void WriteSection(StringBuilder sb, EmailSection section, ICollection<RenderError>? diagnostics)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("background-color", section.BackgroundColor)
@@ -162,11 +179,11 @@ public sealed class MjmlGenerator
 
         sb.Append("<mj-section").Append(a).Append(">\n");
         foreach (var column in section.Columns)
-            WriteColumn(sb, column);
+            WriteColumn(sb, column, diagnostics);
         sb.Append("</mj-section>\n");
     }
 
-    private void WriteColumn(StringBuilder sb, EmailColumn column)
+    private void WriteColumn(StringBuilder sb, EmailColumn column, ICollection<RenderError>? diagnostics)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("width", column.Width)
@@ -179,13 +196,13 @@ public sealed class MjmlGenerator
 
         sb.Append("<mj-column").Append(a).Append(">\n");
         foreach (var block in column.Blocks)
-            WriteBlock(sb, block);
+            WriteBlock(sb, block, diagnostics);
         sb.Append("</mj-column>\n");
     }
 
     // ── Blocks ──────────────────────────────────────────────────────────────────────────────────
 
-    private void WriteBlock(StringBuilder sb, EmailBlockBase block)
+    private void WriteBlock(StringBuilder sb, EmailBlockBase block, ICollection<RenderError>? diagnostics)
     {
         var hasCondition = !string.IsNullOrEmpty(block.VisibleWhen);
         if (hasCondition) sb.Append("{{ if ").Append(block.VisibleWhen).Append(" }}\n");
@@ -198,14 +215,14 @@ public sealed class MjmlGenerator
             case EmailDividerBlock d: WriteDivider(sb, d); break;
             case EmailSpacerBlock s: WriteSpacer(sb, s); break;
             case EmailRawBlock r: WriteRaw(sb, r); break;
-            case EmailTableBlock tb: WriteTable(sb, tb); break;
+            case EmailTableBlock tb: WriteTable(sb, tb, diagnostics); break;
             case EmailSocialBlock so: WriteSocial(sb, so); break;
             case EmailNavbarBlock nv: WriteNavbar(sb, nv); break;
             case EmailCarouselBlock c: WriteCarousel(sb, c); break;
             case EmailAccordionBlock ac: WriteAccordion(sb, ac); break;
-            case EmailHeroBlock h: WriteHero(sb, h); break;
-            case EmailWrapperBlock w: WriteWrapper(sb, w); break;
-            case EmailGroupBlock g: WriteGroup(sb, g); break;
+            case EmailHeroBlock h: WriteHero(sb, h, diagnostics); break;
+            case EmailWrapperBlock w: WriteWrapper(sb, w, diagnostics); break;
+            case EmailGroupBlock g: WriteGroup(sb, g, diagnostics); break;
         }
 
         if (hasCondition) sb.Append("{{ end }}\n");
@@ -299,7 +316,7 @@ public sealed class MjmlGenerator
     private void WriteRaw(StringBuilder sb, EmailRawBlock r)
         => sb.Append("<mj-raw>").Append(r.Content).Append("</mj-raw>\n");
 
-    private void WriteTable(StringBuilder sb, EmailTableBlock t)
+    private void WriteTable(StringBuilder sb, EmailTableBlock t, ICollection<RenderError>? diagnostics)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("align", t.Align, "left")
@@ -314,8 +331,9 @@ public sealed class MjmlGenerator
             .Defaulted("width", t.Width, "100%")
             .BlockCommon(t, "10px 25px");
         sb.Append("<mj-table").Append(a).Append(">\n");
-        foreach (var row in t.Rows)
+        for (var rowIndex = 0; rowIndex < t.Rows.Count; rowIndex++)
         {
+            var row = t.Rows[rowIndex];
             sb.Append("<tr>");
             foreach (var cell in row.Cells)
             {
@@ -324,12 +342,61 @@ public sealed class MjmlGenerator
                 if (!string.IsNullOrEmpty(cell.Align)) sb.Append(" align=\"").Append(MjmlEscape.Attribute(cell.Align)).Append('"');
                 if (cell.ColSpan is > 1) sb.Append(" colspan=\"").Append(cell.ColSpan).Append('"');
                 if (cell.RowSpan is > 1) sb.Append(" rowspan=\"").Append(cell.RowSpan).Append('"');
-                sb.Append('>').Append(MjmlEscape.Text(cell.Text)).Append("</").Append(tag).Append('>');
+                AppendCellBackground(sb, cell, rowIndex, diagnostics);
+                sb.Append('>');
+
+                var text = MjmlEscape.Text(cell.Text);
+                if (string.IsNullOrEmpty(cell.Href))
+                {
+                    sb.Append(text);
+                }
+                else
+                {
+                    // The link is the cell's whole content; a blocked scheme becomes '#' exactly like the
+                    // markup guard does for every other link (§3.7a), so the export of an unrendered
+                    // document cannot hand out a live javascript:/data: link either.
+                    sb.Append("<a href=\"")
+                      .Append(MjmlEscape.Attribute(AllowedHref(cell.Href)))
+                      .Append("\">").Append(text).Append("</a>");
+                }
+
+                sb.Append("</").Append(tag).Append('>');
             }
             sb.Append("</tr>\n");
         }
         sb.Append("</mj-table>\n");
     }
+
+    /// <summary>
+    /// Writes the cell's <c>bgcolor</c> only when the value is a colour of the allow-list. An invalid value
+    /// is dropped and reported — it is never "cleaned up" into something that could still reach the
+    /// attribute (or the <c>style</c> attribute, which this generator never writes for a cell).
+    /// </summary>
+    private static void AppendCellBackground(
+        StringBuilder sb,
+        EmailTableCell cell,
+        int rowIndex,
+        ICollection<RenderError>? diagnostics)
+    {
+        if (string.IsNullOrWhiteSpace(cell.BackgroundColor)) return;
+        if (!EmailColorPolicy.IsAllowed(cell.BackgroundColor))
+        {
+            diagnostics?.Add(new RenderError(
+                $"The background colour of the table cell in row {rowIndex + 1} is not a #rgb/#rrggbb hex "
+                + "or a named colour from the safe set, so no bgcolor was written. The value itself is not "
+                + "echoed: it may be crafted markup.",
+                Key: RenderKeys.InvalidTableCellColor,
+                Severity: RenderErrorSeverity.Warning));
+            return;
+        }
+
+        // The trimmed token is what was validated, so that is what is written.
+        sb.Append(" bgcolor=\"").Append(MjmlEscape.Attribute(cell.BackgroundColor.Trim())).Append('"');
+    }
+
+    /// <summary>The cell link as it may be emitted: the value itself, or <c>#</c> for a blocked scheme.</summary>
+    private static string AllowedHref(string href)
+        => EmailUrlPolicy.IsAllowed(href) ? href : EmailUrlPolicy.BlockedUrlPlaceholder;
 
     private void WriteSocial(StringBuilder sb, EmailSocialBlock s)
     {
@@ -442,7 +509,7 @@ public sealed class MjmlGenerator
         sb.Append("</mj-accordion>\n");
     }
 
-    private void WriteHero(StringBuilder sb, EmailHeroBlock h)
+    private void WriteHero(StringBuilder sb, EmailHeroBlock h, ICollection<RenderError>? diagnostics)
     {
         var a = new MjmlAttributeBuffer()
             .Defaulted("mode", h.Mode, "fluid-height")
@@ -456,11 +523,11 @@ public sealed class MjmlGenerator
             .BlockCommon(h, "0px");
         sb.Append("<mj-hero").Append(a).Append(">\n");
         foreach (var block in h.Blocks)
-            WriteBlock(sb, block);
+            WriteBlock(sb, block, diagnostics);
         sb.Append("</mj-hero>\n");
     }
 
-    private void WriteWrapper(StringBuilder sb, EmailWrapperBlock w)
+    private void WriteWrapper(StringBuilder sb, EmailWrapperBlock w, ICollection<RenderError>? diagnostics)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("background-color", w.BackgroundColor)
@@ -472,11 +539,11 @@ public sealed class MjmlGenerator
             .BlockCommon(w, null);
         sb.Append("<mj-wrapper").Append(a).Append(">\n");
         foreach (var section in w.Sections)
-            WriteSection(sb, section);
+            WriteSection(sb, section, diagnostics);
         sb.Append("</mj-wrapper>\n");
     }
 
-    private void WriteGroup(StringBuilder sb, EmailGroupBlock g)
+    private void WriteGroup(StringBuilder sb, EmailGroupBlock g, ICollection<RenderError>? diagnostics)
     {
         var a = new MjmlAttributeBuffer()
             .Optional("background-color", g.BackgroundColor)
@@ -486,7 +553,7 @@ public sealed class MjmlGenerator
             .BlockCommon(g, null);
         sb.Append("<mj-group").Append(a).Append(">\n");
         foreach (var column in g.Columns)
-            WriteColumn(sb, column);
+            WriteColumn(sb, column, diagnostics);
         sb.Append("</mj-group>\n");
     }
 }

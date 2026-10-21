@@ -1046,6 +1046,15 @@ public sealed class EmailTableCell
 }
 ```
 
+> **`SchemaVersion` zůstává `1` (Fáze 9, D18 — zdůvodnění).** `Href` a `BackgroundColor` jsou
+> **volitelná** pole s `null` výchozím stavem a serializér je zapisuje jen když jsou nastavená
+> (`JsonIgnoreCondition.WhenWritingNull`), takže **staré JSON bez nich se načte** (oba zůstanou `null`) a
+> **nové JSON načte i klient s předchozí verzí** modelu (neznámé property zahodí). Nic se nepřejmenovalo
+> ani nezměnilo typ, žádná hodnota se nedopočítává — migrační krok `v → v+1` by neměl co dělat, a bump by
+> jen zbytečně odmítl dokumenty, které jsou po drátě kompatibilní. Proto `CurrentSchemaVersion => 1`
+> a round-trip je krytý testem (`TableCellsSecurityTests.Serializer_RoundTripsTheNewFieldsWithoutASchemaBump`,
+> `Deserialize_LoadsAJsonWithoutTheNewFields`).
+
 > **Rozhodnutí `EMAIL-IMPORT-JSON-DEPTH`** (Fáze 4, 2026-10-20): `MaxNestingDepth` počítá vnoření
 > **modelu**, `JsonSerializerOptions.MaxDepth` počítá úrovně JSON. Doslovné `MaxDepth = MaxNestingDepth`
 > by odmítlo každý dokument s tabulkou, proto `Deserialize(json, options)` používá per-call kopii
@@ -1067,6 +1076,11 @@ s `MaxDepth = MaxNestingDepth` (statická `Options` zůstává beze změny).
 | `ImportOptions` parametr (editor + import dialog) | ne (aditivní) | 10 | `null` = default; `MaxInputBytes` se měří jako **UTF-8 byte count** vstupu. |
 | `EmailTemplateSerializer.Deserialize(json, EmailImportOptions?)` | ne (nové přetížení) | 4 | `MaxNestingDepth` jde tudy (per-call kopie `Options` s `MaxDepth`); stávající `Deserialize(json)` zůstává. |
 | `EmailTableCell.Href` / `BackgroundColor` | ne (aditivní pole) | 9 | Round-trip `MjmlGenerator`↔`MjmlImporter`; `TextVersionGenerator` vypíše „text (url)“; `SchemaVersion` zůstává 1. |
+| `MjmlGenerator.Generate(document, options, diagnostics)` | ne (nové přetížení) | 9 | `ICollection<RenderError>?` sbírá varování, která markup guard nevidí (barva buňky mimo allow-list). Stávající `Generate(document, options)` i `Generate(document)` zůstávají beze změny. |
+| `RenderKeys.InvalidTableCellColor` (`render.table.invalid_color`) | ne (aditivní konstanta) | 9 | `Warning`: buňka nesla `bgcolor` mimo allow-list, atribut se nezapsal. Zdroje v `TmEmailResources*.json`. |
+| `ImportKeys.BlockedTableLink` (`import.table.blocked_link`), `ImportKeys.InvalidTableColor` (`import.table.invalid_color`) | ne (aditivní konstanty) | 9 | Import upozorní na odkaz mimo allow-list (hodnota zůstává v modelu k opravě) a na zahozenou barvu buňky. |
+| `EmailUrlPolicy` (`BlockedUrlPlaceholder`, `FindBlockedScheme(string?)`, `IsAllowed(string?)`) | ne (aditivní statický typ) | 9 | Veřejný read-only pohled na **jediný** allow-list z §3.7a (`UrlSchemePolicy` zůstává `internal`); hostitel/UI vysvětlí odmítnutý odkaz **před** renderem. Nerozšiřitelný (žádná registrace, žádné rozšíření seznamu). |
+| `EmailColorPolicy.IsAllowed(string?)` | ne (aditivní statický typ) | 9 | Veřejný read-only pohled na allow-list barev **atributu** `bgcolor` (`#rgb`/`#rrggbb`/pevná množina jmen). MJML atributy (navbar, akordeon, social) se validují pravidlem inspektoru `PropertyReflection.IsValidColor` (hex, `rgb()`/`hsl()`, klíčové slovo), protože se zapisují do stylu elementu, ne do atributu, který by mohl uniknout z markup. |
 
 ### 3.9 Editace položek bloků (Fáze 9)
 
@@ -1082,6 +1096,37 @@ public enum EmailItemEditingMode { Inline, Dialog }
 | Položka | Breaking | Fáze | Poznámka |
 |---|---|---|---|
 | `EmailItemEditingMode` + `ItemEditingMode` | ne (aditivní, default `Inline` = dnešní chování) | 9 | `Dialog` = modální editor nad KOPIÍ položky s Uložit/Zrušit, jeden krok undo, fokus zpět na spouštěcí tlačítko. |
+| `EmailSocialNetworks` (`Supported`, `IsSupported(string?)`) | ne (aditivní statický typ) | 9 | Názvy `mj-social-element` s vlastní ikonou Mjml.Net; „vlastní“ = povinné `Src`. |
+| `EmailItemValidationKeys` (`UrlScheme`, `TextRequired`, `HrefRequired`, `SrcRequired`, `AltRequired`, `TitleRequired`, `InvalidColor`, `InvalidSpan`, `ValidatorMissing`) | ne (aditivní statický typ) | 9 | Klíče lokalizace dialogů v tabulce balíčku; `ValidatorMissing` je fail-closed stav (bez registrace validátoru nelze uložit). |
+| `EmailSocialElementValidator`, `EmailNavbarLinkValidator`, `EmailCarouselImageValidator`, `EmailAccordionItemValidator`, `EmailTableCellValidator` (+ `EmailTableCellValidator.MaxSpan = 20`) | ne (aditivní veřejné typy) | 9 | **Veřejné zůstávají** (rozhodnutí `EMAIL-F9-PUBLIC-POLICIES`): kontrakt je zde jmenuje jako veřejné aditivní typy a hostitel potřebuje stejnou odpověď jako editor, aby odmítnutou položku vysvětlil **před** renderem (stejný důvod jako u veřejných politik); `AddTempoFluentValidation` je registruje přes `assembly.GetTypes()`, takže `internal` by fungovalo, ale připravilo by hostitele o tuto možnost. |
+| `TmEmailItemList`, `TmEmailItemDialog`, `TmEmailTableCellDialog` | ne (aditivní veřejné komponenty) | 9 | Kompaktní seznam (`Preview`/`Block`/`OnChanged`/`ReadOnly`/`OnImageUpload`/`ImageUpload`), dialog šablona (`Show`/`Title`/`Errors`/`OnSave`/`OnCancel`/…), dialog buňky (`Block`/`RowIndex`/`CellIndex`/`Show`/`ReadOnly`/`OnSave`/`OnCancel`). `Errors` nese jen chyby **bez pole** (souhrn `role="alert"`); chyba pole se renderuje u pole (`aria-invalid` + `aria-describedby`). |
+| `TmTextInput.FocusAsync(bool preventScroll = false)` (jádro, aditivní) | `ValueTask` | ne (aditivní člen) | Dialog potřebuje fokus na první neplatné pole; komponenta vlastní element, takže konzument se k němu jinak nedostane (stejný vzor jako `TmSearchInput.FocusAsync`). |
+
+**Provedeno ve Fázi 9 (stav implementace):** `ItemEditingMode` je na `TmEmailTemplateEditor` i
+`TmEmailPropertyPanel` a v režimu `Dialog` renderuje `TmEmailItemList` (kompaktní seznam s náhledem a
+akcemi přesun/upravit/odebrat) + `TmEmailItemDialog` (jeden jádrový `TmModal` s
+`MobilePresentation="Auto"`, tedy na mobilu sheet se sticky patičkou — **žádný lokální sheet**).
+Validace jde přes `Tempo.Blazor.FluentValidation` (`EmailSocialElementValidator`,
+`EmailNavbarLinkValidator`, `EmailCarouselImageValidator`, `EmailAccordionItemValidator`,
+`EmailTableCellValidator`), zaregistrované v `AddTempoEmailTemplateEditor`; lokalizované klíče
+`EmailEditor_Item_*`/`EmailEditor_TableCell_*`/`EmailEditor_Table_*` jsou ve všech čtyřech tabulkách.
+Nové veřejné (aditivní) typy: `EmailItemEditingMode`, `EmailSocialNetworks`, `EmailItemValidationKeys`,
+validátory, a v Abstractions `EmailUrlPolicy` + `EmailColorPolicy` (veřejný read-only pohled na allow-list
+z §3.7a, aby UI mohlo odmítnutou hodnotu vysvětlit **před** renderem). Buňka tabulky má navíc dialog
+(`TmEmailTableCellDialog`) dostupný z každé buňky mřížky v obou režimech.
+
+**Review F9 (UX + code/arch) — čím se implementace liší od prvního provedení:** Uložit je vždy
+aktivní (zakázané tlačítko nevysvětlí, co je špatně): neplatné odeslání nic neuloží, zobrazí chybu
+u pole (`aria-invalid`, `aria-describedby`) a fokus na první neplatné pole; chyby se neukazují dřív
+než po zásahu do pole nebo po pokusu o uložení; souhrn `role="alert"` nese jen chyby bez pole. Nová
+položka je do Uložit jen kopií v dialogu (`_isNew`), takže Zrušit nemění dokument ani historii undo.
+Akce řádku mají v přístupném názvu název položky (`EmailEditor_ItemList_{MoveUp,MoveDown,Edit,Remove}`
+s `{0}`, fallback `EmailEditor_ItemList_Unnamed`), prázdný seznam má vlastní stav
+(`EmailEditor_ItemList_Empty`) a smazání se ohlašuje v live regionu (`EmailEditor_Item_Removed`).
+Obsah akordeonu i textového bloku se sanitizuje **před** předáním rich editoru (fail-closed: bez
+`IHtmlContentSanitizer` prázdný řetězec, nikdy surový obsah). Připnutý sloupec mřížky je kompaktní
+(přepínač jen v `aria-label`, lišta `row`, koš v `--tm-color-danger-text` — token
+`--tm-color-danger-strong` v design systému neexistuje), caption je `sr-only`.
 
 ### 3.10 Veřejná plocha z vizuálního redesignu (Fáze 6/7/7A/8/10)
 

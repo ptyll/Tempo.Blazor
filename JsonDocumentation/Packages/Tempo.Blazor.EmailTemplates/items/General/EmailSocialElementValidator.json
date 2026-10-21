@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Validates a social element before the item dialog may apply it: the link and the icon URL must be on the URL allow-list, and a custom (non-MJML) network name requires an explicit icon URL.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "EmailSocialElementValidator",
+      "kind": "Constructor",
+      "type": "EmailSocialElementValidator",
+      "description": "Initializes the validator with the editor's localizer."
+    }
+  ],
+  "itemName": "EmailSocialElementValidator"
+}

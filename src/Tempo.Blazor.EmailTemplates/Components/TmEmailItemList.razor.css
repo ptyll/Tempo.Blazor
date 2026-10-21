@@ -1,0 +1,144 @@
+/* Fáze 9 — the compact item list of the dialog editing mode. Design tokens only.
+   One row = preview + four icon actions (up / down / edit / remove). The actions are at least 32 px, and
+   finger-sized (--tm-touch-target) on a coarse pointer. */
+
+.tm-email-item-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-item-list__item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    min-inline-size: 0;
+}
+
+.tm-email-item-list__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+}
+
+.tm-email-item-list__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 2rem;
+    min-block-size: 2rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-email-item-list__action:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+.tm-email-item-list__action:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-item-list__action:disabled {
+    color: var(--tm-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-email-item-list__action--danger:hover:not(:disabled) {
+    color: var(--tm-color-danger-strong);
+}
+
+.tm-email-item-list__preview {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    flex: 1 1 auto;
+    color: var(--tm-text-primary);
+}
+
+/* The preview is built with RenderTreeBuilder in @code, so its elements never carry this component's
+   scope attribute (the Fáze 7A lesson): the rules must be reached through the scoped ROOT element. */
+.tm-email-item-list ::deep .tm-email-item-list__preview-text {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-item-list ::deep .tm-email-item-list__preview-title {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-email-item-list ::deep .tm-email-item-list__preview-detail {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-email-item-list ::deep .tm-email-item-list__preview-text--large {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--tm-space-1);
+}
+
+.tm-email-item-list__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-email-item-list__label {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-email-item-list__hint {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+@media (pointer: coarse) {
+    .tm-email-item-list__action {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+
+    /* Five 44 px targets plus the preview do not fit a 288 px inspector column: the row wraps, the
+       preview takes its own line. The actions keep their finger size. */
+    .tm-email-item-list__item {
+        flex-wrap: wrap;
+    }
+
+    .tm-email-item-list__preview {
+        flex-basis: 100%;
+        order: 2;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-email-item-list__action {
+        transition: none;
+    }
+}

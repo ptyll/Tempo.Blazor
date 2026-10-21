@@ -45,6 +45,7 @@
                                    ImageUpload="_imageUpload"
                                    Variables="_variables"
                                    LayoutMode="_layoutMode"
+                                   ItemEditingMode="_itemEditingMode"
                                    MobilePanelPresentation="_presentation"
                                    ResolvedLayoutChanged="OnResolvedLayoutChanged" />
         </div>
@@ -67,6 +68,16 @@
                 <option value="failed">Simulate failure</option>
                 <option value="failed-long">Simulate a long failure message</option>
                 <option value="conflict">Simulate conflict</option>
+            </select>
+        </label>
+        @* Fáze 9 demo: how the items of a social / navbar / carousel / accordion block are edited. Inline
+           keeps every field in the inspector; Dialog edits one item at a time in a modal over a copy, which
+           is the mode a touch host wants (the modal is a sheet on a phone). *@
+        <label class="tm-demo-email-editor-page__simulate">
+            <span>Item editing</span>
+            <select data-tm-demo-item-mode @onchange="OnItemModeChanged">
+                <option value="Inline">Inline</option>
+                <option value="Dialog">Dialog</option>
             </select>
         </label>
         @* Fáze 8 demo: force the editor's layout instead of resizing the browser. Auto lets the shell
@@ -116,6 +127,7 @@
     private string _simulation = "real";
     private bool _preferencesLoaded;
     private TmLayoutMode _layoutMode = TmLayoutMode.Auto;
+    private EmailItemEditingMode _itemEditingMode = EmailItemEditingMode.Inline;
     private MobilePanelPresentation _presentation = MobilePanelPresentation.Sheet;
     private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
     private readonly AutoSaveOptions _autoSave = new() { Enabled = true, Interval = TimeSpan.FromSeconds(3) };
@@ -263,6 +275,11 @@
             : MobilePanelPresentation.Sheet;
         await RememberAsync("tm-demo-editor-presentation", _presentation.ToString());
     }
+
+    private void OnItemModeChanged(ChangeEventArgs e)
+        => _itemEditingMode = Enum.TryParse<EmailItemEditingMode>(e.Value?.ToString(), out var mode)
+            ? mode
+            : EmailItemEditingMode.Inline;
 
     private async Task OnLayoutChanged(ChangeEventArgs e)
     {

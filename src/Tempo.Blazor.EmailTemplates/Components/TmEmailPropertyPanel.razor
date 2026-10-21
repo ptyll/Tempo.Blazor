@@ -71,7 +71,11 @@
                             case EmailTextBlock textBlock:
                                 <div class="tm-email-properties__group" data-tm-rich-content>
                                     <header class="tm-email-properties__subheader">@Loc["EmailEditor_Field_Content"]</header>
-                                    <TmRichEditorSimple Value="@textBlock.Content" IsDisabled="ReadOnly"
+                                    @* The rich editor hands its value to innerHTML in JS, so a block whose
+                                       content came from an import or a JSON payload must be sanitized on
+                                       the way IN as well (stored XSS, review F9). *@
+                                    <TmRichEditorSimple Value="@SanitizeTemplateContent(textBlock.Content)"
+                                                        IsDisabled="ReadOnly"
                                                         ValueChanged="@(v => SetAsync(() => textBlock.Content = v))" />
                                     @if (!ReadOnly)
                                     {
@@ -132,21 +136,35 @@
                         }
                         @switch (block)
                         {
-                            case EmailSocialBlock social:
-                                <TmEmailListEditor TItem="EmailSocialElement" Items="social.Elements"
-                                                   ItemPrimary="@(new[] { "Name", "Href", "Label" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                                break;
-                            case EmailNavbarBlock navbar:
-                                <TmEmailListEditor TItem="EmailNavbarLink" Items="navbar.Links"
-                                                   ItemPrimary="@(new[] { "Text", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                                break;
-                            case EmailCarouselBlock carousel:
-                                <TmEmailListEditor TItem="EmailCarouselImage" Items="carousel.Images"
-                                                   ItemPrimary="@(new[] { "Src", "Alt", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
-                                break;
-                            case EmailAccordionBlock accordion:
-                                <TmEmailListEditor TItem="EmailAccordionItem" Items="accordion.Items"
-                                                   ItemPrimary="@(new[] { "Title", "Content" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                            // The item-bearing blocks render through ONE component that owns the mode (Fáze 9):
+                            // inline keeps every field in the inspector, Dialog swaps it for a compact list
+                            // whose Edit opens the modal editor over a copy.
+                            case EmailSocialBlock or EmailNavbarBlock or EmailCarouselBlock or EmailAccordionBlock:
+                                @if (ItemEditingMode == EmailItemEditingMode.Dialog)
+                                {
+                                    <TmEmailItemList Block="block" OnChanged="OnChanged" ReadOnly="ReadOnly"
+                                                     OnImageUpload="OnImageUpload" ImageUpload="ImageUpload" />
+                                }
+                                else if (block is EmailSocialBlock social)
+                                {
+                                    <TmEmailListEditor TItem="EmailSocialElement" Items="social.Elements"
+                                                       ItemPrimary="@(new[] { "Name", "Href", "Label" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                }
+                                else if (block is EmailNavbarBlock navbar)
+                                {
+                                    <TmEmailListEditor TItem="EmailNavbarLink" Items="navbar.Links"
+                                                       ItemPrimary="@(new[] { "Text", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                }
+                                else if (block is EmailCarouselBlock carousel)
+                                {
+                                    <TmEmailListEditor TItem="EmailCarouselImage" Items="carousel.Images"
+                                                       ItemPrimary="@(new[] { "Src", "Alt", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                }
+                                else if (block is EmailAccordionBlock accordion)
+                                {
+                                    <TmEmailListEditor TItem="EmailAccordionItem" Items="accordion.Items"
+                                                       ItemPrimary="@(new[] { "Title", "Content" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
+                                }
                                 break;
                             case EmailTableBlock table:
                                 <TmEmailTableEditor Block="table" OnChanged="OnChanged" ReadOnly="ReadOnly" />
@@ -310,6 +328,15 @@
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// How the items of a social / navbar / carousel / accordion block are edited (§3.9).
+    /// <see cref="EmailItemEditingMode.Inline"/> (default) renders every field in the inspector;
+    /// <see cref="EmailItemEditingMode.Dialog"/> renders a compact list whose Edit action opens a modal
+    /// editor over a COPY of the item — Save is one change (one undo step), Cancel / Escape / the overlay
+    /// change nothing. The table grid is inline in both modes and every cell offers its dialog.
+    /// </summary>
+    [Parameter] public EmailItemEditingMode ItemEditingMode { get; set; } = EmailItemEditingMode.Inline;
+
     private readonly string _instanceId = Guid.NewGuid().ToString("n")[..6];
     private readonly EmailInspectorState _state = new();
     private string _activeTab = "content";
@@ -357,6 +384,17 @@
             _lastSelected = SelectedId;
             _state.ClearFocus();
         }
+    }
+
+    /// <summary>
+    /// The rich-text content of a block as the editor may show it, sanitized by the pipeline's own sanitizer.
+    /// FAIL-CLOSED: with no <see cref="IHtmlContentSanitizer"/> registered the value becomes empty — never
+    /// the raw value, because the raw value is exactly what would reach <c>innerHTML</c>.
+    /// </summary>
+    private string SanitizeTemplateContent(string? content)
+    {
+        var sanitizer = Services.GetService(typeof(IHtmlContentSanitizer)) as IHtmlContentSanitizer;
+        return sanitizer?.SanitizeTemplateContent(content ?? string.Empty) ?? string.Empty;
     }
 
     private Task OnTabChangedAsync(string tabId)
@@ -430,7 +468,7 @@
         var file = e.File;
         var options = EffectiveImageUpload;
 
-        if (!IsAcceptedType(file.ContentType, options.Accept))
+        if (!ImageUploadValidation.IsAcceptedType(file.ContentType, options.Accept))
         {
             _imageUploadError = Loc["EmailEditor_Image_Upload_TypeNotAllowed", options.Accept];
             StateHasChanged();
@@ -439,7 +477,7 @@
 
         if (file.Size > options.MaxBytes)
         {
-            _imageUploadError = Loc["EmailEditor_Image_Upload_TooLarge", FormatBytes(options.MaxBytes)];
+            _imageUploadError = Loc["EmailEditor_Image_Upload_TooLarge", ImageUploadValidation.FormatBytes(options.MaxBytes)];
             StateHasChanged();
             return;
         }
@@ -465,42 +503,6 @@
             StateHasChanged();
         }
     }
-
-    /// <summary>Matches a MIME type against the <c>accept</c> attribute syntax (comma separated, <c>*</c> wildcards).</summary>
-    private static bool IsAcceptedType(string? contentType, string? accept)
-    {
-        if (string.IsNullOrWhiteSpace(contentType)) return false;
-        if (string.IsNullOrWhiteSpace(accept)) return true;
-
-        foreach (var candidate in accept.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            if (candidate is "*" or "*/*") return true;
-            var slash = candidate.IndexOf('/');
-            if (slash < 0)
-            {
-                // A bare extension list (".png,.jpg") — compare the file's type family loosely.
-                if (contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return true;
-                continue;
-            }
-
-            var type = candidate[..slash];
-            var subtype = candidate[(slash + 1)..];
-            if (!string.Equals(type, "*", StringComparison.OrdinalIgnoreCase)
-                && !contentType.StartsWith(type + "/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (subtype is "*" || contentType.EndsWith("/" + subtype, StringComparison.OrdinalIgnoreCase)) return true;
-        }
-
-        return false;
-    }
-
-    private static string FormatBytes(long bytes)
-        => bytes >= 1024 * 1024
-            ? string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.#} MB", bytes / (1024d * 1024d))
-            : string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.#} KB", bytes / 1024d);
 
     private static List<string> Split(string value) =>
         value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();

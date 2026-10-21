@@ -107,6 +107,14 @@ public partial class TmEmailTemplateEditor
     [Parameter] public RenderFragment? FooterActions { get; set; }
 
     /// <summary>
+    /// How the items of a social / navbar / carousel / accordion block are edited (§3.9), forwarded to the
+    /// inspector. <see cref="EmailItemEditingMode.Inline"/> is the default and keeps the 2.9.x behaviour;
+    /// <see cref="EmailItemEditingMode.Dialog"/> edits one item at a time in a modal over a copy, so the
+    /// document changes in one undo step and a half-typed item never touches it.
+    /// </summary>
+    [Parameter] public EmailItemEditingMode ItemEditingMode { get; set; } = EmailItemEditingMode.Inline;
+
+    /// <summary>
     /// Whether the blocks palette is collapsed. The editor mirrors the state it is given and reports every
     /// USER collapse/expand through <see cref="ToolboxCollapsedChanged"/>; F8 maps the same parameter onto
     /// <c>TmEditorShell.CollapsedPanels</c> (D10).

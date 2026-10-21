@@ -38,7 +38,7 @@ public sealed partial class TextVersionGenerator
                 sb.AppendLine(StripHtml(t.Content));
                 break;
             case EmailButtonBlock b:
-                sb.AppendLine(string.IsNullOrEmpty(b.Href) ? b.Text : $"{b.Text} ({b.Href})");
+                sb.AppendLine(Linked(b.Text, b.Href));
                 break;
             case EmailImageBlock i when !string.IsNullOrEmpty(i.Alt):
                 sb.AppendLine(i.Alt);
@@ -82,19 +82,35 @@ public sealed partial class TextVersionGenerator
     private static void WriteTable(StringBuilder sb, EmailTableBlock table)
     {
         foreach (var row in table.Rows)
-            sb.AppendLine(string.Join("\t", row.Cells.Select(c => c.Text)));
+            sb.AppendLine(string.Join("\t", row.Cells.Select(CellText)));
     }
+
+    /// <summary>
+    /// One cell of the plain-text table: a linked cell reads <c>text (url)</c> like a linked button, so the
+    /// link is not lost in the text alternative (Fáze 9).
+    /// </summary>
+    private static string CellText(EmailTableCell cell) => Linked(cell.Text, cell.Href);
+
+    /// <summary>
+    /// A label with its target in parentheses. A target outside the URL allow-list is NOT printed: the
+    /// markup replaces such a link with <c>#</c> (§3.7a), so the text alternative must not advertise a
+    /// destination the message itself refuses (review F9).
+    /// </summary>
+    private static string Linked(string? text, string? href)
+        => string.IsNullOrEmpty(href) || !EmailUrlPolicy.IsAllowed(href)
+            ? text ?? string.Empty
+            : $"{text} ({href})";
 
     private static void WriteSocial(StringBuilder sb, EmailSocialBlock social)
     {
         foreach (var e in social.Elements)
-            sb.AppendLine(string.IsNullOrEmpty(e.Href) ? (e.Label ?? e.Name ?? "") : $"{e.Label ?? e.Name} ({e.Href})");
+            sb.AppendLine(Linked(e.Label ?? e.Name ?? "", e.Href));
     }
 
     private static void WriteNavbar(StringBuilder sb, EmailNavbarBlock navbar)
     {
         foreach (var link in navbar.Links)
-            sb.AppendLine(string.IsNullOrEmpty(link.Href) ? link.Text : $"{link.Text} ({link.Href})");
+            sb.AppendLine(Linked(link.Text, link.Href));
     }
 
     private static void WriteCarousel(StringBuilder sb, EmailCarouselBlock carousel)

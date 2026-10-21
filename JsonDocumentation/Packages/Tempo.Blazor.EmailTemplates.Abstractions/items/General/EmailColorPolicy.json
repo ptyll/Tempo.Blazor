@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The colour allow-list of the model colours that reach the markup as an attribute (§3.7a): #rgb, #rrggbb and a named colour from a small fixed safe set. A value outside the list is dropped by the generator (with a warning), never sanitized into something else, because a CSS function or a quote would let a crafted string leave the attribute or fetch a remote resource.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailColorPolicy.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "IsAllowed",
+      "kind": "Method",
+      "type": "bool",
+      "description": "Answers whether a colour may be written into the markup. Empty is not a colour: the caller omits the attribute instead."
+    }
+  ],
+  "itemName": "EmailColorPolicy"
+}

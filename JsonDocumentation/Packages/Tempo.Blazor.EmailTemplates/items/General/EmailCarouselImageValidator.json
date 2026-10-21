@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Validates a carousel image before the item dialog may apply it: the source and the alternative text are required, and the source and the link must be on the URL allow-list.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "EmailCarouselImageValidator",
+      "kind": "Constructor",
+      "type": "EmailCarouselImageValidator",
+      "description": "Initializes the validator with the editor's localizer."
+    }
+  ],
+  "itemName": "EmailCarouselImageValidator"
+}

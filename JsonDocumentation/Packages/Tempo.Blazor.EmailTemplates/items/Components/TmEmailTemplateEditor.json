@@ -96,6 +96,13 @@
       "description": "Raised when the user requests a save."
     },
     {
+      "name": "ItemEditingMode",
+      "type": "EmailItemEditingMode",
+      "isRequired": false,
+      "default": "EmailItemEditingMode.Inline",
+      "description": "How the items of a social / navbar / carousel / accordion block are edited, forwarded to the inspector: Inline (default) keeps the 2.9.x behaviour, Dialog edits one item at a time in a modal over a copy, so the document changes in one undo step."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,

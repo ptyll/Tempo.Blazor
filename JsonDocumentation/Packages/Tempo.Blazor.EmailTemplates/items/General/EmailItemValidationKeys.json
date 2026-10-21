@@ -1,0 +1,66 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "The localization keys of the item and table-cell dialog validation. They live in the package's own JSON table (TmEmailResources*.json), so the messages follow the editor's culture instead of a validator's English default.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "UrlScheme",
+      "kind": "Field",
+      "type": "string",
+      "description": "The value is a link outside the URL allow-list (§3.7a)."
+    },
+    {
+      "name": "TextRequired",
+      "kind": "Field",
+      "type": "string",
+      "description": "A required display text is missing."
+    },
+    {
+      "name": "HrefRequired",
+      "kind": "Field",
+      "type": "string",
+      "description": "A required link target is missing."
+    },
+    {
+      "name": "SrcRequired",
+      "kind": "Field",
+      "type": "string",
+      "description": "A required image or icon source is missing."
+    },
+    {
+      "name": "AltRequired",
+      "kind": "Field",
+      "type": "string",
+      "description": "A required alternative text is missing."
+    },
+    {
+      "name": "TitleRequired",
+      "kind": "Field",
+      "type": "string",
+      "description": "A required title is missing."
+    },
+    {
+      "name": "InvalidColor",
+      "kind": "Field",
+      "type": "string",
+      "description": "The background or text colour is outside the colour allow-list."
+    },
+    {
+      "name": "InvalidSpan",
+      "kind": "Field",
+      "type": "string",
+      "description": "A column or row span is not a number between 1 and 20."
+    },
+    {
+      "name": "ValidatorMissing",
+      "kind": "Field",
+      "type": "string",
+      "description": "No IValidator<T> is registered for the item, so the dialog refuses to save instead of skipping validation."
+    }
+  ],
+  "itemName": "EmailItemValidationKeys"
+}

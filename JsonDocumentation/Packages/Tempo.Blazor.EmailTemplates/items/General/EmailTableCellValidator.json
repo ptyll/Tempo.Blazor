@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Validates a table cell before the cell dialog may apply it: the link must be on the URL allow-list, the background colour on the colour allow-list, and the spans must be whole numbers between 1 and MaxSpan.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "MaxSpan",
+      "kind": "Field",
+      "type": "int",
+      "description": "The largest row or column span the dialog accepts."
+    },
+    {
+      "name": "EmailTableCellValidator",
+      "kind": "Constructor",
+      "type": "EmailTableCellValidator",
+      "description": "Initializes the validator with the editor's localizer."
+    }
+  ],
+  "itemName": "EmailTableCellValidator"
+}

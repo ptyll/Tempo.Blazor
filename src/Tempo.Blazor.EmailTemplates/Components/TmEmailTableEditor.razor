@@ -1,40 +1,97 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
 
-<div class="tm-email-table-editor" data-tm-table-editor>
-    <table class="tm-email-table-editor__grid">
-        <tbody>
-            @for (var r = 0; r < Block.Rows.Count; r++)
-            {
-                var row = Block.Rows[r];
-                <tr data-tm-table-row>
-                    <td class="tm-email-table-editor__rowctl">
-                        <TmToggle Value="row.IsHeader" Label="@Loc["EmailEditor_Table_HeaderRow"]" Disabled="ReadOnly"
-                                  ValueChanged="@(v => SetAsync(() => row.IsHeader = v))" />
-                        <button type="button" data-tm-table-row-remove aria-label="@Loc["EmailEditor_Action_Delete"]"
-                                disabled="@ReadOnly" @onclick="() => RemoveRowAsync(row)">
-                            <TmIcon Name="trash-2" Size="IconSize.Xs" />
-                        </button>
-                    </td>
-                    @foreach (var cell in row.Cells)
-                    {
-                        var c = cell;
-                        <td data-tm-table-cell>
-                            <TmTextInput Value="@c.Text" Disabled="ReadOnly"
-                                         ValueChanged="@(v => SetAsync(() => c.Text = v))" />
-                        </td>
-                    }
-                </tr>
-            }
-        </tbody>
-    </table>
-    <div class="tm-email-table-editor__actions">
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
-                  data-tm-table-add-row="true" OnClick="AddRowAsync">@Loc["EmailEditor_Table_AddRow"]</TmButton>
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
-                  data-tm-table-add-col="true" OnClick="AddColumnAsync">@Loc["EmailEditor_Table_AddColumn"]</TmButton>
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="minus" Disabled="ReadOnly"
-                  data-tm-table-remove-col="true" OnClick="RemoveColumnAsync">@Loc["EmailEditor_Table_RemoveColumn"]</TmButton>
-    </div>
+@* Fáze 9: the inline table grid. Its own scoped stylesheet, a horizontal scroll container with a PINNED
+   control column (position: sticky), a visually distinct header row, a localized accessible name on every
+   cell and one "edit cell" action per cell that opens the full cell dialog. *@
+<div class="tm-email-table-editor" data-tm-table-editor
+     data-tm-table-columns="@ColumnCount" data-tm-table-rows="@Block.Rows.Count">
+    <section class="tm-email-table-editor__section" data-tm-table-section="header">
+        <header class="tm-email-table-editor__section-title">@Loc["EmailEditor_Table_HeaderSection"]</header>
+        <div data-tm-table-first-row-header="true">
+            <TmToggle Label="@Loc["EmailEditor_Table_FirstRowHeader"]" Value="FirstRowIsHeader"
+                      Disabled="@(ReadOnly || Block.Rows.Count == 0)"
+                      ValueChanged="SetFirstRowHeaderAsync" />
+        </div>
+    </section>
+
+    <section class="tm-email-table-editor__section" data-tm-table-section="rows-columns">
+        <header class="tm-email-table-editor__section-title">@Loc["EmailEditor_Table_RowsColumns"]</header>
+
+        @if (Block.Rows.Count == 0)
+        {
+            <p class="tm-email-table-editor__empty" data-tm-table-empty="true">@Loc["EmailEditor_Table_Empty"]</p>
+        }
+        else
+        {
+            <div class="tm-email-table-editor__scroll" data-tm-table-scroll>
+                <table class="tm-email-table-editor__grid">
+                    @* Screen-reader only: the section header already names the grid visually, and a caption
+                       printed above it would say the same thing twice (review F9). *@
+                    <caption class="tm-sr-only">@Loc["EmailEditor_Table_Caption"]</caption>
+                    <tbody>
+                        @for (var r = 0; r < Block.Rows.Count; r++)
+                        {
+                            var rowIndex = r;
+                            var row = Block.Rows[rowIndex];
+                            <tr data-tm-table-row class="@(row.IsHeader ? "tm-email-table-editor__row--header" : null)">
+                                <th scope="row" class="tm-email-table-editor__rowctl" data-tm-table-rowctl>
+                                    @* The pinned column has to stay narrow: the toggle carries its label in
+                                       its accessible name only (the visible caption would double the width of
+                                       every row). *@
+                                    <div class="tm-email-table-editor__rowstack">
+                                    <span class="tm-email-table-editor__rowlabel">@(rowIndex + 1)</span>
+                                    <TmToggle AriaLabel="@Loc["EmailEditor_Table_RowHeaderLabel", rowIndex + 1]"
+                                              Value="row.IsHeader" Disabled="ReadOnly"
+                                              ValueChanged="@(value => SetRowHeaderAsync(row, value))" />
+                                    <button type="button" class="tm-email-table-editor__icon-btn"
+                                            data-tm-table-row-remove="true"
+                                            aria-label="@Loc["EmailEditor_Table_RowRemoveLabel", rowIndex + 1]"
+                                            title="@Loc["EmailEditor_Table_RowRemoveLabel", rowIndex + 1]"
+                                            disabled="@ReadOnly" @onclick="() => RemoveRowAsync(row)">
+                                        <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                                    </button>
+                                    </div>
+                                </th>
+                                @foreach (var cell in row.Cells)
+                                {
+                                    var cellIndex = row.Cells.IndexOf(cell);
+                                    var editable = cell;
+                                    <td class="tm-email-table-editor__cell" data-tm-table-cell
+                                        aria-label="@Loc["EmailEditor_Table_CellLabel", rowIndex + 1, cellIndex + 1]">
+                                        <div class="tm-email-table-editor__cellstack">
+                                        <TmTextInput Value="@editable.Text" Disabled="ReadOnly"
+                                                     aria-label="@Loc["EmailEditor_Table_CellLabel", rowIndex + 1, cellIndex + 1]"
+                                                     ValueChanged="@(value => SetCellTextAsync(editable, value))" />
+                                        <button type="button" class="tm-email-table-editor__icon-btn"
+                                                data-tm-table-cell-edit="true"
+                                                aria-label="@Loc["EmailEditor_Table_CellEditLabel", rowIndex + 1, cellIndex + 1]"
+                                                title="@Loc["EmailEditor_Table_CellEditLabel", rowIndex + 1, cellIndex + 1]"
+                                                disabled="@ReadOnly"
+                                                @onclick="() => OpenCellAsync(rowIndex, cellIndex)">
+                                            <TmIcon Name="edit" Size="IconSize.Xs" />
+                                        </button>
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="tm-email-table-editor__actions" data-tm-table-actions="true">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
+                      data-tm-table-add-row="true" OnClick="AddRowAsync">@Loc["EmailEditor_Table_AddRow"]</TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
+                      data-tm-table-add-col="true" OnClick="AddColumnAsync">@Loc["EmailEditor_Table_AddColumn"]</TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="minus" Disabled="ReadOnly"
+                      data-tm-table-remove-col="true" OnClick="RemoveColumnAsync">@Loc["EmailEditor_Table_RemoveColumn"]</TmButton>
+        </div>
+    </section>
+
+    <TmEmailTableCellDialog Block="Block" RowIndex="_cellRow" CellIndex="_cellColumn" Show="_cellOpen"
+                            ReadOnly="ReadOnly" OnSave="OnCellSavedAsync" OnCancel="CloseCell" />
 </div>
 
 @code {
@@ -50,6 +107,10 @@
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    private bool _cellOpen;
+    private int _cellRow;
+    private int _cellColumn;
+
     /// <summary>Applies one cell mutation unless the grid is read-only, then reports the change.</summary>
     private Task SetAsync(Action apply)
     {
@@ -59,6 +120,34 @@
     }
 
     private int ColumnCount => Block.Rows.Count == 0 ? 1 : Block.Rows.Max(r => r.Cells.Count);
+
+    /// <summary>The first row's header flag — the section toggle the plan calls "První řádek je záhlaví".</summary>
+    private bool FirstRowIsHeader => Block.Rows.Count > 0 && Block.Rows[0].IsHeader;
+
+    private Task SetFirstRowHeaderAsync(bool value)
+        => Block.Rows.Count == 0 ? Task.CompletedTask : SetAsync(() => Block.Rows[0].IsHeader = value);
+
+    private Task SetRowHeaderAsync(EmailTableRow row, bool value) => SetAsync(() => row.IsHeader = value);
+
+    private Task SetCellTextAsync(EmailTableCell cell, string value) => SetAsync(() => cell.Text = value);
+
+    private Task OpenCellAsync(int rowIndex, int cellIndex)
+    {
+        _cellRow = rowIndex;
+        _cellColumn = cellIndex;
+        _cellOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private void CloseCell() => _cellOpen = false;
+
+    /// <summary>The cell dialog already applied the copy; the grid only reports the change.</summary>
+    private async Task OnCellSavedAsync()
+    {
+        _cellOpen = false;
+        if (ReadOnly) return;
+        await OnChanged.InvokeAsync();
+    }
 
     private async Task AddRowAsync()
     {

@@ -14,7 +14,8 @@
                 <TmIcon Name="@LeftIcon" Size="IconSize.Sm" />
             </div>
         }
-        <input id="@Id"
+        <input @ref="_inputRef"
+               id="@Id"
                type="@Type"
                value="@Value"
                placeholder="@Placeholder"
@@ -169,6 +170,17 @@
 
     /// <summary>Fires when the input loses focus.</summary>
     [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
+
+    private ElementReference _inputRef;
+
+    /// <summary>
+    /// Moves keyboard focus to the input. The component owns the element, so a consumer that cannot reach
+    /// the DOM (the e-mail item dialog focuses its first invalid field after a failed save) has no other
+    /// way. Additive: no existing member changes.
+    /// </summary>
+    /// <param name="preventScroll">When true the browser does not scroll the input into view.</param>
+    /// <returns>A task that completes when focus has been moved.</returns>
+    public ValueTask FocusAsync(bool preventScroll = false) => _inputRef.FocusAsync(preventScroll);
 
     // ── Accessibility ────────────────────────────────────────────
     private bool IsInvalid => IsValid == false || !string.IsNullOrEmpty(Error);

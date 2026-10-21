@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "The mj-social-element network names the item dialog offers. A supported name carries MJML's own icon; any other choice is the custom network and then requires an explicit icon URL.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Supported",
+      "kind": "Field",
+      "type": "IReadOnlyList<string>",
+      "description": "The names offered by the network select, in the order the dialog shows them."
+    },
+    {
+      "name": "IsSupported",
+      "kind": "Method",
+      "type": "bool",
+      "description": "Answers whether a name is a supported network (case-insensitive)."
+    }
+  ],
+  "itemName": "EmailSocialNetworks"
+}

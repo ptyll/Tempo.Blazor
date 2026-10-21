@@ -1,0 +1,809 @@
+@namespace Tempo.Blazor.EmailTemplates.Components
+@using Tempo.Blazor.Abstractions.Models
+@using global::FluentValidation
+@using global::FluentValidation.Results
+@inject IServiceProvider Services
+@inject IJSRuntime JS
+
+@* Fáze 9: the compact list of a block's items in EmailItemEditingMode.Dialog. Each row is a preview plus
+   four icon actions (up / down / edit / remove); Edit — and Add — open ONE dialog over a COPY of the item,
+   so the document changes only on Save and always as a single change (one undo step in the editor).
+   A new item is a copy as well: nothing is inserted before Save, so Cancel leaves both the document and
+   the editor history untouched (review F9). *@
+<div class="tm-email-item-list" data-tm-item-list @ref="_rootRef">
+    @* Removing an item is not visible in the canvas (the block simply renders one row fewer), so the list
+       speaks it. The region lives before the text changes — that is what makes a live region announce. *@
+    <span class="tm-sr-only" role="status" aria-live="polite" data-tm-item-removed>@_removedAnnouncement</span>
+
+    @if (Count == 0)
+    {
+        <p class="tm-email-item-list__empty" data-tm-item-list-empty="true">@Loc["EmailEditor_ItemList_Empty"]</p>
+    }
+
+    @for (var i = 0; i < Count; i++)
+    {
+        var index = i;
+        var item = ItemAt(index);
+        if (item is null) continue;
+        var name = ItemName(item, index);
+        <div class="tm-email-item-list__item" data-tm-item>
+            <div class="tm-email-item-list__actions">
+                <button type="button" class="tm-email-item-list__action" data-tm-item-up="true"
+                        data-tm-item-index="@index"
+                        aria-label="@Loc["EmailEditor_ItemList_MoveUp", name]"
+                        title="@Loc["EmailEditor_ItemList_MoveUp", name]"
+                        disabled="@(ReadOnly || index == 0)" @onclick="() => MoveAsync(index, -1)">
+                    <TmIcon Name="chevron-up" Size="IconSize.Xs" />
+                </button>
+                <button type="button" class="tm-email-item-list__action" data-tm-item-down="true"
+                        data-tm-item-index="@index"
+                        aria-label="@Loc["EmailEditor_ItemList_MoveDown", name]"
+                        title="@Loc["EmailEditor_ItemList_MoveDown", name]"
+                        disabled="@(ReadOnly || index >= Count - 1)" @onclick="() => MoveAsync(index, 1)">
+                    <TmIcon Name="chevron-down" Size="IconSize.Xs" />
+                </button>
+                <button type="button" class="tm-email-item-list__action" data-tm-item-edit="true"
+                        data-tm-item-index="@index"
+                        aria-label="@Loc["EmailEditor_ItemList_Edit", name]"
+                        title="@Loc["EmailEditor_ItemList_Edit", name]"
+                        disabled="@ReadOnly" @onclick="() => OpenAsync(index)">
+                    <TmIcon Name="edit" Size="IconSize.Xs" />
+                </button>
+                <button type="button" class="tm-email-item-list__action tm-email-item-list__action--danger"
+                        data-tm-item-remove="true" data-tm-item-index="@index"
+                        aria-label="@Loc["EmailEditor_ItemList_Remove", name]"
+                        title="@Loc["EmailEditor_ItemList_Remove", name]"
+                        disabled="@ReadOnly" @onclick="() => RemoveAsync(index)">
+                    <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                </button>
+            </div>
+            <div class="tm-email-item-list__preview" data-tm-item-preview="true">
+                @Preview(item)
+            </div>
+        </div>
+    }
+
+    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="plus" Disabled="@ReadOnly"
+              OnClick="AddAsync" data-tm-item-add="true">@Loc["EmailEditor_List_Add"]</TmButton>
+</div>
+
+<TmEmailItemDialog Show="_editing is not null" Title="@DialogTitle" Errors="_summaryErrors"
+                   ReadOnly="@ReadOnly" OnSave="SubmitAsync" OnCancel="Close">
+    <ChildContent>
+        @switch (_editing)
+        {
+            case EmailSocialElement social:
+                @SocialFields(social)
+                break;
+            case EmailNavbarLink link:
+                @NavbarFields(link)
+                break;
+            case EmailCarouselImage image:
+                @CarouselFields(image)
+                break;
+            case EmailAccordionItem accordionItem:
+                @AccordionFields(accordionItem)
+                break;
+        }
+    </ChildContent>
+    <PreviewContent>
+        @if (_editing is not null)
+        {
+            @Preview(_editing, large: true)
+        }
+    </PreviewContent>
+</TmEmailItemDialog>
+
+@code {
+    /// <summary>
+    /// The block whose items are listed. Supports the four item-bearing block types of the editor
+    /// (social, navbar, carousel, accordion); any other block renders an empty list.
+    /// </summary>
+    [Parameter, EditorRequired] public EmailBlockBase Block { get; set; } = default!;
+
+    /// <summary>Raised once after a save, a remove, a move or an add — one editor undo step each.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>
+    /// Renders the list read-only: the dialog's Save is disabled and every mutating action returns early, so
+    /// a synthetic click cannot change the document.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Optional host upload handler, offered by the carousel image dialog.</summary>
+    [Parameter] public Func<IBrowserFile, Task<string>>? OnImageUpload { get; set; }
+
+    /// <summary>
+    /// Client-side limits applied to a picked carousel image <b>before</b> <see cref="OnImageUpload"/> runs;
+    /// <see langword="null"/> uses the <see cref="ImageUploadOptions"/> defaults.
+    /// </summary>
+    [Parameter] public ImageUploadOptions? ImageUpload { get; set; }
+
+    private const string FocusModulePath = "./_content/Tempo.Blazor.EmailTemplates/tm-email-panel-focus.js";
+
+    private object? _editing;
+    private int _editingIndex = -1;
+    private bool _isNew;
+    private string? _uploadError;
+    private string _removedAnnouncement = string.Empty;
+
+    // ── Field-level validation state (review F9) ────────────────────────────────────────────
+    // One message per property, shown next to the field it belongs to (aria-describedby through
+    // TmTextInput.Error). A message appears only after the user touched that field or tried to save, so
+    // an untouched form is never pre-flagged. Failures without a property (a missing validator) go to the
+    // dialog's summary with role=alert.
+    private readonly Dictionary<string, string> _fieldErrors = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _touched = new(StringComparer.Ordinal);
+    private IReadOnlyList<string> _summaryErrors = Array.Empty<string>();
+    private bool _submitAttempted;
+    private string? _focusProperty;
+
+    // The text inputs whose invalid state may need the focus. One field per control, because a component
+    // reference can only be captured into a field; only one item type renders at a time.
+    private TmTextInput? _hrefField;
+    private TmTextInput? _labelField;
+    private TmTextInput? _srcField;
+    private TmTextInput? _altField;
+    private TmTextInput? _textField;
+    private TmTextInput? _titleField;
+    private ElementReference _rootRef;
+    private IJSObjectReference? _focusModule;
+
+    private static readonly HashSet<string> FieldProperties = new(StringComparer.Ordinal)
+    {
+        "Name", "Label", "Href", "Src", "Alt", "Text", "Title", "Target", "Color",
+        "BackgroundColor", "TitleColor", "Content",
+    };
+
+    // ── The items of the supported block types ──────────────────────────────────────────────
+
+    /// <summary>The number of items of the block (0 for a block this list does not edit).</summary>
+    private int Count => Block switch
+    {
+        EmailSocialBlock social => social.Elements.Count,
+        EmailNavbarBlock navbar => navbar.Links.Count,
+        EmailCarouselBlock carousel => carousel.Images.Count,
+        EmailAccordionBlock accordion => accordion.Items.Count,
+        _ => 0,
+    };
+
+    private object? ItemAt(int index) => Block switch
+    {
+        EmailSocialBlock social when index >= 0 && index < social.Elements.Count => social.Elements[index],
+        EmailNavbarBlock navbar when index >= 0 && index < navbar.Links.Count => navbar.Links[index],
+        EmailCarouselBlock carousel when index >= 0 && index < carousel.Images.Count => carousel.Images[index],
+        EmailAccordionBlock accordion when index >= 0 && index < accordion.Items.Count => accordion.Items[index],
+        _ => null,
+    };
+
+    private void Replace(int index, object item)
+    {
+        switch (Block)
+        {
+            case EmailSocialBlock social when item is EmailSocialElement element:
+                social.Elements[index] = element;
+                break;
+            case EmailNavbarBlock navbar when item is EmailNavbarLink link:
+                navbar.Links[index] = link;
+                break;
+            case EmailCarouselBlock carousel when item is EmailCarouselImage image:
+                carousel.Images[index] = image;
+                break;
+            case EmailAccordionBlock accordion when item is EmailAccordionItem accordionItem:
+                accordion.Items[index] = accordionItem;
+                break;
+        }
+    }
+
+    private void Insert(int index, object item)
+    {
+        switch (Block)
+        {
+            case EmailSocialBlock social when item is EmailSocialElement element:
+                social.Elements.Insert(index, element);
+                break;
+            case EmailNavbarBlock navbar when item is EmailNavbarLink link:
+                navbar.Links.Insert(index, link);
+                break;
+            case EmailCarouselBlock carousel when item is EmailCarouselImage image:
+                carousel.Images.Insert(index, image);
+                break;
+            case EmailAccordionBlock accordion when item is EmailAccordionItem accordionItem:
+                accordion.Items.Insert(index, accordionItem);
+                break;
+        }
+    }
+
+    private void RemoveAt(int index)
+    {
+        switch (Block)
+        {
+            case EmailSocialBlock social: social.Elements.RemoveAt(index); break;
+            case EmailNavbarBlock navbar: navbar.Links.RemoveAt(index); break;
+            case EmailCarouselBlock carousel: carousel.Images.RemoveAt(index); break;
+            case EmailAccordionBlock accordion: accordion.Items.RemoveAt(index); break;
+        }
+    }
+
+    /// <summary>The localized title of the dialog for the block whose items are listed.</summary>
+    private string DialogTitle => Block switch
+    {
+        EmailSocialBlock => Loc["EmailEditor_Item_Title_Social"],
+        EmailNavbarBlock => Loc["EmailEditor_Item_Title_Navbar"],
+        EmailCarouselBlock => Loc["EmailEditor_Item_Title_Carousel"],
+        EmailAccordionBlock => Loc["EmailEditor_Item_Title_Accordion"],
+        _ => Loc["EmailEditor_Item_Title"],
+    };
+
+    /// <summary>
+    /// The name of the item inside an action's accessible name. A nameless item falls back to its position
+    /// ("Item 3"), so every row action is distinguishable in a screen reader's control list.
+    /// </summary>
+    private string ItemName(object item, int index)
+    {
+        var text = item switch
+        {
+            EmailSocialElement social => social.Label ?? social.Name,
+            EmailNavbarLink link => link.Text,
+            EmailCarouselImage image => image.Alt,
+            EmailAccordionItem accordion => accordion.Title,
+            _ => null,
+        };
+
+        return string.IsNullOrWhiteSpace(text)
+            ? Loc["EmailEditor_ItemList_Unnamed", index + 1]
+            : text.Trim();
+    }
+
+    // ── List actions ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Opens the dialog for a NEW item. The item exists only as the dialog's copy until Save, so Cancel
+    /// leaves the document — and the editor's undo history — untouched (review F9).
+    /// </summary>
+    private Task AddAsync()
+    {
+        if (ReadOnly) return Task.CompletedTask;
+        ResetValidation();
+        _editingIndex = -1;
+        _isNew = true;
+        _editing = CreateItem();
+        _uploadError = null;
+        Revalidate();
+        return Task.CompletedTask;
+    }
+
+    private object CreateItem() => Block switch
+    {
+        EmailSocialBlock => new EmailSocialElement { Name = "facebook", Target = "_blank" },
+        EmailNavbarBlock => new EmailNavbarLink(),
+        EmailCarouselBlock => new EmailCarouselImage(),
+        EmailAccordionBlock => new EmailAccordionItem(),
+        _ => new object(),
+    };
+
+    private async Task RemoveAsync(int index)
+    {
+        if (ReadOnly) return;
+        if (index < 0 || index >= Count) return;
+        RemoveAt(index);
+        _removedAnnouncement = Loc["EmailEditor_Item_Removed"];
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task MoveAsync(int index, int direction)
+    {
+        if (ReadOnly) return;
+        var target = index + direction;
+        if (index < 0 || target < 0 || target >= Count) return;
+
+        var item = ItemAt(index);
+        var other = ItemAt(target);
+        if (item is null || other is null) return;
+        Replace(index, other);
+        Replace(target, item);
+        await OnChanged.InvokeAsync();
+        // The focus follows the moved item: the same action button of the item is focused again, so a
+        // keyboard user who pressed "down" three times stays on the row they are moving (review F9).
+        await FocusMovedActionAsync(target, direction);
+    }
+
+    // ── The copy in the dialog ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Opens the dialog for item <paramref name="index"/> over an independent COPY of the item. The
+    /// rich-text content of an accordion item is sanitized on the way IN as well, so the editor — which
+    /// hands its value to <c>innerHTML</c> in JS — never receives markup the import or a JSON payload
+    /// planted (stored XSS, review F9).
+    /// </summary>
+    private Task OpenAsync(int index)
+    {
+        if (ReadOnly) return Task.CompletedTask;
+        var item = ItemAt(index);
+        if (item is null) return Task.CompletedTask;
+
+        ResetValidation();
+        _editingIndex = index;
+        _isNew = false;
+        _editing = Clone(item);
+        if (_editing is EmailAccordionItem accordionItem)
+        {
+            accordionItem.Content = SanitizeOrEmpty(accordionItem.Content);
+        }
+
+        _uploadError = null;
+        Revalidate();
+        return Task.CompletedTask;
+    }
+
+    private void Close()
+    {
+        _editing = null;
+        _editingIndex = -1;
+        _isNew = false;
+        _uploadError = null;
+        ResetValidation();
+    }
+
+    private void ResetValidation()
+    {
+        _fieldErrors.Clear();
+        _touched.Clear();
+        _summaryErrors = Array.Empty<string>();
+        _submitAttempted = false;
+        _focusProperty = null;
+    }
+
+    /// <summary>
+    /// The rich-text content of the copy, sanitized by the pipeline's own sanitizer. FAIL-CLOSED: with no
+    /// <see cref="IHtmlContentSanitizer"/> registered the content becomes empty — never the raw value,
+    /// because the raw value is exactly what would reach <c>innerHTML</c>.
+    /// </summary>
+    private string SanitizeOrEmpty(string? content)
+    {
+        var sanitizer = Services.GetService(typeof(IHtmlContentSanitizer)) as IHtmlContentSanitizer;
+        return sanitizer?.SanitizeTemplateContent(content ?? string.Empty) ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Validates the copy and applies it. An invalid form is not applied: the messages appear at their
+    /// fields and the focus moves to the first invalid one (review F9).
+    /// </summary>
+    private async Task SubmitAsync()
+    {
+        if (ReadOnly || _editing is null) return;
+        if (!_isNew && _editingIndex < 0) return;
+
+        _submitAttempted = true;
+        Revalidate();
+        if (_fieldErrors.Count > 0 || _summaryErrors.Count > 0)
+        {
+            _focusProperty = FirstInvalidField();
+            StateHasChanged();
+            return;
+        }
+
+        // Defence in depth: the copy was sanitized when it was opened, but the rich editor writes into it
+        // afterwards, so the value that lands in the document is sanitized once more.
+        if (_editing is EmailAccordionItem accordionItem)
+        {
+            accordionItem.Content = SanitizeOrEmpty(accordionItem.Content);
+        }
+
+        if (_isNew)
+        {
+            Insert(Count, _editing);
+        }
+        else
+        {
+            Replace(_editingIndex, _editing);
+        }
+
+        Close();
+        await OnChanged.InvokeAsync();
+    }
+
+    private static object Clone(object item) => item switch
+    {
+        EmailSocialElement social => new EmailSocialElement
+        {
+            Name = social.Name,
+            Href = social.Href,
+            Src = social.Src,
+            Alt = social.Alt,
+            Target = social.Target,
+            Label = social.Label,
+            BackgroundColor = social.BackgroundColor,
+        },
+        EmailNavbarLink link => new EmailNavbarLink
+        {
+            Text = link.Text,
+            Href = link.Href,
+            Rel = link.Rel,
+            Target = link.Target,
+            Color = link.Color,
+            FontFamily = link.FontFamily,
+            FontSize = link.FontSize,
+            FontWeight = link.FontWeight,
+            LineHeight = link.LineHeight,
+            TextDecoration = link.TextDecoration,
+            TextTransform = link.TextTransform,
+            Padding = link.Padding,
+        },
+        EmailCarouselImage image => new EmailCarouselImage
+        {
+            Src = image.Src,
+            Alt = image.Alt,
+            Href = image.Href,
+            Rel = image.Rel,
+            Target = image.Target,
+            Title = image.Title,
+            ThumbnailsSrc = image.ThumbnailsSrc,
+        },
+        EmailAccordionItem accordion => new EmailAccordionItem
+        {
+            Title = accordion.Title,
+            Content = accordion.Content,
+            BackgroundColor = accordion.BackgroundColor,
+            TitleColor = accordion.TitleColor,
+        },
+        _ => item,
+    };
+
+    // ── Validation (FluentValidation through Tempo.Blazor.FluentValidation) ─────────────────
+
+    /// <summary>
+    /// Runs the registered <c>IValidator&lt;T&gt;</c> over the copy and splits its failures into the
+    /// per-field messages and the summary. A missing registration is a hard failure of the form, not a
+    /// silent pass: the dialog then cannot save, because a skipped URL/colour check is exactly how a value
+    /// the pipeline would drop gets stored.
+    /// </summary>
+    private void Revalidate()
+    {
+        _fieldErrors.Clear();
+        _summaryErrors = Array.Empty<string>();
+        if (_editing is null) return;
+
+        var validatorType = typeof(global::FluentValidation.IValidator<>).MakeGenericType(_editing.GetType());
+        var validator = Services.GetService(validatorType) as global::FluentValidation.IValidator;
+        if (validator is null)
+        {
+            _summaryErrors = new[] { Loc[EmailItemValidationKeys.ValidatorMissing, _editing.GetType().Name] };
+            return;
+        }
+
+        var result = validator.Validate(new global::FluentValidation.ValidationContext<object>(_editing));
+        var summary = new List<string>();
+        foreach (var failure in result.Errors)
+        {
+            if (!string.IsNullOrEmpty(failure.PropertyName) && FieldProperties.Contains(failure.PropertyName))
+            {
+                // Several rules may reject the same property; the first message is the one the field shows.
+                _fieldErrors.TryAdd(failure.PropertyName, failure.ErrorMessage);
+            }
+            else
+            {
+                summary.Add(failure.ErrorMessage);
+            }
+        }
+
+        _summaryErrors = summary.Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// The message of one field, or <see langword="null"/> while it must stay silent: a form is never
+    /// pre-flagged, so a message appears after the field was edited or after a save was attempted.
+    /// </summary>
+    private string? FieldError(string property)
+        => (_submitAttempted || _touched.Contains(property)) && _fieldErrors.TryGetValue(property, out var message)
+            ? message
+            : null;
+
+    private void Edited(string property)
+    {
+        _touched.Add(property);
+        Revalidate();
+    }
+
+    private string? FirstInvalidField()
+    {
+        foreach (var property in FieldProperties)
+        {
+            if (_fieldErrors.ContainsKey(property) && FieldComponent(property) is not null) return property;
+        }
+
+        return null;
+    }
+
+    private TmTextInput? FieldComponent(string property) => property switch
+    {
+        "Href" => _hrefField,
+        "Label" => _labelField,
+        "Src" => _srcField,
+        "Alt" => _altField,
+        "Text" => _textField,
+        "Title" => _titleField,
+        _ => null,
+    };
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusProperty is null) return;
+        var target = FieldComponent(_focusProperty);
+        _focusProperty = null;
+        if (target is null) return;
+
+        try
+        {
+            await target.FocusAsync();
+        }
+        catch (JSException)
+        {
+            // No interop (prerendering, a test without a JS runtime): the message is still shown and
+            // described, only the focus move is lost.
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Focuses the action of the item that was just moved, so a keyboard user keeps operating the row they
+    /// moved. Implemented with the package's focus helper (the button is rendered inside a loop, so no
+    /// component reference can address it).
+    /// </summary>
+    private async Task FocusMovedActionAsync(int index, int direction)
+    {
+        var attribute = direction < 0 ? "data-tm-item-up" : "data-tm-item-down";
+        try
+        {
+            _focusModule ??= await JS.InvokeAsync<IJSObjectReference>("import", FocusModulePath);
+            await _focusModule.InvokeVoidAsync(
+                "focusBySelector", _rootRef, $"[{attribute}][data-tm-item-index='{index}']");
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    // ── Preview ─────────────────────────────────────────────────────────────────────────────
+
+    private RenderFragment Preview(object item, bool large = false) => builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", large
+            ? "tm-email-item-list__preview-text tm-email-item-list__preview-text--large"
+            : "tm-email-item-list__preview-text");
+
+        var (glyph, text, detail) = item switch
+        {
+            EmailSocialElement social => ("share", social.Label ?? social.Name ?? string.Empty, social.Href),
+            EmailNavbarLink link => ("link", link.Text, link.Href),
+            EmailCarouselImage image => ("image", image.Alt, image.Src),
+            EmailAccordionItem accordion => ("chevron-down", accordion.Title, null),
+            _ => ("square", string.Empty, null),
+        };
+
+        builder.OpenComponent<TmIcon>(2);
+        builder.AddComponentParameter(3, nameof(TmIcon.Name), glyph);
+        builder.AddComponentParameter(4, nameof(TmIcon.Size), large ? IconSize.Md : IconSize.Sm);
+        builder.CloseComponent();
+
+        builder.OpenElement(5, "span");
+        builder.AddAttribute(6, "class", "tm-email-item-list__preview-title");
+        builder.AddContent(7, text);
+        builder.CloseElement();
+
+        if (!string.IsNullOrEmpty(detail))
+        {
+            builder.OpenElement(8, "span");
+            builder.AddAttribute(9, "class", "tm-email-item-list__preview-detail");
+            builder.AddContent(10, detail);
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+
+    // ── Field editors per item type ─────────────────────────────────────────────────────────
+
+    private IReadOnlyList<SelectOption<string>> NetworkOptions
+    {
+        get
+        {
+            var options = new List<SelectOption<string>>
+            {
+                new(string.Empty, Loc["EmailEditor_Item_Network_Custom"]),
+            };
+            foreach (var name in EmailSocialNetworks.Supported)
+            {
+                options.Add(new(name, Loc[$"EmailEditor_Item_Network_{name}"]));
+            }
+
+            return options;
+        }
+    }
+
+    private IReadOnlyList<SelectOption<string>> TargetOptions => new List<SelectOption<string>>
+    {
+        new("_blank", Loc["EmailEditor_Item_Target_Blank"]),
+        new("_self", Loc["EmailEditor_Item_Target_Self"]),
+    };
+
+    private RenderFragment SocialFields(EmailSocialElement social) => @<text>
+        <div class="tm-email-item-list__field" data-tm-item-field="Name">
+            <TmSelect TValue="string" Label="@Loc["EmailEditor_Item_Field_Network"]"
+                      Options="NetworkOptions" Value="@(social.Name ?? string.Empty)"
+                      Disabled="@ReadOnly" ValueChanged="@(value => { social.Name = value; Edited("Name"); })" />
+            @FieldErrorText("Name")
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Label">
+            <TmTextInput @ref="_labelField" Label="@Loc["EmailEditor_Item_Field_Label"]"
+                         Value="@(social.Label ?? string.Empty)" Disabled="@ReadOnly"
+                         Error="@FieldError("Label")"
+                         ValueChanged="@(value => { social.Label = value; Edited("Label"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Href">
+            <TmTextInput @ref="_hrefField" Label="@Loc["EmailEditor_Item_Field_Href"]"
+                         Value="@(social.Href ?? string.Empty)" Disabled="@ReadOnly"
+                         Error="@FieldError("Href")"
+                         ValueChanged="@(value => { social.Href = value; Edited("Href"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Src">
+            <TmTextInput @ref="_srcField" Label="@Loc["EmailEditor_Item_Field_IconUrl"]"
+                         Value="@(social.Src ?? string.Empty)" Disabled="@ReadOnly"
+                         Error="@FieldError("Src")"
+                         ValueChanged="@(value => { social.Src = value; Edited("Src"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="BackgroundColor">
+            <span class="tm-email-item-list__label">@Loc["EmailEditor_Item_Field_BackgroundColor"]</span>
+            <TmColorPicker Value="@(social.BackgroundColor ?? string.Empty)" ShowAlpha="false"
+                           Format="ColorFormat.Hex" ShowClearButton="true" Disabled="@ReadOnly"
+                           ValueChanged="@(value => { social.BackgroundColor = value; Edited("BackgroundColor"); })" />
+            @FieldErrorText("BackgroundColor")
+        </div>
+    </text>;
+
+    private RenderFragment NavbarFields(EmailNavbarLink link) => @<text>
+        <div class="tm-email-item-list__field" data-tm-item-field="Text">
+            <TmTextInput @ref="_textField" Label="@Loc["EmailEditor_Item_Field_Text"]" Value="@link.Text"
+                         Disabled="@ReadOnly" Error="@FieldError("Text")"
+                         ValueChanged="@(value => { link.Text = value; Edited("Text"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Href">
+            <TmTextInput @ref="_hrefField" Label="@Loc["EmailEditor_Item_Field_Href"]"
+                         Value="@(link.Href ?? string.Empty)" Disabled="@ReadOnly"
+                         Error="@FieldError("Href")"
+                         ValueChanged="@(value => { link.Href = value; Edited("Href"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Target">
+            <TmSelect TValue="string" Label="@Loc["EmailEditor_Item_Field_Target"]"
+                      Options="TargetOptions" Value="@link.Target" Disabled="@ReadOnly"
+                      ValueChanged="@(value => { link.Target = value ?? "_blank"; Edited("Target"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Color">
+            <span class="tm-email-item-list__label">@Loc["EmailEditor_Item_Field_Color"]</span>
+            <TmColorPicker Value="@link.Color" ShowAlpha="false" Format="ColorFormat.Hex"
+                           Disabled="@ReadOnly"
+                           ValueChanged="@(value => { link.Color = value ?? string.Empty; Edited("Color"); })" />
+            @FieldErrorText("Color")
+        </div>
+    </text>;
+
+    private RenderFragment CarouselFields(EmailCarouselImage image) => @<text>
+        <div class="tm-email-item-list__field" data-tm-item-field="Src">
+            <TmTextInput @ref="_srcField" Label="@Loc["EmailEditor_Item_Field_ImageUrl"]" Value="@image.Src"
+                         Disabled="@ReadOnly" Error="@FieldError("Src")"
+                         ValueChanged="@(value => { image.Src = value; Edited("Src"); })" />
+        </div>
+        @if (OnImageUpload is not null && !ReadOnly)
+        {
+            <div class="tm-email-item-list__field" data-tm-item-upload>
+                @if (_uploadError is not null)
+                {
+                    <TmAlert Severity="AlertSeverity.Error" data-tm-item-upload-error="true">@_uploadError</TmAlert>
+                }
+                <TmFileDropZone Accept="@EffectiveImageUpload.Accept"
+                                InputAriaLabel="@Loc["EmailEditor_Item_Field_ImageUrl"]"
+                                InputTestId="tm-item-image-upload"
+                                OnFilesSelected="e => UploadAsync(image, e)" />
+            </div>
+        }
+        <div class="tm-email-item-list__field" data-tm-item-field="Alt">
+            <TmTextInput @ref="_altField" Label="@Loc["EmailEditor_Item_Field_Alt"]" Value="@image.Alt"
+                         Disabled="@ReadOnly" Error="@FieldError("Alt")"
+                         ValueChanged="@(value => { image.Alt = value; Edited("Alt"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Href">
+            <TmTextInput @ref="_hrefField" Label="@Loc["EmailEditor_Item_Field_Href"]"
+                         Value="@(image.Href ?? string.Empty)" Disabled="@ReadOnly"
+                         Error="@FieldError("Href")"
+                         ValueChanged="@(value => { image.Href = value; Edited("Href"); })" />
+        </div>
+    </text>;
+
+    private RenderFragment AccordionFields(EmailAccordionItem item) => @<text>
+        <div class="tm-email-item-list__field" data-tm-item-field="Title">
+            <TmTextInput @ref="_titleField" Label="@Loc["EmailEditor_Item_Field_Title"]" Value="@item.Title"
+                         Disabled="@ReadOnly" Error="@FieldError("Title")"
+                         ValueChanged="@(value => { item.Title = value; Edited("Title"); })" />
+        </div>
+        <div class="tm-email-item-list__field" data-tm-item-field="Content">
+            <span class="tm-email-item-list__label">@Loc["EmailEditor_Item_Field_Content"]</span>
+            <TmRichEditorSimple Value="@item.Content" IsDisabled="@ReadOnly"
+                                ValueChanged="@(value => { item.Content = value; Edited("Content"); })" />
+            <p class="tm-email-item-list__hint">@Loc["EmailEditor_Item_Content_Sanitized"]</p>
+        </div>
+    </text>;
+
+    /// <summary>
+    /// The message of a field whose control cannot show one itself (a select or a colour picker). A text
+    /// input renders its own error through <see cref="TmTextInput.Error"/> and its <c>aria-describedby</c>.
+    /// </summary>
+    private RenderFragment? FieldErrorText(string property)
+        => FieldError(property) is { } message
+            ? @<p class="tm-email-item-list__error" data-tm-item-field-error="@property">@message</p>
+            : null;
+
+    private ImageUploadOptions EffectiveImageUpload => ImageUpload ?? new ImageUploadOptions();
+
+    /// <summary>
+    /// Validates the picked file against <see cref="ImageUploadOptions"/> before the host sees it and writes
+    /// the returned URL into the copy — the same contract as the inspector's image upload (Fáze 7).
+    /// </summary>
+    private async Task UploadAsync(EmailCarouselImage image, InputFileChangeEventArgs e)
+    {
+        if (ReadOnly || OnImageUpload is null || e.File is null) return;
+
+        _uploadError = null;
+        var file = e.File;
+        var options = EffectiveImageUpload;
+
+        if (!ImageUploadValidation.IsAcceptedType(file.ContentType, options.Accept))
+        {
+            _uploadError = Loc["EmailEditor_Image_Upload_TypeNotAllowed", options.Accept];
+            StateHasChanged();
+            return;
+        }
+
+        if (file.Size > options.MaxBytes)
+        {
+            _uploadError = Loc["EmailEditor_Image_Upload_TooLarge", ImageUploadValidation.FormatBytes(options.MaxBytes)];
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var url = await OnImageUpload(file);
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                _uploadError = Loc["EmailEditor_Image_Upload_EmptyUrl"];
+                StateHasChanged();
+                return;
+            }
+
+            image.Src = url;
+            _touched.Add("Src");
+            Revalidate();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            var logger = Services.GetService(typeof(ILogger<TmEmailItemList>)) as ILogger<TmEmailItemList>;
+            logger?.LogError(ex, "The host's image upload handler failed; the item keeps its previous source.");
+            _uploadError = Loc["EmailEditor_Image_Upload_Failed"];
+            StateHasChanged();
+        }
+    }
+}

@@ -55,6 +55,13 @@
       "description": "Renders the inspector read-only: every control inside the panel is disabled natively and the upload affordance is hidden, so no property change can reach the document."
     },
     {
+      "name": "ItemEditingMode",
+      "type": "EmailItemEditingMode",
+      "isRequired": false,
+      "default": "EmailItemEditingMode.Inline",
+      "description": "How the items of a social / navbar / carousel / accordion block are edited: Inline (default) renders every field in the inspector, Dialog renders a compact list whose Edit action opens a modal editor over a copy of the item."
+    },
+    {
       "name": "SelectedId",
       "type": "Guid?",
       "isRequired": false,

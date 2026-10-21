@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "How the items of a block (social, navbar, carousel, accordion) are edited (§3.9). Inline is the default and keeps every field in the inspector; Dialog shows a compact list whose Edit action opens a modal editor over a copy of the item, so the document changes in one action and one undo step.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemEditingMode.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Inline",
+      "kind": "Field",
+      "type": "EmailItemEditingMode",
+      "description": "Every field of every item is rendered inline in the inspector (default, the 2.9.x behaviour)."
+    },
+    {
+      "name": "Dialog",
+      "kind": "Field",
+      "type": "EmailItemEditingMode",
+      "description": "A compact list (preview + edit / remove / move) with a modal editor over a copy of the item."
+    }
+  ],
+  "itemName": "EmailItemEditingMode"
+}

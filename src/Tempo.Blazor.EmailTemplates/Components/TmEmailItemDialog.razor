@@ -1,0 +1,95 @@
+@namespace Tempo.Blazor.EmailTemplates.Components
+@using Tempo.Blazor.Abstractions.Layout
+
+@* The dialog shell of the item / table-cell editors (Fáze 9): ONE core TmModal (which the base F2 turns
+   into a bottom sheet with a sticky footer on a phone — the editor never ships a second sheet), a body
+   with the type-specific fields, the localized validation messages and the live preview of the item, and
+   the Cancel / Save footer. The COPY is owned by the caller: nothing here touches the document. *@
+<TmModal Show="Show" Title="@Title" Size="ModalSize.Large" MobilePresentation="MobilePresentation.Auto"
+         ShowDefaultFooterButtons="false" CloseOnOverlayClick="true" CloseOnEscape="true"
+         OnClose="OnCancelAsync" data-tm-item-dialog="true">
+    <ChildContent>
+    <div class="tm-email-item-dialog" data-tm-item-dialog-body>
+        <div class="tm-email-item-dialog__fields">
+            @ChildContent
+        </div>
+
+        @* Only failures that belong to NO field live here (a missing validator, a table-level rule): a
+           field's own message is rendered next to that field and described by it (aria-describedby), so a
+           role=alert summary would announce the same text twice (review F9). *@
+        @if (Errors.Count > 0)
+        {
+            <ul class="tm-email-item-dialog__errors" data-tm-item-dialog-errors role="alert">
+                @foreach (var error in Errors)
+                {
+                    <li data-tm-item-dialog-error="true">
+                        <TmIcon Name="alert-circle" Size="IconSize.Xs" />
+                        <span>@error</span>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (PreviewContent is not null)
+        {
+            <div class="tm-email-item-dialog__preview" data-tm-item-preview="true">
+                <header class="tm-email-item-dialog__preview-title">@Loc["EmailEditor_Item_Preview"]</header>
+                @PreviewContent
+            </div>
+        }
+    </div>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="OnCancelAsync" data-tm-item-dialog-cancel="true">
+            @Loc["EmailEditor_Action_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary" Disabled="@(!CanSave)" OnClick="OnSaveAsync"
+                  data-tm-item-dialog-save="true">
+            @Loc["EmailEditor_Action_Save"]
+        </TmButton>
+    </Footer>
+</TmModal>
+
+@code {
+    /// <summary>Whether the dialog is shown.</summary>
+    [Parameter] public bool Show { get; set; }
+
+    /// <summary>The localized dialog title.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>The type-specific fields, bound to the caller's copy.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The live preview of the edited copy (optional).</summary>
+    [Parameter] public RenderFragment? PreviewContent { get; set; }
+
+    /// <summary>
+    /// The localized validation messages that belong to no single field (a missing validator, a table-level
+    /// rule), rendered as one <c>role="alert"</c> summary. A field's own message is shown next to the field
+    /// by the caller, described through the control's <c>aria-describedby</c>.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> Errors { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Raised when the user saves. The button stays ENABLED even for an invalid form: the caller validates,
+    /// shows the messages at their fields and moves the focus to the first invalid one, because a disabled
+    /// button never explains what is wrong (review F9).
+    /// </summary>
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    /// <summary>Raised on Cancel, Escape and an overlay click — the copy is thrown away.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>Whether the copy may be applied: a valid form and a single, non-read-only action.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    private bool CanSave => !ReadOnly;
+
+    private async Task OnSaveAsync()
+    {
+        if (!CanSave) return;
+        await OnSave.InvokeAsync();
+    }
+
+    private Task OnCancelAsync() => OnCancel.InvokeAsync();
+}

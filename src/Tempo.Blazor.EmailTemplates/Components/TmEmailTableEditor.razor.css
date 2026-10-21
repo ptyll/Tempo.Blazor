@@ -1,0 +1,194 @@
+/* Fáze 9 — the inline table grid. Design tokens only (Fáze 7A DoD guard): no literal colour and no
+   token fallback, so a theme change reaches every part of the editor.
+
+   The grid lives in a horizontal scroll container and its CONTROL column is pinned with
+   position: sticky — a table with six columns must be editable inside a 200 px inspector column
+   without the row toggle and the trash scrolling away. */
+
+.tm-email-table-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    min-inline-size: 0;
+}
+
+.tm-email-table-editor__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-table-editor__section-title {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-email-table-editor__empty {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-email-table-editor__scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    max-inline-size: 100%;
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+}
+
+.tm-email-table-editor__grid {
+    border-collapse: separate;
+    border-spacing: 0;
+    /* Never squeeze the columns into unreadable 20 px slivers: the container scrolls instead. */
+    min-inline-size: max-content;
+    inline-size: 100%;
+}
+
+/* The caption is screen-reader only (`.tm-sr-only` from the core base.css): the section header above the
+   grid already names it visually. */
+
+.tm-email-table-editor__rowctl {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    padding: var(--tm-space-1);
+    background: var(--tm-color-surface);
+    border-inline-end: 1px solid var(--tm-color-border);
+    text-align: start;
+    vertical-align: top;
+    font-weight: var(--tm-font-weight-normal);
+}
+
+/* A table cell keeps display: table-cell (a flex cell collapses the whole grid), so the stack lives in
+   an inner block. The pinned column is compact: row number, header toggle and trash sit on ONE wrapping
+   line, which keeps the sticky column narrow enough to leave the grid usable on a phone (review F9). */
+.tm-email-table-editor__rowstack {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    /* The sticky column must stay narrow: the toggle and the trash are both --tm-touch-target (44 px) on a
+       coarse pointer, so a one-line stack would be ~100 px wide and eat the cell columns. The cap forces the
+       trash onto a second line and keeps the whole column under 96 px (review F9, E2E F9_6). */
+    max-inline-size: 4.5rem;
+}
+
+.tm-email-table-editor__rowlabel {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+.tm-email-table-editor__cell {
+    padding: var(--tm-space-2);
+    vertical-align: top;
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+    background: var(--tm-color-surface);
+    min-inline-size: 9rem;
+}
+
+.tm-email-table-editor__cellstack {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 7rem;
+}
+
+.tm-email-table-editor__cell:last-child {
+    border-inline-end: 0;
+}
+
+/* The header row is visually distinct — the same distinction the message gets. */
+.tm-email-table-editor__grid tr.tm-email-table-editor__row--header .tm-email-table-editor__cell,
+.tm-email-table-editor__grid tr.tm-email-table-editor__row--header .tm-email-table-editor__rowctl {
+    background: var(--tm-color-surface-secondary);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-email-table-editor__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* Icon-only controls: at least 32 px so the target is clickable, 44 px on a coarse pointer. */
+    min-inline-size: 2rem;
+    min-block-size: 2rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-email-table-editor__icon-btn:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+.tm-email-table-editor__icon-btn:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-email-table-editor__icon-btn:disabled {
+    color: var(--tm-text-disabled);
+    cursor: not-allowed;
+}
+
+/* The cell input gets a FIXED narrow width: an input's intrinsic (size=20) width plus the edit action would
+   be wider than the inspector column, so "Edit cell" would sit behind a horizontal scroll at the scroll
+   origin — the one action of a cell a user has to see (review F9). */
+.tm-email-table-editor__cellstack ::deep input {
+    inline-size: 7rem;
+    min-inline-size: 0;
+}
+
+.tm-email-table-editor__cell .tm-email-table-editor__icon-btn {
+    margin-inline-start: auto;
+}
+
+/* The destructive action is a danger colour, not the neutral secondary ink: it is the one action of the
+   grid that destroys content. `--tm-color-danger-strong` is not a token of the design system; the contrast
+   -checked danger TEXT token is (4.5:1 on the surface), so that is what the trash uses. */
+.tm-email-table-editor__rowctl .tm-email-table-editor__icon-btn[data-tm-table-row-remove] {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-email-table-editor__rowctl .tm-email-table-editor__icon-btn[data-tm-table-row-remove]:disabled {
+    color: var(--tm-text-disabled);
+}
+
+.tm-email-table-editor__actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-table-editor__actions ::deep .tm-btn {
+    inline-size: 100%;
+    justify-content: center;
+}
+
+@media (pointer: coarse) {
+    .tm-email-table-editor__icon-btn {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-email-table-editor__actions ::deep .tm-btn {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-email-table-editor__icon-btn {
+        transition: none;
+    }
+}

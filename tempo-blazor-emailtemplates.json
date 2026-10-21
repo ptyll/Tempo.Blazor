@@ -42,6 +42,42 @@
   },
   "items": [
     {
+      "itemName": "EmailAccordionItemValidator",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Validates an accordion item before the item dialog may apply it: the title is required and both colours must be on the colour allow-list. The content is sanitized with the pipeline's own sanitizer on save.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EmailAccordionItemValidator",
+          "kind": "Constructor",
+          "type": "EmailAccordionItemValidator",
+          "description": "Initializes the validator with the editor's localizer."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailCarouselImageValidator",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Validates a carousel image before the item dialog may apply it: the source and the alternative text are required, and the source and the link must be on the URL allow-list.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EmailCarouselImageValidator",
+          "kind": "Constructor",
+          "type": "EmailCarouselImageValidator",
+          "description": "Initializes the validator with the editor's localizer."
+        }
+      ]
+    },
+    {
       "itemName": "EmailInspectorState",
       "kind": "Class",
       "category": "Components",
@@ -130,6 +166,114 @@
       ]
     },
     {
+      "itemName": "EmailItemEditingMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "How the items of a block (social, navbar, carousel, accordion) are edited (§3.9). Inline is the default and keeps every field in the inspector; Dialog shows a compact list whose Edit action opens a modal editor over a copy of the item, so the document changes in one action and one undo step.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemEditingMode.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Inline",
+          "kind": "Field",
+          "type": "EmailItemEditingMode",
+          "description": "Every field of every item is rendered inline in the inspector (default, the 2.9.x behaviour)."
+        },
+        {
+          "name": "Dialog",
+          "kind": "Field",
+          "type": "EmailItemEditingMode",
+          "description": "A compact list (preview + edit / remove / move) with a modal editor over a copy of the item."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailItemValidationKeys",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "The localization keys of the item and table-cell dialog validation. They live in the package's own JSON table (TmEmailResources*.json), so the messages follow the editor's culture instead of a validator's English default.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "UrlScheme",
+          "kind": "Field",
+          "type": "string",
+          "description": "The value is a link outside the URL allow-list (§3.7a)."
+        },
+        {
+          "name": "TextRequired",
+          "kind": "Field",
+          "type": "string",
+          "description": "A required display text is missing."
+        },
+        {
+          "name": "HrefRequired",
+          "kind": "Field",
+          "type": "string",
+          "description": "A required link target is missing."
+        },
+        {
+          "name": "SrcRequired",
+          "kind": "Field",
+          "type": "string",
+          "description": "A required image or icon source is missing."
+        },
+        {
+          "name": "AltRequired",
+          "kind": "Field",
+          "type": "string",
+          "description": "A required alternative text is missing."
+        },
+        {
+          "name": "TitleRequired",
+          "kind": "Field",
+          "type": "string",
+          "description": "A required title is missing."
+        },
+        {
+          "name": "InvalidColor",
+          "kind": "Field",
+          "type": "string",
+          "description": "The background or text colour is outside the colour allow-list."
+        },
+        {
+          "name": "InvalidSpan",
+          "kind": "Field",
+          "type": "string",
+          "description": "A column or row span is not a number between 1 and 20."
+        },
+        {
+          "name": "ValidatorMissing",
+          "kind": "Field",
+          "type": "string",
+          "description": "No IValidator<T> is registered for the item, so the dialog refuses to save instead of skipping validation."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailNavbarLinkValidator",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Validates a navigation link before the item dialog may apply it: the text and the link target are required, the target must be on the URL allow-list and a colour must be on the colour allow-list.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EmailNavbarLinkValidator",
+          "kind": "Constructor",
+          "type": "EmailNavbarLinkValidator",
+          "description": "Initializes the validator with the editor's localizer."
+        }
+      ]
+    },
+    {
       "itemName": "EmailPreviewDevice",
       "kind": "Enum",
       "category": "Components",
@@ -201,6 +345,72 @@
               "type": "EmailTemplateDocument?"
             }
           ]
+        }
+      ]
+    },
+    {
+      "itemName": "EmailSocialElementValidator",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Validates a social element before the item dialog may apply it: the link and the icon URL must be on the URL allow-list, and a custom (non-MJML) network name requires an explicit icon URL.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EmailSocialElementValidator",
+          "kind": "Constructor",
+          "type": "EmailSocialElementValidator",
+          "description": "Initializes the validator with the editor's localizer."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailSocialNetworks",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "The mj-social-element network names the item dialog offers. A supported name carries MJML's own icon; any other choice is the custom network and then requires an explicit icon URL.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Supported",
+          "kind": "Field",
+          "type": "IReadOnlyList<string>",
+          "description": "The names offered by the network select, in the order the dialog shows them."
+        },
+        {
+          "name": "IsSupported",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Answers whether a name is a supported network (case-insensitive)."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailTableCellValidator",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Validates a table cell before the cell dialog may apply it: the link must be on the URL allow-list, the background colour on the colour allow-list, and the spans must be whole numbers between 1 and MaxSpan.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "MaxSpan",
+          "kind": "Field",
+          "type": "int",
+          "description": "The largest row or column span the dialog accepts."
+        },
+        {
+          "name": "EmailTableCellValidator",
+          "kind": "Constructor",
+          "type": "EmailTableCellValidator",
+          "description": "Initializes the validator with the editor's localizer."
         }
       ]
     },
@@ -395,6 +605,119 @@
       ]
     },
     {
+      "itemName": "TmEmailItemDialog",
+      "kind": "Component",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Dialog shell of the item and table-cell editors (Fáze 9): one core TmModal (a full-height bottom sheet with a sticky footer on a phone), the type-specific fields, the localized validation messages and a live preview of the item being edited.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailItemDialog.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.EmailTemplates.Components"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The type-specific fields, bound to the caller's copy."
+        },
+        {
+          "name": "Errors",
+          "type": "IReadOnlyList<string>",
+          "isRequired": false,
+          "default": "Array.Empty<string>()",
+          "description": "The localized validation messages; an invalid item cannot be saved."
+        },
+        {
+          "name": "OnCancel",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised on Cancel, Escape and an overlay click — the copy is thrown away."
+        },
+        {
+          "name": "OnSave",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the user saves the copy (only reachable while the form is valid)."
+        },
+        {
+          "name": "PreviewContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The live preview of the edited copy (optional)."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the dialog read-only: Save is disabled and the copy can never be applied.",
+          "default": "false"
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the dialog is shown.",
+          "default": "false"
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The localized dialog title."
+        }
+      ]
+    },
+    {
+      "itemName": "TmEmailItemList",
+      "kind": "Component",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Compact list of a block's items for EmailItemEditingMode.Dialog: one row per item with a preview and the move up / move down / edit / remove actions. Edit opens the modal editor over a copy of the item, so the document changes only on Save and always as a single change (one undo step).",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailItemList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.EmailTemplates.Components"
+      ],
+      "parameters": [
+        {
+          "name": "Block",
+          "type": "EmailBlockBase",
+          "isRequired": true,
+          "description": "The block whose items are listed: social, navbar, carousel or accordion.",
+          "editorRequired": true
+        },
+        {
+          "name": "ImageUpload",
+          "type": "ImageUploadOptions?",
+          "isRequired": false,
+          "description": "Client-side limits applied to a picked carousel image before OnImageUpload runs; null uses the ImageUploadOptions defaults."
+        },
+        {
+          "name": "OnChanged",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised once after a save, a remove, a move or an add — one editor undo step each."
+        },
+        {
+          "name": "OnImageUpload",
+          "type": "Func<IBrowserFile, Task<string>>?",
+          "isRequired": false,
+          "description": "Optional host upload handler, offered by the carousel image dialog."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the list read-only: the dialog's Save is disabled and every mutating action returns early.",
+          "default": "false"
+        }
+      ]
+    },
+    {
       "itemName": "TmEmailKeyValueEditor",
       "kind": "Component",
       "category": "Components",
@@ -573,6 +896,13 @@
           "description": "Client-side limits applied to a picked image before OnImageUpload runs; null uses the ImageUploadOptions defaults (5 MB, images only)."
         },
         {
+          "name": "ItemEditingMode",
+          "type": "EmailItemEditingMode",
+          "isRequired": false,
+          "default": "EmailItemEditingMode.Inline",
+          "description": "How the items of a social / navbar / carousel / accordion block are edited: Inline (default) renders every field in the inspector, Dialog renders a compact list whose Edit action opens a modal editor over a copy of the item."
+        },
+        {
           "name": "OnChanged",
           "type": "EventCallback",
           "isRequired": false,
@@ -619,11 +949,73 @@
       ]
     },
     {
+      "itemName": "TmEmailTableCellDialog",
+      "kind": "Component",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.EmailTemplates.Components",
+      "description": "Dialog editor of one table cell (Fáze 9): text, link, column and row span, alignment, background colour and the header flag of its row, with a mini preview of the whole table in which the edited cell is highlighted. Reachable from every cell of the inline table grid, in both item editing modes.",
+      "packageId": "Tempo.Blazor.EmailTemplates",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTableCellDialog.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.EmailTemplates.Components"
+      ],
+      "parameters": [
+        {
+          "name": "Block",
+          "type": "EmailTableBlock",
+          "isRequired": true,
+          "description": "The table whose cell is edited.",
+          "editorRequired": true
+        },
+        {
+          "name": "CellIndex",
+          "type": "int",
+          "isRequired": false,
+          "description": "The column of the edited cell.",
+          "default": "0"
+        },
+        {
+          "name": "OnCancel",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the user closes the dialog without applying the copy."
+        },
+        {
+          "name": "OnSave",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after the copy was applied to the table (one change, one undo step)."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the dialog read-only; Save is disabled and the copy can never be applied.",
+          "default": "false"
+        },
+        {
+          "name": "RowIndex",
+          "type": "int",
+          "isRequired": false,
+          "description": "The row of the edited cell.",
+          "default": "0"
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the dialog is shown.",
+          "default": "false"
+        }
+      ]
+    },
+    {
       "itemName": "TmEmailTableEditor",
       "kind": "Component",
       "category": "Components",
       "namespace": "Tempo.Blazor.EmailTemplates.Components",
-      "description": "Grid editor for a table block's cells. Lets the user edit each cell's text, mark rows as header rows, and add or remove rows and columns.",
+      "description": "Grid editor for a table block's cells. Lets the user edit each cell's text inline, mark rows (or just the first row) as header rows, and add or remove rows and columns. The grid lives in a horizontal scroll container with a pinned control column, labels every cell for assistive technology, and each cell opens the full cell dialog (text, link, spans, alignment, background).",
       "packageId": "Tempo.Blazor.EmailTemplates",
       "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTableEditor.razor",
       "documentationStatus": "merged",
@@ -792,6 +1184,13 @@
           "type": "EventCallback<bool>",
           "isRequired": false,
           "description": "Raised when IsDirty changes — only on a transition, never on initialization and never for an edit that keeps the document dirty."
+        },
+        {
+          "name": "ItemEditingMode",
+          "type": "EmailItemEditingMode",
+          "isRequired": false,
+          "default": "EmailItemEditingMode.Inline",
+          "description": "How the items of a social / navbar / carousel / accordion block are edited, forwarded to the inspector: Inline (default) keeps the 2.9.x behaviour, Dialog edits one item at a time in a modal over a copy, so the document changes in one undo step."
         },
         {
           "name": "LayoutMode",
@@ -1330,11 +1729,19 @@
   ],
   "assets": [
     {
+      "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/tm-email-panel-focus.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/tm-email-save-shortcut.js",
       "kind": "JavaScript"
     },
     {
       "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/tm-email-variable-insert.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/__tests__/tm-email-panel-focus.test.mjs",
       "kind": "JavaScript"
     },
     {
@@ -1347,11 +1754,11 @@
     }
   ],
   "summary": {
-    "itemCount": 32,
-    "manualItemCount": 32,
-    "generatedItemCount": 32,
+    "itemCount": 43,
+    "manualItemCount": 43,
+    "generatedItemCount": 43,
     "generatedOnlyItemCount": 0,
-    "componentCount": 15,
-    "publicApiTypeCount": 17
+    "componentCount": 18,
+    "publicApiTypeCount": 25
   }
 }

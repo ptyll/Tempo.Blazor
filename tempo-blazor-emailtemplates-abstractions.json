@@ -864,6 +864,12 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "BlockedTableLink",
+          "kind": "Field",
+          "type": "string",
+          "description": "A table cell's link used a scheme outside the URL allow-list (§3.7a). The value is kept in the model so the editor can show and fix it; every emission path (generator, text version, renderer) fail-closes it."
+        },
+        {
           "name": "ElementWrapped",
           "kind": "Field",
           "type": "string",
@@ -886,6 +892,12 @@
           "kind": "Field",
           "type": "string",
           "description": "The input is larger than MaxInputBytes (UTF-8 bytes)."
+        },
+        {
+          "name": "InvalidTableColor",
+          "kind": "Field",
+          "type": "string",
+          "description": "A table cell's bgcolor was outside the colour allow-list (EmailColorPolicy) and was dropped from the model, because no message this pipeline renders could carry it."
         },
         {
           "name": "NotMjml",
@@ -2997,10 +3009,22 @@
           "description": "Gets or sets the cell text alignment (align)."
         },
         {
+          "name": "BackgroundColor",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Gets or sets an optional cell background colour, emitted as the bgcolor attribute. Only a value on the colour allow-list (EmailColorPolicy) is written — an invalid value is dropped and reported as a warning, so a crafted string can never reach bgcolor or style."
+        },
+        {
           "name": "ColSpan",
           "kind": "Property",
           "type": "int?",
           "description": "Gets or sets the column span (colspan), when greater than one."
+        },
+        {
+          "name": "Href",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Gets or sets an optional link target of the whole cell (an <a href> around the text). The value is checked against the one URL allow-list of the pipeline (§3.7a, EmailUrlPolicy): a value outside the allow-list is replaced with # in the markup and reported as a warning, never emitted as written."
         },
         {
           "name": "RowSpan",
@@ -3685,6 +3709,30 @@
       ]
     },
     {
+      "itemName": "EmailColorPolicy",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "The colour allow-list of the model colours that reach the markup as an attribute (§3.7a): #rgb, #rrggbb and a named colour from a small fixed safe set. A value outside the list is dropped by the generator (with a warning), never sanitized into something else, because a CSS function or a quote would let a crafted string leave the attribute or fetch a remote resource.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailColorPolicy.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsAllowed",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Answers whether a colour may be written into the markup. Empty is not a colour: the caller omits the attribute instead.",
+          "parameters": [
+            {
+              "name": "color",
+              "type": "string?"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "EmailDocumentLimitsValidator",
       "kind": "Class",
       "category": "Rendering",
@@ -3851,6 +3899,48 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailPreviewStatus.cs",
       "documentationStatus": "merged",
       "members": []
+    },
+    {
+      "itemName": "EmailUrlPolicy",
+      "kind": "Class",
+      "category": "Rendering",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+      "description": "The public read-only view of the pipeline's single URL allow-list (§3.7a, D15), for a UI that has to explain a rejected link before it reaches the markup. The list cannot be extended by a host: http, https, mailto, tel, a relative path without an authority and a #fragment pass; every other scheme and every network/UNC path is refused.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailUrlPolicy.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BlockedUrlPlaceholder",
+          "kind": "Field",
+          "type": "string",
+          "description": "The value a refused URL is replaced with in the markup."
+        },
+        {
+          "name": "FindBlockedScheme",
+          "kind": "Method",
+          "type": "string?",
+          "description": "Returns the offending scheme (or the pseudo-scheme network-path) or null when the URL may be emitted.",
+          "parameters": [
+            {
+              "name": "url",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "IsAllowed",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Answers whether a URL may be emitted into the message.",
+          "parameters": [
+            {
+              "name": "url",
+              "type": "string?"
+            }
+          ]
+        }
+      ]
     },
     {
       "itemName": "HtmlSanitizerPolicy",
@@ -4167,6 +4257,12 @@
           "kind": "Field",
           "type": "string",
           "description": "Raw markup carried an event-handler attribute (on*) or srcdoc, which was removed because a variable inside it would run as script. The editor package carries the resource entry."
+        },
+        {
+          "name": "InvalidTableCellColor",
+          "kind": "Field",
+          "type": "string",
+          "description": "A table cell carried a background colour outside the colour allow-list (#rgb, #rrggbb or a named colour of EmailColorPolicy), so the bgcolor attribute was omitted instead of being written. Severity is Warning: the rest of the message renders normally. The editor package carries the resource entry."
         },
         {
           "name": "MarkupTooComplex",
@@ -4926,11 +5022,11 @@
     }
   ],
   "summary": {
-    "itemCount": 118,
-    "manualItemCount": 118,
-    "generatedItemCount": 118,
+    "itemCount": 120,
+    "manualItemCount": 120,
+    "generatedItemCount": 120,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 118
+    "publicApiTypeCount": 120
   }
 }

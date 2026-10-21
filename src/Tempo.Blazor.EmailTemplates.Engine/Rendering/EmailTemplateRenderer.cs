@@ -121,9 +121,18 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
                 ? Substitute(document.Preheader, model, options, TemplateEscapeMode.None, errors)
                 : document.Preheader;
 
-        // The MJML body is the HTML pass: every expression result is HTML-escaped.
-        var mjml = _generator.Generate(document);
+        // The MJML body is the HTML pass: every expression result is HTML-escaped. The generator reports
+        // the values it had to drop (a table cell colour outside the allow-list), because the markup guard
+        // cannot see a model colour at all.
+        var generatorDiagnostics = new List<RenderError>();
+        var mjml = _generator.Generate(document, MjmlGeneratorOptions.Default, generatorDiagnostics);
+        errors.AddRange(generatorDiagnostics);
+
         var auditor = new TemplateSecurityAuditor(mjml, _auditSinks, _timeProvider, _logger);
+
+        // A blocked table-cell link was already rewritten to '#' by the generator, so the guard below can
+        // no longer recognise its scheme: the model link is warned and audited here instead (§3.7a).
+        ReportModelLinkFindings(document, errors, reportedSchemes, auditor);
         var resolvedMjml = substituteVariables
             ? Substitute(mjml, model, options, TemplateEscapeMode.Html, errors)
             // No substitution: the token text is the only place markup could reach the export unchecked.
@@ -233,6 +242,32 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
         {
             errors.Add(MarkupGuard.FailureToError(ex));
             return (new MarkupGuardResult(string.Empty, [], [], []), true);
+        }
+    }
+
+    /// <summary>
+    /// Warns about (and audits) the blocked schemes of model links that the generator rewrote before the
+    /// markup guard could see them. The wording and the audit detail match the guard's own finding — only
+    /// the scheme is ever reported, never the URL, which may carry data.
+    /// </summary>
+    private static void ReportModelLinkFindings(
+        EmailTemplateDocument document,
+        List<RenderError> errors,
+        HashSet<string> reportedSchemes,
+        TemplateSecurityAuditor auditor)
+    {
+        foreach (var scheme in ModelLinkScanner.BlockedTableCellSchemes(document))
+        {
+            if (!reportedSchemes.Add(scheme))
+            {
+                continue;
+            }
+
+            errors.Add(new RenderError(
+                $"A link with the blocked URL scheme '{scheme}' was replaced with '{UrlSchemePolicy.BlockedUrlPlaceholder}'.",
+                Key: RenderKeys.BlockedUrlScheme,
+                Severity: RenderErrorSeverity.Warning));
+            auditor.Report(TemplateSecurityEventKind.BlockedUrlScheme, scheme);
         }
     }
 

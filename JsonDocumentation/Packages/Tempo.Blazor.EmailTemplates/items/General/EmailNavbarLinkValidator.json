@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Validates a navigation link before the item dialog may apply it: the text and the link target are required, the target must be on the URL allow-list and a colour must be on the colour allow-list.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "EmailNavbarLinkValidator",
+      "kind": "Constructor",
+      "type": "EmailNavbarLinkValidator",
+      "description": "Initializes the validator with the editor's localizer."
+    }
+  ],
+  "itemName": "EmailNavbarLinkValidator"
+}

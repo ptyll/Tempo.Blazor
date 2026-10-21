@@ -1,0 +1,30 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The public read-only view of the pipeline's single URL allow-list (§3.7a, D15), for a UI that has to explain a rejected link before it reaches the markup. The list cannot be extended by a host: http, https, mailto, tel, a relative path without an authority and a #fragment pass; every other scheme and every network/UNC path is refused.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/EmailUrlPolicy.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "BlockedUrlPlaceholder",
+      "kind": "Field",
+      "type": "string",
+      "description": "The value a refused URL is replaced with in the markup."
+    },
+    {
+      "name": "FindBlockedScheme",
+      "kind": "Method",
+      "type": "string?",
+      "description": "Returns the offending scheme (or the pseudo-scheme network-path) or null when the URL may be emitted."
+    },
+    {
+      "name": "IsAllowed",
+      "kind": "Method",
+      "type": "bool",
+      "description": "Answers whether a URL may be emitted into the message."
+    }
+  ],
+  "itemName": "EmailUrlPolicy"
+}

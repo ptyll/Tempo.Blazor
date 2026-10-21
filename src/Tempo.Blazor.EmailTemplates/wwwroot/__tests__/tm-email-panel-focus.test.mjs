@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { focusRailExpandedToggle } from '../tm-email-panel-focus.js';
+import { focusBySelector, focusRailExpandedToggle } from '../tm-email-panel-focus.js';
 
 function fakeTarget() {
     return {
@@ -64,4 +64,21 @@ test('does nothing when the expanded toggle is not rendered', () => {
     const moved = withDocument(null, { isConnected: true }, () =>
         focusRailExpandedToggle(root, '.tm-editor-shell__panel-toggle--right'));
     assert.equal(moved, false);
+});
+
+test('focusBySelector moves the focus onto the matching action of the moved item', () => {
+    const target = fakeTarget();
+    let asked = null;
+    const root = { querySelector: (selector) => { asked = selector; return target; } };
+    const moved = focusBySelector(root, "[data-tm-item-down][data-tm-item-index='2']");
+    assert.equal(moved, true);
+    assert.equal(target.focused, true);
+    assert.equal(asked, "[data-tm-item-down][data-tm-item-index='2']");
+});
+
+test('focusBySelector never throws when the action is gone', () => {
+    assert.equal(focusBySelector({ querySelector: () => null }, '[data-tm-item-up]'), false);
+    assert.equal(focusBySelector(null, '[data-tm-item-up]'), false);
+    const detached = { isConnected: false, focus() { throw new Error('must not focus'); } };
+    assert.equal(focusBySelector({ querySelector: () => detached }, '[data-tm-item-up]'), false);
 });

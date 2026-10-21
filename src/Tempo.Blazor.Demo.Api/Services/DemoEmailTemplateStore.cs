@@ -169,16 +169,44 @@ public sealed class DemoEmailTemplateStore : IEmailTemplateStore
         var col = new EmailColumn();
         col.Blocks.Add(new EmailTextBlock { Content = "<p>Hi {{ customer_name }}, thanks for your order!</p>" });
 
+        // Fáze 9 demo data: a header row, a linked cell with its own background and a plain cell, so the
+        // table-cell dialog, the URL allow-list and the bgcolor emission can be reviewed on a real document.
         var table = new EmailTableBlock();
         var header = new EmailTableRow { IsHeader = true };
         header.Cells.Add(new EmailTableCell { Text = "Item" });
         header.Cells.Add(new EmailTableCell { Text = "Price" });
         var row = new EmailTableRow();
-        row.Cells.Add(new EmailTableCell { Text = "Widget" });
+        row.Cells.Add(new EmailTableCell
+        {
+            Text = "Widget",
+            Href = "https://example.com/widget",
+            BackgroundColor = "#f5f5f5",
+        });
         row.Cells.Add(new EmailTableCell { Text = "$9.99" });
+        var more = new EmailTableRow();
+        more.Cells.Add(new EmailTableCell { Text = "Gadget", Href = "https://example.com/gadget" });
+        more.Cells.Add(new EmailTableCell { Text = "$19.99" });
         table.Rows.Add(header);
         table.Rows.Add(row);
+        table.Rows.Add(more);
         col.Blocks.Add(table);
+
+        // Fáze 9 demo data: two social elements, one with a built-in network name and one "custom" (which
+        // requires an icon URL), so the dialog's validation is reachable from the demo.
+        var social = new EmailSocialBlock();
+        social.Elements.Add(new EmailSocialElement
+        {
+            Name = "facebook",
+            Href = "https://facebook.com/example",
+            Label = "Facebook",
+        });
+        social.Elements.Add(new EmailSocialElement
+        {
+            Name = "instagram",
+            Href = "https://instagram.com/example",
+            Label = "Instagram",
+        });
+        col.Blocks.Add(social);
 
         col.Blocks.Add(new EmailTextBlock
         {

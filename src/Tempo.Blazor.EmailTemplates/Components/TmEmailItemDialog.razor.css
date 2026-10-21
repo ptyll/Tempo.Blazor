@@ -1,0 +1,82 @@
+/* Fáze 9 — the dialog shell of an item / table-cell editor. Design tokens only.
+   On a phone the shell is the core TmModal sheet (base F2), whose footer is already sticky; this file only
+   lays out the body: the fields, the validation messages and the live preview. */
+
+.tm-email-item-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    min-inline-size: 0;
+}
+
+.tm-email-item-dialog__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-email-item-dialog__errors {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    border: 1px solid var(--tm-color-danger);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-strong);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-item-dialog__errors li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-item-dialog__preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: 1px dashed var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface-secondary);
+}
+
+.tm-email-item-dialog__preview-title {
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* The preview the caller passes in is usually builder-rendered (TmEmailItemList) or markup of another
+   component, so it never carries THIS component's scope attribute: reach it through the scoped root. */
+.tm-email-item-dialog ::deep .tm-email-item-list__preview-text {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-item-dialog ::deep .tm-email-item-list__preview-title {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    overflow-wrap: anywhere;
+}
+
+.tm-email-item-dialog ::deep .tm-email-item-list__preview-detail {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-email-item-dialog {
+        transition: none;
+    }
+}

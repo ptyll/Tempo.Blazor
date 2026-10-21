@@ -1,0 +1,47 @@
+{
+  "itemName": "TmEmailItemList",
+  "kind": "Component",
+  "category": "Components",
+  "description": "Compact list of a block's items for EmailItemEditingMode.Dialog: one row per item with a preview and the move up / move down / edit / remove actions. Edit opens the modal editor over a copy of the item, so the document changes only on Save and always as a single change (one undo step).",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailItemList.razor",
+  "documentationStatus": "merged",
+  "requiredImports": [
+    "@using Tempo.Blazor.EmailTemplates.Components"
+  ],
+  "parameters": [
+    {
+      "name": "Block",
+      "type": "EmailBlockBase",
+      "isRequired": true,
+      "editorRequired": true,
+      "description": "The block whose items are listed: social, navbar, carousel or accordion."
+    },
+    {
+      "name": "OnChanged",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised once after a save, a remove, a move or an add — one editor undo step each."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the list read-only: the dialog's Save is disabled and every mutating action returns early."
+    },
+    {
+      "name": "OnImageUpload",
+      "type": "Func<IBrowserFile, Task<string>>?",
+      "isRequired": false,
+      "description": "Optional host upload handler, offered by the carousel image dialog."
+    },
+    {
+      "name": "ImageUpload",
+      "type": "ImageUploadOptions?",
+      "isRequired": false,
+      "description": "Client-side limits applied to a picked carousel image before OnImageUpload runs; null uses the ImageUploadOptions defaults."
+    }
+  ]
+}

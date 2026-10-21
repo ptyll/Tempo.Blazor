@@ -26,4 +26,18 @@ public static class ImportKeys
 
     /// <summary>The input is larger than <see cref="EmailImportOptions.MaxInputBytes"/> (UTF-8 bytes).</summary>
     public const string InputTooLarge = "import.input_too_large";
+
+    /// <summary>
+    /// A table cell's link used a scheme outside the URL allow-list (§3.7a). The value is kept in the
+    /// model so the editor can show and fix it; every emission path (generator, text version, renderer)
+    /// fail-closes it.
+    /// </summary>
+    public const string BlockedTableLink = "import.table.blocked_link";
+
+    /// <summary>
+    /// A table cell's <c>bgcolor</c> was outside the colour allow-list
+    /// (<see cref="Rendering.EmailColorPolicy"/>) and was dropped from the model, because no message this
+    /// pipeline renders could carry it.
+    /// </summary>
+    public const string InvalidTableColor = "import.table.invalid_color";
 }

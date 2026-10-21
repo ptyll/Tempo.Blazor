@@ -1,0 +1,62 @@
+{
+  "itemName": "TmEmailTableCellDialog",
+  "kind": "Component",
+  "category": "Components",
+  "description": "Dialog editor of one table cell (Fáze 9): text, link, column and row span, alignment, background colour and the header flag of its row, with a mini preview of the whole table in which the edited cell is highlighted. Reachable from every cell of the inline table grid, in both item editing modes.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTableCellDialog.razor",
+  "documentationStatus": "merged",
+  "requiredImports": [
+    "@using Tempo.Blazor.EmailTemplates.Components"
+  ],
+  "parameters": [
+    {
+      "name": "Block",
+      "type": "EmailTableBlock",
+      "isRequired": true,
+      "editorRequired": true,
+      "description": "The table whose cell is edited."
+    },
+    {
+      "name": "RowIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "The row of the edited cell."
+    },
+    {
+      "name": "CellIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "The column of the edited cell."
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the dialog is shown."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the dialog read-only; Save is disabled and the copy can never be applied."
+    },
+    {
+      "name": "OnSave",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after the copy was applied to the table (one change, one undo step)."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user closes the dialog without applying the copy."
+    }
+  ]
+}

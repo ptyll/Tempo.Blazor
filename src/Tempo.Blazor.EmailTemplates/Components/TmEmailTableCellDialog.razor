@@ -1,0 +1,387 @@
+@namespace Tempo.Blazor.EmailTemplates.Components
+@using Tempo.Blazor.Abstractions.Models
+@using global::FluentValidation
+@using global::FluentValidation.Results
+@inject IServiceProvider Services
+
+@* Fáze 9: the table-cell dialog. It edits a COPY of one cell (text, link, spans, alignment, background)
+   plus the HEADER flag of its row, and previews the whole table with the edited cell highlighted. Save
+   applies the copy as one change; Cancel / Escape / the overlay throw it away. The dialog is reachable from
+   every cell of the inline grid, in both item editing modes.
+   Review F9: the Save button is never disabled — a failed save shows the message at the offending field,
+   focuses it and applies nothing. *@
+<TmEmailItemDialog Show="Show" Title="@Loc["EmailEditor_TableCell_Title"]" Errors="_summaryErrors"
+                   ReadOnly="ReadOnly" OnSave="SaveAsync" OnCancel="CancelAsync">
+    <ChildContent>
+        <div class="tm-email-table-cell-dialog" data-tm-table-cell-dialog="true">
+            <div class="tm-email-table-cell-dialog__field" data-tm-item-field="Text">
+                <TmTextInput @ref="_textField" Label="@Loc["EmailEditor_Item_Field_CellText"]" Value="@_cell.Text"
+                             Disabled="@ReadOnly" Error="@FieldError("Text")"
+                             ValueChanged="@(value => { _cell.Text = value; Edited("Text"); })" />
+            </div>
+            <div class="tm-email-table-cell-dialog__field" data-tm-item-field="Href">
+                <TmTextInput @ref="_hrefField" Label="@Loc["EmailEditor_Item_Field_Href"]"
+                             Value="@(_cell.Href ?? string.Empty)" Disabled="@ReadOnly"
+                             Error="@FieldError("Href")"
+                             ValueChanged="@(value => { _cell.Href = value; Edited("Href"); })" />
+            </div>
+            <div class="tm-email-table-cell-dialog__row">
+                <div class="tm-email-table-cell-dialog__field" data-tm-item-field="ColSpan">
+                    <TmTextInput @ref="_colSpanField" Label="@Loc["EmailEditor_Item_Field_ColSpan"]"
+                                 Value="@_colSpanText" HelpText="@Loc["EmailEditor_Item_Span_Help"]"
+                                 Disabled="@ReadOnly" inputmode="numeric" Error="@FieldError("ColSpan")"
+                                 ValueChanged="@(value => OnSpanChanged(value, isColumn: true))" />
+                </div>
+                <div class="tm-email-table-cell-dialog__field" data-tm-item-field="RowSpan">
+                    <TmTextInput @ref="_rowSpanField" Label="@Loc["EmailEditor_Item_Field_RowSpan"]"
+                                 Value="@_rowSpanText" HelpText="@Loc["EmailEditor_Item_Span_Help"]"
+                                 Disabled="@ReadOnly" inputmode="numeric" Error="@FieldError("RowSpan")"
+                                 ValueChanged="@(value => OnSpanChanged(value, isColumn: false))" />
+                </div>
+            </div>
+            <div class="tm-email-table-cell-dialog__field" data-tm-item-field="Align">
+                <TmSelect TValue="string" Label="@Loc["EmailEditor_Item_Field_Align"]"
+                          Options="_alignOptions" Value="@(_cell.Align ?? string.Empty)" Disabled="@ReadOnly"
+                          ValueChanged="@(value => { _cell.Align = string.IsNullOrEmpty(value) ? null : value; Edited("Align"); })" />
+            </div>
+            <div class="tm-email-table-cell-dialog__field" data-tm-item-field="BackgroundColor">
+                <span class="tm-email-table-cell-dialog__label">@Loc["EmailEditor_Item_Field_BackgroundColor"]</span>
+                <TmColorPicker Value="@(_cell.BackgroundColor ?? string.Empty)" ShowAlpha="false"
+                               Format="ColorFormat.Hex" ShowClearButton="true" Disabled="@ReadOnly"
+                               ValueChanged="@(value => { _cell.BackgroundColor = value; Edited("BackgroundColor"); })" />
+                @FieldErrorText("BackgroundColor")
+            </div>
+            <div class="tm-email-table-cell-dialog__field" data-tm-table-cell-header="true">
+                <TmToggle Label="@Loc["EmailEditor_TableCell_Header"]" Value="@_isHeader" Disabled="@ReadOnly"
+                          ValueChanged="@(value => { _isHeader = value; })" />
+            </div>
+        </div>
+    </ChildContent>
+    <PreviewContent>
+        <table class="tm-email-table-cell-dialog__preview" data-tm-table-cell-preview="true">
+            <tbody>
+                @for (var r = 0; r < PreviewRows; r++)
+                {
+                    var rowIndex = r;
+                    var row = Block.Rows[rowIndex];
+                    <tr class="@(rowIndex == RowIndex && _isHeader ? "is-header" : null)">
+                        @for (var c = 0; c < row.Cells.Count; c++)
+                        {
+                            var cellIndex = c;
+                            var isActive = rowIndex == RowIndex && cellIndex == CellIndex;
+                            var stored = row.Cells[cellIndex];
+                            var text = isActive ? _cell.Text : stored.Text;
+                            var color = isActive ? _cell.BackgroundColor : stored.BackgroundColor;
+                            <td data-tm-table-preview-cell="@($"{rowIndex}-{cellIndex}")"
+                                data-tm-preview-active="@(isActive ? "true" : "false")"
+                                class="@(isActive ? "is-active" : null)"
+                                bgcolor="@PreviewColor(color)">@text</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </PreviewContent>
+</TmEmailItemDialog>
+
+@code {
+    /// <summary>The table whose cell is edited.</summary>
+    [Parameter, EditorRequired] public EmailTableBlock Block { get; set; } = default!;
+
+    /// <summary>The row of the edited cell.</summary>
+    [Parameter] public int RowIndex { get; set; }
+
+    /// <summary>The column of the edited cell.</summary>
+    [Parameter] public int CellIndex { get; set; }
+
+    /// <summary>Whether the dialog is shown.</summary>
+    [Parameter] public bool Show { get; set; }
+
+    /// <summary>Renders the dialog read-only; Save is disabled and the copy can never be applied.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Raised after the copy was applied to the table (one change, one undo step).</summary>
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    /// <summary>Raised when the user closes the dialog without applying the copy.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private EmailTableCell _cell = new();
+    private bool _isHeader;
+    private string _colSpanText = string.Empty;
+    private string _rowSpanText = string.Empty;
+    private bool _colSpanInvalid;
+    private bool _rowSpanInvalid;
+    private bool _loaded;
+
+    // Field-level validation: a message appears next to its field, only after that field was edited or a
+    // save was attempted (review F9). Failures without a property go to the dialog's alert summary.
+    private readonly Dictionary<string, string> _fieldErrors = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _touched = new(StringComparer.Ordinal);
+    private IReadOnlyList<string> _summaryErrors = Array.Empty<string>();
+    private bool _submitAttempted;
+    private string? _focusProperty;
+
+    private TmTextInput? _textField;
+    private TmTextInput? _hrefField;
+    private TmTextInput? _colSpanField;
+    private TmTextInput? _rowSpanField;
+
+    private IReadOnlyList<SelectOption<string>> _alignOptions = Array.Empty<SelectOption<string>>();
+
+    // A table with hundreds of rows would build a huge preview for a dialog: the preview is a thumbnail, so
+    // it shows the first rows only (the highlight is always inside them for a normal table).
+    private const int MaxPreviewRows = 8;
+
+    private int PreviewRows => Math.Min(Block.Rows.Count, MaxPreviewRows);
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        _alignOptions = new List<SelectOption<string>>
+        {
+            new(string.Empty, Loc["EmailEditor_Item_Align_Unset"]),
+            new("left", Loc["EmailEditor_Choice_Align_left"]),
+            new("center", Loc["EmailEditor_Choice_Align_center"]),
+            new("right", Loc["EmailEditor_Choice_Align_right"]),
+            new("justify", Loc["EmailEditor_Choice_Align_justify"]),
+        };
+
+        if (Show && !_loaded) Load();
+        if (!Show) _loaded = false;
+    }
+
+    /// <summary>Takes an independent copy of the cell and of its row's header flag.</summary>
+    private void Load()
+    {
+        _loaded = true;
+        ResetValidation();
+
+        if (RowIndex < 0 || RowIndex >= Block.Rows.Count)
+        {
+            _cell = new EmailTableCell();
+            _isHeader = false;
+            _colSpanText = string.Empty;
+            _rowSpanText = string.Empty;
+            _colSpanInvalid = false;
+            _rowSpanInvalid = false;
+            Revalidate();
+            return;
+        }
+
+        var row = Block.Rows[RowIndex];
+        _isHeader = row.IsHeader;
+        _cell = CellIndex >= 0 && CellIndex < row.Cells.Count
+            ? Clone(row.Cells[CellIndex])
+            : new EmailTableCell();
+        _colSpanText = _cell.ColSpan is { } colSpan ? colSpan.ToString(System.Globalization.CultureInfo.CurrentCulture) : string.Empty;
+        _rowSpanText = _cell.RowSpan is { } rowSpan ? rowSpan.ToString(System.Globalization.CultureInfo.CurrentCulture) : string.Empty;
+        _colSpanInvalid = false;
+        _rowSpanInvalid = false;
+        Revalidate();
+    }
+
+    private static EmailTableCell Clone(EmailTableCell cell) => new()
+    {
+        Text = cell.Text,
+        Align = cell.Align,
+        ColSpan = cell.ColSpan,
+        RowSpan = cell.RowSpan,
+        Href = cell.Href,
+        BackgroundColor = cell.BackgroundColor,
+    };
+
+    /// <summary>
+    /// Parses a typed span. A value that is not a whole number between 1 and the documented maximum is
+    /// reported at THAT field and the copy keeps no span — it never silently becomes "1".
+    /// </summary>
+    private void OnSpanChanged(string? text, bool isColumn)
+    {
+        var trimmed = (text ?? string.Empty).Trim();
+        int? span = null;
+        var invalid = false;
+
+        if (trimmed.Length > 0)
+        {
+            if (int.TryParse(trimmed, System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.CurrentCulture, out var parsed)
+                && parsed >= 1 && parsed <= EmailTableCellValidator.MaxSpan)
+            {
+                span = parsed;
+            }
+            else
+            {
+                invalid = true;
+            }
+        }
+
+        if (isColumn)
+        {
+            _colSpanText = trimmed;
+            _cell.ColSpan = span;
+            _colSpanInvalid = invalid;
+        }
+        else
+        {
+            _rowSpanText = trimmed;
+            _cell.RowSpan = span;
+            _rowSpanInvalid = invalid;
+        }
+
+        Edited(isColumn ? "ColSpan" : "RowSpan");
+    }
+
+    /// <summary>
+    /// Recomputes the messages of the copy. The typed span cannot be expressed in the model (an invalid value
+    /// leaves the span empty), so its message is kept next to the validator's failures.
+    /// </summary>
+    private void Revalidate()
+    {
+        _fieldErrors.Clear();
+        var summary = new List<string>();
+
+        if (_colSpanInvalid) _fieldErrors["ColSpan"] = Loc[EmailItemValidationKeys.InvalidSpan];
+        if (_rowSpanInvalid) _fieldErrors["RowSpan"] = Loc[EmailItemValidationKeys.InvalidSpan];
+
+        var validator = Services.GetService(typeof(global::FluentValidation.IValidator<EmailTableCell>)) as global::FluentValidation.IValidator<EmailTableCell>;
+        if (validator is null)
+        {
+            summary.Add(Loc[EmailItemValidationKeys.ValidatorMissing, nameof(EmailTableCell)]);
+        }
+        else
+        {
+            foreach (var failure in validator.Validate(_cell).Errors)
+            {
+                if (!string.IsNullOrEmpty(failure.PropertyName) && FieldProperties.Contains(failure.PropertyName))
+                {
+                    _fieldErrors.TryAdd(failure.PropertyName, failure.ErrorMessage);
+                }
+                else
+                {
+                    summary.Add(failure.ErrorMessage);
+                }
+            }
+        }
+
+        _summaryErrors = summary.Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    private static readonly HashSet<string> FieldProperties = new(StringComparer.Ordinal)
+    {
+        "Text", "Href", "Align", "BackgroundColor", "ColSpan", "RowSpan",
+    };
+
+    /// <summary>
+    /// The message of one field, or <see langword="null"/> while it must stay silent: a form is never
+    /// pre-flagged, so a message appears after the field was edited or after a save was attempted.
+    /// </summary>
+    private string? FieldError(string property)
+        => (_submitAttempted || _touched.Contains(property)) && _fieldErrors.TryGetValue(property, out var message)
+            ? message
+            : null;
+
+    private void Edited(string property)
+    {
+        _touched.Add(property);
+        Revalidate();
+    }
+
+    /// <summary>
+    /// The message of a field whose control cannot show one itself (a colour picker): a text input renders
+    /// its own error and describes it with <c>aria-describedby</c>.
+    /// </summary>
+    private RenderFragment? FieldErrorText(string property)
+        => FieldError(property) is { } message
+            ? @<p class="tm-email-table-cell-dialog__error" data-tm-item-field-error="@property">@message</p>
+            : null;
+
+    private void ResetValidation()
+    {
+        _fieldErrors.Clear();
+        _touched.Clear();
+        _summaryErrors = Array.Empty<string>();
+        _submitAttempted = false;
+        _focusProperty = null;
+    }
+
+    private string? FirstInvalidField()
+    {
+        foreach (var property in new[] { "Text", "Href", "ColSpan", "RowSpan" })
+        {
+            if (_fieldErrors.ContainsKey(property)) return property;
+        }
+
+        return null;
+    }
+
+    private TmTextInput? FieldComponent(string property) => property switch
+    {
+        "Text" => _textField,
+        "Href" => _hrefField,
+        "ColSpan" => _colSpanField,
+        "RowSpan" => _rowSpanField,
+        _ => null,
+    };
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusProperty is null) return;
+        var target = FieldComponent(_focusProperty);
+        _focusProperty = null;
+        if (target is null) return;
+
+        try
+        {
+            await target.FocusAsync();
+        }
+        catch (JSException)
+        {
+            // No interop (prerendering, a test without a JS runtime): the message stays visible.
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Applies the copy. An invalid form is not applied: the messages appear at their fields, the first
+    /// invalid field takes the focus and the document is untouched (review F9).
+    /// </summary>
+    private async Task SaveAsync()
+    {
+        if (ReadOnly) return;
+        if (RowIndex < 0 || RowIndex >= Block.Rows.Count) return;
+
+        _submitAttempted = true;
+        Revalidate();
+        if (_fieldErrors.Count > 0 || _summaryErrors.Count > 0)
+        {
+            _focusProperty = FirstInvalidField();
+            StateHasChanged();
+            return;
+        }
+
+        var row = Block.Rows[RowIndex];
+        if (CellIndex < 0 || CellIndex >= row.Cells.Count) return;
+
+        row.Cells[CellIndex] = _cell;
+        row.IsHeader = _isHeader;
+        _loaded = false;
+        await OnSave.InvokeAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        _loaded = false;
+        ResetValidation();
+        await OnCancel.InvokeAsync();
+    }
+
+    /// <summary>
+    /// The preview colour of a cell: only a value on the allow-list is painted, exactly like the renderer, so
+    /// the dialog can never show a colour the message would not have.
+    /// </summary>
+    private static string? PreviewColor(string? value)
+        => EmailColorPolicy.IsAllowed(value) ? value : null;
+}

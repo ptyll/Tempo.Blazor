@@ -6,6 +6,7 @@ using Tempo.Blazor.EmailTemplates.Abstractions.Localization;
 using Tempo.Blazor.EmailTemplates.Abstractions.Templating;
 using Tempo.Blazor.EmailTemplates.Localization;
 using Tempo.Blazor.EmailTemplates.Resources;
+using Tempo.Blazor.FluentValidation;
 
 namespace Tempo.Blazor.EmailTemplates;
 
@@ -54,6 +55,11 @@ public static class ServiceCollectionExtensions
         // The model side, without any engine: conservative sanitizer, regex variable extractor, validators
         // with their own closed JSON localizer, and the one shared TemplateSecurityOptions instance.
         services.AddTempoEmailTemplateModel(options.ApplyTo);
+
+        // Fáze 9: the item / table-cell dialog validators, so the dialog runs the same rules through
+        // Tempo.Blazor.FluentValidation that the render pipeline enforces later (URL allow-list, colour
+        // allow-list, required texts). Scanned from THIS assembly, so no host registration is needed.
+        services.AddTempoFluentValidation(typeof(ServiceCollectionExtensions).Assembly);
 
         return services;
     }

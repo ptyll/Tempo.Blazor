@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Validates an accordion item before the item dialog may apply it: the title is required and both colours must be on the colour allow-list. The content is sanitized with the pipeline's own sanitizer on save.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/EmailItemValidators.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "EmailAccordionItemValidator",
+      "kind": "Constructor",
+      "type": "EmailAccordionItemValidator",
+      "description": "Initializes the validator with the editor's localizer."
+    }
+  ],
+  "itemName": "EmailAccordionItemValidator"
+}

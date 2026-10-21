@@ -30,6 +30,14 @@ public static class RenderKeys
     public const string MarkupTooComplex = "render.markup.too_complex";
 
     /// <summary>
+    /// A table cell carried a background colour outside the colour allow-list (<c>#rgb</c>, <c>#rrggbb</c>
+    /// or a named colour of <see cref="EmailColorPolicy"/>), so the <c>bgcolor</c> attribute was omitted
+    /// instead of being written. Severity is <see cref="RenderErrorSeverity.Warning"/>: the rest of the
+    /// message renders normally. The editor package carries the resource entry.
+    /// </summary>
+    public const string InvalidTableCellColor = "render.table.invalid_color";
+
+    /// <summary>
     /// The preview renderer itself could not produce a result (a server or transport failure). The editor
     /// shows this as <see cref="EmailPreviewStatus.Unavailable"/> with a retry, not as a template error.
     /// </summary>

@@ -551,22 +551,72 @@ public sealed partial class MjmlImporter
         {
             var cells = tr.Elements().Where(x => x.Name.LocalName is "td" or "th").ToList();
             var row = new EmailTableRow { IsHeader = cells.Count > 0 && cells.All(c => NameIs(c, "th")) };
-            foreach (var cell in cells)
+            for (var cellIndex = 0; cellIndex < cells.Count; cellIndex++)
             {
+                var cell = cells[cellIndex];
                 int? colSpan = int.TryParse(cell.Attribute("colspan")?.Value, null, out var cs) ? cs : null;
                 int? rowSpan = int.TryParse(cell.Attribute("rowspan")?.Value, null, out var rs) ? rs : null;
+                // A cell's link is written as an <a href> around the WHOLE text (Fáze 9), so the anchor —
+                // not an attribute of the td — is where the imported href lives. Only an anchor that is the
+                // cell's single content node counts as the cell link: a mixed cell (`<a>Docs</a> since
+                // 2024`, or an anchor next to markup) keeps its full text and no link, so the rest of the
+                // cell is never silently dropped (review F9).
+                var anchor = cell.Elements().FirstOrDefault(x => NameIs(x, "a"));
+                var isSoleAnchor = anchor is not null && IsSoleContent(cell, anchor);
+                var href = isSoleAnchor ? anchor!.Attribute("href")?.Value : null;
+                var text = isSoleAnchor ? anchor!.Value : cell.Value;
+
+                var background = cell.Attribute("bgcolor")?.Value;
+                if (!string.IsNullOrWhiteSpace(background) && !EmailColorPolicy.IsAllowed(background))
+                {
+                    // The message can never carry this value (the generator only writes colours of the
+                    // allow-list), so it is dropped at the door instead of riding along through every edit
+                    // and being reported again on every render.
+                    Warn(ImportKeys.InvalidTableColor, CellReference(tr, cellIndex));
+                    background = null;
+                }
+
+                if (!string.IsNullOrEmpty(href) && !EmailUrlPolicy.IsAllowed(href))
+                {
+                    // The value is KEPT: the editor has to show the offending link so it can be fixed, and
+                    // every emission path already fail-closes it (generator → '#', text version omits it,
+                    // renderer audits it) — the same treatment a hand-authored model value gets.
+                    Warn(ImportKeys.BlockedTableLink, CellReference(tr, cellIndex));
+                }
+
                 row.Cells.Add(new EmailTableCell
                 {
-                    Text = cell.Value,
+                    Text = text,
                     Align = cell.Attribute("align")?.Value,
                     ColSpan = colSpan,
                     RowSpan = rowSpan,
+                    Href = href,
+                    BackgroundColor = background,
                 });
             }
             b.Rows.Add(row);
         }
         return b;
     }
+
+    /// <summary>
+    /// Whether <paramref name="anchor"/> is the only content node of <paramref name="cell"/> and carries
+    /// nothing but text itself — i.e. whether the cell's whole content is that one link.
+    /// </summary>
+    private static bool IsSoleContent(XElement cell, XElement anchor)
+        => cell.Nodes().All(node => ReferenceEquals(node, anchor) || IsWhitespaceText(node))
+           && anchor.Nodes().All(node => node is XText or XCData);
+
+    private static bool IsWhitespaceText(XNode node)
+        => node is XText text && string.IsNullOrWhiteSpace(text.Value);
+
+    /// <summary>A stable, value-free reference to a cell for a diagnostic ("row 2, column 3").</summary>
+    private static string CellReference(XElement row, int cellIndex)
+        => string.Create(
+            CultureInfo.InvariantCulture,
+            $"row {row.ElementsBeforeSelf().Count(x => NameIs(x, "tr")) + 1}, column {cellIndex + 1}");
+
+    private void Warn(string key, string detail) => _warnings.Add(new ImportMessage(key, detail));
 
     private EmailSocialBlock MapSocial(XElement e)
     {
