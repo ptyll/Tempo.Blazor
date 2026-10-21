@@ -418,6 +418,13 @@
   `ShowCollapseToggle`, and `TmEmailPropertyPanel.OnDuplicate`/`OnDelete`. Nothing on the document model or
   the save contract changed.
 
+- **`TmEditorShell.MobileActionsMaxVisible` (jádro, aditivní).** How many of the shell's
+  `MobileActions` stay on the mobile action bar before the rest overflow into the bar's own "More"
+  menu. Default `3` — the bar's own default — so a host that never sets it keeps exactly the
+  earlier behaviour; a value below `1` is rejected with `ArgumentOutOfRangeException` (a bar with
+  no action would be an unreachable set of commands). The email template editor sets it to `4` so
+  its D20 actions (Zpět / Znovu / Náhled / Validovat) sit on the bar instead of behind "More".
+
 ### Fixed
 
 - **Inspector (Fáze 7A review): an optional colour can be unset; the required one is never cleared.** A

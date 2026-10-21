@@ -42,6 +42,9 @@
                    Canvas="CanvasPanel"
                    Right="InspectorPanel"
                    StatusBar="StatusBarPanel"
+                   @* D20 names exactly four bar actions (undo / redo / preview / validate), so the shell's
+                      default three-slot budget would push "Validate" into the bar's own More menu. *@
+                   MobileActionsMaxVisible="4"
                    MobileActions="MobileActionItems" />
 
     @* One polite announcer for the outcome the user cannot see (the badge is a visual pill, not a live

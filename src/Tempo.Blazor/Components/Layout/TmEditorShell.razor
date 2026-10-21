@@ -87,7 +87,7 @@
                 }
                 @if (HasMobileActions)
                 {
-                    <TmMobileActionBar Items="@MobileActions" LayoutMode="TmLayoutMode.Mobile" />
+                    <TmMobileActionBar Items="@MobileActions" MaxVisible="@MobileActionsMaxVisible" LayoutMode="TmLayoutMode.Mobile" />
                 }
             </div>
         }
@@ -176,7 +176,7 @@
                 }
                 @if (HasMobileActions)
                 {
-                    <TmMobileActionBar Items="@MobileActions" LayoutMode="TmLayoutMode.Mobile" />
+                    <TmMobileActionBar Items="@MobileActions" MaxVisible="@MobileActionsMaxVisible" LayoutMode="TmLayoutMode.Mobile" />
                 }
             </div>
         }
@@ -301,6 +301,16 @@
     /// <see cref="Toolbar"/> slot is not rendered on a mobile layout: the actions replace it.
     /// </summary>
     [Parameter] public IReadOnlyList<TmActionItem>? MobileActions { get; set; }
+
+    /// <summary>
+    /// How many of the <see cref="MobileActions"/> stay on the mobile action bar before the rest
+    /// overflow into the bar's own "More" menu. Default 3 — the bar's own default, so a host that
+    /// never sets it keeps exactly the behaviour of earlier versions. A host whose action set is the
+    /// editor's primary navigation (the email template editor's Back / Redo / Preview / Validate)
+    /// raises it to keep those commands one tap away instead of behind "More".
+    /// </summary>
+    /// <remarks>A value below 1 is rejected with <see cref="ArgumentOutOfRangeException"/>.</remarks>
+    [Parameter] public int MobileActionsMaxVisible { get; set; } = 3;
 
     /// <summary>Whether the left panel is open. Two-way with <see cref="LeftOpenChanged"/>. Means the same on desktop and tablet; the mobile Tabs presentation ignores it.</summary>
     [Parameter] public bool LeftOpen { get; set; } = true;
@@ -937,6 +947,16 @@
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        // A budget below one would render a bar that shows no action at all — an unreachable set of
+        // commands — so it is a host bug, not a preference to normalize away.
+        if (MobileActionsMaxVisible < 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MobileActionsMaxVisible),
+                MobileActionsMaxVisible,
+                "MobileActionsMaxVisible must be at least 1.");
+        }
+
         // The two-way shadows adopt a host value only when the host CHANGED it: a host that ignores
         // the callback must not have its stale value re-imposed over what the user just did.
         var snapAdopted = false;

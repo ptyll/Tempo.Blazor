@@ -304,6 +304,16 @@ public class TmEmailTemplateEditorShellTests : EmailEditorTestBase
 
         var bar = cut.FindComponent<TmMobileActionBar>();
         bar.Markup.Should().NotContain("data-tm-save\"");
+
+        // D20 puts all four on the BAR: the shell's default three-slot budget would hide "Validate"
+        // behind the bar's own More menu, so the editor lifts it to four.
+        ShellOf(cut).MobileActionsMaxVisible.Should().Be(4,
+            "the editor asks the shell for a four-slot budget");
+        cut.FindAll(".tm-mobile-action-bar__action")
+            .Select(button => button.GetAttribute("data-action-id"))
+            .Should().Equal("undo", "redo", "preview", "validate");
+        cut.FindAll(".tm-mobile-action-bar__more").Should().BeEmpty(
+            "none of the four D20 actions is behind More");
     }
 
     [Fact]
