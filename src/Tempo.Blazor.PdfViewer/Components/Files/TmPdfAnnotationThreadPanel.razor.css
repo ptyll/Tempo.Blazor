@@ -29,9 +29,12 @@
 }
 
 /* Sheet presentation (TmSidePanel): the sheet header owns the title and the close button,
-   so the panel's own header carries only the resolved filter, pushed to the end. */
+   so the panel's own header carries only the resolved filter, pushed to the end. The sheet
+   surface is already --tm-bg-surface, so the header blends into it instead of painting a
+   grey secondary band behind the "Show resolved" row (phase 10 backlog). */
 .tm-pdf-annotation-panel__header--sheet {
     justify-content: flex-end;
+    background: var(--tm-bg-surface);
 }
 
 .tm-pdf-annotation-panel__title {

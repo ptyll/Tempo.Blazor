@@ -81,7 +81,10 @@ public class PdfViewerResponsiveE2ETests : WasmTestBase
     [TestCategory("WASM")]
     public async Task PdfViewer_Tablet_TouchTargets44()
     {
-        var page = await OpenAsync(PdfPage, 1024, 768, touch: true);
+        // 1180×820 (iPad Air landscape): the forced-tablet section renders full-bleed in the
+        // demo column, so the evidence screenshots come from a real tablet-width container
+        // (≥768px) — phase 10 review.
+        var page = await OpenAsync(PdfPage, 1180, 820, touch: true);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"),
             "precondition: the tablet context emulates a coarse pointer");
 
@@ -277,6 +280,25 @@ public class PdfViewerResponsiveE2ETests : WasmTestBase
             "el => { const s = el.querySelector('.tm-pdf-viewer__toolbar .tm-toolbar-start'); return s ? s.getBoundingClientRect().height : 0; }");
         Assert.IsTrue(startHeight is > 0 and <= 53,
             $"the toolbar start section must stay a single row at 320px (measured {startHeight:0.#}px, limit 53px ≈ 1.2 × 44px touch target)");
+
+        // Phase 10 review: the page input must not clip its value and the "/N" count must
+        // stay visible — the input is floored at 3ch/touch-target (flex-shrink: 0) while the
+        // zoom trigger and "More" yield their space instead of the page indicator.
+        var pageIndicator = await section.EvaluateAsync<string>(@"
+el => {
+    const input = el.querySelector('.tm-pdf-viewer__page-input');
+    if (!input) return 'missing-input';
+    if (input.scrollWidth > input.clientWidth + 1)
+        return 'input-clipped ' + input.scrollWidth + '>' + input.clientWidth;
+    const count = el.querySelector('.tm-pdf-viewer__page-count');
+    if (!count) return 'missing-count';
+    const style = getComputedStyle(count);
+    if (style.display === 'none' || style.visibility === 'hidden' || count.getClientRects().length === 0)
+        return 'count-hidden';
+    return 'ok';
+    }");
+        Assert.AreEqual("ok", pageIndicator,
+            $"the page input must not clip and the count must stay visible at 320px (got: {pageIndicator})");
 
         await ParkAndShootAsync(page, section, ShotDir("pdf-viewer"), "mobile-320-all-features");
 

@@ -106,7 +106,10 @@ public class PdfAnnotatorResponsiveE2ETests : WasmTestBase
     [TestCategory("WASM")]
     public async Task PdfAnnotator_Tablet_TouchTargets44_ToolsLabeled()
     {
-        var page = await OpenAsync(1024, 768, touch: true);
+        // 1180×820 (iPad Air landscape): the forced-tablet section is the touch evidence and,
+        // since the phase 10 review, renders full-bleed in the demo column — its container is
+        // a real tablet width (≥768px), not the squeezed desktop column.
+        var page = await OpenAsync(1180, 820, touch: true);
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"),
             "precondition: the tablet context emulates a coarse pointer");
 
@@ -115,6 +118,13 @@ public class PdfAnnotatorResponsiveE2ETests : WasmTestBase
         var section = Section(page, TabletSectionTitle);
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await WaitForLoadedAnnotatorAsync(section);
+
+        // Phase 10 review: the evidence screenshot must come from a ≥768px container — the
+        // full-bleed demo section promises a real tablet width.
+        var rootWidth = await section.EvaluateAsync<double>(
+            "el => { const a = el.querySelector('.tm-pdf-annotator'); return a ? a.getBoundingClientRect().width : 0; }");
+        Assert.IsTrue(rootWidth >= 768,
+            $"the tablet evidence must render in a container ≥768px wide (measured {rootWidth:0.#}px)");
 
         // Every visible annotator-owned control in the merged toolbar meets the 44px touch
         // target on coarse: the tool pills, the export/print buttons and the panel toggle.
@@ -155,45 +165,53 @@ el => {
         Assert.IsTrue(labeledTools >= 5,
             $"the five annotator tools render labels below the icons, found {labeledTools}");
 
-        // Phase 8 review 12 + UX4 (FZE-9 review): all five tool pills fall fully inside the
-        // ribbon's bounding box. On a WIDE ribbon the color chip shares its line with its
-        // VISIBLE label; at a NARROW container the labelled tablet tools collapse to icons —
-        // and the chip's label collapses with them (a lone chip among icon-only pills would
-        // read as a stray dot).
+        // Phase 10 review: the tablet ribbon is ONE scrollable row at every container width —
+        // the pills keep their labels (never collapsing to icons), the color label stays
+        // VISIBLE and the panel toggle stays in the row. A narrow pane scrolls the row
+        // horizontally instead of wrapping it to a second line.
         var rowReport = await section.EvaluateAsync<string>(@"
 el => {
     const row = el.querySelector('[data-testid=""pdf-annotator-toolbar""]');
     if (!row) return 'missing-row';
     const rr = row.getBoundingClientRect();
     const bad = [];
+    let firstTop = null;
     for (const id of ['browse', 'highlight', 'comment', 'stamp', 'draw']) {
         const btn = el.querySelector('[data-testid=""pdf-annotator-mode-' + id + '""]');
         if (!btn) { bad.push(id + ':missing'); continue; }
         const b = btn.getBoundingClientRect();
-        if (b.left < rr.left - 0.5 || b.right > rr.right + 0.5 ||
-            b.top < rr.top - 0.5 || b.bottom > rr.bottom + 0.5)
-            bad.push(id + ':' + Math.round(b.left) + '..' + Math.round(b.right) +
-                'x' + Math.round(b.top) + '..' + Math.round(b.bottom) + ' vs row ' +
-                Math.round(rr.left) + '..' + Math.round(rr.right) +
-                'x' + Math.round(rr.top) + '..' + Math.round(rr.bottom));
+        if (b.height <= 0) { bad.push(id + ':hidden'); continue; }
+        if (b.top < rr.top - 0.5 || b.bottom > rr.bottom + 0.5)
+            bad.push(id + ':outside-row ' + Math.round(b.top) + '..' + Math.round(b.bottom) +
+                ' vs row ' + Math.round(rr.top) + '..' + Math.round(rr.bottom));
+        if (firstTop === null) firstTop = Math.round(b.top);
+        else if (Math.abs(firstTop - Math.round(b.top)) > 1) bad.push(id + ':second-line');
+        const text = btn.querySelector('.tm-toolbar-btn-text');
+        if (!text || text.getClientRects().length === 0) bad.push(id + ':label-hidden');
     }
     const chip = el.querySelector('.tm-pdf-annotator__color-chip');
     const label = el.querySelector('.tm-pdf-annotator__color-label');
-    if (!chip || !label) return (bad.length ? bad.join(', ') + '; ' : '') + 'missing-color';
-    const modeTexts = [...row.querySelectorAll('.tm-pdf-annotator__modes .tm-toolbar-btn-text')];
-    const collapsed = modeTexts.length > 0 && modeTexts.every(t => getComputedStyle(t).display === 'none');
-    const c = chip.getBoundingClientRect(), l = label.getBoundingClientRect();
-    if (collapsed) {
-        if (l.width >= 8 && l.height >= 8) bad.push('color-label-visible-while-collapsed:' + Math.round(l.width) + 'x' + Math.round(l.height));
-    } else {
-        const overlap = Math.min(c.bottom, l.bottom) - Math.max(c.top, l.top);
-        if (overlap < c.height / 2) bad.push('chip-label-not-on-one-line:' + Math.round(overlap) + 'px overlap');
-        if (l.width < 8 || l.height < 8) bad.push('color-label-hidden:' + Math.round(l.width) + 'x' + Math.round(l.height));
+    if (!chip || !label) bad.push('missing-color');
+    else {
+        const c = chip.getBoundingClientRect(), l = label.getBoundingClientRect();
+        if (l.width < 8 || l.height < 8)
+            bad.push('color-label-hidden:' + Math.round(l.width) + 'x' + Math.round(l.height));
+        else {
+            const overlap = Math.min(c.bottom, l.bottom) - Math.max(c.top, l.top);
+            if (overlap < c.height / 2) bad.push('chip-label-not-on-one-line:' + Math.round(overlap) + 'px overlap');
+        }
+    }
+    const toggle = el.querySelector('[data-testid=""pdf-annotator-panel-toggle""]');
+    if (!toggle) bad.push('missing-panel-toggle');
+    else {
+        const t = toggle.getBoundingClientRect();
+        if (t.height <= 0) bad.push('panel-toggle-hidden');
+        else if (t.top < rr.top - 0.5 || t.bottom > rr.bottom + 0.5) bad.push('panel-toggle-wrapped');
     }
     return bad.length === 0 ? 'ok' : bad.join(', ');
     }");
         Assert.AreEqual("ok", rowReport,
-            $"every tool pill must sit fully inside the tablet ribbon, and the color chip's label must be visible on a wide ribbon or collapsed with the icon-only tools on a narrow one; got '{rowReport}'");
+            $"the tablet ribbon must keep the tool labels, the color label and the panel toggle on one scrollable row (never wrapping, never dropping a label); got '{rowReport}'");
 
         // The thread panel is the shell's side region (docked), not an inline column squeeze.
         var sidePanel = section.Locator("[data-region='right'] [data-testid='pdf-annotator-panel']").First;

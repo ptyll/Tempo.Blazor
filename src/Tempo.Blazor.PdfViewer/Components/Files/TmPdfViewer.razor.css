@@ -385,12 +385,30 @@
     left: 50%;
     transform: translateX(-50%);
     pointer-events: auto;
+    /* PDF.js v5 TextLayer contract: the layer is one line-box tall per glyph row and
+       clips the (invisible) span boxes to the page — the mirror of the official
+       .textLayer rule. The box size itself is the viewport size set by pdf-viewer.js. */
+    line-height: 1;
+    overflow: hidden;
+    text-align: initial;
 }
 
-/* FZE-9 touch selection: pdf-viewer.js paints the layer text invisible (color: transparent,
-   not an element opacity, which would fade the highlight too) — the native selection renders
-   at full strength and the touch handles stay visible. */
-.tm-pdf-viewer__text-layer ::deep div::selection {
+/* The TextLayer spans paint nothing (FZE-9: no doubled glyphs under the canvas) but stay
+   fully opaque so the native selection highlight — and its touch handles — render at full
+   strength (an `opacity` on the span would fade the highlight too). Positioning, font size
+   and the width-correcting transform are the TextLayer's own inline styles; these rules
+   supply the presentation half of the official .textLayer :is(span, br) contract. */
+.tm-pdf-viewer__text-layer ::deep :is(span, br) {
+    position: absolute;
+    margin: 0;
+    white-space: pre;
+    color: transparent;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+}
+
+.tm-pdf-viewer__text-layer ::deep :is(span, div)::selection {
     background: color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
@@ -657,17 +675,19 @@
         min-width: 0;
     }
 
-    /* The page input shares the row: shrinkable, but never below its touch target. */
+    /* The page input shares the row but never yields: flex-shrink: 0 keeps its value
+       legible — min-width floors it at the touch target and at three digits (3ch), so the
+       number can no longer clip under compression. The zoom trigger and the "More" overflow
+       absorb the space instead. */
     .tm-pdf-viewer__page-input {
         width: 3rem;
-        min-width: 0;
-        flex-shrink: 1;
+        min-width: max(var(--tm-touch-target), 3ch);
+        flex-shrink: 0;
     }
 
     /* The navigation group must be allowed to compress with it: the group's own min-content
        would otherwise keep the input's reserved width and overflow a narrow container
-       (::deep — the group root is a child component). Its pinned chevrons cannot shrink, so
-       the input absorbs whatever the row gives up. */
+       (::deep — the group root is a child component). */
     .tm-pdf-viewer ::deep .tm-toolbar-group[data-tm-group="navigation"] {
         min-width: 0;
     }
@@ -692,16 +712,33 @@
 
 /* Ultra-narrow containers (a 320px phone, a narrow Notion column): below ~280px of viewer
    width the full compact row — two pinned chevrons, the page input, the "/N" count, the zoom
-   trigger and "More" — cannot fit even with the input compressed to zero, so the count
-   yields (the input stays the page indicator) and the row padding tightens a step to keep
-   every touch target on one line. */
+   trigger and "More" — cannot fit at their touch-target widths, so the zoom trigger and the
+   "More" overflow YIELD their space (a tighter trigger padding keeps the glyphs visible; the
+   row gap tightens too). The count NEVER hides: the input + "/N" pair stays the page
+   indicator at every width (phase 10 review). */
 @container tm-pdf-viewer (width < 280px) {
-    .tm-pdf-viewer__page-count {
-        display: none;
-    }
-
     .tm-pdf-viewer ::deep .tm-pdf-viewer__toolbar {
         padding-inline: var(--tm-space-2);
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar-start {
+        gap: var(--tm-space-1);
+    }
+
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom {
+        flex-shrink: 1;
+    }
+
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom .tm-dropdown-trigger {
+        min-width: 0;
+        padding-inline: var(--tm-space-1);
+        font-size: var(--tm-font-size-xs);
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar .tm-toolbar-more {
+        min-width: 0;
+        flex-shrink: 1;
+        padding-inline: var(--tm-space-1);
     }
 }
 

@@ -293,43 +293,43 @@ window.tmPdfViewer = (function () {
         await renderPage(rootEl, state.currentPage, state.scale, rotation);
     }
 
-    // Shared text-layer builder: fills `el` with the selectable text divs for one
+    // Shared text-layer builder: fills `el` with the selectable text spans for one
     // page. Used by the single-page layer and by the per-page layers of the
     // continuous renderer.
+    //
+    // Phase 10 review: the layer is built by PDF.js's own `TextLayer` class (the
+    // bundled pdf.min.mjs exports it). The previous hand-rolled divs sat on the text
+    // BASELINE (top = tx[5]) and never broke lines, so a multi-line selection came
+    // out as one run-together string with misaligned boxes. `TextLayer` inserts
+    // <br> for hasEOL items, places each span at top = baseline − fontHeight and
+    // scales it against the actually measured glyph width. The spans keep painting
+    // nothing (the scoped `color: transparent` rule) while the native ::selection
+    // highlight renders at full strength.
     async function _renderTextLayerInto(state, el, page, viewport) {
         if (!state?.pdfDoc || !el) return;
         try {
             const pdfjs = await _ensureLib();
-            const textContent = await page.getTextContent();
 
             el.innerHTML = '';
             el.style.width = viewport.width + 'px';
             el.style.height = viewport.height + 'px';
+            // PDF.js v5 sizes the layer box and its spans through the
+            // --total-scale-factor custom property (raw page units × scale, applied
+            // purely in CSS so a zoom re-flow needs no re-render) — the variables
+            // must resolve on the container or the layer collapses to zero.
+            el.style.setProperty('--scale-factor', String(viewport.scale));
+            el.style.setProperty('--user-unit', String(page.userUnit ?? 1));
+            el.style.setProperty('--total-scale-factor', 'calc(var(--scale-factor) * var(--user-unit))');
+            el.style.setProperty('--scale-round-x', '0.01px');
+            el.style.setProperty('--scale-round-y', '0.01px');
 
-            for (const item of textContent.items) {
-                const tx = pdfjs.Util.transform(viewport.transform, item.transform);
-                const fontHeight = Math.hypot(tx[0], tx[1]);
-                const fontWidth = Math.hypot(tx[2], tx[3]);
-                const div = document.createElement('div');
-                div.textContent = item.str;
-                div.style.position = 'absolute';
-                div.style.left = tx[4] + 'px';
-                div.style.top = tx[5] + 'px';
-                div.style.fontSize = fontHeight + 'px';
-                div.style.fontFamily = item.fontName;
-                div.style.transform = `scaleX(${fontWidth > 0 ? fontHeight / fontWidth : 1})`;
-                div.style.transformOrigin = '0 0';
-                div.style.whiteSpace = 'pre';
-                div.style.userSelect = 'text';
-                div.style.cursor = 'text';
-                // FZE-9 touch selection: the text itself paints nothing (no doubled glyphs
-                // under the canvas) but stays fully opaque so the native selection highlight
-                // — and its touch handles — render at full strength (an `opacity` on the div
-                // would fade the highlight too). The highlight color is the scoped
-                // `.tm-pdf-viewer__text-layer ::deep div::selection` rule.
-                div.style.color = 'transparent';
-                el.appendChild(div);
-            }
+            const textContent = await page.getTextContent();
+            const layer = new pdfjs.TextLayer({
+                textContentSource: textContent,
+                container: el,
+                viewport,
+            });
+            await layer.render();
         } catch (err) {
             console.error('tmPdfViewer.renderTextLayer', err);
         }
@@ -1678,6 +1678,16 @@ window.tmPdfViewer = (function () {
         a.remove();
     }
 
+    // Scrolls the thread CARD owning `element` (a comment item's edit input, say) into view —
+    // used by the shared comment item when the inline edit opens in a scrolled sheet: focus
+    // alone can leave the card's author row clipped under the sheet header (phase 10 backlog).
+    function scrollCardIntoView(element) {
+        const card = element?.closest?.('.tm-pdf-thread-card');
+        if (!card) return false;
+        card.scrollIntoView({ block: 'nearest' });
+        return true;
+    }
+
     return {
         isAvailable,
         init,
@@ -1702,6 +1712,7 @@ window.tmPdfViewer = (function () {
         fitScale,
         clearFit,
         clearSelection,
+        scrollCardIntoView,
         // Internal (test surface): the pure selection-report identity (M3).
         _selectionKey,
         downloadUrl,

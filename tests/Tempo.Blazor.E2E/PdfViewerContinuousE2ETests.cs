@@ -230,7 +230,7 @@ el => {
 
         // Selection enabled: the deferred setup rendered the text layer into the fresh
         // DOM (renderTextLayer + enableSelection run inside the same post-render pass).
-        var textSpans = await section.Locator(".tm-pdf-viewer__canvas-wrap .tm-pdf-viewer__text-layer div").CountAsync();
+        var textSpans = await section.Locator(".tm-pdf-viewer__canvas-wrap .tm-pdf-viewer__text-layer span").CountAsync();
         Assert.IsTrue(textSpans > 0,
             $"the selection text layer must be populated after the switch (found {textSpans} spans)");
     }
@@ -272,7 +272,7 @@ el => {
         Assert.IsTrue(await canvas.EvaluateAsync<bool>(JsCanvasPaintedProbe),
             "the thread select must leave a painted single-page canvas on page 3");
 
-        var textSpans = await section.Locator(".tm-pdf-viewer__canvas-wrap .tm-pdf-viewer__text-layer div").CountAsync();
+        var textSpans = await section.Locator(".tm-pdf-viewer__canvas-wrap .tm-pdf-viewer__text-layer span").CountAsync();
         Assert.IsTrue(textSpans > 0, "the selection layer must be re-armed for the thread's page");
     }
 

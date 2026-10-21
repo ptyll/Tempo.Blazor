@@ -64,7 +64,8 @@ The viewer measures **its own container** (`.tm-pdf-viewer` is a named query con
 - **Mobile** (<640px): a compact single-row toolbar (prev chevron · page input · next chevron,
   compact `N/M` count, bare-`%` zoom trigger) with a "More" menu for the low-priority groups
   (Rotate, Open, Download, the continuous toggle — `OverflowOnly` priorities), an in-flow
-  `TmMobileActionBar` ("Pages | Hledat | Komentáře (N)" — only enabled features render tiles),
+  `TmMobileActionBar` ("Pages | Search | 3 comments" — only enabled features render tiles; the
+  comments tile reuses the plural `TmPdfViewer_CommentsCount` wording),
   the thumbnails / comments / zoom presets / search as bottom sheets, and `ZoomMode=Auto`
   computing **fit-width**.
 
@@ -90,7 +91,7 @@ The toolbar is the core `TmToolbar` (`Overflow=Menu`, priority-based "More"). Th
 | `view` | The single/continuous segmented control (`ShowViewModeToggle`) |
 | `panels` | The "Pages" thumbnails toggle |
 | `search` | The search toggle (`ShowSearch`) |
-| `comments` | The comments toggle with the live open-thread count ("Comments (N)") |
+| `comments` | The comments toggle with the live open-thread count as its label ("1 comment" / "3 comments" — the `TmPdfViewer_CommentsCount` plural family; the toggle keeps its text even in the icon-only toolbar) |
 | `export` | The trailing file links (Download primary, Open secondary) + host `ToolbarEnd` |
 
 The annotator adds its `tools` group and its panel toggle into the same row. Where a group
@@ -201,8 +202,11 @@ Responsive (`LayoutMode`, default `Auto`):
 
 - **Desktop** — merged toolbar + docked thread panel (with a resize separator).
 - **Tablet** — the tools render as a **full-width labelled row** above the canvas (never inside
-  the narrow viewer toolbar overflow; the colour chip label stays visible), the panel is a
-  docked aside and the thumbnails reuse the viewer's guarded default (collapsed).
+  the narrow viewer toolbar overflow). The row is a **single scrollable line** at every
+  container width: when the docked panel squeezes the canvas the row scrolls horizontally
+  (like the mobile tile row) instead of wrapping or dropping labels — the tool labels, the
+  colour chip label and the trailing panel toggle (sticky right) all stay visible. The panel
+  is a docked aside and the thumbnails reuse the viewer's guarded default (collapsed).
 - **Mobile — G2: viewing + light edits only.** The tool palette is the tile row with exactly
   *Browse* and *Add comment* (highlight/stamp/draw are hidden; an active edit mode falls back to
   Browse with a localized hint `TmPdfAnnotator_EditOnLargerScreen`), the F5 `TmMobileActionBar`
@@ -304,9 +308,56 @@ summary:
   selection/init/generations/classes modules); `scripts/run-node-tests.mjs` enumerates files
   explicitly, no globs.
 - **E2E** — `tests/Tempo.Blazor.E2E` `PdfViewer*` / `PdfAnnotator*` / `Redaction*` suites
-  (desktop 1440, tablet 1024×768 touch, mobile 390×844); screenshots land in
-  `tests/Tempo.Blazor.E2E/screenshots/pdf-viewer/` and `…/pdf-annotator/`. The demo loads a
+  (desktop 1440, tablet 1180×820 touch — the forced-tablet sections render full-bleed so the
+  evidence container is ≥768px wide, mobile 390×844 and 320×640); screenshots land in
+  `tests/Tempo.Blazor.E2E/__screenshots__/pdf-viewer/`, `…/pdf-annotator/` and
+  `…/redaction/`. The demo loads a
   local 120-page fixture (`_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf`).
 - **Audits** — the strict CSS token audit (`scripts/audit-css-strict.mjs`, baseline 0 for the
   package), `ScopedCssOwnershipTests` and `ComponentDocumentationFreshnessTests` (regenerate the
   JSON bundles after touching the `[Parameter]` surface).
+
+## Reference deviations
+
+The redesign references live in `output/imagegen/tempo-reimagined/Tempo.Blazor.PdfViewer/`;
+each is reviewed against the E2E screenshots under
+`tests/Tempo.Blazor.E2E/__screenshots__/`. Statuses: **matched** (the reference presentation is
+implemented and screenshotted), **intentional** (a documented deviation from the reference) and
+**backlog** (reference content deliberately not built).
+
+| Reference | E2E screenshot(s) | Status |
+|-----------|-------------------|--------|
+| `pdf-viewer--desktop.png` | `pdf-viewer/pdf-viewer--{light,dark}-{default,indigo}--desktop.png`, `toolbar-desktop.png`, `header-desktop.png` | **matched** — one toolbar row with grouped pill labels, editable page input, zoom presets, Download primary / Open secondary; the theme shots also prove token propagation |
+| `pdf-viewer--tablet.png` | `pdf-viewer/tablet-toolbar.png`, `tablet-comments-sheet.png` | **matched** — captured at 1180×820 in a ≥768px full-bleed container; 44px coarse targets, labels below icons, thumbnails collapsed |
+| `pdf-viewer--mobile.png` | `pdf-viewer/mobile-320-all-features.png`, `mobile-fit-width.png`, `mobile-more-menu.png` | **matched** — compact single row, "More" overflow, fit-width Auto, action bar; shot at 320 (the smallest supported phone) instead of the mock's 390 |
+| `pdf-viewer-continuous--desktop.png` | `pdf-viewer/continuous-desktop.png`, `continuous-start.png` | **matched** — lazy scroll column, painted page cards, scroll-tracked page number |
+| `pdf-viewer-continuous--tablet.png` | `pdf-viewer/mobile-continuous.png` (chrome is forced-tablet-identical except the label position) | **intentional** — no separate tablet continuous capture; the layout is container-driven and the tablet chrome is covered by `tablet-toolbar.png` |
+| `pdf-viewer-continuous--mobile.png` | `pdf-viewer/mobile-continuous.png` | **matched** — per-page text layer + search highlights in the scroll column |
+| `pdf-annotator--desktop.png` | `pdf-annotator/pdf-annotator--{light,dark}-{default,indigo}--desktop.png`, `stamp-placed.png` | **matched** — one merged toolbar (tool pills, colour label, panel toggle), header export row |
+| `pdf-annotator--tablet.png` | `pdf-annotator/tablet-tools-labeled.png` | **matched** — full-width labelled tools row (single scrollable line), docked panel; ≥768px container since phase 10 |
+| `pdf-annotator--mobile.png` | `pdf-annotator/mobile-default.png`, `mobile-320-annotator.png` | **intentional (G2)** — the mock keeps the full palette on a phone; the implementation is viewing + light edits only (Browse + Add comment, export/action bar) |
+| `pdf-annotator-panel--desktop.png` | `pdf-annotator/panel-cards.png`, `two-users-thread-shared.png` | **matched** — docked aside with the shared compact thread cards |
+| `pdf-annotator-panel--tablet.png` | `pdf-annotator/tablet-drawing.png` | **matched** — docked aside hosting the composer while drawing |
+| `pdf-annotator-panel--mobile.png` | `pdf-annotator/mobile-reply-sheet.png`, `mobile-edit-comment.png` | **matched** — non-modal bottom sheet (peek/half/full), closed at load |
+| `pdf-annotation-thread-panel--desktop.png` | `pdf-viewer/annotations-panel.png`, `annotations-detail.png` | **matched** — docked comments panel with the shared cards |
+| `pdf-annotation-thread-panel--tablet.png` | `pdf-viewer/tablet-comments-sheet.png` | **intentional** — the reference shows the side sheet open; the implementation starts it **closed** (open through the toolbar toggle), restoring focus to the toggle |
+| `pdf-annotation-thread-panel--mobile.png` | `pdf-viewer/mobile-comments-sheet.png` | **matched** — bottom sheet with the compact cards |
+
+Cross-cutting deviations that apply to several references:
+
+- **App shell** — the mockups paint a standalone application (logo, breadcrumbs, back arrow,
+  status bar, global search in the header). The library ships components, not an app: hosts
+  own the shell, the demo pages embed the components in their own chrome. *(intentional)*
+- **Icon-only labels by default** — the references show labelled toolbars everywhere; the
+  shipped default is `ToolbarLabels.Icons` (labels via `Auto`/`IconsWithText`, or below the
+  icons on a tablet layout). The comments count keeps its text regardless. *(intentional)*
+- **Compact thread cards** — the shared `TmPdfThreadCard`/`TmPdfCommentItem` cards are denser
+  than the mockup's cards (relative timestamps, smaller paddings) so both panels fit narrow
+  containers; the mockup's per-layout card variants were unified into one. *(intentional)*
+- **Invented features (not built)** — per the analysis `[E]` lists: the "Tempo" app shell,
+  "Open in app" wording ("Open" kept), file-size metadata in the header, the global search
+  field in the annotator header, hand/pan + text-annotation + undo/redo tools, the unbound
+  bottom composer, "All/Unresolved" tabs (the "Show resolved" toggle ships instead),
+  comment popovers tethered to markers, document-structure references ("Article 1"), photo
+  avatars (initials only) and a second (counter-clockwise) rotation. *(backlog — none are
+  planned; hosts may add their own via the slots)*

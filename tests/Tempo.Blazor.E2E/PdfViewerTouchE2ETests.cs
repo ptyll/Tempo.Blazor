@@ -124,35 +124,35 @@ public class PdfViewerTouchE2ETests : WasmTestBase
         await TouchAsync(session, "touchEnd", Array.Empty<(double, double)>());
     }
 
-    /// <summary>Selects text across the section's text-layer divs (the touch selection's own
+    /// <summary>Selects text across the section's text-layer spans (the touch selection's own
     /// report path is pinned by the node tests; this drives the same <c>selectionchange</c>
     /// → .NET wiring the finger would).</summary>
     private static async Task<bool> SelectTextAsync(ILocator section)
         => await section.EvaluateAsync<bool>(@"(section) => {
-            const divs = [...section.querySelectorAll('.tm-pdf-viewer__text-layer div')];
-            if (divs.length < 2) return false;
+            const spans = [...section.querySelectorAll('.tm-pdf-viewer__text-layer span')];
+            if (spans.length < 2) return false;
             const sel = window.getSelection();
             sel.removeAllRanges();
             const range = document.createRange();
-            range.setStartBefore(divs[0]);
-            range.setEndAfter(divs[Math.min(divs.length - 1, 4)]);
+            range.setStartBefore(spans[0]);
+            range.setEndAfter(spans[Math.min(spans.length - 1, 4)]);
             sel.addRange(range);
             return (sel.toString() || '').length > 0;
         }");
 
-    /// <summary>Selects a run of BODY-TEXT divs — real sentences, not the short heading-like
+    /// <summary>Selects a run of BODY-TEXT spans — real sentences, not the short heading-like
     /// items at the top of the layer — so the sticky CTA's reference shot shows the case it
     /// exists for (UX1, FZE-9 review).</summary>
     private static async Task<bool> SelectBodyTextAsync(ILocator section)
         => await section.EvaluateAsync<bool>(@"(section) => {
-            const divs = [...section.querySelectorAll('.tm-pdf-viewer__text-layer div')]
-                .filter(d => (d.textContent || '').trim().length >= 12);
-            if (divs.length < 2) return false;
+            const spans = [...section.querySelectorAll('.tm-pdf-viewer__text-layer span')]
+                .filter(s => (s.textContent || '').trim().length >= 12);
+            if (spans.length < 2) return false;
             const sel = window.getSelection();
             sel.removeAllRanges();
             const range = document.createRange();
-            range.setStartBefore(divs[0]);
-            range.setEndAfter(divs[Math.min(divs.length - 1, 6)]);
+            range.setStartBefore(spans[0]);
+            range.setEndAfter(spans[Math.min(spans.length - 1, 6)]);
             sel.addRange(range);
             return (sel.toString() || '').length > 0;
         }");
@@ -199,6 +199,48 @@ public class PdfViewerTouchE2ETests : WasmTestBase
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 20000 });
         Assert.IsTrue(await sheet.Locator("[data-testid='pdf-annotation-thread']").CountAsync() > threadsBefore,
             "the comment created through the sticky CTA appears as a thread");
+    }
+
+    // ── Text layer: the selection text keeps the line breaks ──────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_TextLayer_MultiLineSelection_KeepsLineBreaks()
+    {
+        // Phase 10 review: the layer is the PDF.js TextLayer — a <br> for every hasEOL
+        // item — so a selection spanning several lines reads with a line break (the old
+        // hand-rolled divs ran the lines together) and the span boxes align with the text.
+        var page = await OpenTouchAsync(PdfPage, TabletWidth, TabletHeight);
+
+        var section = Section(page, "Annotations & Comments");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+        await WaitForLoadedViewerAsync(section);
+
+        var spans = await section.Locator(".tm-pdf-viewer__text-layer span").CountAsync();
+        Assert.IsTrue(spans >= 2, $"the text layer must be populated with spans (found {spans})");
+
+        var selection = await section.EvaluateAsync<string>(@"(section) => {
+            const spans = [...section.querySelectorAll('.tm-pdf-viewer__text-layer span')]
+                .filter(s => (s.textContent || '').trim().length > 0);
+            if (spans.length < 2) return '';
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            const range = document.createRange();
+            range.setStartBefore(spans[0]);
+            range.setEndAfter(spans[Math.min(spans.length - 1, 40)]);
+            sel.addRange(range);
+            return sel.toString();
+        }");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(selection),
+            "a selection over the text layer must produce text");
+
+        var brs = await section.Locator(".tm-pdf-viewer__text-layer br").CountAsync();
+        Assert.IsTrue(brs > 0, "the TextLayer must insert <br> line breaks (hasEOL items)");
+
+        var trimmed = selection.TrimEnd();
+        Assert.IsTrue(trimmed.Contains('\n') || trimmed.Contains('\r'),
+            $"a multi-line selection's text must break between the lines (got: '{trimmed.Substring(0, Math.Min(120, trimmed.Length))}…')");
     }
 
     // ── Tablet: one finger draws, two fingers pinch (no stroke) ───────────────

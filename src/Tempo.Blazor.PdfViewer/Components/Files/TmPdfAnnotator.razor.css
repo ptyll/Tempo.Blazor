@@ -32,10 +32,17 @@
 }
 
 /* The tablet ribbon: the tools + export group are the row's whole width, the
-   pills keep their labels under the icons and nothing overflows into a menu. */
+   pills keep their labels under the icons and nothing overflows into a menu.
+   When the pane is too narrow for every label the row SCROLLS horizontally
+   (like the mobile tile row) instead of wrapping or dropping labels — the
+   colour label stays visible and the trailing panel toggle remains in the row
+   (the end group is sticky right, so the toggle keeps its place while the
+   tools scroll; phase 10 review). */
 .tm-pdf-annotator__toolbar--tablet {
-    flex-wrap: wrap;
-    row-gap: var(--tm-space-1);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
 }
 
 /* The color indicator never wraps its chip away from its label: the chip alone
@@ -45,12 +52,25 @@
     flex: 0 0 auto;
 }
 
-/* The labelled pill track wraps within the group too (phase 8 review 12): at a
-   768px pane the five labelled pills + the color indicator exceed one line, and
-   the modes row must break into a second line instead of clipping the last
-   pills out of the ribbon. */
+/* The labelled pill track never wraps inside the scrollable ribbon either: the
+   row scrolls as ONE line at every container width — the tools keep their
+   labels instead of collapsing to icons (phase 10 review). */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__tools {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+}
+
 .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__modes {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+}
+
+/* The trailing group rides the scroll as the row's end anchor: sticky right
+   keeps the panel toggle on screen while the tool pills scroll beneath it. */
+.tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__toolbar-end {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    padding-inline-start: var(--tm-space-2);
 }
 
 /* A finger cannot hit the row's pills either — the tablet row sits outside a
@@ -258,6 +278,18 @@
         border: 0;
     }
 
+    /* The tablet ribbon is exempt: its scrollable row makes room for the label at
+       every container width (phase 10 review — the label never hides on tablet). */
+    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color-label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+        clip-path: none;
+    }
+
     .tm-pdf-annotator__action-text {
         display: none;
     }
@@ -288,30 +320,10 @@
     }
 }
 
-/* UX4 (FZE-9 review): at a narrow container width (the docked tablet panel squeezes
-   the canvas region) the labelled tablet tools collapse to icons — the ribbon keeps
-   ONE row and the canvas keeps its vertical room, so a drawn stroke stays in view.
-   The pills keep their title/aria-label; only the visual label hides. The color chip
-   label collapses with them (a lone chip among icon-only pills reads as a stray dot,
-   the same rule the phase 8 review applied to the merged row). */
-@container tm-pdf-annotator-viewer (max-width: 699.98px) {
-    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__modes ::deep .tm-toolbar-btn-text {
-        display: none;
-    }
-
-    .tm-pdf-annotator__toolbar--tablet .tm-pdf-annotator__color-label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        clip-path: inset(50%);
-        white-space: nowrap;
-        border: 0;
-    }
-}
+/* UX4 (FZE-9 review → phase 10 review): a narrow container (the docked tablet panel
+   squeezing the canvas region) no longer collapses the labelled tablet tools to icons —
+   the ribbon scrolls horizontally as one line instead (see the --tablet rules above), so
+   the labels AND the colour label stay visible at every container width. */
 
 /* ── Body: the shell owns the layout (FZE-8) ─────────────────────────────── */
 

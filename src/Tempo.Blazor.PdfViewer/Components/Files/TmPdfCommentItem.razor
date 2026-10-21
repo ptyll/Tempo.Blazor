@@ -198,7 +198,14 @@
         if (_focusEditAfterRender)
         {
             _focusEditAfterRender = false;
-            try { await _editInputRef.FocusAsync(); }
+            try
+            {
+                await _editInputRef.FocusAsync();
+                // Phase 10 backlog: in a scrolled sheet (the mobile edit sheet) the focus can
+                // land with the card's author row still clipped under the sheet header —
+                // bring the owning thread card into view explicitly.
+                await JS.InvokeAsync<bool>("tmPdfViewer.scrollCardIntoView", _editInputRef);
+            }
             catch (JSException) { }
             catch (JSDisconnectedException) { }
         }

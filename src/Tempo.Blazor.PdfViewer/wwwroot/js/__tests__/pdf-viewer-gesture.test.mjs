@@ -17,7 +17,31 @@ const VIEWER_JS = new URL('../pdf-viewer.js', import.meta.url);
 
 const PDF_STUB = `export const GlobalWorkerOptions = {};
 export const Util = { transform: () => [1, 0, 0, 1, 0, 0] };
-export function getDocument() { return globalThis.__tmPdfViewerTestDocRequest; };`;
+export function getDocument() { return globalThis.__tmPdfViewerTestDocRequest; };
+// Minimal TextLayer mirror with the same DOM contract as PDF.js v5: a span per text
+// item and a <br> for every hasEOL item (the class positions and sizes them itself).
+export class TextLayer {
+    constructor({ textContentSource, container, viewport }) {
+        this.textContentSource = textContentSource;
+        this.container = container;
+        this.viewport = viewport;
+    }
+    async render() {
+        const el = this.container;
+        el.__textLayerContract = { scale: this.viewport.scale, spans: [], brs: 0 };
+        for (const item of this.textContentSource.items) {
+            if (item.str !== '') {
+                const span = { textContent: item.str };
+                el.children.push(span);
+                el.__textLayerContract.spans.push(item.str);
+            }
+            if (item.hasEOL) {
+                el.children.push({ br: true });
+                el.__textLayerContract.brs++;
+            }
+        }
+    }
+};`;
 
 const SIZE_STUB = `export function canvasSize(width, height, dpr) {
   const cap = Math.min(dpr || 1, 2);
@@ -45,9 +69,13 @@ export function attachPinch(element, options = {}) {
 };`;
 
 function fakeElement(tag) {
+    // The style object doubles as the custom-property store: setProperty assigns it.
+    const style = {
+        setProperty(name, value) { this[name] = value; },
+    };
     return {
         tagName: tag,
-        style: {},
+        style,
         dataset: {},
         children: [],
         innerHTML: '',
@@ -79,9 +107,13 @@ function fakePdfDoc(numPages) {
         async destroy() { },
         async getPage() {
             return {
-                getViewport: () => ({ width: 100, height: 50, transform: [1, 0, 0, 1, 0, 0] }),
+                userUnit: 1,
+                getViewport: () => ({ width: 100, height: 50, scale: 1, transform: [1, 0, 0, 1, 0, 0] }),
                 getTextContent: async () => ({
-                    items: [{ str: 'Hello touch selection', transform: [10, 0, 0, 10, 4, 12], fontName: 'g_d0_f1' }],
+                    items: [
+                        { str: 'First line of body text', transform: [10, 0, 0, 10, 4, 12], fontName: 'g_d0_f1', hasEOL: true },
+                        { str: 'Second line of body text', transform: [10, 0, 0, 10, 4, 24], fontName: 'g_d0_f1' },
+                    ],
                 }),
             };
         },
@@ -297,7 +329,7 @@ test('enablePinchZoom no-ops before the document is loaded', async (t) => {
         'no pinch may attach against a pending (canvas-less) state');
 });
 
-test('the text layer keeps the text invisible but the selection paintable', async (t) => {
+test('the text layer is built by the PDF.js TextLayer with the v5 scale-factor contract', async (t) => {
     const env = await loadViewer(t);
     const rootEl = fakeRootEl(fakeCanvas());
     const textLayer = fakeElement('text-layer');
@@ -308,13 +340,37 @@ test('the text layer keeps the text invisible but the selection paintable', asyn
 
     await env.viewer.renderTextLayer(rootEl, textLayer, 1, 1, 0);
 
-    assert.equal(textLayer.children.length, 1, 'one div per text item');
-    const div = textLayer.children[0];
-    assert.equal(div.style.color, 'transparent',
-        'the text paints nothing itself — no doubled text under the canvas');
-    assert.notEqual(div.style.opacity, '0.2',
-        'opacity would fade the native selection highlight too — color: transparent keeps it strong');
-    assert.equal(div.style.userSelect, 'text', 'the layer stays selectable for the touch handles');
+    // PDF.js v5 sizes the layer and its spans through the --total-scale-factor custom
+    // property — the container must carry it or the layer collapses to zero.
+    assert.equal(textLayer.style['--scale-factor'], '1',
+        'the layer container carries the PDF.js v5 --scale-factor variable');
+    assert.equal(textLayer.style['--user-unit'], '1', 'the page user unit feeds the total scale');
+    assert.equal(textLayer.style['--total-scale-factor'], 'calc(var(--scale-factor) * var(--user-unit))',
+        'the total scale factor resolves through the user unit');
+    const contract = textLayer.__textLayerContract;
+    assert.ok(contract, 'the layer is rendered by the TextLayer class (not hand-rolled divs)');
+    assert.equal(contract.scale, 1, 'the TextLayer receives the render viewport');
+});
+
+test('a multi-line selection reads with a line break between the lines', async (t) => {
+    const env = await loadViewer(t);
+    const rootEl = fakeRootEl(fakeCanvas());
+    const textLayer = fakeElement('text-layer');
+
+    const initPromise = env.viewer.init(rootEl, 'https://example.com/doc.pdf', env.dotNet);
+    env.docRequest.resolve(fakePdfDoc(3));
+    await initPromise;
+
+    await env.viewer.renderTextLayer(rootEl, textLayer, 1, 1, 0);
+
+    // The browser walks the selected range in DOM order: span text plus '\n' per <br>.
+    // The old hand-rolled layer had no line breaks at all — the lines ran together
+    // ("First line…Second line…") and the boxes sat on the baseline.
+    const selectionText = textLayer.children.map(c => (c.br ? '\n' : c.textContent)).join('');
+    assert.ok(selectionText.includes('\n'),
+        `the two text items must be separated by the hasEOL line break (got '${selectionText}')`);
+    assert.equal(selectionText, 'First line of body text\nSecond line of body text',
+        'the selection text keeps each line intact');
 });
 
 test('M6: a non-passive touchmove listener on the wrap blocks the native two-finger zoom', async (t) => {
