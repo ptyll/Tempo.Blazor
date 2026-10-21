@@ -1121,6 +1121,9 @@ window.tmWireframeDesigner = {
     _onKeyDown: function (e, inst) {
         // Only handle if SVG or a child has focus (or SVG is inside an active editor)
         if (!inst.svg.closest(':focus-within') && document.activeElement !== document.body) return;
+        // The layers panel owns every key typed inside it (radio roaming, Alt+Arrow reorder, Delete/Escape on a
+        // control): none of them may also act on the canvas selection (nudge, delete, clear).
+        if (e.target.closest?.('.tm-wd-layers')) return;
 
         const ids = [...inst.selectedIds];
 
@@ -1508,6 +1511,28 @@ window.tmWireframeDesigner = {
         });
     },
 
+    /// <summary>
+    /// Scroll guard for the layers panel list. The active-layer radios are native buttons roamed with the arrow keys
+    /// (handled in C#) and the layer name is a non-native div[role=button] whose Space activation runs on KEYUP, so
+    /// the browser's default for those keydowns - scrolling the list - must be cancelled. Scoped on purpose
+    /// (docs/keyboard-activation-convention.md): plain arrows only when the target IS a radio, Space only when the
+    /// target IS a name; Alt+Arrow (reorder), Tab and every other key or target are never touched.
+    /// </summary>
+    initLayersList: function (listElement) {
+        if (!listElement || listElement._wdLayersInit) return;
+        listElement._wdLayersInit = true;
+        listElement.addEventListener('keydown', function (e) {
+            const target = e.target;
+            if (!target || !target.classList) return;
+            if (target.getAttribute('role') === 'radio'
+                && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+                && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                e.preventDefault();
+            } else if (e.key === ' ' && target.classList.contains('tm-wd-layers__name')) {
+                e.preventDefault();
+            }
+        });
+    },
     // ── Export: bake token paints into explicit colours ───────────────────────
     // The canvas paints its page, grid and handles through var(--tm-wd-*) so dark mode and the indigo
     // theme reach it. A serialized export is standalone (the PNG/PDF rasteriser has no stylesheet and

@@ -3633,7 +3633,7 @@
       "kind": "Component",
       "category": "Wireframe",
       "namespace": "Tempo.Blazor.Components.Wireframe",
-      "description": "Right-side layers panel for managing wireframe layers.",
+      "description": "Layers panel of the wireframe editor: active layer (radiogroup), visibility and lock toggles (aria-pressed), inline rename, per-row menu (rename, move up/down, delete), drag-and-drop reorder with a drop indicator, and a Move to layer selector. Every operation has a non-drag alternative: the row menu, F2 (rename) and Alt+Up/Down (reorder), all through undoable commands.",
       "packageId": "Tempo.Blazor.Wireframe",
       "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeLayersPanel.razor",
       "documentationStatus": "merged",
@@ -3684,7 +3684,43 @@
           "isRequired": false,
           "default": "[]",
           "description": "Ids of the currently selected elements; enables the \"Move to layer\" selector when non-empty."
+        },
+        {
+          "name": "ShowCollapseToggle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the panel renders its own collapse tab. Defaults to true (standalone use). Hosts that own the collapse or the surrounding panel pass false: the panel then renders without the tab, is never collapsed and fills the width of its host."
         }
+      ],
+      "cssClasses": [
+        "tm-wd-layers",
+        "tm-wd-layers--embedded",
+        "tm-wd-layers__toggle",
+        "tm-wd-layers__inner",
+        "tm-wd-layers__header",
+        "tm-wd-layers__title",
+        "tm-wd-layers__add-btn",
+        "tm-wd-layers__list",
+        "tm-wd-layers__item",
+        "tm-wd-layers__item--active",
+        "tm-wd-layers__item--hidden",
+        "tm-wd-layers__item--dragging",
+        "tm-wd-layers__item--drag-over",
+        "tm-wd-layers__drag-handle",
+        "tm-wd-layers__active",
+        "tm-wd-layers__radio",
+        "tm-wd-layers__radio--checked",
+        "tm-wd-layers__visibility",
+        "tm-wd-layers__lock",
+        "tm-wd-layers__name",
+        "tm-wd-layers__name-input",
+        "tm-wd-layers__delete",
+        "tm-wd-layers__row-menu",
+        "tm-wd-layers__row-menu-trigger",
+        "tm-wd-layers__row-menu-item",
+        "tm-wd-layers__move-section",
+        "tm-wd-layers__move-label"
       ]
     },
     {

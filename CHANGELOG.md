@@ -69,6 +69,28 @@
 
 ### Added
 
+- **Wireframe layers panel: row menu, non-drag reorder and real semantics (redesign plan ce19aa8c, phase 3).**
+  `TmWireframeLayersPanel` can now be driven entirely without a mouse and without dragging (WCAG 2.5.7):
+  every row has a "⋯" menu (core `TmContextMenu`: **Rename layer**, **Move up**, **Move down**, **Delete layer**;
+  the first row cannot move up, the last cannot move down, the default layer has no Delete), **F2** renames the row
+  from any of its controls, and **Alt+↑ / Alt+↓** reorder it. Reordering, rename, visibility, lock, delete and
+  *Move to layer* all go through the editor's undoable command stack (`ReorderLayersCommand`, `RenameLayerCommand`, …),
+  so undo/redo works for every path, and a polite live region announces moves and deletions. The drag-and-drop
+  drop now paints a drop indicator line (before/after the hovered row) and clears it on drop and `dragend`.
+  The active layer is a labelled `radiogroup` of `role="radio"` buttons (Arrow keys roam and activate, one tab
+  stop); the eye and the lock are toggle buttons with `aria-pressed`. New parameter
+  **`ShowCollapseToggle`** (`bool`, default `true` = today's standalone look): a host that owns the collapse or the
+  surrounding panel passes `false` and gets the panel without its own tab, never collapsed, filling its host.
+  Look: lighter, per the reference — sentence-case 14px title (no uppercase 11px caption), 36px rows, 32px icon
+  buttons (44px = `--tm-touch-target` on `(pointer: coarse)`), the active row tinted with
+  `--tm-color-primary-subtle`, the trash quiet on a fine pointer (shown on row hover, `:focus-within` and on the active row) and always shown
+  where there is no hover; in the editor's narrow column on a coarse pointer it steps aside for the row menu's Delete
+  (five 44px targets do not fit 288px), and the grip is hidden on touch (HTML5 drag does not run there).
+  Every key typed inside the panel stays in the panel (the canvas shortcuts - nudge, Delete, Escape - ignore it), keys inside
+  an open row menu do not reach the row shortcuts, the default layer (lowest-ordered, moves on reorder) is marked with
+  `aria-description`, and moves are announced with their new position.
+  New localization keys `TmWireframeLayers_*` (en/cs/sk/fr). Guarded by `TmWireframeLayersPanelTests` (bUnit) and
+  `WireframeLayersPanelE2ETests` / `Layers_KeyboardReorder` / `Layers_RowMenuRename` (E2E, incl. axe).
 - **`TmFilterBuilder.ResultCountKey`** (`object?`, default `null`). Changing this value re-runs the count; hosts
   pass a token covering inputs outside `ActiveFilters` — search text, column filters, new items or a reloaded
   data provider. `TmDataTable` and `TmMultiViewList` pass an internal version counter they bump on those changes,
@@ -1152,6 +1174,33 @@
 
 ### Breaking / Migration
 
+- **`TmWireframeLayersPanel` DOM: the active layer is a `role="radio"` button inside a `radiogroup`, and the
+  visibility/lock buttons are toggles.** Impact: a test, script or stylesheet that relied on the old structure
+  must move. The list was `role="list"` of `role="listitem"` rows whose "active" control was a plain `<button>`
+  with a decorative `<span>`; the eye and lock buttons flipped their `aria-label` ("Hide layer" / "Show layer")
+  and carried no pressed state. The `.tm-wd-layers`, `__item`, `__add-btn`, `__active`, `__radio`,
+  `__radio--checked`, `__visibility`, `__lock`, `__delete`, `__name` and `__move-section` classes are unchanged
+  (the E2E selectors keep working); the row is now also `--active` / `--hidden` / `--drag-over` / `--dragging`.
+  Before:
+  ```html
+  <div class="tm-wd-layers__list" role="list">
+    <div class="tm-wd-layers__item" role="listitem" data-layer-id="l1">
+      <button class="tm-wd-layers__active" aria-label="Set as active layer"><span class="tm-wd-layers__radio tm-wd-layers__radio--checked"></span></button>
+      <button class="tm-wd-layers__visibility" aria-label="Hide layer">…</button>
+  ```
+  After:
+  ```html
+  <div class="tm-wd-layers__list" role="radiogroup" aria-label="Active layer">
+    <div class="tm-wd-layers__item tm-wd-layers__item--active" data-layer-id="l1">
+      <button class="tm-wd-layers__active" role="radio" aria-checked="true" aria-label="Set layer Content as active"><span class="tm-wd-layers__radio tm-wd-layers__radio--checked" aria-hidden="true"></span></button>
+      <button class="tm-wd-layers__visibility" aria-pressed="true" aria-label="Show layer Content">…</button>
+  ```
+  Migrate: select the active layer with `[role="radio"][aria-checked="true"]` (or the unchanged
+  `.tm-wd-layers__radio--checked`), the visibility state with `aria-pressed` on `.tm-wd-layers__visibility`
+  (`true` = visible) and the lock with `aria-pressed` on `.tm-wd-layers__lock` (`true` = locked) instead of
+  comparing the label text. The layer title is now sentence case (`text-transform: none`, 14px); a stylesheet that
+  matched the uppercase caption should drop that assumption. `data-collapsed` is now always rendered as the string
+  `"True"` / `"False"`, which is what the stylesheet matches.
 - **Wireframe editor: `--tm-wd-*` are now aliases of the core `--tm-*` tokens; a consumer palette override moves to
   `--tm-*`.** `_wireframe-editor.css` no longer ships a palette of its own (`--tm-wd-accent: #3b82f6`,
   `--tm-wd-border: #d1d5db`, …). Every `--tm-wd-*` is `var(--tm-…)` (`--tm-wd-accent` = `--tm-color-primary`,

@@ -81,6 +81,37 @@ re-colour paper-drawn stencils. A host that wants indigo stencils sets the pack 
 Toolbar, properties-panel, toolbox and page-tab controls render `TmIcon` (`IconNames.*`), never emoji or Unicode
 arrows. Icon-only buttons keep an `aria-label` / `title`. All icons used exist in core (no local SVGs).
 
+## Layers panel (phase 3)
+
+`TmWireframeLayersPanel` stays a public, standalone component (the editor hosts it in the right column). Every
+operation has a non-drag alternative (WCAG 2.5.7) and goes through the editor's undoable command stack:
+
+| Operation | Mouse / touch | Keyboard | Command |
+|---|---|---|---|
+| Set active layer | click the radio | Arrow keys roam and activate (one tab stop) | — (`ActiveLayerIdChanged`) |
+| Show / hide, lock / unlock | eye / lock toggle (`aria-pressed`) | Enter / Space | `ToggleLayerVisibilityCommand`, `ToggleLayerLockCommand` |
+| Rename | row menu **Rename layer**, double-click | **F2** from any control of the row, Enter / Space on the name | `RenameLayerCommand` |
+| Reorder | row menu **Move up / Move down**, drag-and-drop (drop indicator) | **Alt+↑ / Alt+↓** | `ReorderLayersCommand` |
+| Delete | trash, row menu **Delete layer** | Tab to either | `RemoveLayerCommand` (never the default layer) |
+| Move selection | **Move to layer** select (only with a selection) | — | `MoveElementsToLayerCommand` |
+
+`ReadOnly` disables every one of them (the row menu is not rendered). `ShowCollapseToggle` (default `true`) hides the
+panel's own collapse tab for a host that owns the collapse (`.tm-wd-layers--embedded`: no height cap, fills its host).
+Rows are 36px, icon buttons 32px; on `(pointer: coarse)` they reach `--tm-touch-target` and the grip is hidden. The
+trash is quiet on a fine pointer and shown on row hover, `:focus-within` and for the active row; on a coarse pointer it is
+always shown unless the list is narrower than 22rem (the editor column), where Delete lives in the row menu only. Stencil/role audit:
+the panel is editor chrome, not a placeable wireframe component, so the stencil pack needs no "layers list" role.
+
+**Default layer.** The default layer is the page's *lowest-ordered* layer, not a fixed one: it cannot be deleted (a deleted
+layer's elements fall back to it), and reordering can hand the role to another layer. The panel reads it on every render, so
+the Delete controls follow the new lowest layer. The default row's name carries an ria-description ("Default layer").
+
+**Keyboard scope.** Every key typed inside .tm-wd-layers belongs to the panel: the editor's canvas shortcuts
+(arrow nudge, Delete/Backspace, Escape, Ctrl+…) ignore events whose target is inside it. Plain arrows on a radio and Space on a
+layer name get their browser default (list scroll) cancelled by a scoped listener (initLayersList), never a blanket
+preventDefault. Keys inside an open row menu do not reach the row shortcuts. Moves are announced with the new position
+("Layer X moved down, position 3 of 5") so repeated moves are re-announced.
+
 ## E2E anchors (stable selectors)
 
 `.tm-wd-editor`, `.tm-wd-editor__toolbar`, `.tm-wd-editor__btn` (`--icon`, `--active`, `--text`),
