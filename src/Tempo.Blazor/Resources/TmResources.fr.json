@@ -997,6 +997,7 @@
   "TmViewManager_SetDefaultNamed": "Définir {0} par défaut",
   "TmViewManager_DefaultView": "Vue par défaut",
   "TmViewManager_SetDefaultFailed": "Impossible de définir la vue par défaut.",
+  "TmViewManager_SetDefaultDone": "{0} est désormais la vue par défaut.",
   "TmFilterBuilder_ResultPreviewLoading": "Comptage…",
   "TmFilterBuilder_ResultPreview_One": "{0} enregistrement correspondant",
   "TmFilterBuilder_ResultPreview_Many": "{0:N0} d'enregistrements correspondants",

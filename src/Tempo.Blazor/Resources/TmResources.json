@@ -989,6 +989,7 @@
   "TmViewManager_SetDefaultNamed": "Set {0} as default",
   "TmViewManager_DefaultView": "Default view",
   "TmViewManager_SetDefaultFailed": "Could not set the default view.",
+  "TmViewManager_SetDefaultDone": "{0} is now the default view.",
   "TmFilterBuilder_ResultPreviewLoading": "Counting…",
   "TmFilterBuilder_ResultPreview_One": "{0} matching record",
   "TmFilterBuilder_ResultPreview_Other": "{0} matching records",

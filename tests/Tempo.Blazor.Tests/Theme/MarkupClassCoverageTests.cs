@@ -121,9 +121,8 @@ public sealed class MarkupClassCoverageTests
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
-        // AllowExportSelected: the scope choice reuses .tm-data-table__export-item; the extra
-        // class only marks the choice, and the selected state has its own rule.
-        "tm-data-table__export-scope",
+        // ("tm-data-table__export-scope" left the inventory: the disabled-state rules
+        // (.tm-data-table__export-scope[aria-disabled=…] in _data-table.css) now style it.)
         "tm-date-today-btn",
         "tm-datetime-range-end",
         "tm-datetime-range-start",

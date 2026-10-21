@@ -1312,6 +1312,9 @@
     <div class="tm-overlay" @onclick="CloseDropdown"></div>
     ```
     After: no backdrop element — the panel renders as a `TmOverlayPanel` in the browser top layer (click-outside closing is handled by the overlay panel).
+  - `TmViewManager` announces a completed Set-as-default in a visually-hidden polite live region inside the panel, and each view row carries a stable id (`{toggle-id}-view-{view-id}`) used to restore focus after the row list re-renders. <!-- snapshot:dt-viewmanager -->
+    Before: `<div class="tm-view-manager-panel"><div class="tm-view-section">` and `<button type="button" class="tm-view-item">`
+    After: `<div class="tm-view-manager-panel"><div class="tm-sr-only" role="status" aria-live="polite"></div><div class="tm-view-section">` and `<button type="button" id="…-view-…" class="tm-view-item">`
   - Group toggles and the group-chip remove control use `TmIcon` plus `aria-expanded` / `aria-label` instead of `▼`, `▶` and `×`. <!-- snapshot:dt-grouping --> <!-- snapshot:mvl-grouped -->
     Before: `<button class="tm-data-table-group-chip-remove">×</button>`
     After: `<button class="tm-data-table-group-chip-remove" aria-label="Remove grouping by Role"><svg class="tm-icon">…</svg></button>`

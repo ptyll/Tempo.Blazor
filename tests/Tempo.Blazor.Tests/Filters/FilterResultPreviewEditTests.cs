@@ -71,10 +71,14 @@ public class FilterResultPreviewEditTests : LocalizationTestBase
             cut.Find(".tm-filter-result-preview").TextContent.Trim().Should().Be("3 matching records"),
             timeout: TimeSpan.FromSeconds(2));
 
-        // Apply Name contains "a" → Alice and Carol.
+        // Apply Name contains "a" → Alice and Carol. The clicks render asynchronously, so each
+        // element is awaited through WaitForAssertion — under full-suite parallel load a bare
+        // Find raced the render and failed intermittently.
         cut.Find(".tm-filter-builder-add").Click();
-        cut.Find(".tm-filter-field-option").Click();
-        cut.Find(".tm-filter-value-input").Change("a");
+        cut.WaitForAssertion(() => cut.Find(".tm-filter-field-option").Click(),
+            timeout: TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() => cut.Find(".tm-filter-value-input").Change("a"),
+            timeout: TimeSpan.FromSeconds(2));
         cut.Find(".tm-filter-apply").Click();
 
         cut.WaitForAssertion(() =>
@@ -82,8 +86,10 @@ public class FilterResultPreviewEditTests : LocalizationTestBase
             timeout: TimeSpan.FromSeconds(2));
 
         // Open the chip for editing and change the value to "b" → only Bob.
-        cut.Find(".tm-filter-chip").Click();
-        cut.Find(".tm-filter-value-input").Change("b");
+        cut.WaitForAssertion(() => cut.Find(".tm-filter-chip").Click(),
+            timeout: TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() => cut.Find(".tm-filter-value-input").Change("b"),
+            timeout: TimeSpan.FromSeconds(2));
 
         cut.WaitForAssertion(() =>
         {

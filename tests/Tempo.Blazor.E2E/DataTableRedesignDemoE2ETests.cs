@@ -133,6 +133,37 @@ public class DataTableRedesignDemoE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    public async Task ViewManager_SetDefault_KeepsKeyboardFocusOnTheNewDefaultRow_AndAnnouncesIt()
+    {
+        // The Set-as-default star disappears after the reload (its view became the default), which
+        // would drop keyboard focus to <body> while the panel is still open (WCAG 2.4.3 / 4.1.3).
+        var page = await OpenDataTableAsync(1440, 1100);
+        var section = page.Locator("[data-testid='dt-views-demo']");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+
+        var toggle = section.Locator(".tm-view-manager-toggle");
+        await toggle.ClickAsync();
+        var panel = page.Locator(".tm-view-manager-panel").First;
+        await Assertions.Expect(panel).ToBeVisibleAsync(new() { Timeout = 10000 });
+
+        // Keyboard path: focus the star directly, then activate it with Enter — bUnit cannot bubble
+        // native Enter activation, so this is the keyboard contract check.
+        var star = section.Locator(".tm-view-set-default-btn").First;
+        await star.FocusAsync();
+        await Assertions.Expect(star).ToBeFocusedAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        await page.WaitForFunctionAsync(
+            @"() => {
+                const el = document.activeElement;
+                return !!el && el.classList.contains('tm-view-item') && el.textContent.includes('Engineering');
+            }", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        await Assertions.Expect(panel).ToContainTextAsync("is now the default view");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     public async Task PinnedColumns_At1024_DoNotOverlap_AndFirstPinnedStaysPutWhileScrolling()
     {
         var page = await OpenDataTableAsync(1024, 900);

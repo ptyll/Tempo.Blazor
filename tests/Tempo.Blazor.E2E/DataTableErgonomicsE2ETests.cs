@@ -164,7 +164,10 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
 
-        var editButtons = section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" });
+        // Scoped to the default table: the section also demonstrates EditActionsMode.Footer in a
+        // second table, which exposes its own Edit row actions.
+        var defaultTable = section.Locator("[data-testid='transaction-table']");
+        var editButtons = defaultTable.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" });
         Assert.AreEqual(3, await editButtons.CountAsync(), "Every editable row should expose an accessible Edit row action.");
         await editButtons.First.ClickAsync();
 
@@ -175,7 +178,7 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Cancel" }).WaitForAsync();
 
         // Starting a second row replaces the active edit row instead of leaving two editing rows.
-        await section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" }).First.ClickAsync();
+        await defaultTable.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" }).First.ClickAsync();
         Assert.AreEqual(1, await editing.CountAsync(), "Starting another row must preserve the single-row edit invariant.");
         Assert.AreEqual(49.5m, decimal.Parse(
             await editing.Locator("input[type='number']").InputValueAsync(),
@@ -192,6 +195,46 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await Assertions.Expect(editing).ToHaveCountAsync(1);
         await editing.Locator("input").First.PressAsync("Enter");
         await Assertions.Expect(editing).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task DataTable_InlineEdit_FooterActions_FitTheirLabelsAndDoNotOverlap()
+    {
+        // EditActionsMode.Footer renders icon + visible label, but the base rule squeezes every
+        // edit action into a 32px icon square: the label would overflow and the legacy sibling
+        // margin would double the flex gap. Both are guarded here by live geometry.
+        var page = await OpenPageAsync();
+
+        var table = page.Locator("[data-testid='transaction-table-footer']");
+        await table.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await table.ScrollIntoViewIfNeededAsync();
+
+        await table.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" }).First.ClickAsync();
+        var footer = table.Locator(".tm-data-table__edit-footer-actions");
+        await footer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        var save = footer.Locator(".tm-data-table__edit-action--save");
+        var cancel = footer.Locator(".tm-data-table__edit-action--cancel");
+
+        var geometry = await save.EvaluateAsync<string>(@"el => {
+            const r = el.getBoundingClientRect();
+            const pair = el.nextElementSibling ? el.nextElementSibling.getBoundingClientRect() : null;
+            return JSON.stringify({
+                width: r.width,
+                scrollWidth: el.scrollWidth,
+                nextX: pair ? pair.x : null,
+                end: r.x + r.width
+            });
+        }");
+        using var doc = System.Text.Json.JsonDocument.Parse(geometry);
+        var root = doc.RootElement;
+        Assert.IsTrue(root.GetProperty("width").GetDouble() >= root.GetProperty("scrollWidth").GetDouble() - 0.5,
+            $"the Save button must fit its label (width {root.GetProperty("width")}, scrollWidth {root.GetProperty("scrollWidth")})");
+        var nextX = root.GetProperty("nextX");
+        Assert.IsFalse(nextX.ValueKind == System.Text.Json.JsonValueKind.Null, "the Cancel button must sit beside Save");
+        Assert.IsTrue(nextX.GetDouble() >= root.GetProperty("end").GetDouble() - 0.5,
+            "the Save and Cancel buttons must not overlap");
     }
 
     [TestMethod]

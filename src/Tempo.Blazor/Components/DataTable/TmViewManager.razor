@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.DataTable
+@implements IAsyncDisposable
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Filters
 @using Tempo.Blazor.Components.Overlay
@@ -25,6 +26,8 @@
             {
                 <div class="tm-view-error" role="alert">@_errorMessage</div>
             }
+            @* Announces the completed Set-as-default for screen readers (the ★ itself is aria-hidden). *@
+            <div class="tm-sr-only" role="status" aria-live="polite">@_statusMessage</div>
 
             @* Personal Views Section *@
             <div class="tm-view-section">
@@ -36,7 +39,7 @@
                     @foreach (var view in _views.Where(v => v.Scope == ViewScope.Personal))
                     {
                         <div class="tm-view-item-row">
-                            <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                            <button type="button" id="@($"{_toggleId}-view-{view.Id}")" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
                                  aria-current="@(_activeView?.Id == view.Id ? "true" : null)"
                                  @onclick="() => ApplyViewAsync(view)">
                                 <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
@@ -48,7 +51,7 @@
                             </button>
                             @if (AllowSetDefault && !view.IsDefault)
                             {
-                                <button type="button" aria-label="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                                <button type="button" aria-label="@SetDefaultLabel(view)" title="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
                             }
                             @if (CanEditView(view))
                             {
@@ -85,7 +88,7 @@
                         @foreach (var view in _views.Where(v => v.Scope == ViewScope.Tenant))
                         {
                             <div class="tm-view-item-row">
-                                <button type="button" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                <button type="button" id="@($"{_toggleId}-view-{view.Id}")" class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
                                      aria-current="@(_activeView?.Id == view.Id ? "true" : null)"
                                      @onclick="() => ApplyViewAsync(view)">
                                     <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
@@ -97,7 +100,7 @@
                                 </button>
                                 @if (AllowSetDefault && !view.IsDefault)
                                 {
-                                    <button type="button" aria-label="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
+                                    <button type="button" aria-label="@SetDefaultLabel(view)" title="@SetDefaultLabel(view)" class="tm-view-set-default-btn" @onclick="() => RequestSetDefaultAsync(view)"><TmIcon Name="star" Size="IconSize.Sm" /></button>
                                 }
                                 @if (CanEditView(view))
                                 {

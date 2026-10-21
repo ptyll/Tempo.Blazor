@@ -1005,6 +1005,7 @@
   "TmViewManager_SetDefaultNamed": "Nastaviť {0} ako predvolené",
   "TmViewManager_DefaultView": "Predvolené zobrazenie",
   "TmViewManager_SetDefaultFailed": "Predvolené zobrazenie sa nepodarilo nastaviť.",
+  "TmViewManager_SetDefaultDone": "{0} je teraz predvoleným zobrazením.",
   "TmFilterBuilder_ResultPreviewLoading": "Počítam…",
   "TmFilterBuilder_ResultPreview_One": "{0} zodpovedajúci záznam",
   "TmFilterBuilder_ResultPreview_Few": "{0} zodpovedajúce záznamy",

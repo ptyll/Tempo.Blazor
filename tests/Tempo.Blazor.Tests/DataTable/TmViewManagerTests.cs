@@ -363,4 +363,22 @@ public class TmViewManagerTests : LocalizationTestBase
 
         cut.Markup.Should().NotContain("data-tm-view-name", "the attribute was read by nothing");
     }
+
+    [Fact]
+    public async Task ViewManager_Dispose_ReleasesWithoutThrowing()
+    {
+        // DisposeAsync is wired through @implements IAsyncDisposable on the component; if the
+        // declaration is ever dropped again Blazor stops calling it and the lazily imported
+        // overlay.js module leaks. This also exercises the disposal path itself.
+        var provider = BuildProvider();
+        var cut = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId));
+
+        await cut.InvokeAsync(() => { });
+
+        var act = async () => await cut.Instance.DisposeAsync();
+        await act.Should().NotThrowAsync();
+    }
 }

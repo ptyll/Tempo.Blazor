@@ -1004,6 +1004,7 @@
   "TmViewManager_SetDefaultNamed": "Nastavit {0} jako výchozí",
   "TmViewManager_DefaultView": "Výchozí pohled",
   "TmViewManager_SetDefaultFailed": "Výchozí pohled se nepodařilo nastavit.",
+  "TmViewManager_SetDefaultDone": "{0} je nyní výchozím pohledem.",
   "TmFilterBuilder_ResultPreviewLoading": "Počítám…",
   "TmFilterBuilder_ResultPreview_One": "{0} odpovídající záznam",
   "TmFilterBuilder_ResultPreview_Few": "{0} odpovídající záznamy",

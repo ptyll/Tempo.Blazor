@@ -367,6 +367,34 @@
                 </ChildContent>
             </TmDataTable>
         </div>
+        <div class="mt-4" data-testid="transaction-table-footer">
+            <TmDataTable TItem="TransactionDemo"
+                         Items="_transactions"
+                         ViewContext="transaction-inline-edit-footer-demo"
+                         Editable="true"
+                         EditActionsMode="EditActionsMode.Footer"
+                         OnRowSave="HandleTransactionSaved">
+                <ChildContent>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Date"]" PropertyName="Date" Field="transaction => transaction.Date">
+                        <CellTemplate Context="transaction">@transaction.Date.ToString("d")</CellTemplate>
+                    </TmDataTableColumn>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Amount"]" PropertyName="Amount" Field="transaction => transaction.Amount" Editable="true">
+                        <EditTemplate Context="transaction">
+                            <input class="tm-input" type="number" step="0.01"
+                                   aria-label="@Loc["TmDataTableDemo_Amount"]"
+                                   @bind="transaction.Amount" @bind:event="oninput" />
+                        </EditTemplate>
+                    </TmDataTableColumn>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Note"]" PropertyName="Note" Field="transaction => transaction.Note" Editable="true">
+                        <EditTemplate Context="transaction">
+                            <input class="tm-input"
+                                   aria-label="@Loc["TmDataTableDemo_Note"]"
+                                   @bind="transaction.Note" @bind:event="oninput" />
+                        </EditTemplate>
+                    </TmDataTableColumn>
+                </ChildContent>
+            </TmDataTable>
+        </div>
         <p class="text-sm text-slate-600 dark:text-slate-300 mt-3" data-testid="dt-inline-save-result" aria-live="polite">
             @(_lastSavedTransaction is null
                 ? Loc["TmDataTableDemo_SavePlaceholder"]

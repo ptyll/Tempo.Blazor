@@ -578,7 +578,7 @@
   transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast), border-color var(--tm-transition-fast);
 }
 .tm-data-table__edit-action + .tm-data-table__edit-action {
-  margin-left: var(--tm-space-1);
+  margin-inline-start: var(--tm-space-1);
 }
 .tm-data-table__edit-action:hover {
   background: var(--tm-bg-muted);
@@ -625,6 +625,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tm-data-table__edit-action { transition: none; }
+  .tm-view-set-default-btn { transition: none; }
 }
 
 /* Multi-sort precedence badge */
@@ -1747,6 +1748,18 @@
   gap: var(--tm-space-2);
   justify-content: flex-end;
 }
+/* Footer actions carry a visible label next to the icon, so the icon-only 32px square from the
+   in-row cells must not squeeze them: the box grows to the label instead. The base sibling margin
+   would double the flex gap, so it is reset here. */
+.tm-data-table__edit-footer-actions .tm-data-table__edit-action {
+  width: auto;
+  min-block-size: var(--tm-space-8);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  gap: var(--tm-space-1);
+}
+.tm-data-table__edit-footer-actions .tm-data-table__edit-action + .tm-data-table__edit-action {
+  margin-inline-start: 0;
+}
 /* Mobile cards: the action cell is not in a table, so flex on the cell itself is fine. */
 .tm-data-table__edit-actions--card-footer {
   display: flex;
@@ -1776,6 +1789,12 @@
   border-radius: var(--tm-radius-md);
   cursor: pointer;
   color: var(--tm-text-secondary);
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+/* The bare grey star gave no affordance: the same hover feedback the edit/delete buttons have. */
+.tm-view-set-default-btn:hover {
+  background-color: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
 }
 
 /* Screen-reader-only live region announcing the visible row count; the hiding comes from .tm-sr-only (base.css). */

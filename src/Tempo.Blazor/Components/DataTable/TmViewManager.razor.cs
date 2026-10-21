@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.Overlay;
@@ -86,8 +87,19 @@ public partial class TmViewManager : ComponentBase
 
     private bool _isOpen;
     private ElementReference _toggleRef;
+    private string? _statusMessage;
+    private string? _pendingFocusId;
 
-    private void SetOpen(bool open) => _isOpen = open;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private IJSObjectReference? _overlayModule;
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
+        // A stale announcement must not replay when the panel is reopened.
+        _statusMessage = null;
+    }
 
     // Per instance. A hardcoded id restores focus to the first manager on the page.
     private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
@@ -118,16 +130,18 @@ public partial class TmViewManager : ComponentBase
         _dataLoaded = true;
     }
 
-    private async Task LoadViewsAsync()
+    private async Task<bool> LoadViewsAsync()
     {
         try
         {
             _views = (await Provider.GetViewsAsync(ViewContext, CurrentTenantId, CurrentUserId)).ToList();
             _defaultView = await Provider.GetDefaultViewAsync(ViewContext, CurrentTenantId, CurrentUserId);
+            return true;
         }
         catch
         {
             _views = [];
+            return false;
         }
     }
 
@@ -162,19 +176,82 @@ public partial class TmViewManager : ComponentBase
         {
             _errorMessage = null;
             await Provider.SetDefaultViewAsync(ViewContext, view.Id, CurrentTenantId, CurrentUserId);
-            await LoadViewsAsync();
+            if (!await LoadViewsAsync())
+            {
+                // LoadViewsAsync swallows provider faults, so a failed reload would otherwise empty
+                // the panel silently and OnSetDefault would still fire with a stale view.
+                _errorMessage = Loc["TmViewManager_SetDefaultFailed"];
+                return;
+            }
             persisted = _views.FirstOrDefault(v => v.Id == view.Id) ?? view;
         }
         catch
         {
-            // Only a failed write or reload is a set-default failure. A consumer callback that
-            // throws after the default was saved must not be reported as a failed save, nor swallowed.
+            // Only a failed write is a set-default failure here (a failed reload is handled above).
+            // A consumer callback that throws after the default was saved must not be reported as a
+            // failed save, nor swallowed.
             _errorMessage = Loc["TmViewManager_SetDefaultFailed"];
             return;
         }
 
+        // The reloaded list makes the picked view the default, so its Set-as-default button leaves
+        // the DOM: announce the change and move focus back into the panel (WCAG 2.4.3 / 4.1.3).
+        _statusMessage = string.Format(
+            System.Globalization.CultureInfo.CurrentCulture, Loc["TmViewManager_SetDefaultDone"], persisted.Name);
+        _pendingFocusId = persisted.Id;
+
         if (OnSetDefault.HasDelegate)
             await OnSetDefault.InvokeAsync(persisted);
+    }
+
+    /// <summary>Applies the focus a completed Set-as-default requested after Blazor applied the render.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocusId is null)
+            return;
+
+        var viewId = _pendingFocusId;
+        _pendingFocusId = null;
+        await FocusViewByIdAsync(viewId);
+    }
+
+    private async Task FocusViewByIdAsync(string viewId)
+    {
+        try
+        {
+            _overlayModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Tempo.Blazor/js/overlay.js");
+            if (_overlayModule is null)
+                return;
+            await _overlayModule.InvokeVoidAsync(
+                "focusById", $"{_toggleId}-view-{viewId}", new { preventScroll = true });
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit/browser is gone; nothing to focus.
+        }
+        catch (TaskCanceledException)
+        {
+            // The render was superseded; the next render re-arms if needed.
+        }
+        catch (JSException)
+        {
+            // The panel or module may be mid-teardown; never let focus handling throw.
+        }
+    }
+
+    /// <summary>Releases the lazy overlay.js module import.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_overlayModule is not null)
+                await _overlayModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone.
+        }
     }
 
     private async Task ApplyViewAsync(DataTableView view)
