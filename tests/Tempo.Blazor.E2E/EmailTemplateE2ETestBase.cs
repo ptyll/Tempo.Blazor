@@ -68,11 +68,46 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
     /// ~1080 px editor — a TABLET, with the palette railed. These specs describe the DESKTOP editor (docked
     /// palette + inspector), so they pin that mode instead of depending on the demo's window chrome.
     /// </summary>
+    /// <summary>
+    /// Opens the demo page's own switch bar when the page folded it into a disclosure. The page folds it away
+    /// while the EDITOR resolved the phone layout (review item 9: the demo's chrome was eating the phone's
+    /// stage), so a spec that drives a switch on a phone has to open it first — every helper that touches a
+    /// <c>[data-tm-demo-*]</c> control goes through here.
+    /// </summary>
+    protected static async Task OpenDemoControlsAsync(IPage page)
+    {
+        var summary = page.Locator("[data-tm-demo-controls] > summary");
+        if (await summary.CountAsync() == 0) return;
+        if (await page.Locator("[data-tm-demo-controls]").GetAttributeAsync("open") is null)
+        {
+            await summary.ClickAsync();
+            await page.WaitForSelectorAsync("[data-tm-demo-controls][open]", new() { Timeout = 15000 });
+        }
+    }
+
     protected static async Task ForceEditorLayoutAsync(IPage page, string layout)
     {
+        await OpenDemoControlsAsync(page);
         await page.SelectOptionAsync("[data-tm-demo-layout]", layout);
         await page.WaitForSelectorAsync($".tm-editor-shell[data-layout='{layout.ToLowerInvariant()}']",
             new() { Timeout = 30000 });
+    }
+
+    /// <summary>
+    /// Saves a VIEWPORT-sized PNG (never full page) into the repo's named screenshot folder. UX review reads
+    /// these frames as the screen the user actually sees: a full-page capture of a scrolling editor stretches
+    /// the canvas and hides the "does it fit the phone" question the review asks (fáze 8 review, item 8).
+    /// </summary>
+    protected static async Task SaveNamedViewportScreenshotAsync(IPage page, string fileName)
+    {
+        var dir = Path.Combine(FindRepositoryRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "email-templates");
+        Directory.CreateDirectory(dir);
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(dir, fileName),
+            Type = ScreenshotType.Png,
+            FullPage = false,
+        });
     }
 
     /// <summary>Saves a full-page PNG into the repo's named screenshot folder for UX review.</summary>

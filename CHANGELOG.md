@@ -585,6 +585,45 @@
   into "More" — it needs no `Pinned` priority and keeps its `data-tm-save` hook.
 
 
+- **Fáze 8 review — the mobile/tablet chrome is readable and operable at 390 px and 320 px.** Seven
+  defects found in review, all measured in a browser:
+
+  * The **save state is readable again**: below the desktop layout the pill kept only a 24 px severity
+    glyph, so "unsaved changes" and "saved 2 min ago" looked identical. It now keeps its
+    `EmailEditor_SaveStatus_*` label (ellipsised) and drops only the host's free-text reason, which the
+    full-width failed/conflict alert already carries.
+  * The **"⋮" trigger has an accessible name** (`EmailEditor_Mobile_MoreActions`, visually hidden inside
+    the trigger): an icon-only popover trigger was announced as "button".
+  * The **⋮ body carries no Preview** any more (it is one of the four action-bar commands, D20), and its
+    groups are separated by a token border: Import/Export · Validate · Shortcuts · the host's
+    `ToolbarEnd`.
+  * **Save and the ⋮ are pinned to the right** of the compact header (`margin-inline-start: auto`), and
+    without a host `ToolbarStart` the header now shows the **document's name** (one ellipsised line,
+    `Document.Name`) instead of nothing.
+  * **A tablet's railed inspector is no longer a dead end**: the shell's `RightRail` carries a
+    finger-sized button (`IconNames.Sliders`, `aria-label` `EmailEditor_Panel_Properties`) that expands
+    the properties panel. Because a tablet expands at most one panel, that is a USER collapse of the
+    palette, so it does report `ToolboxCollapsedChanged` (U1).
+  * **Touch targets**: Save and every ⋮ row are `--tm-touch-target` tall under a coarse pointer, and the
+    rows are full-width, left-aligned menu items (`inline-size: 100%`, `justify-content: flex-start`).
+  * **The palette's own title and the inspector's panel header are hidden on a phone**: the sheet's tab
+    already names the panel, so the properties tab showed three titles for one surface. The docked
+    layouts keep both.
+
+- **Fáze 8 review — inserting on a phone always reveals the new content, and "add section" focuses it.**
+  In the `Tabs` presentation there is no sheet to close, so "add block" used to leave the user on the
+  palette tab while the block landed on a canvas they could not see; it now switches to the CANVAS tab
+  (`ActiveMobilePanel = EditorShellPanel.None`). `TmEmailTemplateCanvas` keeps section element references
+  too (`_sectionRefs`), so `FocusAsync` after "add section" lands on the NEW SECTION instead of falling
+  back to the canvas root, and the editor's focus helper swallows `TaskCanceledException` (a cancelled
+  render mid-focus must not tear down the insert that armed it).
+
+- **Fáze 8 review — a one-way `ActiveMobilePanel` is adopted when the parameter changes.** The editor kept
+  its own shadow (`_activeMobilePanel`) and only the host's FIRST value ever won: a host that drives the
+  mobile tab without binding `ActiveMobilePanelChanged` could not move the sheet again. It now adopts the
+  parameter whenever it differs from the last value seen (the shell's own `_activeParamSeen` pattern).
+
+
 ### Breaking / Migration
 
 - **`TmEditorShell.ResolvedLayoutChanged` now fires before `CollapsedPanelsChanged` (event ORDER, not the
@@ -606,6 +645,26 @@
   collapse handler and read the layout from the parameter it was last given (the shell has already
   resolved it).
 
+
+- **`TmEditorShell`'s layout-imposed rail no longer raises `ToolboxCollapsedChanged` (e-mail editor,
+  U1/D27).** A tablet layout expands at most one panel, so the shell rails the other one on its own. That
+  is a LAYOUT STATE, not a collapsed preference: it is neither adopted into `ToolboxCollapsed` nor
+  reported through `ToolboxCollapsedChanged` any more. Before, the editor adopted and reported it, so a
+  host that bound the parameter two-way saw the palette pinned to its rail for ever (the Mobile→Tablet
+  flip raised `Left` before the editor knew the layout had changed).
+
+  ```razor
+  @* before — a layout flip reported the rail as a preference *@
+  <TmEmailTemplateEditor @bind-ToolboxCollapsed="collapsed" />   @* collapsed became true on a tablet *@
+
+  @* after — only a USER collapse/expand reports; a tablet auto-rail is ignored *@
+  <TmEmailTemplateEditor @bind-ToolboxCollapsed="collapsed" />   @* a tablet rail leaves collapsed alone *@
+  ```
+
+  Migration: nothing to change in the markup. A host that used the callback to mirror "is the palette
+  visible right now" must read the shell's own layout (`data-layout` / the editor's
+  `ResolvedLayoutChanged`) instead — on a tablet the palette may be railed while `ToolboxCollapsed` stays
+  `false`. The reverse direction is unchanged: `ToolboxCollapsed="true"` still forces the rail everywhere.
 
 - **`TmEmailTemplateEditor.OnSave` is a `Func<EmailSaveRequest, Task<EmailSaveResult>>?` and `OnAutoSave` is
   gone (B1).** The old `EventCallback<EmailTemplateDocument> OnSave` could not report an outcome, so the

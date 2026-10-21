@@ -85,11 +85,27 @@
     overflow: hidden;
 }
 
+/* Save and the "⋮" are pinned to the RIGHT edge whatever else the header carries (a host's ToolbarStart
+   or the document title), so the primary action never drifts with the title's length. */
 .tm-email-editor__mobile-header-end {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
     gap: var(--tm-space-2);
+    margin-inline-start: auto;
+}
+
+/* Without a host ToolbarStart the header shows the DOCUMENT's name: a phone header with only two
+   controls and no idea which template is open is not a header. One line, ellipsised. */
+.tm-email-editor__mobile-doc-title {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-color-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* The "⋮" is a popover trigger: the trigger must stay a finger-sized target even though its glyph is
@@ -126,6 +142,15 @@
     gap: var(--tm-space-1);
 }
 
+/* Groups are separated by a token border, not by whitespace alone: Import/Export, Validate and Shortcuts
+   are different tasks and a flat list of five rows reads as one command set. */
+.tm-email-editor__mobile-overflow-panel .tm-email-editor__toolbar-group
+    + .tm-email-editor__toolbar-group {
+    margin-block-start: var(--tm-space-1);
+    padding-block-start: var(--tm-space-2);
+    border-block-start: 1px solid var(--tm-color-border-subtle);
+}
+
 /* ── Panels (the two docked columns / the sheet panels) ───────────────────────────────── */
 
 .tm-email-editor__panel {
@@ -160,6 +185,17 @@
 /* The docked panels are shell columns, not cards: the shell owns the region chrome (its own surface and
    the separator between a panel and the canvas). Only the sheet presentation gets the inner card look,
    because there the panel floats above the canvas. */
+/* On a phone the sheet's own tab already names the panel: a heading directly under it costs height for
+   the same words, and the palette's title made THREE titles for one surface (sheet tab + panel header +
+   palette title). The docked layouts keep both. */
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__panel-header {
+    display: none;
+}
+
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-toolbox__title {
+    display: none;
+}
+
 .tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__panel {
     block-size: auto;
     min-block-size: 0;
@@ -298,36 +334,31 @@
     color: var(--tm-color-warning-text);
 }
 
-/* Below the desktop layout the status bar is a narrow strip: the pill collapses to a full-size 24px
-   severity chip instead of a squeezed sliver (a pill truncated to a few pale pixels told the user
-   nothing, and words do not fit next to the primary action). The words live in `title` and, for a
-   failure/conflict, in the alert above. Keyed on the SHELL's decision, never on a local width step. */
+/* Below the desktop layout the status bar is a narrow strip, but the STATE MUST STAY READABLE: the pill
+   keeps its label (`EmailEditor_SaveStatus_*`) and only drops the host's (possibly long) reason, which
+   the full-width alert above already carries for a failure/conflict. Deliberately NOT an icon-only chip
+   any more (fáze 8 review, item 10): a severity glyph in a 24px circle left the user guessing whether the
+   template was saved. Keyed on the SHELL's decision, never on a local width step. */
 .tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-status,
 .tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-status {
-    position: relative;
-    flex: 0 0 auto;
-    inline-size: var(--tm-space-6);
-    min-inline-size: var(--tm-space-6);
-    justify-content: center;
-    padding-inline: 0;
-    overflow: hidden;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
 }
 
-/* The words are visually hidden, NOT display:none: the badge keeps its full text in the DOM and in the
-   accessibility tree (a screen reader still reads the state), and `title` carries it for a pointer. */
-.tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-label,
+/* Only the free-text reason is dropped; the label is the state and stays. */
 .tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-message,
-.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-label,
 .tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-message {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    margin: -1px;
-    padding: 0;
+    display: none;
+}
+
+.tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-label,
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-label {
+    flex: 0 1 auto;
+    min-inline-size: 0;
     overflow: hidden;
-    clip-path: inset(50%);
+    text-overflow: ellipsis;
     white-space: nowrap;
-    border: 0;
 }
 
 /* ── Read-only (Fáze 7) ─────────────────────────────────────────────────────────────────── */
@@ -412,6 +443,20 @@
    its own (rails, tabs, sheet close) with --tm-touch-target, and the palette tiles inside the sheet are
    sized here (they are a CHILD component's elements, hence ::deep). */
 @media (pointer: coarse) {
+    /* Save is the primary action of the compact header: a 32px button next to a 44px "⋮" is a
+       mis-tap waiting to happen. It is a CHILD component's root, hence ::deep. */
+    .tm-email-editor ::deep [data-tm-save] {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    /* The "⋮" body is a list of commands, not a row of toolbar chips: every row is a full-width
+       finger-sized target, left-aligned like a menu item. */
+    .tm-email-editor ::deep .tm-email-editor__mobile-overflow-panel .tm-toolbar-btn {
+        min-block-size: var(--tm-touch-target);
+        inline-size: 100%;
+        justify-content: flex-start;
+    }
+
     .tm-email-editor ::deep .tm-email-toolbox__item {
         min-block-size: var(--tm-touch-target);
     }

@@ -79,7 +79,11 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
         => await page.Locator("[data-tm-save-badge]").GetAttributeAsync("data-tm-save-state") ?? "(none)";
 
     private static async Task ChooseHostResultAsync(IPage page, string value)
-        => await page.Locator("[data-tm-demo-simulate]").SelectOptionAsync(value);
+    {
+        // The demo folds its switches into a disclosure while the editor is a PHONE layout (item 9).
+        await OpenDemoControlsAsync(page);
+        await page.Locator("[data-tm-demo-simulate]").SelectOptionAsync(value);
+    }
 
     // ── manual save → Saved ─────────────────────────────────────────────────────────────────
 
@@ -303,6 +307,7 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
         // bar instead — so the icon-only state is now the ACTION BAR, where the label always accompanies the
         // icon and the accessible name is the tile label. The harness pinned the desktop mode for the cases
         // above; this half needs the editor to follow its container again.
+        await OpenDemoControlsAsync(page);
         await page.SelectOptionAsync("[data-tm-demo-layout]", "Auto");
         await page.SetViewportSizeAsync(390, 800);
         await page.WaitForSelectorAsync(".tm-editor-shell[data-layout='mobile']", new() { Timeout = 30000 });
@@ -328,7 +333,8 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
             await page.SetViewportSizeAsync(width, height);
             // This case is about the NARROW chrome, so let the editor follow its container again (the base
             // harness seeds the desktop mode for the specs that need the docked layout).
-            await page.SelectOptionAsync("[data-tm-demo-layout]", "Auto");
+            await OpenDemoControlsAsync(page);
+        await page.SelectOptionAsync("[data-tm-demo-layout]", "Auto");
             await page.WaitForSelectorAsync(".tm-editor-shell[data-layout='mobile']", new() { Timeout = 30000 });
             await ChooseHostResultAsync(page, "failed-long");
 

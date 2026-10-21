@@ -47,21 +47,46 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
+            if (await page.Locator("[data-tm-variable-picker]").CountAsync() > 0)
+            {
+                // A picker left OPEN by the previous step would make this click CLOSE it — and the node
+                // survives the close animation, so a "did it open?" probe would lie and the next Fill would
+                // land in a panel that is being removed (measured: the search box stayed EMPTY while the
+                // test read an unfiltered row). Close it, wait it out, then really open it.
+                await trigger.ClickAsync();
+                await WaitForPickerGoneAsync(page);
+            }
+
             await trigger.ClickAsync();
             try
             {
-                await page.WaitForFunctionAsync(
-                    "() => document.querySelector('[data-tm-variable-picker]') !== null",
-                    null, new() { Timeout = 5000 });
+                // VISIBLE and interactive, not merely present: the popover animates in.
+                await page.WaitForSelectorAsync("[data-tm-variable-picker] input[type='search']",
+                    new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
                 return;
             }
             catch (TimeoutException)
             {
-                // Blazor had not attached the trigger yet — click again.
+                // Blazor had not attached the trigger yet — wait the stale node out and click again.
+                await WaitForPickerGoneAsync(page);
             }
         }
 
         throw new TimeoutException($"The variable picker for '{field}' did not open.");
+    }
+
+    /// <summary>Best effort: waits until no variable picker is mounted (it may never have opened).</summary>
+    private static async Task WaitForPickerGoneAsync(IPage page)
+    {
+        try
+        {
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('[data-tm-variable-picker]') === null",
+                null, new() { Timeout = 3000 });
+        }
+        catch (TimeoutException)
+        {
+        }
     }
 
     /// <summary>
@@ -360,8 +385,11 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
         // insert it (the search box must never become the insertion target).
         await OpenVariablePickerAsync(page, "Subject");
         await page.Locator("[data-tm-variable-picker] input[type='search']").FillAsync("e-mail address");
+        // Wait for the FILTERED row the search must produce, not for a global row count: a leftover
+        // unfiltered/unmounted picker can satisfy a count while the real list is still rendering.
         await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('[data-tm-variable]').length === 1",
+            "() => document.querySelectorAll('[data-tm-variable]').length === 1 "
+            + "&& document.querySelector(\"[data-tm-variable='user.email']\") !== null",
             null, new() { Timeout = 10000 });
         var emailRow = page.Locator("[data-tm-variable]").First;
         (await emailRow.GetAttributeAsync("data-tm-variable")).Should().Be("user.email");
@@ -373,9 +401,16 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
         // The popover animates in (opacity 0 → 1): a screenshot taken too early shows a half-transparent
         // panel and a click can land on a moving target.
         await OpenVariablePickerAsync(page, "Subject");
-        await page.Locator("[data-tm-variable-picker] input[type='search']").FillAsync("total");
+        var totalSearch = page.Locator("[data-tm-variable-picker] input[type='search']");
+        await totalSearch.FillAsync("total");
+        // The fill has to LAND (the picker could have been remounted under it) and the list has to be the
+        // filtered one before the row is read.
         await page.WaitForFunctionAsync(
-            "() => document.querySelectorAll('[data-tm-variable]').length === 1",
+            "() => document.querySelector(\"[data-tm-variable-picker] input[type='search']\")?.value === 'total'",
+            null, new() { Timeout = 10000 });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-tm-variable]').length === 1 "
+            + "&& document.querySelector(\"[data-tm-variable='order.total']\") !== null",
             null, new() { Timeout = 10000 });
         await page.WaitForFunctionAsync(
             "() => { const panel = document.querySelector('[data-tm-variable-picker]')?.closest('.tm-popover__body'); " +

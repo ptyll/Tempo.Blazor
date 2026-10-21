@@ -6,8 +6,54 @@
 
 <PageTitle>Edit template</PageTitle>
 
-<div class="tm-demo-email-editor-page" data-tm-email-editor-page>
-    <div class="tm-demo-email-editor-page__bar">
+<div class="tm-demo-email-editor-page" data-tm-email-editor-page
+     data-tm-demo-resolved="@_resolvedLayout">
+    @* Review fix (fáze 8, item 9): on a phone the demo's own switch bar ate ~300 px of the stage, so the
+       sheet's default snap showed the tabs and the search box and the first block tile sat below the fold.
+       The controls move into a collapsed disclosure there and the editor takes the rest of the viewport
+       (`.tm-demo-email-editor-page[data-tm-demo-resolved="Mobile"]`); the docked layouts keep the full bar. *@
+    @if (IsPhoneLayout)
+    {
+        <details class="tm-demo-email-editor-page__controls" data-tm-demo-controls>
+            <summary>Demo controls</summary>
+            <div class="tm-demo-email-editor-page__bar" data-tm-demo-bar>@DemoControls</div>
+        </details>
+    }
+    else
+    {
+        <div class="tm-demo-email-editor-page__bar" data-tm-demo-bar>@DemoControls</div>
+    }
+
+    @if (_loading)
+    {
+        <TmSpinner />
+    }
+    else if (_document is null)
+    {
+        <TmEmptyState Icon="alert-triangle" Title="Template not found" />
+    }
+    else
+    {
+        <div class="tm-demo-email-editor-page__editor">
+            <TmEmailTemplateEditor @ref="_editor"
+                                   Document="_document"
+                                   DocumentChanged="OnDocumentChangedAsync"
+                                   OnSave="SaveAsync"
+                                   IsDirtyChanged="OnIsDirtyChanged"
+                                   ReadOnly="_readOnly"
+                                   AutoSave="_autoSave"
+                                   ImageUpload="_imageUpload"
+                                   Variables="_variables"
+                                   LayoutMode="_layoutMode"
+                                   MobilePanelPresentation="_presentation"
+                                   ResolvedLayoutChanged="OnResolvedLayoutChanged" />
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The demo's own switches: the host save result, the forced layout, the mobile presentation.</summary>
+    private RenderFragment DemoControls => @<text>
         <TmButton Variant="ButtonVariant.Ghost" Icon="arrow-left" OnClick="Back" data-tm-back>Back</TmButton>
 
         @* Fáze 7 demo: the editor owns the dirty flag and the save outcome, the host only reports results.
@@ -53,36 +99,11 @@
         <span class="tm-demo-email-editor-page__status" data-tm-demo-resolved-layout="@_resolvedLayout">
             Layout: @_resolvedLayout
         </span>
-    </div>
+    </text>;
 
-    @if (_loading)
-    {
-        <TmSpinner />
-    }
-    else if (_document is null)
-    {
-        <TmEmptyState Icon="alert-triangle" Title="Template not found" />
-    }
-    else
-    {
-        <div class="tm-demo-email-editor-page__editor">
-            <TmEmailTemplateEditor @ref="_editor"
-                                   Document="_document"
-                                   DocumentChanged="OnDocumentChangedAsync"
-                                   OnSave="SaveAsync"
-                                   IsDirtyChanged="OnIsDirtyChanged"
-                                   ReadOnly="_readOnly"
-                                   AutoSave="_autoSave"
-                                   ImageUpload="_imageUpload"
-                                   Variables="_variables"
-                                   LayoutMode="_layoutMode"
-                                   MobilePanelPresentation="_presentation"
-                                   ResolvedLayoutChanged="OnResolvedLayoutChanged" />
-        </div>
-    }
-</div>
+    /// <summary>True while the editor resolved the PHONE layout: the demo folds its own chrome away there.</summary>
+    private bool IsPhoneLayout => _resolvedLayout == TmLayoutMode.Mobile;
 
-@code {
     /// <summary>The template id from the route.</summary>
     [Parameter] public Guid Id { get; set; }
 

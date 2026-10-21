@@ -8,12 +8,14 @@ namespace Tempo.Blazor.E2E;
 /// Fáze 8 — the editor's responsive chrome on the core <c>TmEditorShell</c>, measured in a real browser:
 /// desktop 1440 (docked palette + inspector, one command row), tablet 1024 with a coarse pointer (same
 /// docked chrome, one panel railed, no overflow) and phone 390 / 320 (canvas + bottom sheet with
-/// Bloky | Vlastnosti, compact header, action bar, "⋮" overflow), plus the Tabs presentation, the Escape
-/// close path and a 200 % zoom.
+/// Bloky | Vlastnosti, compact header, action bar, "⋮" overflow), plus the Tabs presentation, both Escape
+/// paths and a 200 % zoom.
 /// <para>
 /// Screenshots land in <c>__screenshots__/email-templates/f8-*.png</c> and are the UX review material for
 /// this phase; they are compared against
 /// <c>output/imagegen/tempo-reimagined/Tempo.Blazor.EmailTemplates/email-template-editor--{desktop|tablet|mobile}.png</c>.
+/// Review (item 8): they are VIEWPORT captures, not full page, and the phone ones hide the demo's own
+/// switch bar (the page folds it into a disclosure below the editor's mobile breakpoint).
 /// </para>
 /// </summary>
 [TestClass]
@@ -89,6 +91,35 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         await page.WaitForTimeoutAsync(300);
     }
 
+    /// <summary>
+    /// Switches the demo (and therefore the shell) to the dark theme. The toggle lives in the demo's app
+    /// sidebar, which <see cref="ExpandEditorToViewportAsync"/> HIDES to give the editor the whole viewport —
+    /// so the click is dispatched programmatically on the button itself (the Blazor handler runs either way).
+    /// </summary>
+    private static async Task GoDarkAsync(IPage page)
+    {
+        var clicked = await page.EvaluateAsync<bool>(
+            "() => { const b = document.querySelector(`[data-testid='theme-toggle']`); if (!b) return false; b.click(); return true; }");
+        clicked.Should().BeTrue("the demo host renders the theme toggle");
+        await page.WaitForSelectorAsync("[data-theme='dark']", new() { Timeout = 15000 });
+        await page.WaitForTimeoutAsync(300);
+    }
+
+    /// <summary>
+    /// The F5 action bar carries exactly the D20 commands (Undo / Redo / Preview / Validate) and no "More":
+    /// the editor raises the shell's <c>MobileActionsMaxVisible</c> to 4, so nothing hides behind a menu.
+    /// </summary>
+    private static async Task AssertFourActionBarCommandsAsync(IPage page)
+    {
+        (await page.Locator(".tm-mobile-action-bar").CountAsync()).Should().BeGreaterThan(0);
+        var ids = await page.Locator(".tm-mobile-action-bar__action").EvaluateAllAsync<string[]>(
+            "els => els.map(e => e.getAttribute('data-action-id'))");
+        ids.Should().Equal(["undo", "redo", "preview", "validate"],
+            "D20 names exactly four bar commands and MobileActionsMaxVisible=4 keeps all of them on the bar");
+        (await page.Locator(".tm-mobile-action-bar__more").CountAsync()).Should().Be(0,
+            "with a four-slot budget there is nothing left for the bar's own More menu");
+    }
+
     // ── Desktop 1440 ───────────────────────────────────────────────────────────────────────
 
     [TestMethod]
@@ -102,8 +133,8 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
             .Should().BeGreaterThanOrEqualTo(4, "the command row is grouped by task");
         (await page.Locator("[data-region='header']").IsVisibleAsync()).Should().BeFalse(
             "a desktop editor has no compact mobile header (the slot renders nothing and the band collapses)");
-        // The palette is either docked or railed (a shell-imposed tablet rail is reported through
-        // ToolboxCollapsedChanged — D10 — and survives the flip back to desktop); the inspector is docked.
+        // The palette is docked (a tablet auto-rail is no longer reported as a preference — U1 — so a
+        // desktop container has both panels open); the inspector is docked.
         (await page.Locator("[data-region='left'] [data-tm-toolbox], [data-region='rail-left']").CountAsync())
             .Should().Be(1, "the palette is reachable in exactly one shape");
         (await page.Locator("[data-region='right'] [data-tm-properties]").CountAsync()).Should().Be(1);
@@ -117,7 +148,7 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         right.Should().NotBeNull();
         (right!.X + right.Width).Should().BeLessThanOrEqualTo(1440 + 1, "the inspector is fully visible");
 
-        // The reference desktop frame shows the palette docked: expand it if the resize path railed it.
+        // The reference desktop frame shows the palette docked.
         if (await page.Locator("[data-region='rail-left']").CountAsync() == 1)
         {
             await page.Locator("[data-region='rail-left'] button.tm-editor-shell__panel-toggle").First.ClickAsync();
@@ -125,7 +156,7 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         }
 
         await SettleAsync(page);
-        await SaveNamedScreenshotAsync(page, "f8-editor-desktop-1440.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-desktop-1440.png");
     }
 
     // ── Tablet 1024 (touch) ────────────────────────────────────────────────────────────────
@@ -152,18 +183,22 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         right.Should().NotBeNull();
         (right!.X + right.Width).Should().BeLessThanOrEqualTo(1024 + 1, "the inspector is fully visible");
 
-        // At most one panel is expanded: the toolbox is railed, and the rail is operable.
+        // At most one panel is expanded: the toolbox is railed, and the rail is named and operable.
         (await page.Locator("[data-region='rail-left'], aside.tm-editor-shell__panel--left").CountAsync())
             .Should().Be(1, "exactly one of the two left shapes is rendered");
         (await page.Locator("[data-region='rail-left'] [data-tm-rail-block]").CountAsync())
             .Should().BeGreaterThan(0, "the railed palette keeps every block one tap away");
+        (await page.Locator("[data-region='rail-left']").First.GetAttributeAsync("role")).Should().Be("group",
+            "the rail is a named group of blocks, not a run of unnamed buttons");
+        (await page.Locator("[data-region='rail-left']").First.GetAttributeAsync("aria-label"))
+            .Should().Be("Blocks", "the rail carries the panel's own title as its accessible name");
 
         await SettleAsync(page);
-        await SaveNamedScreenshotAsync(page, "f8-editor-tablet-1024.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-tablet-1024.png");
     }
 
     [TestMethod]
-    public async Task Tablet_1024_swaps_which_panel_is_expanded()
+    public async Task Tablet_1024_swaps_which_panel_is_expanded_and_offers_the_inspector_rail()
     {
         var page = await OpenEditorAsync(1024, 800, touch: true);
         await ExpandEditorToViewportAsync(page);
@@ -176,8 +211,43 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
 
         (await page.Locator("aside.tm-editor-shell__panel--left").CountAsync()).Should().Be(1);
         (await InlineOverflowAsync(page, "[data-tm-email-editor]")).Should().BeLessThanOrEqualTo(0);
+
+        // Review item 15: the now-railed INSPECTOR keeps its own way back instead of being a dead end.
+        var propertiesRail = page.Locator("[data-tm-properties-rail]");
+        (await propertiesRail.CountAsync()).Should().Be(1, "the railed inspector renders its own rail");
+        var expand = propertiesRail.Locator("[data-tm-expand-properties]");
+        (await expand.GetAttributeAsync("aria-label")).Should().Be("Properties");
+        var box = await expand.BoundingBoxAsync();
+        box.Should().NotBeNull();
+        box!.Height.Should().BeGreaterThanOrEqualTo(44, "a tablet is a coarse pointer: the target is finger-sized");
+
+        await expand.ClickAsync();
+        await page.WaitForSelectorAsync("aside.tm-editor-shell__panel--right", new() { Timeout = 8000 });
+
         await SettleAsync(page);
-        await SaveNamedScreenshotAsync(page, "f8-editor-tablet-toolbox-1024.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-tablet-toolbox-1024.png");
+    }
+
+    [TestMethod]
+    public async Task Tablet_1024_dark_mode_keeps_the_docked_chrome_readable()
+    {
+        // Auto layout (the demo seeds no forced mode): the shell measures its own container at 1024 px.
+        var page = await OpenEditorAsync(1024, 800, touch: true);
+        await ExpandEditorToViewportAsync(page);
+        await WaitForLayoutAsync(page, "tablet");
+
+        await GoDarkAsync(page);
+
+        (await ResolvedLayoutAsync(page)).Should().Be("tablet", "the dark capture stays in the Auto layout");
+        (await page.Locator("[data-theme='dark']").CountAsync()).Should().BeGreaterThan(0);
+        (await InlineOverflowAsync(page, "[data-tm-email-editor]")).Should().BeLessThanOrEqualTo(0);
+
+        var surface = await page.EvaluateAsync<string>(
+            "() => getComputedStyle(document.querySelector('.tm-editor-shell__panel--right')).backgroundColor");
+        surface.Should().NotBe("rgba(0, 0, 0, 0)", "the docked inspector paints a dark surface, not the light one");
+
+        await SettleAsync(page);
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-tablet-dark-1024.png");
     }
 
     // ── Container vs viewport ─────────────────────────────────────────────────────────────
@@ -215,34 +285,80 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         (await page.Locator("[data-region='toolbar']").CountAsync()).Should().Be(0);
         (await page.Locator("[data-tm-mobile-overflow]").CountAsync()).Should().Be(1);
 
-        // Sheet with the two panel tabs.
-        await page.WaitForSelectorAsync(".tm-editor-shell__sheet", new() { Timeout = 15000 });
-        var tabs = await page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").AllInnerTextsAsync();
-        tabs.Should().HaveCount(2);
-        (await page.Locator("[data-region='left'] [data-tm-toolbox]").IsVisibleAsync())
-            .Should().BeTrue("the sheet starts on the blocks palette");
+        // Review item 13: without a host ToolbarStart the header names the DOCUMENT, and Save + ⋮ sit right.
+        var title = page.Locator("[data-tm-mobile-title]");
+        (await title.CountAsync()).Should().Be(1,
+            "the demo host supplies no ToolbarStart, so the header shows the template name");
+        (await title.InnerTextAsync()).Should().NotBeNullOrWhiteSpace();
+        var titleBox = await title.BoundingBoxAsync();
+        var saveBox = await page.Locator("[data-region='header'] [data-tm-save]").First.BoundingBoxAsync();
+        titleBox.Should().NotBeNull();
+        saveBox.Should().NotBeNull();
+        (titleBox!.X + titleBox.Width).Should().BeLessThanOrEqualTo(saveBox!.X + 1,
+            "the title yields its space to the pinned Save/⋮ group");
+
+        // The demo folds its own switch bar away on a phone (item 9), so the editor owns the stage.
+        (await page.Locator("[data-tm-demo-controls]").CountAsync()).Should().Be(1,
+            "the demo's switches live in a disclosure below the editor's mobile breakpoint");
+        (await page.Locator("[data-tm-demo-controls][open]").CountAsync()).Should().Be(0,
+            "and it starts collapsed: the stage belongs to the editor");
+
+        // The action bar is the F5 primitive with all four D20 commands.
+        await AssertFourActionBarCommandsAsync(page);
+
+        // Review item 9: the sheet's default snap shows REAL TILES — the first block is hit-testable at its
+        // centre and sits above the action bar's top edge (it used to be just under the fold).
+        var tile = page.Locator(".tm-editor-shell__sheet [data-tm-toolbox-list] [data-tm-block]").First;
+        (await tile.CountAsync()).Should().BeGreaterThan(0, "the palette is what the sheet opens on");
+        var tileReachable = await page.EvaluateAsync<bool>(
+            @"() => {
+                const tile = document.querySelector('.tm-editor-shell__sheet [data-tm-toolbox-list] [data-tm-block]');
+                if (!tile) return false;
+                const rect = tile.getBoundingClientRect();
+                const bar = document.querySelector('.tm-mobile-action-bar');
+                const barTop = bar ? bar.getBoundingClientRect().top : window.innerHeight;
+                if (rect.top < 0 || rect.bottom > barTop) return false;
+                const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                return !!hit && (hit === tile || tile.contains(hit));
+            }");
+        tileReachable.Should().BeTrue(
+            "the default snap must show a real tile above the action bar, not only the tabs and the search box");
+
+        // Review item 10: the save state keeps a READABLE label on a phone (no icon-only chip). A clean,
+        // never-saved editor renders no badge at all, so the state is produced by an actual save first.
+        await page.Locator("[data-region='header'] [data-tm-save]").ClickAsync();
+        await page.WaitForSelectorAsync("[data-tm-save-badge]", new() { Timeout = 20000 });
+        var saveLabel = page.Locator(".tm-email-editor__save-label").First;
+        (await saveLabel.IsVisibleAsync())
+            .Should().BeTrue("the save state is a word on a phone, not a 24px severity dot");
+        var saveLabelBox = await saveLabel.BoundingBoxAsync();
+        saveLabelBox.Should().NotBeNull();
+        saveLabelBox!.Width.Should().BeGreaterThan(24,
+            "the label must be able to say 'Saved just now', not collapse to a glyph");
+        (await page.Locator(".tm-email-editor__save-message").First.IsVisibleAsync())
+            .Should().BeFalse("only the host's free-text reason is dropped on a phone");
 
         (await InlineOverflowAsync(page, "[data-tm-email-editor]"))
             .Should().BeLessThanOrEqualTo(0, "a phone must never scroll horizontally");
 
-        // The action bar is the F5 primitive: Undo / Redo / Preview (+ the "More" overflow).
-        (await page.Locator(".tm-mobile-action-bar").CountAsync()).Should().BeGreaterThan(0);
-
-        // The sheet opens at the editor's own first snap (0.65 of the stage, not the shell's half default),
-        // so "Blocks" carries a usable palette and not just its search box. In the demo the page's own chrome
-        // is ~300 px, which still leaves the first tile row just under the fold — the snap ratio is what the
-        // editor controls, so that is what this asserts.
-        var sheetBox = await page.Locator(".tm-editor-shell__sheet .tm-drawer__panel").First.BoundingBoxAsync();
-        var stageBox = await page.Locator(".tm-editor-shell__stage").First.BoundingBoxAsync();
-        sheetBox.Should().NotBeNull();
-        stageBox.Should().NotBeNull();
-        ((double)sheetBox!.Height / stageBox!.Height).Should().BeGreaterThan(0.6,
-            "the panels sheet opens above the shell's half default so the palette is usable");
-        (await page.Locator(".tm-editor-shell__sheet [data-tm-toolbox-list] [data-tm-block]").CountAsync())
-            .Should().BeGreaterThan(0, "the palette is what the sheet opens on");
-
         // The initial phone frame is the UX review material for the default state (sheet open on Blocks).
-        await SaveNamedScreenshotAsync(page, "f8-editor-mobile-390.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-390.png");
+    }
+
+    [TestMethod]
+    public async Task Mobile_390_dark_mode_keeps_the_compact_chrome_readable()
+    {
+        var page = await OpenEditorAsync(390, 844, touch: true);
+        await WaitForLayoutAsync(page, "mobile");
+
+        await GoDarkAsync(page);
+
+        (await ResolvedLayoutAsync(page)).Should().Be("mobile", "the dark capture stays in the Auto layout");
+        (await InlineOverflowAsync(page, "[data-tm-email-editor]")).Should().BeLessThanOrEqualTo(0);
+        (await page.Locator("[data-tm-mobile-title]").IsVisibleAsync()).Should().BeTrue();
+        await AssertFourActionBarCommandsAsync(page);
+
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-dark-390.png");
     }
 
     [TestMethod]
@@ -264,9 +380,14 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
                 "the sheet follows the selection (the inspector is where a block is edited)");
         (await page.Locator(".tm-editor-shell__sheet [data-tm-prop-target='block']").CountAsync())
             .Should().Be(1, "the selected block's inspector is what the sheet shows");
+        // Review item 8: the capture has to show the BLOCK's inspector, not an empty properties panel —
+        // and item 9: the sheet's own tab already names the panel, so no second heading may repeat it.
+        (await page.Locator(".tm-editor-shell__sheet [data-tm-properties] .tm-email-properties__title").First.InnerTextAsync())
+            .Should().NotBeNullOrWhiteSpace("the inspector names the selected block's type");
+        (await page.Locator(".tm-editor-shell__sheet [data-tm-properties] .tm-email-editor__panel-header").First.IsVisibleAsync())
+            .Should().BeFalse("on a phone the panel header is hidden: the sheet tab is the title (item 9)");
 
-        await SettleAsync(page);
-        await SaveNamedScreenshotAsync(page, "f8-editor-mobile-properties-390.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-properties-390.png");
     }
 
     [TestMethod]
@@ -289,11 +410,39 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         (await page.Locator(".tm-editor-shell__panel-toggle--mobile").CountAsync()).Should().Be(1);
 
         await SettleAsync(page);
-        await SaveNamedScreenshotAsync(page, "f8-editor-mobile-after-insert-390.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-after-insert-390.png");
     }
 
     [TestMethod]
-    public async Task Mobile_escape_closes_the_panels_sheet()
+    public async Task Mobile_tabs_inserting_a_block_activates_the_canvas_tab_and_focuses_it()
+    {
+        var page = await OpenEditorAsync(390, 844, touch: true);
+        await WaitForLayoutAsync(page, "mobile");
+
+        await OpenDemoControlsAsync(page);
+        await page.SelectOptionAsync("[data-tm-demo-presentation]", "Tabs");
+        await page.WaitForSelectorAsync(".tm-editor-shell__tabs--region", new() { Timeout = 15000 });
+
+        // Review item 2: the Tabs presentation has NO sheet to close, so an insert has to select the CANVAS
+        // tab — otherwise the new block lands on a canvas the user cannot see.
+        await page.Locator(".tm-editor-shell__tabs--region .tm-editor-shell__tab").First.ClickAsync();
+        await page.WaitForSelectorAsync("[data-region='left']:not([hidden]) [data-tm-toolbox]", new() { Timeout = 15000 });
+
+        await page.Locator("[data-region='left'] [data-tm-block='text']").First.ClickAsync();
+
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.hasAttribute('data-tm-block-id') === true",
+            null, new PageWaitForFunctionOptions { Timeout = 15000 });
+        var canvasTabSelected = await page.EvaluateAsync<bool>(
+            "() => { const t = document.querySelector(\"[data-region='canvas']\"); "
+            + "return !!t && !t.hasAttribute('hidden'); }");
+        canvasTabSelected.Should().BeTrue("the insert reveals the canvas tab");
+
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-tabs-after-insert-390.png");
+    }
+
+    [TestMethod]
+    public async Task Mobile_escape_from_a_sheet_tab_moves_focus_to_the_panels_toggle()
     {
         var page = await OpenEditorAsync(390, 844, touch: true);
         await WaitForLayoutAsync(page, "mobile");
@@ -305,13 +454,39 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         await page.WaitForFunctionAsync("() => document.querySelectorAll('.tm-editor-shell__sheet').length === 0",
             null, new PageWaitForFunctionOptions { Timeout = 15000 });
 
-        // The focus comes back only when it was lost with the sheet (focusIfLost), never stolen.
-        (await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('[data-tm-email-editor]')"))
-            .Should().BeTrue("focus never falls to <body> after the sheet closes");
+        // Review item 18a: the focused tab unmounted with the sheet, so the shell re-asserts the focus on
+        // the closed-state bar — never leaving it on <body>.
+        (await page.EvaluateAsync<bool>(
+            "() => document.activeElement?.classList.contains('tm-editor-shell__panel-toggle--mobile') === true"))
+            .Should().BeTrue("Escape from a sheet tab lands on the panels toggle, not on <body>");
     }
 
     [TestMethod]
-    public async Task Mobile_overflow_lists_import_export_validate_and_shortcuts()
+    public async Task Mobile_escape_from_the_canvas_leaves_the_focus_alone()
+    {
+        var page = await OpenEditorAsync(390, 844, touch: true);
+        await WaitForLayoutAsync(page, "mobile");
+
+        await page.Locator(".tm-editor-shell__sheet-close").First.ClickAsync();
+        await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 15000 });
+        var block = page.Locator("[data-tm-block-id]").First;
+        await block.ClickAsync();
+        (await page.EvaluateAsync<bool>("() => document.activeElement?.hasAttribute('data-tm-block-id') === true"))
+            .Should().BeTrue("the tap put the focus on the block (the sheet then reopened on the inspector)");
+
+        await page.Locator(".tm-editor-shell__sheet-close").First.ClickAsync();
+        await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 15000 });
+        await page.Locator("[data-tm-block-id]").First.FocusAsync();
+        await page.Keyboard.PressAsync("Escape");
+
+        // Review item 18b: the canvas is not inside any overlay, so Escape changes nothing — the focus stays
+        // exactly where the user put it (no focus theft, no scroll jump).
+        (await page.EvaluateAsync<bool>("() => document.activeElement?.hasAttribute('data-tm-block-id') === true"))
+            .Should().BeTrue("Escape on the canvas must not move the focus");
+    }
+
+    [TestMethod]
+    public async Task Mobile_overflow_lists_import_export_validate_and_shortcuts_without_a_second_preview()
     {
         var page = await OpenEditorAsync(390, 844, touch: true);
         await WaitForLayoutAsync(page, "mobile");
@@ -324,8 +499,20 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         (await panel.Locator("[data-tm-mjml-btn]").CountAsync()).Should().Be(1);
         (await panel.Locator("[data-tm-validate-btn]").CountAsync()).Should().Be(1);
         (await panel.Locator("[data-tm-help-btn]").CountAsync()).Should().Be(1);
+        // Review item 14: Preview is one of the four action-bar commands, so it is NOT offered twice here.
+        (await panel.Locator("[data-tm-preview-btn]").CountAsync()).Should().Be(0);
 
-        await SaveNamedScreenshotAsync(page, "f8-editor-mobile-overflow-390.png");
+        // Review item 12: every row is a finger-sized, full-width menu item.
+        var row = panel.Locator("[data-tm-import-btn]").First;
+        var rowBox = await row.BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        rowBox.Should().NotBeNull();
+        panelBox.Should().NotBeNull();
+        rowBox!.Height.Should().BeGreaterThanOrEqualTo(44, "a coarse pointer needs a 44px row");
+        (panelBox!.Width - rowBox.Width).Should().BeLessThan(24,
+            "the rows fill the panel instead of hugging their label");
+
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-overflow-390.png");
     }
 
     [TestMethod]
@@ -334,15 +521,20 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         var page = await OpenEditorAsync(390, 844, touch: true);
         await WaitForLayoutAsync(page, "mobile");
 
+        await OpenDemoControlsAsync(page);
         await page.SelectOptionAsync("[data-tm-demo-presentation]", "Tabs");
         await page.WaitForSelectorAsync(".tm-editor-shell__tabs--region", new() { Timeout = 15000 });
 
         (await page.Locator(".tm-editor-shell__sheet").CountAsync()).Should().Be(0, "Tabs has no sheet");
         var tabs = await page.Locator(".tm-editor-shell__tabs--region .tm-editor-shell__tab").AllInnerTextsAsync();
         tabs.Should().HaveCount(3, "Blocks | Canvas | Properties");
+        // U3 (jádro): a tab is primary navigation on a phone and is finger-sized under a coarse pointer.
+        var tabBox = await page.Locator(".tm-editor-shell__tabs--region .tm-editor-shell__tab").First.BoundingBoxAsync();
+        tabBox.Should().NotBeNull();
+        tabBox!.Height.Should().BeGreaterThanOrEqualTo(44, "a sheet/Tabs tab is a --tm-touch-target control");
         (await InlineOverflowAsync(page, "[data-tm-email-editor]")).Should().BeLessThanOrEqualTo(0);
 
-        await SaveNamedScreenshotAsync(page, "f8-editor-mobile-tabs-390.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-tabs-390.png");
     }
 
     // ── 320 px edge case ───────────────────────────────────────────────────────────────────
@@ -355,17 +547,26 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
 
         (await InlineOverflowAsync(page, "[data-tm-email-editor]"))
             .Should().BeLessThanOrEqualTo(0, "320 px is the narrowest supported phone");
+        (await page.EvaluateAsync<bool>(
+            "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1"))
+            .Should().BeTrue("the demo page itself must not scroll sideways at 320 px (item 17)");
 
         (await page.Locator("[data-region='header'] [data-tm-save]").IsVisibleAsync()).Should().BeTrue();
         (await page.Locator("[data-tm-mobile-overflow]").IsVisibleAsync()).Should().BeTrue();
 
-        // Every sheet tab is still a finger-sized target.
+        // U3 (jádro): every sheet tab is a finger-sized target, not a 32px word.
         var tab = await page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").First.BoundingBoxAsync();
         tab.Should().NotBeNull();
-        tab!.Height.Should().BeGreaterThanOrEqualTo(32);
+        tab!.Height.Should().BeGreaterThanOrEqualTo(44,
+            "--tm-touch-target under a coarse pointer (2.10.0: .tm-editor-shell__tab min-block-size)");
+
+        // Item 12: Save is finger-sized too.
+        var save = await page.Locator("[data-region='header'] [data-tm-save]").First.BoundingBoxAsync();
+        save.Should().NotBeNull();
+        save!.Height.Should().BeGreaterThanOrEqualTo(44);
 
         await SettleAsync(page);
-        await SaveNamedScreenshotAsync(page, "f8-editor-mobile-320.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-mobile-320.png");
     }
 
     // ── 200 % zoom ─────────────────────────────────────────────────────────────────────────
@@ -388,6 +589,6 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
             .Should().BeLessThanOrEqualTo(0, "200 % zoom must not introduce horizontal scrolling");
         (await page.Locator("[data-tm-save]").First.IsVisibleAsync()).Should().BeTrue("Save stays reachable");
 
-        await SaveNamedScreenshotAsync(page, "f8-editor-desktop-200pct-zoom.png");
+        await SaveNamedViewportScreenshotAsync(page, "f8-editor-desktop-200pct-zoom.png");
     }
 }

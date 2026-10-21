@@ -9,16 +9,16 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--tm-space-3, 0.75rem);
-    padding: var(--tm-space-3, 0.75rem) var(--tm-space-4, 1rem);
-    border-bottom: 1px solid var(--tm-color-border, #e4e7eb);
-    background: var(--tm-bg-surface, #fff);
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-bg-surface);
 }
 
 .tm-demo-email-editor-page__status {
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    color: var(--tm-text-secondary, #616e7c);
-    font-weight: var(--tm-font-weight-medium, 500);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-medium);
 }
 
 .tm-demo-email-editor-page__editor {
@@ -36,16 +36,53 @@
 .tm-demo-email-editor-page__simulate {
     display: inline-flex;
     align-items: center;
-    gap: var(--tm-space-2, 0.5rem);
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    color: var(--tm-text-secondary, #616e7c);
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
 }
 
 .tm-demo-email-editor-page__simulate select {
-    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
-    border: 1px solid var(--tm-color-border, #e4e7eb);
-    border-radius: var(--tm-radius-md, 0.375rem);
-    background: var(--tm-bg-surface, #fff);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
     color: inherit;
     font: inherit;
+}
+
+/* ── Fáze 8 review (item 9 + 17): the demo must not steal the phone's stage ────────────────── */
+
+/* Below the editor's own mobile breakpoint the switch bar folds into a disclosure (the page markup
+   branches on the layout the EDITOR resolved, never on the viewport: the shell measures its container).
+   The editor then takes the rest of the dynamic viewport, so the sheet's default snap shows real block
+   tiles instead of the tab strip and the search box alone. */
+/* No paint of its own: the switch bar inside the disclosure already carries the surface, its border and its
+   text colour, so a second declaration here would only duplicate tokens (and the strict CSS audit counts
+   colour literals per declaration — the baseline may only shrink). */
+.tm-demo-email-editor-page__controls > summary {
+    padding: var(--tm-space-2) var(--tm-space-4);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+/* The app shell above the page is 4rem of fixed mobile header plus 4rem of sticky page bar; the
+   disclosure summary is ~2.5rem. Whatever is left belongs to the editor. */
+.tm-demo-email-editor-page[data-tm-demo-resolved="Mobile"] {
+    block-size: calc(100dvh - 10.5rem);
+    min-block-size: 0;
+}
+
+/* Item 17: at 320 px a <select> with a long option still tried to be as wide as its longest option and
+   pushed the bar into a horizontal scroll. */
+.tm-demo-email-editor-page [data-tm-demo-simulate],
+.tm-demo-email-editor-page [data-tm-demo-layout],
+.tm-demo-email-editor-page [data-tm-demo-presentation] {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+}
+
+.tm-demo-email-editor-page__simulate {
+    max-inline-size: 100%;
+    min-inline-size: 0;
 }
