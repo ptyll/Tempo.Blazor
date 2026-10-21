@@ -209,7 +209,9 @@
     }
     else if (!HasItems)
     {
-        <TmEmptyState Title="@(!string.IsNullOrEmpty(EmptyTitle) ? EmptyTitle : Loc["Tm_NoResults"])" />
+        <TmEmptyState Title="@(!string.IsNullOrEmpty(EmptyTitle) ? EmptyTitle : Loc["Tm_NoResults"])"
+                      Icon="@Tempo.Blazor.Components.Icons.IconNames.Database"
+                      Description="@Loc["TmDataTable_EmptyDescription"]" />
     }
     else
     {

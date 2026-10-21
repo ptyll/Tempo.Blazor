@@ -1468,11 +1468,33 @@
     grid-column: 1 / -1;
   }
 
-  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-col-check,
   .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-data-table__edit-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
     min-height: var(--tm-touch-target);
+  }
+
+  /* The row checkbox must not spend a whole card row on itself: it docks into the card's
+     inline-end corner (the row is the positioning context), and the title row reserves that
+     corner so its text cannot run underneath the 44px hit target. */
+  .tm-data-table-wrapper--card .tm-data-table tbody tr,
+  .tm-data-table-wrapper--cards .tm-data-table tbody tr {
+    position: relative;
+  }
+  .tm-data-table-wrapper--card .tm-data-table tbody td.tm-col-check,
+  .tm-data-table-wrapper--cards .tm-data-table tbody td.tm-col-check {
+    position: absolute;
+    inset-block-start: var(--tm-space-2);
+    inset-inline-end: var(--tm-space-2);
+    /* the generic card-cell rule sets width:100%; the docked checkbox must shrink to fit */
+    inline-size: auto;
+    min-height: var(--tm-touch-target);
+    min-width: var(--tm-touch-target);
+    align-items: center;
+    justify-content: center;
+  }
+  .tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role="Title"] {
+    padding-inline-end: calc(var(--tm-touch-target) + var(--tm-space-1));
   }
 
   .tm-data-table-wrapper--card .tm-data-table tbody td[data-label]::before,
@@ -1686,9 +1708,11 @@
 /* Screen-reader-only live region announcing the visible row count; the hiding comes from .tm-sr-only (base.css). */
 .tm-data-table-live-count { white-space: nowrap; }
 
-/* The view dialog is portaled out of the table: native radios and checkboxes follow the theme's primary, not the browser blue. */
+/* Portaled chrome (view dialog, column picker): native radios and checkboxes follow the theme's
+   primary, not the browser default that shows up as an unthemed white square in dark mode. */
 .tm-view-radio-label input,
-.tm-view-column-item input {
+.tm-view-column-item input,
+.tm-column-picker-item input {
   accent-color: var(--tm-color-primary);
 }
 

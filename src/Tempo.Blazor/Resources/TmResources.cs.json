@@ -961,6 +961,7 @@
   "TmDataTable_GroupBy": "Seskupit podle",
   "TmDataTable_GroupDropPlaceholder": "Přetáhněte záhlaví sloupce pro seskupení",
   "TmDataTable_FilterAll": "Vše",
+  "TmDataTable_EmptyDescription": "Žádné záznamy k zobrazení.",
   "TmDataTable_GroupMax": "Max",
   "TmDataTable_GroupMin": "Min",
   "TmDataTable_GroupSum": "Součet",

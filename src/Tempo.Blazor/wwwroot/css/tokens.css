@@ -4,6 +4,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
+  /* Native controls (checkbox, scrollbar, <select> popup) are drawn by the browser and follow
+     color-scheme, which accent-color does NOT affect: the unchecked box stayed white in dark mode
+     until this was declared. Light is the library's default theme. */
+  color-scheme: light;
+
   /* ── Color Palette ──────────────────────────────────────────── */
 
   /* Primary (blue) */

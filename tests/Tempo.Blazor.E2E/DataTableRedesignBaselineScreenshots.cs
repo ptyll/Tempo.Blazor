@@ -257,7 +257,9 @@ public class DataTableRedesignBaselineScreenshots : BaselineGeneratorTestBase
         await ShotAsync(page, search, theme, "edge-no-results");
 
         var loading = page.Locator("[data-testid='dt-edge-loading']");
-        await Assertions.Expect(loading.Locator(".tm-data-table-loading-row")).ToBeVisibleAsync();
+        // The loading state renders FOUR skeleton rows (one cell per column, so widths do not jump);
+        // assert the first of them — a multi-element locator would trip Playwright's strict mode.
+        await Assertions.Expect(loading.Locator(".tm-data-table-loading-row").First).ToBeVisibleAsync();
         await ShotAsync(page, loading, theme, "edge-loading");
 
         var host = page.Locator("[data-testid='dt-edge-long']");
@@ -271,6 +273,13 @@ public class DataTableRedesignBaselineScreenshots : BaselineGeneratorTestBase
         await wide.ScrollIntoViewIfNeededAsync();
         Assert.IsTrue(await wide.Locator(".tm-data-table-scroll").EvaluateAsync<int>("el => el.scrollWidth - el.clientWidth") > 200);
         await ShotAsync(page, wide, theme, "edge-fifteen-columns");
+
+        // 15 columns do not fit 1440px: the start shot above shows the first ~10, so scroll the
+        // scroller to its end and capture the remaining columns — between the two shots the
+        // baseline demonstrates the whole column set (UX review: "shows only 10 of 15").
+        await wide.Locator(".tm-data-table-scroll").EvaluateAsync("el => { el.scrollLeft = el.scrollWidth - el.clientWidth; }");
+        await page.WaitForTimeoutAsync(300);
+        await ShotAsync(page, wide, theme, "edge-fifteen-columns-end");
 
         await page.EvaluateAsync("() => document.documentElement.setAttribute('dir', 'rtl')");
         await page.WaitForTimeoutAsync(600);

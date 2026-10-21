@@ -590,7 +590,11 @@
                     {
                         <tr>
                             <td colspan="@ColSpan" class="tm-data-table-empty-cell">
-                                <TmEmptyState Title="@EmptyTitle" />
+                                @* The empty state carries an icon and a localized supporting line, so the
+                                   cell is not a bare string floating in the table (UX review, fix round 3). *@
+                                <TmEmptyState Title="@EmptyTitle"
+                                              Icon="@Tempo.Blazor.Components.Icons.IconNames.Database"
+                                              Description="@Loc["TmDataTable_EmptyDescription"]" />
                             </td>
                         </tr>
                     }
@@ -605,7 +609,11 @@
                     {
                         <tr>
                             <td colspan="@ColSpan" class="tm-data-table-empty-cell">
-                                <TmEmptyState Title="@EmptyTitle" />
+                                @* The empty state carries an icon and a localized supporting line, so the
+                                   cell is not a bare string floating in the table (UX review, fix round 3). *@
+                                <TmEmptyState Title="@EmptyTitle"
+                                              Icon="@Tempo.Blazor.Components.Icons.IconNames.Database"
+                                              Description="@Loc["TmDataTable_EmptyDescription"]" />
                             </td>
                         </tr>
                     }

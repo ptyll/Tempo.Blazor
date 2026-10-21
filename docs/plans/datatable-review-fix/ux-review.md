@@ -64,9 +64,36 @@ themes; dark surfaces use dark tokens (no light-theme colours).
    cards container rule turns off the card cell's space-between row layout, centring the text
    like every other empty state (`CardsMode_EmptyStateCell_IsCentred`).
 
+## Fixed in fix round 3 (the last "Open" items + the two red E2E specs)
+
+1. **Cards mode checkbox row:** the row checkbox no longer spends a whole card row on itself —
+   it docks into the card's inline-end corner (`position: absolute` + the touch-target box) and
+   the Title cell reserves that corner with `padding-inline-end`
+   (`DataTableUxDefectsCssTests.CardsCheckbox_DocksIntoTheCardCorner_InsteadOfItsOwnRow`,
+   `CardsTitle_ReservesTheCheckboxCorner`).
+2. **Native white checkboxes in dark:** the portaled chrome's radios/checkboxes (view dialog,
+   view-panel columns, column picker) share one `accent-color: var(--tm-color-primary)` rule, so
+   no native control renders unthemed in dark (`PortaledCheckboxes_FollowTheThemeAccent`).
+3. **Bare empty states:** the DataTable and MultiViewList empty states render with an icon and a
+   localized supporting line (`TmDataTable_EmptyDescription`, en/cs/sk/fr + MockTmLocalizer);
+   `TmDataTable_Empty_Items_ShowsIconAndLocalizedDescription`.
+4. **Views button height:** the Views toggle (a full-height `.tm-btn`) and the content-height
+   view-switcher buttons next to it now share `var(--tm-input-height-sm)` in the list toolbar
+   (`MvlToolbar_ViewsToggleMatchesItsNeighbours`).
+5. **`edge-fifteen-columns` shows 10 of 15:** the capture scrolls the 15-column scroller to its
+   end and writes a second baseline, `edge-fifteen-columns-end` — between the two shots the
+   baseline demonstrates the whole column set. The same pass fixes the edge-loading assertion,
+   which still expected the old single spinner cell and tripped Playwright's strict mode against
+   the four skeleton rows (now `.First`).
+6. **`SortButton_SortedColumn_HoverFocus`:** the Tab walk budget (40) was exhausted before the
+   ergonomics table because the demo page grew in phases 12–13; the walk now allows 250 presses
+   (the walk stops at the first sort button it reaches).
+7. **`DataTable_Axe` dark color-contrast:** two fixes — the dark switch now waits out the demo
+   layout's 300 ms colour transition before scanning (a mid-fade scan flagged toolbar/cell text),
+   and the axe failure message now prints each offending element's class/text/computed colours.
+   The remaining genuine violation (the unstyled export dropdown trigger span in dark) is fixed
+   by the tokenized trigger styling (`tm-dropdown-trigger` gets theme text/surface tokens).
+
 ## Open (still deferred, not part of the cleanup scope)
 
-1. **Cards mode:** a card spends a row on an empty checkbox.
-2. **Smaller:** native white checkboxes in dark, bare empty states (no icon/action), the Views
-   button is taller than its neighbours in the list toolbar, `edge-fifteen-columns` shows 10 of
-   15 columns (scroll position, not a defect of the table itself).
+Nothing — every item from the phase 13 UX review is fixed and guarded.

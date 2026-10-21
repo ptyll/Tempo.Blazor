@@ -2,6 +2,13 @@
    matched anything, so this also fixes a dead rule. */
 .tm-dropdown-wrapper { position: relative; display: inline-flex; }
 
+/* A trigger without OutlineTrigger is a bare button: it inherits the host page's ink (Tailwind
+   preflight sets color: inherit), which in dark mode was the page's light-theme colour and failed
+   contrast. The trigger follows the theme's text token instead. */
+.tm-dropdown-trigger {
+  color: var(--tm-text-primary);
+}
+
 /* A disabled dropdown greys out its trigger (the wrapper class comes from TmDropdown.Disabled;
    the native `disabled` attribute blocks the click, this only paints the state). */
 .tm-dropdown-wrapper.tm-dropdown-disabled .tm-dropdown-trigger {

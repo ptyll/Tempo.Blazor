@@ -5,6 +5,12 @@
 
 [data-theme="dark"],
 .tm-dark {
+  /* Native controls are drawn by the BROWSER and follow color-scheme, which accent-color only
+     tints the CHECKED state — without this, the unchecked box (and scrollbars) rendered white
+     on the dark surface. Re-declared on the theme roots (not inherited from :root aliases)
+     for the same reason every token above is: the theme may sit on a parent element. */
+  color-scheme: dark;
+
   /* Surfaces */
   --tm-bg-page:              #0f172a;
   --tm-bg-surface:           #1e293b;

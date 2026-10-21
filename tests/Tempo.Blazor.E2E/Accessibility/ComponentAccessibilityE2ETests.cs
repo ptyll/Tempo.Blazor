@@ -48,7 +48,23 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
                     .filter(v => impacts.includes(v.impact))
                     .map(v => ({ v, nodes: v.nodes.filter(n => !isChrome(n.target)) }))
                     .filter(x => x.nodes.length > 0)
-                    .map(x => `${x.v.impact}: ${x.v.id} - ${x.v.help} (${x.nodes.map(n => n.target.join(' ')).join('; ')})`);
+                    .map(x => `${x.v.impact}: ${x.v.id} - ${x.v.help} (${x.nodes.map(n => {
+                        const el = document.querySelector(n.target[n.target.length - 1]);
+                        const cls = el && el.className && el.className.baseVal === undefined ? el.className : '';
+                        const text = el && el.textContent ? el.textContent.trim().slice(0, 40) : '';
+                        let dbg = '';
+                        if (el) {
+                            const cs = getComputedStyle(el);
+                            const chain = [];
+                            let a = el;
+                            for (let i = 0; i < 6 && a; i++, a = a.parentElement) {
+                                const s = getComputedStyle(a);
+                                chain.push(`${a.tagName.toLowerCase()}.${(a.className.baseVal === undefined ? a.className : '')} c=${s.color} bg=${s.backgroundColor} scheme=${s.colorScheme}`);
+                            }
+                            dbg = ` ||| ${chain.join(' <- ')}`;
+                        }
+                        return `${n.target.join(' ')} [${cls}] "${text}"${dbg}`;
+                    }).join('; ')})`);
             }
             """,
             new object[] { selector, impacts, exclude ?? Array.Empty<string>() });
@@ -124,7 +140,10 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
                 });
             }
             """);
-        await page.WaitForTimeoutAsync(250);
+        // The demo layout paints a 300ms colour transition; axe samples computed colours, so a
+        // 250ms wait could scan MID-FADE and flag half-darkened toolbar/cell text as a contrast
+        // violation. Give the fade a comfortable settle budget before scanning.
+        await page.WaitForTimeoutAsync(700);
     }
 
     // The swept component must be free of critical/serious violations in BOTH light and dark themes.

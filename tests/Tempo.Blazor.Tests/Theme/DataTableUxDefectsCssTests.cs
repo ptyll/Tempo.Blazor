@@ -151,4 +151,77 @@ public sealed class DataTableUxDefectsCssTests
     {
         Rule(Css(), ".tm-data-table-loading-row td").Should().Contain("block-size");
     }
+
+    // ── Fix round 3: the deferred "Open" polish items ──
+
+    private static string MvlCss() => ThemeCss.ComponentCss("_multi-view-list.css");
+
+    [Fact]
+    public void CardsCheckbox_DocksIntoTheCardCorner_InsteadOfItsOwnRow()
+    {
+        var css = Css();
+        var at = css.IndexOf(".tm-data-table-wrapper--cards .tm-data-table tbody td.tm-col-check", StringComparison.Ordinal);
+        at.Should().BeGreaterThanOrEqualTo(0);
+        var body = css[css.IndexOf('{', at)..css.IndexOf('}', at)];
+        body.Should().Contain("position: absolute", "a full card row spent on an empty checkbox was the defect");
+        body.Should().Contain("inset-inline-end");
+        body.Should().Contain("var(--tm-touch-target)");
+    }
+
+    [Fact]
+    public void CardsTitle_ReservesTheCheckboxCorner()
+    {
+        var css = Css();
+        // The Title cell has an earlier grid-column rule; the padding reservation is the LAST one.
+        var at = css.LastIndexOf(".tm-data-table-wrapper--cards .tm-data-table tbody td[data-card-role=\"Title\"]", StringComparison.Ordinal);
+        at.Should().BeGreaterThanOrEqualTo(0);
+        css[css.IndexOf('{', at)..css.IndexOf('}', at)].Should().Contain("padding-inline-end");
+    }
+
+    [Fact]
+    public void PortaledCheckboxes_FollowTheThemeAccent()
+    {
+        var match = Regex.Matches(Css(), @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.None, Timeout)
+            .Where(m => m.Groups["sel"].Value.Contains(".tm-column-picker-item input", StringComparison.Ordinal))
+            .Select(m => m.Groups["body"].Value)
+            .FirstOrDefault(b => b.Contains("accent-color: var(--tm-color-primary)", StringComparison.Ordinal));
+        match.Should().NotBeNull("native checkboxes rendered unthemed (white) in dark mode");
+    }
+
+    [Fact]
+    public void MvlToolbar_ViewsToggleMatchesItsNeighbours()
+    {
+        var toggle = MvlCss();
+        toggle.Should().Contain(".tm-mvl-toolbar-right .tm-view-manager-toggle");
+        Rule(toggle, ".tm-mvl-toolbar-right .tm-view-manager-toggle")
+            .Should().Contain("var(--tm-input-height-sm)");
+        Rule(toggle, ".tm-mvl-switch-table")
+            .Should().Contain("min-block-size: var(--tm-input-height-sm)",
+                "the switcher buttons were content-height next to a full-height .tm-btn");
+    }
+
+    [Fact]
+    public void BareDropdownTrigger_FollowsTheThemeTextToken()
+    {
+        Rule(ThemeCss.ComponentCss("_dropdown.css"), ".tm-dropdown-trigger")
+            .Should().Contain("color: var(--tm-text-primary)",
+                "a bare trigger inherits the host page's ink, which was light-theme colour in dark");
+    }
+
+    [Fact]
+    public void DarkThemeRoot_DeclaresColorSchemeDark()
+    {
+        // accent-color only tints the CHECKED state; the unchecked box, native scrollbars and form
+        // control chrome are drawn by the browser and follow `color-scheme`. Without this the
+        // unchecked card checkbox rendered as a bright white square on the dark surface.
+        var dark = File.ReadAllText(ThemeCss.CssPath("tokens-dark.css"));
+        var light = File.ReadAllText(ThemeCss.CssPath("tokens.css"));
+
+        var darkRoot = Rule(dark, "[data-theme=\"dark\"]");
+        darkRoot.Should().Contain("color-scheme: dark",
+            "the browser-drawn unchecked checkbox and scrollbars follow color-scheme, not accent-color");
+
+        Rule(light, ":root").Should().Contain("color-scheme: light",
+            "the light default must be explicit so the dark override is a real switch");
+    }
 }

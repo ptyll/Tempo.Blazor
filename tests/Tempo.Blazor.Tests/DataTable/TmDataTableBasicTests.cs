@@ -80,6 +80,17 @@ public class TmDataTableBasicTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmDataTable_Empty_Items_ShowsIconAndLocalizedDescription()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, new List<BasicPerson>())
+            .Add(c => c.EmptyTitle, "No data found"));
+
+        cut.Find(".tm-empty-state-icon").Should().NotBeNull("a bare text-only empty state was a UX review defect");
+        cut.Find(".tm-empty-state-description").TextContent.Should().Be("No records to display.");
+    }
+
+    [Fact]
     public void TmDataTable_Renders_Column_Headers()
     {
         var cut = Render<TmDataTable<BasicPerson>>(p => p

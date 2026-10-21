@@ -48,6 +48,19 @@
   white-space: nowrap;
 }
 
+/* The Views toggle is a .tm-btn (38px); the switcher next to it was content-height, so the
+   toolbar looked uneven. Both controls now share the small input height (and both grow to the
+   44px touch target together on coarse pointers via the responsive rules). */
+.tm-mvl-toolbar-right .tm-view-manager-toggle {
+  block-size: var(--tm-input-height-sm);
+  min-block-size: var(--tm-input-height-sm);
+}
+.tm-mvl-switch-table,
+.tm-mvl-switch-card,
+.tm-mvl-switch-list {
+  min-block-size: var(--tm-input-height-sm);
+}
+
 /* External Filters */
 .tm-mvl-external-filters {
   padding: var(--tm-space-3) 0;
