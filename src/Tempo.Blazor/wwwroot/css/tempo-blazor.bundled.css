@@ -284,6 +284,7 @@ to{transform:translateX(0);}
 .tm-editor-shell__tabpanels>.tm-editor-shell__tabpanel:not([hidden]){flex:1 1 0;overflow:auto;}
 .tm-editor-shell__sheet-panel{min-block-size:0;}
 @media (pointer:coarse){.tm-editor-shell__panel-toggle{inline-size:var(--tm-touch-target);}
+.tm-editor-shell__tab{min-block-size:var(--tm-touch-target);}
 .tm-editor-shell__panel-toggle.tm-editor-shell__panel-toggle--mobile{inline-size:auto;}
 }
 .tm-side-panel{box-sizing:border-box;min-inline-size:0;}

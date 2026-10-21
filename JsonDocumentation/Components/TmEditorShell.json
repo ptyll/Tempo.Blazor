@@ -67,7 +67,7 @@
       "type": "int",
       "isRequired": false,
       "default": "3",
-      "description": "How many of the MobileActions stay on the mobile action bar before the rest overflow into the bar's own More menu. Default 3 is the bar's own default, so a host that does not set it keeps the earlier behaviour. A host whose action set is the editor's primary navigation (the email template editor's Back / Redo / Preview / Validate) raises it so those commands stay one tap away. A value below 1 is rejected with ArgumentOutOfRangeException."
+      "description": "How many of the MobileActions stay on the mobile action bar before the rest overflow into the bar's own More menu. Default 3 is the bar's own default, so a host that does not set it keeps the earlier behaviour. A host whose action set is the editor's primary navigation (the email template editor's Undo / Redo / Preview / Validate) raises it so those commands stay one tap away. A value below 1 is rejected with ArgumentOutOfRangeException."
     },
     {
       "name": "LeftOpen",

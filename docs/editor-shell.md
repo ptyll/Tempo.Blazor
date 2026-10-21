@@ -14,9 +14,9 @@ Read [responsive-conventions.md](responsive-conventions.md) first: the shell fol
 
 | Layout (container width, default thresholds) | Panels | Canvas | Actions |
 |---|---|---|---|
-| **Desktop** (≥ 1024) | Docked, resizable columns. A strip toggle per panel hides it, collapses it to a 44px rail, or expands it again. | Fills the remaining width. | Toolbar slot. |
-| **Tablet** (640–1023) | The **same docked panels**: `CollapsedPanels` is honoured, and **at most one** panel is expanded — expanding (or opening) one rails the other and raises `CollapsedPanelsChanged`. **No modal, nothing inert.** | Always visible and operable. | Toolbar slot. |
-| **Mobile** (< 640) | `MobilePanelPresentation.Sheet` (default): the canvas plus one **inline, non-modal bottom sheet** (snap points configurable through `MobileSheetSnapPoints`, default 50 % / 100 %, body floor 14rem on short stages); with two open panels the sheet shows a Left / Right tab strip. `MobilePanelPresentation.Tabs`: a full-region `tablist` **Left \| Canvas \| Right**, no sheet. | Keeps the pointer and its own scroll outside the sheet panel. | `MobileActions` through `TmMobileActionBar`; when set, the **Toolbar slot is not rendered** on mobile (the actions replace it). |
+| **Desktop** (≥ 1024 default, ≥ 1200 with `Breakpoints(768, 1200)`) | Docked, resizable columns. A strip toggle per panel hides it, collapses it to a 44px rail, or expands it again. | Fills the remaining width. | Toolbar slot. |
+| **Tablet** (640–1023 default, 768–1199 with `Breakpoints(768, 1200)`) | The **same docked panels**: `CollapsedPanels` is honoured, and **at most one** panel is expanded — expanding (or opening) one rails the other and raises `CollapsedPanelsChanged`. **No modal, nothing inert.** | Always visible and operable. | Toolbar slot. |
+| **Mobile** (< 640 default, < 768 with the editor's `Breakpoints(768, 1200)`) | `MobilePanelPresentation.Sheet` (default): the canvas plus one **inline, non-modal bottom sheet** (snap points configurable through `MobileSheetSnapPoints`, default 50 % / 100 %, body floor 14rem on short stages); with two open panels the sheet shows a Left / Right tab strip. `MobilePanelPresentation.Tabs`: a full-region `tablist` **Left \| Canvas \| Right**, no sheet. | Keeps the pointer and its own scroll outside the sheet panel. | `MobileActions` through `TmMobileActionBar`; when set, the **Toolbar slot is not rendered** on mobile (the actions replace it). |
 
 `LeftOpen` / `RightOpen` mean the same on desktop and tablet (hidden vs shown); on tablet a panel
 that is shown but not the one expanded reads as a rail. The mobile sheet is inline on purpose
@@ -90,6 +90,12 @@ a private flag that could disagree with the host.
   rules, an empty result falls back to the default, and the lowest snap drives the canvas reserve.
   On a short stage the 14rem floor applies to the whole sheet panel (header, tabs and body), capped
   at the stage height (`--tm-editor-shell-sheet-min-block`).
+* `MobileActionsMaxVisible` (default `3`, the bar's own default) is how many of the
+  `MobileActions` stay on the action bar before the rest overflow into the bar's own "More" menu.
+  A host whose action set is the editor's primary navigation raises it so those commands stay one
+  tap away — the e-mail template editor sets `4` for Undo / Redo / Preview / Validate. A value
+  below `1` throws `ArgumentOutOfRangeException` (a bar that shows no action is an unreachable set
+  of commands).
 * `CanvasTitle` labels the canvas tab of the Tabs presentation (localized default).
 * On a closed mobile sheet a labelled bar names what is behind it ("Blocks · Properties · Layers", from
   `LeftTitle` / `RightTitle` / `ExtraTitle`; the bar renders only while `ShowMobilePanelsToggle` is true).
@@ -212,7 +218,13 @@ Decision `F6-EDITOR-SHELL-EMAIL-API` records the real mapping, which needs **no 
   (Vlastnosti); "add block" sets `MobileSheetSnapIndex` to collapse the sheet. Use
   `MobilePanelPresentation.Tabs` for a full-region *Bloky | Obsah | Vlastnosti* tablist instead
   (`CanvasTitle="Obsah"`).
-* Mobile actions: Undo, Redo, Preview, Validate, Save through `MobileActions`.
+* Mobile actions: Undo, Redo, Preview, Validate through `MobileActions` (with
+  `MobileActionsMaxVisible="4"`, so none of them hides behind the bar's "More"). Save is NOT one of
+  them: it is the compact header's primary action.
+* The palette's collapsed state is the host's `ToolboxCollapsed` (D10), mapped onto the shell's
+  `CollapsedPanels` (`EditorShellPanel.Left`). A rail the LAYOUT imposes (the tablet
+  one-expanded-panel rule) is a layout state and does NOT raise `ToolboxCollapsedChanged`; only a
+  user collapse/expand does.
 
 ## `TmSidePanel` — the inspector for non-editors
 

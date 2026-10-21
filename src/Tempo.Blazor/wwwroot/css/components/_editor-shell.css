@@ -368,6 +368,12 @@
         inline-size: var(--tm-touch-target);
     }
 
+    /* A sheet / Tabs tab is primary navigation on a phone (Bloky | Vlastnosti): it gets the full
+       --tm-touch-target height even though the paint stays a slim text label. */
+    .tm-editor-shell__tab {
+        min-block-size: var(--tm-touch-target);
+    }
+
     /* The mobile closed-state bar is a labelled, full-width bar: the 44px touch width of the
        strip toggles must not clip its label. */
     .tm-editor-shell__panel-toggle.tm-editor-shell__panel-toggle--mobile {

@@ -425,6 +425,41 @@
   no action would be an unreachable set of commands). The email template editor sets it to `4` so
   its D20 actions (Zpět / Znovu / Náhled / Validovat) sit on the bar instead of behind "More".
 
+### Changed
+
+- **`TmEditorShell` raises `ResolvedLayoutChanged` BEFORE `CollapsedPanelsChanged` (jádro, behaviour).**
+  Both callbacks describe the same layout transition (a desktop→tablet flip rails one panel through the
+  tablet one-expanded-panel rule), but the collapse one used to arrive first — so a host that maps
+  `CollapsedPanels` onto its own state (the e-mail editor's `ToolboxCollapsed`, D10) could not tell a rail
+  the LAYOUT imposed from a collapse the user asked for, and adopted the rail as a preference (measured:
+  a Mobile→Tablet flip pinned the palette to its rail for ever).
+
+  ```text
+  before — a host sees the collapse before it knows the layout changed
+    CollapsedPanelsChanged(Left)     ← the tablet rule railed the palette
+    ResolvedLayoutChanged(Tablet)
+
+  after  — the layout first, then the collapse it caused
+    ResolvedLayoutChanged(Tablet)
+    CollapsedPanelsChanged(Left)
+  ```
+
+  The same pass still raises both, so nothing needs to be deferred: a handler can compare the layout
+  generation it just recorded with the one the collapse arrives in and treat a same-generation raise as a
+  layout state. A user collapse (the panel toggle, the strip) is unchanged — one `CollapsedPanelsChanged`
+  and no layout callback.
+
+- **The shell's sheet / Tabs tab is finger-sized under a coarse pointer (jádro, aditivní CSS).**
+  `@media (pointer: coarse) { .tm-editor-shell__tab { min-block-size: var(--tm-touch-target) } }` in
+  `_editor-shell.css`: Bloky | Vlastnosti (and Bloky | Plátno | Vlastnosti) are primary navigation on a
+  phone, and a 30 px tab measured on a touch device is not a target. The visual label is unchanged; only
+  the hit area grows.
+
+- **The collapsed panel's rail is a named group.** A collapsed docked panel renders
+  `<div class="tm-editor-shell__rail" role="group" aria-label="…">` (the panel's own title, `LeftTitle` /
+  `RightTitle` or their localized default), so the strip of block icons it may carry is announced as the
+  palette's group instead of a run of unnamed buttons.
+
 ### Fixed
 
 - **Inspector (Fáze 7A review): an optional colour can be unset; the required one is never cleared.** A
@@ -545,10 +580,32 @@
   inserting one collapses the sheet and moves the focus (and the scroll) to the new block. The palette's
   collapsed state is an icon RAIL whose tiles are `--tm-touch-target`-sized, the failed/conflict alert is
   readable in the status bar (no more hovering a truncated pill), and the editor keeps the command row
-  as a core `TmToolbar Overflow="Menu"` with a `Priority` per action (Save is `Pinned`).
+  as a core `TmToolbar Overflow="Menu"` with a `Priority` per action. Save sits in the toolbar's
+  `Actions` area, which never overflows (`flex-shrink: 0`), so the primary action can never be pushed
+  into "More" — it needs no `Pinned` priority and keeps its `data-tm-save` hook.
 
 
 ### Breaking / Migration
+
+- **`TmEditorShell.ResolvedLayoutChanged` now fires before `CollapsedPanelsChanged` (event ORDER, not the
+  signatures).** Both callbacks keep their types and both still fire in the same pass; only the order
+  changed. A host that reacts to the collapse by adopting it into its own state and also reads the layout
+  must rely on the new order.
+
+  ```razor
+  @* before — the collapse arrived first, so this handler adopted a layout-imposed rail as a preference *@
+  <TmEditorShell CollapsedPanelsChanged="panels => toolboxCollapsed = panels.HasFlag(EditorShellPanel.Left)" />
+
+  @* after — the layout is current when the collapse arrives; compare the layout generation *@
+  <TmEditorShell ResolvedLayoutChanged="mode => layoutGeneration++"
+                 CollapsedPanelsChanged="panels => AdoptIfUserCollapse(panels, layoutGeneration)" />
+  ```
+
+  A host that only forwards `CollapsedPanels` two-way (`@bind-CollapsedPanels`) needs no change. Migration:
+  if your handler assumed the collapse arrived before the layout notification, move that work into the
+  collapse handler and read the layout from the parameter it was last given (the shell has already
+  resolved it).
+
 
 - **`TmEmailTemplateEditor.OnSave` is a `Func<EmailSaveRequest, Task<EmailSaveResult>>?` and `OnAutoSave` is
   gone (B1).** The old `EventCallback<EmailTemplateDocument> OnSave` could not report an outcome, so the
