@@ -117,6 +117,13 @@
     [Parameter] public Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? ResultCountProvider { get; set; }
 
     /// <summary>
+    /// Changing this value re-runs the count; hosts pass a token covering inputs outside
+    /// <see cref="ActiveFilters"/> — search text, column filters, a reloaded data set. Compare by
+    /// value, so an incrementing version counter works.
+    /// </summary>
+    [Parameter] public object? ResultCountKey { get; set; }
+
+    /// <summary>
     /// How long a burst of filter changes waits before the count is asked for. Not a parameter —
     /// tests set it through <c>InternalsVisibleTo</c>. Defaults to 300 ms.
     /// </summary>
@@ -275,6 +282,7 @@
     private List<ActiveFilter>   _filters          = [];
     private IReadOnlyList<ActiveFilter> _lastActiveFilters = [];
     private Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>? _lastResultCountProvider;
+    private object? _lastResultCountKey;
     private bool _sawResultCountInputs;
     private bool _lastShowResultPreview;
     private int? _resultCount;
@@ -309,8 +317,13 @@
         var previewChanged = _lastShowResultPreview != ShowResultPreview;
         _lastShowResultPreview = ShowResultPreview;
 
+        // The host signals that an input the builder cannot see (search text, column filters, the
+        // data itself) has changed; the count would otherwise keep a stale number on screen.
+        var keyChanged = !Equals(_lastResultCountKey, ResultCountKey);
+        _lastResultCountKey = ResultCountKey;
+
         // A parent re-render with the same inputs must not clear the count or ask again.
-        if (!_sawResultCountInputs || filtersChanged || providerChanged || previewChanged)
+        if (!_sawResultCountInputs || filtersChanged || providerChanged || previewChanged || keyChanged)
         {
             _sawResultCountInputs = true;
             ScheduleResultCount();

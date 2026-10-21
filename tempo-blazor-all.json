@@ -13138,6 +13138,12 @@
               "description": "Inline (default) keeps the field picker and editor in the document flow, including PickersPage. Popover and Auto open both through TmOverlayPanel anchored to Add filter: Popover stays a popover at every width, Auto becomes a sheet on a narrow viewport. Hosts must opt in."
             },
             {
+              "name": "ResultCountKey",
+              "type": "object?",
+              "isRequired": false,
+              "description": "Changing this value re-runs the count; hosts pass a token covering inputs outside ActiveFilters (search text, column filters, a reloaded data set). Compare by value, so an incrementing version counter works."
+            },
+            {
               "name": "ResultCountProvider",
               "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
               "isRequired": false,

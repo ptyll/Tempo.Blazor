@@ -142,6 +142,7 @@
                              DisplayResolver="DisplayResolver"
                              ShowResultPreview="ShowFilterResultPreview"
                              ResultCountProvider="ResultCountProvider"
+                             ResultCountKey="_resultCountVersion"
                              ShowClearAll="@(!IsContentToolbarMode && !IsSearchToolbarMode)" />
         </div>
     }
@@ -678,6 +679,16 @@
     // ── State ─────────────────────────────────────────────────────
     private ListViewMode _viewMode = ListViewMode.Table;
     private string _searchText = string.Empty;
+
+    /// <summary>
+    /// Bumped whenever an input the filter builder cannot see changes (search text, new items, a
+    /// provider reload). Passed as the builder's <c>ResultCountKey</c> so the preview recounts
+    /// instead of keeping a stale number.
+    /// </summary>
+    private int _resultCountVersion;
+
+    /// <summary>The <see cref="Items"/> reference the preview-invalidation counter last saw.</summary>
+    private IReadOnlyList<TItem>? _lastCountedItems;
     private string? _lastSearchTextParam;
     private HashSet<string> _selectedIds = [];
     private List<ActiveFilter> _externalFilters = [];
@@ -1285,6 +1296,7 @@
             _searchText = SearchText;
             _currentPage = 1;
             _groupPageRequests.Clear();
+            _resultCountVersion++;
             if (DataProvider is not null)
                 await LoadFromProviderAsync();
             else
@@ -1294,6 +1306,13 @@
         // Track transition from controlled back to uncontrolled without overwriting internal state.
         if (SearchText is null && _lastSearchTextParam is not null)
             _lastSearchTextParam = null;
+
+        // New items behind the builder's back invalidate the preview count.
+        if (!ReferenceEquals(_lastCountedItems, Items))
+        {
+            _lastCountedItems = Items;
+            _resultCountVersion++;
+        }
 
         // Sync externally supplied SelectedIds into internal state
         if (SelectedIds is not null)
@@ -1358,6 +1377,7 @@
         finally
         {
             _isLoading = false;
+            _resultCountVersion++; // the data behind the preview count may have moved
             StateHasChanged();
         }
     }
@@ -1387,6 +1407,7 @@
     {
         _searchText = value ?? string.Empty;
         _groupPageRequests.Clear();
+        _resultCountVersion++;
 
         // In controlled mode, advance the last-seen parameter so the upcoming
         // parent rerender from @bind-SearchText does not trigger a duplicate reload.

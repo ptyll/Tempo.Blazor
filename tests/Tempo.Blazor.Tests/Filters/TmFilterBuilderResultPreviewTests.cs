@@ -1,7 +1,10 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Filters;
+using Tempo.Blazor.Interfaces;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
@@ -257,6 +260,36 @@ public class TmFilterBuilderResultPreviewTests : LocalizationTestBase
         {
             last.Should().HaveCount(2);
             last.Should().Contain(f => f.FieldName == "name" && f.DisplayValue == "Ann");
+        }, timeout: TimeSpan.FromSeconds(2));
+    }
+
+    /// <summary>
+    /// French "whole millions" use the <c>_Many</c> form. The number is formatted in full, so the
+    /// template must read "&lt;N&gt; d'enregistrements correspondants" — the old template added
+    /// "de millions", which claimed a count a million times too large.
+    /// </summary>
+    [Fact]
+    public void ResultPreview_French_ManyForm_FormatsTheFullNumberWithoutTheMillionsWord()
+    {
+        Services.AddSingleton<ITmLocalizer>(new MockTmLocalizer(
+            new Dictionary<string, string>
+            {
+                ["TmFilterBuilder_ResultPreview_One"] = "{0} enregistrement correspondant",
+                ["TmFilterBuilder_ResultPreview_Many"] = "{0:N0} d'enregistrements correspondants",
+                ["TmFilterBuilder_ResultPreview_Other"] = "{0:N0} enregistrements correspondants",
+            },
+            System.Globalization.CultureInfo.GetCultureInfo("fr")));
+
+        var cut = Render<TmFilterBuilder>(p => p
+            .Add(c => c.ShowResultPreview, true)
+            .Add(c => c.ResultCountProvider, Count(2000000))
+            .Add(c => c.ActiveFilters, new[] { NameContainsA }));
+
+        cut.WaitForAssertion(() =>
+        {
+            var text = cut.Find(".tm-filter-result-preview").TextContent;
+            text.Should().Contain("d'enregistrements correspondants");
+            text.Should().NotContain("de millions");
         }, timeout: TimeSpan.FromSeconds(2));
     }
 

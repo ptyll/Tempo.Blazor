@@ -999,7 +999,7 @@
   "TmViewManager_SetDefaultFailed": "Impossible de définir la vue par défaut.",
   "TmFilterBuilder_ResultPreviewLoading": "Comptage…",
   "TmFilterBuilder_ResultPreview_One": "{0} enregistrement correspondant",
-  "TmFilterBuilder_ResultPreview_Many": "{0:N0} de millions d'enregistrements correspondants",
+  "TmFilterBuilder_ResultPreview_Many": "{0:N0} d'enregistrements correspondants",
   "TmFilterBuilder_ResultPreview_Other": "{0} enregistrements correspondants",
   "TmDataTable_SaveRow": "Enregistrer",
   "TmDataTable_SaveView": "Enregistrer la vue",

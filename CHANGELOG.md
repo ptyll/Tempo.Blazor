@@ -4,6 +4,30 @@
 
 ### Fixed
 
+- **French filter result preview claimed whole millions wrong.** The `TmFilterBuilder_ResultPreview_Many`
+  template was "`{0:N0}` de millions d'enregistrements correspondants", but the `_Many` form is picked for
+  whole millions and the number is formatted in full, so a count of 2 000 000 read "2 000 000 de millions
+  d'enregistrements correspondants". The template is now "`{0:N0}` d'enregistrements correspondants", like
+  every other French `_Many` family. Guarded by a bUnit test.
+
+- **`TmDataTable` client-side result preview counted an edited filter twice.** The table copies the applied
+  builder filters into its own column-filter map; the in-memory count then applied the map *and* the builder's
+  filters, so editing an applied filter (Status=A becomes Status=B) counted "A AND B" — usually 0. The count now
+  merges both filter sources with the same rule the data-provider path already used: the builder's filter wins
+  on its column. Guarded by bUnit (`FilterResultPreviewEditTests`).
+
+- **The filter result preview kept a stale count when the search, column filters or the data changed.**
+  `TmFilterBuilder` only recounted when `ActiveFilters`, `ResultCountProvider` or `ShowResultPreview` changed,
+  but `TmDataTable` and `TmMultiViewList` count with inputs the builder cannot see. Both hosts now pass a new
+  `ResultCountKey` token (below) so the preview recounts with the table.
+
+### Added
+
+- **`TmFilterBuilder.ResultCountKey`** (`object?`, default `null`). Changing this value re-runs the count; hosts
+  pass a token covering inputs outside `ActiveFilters` — search text, column filters, new items or a reloaded
+  data provider. `TmDataTable` and `TmMultiViewList` pass an internal version counter they bump on those changes,
+  so the preview count always matches what the table shows. No default behaviour change for hosts that do not set it.
+
 - **Default (Plain) `TmDataTable` group zone and export menu lost their pre-redesign CSS.** The opt-in gating
   (`Appearance=Card`) had moved the markup but the stylesheet still styled the default: the group chip rendered
   as the redesign's subtle pill instead of the original solid primary chip, Expand all / Collapse all had no

@@ -1028,6 +1028,16 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private string _searchText = string.Empty;
     private string? _lastSearchTextParam;
     private List<ActiveFilter> _externalFilters = [];
+
+    /// <summary>
+    /// Bumped whenever an input the filter builder cannot see changes (search text, column filters,
+    /// new items, a provider reload). Passed as the builder's <c>ResultCountKey</c> so the preview
+    /// recount instead of keeping a stale number.
+    /// </summary>
+    private int _resultCountVersion;
+
+    /// <summary>The <see cref="Items"/> reference the preview-invalidation counter last saw.</summary>
+    private IEnumerable<TItem>? _lastCountedItems;
     private string? _activeViewId;
 
     // ── Grouping state ─────────────────────────────────────────
@@ -1653,6 +1663,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             _searchText = SearchText!;
             _currentPage = 1;
             _groupPageRequests.Clear();
+            _resultCountVersion++;
         }
         else if (SearchText is null && _lastSearchTextParam is not null)
         {
@@ -1673,7 +1684,14 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
         // Re-apply when Items collection reference changes in client-side mode
         if (DataProvider is null)
+        {
+            if (!ReferenceEquals(_lastCountedItems, Items))
+            {
+                _lastCountedItems = Items;
+                _resultCountVersion++;
+            }
             RefreshClientItems();
+        }
     }
 
     // ── Column registration ───────────────────────────────────────
@@ -2384,6 +2402,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             if (generation == _loadGeneration)
             {
                 _isLoading = false;
+                _resultCountVersion++; // the data behind the preview count may have moved
                 StateHasChanged();
             }
         }
@@ -2482,6 +2501,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         }
 
         _currentPage = 1;
+        _resultCountVersion++;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -2493,6 +2513,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _searchText = value ?? string.Empty;
         _currentPage = 1;
         _groupPageRequests.Clear();
+        _resultCountVersion++;
 
         // In controlled mode, advance the last-seen parameter so the upcoming
         // parent rerender from @bind-SearchText does not trigger a duplicate reload.
@@ -2510,6 +2531,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         _activeFilters.Remove(columnKey);
         _currentPage = 1;
+        _resultCountVersion++;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -2522,6 +2544,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _searchText = string.Empty;
         _currentPage = 1;
         _groupPageRequests.Clear();
+        _resultCountVersion++;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -2564,16 +2587,21 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
             return table.CountClientItems(filters);
         }
+    }
 
-        private static List<DataTableFilter> MergeExternalFilters(
-            IReadOnlyList<DataTableFilter> current,
-            IReadOnlyList<ActiveFilter> external)
-        {
-            var externalColumns = new HashSet<string>(external.Select(f => f.FieldName), StringComparer.Ordinal);
-            var merged = current.Where(f => !externalColumns.Contains(f.Column)).ToList();
-            merged.AddRange(external.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)));
-            return merged;
-        }
+    /// <summary>
+    /// Combines the table's own column filters with the filter builder's filters. The builder's
+    /// filters win on their columns: an applied filter being edited is replaced by its draft, not
+    /// counted next to it. Both the provider query and the client-side count share this rule.
+    /// </summary>
+    private static List<DataTableFilter> MergeExternalFilters(
+        IReadOnlyList<DataTableFilter> current,
+        IReadOnlyList<ActiveFilter> external)
+    {
+        var externalColumns = new HashSet<string>(external.Select(f => f.FieldName), StringComparer.Ordinal);
+        var merged = current.Where(f => !externalColumns.Contains(f.Column)).ToList();
+        merged.AddRange(external.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)));
+        return merged;
     }
 
     /// <summary>How many in-memory rows match the table's current search, column filters and these external filters.</summary>
@@ -2590,19 +2618,11 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                        ?.Contains(search, StringComparison.OrdinalIgnoreCase) == true));
         }
 
-        foreach (var filter in _activeFilters.Values)
+        foreach (var filter in MergeExternalFilters(_activeFilters.Values.ToList(), externalFilters))
         {
             var col = _columns.FirstOrDefault(c => c.Key == filter.Column);
             if (col?.Field != null)
                 items = ApplyClientFilter(items, col.Field, filter);
-        }
-
-        foreach (var filter in externalFilters)
-        {
-            var col = _columns.FirstOrDefault(c => c.Key == filter.FieldName);
-            if (col?.Field is null) continue;
-            items = ApplyClientFilter(items, col.Field,
-                new DataTableFilter(filter.FieldName, filter.Operator.ToString(), filter.Value));
         }
 
         return items.Count();
