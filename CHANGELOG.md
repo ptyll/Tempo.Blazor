@@ -34,7 +34,9 @@
 - **TmOverlayPanel no longer takes a focus-restore id.** `RestoreFocusTargetId` was removed.
   Escape returns focus to the anchor inside `overlay.js` (`anchor.focus({ preventScroll: true })`)
   when focus would otherwise die. An outside click does not: the user clicked somewhere else.
-  Do not pass the old parameter.
+  Behaviour change: an outside click on dead space now leaves focus on `<body>` instead of
+  restoring it to the anchor; Escape still returns focus to the anchor. Migration (before/after)
+  is documented in the Breaking / Migration entry "`TmOverlayPanel.RestoreFocusTargetId` was removed".
 
 - **TmFilterBuilder focuses its own first field option.** Opening the picker no longer runs
   `document.querySelector` through `eval`, so a second builder on the page focuses its own option.
@@ -1310,6 +1312,9 @@
   Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
 
 - **`TmOverlayPanel.RestoreFocusTargetId` was removed.** Focus returns to the anchor; do not pass the old parameter.
+  Impact: an outside click on dead space now leaves focus where the user clicked (on `<body>`) instead of
+  restoring it to the anchor; Escape still returns focus to the anchor. The same change is described in the
+  Fixed entry of this version (see "TmOverlayPanel no longer takes a focus-restore id").
   Before:
   ```razor
   <TmButton @ref="_trigger">Options</TmButton>

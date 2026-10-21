@@ -27,6 +27,13 @@ internal static class MultiViewListSpecs
         await page.Keyboard.PressAsync("ArrowLeft");
         await Assertions.Expect(list.Locator(".tm-mvl-switch-card")).ToBeFocusedAsync();
 
+        // A MOUSE click on an inactive radio keeps focus on it: the buttons are stable (no @key
+        // recreation), so the clicked element is not removed after the switch.
+        await list.Locator(".tm-mvl-switch-card").ClickAsync();
+        await Assertions.Expect(list.Locator(".tm-mvl-switch-card")).ToHaveAttributeAsync("aria-checked", "true");
+        Assert.IsTrue(await list.Locator(".tm-mvl-switch-card").EvaluateAsync<bool>("el => el === document.activeElement"),
+            "a mouse click on an inactive view radio keeps keyboard focus on that radio");
+
         // Initials fallback, item count that follows the search, and the column cap.
         await SelectAsync(page, "mvl-redesign-avatar-fallback", "Initials");
         await ToggleAsync(page, "mvl-redesign-item-count");

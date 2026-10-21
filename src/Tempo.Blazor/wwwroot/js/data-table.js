@@ -311,7 +311,9 @@ window.tmDataTable = (function () {
     // Arrow keys that scroll the page when a composite widget (a radiogroup) owns them.
     // Tab is deliberately absent: a blanket preventDefault on the container would trap focus.
     var ARROW_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-    var arrowKeyRoots = new Map();
+    // WeakMap: a switcher that unmounts (or whose component is disposed) must not keep its
+    // detached element and listener alive through this module.
+    var arrowKeyRoots = new WeakMap();
 
     /**
      * Cancels the page-scroll default of arrow keys on a composite widget. Only a key whose target
@@ -329,6 +331,18 @@ window.tmDataTable = (function () {
         };
         el.addEventListener('keydown', onKey);
         arrowKeyRoots.set(el, onKey);
+    }
+
+    /**
+     * Removes the listener installed by `attachArrowKeyPrevent` and forgets the element. Safe to
+     * call for an element that was never attached.
+     */
+    function detachArrowKeyPrevent(el) {
+        if (!el) return;
+        var onKey = arrowKeyRoots.get(el);
+        if (!onKey) return;
+        el.removeEventListener('keydown', onKey);
+        arrowKeyRoots.delete(el);
     }
 
     var menuKeyRoots = new Map();
@@ -543,5 +557,5 @@ window.tmDataTable = (function () {
         pinObservers.delete(wrapper);
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, focusRowEditor, attachGridKeys, detachGridKeys, attachColumnMenuKeys, detachColumnMenuKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader, observePinnedOffsets, disposePinnedOffsets };
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, focusRowEditor, attachGridKeys, detachGridKeys, attachColumnMenuKeys, detachColumnMenuKeys, scrollGridToIndex, attachArrowKeyPrevent, detachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader, observePinnedOffsets, disposePinnedOffsets };
 })();

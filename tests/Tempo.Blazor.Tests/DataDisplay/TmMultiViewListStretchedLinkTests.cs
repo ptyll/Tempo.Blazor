@@ -140,4 +140,44 @@ public class TmMultiViewListStretchedLinkTests : LocalizationTestBase
 
         clicks.Should().Be(1);
     }
+
+    [Fact]
+    public void StretchedLink_WithoutATitle_StillHasAnAccessibleName()
+    {
+        // No TitleField and an empty title: the card's only tab stop would otherwise announce
+        // just "button"/"link". It must fall back to a localized name.
+        var cut = this.Render<TmMultiViewList<Item>>(p => p
+            .Add(c => c.Items, new[] { new Item("1", "") })
+            .Add(c => c.TitleField, (Func<Item, string>)(i => i.Title))
+            .Add(c => c.ViewMode, ListViewMode.Card)
+            .Add(c => c.CardActivation, CardActivation.StretchedLink));
+
+        var link = cut.Find("button.tm-stretched-link");
+        link.GetAttribute("aria-label").Should().Be("Open item");
+        link.TextContent.Should().Contain("Open item", "visually hidden text is the rendered name");
+        link.TextContent.Trim().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void StretchedLink_AnchorWithoutATitle_StillHasAnAccessibleName()
+    {
+        var cut = this.Render<TmMultiViewList<Item>>(p => p
+            .Add(c => c.Items, new[] { new Item("1", "") })
+            .Add(c => c.TitleField, (Func<Item, string>)(i => i.Title))
+            .Add(c => c.ViewMode, ListViewMode.Card)
+            .Add(c => c.CardActivation, CardActivation.StretchedLink)
+            .Add(c => c.ItemHref, (Func<Item, string?>)(item => $"/people/{item.Id}")));
+
+        var link = cut.Find("a.tm-stretched-link");
+        link.GetAttribute("aria-label").Should().Be("Open item");
+        link.TextContent.Should().Contain("Open item");
+    }
+
+    [Fact]
+    public void StretchedLink_WithATitle_DoesNotAddAFallbackLabel()
+    {
+        var cut = RenderCards(this, CardActivation.StretchedLink);
+
+        cut.Find("button.tm-stretched-link").HasAttribute("aria-label").Should().BeFalse();
+    }
 }

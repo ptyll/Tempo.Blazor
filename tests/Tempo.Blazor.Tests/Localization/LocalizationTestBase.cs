@@ -900,6 +900,7 @@ public abstract class LocalizationTestBase : BunitContext
         // TmMultiViewList
         ["TmMvl_TableView"]   = "Table view",
         ["TmMvl_ViewSwitcher"] = "View",
+        ["TmMvl_OpenItem"] = "Open item",
         ["TmMvl_CardView"]    = "Card view",
         ["TmMvl_ListView"]    = "List view",
         ["TmMvl_ListOptions"] = "List options",
@@ -4844,6 +4845,7 @@ public abstract class LocalizationTestBase : BunitContext
         // TmMultiViewList
         ["TmMvl_TableView"]   = "Tabulka",
         ["TmMvl_ViewSwitcher"] = "Zobrazení",
+        ["TmMvl_OpenItem"] = "Otevřít položku",
         ["TmMvl_CardView"]    = "Karty",
         ["TmMvl_ListView"]    = "Seznam",
         ["TmMvl_ListOptions"] = "Možnosti seznamu",

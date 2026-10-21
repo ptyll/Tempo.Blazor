@@ -3077,6 +3077,7 @@
   "TmMvl_ItemCount_Other": "{0} articles",
   "TmMvl_TableView": "Vue tableau",
   "TmMvl_ViewSwitcher": "Affichage",
+  "TmMvl_OpenItem": "Ouvrir l’élément",
   "TmNotificationBell_AriaLabel": "Notifications",
   "TmNotificationBell_MarkAllRead": "Tout marquer comme lu",
 "TmNotificationBell_Unread": "Notification non lue",

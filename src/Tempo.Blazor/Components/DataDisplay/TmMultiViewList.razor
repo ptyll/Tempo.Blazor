@@ -11,6 +11,7 @@
 @using Tempo.Blazor.Services
 @inject DragDropService DragDrop
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="@RootCssClass" @attributes="AdditionalAttributes">
 
@@ -66,8 +67,7 @@
                                 aria-checked="@(_viewMode == ListViewMode.Table ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_TableView"]"
                                 tabindex="@(_viewMode == ListViewMode.Table ? "0" : "-1")"
-                                @key="@($"table-{_viewMode == ListViewMode.Table}")"
-                                @ref="TableViewRef"
+                                @ref="_tableViewRef"
                                 @onclick="() => SwitchView(ListViewMode.Table)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9783;</span>
@@ -82,8 +82,7 @@
                                 aria-checked="@(_viewMode == ListViewMode.Card ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_CardView"]"
                                 tabindex="@(_viewMode == ListViewMode.Card ? "0" : "-1")"
-                                @key="@($"card-{_viewMode == ListViewMode.Card}")"
-                                @ref="CardViewRef"
+                                @ref="_cardViewRef"
                                 @onclick="() => SwitchView(ListViewMode.Card)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9645;</span>
@@ -98,8 +97,7 @@
                                 aria-checked="@(_viewMode == ListViewMode.List ? "true" : "false")"
                                 aria-label="@Loc["TmMvl_ListView"]"
                                 tabindex="@(_viewMode == ListViewMode.List ? "0" : "-1")"
-                                @key="@($"list-{_viewMode == ListViewMode.List}")"
-                                @ref="ListViewRef"
+                                @ref="_listViewRef"
                                 @onclick="() => SwitchView(ListViewMode.List)"
                                 @onkeydown="OnViewSwitcherKey">
                             <span>&#9776;</span>
@@ -731,16 +729,27 @@
     private ElementReference _listViewRef;
     private bool _focusViewSwitcher;
 
+    /// <summary>Id of the switcher element the arrow-key prevent is attached to. Null when detached.</summary>
+    private string? _arrowKeyAttachedId;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (ShouldRenderViewSwitcher())
         {
-            try
+            if (_viewSwitcherRef.Id != _arrowKeyAttachedId)
             {
-                // Arrow keys move the view; they must not also scroll the page. Tab is not in the set.
-                await JS.InvokeVoidAsync("tmDataTable.attachArrowKeyPrevent", _viewSwitcherRef, "[role='radio']");
+                try
+                {
+                    // Arrow keys move the view; they must not also scroll the page. Tab is not in the set.
+                    await JS.InvokeVoidAsync("tmDataTable.attachArrowKeyPrevent", _viewSwitcherRef, "[role='radio']");
+                    _arrowKeyAttachedId = _viewSwitcherRef.Id;
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
             }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+        }
+        else if (_arrowKeyAttachedId is not null)
+        {
+            await DetachArrowKeyPreventAsync();
         }
 
         if (_focusViewSwitcher)
@@ -750,7 +759,7 @@
             {
                 await ViewButton(_viewMode).FocusAsync();
             }
-            catch (Exception ex) when (ex is JSException or InvalidOperationException) { }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
         }
 
         if (!AllowSelection) return;
@@ -770,12 +779,8 @@
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
     }
 
-    // A field @ref is written before the render that replaces the button, so focusing it targets
-    // the element that just left the DOM. The property setter runs again once the new button exists.
-    private ElementReference TableViewRef { get => _tableViewRef; set => CaptureView(ListViewMode.Table, value); }
-    private ElementReference CardViewRef { get => _cardViewRef; set => CaptureView(ListViewMode.Card, value); }
-    private ElementReference ListViewRef { get => _listViewRef; set => CaptureView(ListViewMode.List, value); }
-
+    // The switcher buttons are stable: Blazor keeps the same element (and the same @ref) when only
+    // the class/aria attributes change, so the radio that holds focus survives a view switch.
     private ElementReference ViewButton(ListViewMode mode) => mode switch
     {
         ListViewMode.Card => _cardViewRef,
@@ -783,15 +788,22 @@
         _ => _tableViewRef,
     };
 
-    private void CaptureView(ListViewMode mode, ElementReference button)
+    /// <summary>Drops the switcher's arrow-key listener; swallow disconnects like every other interop.</summary>
+    private async Task DetachArrowKeyPreventAsync()
     {
-        switch (mode)
+        _arrowKeyAttachedId = null;
+        try
         {
-            case ListViewMode.Card: _cardViewRef = button; break;
-            case ListViewMode.List: _listViewRef = button; break;
-            default: _tableViewRef = button; break;
+            await JS.InvokeVoidAsync("tmDataTable.detachArrowKeyPrevent", _viewSwitcherRef);
         }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
+    }
 
+    /// <summary>Releases the switcher's arrow-key listener when the component goes away.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_arrowKeyAttachedId is not null)
+            await DetachArrowKeyPreventAsync();
     }
 
     private bool IsPartiallySelected()
@@ -1892,13 +1904,36 @@
     private RenderFragment RenderStretchedActivator(TItem item) => __builder =>
     {
         var href = ItemHref?.Invoke(item);
+        var title = GetTitle(item);
+        // Without a name the card's only tab stop would announce just "link"/"button". An item
+        // with no title source still gets a localized fallback name.
+        var hasName = !string.IsNullOrWhiteSpace(title);
+        var ariaLabel = hasName ? null : Loc["TmMvl_OpenItem"];
         if (!string.IsNullOrEmpty(href))
         {
-            <a class="tm-stretched-link" href="@href" @onclick="() => OnItemClick.InvokeAsync(item)" @onclick:stopPropagation>@GetTitle(item)</a>
+            <a class="tm-stretched-link" href="@href" aria-label="@ariaLabel" @onclick="() => OnItemClick.InvokeAsync(item)" @onclick:stopPropagation>
+                @if (hasName)
+                {
+                    @title
+                }
+                else
+                {
+                    <span class="tm-sr-only">@Loc["TmMvl_OpenItem"]</span>
+                }
+            </a>
         }
         else
         {
-            <button type="button" class="tm-stretched-link" @onclick="() => OnItemClick.InvokeAsync(item)" @onclick:stopPropagation>@GetTitle(item)</button>
+            <button type="button" class="tm-stretched-link" aria-label="@ariaLabel" @onclick="() => OnItemClick.InvokeAsync(item)" @onclick:stopPropagation>
+                @if (hasName)
+                {
+                    @title
+                }
+                else
+                {
+                    <span class="tm-sr-only">@Loc["TmMvl_OpenItem"]</span>
+                }
+            </button>
         }
     };
 
