@@ -78,6 +78,8 @@ public sealed class ComponentChangeCarriesJsonTests
         // Data-table fáze 4: gate present but not run before commit; the OutlineTrigger overlay
         // row landed in 49e3257f (same window).
         "798b8ba9822aed1e3cbafdcefedb9dceb2ba26c5",
+        // phase 2 changed the DraftColor default; overlays updated in 631804ae, same window.
+        "7a0b7562ddc081dd7736e50d348c63ee1c6e21aa",
     };
 
     /// <summary>

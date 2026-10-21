@@ -1,0 +1,92 @@
+/* TmPdfComposer scoped styles — shared textarea + actions row for both PDF annotation panels. */
+
+.tm-pdf-composer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+/* Sticky variant: the reply composer pins to the bottom of the expanded thread card. */
+.tm-pdf-composer--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: var(--tm-space-1) calc(-1 * var(--tm-space-3)) 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-top: 1px solid var(--tm-border-color);
+    border-radius: 0 0 var(--tm-radius-card) var(--tm-radius-card);
+}
+
+.tm-pdf-composer__input {
+    width: 100%;
+    min-height: var(--tm-space-12);
+    resize: vertical;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    padding: var(--tm-space-2);
+    font: inherit;
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    outline: none;
+}
+
+.tm-pdf-composer__input:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-pdf-composer__actions {
+    display: flex;
+    gap: var(--tm-space-2);
+}
+
+/* Reply, resolve/reopen and cancel actions keep a 32px minimum touch height. */
+.tm-pdf-composer__btn {
+    min-height: var(--tm-space-8);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.tm-pdf-composer__btn--primary {
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-pdf-composer__btn--primary:hover:not(:disabled) {
+    background: var(--tm-color-primary-hover);
+}
+
+.tm-pdf-composer__btn--ghost {
+    background: transparent;
+    border-color: var(--tm-border-color);
+    color: var(--tm-text-primary);
+}
+
+.tm-pdf-composer__btn--ghost:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-pdf-composer__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* A finger cannot hit a 32px action: the composer buttons meet the shared touch
+   target on a coarse pointer (the sheet presentations are the common case). */
+@media (pointer: coarse) {
+    .tm-pdf-composer__btn {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-composer__btn {
+        transition: none;
+    }
+}

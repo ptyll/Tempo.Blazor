@@ -185,6 +185,58 @@ test('a single finger never starts a pinch', () => {
     assert.deepEqual(r.names(), []);
 });
 
+// ── FZE-9: captureSinglePointer false — a descendant surface owns the lone finger ──
+
+test('captureSinglePointer false leaves the lone finger uncaptured and prunes it when it ends elsewhere', () => {
+    const el = fakeElement();
+    const r = pinchRecorder();
+    attachPinch(el, { ...r.options, captureSinglePointer: false });
+
+    el.dispatch('pointerdown', touch(1, 100, 100));
+    assert.deepEqual([...el.captured], [], 'a lone finger stays with the host\u2019s own listeners');
+    assert.ok(doc.captures('pointerup'), 'a document-level pruner watches for the finger ending elsewhere');
+
+    // The finger lifts off the descendant surface: the element never sees the pointerup, the
+    // document pruner forgets it, so it cannot anchor the next pinch.
+    doc.dispatch('pointerup', touch(1, 20, 20));
+    assert.equal(doc.captures('pointerup'), false, 'the pruner unbinds once no finger is tracked');
+
+    el.dispatch('pointerdown', touch(2, 150, 100));
+    el.dispatch('pointerdown', touch(3, 250, 100));
+    assert.deepEqual(r.names(), ['start'], 'the next pinch starts from a clean finger set');
+    assert.equal(r.last('start').distance, 100, 'the stale finger did not skew the start distance');
+    assert.deepEqual([...el.captured].sort(), [2, 3], 'the pinch captures both fingers once it starts');
+});
+
+test('captureSinglePointer false keeps the document pruner out of an active pinch', () => {
+    const el = fakeElement();
+    const r = pinchRecorder();
+    attachPinch(el, { ...r.options, captureSinglePointer: false });
+
+    el.dispatch('pointerdown', touch(1, 100, 100));
+    el.dispatch('pointerdown', touch(2, 200, 100));
+    assert.deepEqual([...el.captured].sort(), [1, 2], 'both fingers are captured once the pinch starts');
+
+    // A document pointerup during an active pinch is the element's own business — not pruned.
+    doc.dispatch('pointerup', touch(1, 0, 0));
+    assert.deepEqual(r.names(), ['start'], 'the active pinch did not roll back');
+
+    el.dispatch('pointerup', touch(1, 200, 100));
+    assert.deepEqual(r.names(), ['start', 'end'], 'the pinch commits once');
+});
+
+test('captureSinglePointer false unbinds its document pruner on detach', () => {
+    const el = fakeElement();
+    const r = pinchRecorder();
+    const pinch = attachPinch(el, { ...r.options, captureSinglePointer: false });
+
+    el.dispatch('pointerdown', touch(1, 100, 100));
+    assert.ok(doc.total() > 0, 'the pruner is bound while a lone finger is tracked');
+
+    pinch.detach();
+    assert.equal(doc.total(), 0, 'the document pruner is removed with the pinch');
+});
+
 test('a third finger is ignored while the pinch continues', () => {
     const el = fakeElement();
     const r = pinchRecorder();

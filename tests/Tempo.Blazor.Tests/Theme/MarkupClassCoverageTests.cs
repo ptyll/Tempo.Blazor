@@ -118,6 +118,9 @@ public sealed class MarkupClassCoverageTests
         // Fáze 1 review: the switcher's create-new entry became a native styled button —
         // .tm-dashboard-menu-item--action gained its rule in _dashboard.css and left the
         // population.
+        // Emitted by TmDataTable's live filter-summary announcer (aria-live region); carried over
+        // from main's data-table work without a stylesheet rule — recorded to keep the inventory honest.
+        "tm-data-table-filter-summary-live",
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",

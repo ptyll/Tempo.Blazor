@@ -1,0 +1,155 @@
+/* TmPdfCommentItem scoped styles — shared comment entry for both PDF annotation panels. */
+
+.tm-pdf-comment-item {
+    display: flex;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-surface-elevated);
+}
+
+.tm-pdf-comment-item__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+/* Row 1: author + menu. The author may shrink (long names ellipsize) but never to zero width. */
+.tm-pdf-comment-item__head {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-pdf-comment-item__author {
+    flex: 0 1 auto;
+    min-width: 4ch;
+    font-weight: 600;
+    font-size: var(--tm-font-size-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Row 2: time + "(Edited)". */
+.tm-pdf-comment-item__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-pdf-comment-item__time {
+    white-space: nowrap;
+}
+
+.tm-pdf-comment-item__edited {
+    font-size: var(--tm-font-size-xs);
+    font-style: italic;
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+}
+
+.tm-pdf-comment-item__head-spacer {
+    flex: 1;
+}
+
+/* The "⋯" menu trigger is a compact icon-only square (≥32px) that never stretches the card:
+   no chevron (TmDropdown.ShowChevron=false) and no label overflow. */
+.tm-pdf-comment-item__menu {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.tm-pdf-comment-item__menu ::deep .tm-dropdown-trigger {
+    min-width: var(--tm-space-8);
+    min-height: var(--tm-space-8);
+    flex-shrink: 0;
+    justify-content: center;
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-control);
+}
+
+/* A finger cannot hit a 32px ⋯: the menu trigger meets the shared touch target
+   on a coarse pointer (the sheet presentations are the common case). */
+@media (pointer: coarse) {
+    .tm-pdf-comment-item__menu ::deep .tm-dropdown-trigger {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+.tm-pdf-comment-item__body {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.tm-pdf-comment-item__edit-input {
+    width: 100%;
+    min-height: var(--tm-space-12);
+    resize: vertical;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    padding: var(--tm-space-2);
+    font: inherit;
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    outline: none;
+}
+
+.tm-pdf-comment-item__edit-input:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-pdf-comment-item__edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+}
+
+.tm-pdf-comment-item__btn {
+    min-height: var(--tm-space-8);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.tm-pdf-comment-item__btn--primary {
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-pdf-comment-item__btn--primary:hover:not(:disabled) {
+    background: var(--tm-color-primary-hover);
+}
+
+.tm-pdf-comment-item__btn--ghost {
+    background: transparent;
+    border-color: var(--tm-border-color);
+    color: var(--tm-text-primary);
+}
+
+.tm-pdf-comment-item__btn--ghost:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-pdf-comment-item__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-comment-item__btn {
+        transition: none;
+    }
+}

@@ -47,7 +47,7 @@
 
 .tm-pdf-annotator-layer__highlight--selected {
     opacity: 0.55;
-    outline: 2px solid var(--tm-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
 }
 
 .tm-pdf-annotator-layer__highlight--resolved {
@@ -67,11 +67,11 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    background: color-mix(in srgb, var(--tm-surface, #ffffff) 82%, transparent);
+    background: color-mix(in srgb, var(--tm-bg-surface) 82%, transparent);
     border: 2px solid currentColor;
-    border-radius: var(--tm-radius-sm, 4px);
+    border-radius: var(--tm-radius-sm);
     font-weight: 700;
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     transform: rotate(-6deg);
@@ -82,7 +82,7 @@
 }
 
 .tm-pdf-annotator-layer__stamp--selected {
-    outline: 2px solid var(--tm-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
 }
 
 .tm-pdf-annotator-layer__stamp--resolved {
@@ -100,18 +100,18 @@
     height: 22px;
     padding: 0;
     transform: translate(-50%, -100%);
-    border: 2px solid var(--tm-surface, #ffffff);
+    border: 2px solid var(--tm-bg-surface);
     border-radius: 999px 999px 999px 2px;
-    color: var(--tm-on-primary, #ffffff);
+    color: var(--tm-color-on-primary);
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     pointer-events: auto;
-    box-shadow: var(--tm-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.2));
+    box-shadow: var(--tm-shadow-sm);
 }
 
 .tm-pdf-annotator-layer__marker--selected {
-    outline: 2px solid var(--tm-primary, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
 }
 
 .tm-pdf-annotator-layer__marker--resolved {

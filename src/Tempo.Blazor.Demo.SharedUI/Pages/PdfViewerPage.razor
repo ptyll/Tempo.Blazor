@@ -1,5 +1,7 @@
 @page "/pdf-viewer"
 @using Tempo.Blazor.Components.Files
+@using Tempo.Blazor.Components.Toolbar
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
 <PageTitle>PDF Viewer – Tempo.Blazor</PageTitle>
 
@@ -26,6 +28,7 @@
         </p>
         <TmPdfViewer Url="@EffectiveBasicPdfUrl"
                      ShowToolbar="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      AllowDownload="true"
                      Height="500px" />
     </div>
@@ -46,6 +49,7 @@
                      ShowToolbar="true"
                      ShowThumbnails="true"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="500px" />
     </div>
 </section>
@@ -65,6 +69,7 @@
                      ShowToolbar="true"
                      ShowSearch="true"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="500px" />
     </div>
 </section>
@@ -94,6 +99,7 @@
                      CurrentUser="_currentUser"
                      OnTextSelected="OnDemoTextSelected"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="600px" />
     </div>
 </section>
@@ -113,6 +119,7 @@
                      ShowToolbar="true"
                      ShowTextLayer="true"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="500px" />
     </div>
 </section>
@@ -126,13 +133,20 @@
 
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Scroll through all pages seamlessly instead of navigating page by page.
+            Scroll through all pages seamlessly instead of navigating page by page. Pages are painted
+            lazily as they enter the viewport, canvases far outside the view are released, scrolling
+            keeps the page indicator (and the two-way <code>Page</code> binding) in sync, and search
+            scrolls to the match's page. This section loads a local 120-page document.
         </p>
         <TmPdfViewer Url="@_demoPdfUrl"
                      ShowToolbar="true"
                      ShowViewModeToggle="true"
+                     ShowSearch="true"
+                     ShowTextLayer="true"
+                     AllowRotation="true"
                      ViewMode="PdfViewMode.Continuous"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="600px" />
     </div>
 </section>
@@ -146,13 +160,71 @@
 
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Rotate the document in 90° increments (0° → 90° → 180° → 270°).
+            Rotate the document in 90° increments (0° → 90° → 180° → 270°). The selectable
+            text layer stays aligned with the rotated canvas at every angle.
         </p>
         <TmPdfViewer Url="@_demoPdfUrl"
                      ShowToolbar="true"
+                     ShowTextLayer="true"
                      AllowRotation="true"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="500px" />
+    </div>
+</section>
+
+<!-- Document Header -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Document Header</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">Chrome</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-header-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Optional document header (<code>ShowHeader</code>) with a title and the Open/Download
+            actions moved out of the toolbar. The subtitle defaults to a neutral page count once
+            the document is loaded; <code>HeaderStart</code> / <code>HeaderActions</code> slots
+            let hosts compose their own chrome.
+        </p>
+        <TmPdfViewer Url="@_demoPdfUrl"
+                     ShowToolbar="true"
+                     ShowHeader="true"
+                     Title="Quarterly Report 2026"
+                     AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
+                     Height="500px" />
+    </div>
+</section>
+
+<!-- Tablet Layout -->
+@* demo-full-bleed: the forced-tablet reference is the UX evidence — it renders in the full
+   content column so its container reaches a real tablet width (≥768px) instead of the
+   squeezed demo column. *@
+<section class="demo-section demo-full-bleed">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tablet Layout</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Responsive</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-tablet-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            The forced <code>LayoutMode="TmLayoutMode.Tablet"</code> reference (the touch evidence
+            for the responsive redesign): full-width viewer with the tablet chrome — labels below
+            the icons, the thumbnails start collapsed (reopen through the "Pages" toggle) and the
+            comments panel presents as a side sheet.
+        </p>
+        <TmPdfViewer Url="@_demoPdfUrl"
+                     DocumentId="demo-annotated-pdf"
+                     LayoutMode="TmLayoutMode.Tablet"
+                     ShowToolbar="true"
+                     ShowThumbnails="true"
+                     EnableAnnotations="true"
+                     AnnotationProvider="_annotationProvider"
+                     CurrentUser="_currentUser"
+                     AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
+                     Height="600px" />
     </div>
 </section>
 
@@ -175,15 +247,23 @@
                      ShowTextLayer="true"
                      ShowViewModeToggle="true"
                      EnableAnnotations="true"
+                     AnnotationProvider="_annotationProvider"
                      CurrentUser="_currentUser"
                      AllowRotation="true"
                      AllowDownload="true"
+                     ToolbarLabels="ToolbarLabels.Auto"
                      Height="600px" />
     </div>
 </section>
 
 @code {
-    private const string _demoPdfUrl = "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf";
+    /// <summary>
+    /// Local 120-page fixture (Demo.SharedUI static web assets,
+    /// <c>_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf</c>) so the
+    /// demos and the E2E lane never depend on an external URL: 100+ pages keep the
+    /// continuous scroll, lazy rendering and search lanes honest.
+    /// </summary>
+    private const string _demoPdfUrl = "_content/Tempo.Blazor.Demo.SharedUI/sample-data/tempo-pdf-viewer-120p.pdf";
 
     /// <summary>Optional PDF URL override for the Basic Usage viewer (e.g. a document-editor export).</summary>
     [Microsoft.AspNetCore.Components.SupplyParameterFromQuery(Name = "url")]
@@ -201,6 +281,31 @@
     private readonly InMemoryPdfAnnotationProvider _annotationProvider = new(
         new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
         {
+            // Seed for the Continuous→SinglePage handoff (PD1): a thread on page 3 lets
+            // the E2E lane select it while the "All Features Combined" viewer is in
+            // continuous mode and assert the switch back to the thread's page.
+            ["demo-full-pdf"] =
+            [
+                new DocumentCommentThread
+                {
+                    Id = "full-seed-thread",
+                    Anchor = DocumentCommentAnchor.TextRange(3,
+                        [DocumentCommentRect.Create(0.20, 0.35, 0.25, 0.015)],
+                        "content point"),
+                    Comments =
+                    [
+                        new DocumentComment
+                        {
+                            Id = "full-seed-comment",
+                            AuthorId = "reviewer",
+                            AuthorName = "Reviewer",
+                            Body = "Selecting this thread returns the viewer to single-page mode on page 3.",
+                            CanEdit = false,
+                            CanDelete = false
+                        }
+                    ]
+                }
+            ],
             ["demo-annotated-pdf"] =
             [
                 new DocumentCommentThread

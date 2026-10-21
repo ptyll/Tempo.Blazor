@@ -139,8 +139,8 @@
     /// <summary>Stroke currently being drawn, when any.</summary>
     [Parameter] public IReadOnlyList<DocumentInkPoint>? ActiveStroke { get; set; }
 
-    /// <summary>Color used for the draft and the active stroke.</summary>
-    [Parameter] public string DraftColor { get; set; } = "#2563eb";
+    /// <summary>Color used for the draft and the active stroke. Defaults to <see cref="PdfAnnotationColorHelper.DefaultColor"/>.</summary>
+    [Parameter] public string DraftColor { get; set; } = PdfAnnotationColorHelper.DefaultColor;
 
     /// <summary>Whether interaction is disabled.</summary>
     [Parameter] public bool Disabled { get; set; }

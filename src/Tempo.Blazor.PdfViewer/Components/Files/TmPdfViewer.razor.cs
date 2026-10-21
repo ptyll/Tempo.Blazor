@@ -1,7 +1,11 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Toolbar;
+using Tempo.Blazor.Localization;
 
 namespace Tempo.Blazor.Components.Files;
 
@@ -12,6 +16,28 @@ public enum PdfViewMode
     SinglePage,
     /// <summary>Continuous scroll through all pages.</summary>
     Continuous
+}
+
+/// <summary>
+/// How the viewer decides the zoom scale. <see cref="TmPdfViewer.ZoomMode"/> drives it;
+/// <see cref="Auto"/> (the default since the responsive viewer redesign) resolves to
+/// fit-width on a mobile layout and to the bound <see cref="TmPdfViewer.Scale"/>
+/// everywhere else. Set <see cref="Custom"/> to restore the pre-Auto behavior.
+/// </summary>
+public enum PdfZoomMode
+{
+    /// <summary>The scale is controlled by the user (zoom buttons, presets, binding).</summary>
+    Custom,
+    /// <summary>The scale is computed so the current page fills the container width.</summary>
+    FitWidth,
+    /// <summary>The scale is computed so the whole current page fits the container.</summary>
+    FitPage,
+    /// <summary>
+    /// Default. Fit-width on a mobile layout, the bound scale everywhere else — a resize
+    /// only recomputes the scale while the layout stays mobile, so a zoom preset or button
+    /// still hands control back to the user.
+    /// </summary>
+    Auto
 }
 
 /// <summary>
@@ -59,6 +85,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Whether to show a search input. Default is false.</summary>
     [Parameter] public bool ShowSearch { get; set; }
 
+    /// <summary>
+    /// Whether the viewer renders its own mobile action bar (Pages | Search | Comments).
+    /// Default is true. Hosts that fold these entries into their own action bar (such as
+    /// <see cref="TmPdfAnnotator"/>) pass false and drive the sheets through the public
+    /// <see cref="OpenThumbnailsSheetAsync"/> / <see cref="OpenSearchAsync"/> methods instead.
+    /// </summary>
+    [Parameter] public bool ShowMobileActionBar { get; set; } = true;
+
     /// <summary>Whether to show a view mode toggle (single/continuous). Default is false.</summary>
     [Parameter] public bool ShowViewModeToggle { get; set; }
 
@@ -67,6 +101,89 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     /// <summary>Callback when the view mode changes.</summary>
     [Parameter] public EventCallback<PdfViewMode> ViewModeChanged { get; set; }
+
+    /// <summary>
+    /// How the zoom scale is decided. Default <see cref="PdfZoomMode.Auto"/>: fit-width on a
+    /// mobile layout, the bound scale everywhere else. <see cref="PdfZoomMode.FitWidth"/> and
+    /// <see cref="PdfZoomMode.FitPage"/> let JavaScript compute the scale from the container
+    /// size (and keep recomputing it on resize); any zoom button or preset switches the mode
+    /// back to <see cref="PdfZoomMode.Custom"/>. Set <see cref="PdfZoomMode.Custom"/> to
+    /// restore the pre-Auto behavior at every width. Supports two-way binding.
+    /// </summary>
+    [Parameter] public PdfZoomMode ZoomMode { get; set; } = PdfZoomMode.Auto;
+
+    /// <summary>Callback when the zoom mode changes.</summary>
+    [Parameter] public EventCallback<PdfZoomMode> ZoomModeChanged { get; set; }
+
+    /// <summary>
+    /// Whether the toolbar's icon buttons show their text labels. Default
+    /// <see cref="ToolbarLabels.Icons"/> (the icon-only toolbar of the earlier redesign
+    /// phases); <see cref="ToolbarLabels.Auto"/> shows the labels except on a toolbar
+    /// narrower than the mobile breakpoint, and <see cref="ToolbarLabels.IconsWithText"/>
+    /// always shows them.
+    /// </summary>
+    [Parameter] public ToolbarLabels ToolbarLabels { get; set; } = ToolbarLabels.Icons;
+
+    /// <summary>
+    /// How the viewer decides its responsive layout. <see cref="TmLayoutMode.Auto"/> measures
+    /// the viewer's own container; a forced value renders that layout without measuring, so a
+    /// test — or a host — can pin a mode. Default <see cref="TmLayoutMode.Auto"/>.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>Whether to show a document header above the toolbar. Default is false,
+    /// which keeps the toolbar-only layout. When true, the Open and Download links move
+    /// from the toolbar into the header.</summary>
+    [Parameter] public bool ShowHeader { get; set; }
+
+    /// <summary>Document title rendered in the header. Used only when <see cref="ShowHeader"/> is true.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// Document subtitle rendered in the header. Used only when <see cref="ShowHeader"/> is true.
+    /// When omitted, a neutral page count ("Pages: N") is rendered once the document is loaded.
+    /// </summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Whether to show an "Open in new tab" link. Default is true.</summary>
+    [Parameter] public bool ShowOpenLink { get; set; } = true;
+
+    /// <summary>
+    /// Whether the thumbnails sidebar is collapsed. Supports two-way binding; the collapse
+    /// button in the sidebar header and the toolbar "Pages" toggle both drive it.
+    /// Default is false.
+    /// </summary>
+    [Parameter] public bool ThumbnailsCollapsed { get; set; }
+
+    /// <summary>Callback when the thumbnails collapse state changes.</summary>
+    [Parameter] public EventCallback<bool> ThumbnailsCollapsedChanged { get; set; }
+
+    /// <summary>
+    /// Content rendered at the very start of the toolbar (before the navigation group),
+    /// letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar.
+    /// </summary>
+    [Parameter] public RenderFragment? ToolbarStart { get; set; }
+
+    /// <summary>
+    /// Content rendered at the very end of the toolbar (after the built-in groups),
+    /// letting hosts such as TmPdfAnnotator compose their own tool groups into the toolbar.
+    /// </summary>
+    [Parameter] public RenderFragment? ToolbarEnd { get; set; }
+
+    /// <summary>Content rendered at the start of the document header. Used only when <see cref="ShowHeader"/> is true.</summary>
+    [Parameter] public RenderFragment? HeaderStart { get; set; }
+
+    /// <summary>Content rendered at the end of the document header, after the Open/Download links. Used only when <see cref="ShowHeader"/> is true.</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>
+    /// Content rendered in the viewer's in-flow sticky selection CTA row — OUTSIDE the
+    /// scroll area (FZE-9 review M4), so a zoom or a scroll never carries it away. Hosts
+    /// (the annotator) supply their own sticky selection actions through this slot; the
+    /// viewer's own comment CTA is independent and may render in the same row. The row
+    /// renders whenever this slot is supplied.
+    /// </summary>
+    [Parameter] public RenderFragment? SelectionCtaContent { get; set; }
 
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -77,6 +194,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Additional HTML attributes passed to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>
+    /// The layout context cascaded by an ancestor <see cref="Layout.TmLayoutObserver"/>. A forced
+    /// ancestor decides the layout for this viewer too (same resolution as
+    /// <see cref="Layout.TmEditorShell"/>): its resolved mode wins over the viewer's own
+    /// measurement while <see cref="LayoutMode"/> stays <see cref="TmLayoutMode.Auto"/>.
+    /// </summary>
+    [CascadingParameter] public TmLayoutContext? Parent { get; set; }
 
     // ── Annotation parameters ─────────────────────────────────────────────────
 
@@ -124,6 +249,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     // ── State ────────────────────────────────────────────────────────────────
 
+    private ElementReference _rootRef;
     private ElementReference _canvasRef;
     private ElementReference _textLayerRef;
     private ElementReference _thumbnailsRef;
@@ -131,6 +257,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private ElementReference _searchLayerRef;
     private ElementReference _annotationOverlayRef;
     private ElementReference _customOverlayRef;
+    private ElementReference _canvasWrapRef;
     private bool _customOverlaySynced;
     private DotNetObjectReference<TmPdfViewer>? _dotNetRef;
     private bool _pdfInitialized;
@@ -139,11 +266,51 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private int _currentPage = 1;
     private int _totalPages;
     private double _scale = 1.0;
+    /// <summary>
+    /// Scale bounds shared with the JS fit computation (pdf-viewer.js clamps to the same
+    /// range). A fit mode MAY compute a scale outside <see cref="_zoomSteps"/> — that is by
+    /// design so fit-width can use the exact container ratio — but never outside this range.
+    /// </summary>
+    internal const double MinScale = 0.1;
+    internal const double MaxScale = 5.0;
     /// <summary>Current rotation in degrees (0, 90, 180, 270).</summary>
     public int Rotation { get; private set; }
     private PdfViewMode _viewMode = PdfViewMode.SinglePage;
+    private PdfZoomMode _zoomMode = PdfZoomMode.Custom;
+    /// <summary>Text currently shown in the toolbar page input; kept in sync with <see cref="_currentPage"/>.</summary>
+    private string _pageInput = "1";
+    private bool _thumbnailsCollapsed;
     private string? _loadError;
     private string? _lastUrl;
+    /// <summary>
+    /// Incremented on every <see cref="Url"/> change. The OnAfterRenderAsync pass that starts
+    /// <c>tmPdfViewer.init</c> captures the current generation and only ends the loading state
+    /// if it still owns it — otherwise an older load finishing after a mid-download Url change
+    /// would clear the spinner and consume the one-shot flags of the newer load.
+    /// </summary>
+    private int _loadGeneration;
+    /// <summary>The (Url, Scale, Rotation) tuple the continuous scroll was last rendered with,
+    /// so OnAfterRenderAsync re-renders only when one of them changed.</summary>
+    private (string? Url, double Scale, int Rotation)? _lastContinuousRender;
+    /// <summary>The Url the thumbnails sidebar was last rendered with.</summary>
+    private string? _lastThumbnailUrl;
+    /// <summary>The page the thumbnails sidebar last highlighted.</summary>
+    private int _lastHighlightedThumbnailPage;
+    /// <summary>
+    /// A fit recompute was deferred to the next <see cref="OnAfterRenderAsync"/> pass: a
+    /// view-mode switch swaps the observed container (single-page canvas wrap vs
+    /// continuous wrap), and its ElementReference is stale — the fresh element exists
+    /// only after the switch has been rendered.
+    /// </summary>
+    private bool _fitPending;
+    /// <summary>
+    /// A Continuous → SinglePage switch was deferred to the next
+    /// <see cref="OnAfterRenderAsync"/> pass: the canvas, text-layer and overlay
+    /// ElementReferences still point at the torn-down continuous DOM until the
+    /// re-render that follows the switch — rendering or attaching selection against
+    /// them would target stale (or missing) nodes. Same pattern as <see cref="_fitPending"/>.
+    /// </summary>
+    private bool _singlePagePending;
 
     // Search state
     private bool _searchVisible;
@@ -161,6 +328,31 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private PdfTextSelection? _pendingSelection;
     private List<DocumentCommentThread> _threads = [];
     private InMemoryPdfAnnotationProvider? _fallbackProvider;
+
+    // Responsive state (FZE-7)
+    /// <summary>
+    /// The layout the wrapping <see cref="Tempo.Blazor.Components.Layout.TmLayoutObserver"/> last
+    /// measured (reported through <see cref="OnResolvedLayoutChanged"/>). Null until the first
+    /// report; combined with <see cref="LayoutMode"/> and <see cref="Parent"/> through
+    /// <see cref="TmLayout.Resolve"/>.
+    /// </summary>
+    private TmLayoutMode? _measured;
+    /// <summary>
+    /// The resolved layout the chrome branches on: <see cref="TmLayout.Resolve"/> of the
+    /// <see cref="LayoutMode"/> parameter, the cascaded <see cref="Parent"/> and
+    /// <see cref="_measured"/>. Desktop until the first report.
+    /// </summary>
+    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+    /// <summary>
+    /// Whether the user has touched the panels (thumbnails, comments) since the document was
+    /// loaded. While false, a layout flip re-applies the panel defaults; the user's own choice
+    /// is never overwritten.
+    /// </summary>
+    private bool _panelsTouched;
+    /// <summary>Whether the comments panel is open as a sheet (tablet side sheet / mobile bottom sheet).</summary>
+    private bool _commentsSheetOpen;
+    /// <summary>Whether the thumbnails sheet is open on a mobile layout.</summary>
+    private bool _thumbnailsSheetOpen;
 
     private static readonly double[] _zoomSteps = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -195,17 +387,47 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // The chrome branches on TmLayout.Resolve: an explicit LayoutMode wins, then a forced
+        // cascaded ancestor, then the observer's measurement (kept current by its callback) —
+        // the first frame is Desktop. A forced mode also suppresses the measurement, exactly
+        // like the TmEditorShell resolution. The resolution is APPLIED through
+        // ApplyResolvedLayoutAsync (OnParametersSetAsync / OnResolvedLayoutChanged); only a
+        // fresh document takes it directly here, because its from-scratch defaults must not
+        // wait for — and must not double-apply behind — the async pass.
+        var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, TmLayoutMode.Desktop);
+
         if (Url != _lastUrl)
         {
             _lastUrl = Url;
+            // A newer generation owns the loading state from here on; the finally of an
+            // older init() in flight must not end it.
+            _loadGeneration++;
             _pdfInitialized = false;
             _currentPage = Math.Max(1, Page);
+            _pageInput = _currentPage.ToString(CultureInfo.InvariantCulture);
             _scale = Scale is > 0 and <= 5 ? Scale : 1.0;
             Rotation = 0;
             _viewMode = ViewMode;
+            _zoomMode = ZoomMode;
+            _panelsTouched = false;
+            // The panel defaults follow the layout (FZE-7): the docked thumbnails start
+            // collapsed on a tablet layout, the comments panel opens only on desktop.
+            _resolved = resolved;
+            _thumbnailsCollapsed = ThumbnailsCollapsed || _resolved == TmLayoutMode.Tablet;
+            _annotationsPanelVisible = _resolved == TmLayoutMode.Desktop;
+            _commentsSheetOpen = false;
+            _thumbnailsSheetOpen = false;
             _useFallback = false;
+            _isLoading = true;
             _loadError = null;
             _totalPages = 0;
+            _singlePagePending = false;
+            _fitPending = false;
+            // Render keys are per document: a new Url must re-render thumbnails
+            // and continuous pages even if scale/rotation are unchanged.
+            _lastContinuousRender = null;
+            _lastThumbnailUrl = null;
+            _customOverlaySynced = false;
             _searchVisible = ShowSearch;
             _searchQuery = null;
             _lastSearchedQuery = null;
@@ -213,6 +435,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _searchCurrentMatch = 0;
             _annotationsLoaded = false;
             _selectionEnabled = false;
+            _pinchWiredRefId = null;
             _showResolvedAnnotations = ShowResolvedAnnotations;
             _selectedThreadId = null;
             _pendingSelection = null;
@@ -224,9 +447,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             if (Page != _currentPage && Page >= 1)
             {
                 _currentPage = Page;
+                _pageInput = _currentPage.ToString(CultureInfo.InvariantCulture);
                 if (_pdfInitialized && !_useFallback)
                 {
-                    _ = RenderCurrentPageAsync();
+                    // In continuous mode a host-driven Page change scrolls the wrap —
+                    // the lazy renderer paints it when it becomes visible.
+                    _ = _viewMode == PdfViewMode.Continuous
+                        ? ScrollToPageInContinuousAsync(Page)
+                        : RenderCurrentPageAsync();
                 }
             }
             if (Math.Abs(Scale - _scale) > 0.001 && Scale is > 0 and <= 5)
@@ -235,6 +463,34 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
                 if (_pdfInitialized && !_useFallback)
                 {
                     _ = ApplyZoomAsync();
+                }
+            }
+            if (ZoomMode != _zoomMode)
+            {
+                _zoomMode = ZoomMode;
+                if (_pdfInitialized && !_useFallback)
+                {
+                    if (_zoomMode is PdfZoomMode.Custom)
+                    {
+                        // A host-driven switch to Custom must detach the JS fit observer
+                        // too — exactly like the user-driven SwitchToCustomZoomAsync.
+                        _ = ClearFitAsync();
+                    }
+                    else if (_totalPages > 0)
+                    {
+                        _ = ApplyZoomModeAsync();
+                    }
+                }
+            }
+            if (ThumbnailsCollapsed != _thumbnailsCollapsed)
+            {
+                _thumbnailsCollapsed = ThumbnailsCollapsed;
+                if (!ThumbnailsCollapsed)
+                {
+                    // The JS-rendered thumbnails died with the hidden panel; force the
+                    // post-render pass to rebuild them in the fresh container (the
+                    // user-driven SetThumbnailsCollapsedAsync does the same).
+                    _lastThumbnailUrl = null;
                 }
             }
             if (ViewMode != _viewMode)
@@ -249,6 +505,89 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     }
 
     /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        // A layout flip that arrives through a parameter — a forced <see cref="LayoutMode"/>
+        // or a cascaded ancestor changing its resolved mode — must re-apply the same defaults
+        // an observer-reported flip does. The fresh document was handled synchronously above
+        // (its _resolved is already the new value, so this is a guarded no-op).
+        if (string.IsNullOrEmpty(Url))
+        {
+            return;
+        }
+
+        var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, TmLayoutMode.Desktop);
+        await ApplyResolvedLayoutAsync(resolved);
+
+        // A fresh document applies the panel defaults synchronously (above), which the
+        // no-op ApplyResolvedLayoutAsync call skips — report the guarded default to a bound
+        // host here, so the next parameter pass does not override it with a stale value.
+        if (!_panelsTouched && _thumbnailsCollapsed != ThumbnailsCollapsed && ThumbnailsCollapsedChanged.HasDelegate)
+        {
+            await ThumbnailsCollapsedChanged.InvokeAsync(_thumbnailsCollapsed);
+        }
+    }
+
+    /// <summary>
+    /// The single mutation point for a resolved-layout change: re-applies the guarded panel
+    /// defaults (until the user has touched the panels themselves, <see cref="_panelsTouched"/>),
+    /// starts the <see cref="PdfZoomMode.Auto"/> fit computation on mobile — or detaches the JS
+    /// fit observer when the layout leaves mobile — and records <paramref name="next"/> as the
+    /// resolved layout the chrome branches on. A no-op when the resolved mode did not change,
+    /// so every caller may invoke it unconditionally.
+    /// </summary>
+    private async Task ApplyResolvedLayoutAsync(TmLayoutMode next)
+    {
+        if (_resolved == next)
+        {
+            return;
+        }
+
+        if (!_panelsTouched)
+        {
+            var reopenThumbnails = _thumbnailsCollapsed && !(ThumbnailsCollapsed || next == TmLayoutMode.Tablet);
+            _thumbnailsCollapsed = ThumbnailsCollapsed || next == TmLayoutMode.Tablet;
+            _annotationsPanelVisible = next == TmLayoutMode.Desktop;
+            if (reopenThumbnails)
+            {
+                // The docked thumbnails reappear in a fresh container: the post-render pass
+                // must rebuild the JS-rendered thumbnails (same as SetThumbnailsCollapsedAsync).
+                _lastThumbnailUrl = null;
+            }
+
+            // Report the layout default to a bound host: the annotator forwards the callback
+            // into its own two-way shadow, so the next parameter pass carries the same value
+            // back instead of overriding the guarded default with a stale parameter (phase 8
+            // review 8 — the annotator must not fight the viewer's tablet default).
+            if (_thumbnailsCollapsed != ThumbnailsCollapsed && ThumbnailsCollapsedChanged.HasDelegate)
+            {
+                await ThumbnailsCollapsedChanged.InvokeAsync(_thumbnailsCollapsed);
+            }
+        }
+
+        _resolved = next;
+
+        // Read AFTER the assignment: the effective mode follows the new layout (Auto resolves
+        // to fit-width on mobile, to the bound scale everywhere else).
+        if (_pdfInitialized && !_useFallback)
+        {
+            if (next == TmLayoutMode.Mobile)
+            {
+                if (EffectiveZoomMode is not PdfZoomMode.Custom && _totalPages > 0)
+                {
+                    _ = ApplyZoomModeAsync();
+                }
+            }
+            else if (_zoomMode == PdfZoomMode.Auto)
+            {
+                _ = ClearFitAsync();
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (string.IsNullOrEmpty(Url)) return;
@@ -260,12 +599,13 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             StateHasChanged();
             _dotNetRef?.Dispose();
             _dotNetRef = DotNetObjectReference.Create(this);
+            var loadGeneration = _loadGeneration;
             try
             {
                 var available = await JS.InvokeAsync<bool>("tmPdfViewer.isAvailable");
                 if (available)
                 {
-                    await JS.InvokeVoidAsync("tmPdfViewer.init", _canvasRef, Url, _dotNetRef);
+                    await JS.InvokeVoidAsync("tmPdfViewer.init", _rootRef, Url, _dotNetRef);
                 }
                 else
                 {
@@ -278,28 +618,83 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             }
             finally
             {
-                _isLoading = false;
+                // A Url change mid-load started a newer generation; only the generation that
+                // owns the current load may end its loading state.
+                if (_loadGeneration == loadGeneration)
+                {
+                    _isLoading = false;
+                }
                 StateHasChanged();
             }
         }
 
-        if (_totalPages > 0 && ShowThumbnails && _thumbnailsRef.Context is not null)
+        // Thumbnails are re-rendered only when the document changed; the active-page
+        // highlight is refreshed separately whenever the page changes.
+        if (_totalPages > 0 && ShowThumbnails && !_useFallback && _thumbnailsRef.Context is not null)
         {
-            try
+            if (_lastThumbnailUrl != Url)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderThumbnails", _thumbnailsRef, Url, 0.3, _dotNetRef);
-                await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _thumbnailsRef, _currentPage);
+                _lastThumbnailUrl = Url;
+                _lastHighlightedThumbnailPage = 0; // a re-render wipes the highlight
+                try
+                {
+                    await JS.InvokeVoidAsync("tmPdfViewer.renderThumbnails", _rootRef, _thumbnailsRef, 0.3, _dotNetRef);
+                }
+                catch { }
             }
-            catch { }
+
+            if (_lastHighlightedThumbnailPage != _currentPage)
+            {
+                _lastHighlightedThumbnailPage = _currentPage;
+                try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _rootRef, _currentPage); }
+                catch { }
+            }
         }
 
-        if (_totalPages > 0 && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
+        // Continuous pages are re-rendered only when the render key changed; explicit
+        // zoom/rotate/view-mode calls update the key themselves.
+        if (_totalPages > 0 && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null
+            && _lastContinuousRender != (Url, _scale, Rotation))
         {
-            try
+            // The render key is recorded inside RenderContinuousPagesAsync only after
+            // the interop call succeeded — a failed/no-op call stays unrecorded and is
+            // retried by the next OnAfterRender pass.
+            await RenderContinuousPagesAsync();
+        }
+
+        // A fit recompute deferred by a view-mode switch runs here: the swapped
+        // container exists only after the switch was rendered, so the render above has
+        // already put the fresh pages into it before the fit math observes it.
+        if (_fitPending)
+        {
+            _fitPending = false;
+            if (EffectiveZoomMode is not PdfZoomMode.Custom && !_useFallback && _totalPages > 0)
             {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation);
+                await ApplyZoomModeAsync();
             }
-            catch { }
+        }
+
+        // The one-shot blocks below need the JS instance state that init() creates.
+        // A re-entrant OnAfterRenderAsync pass (fired by the StateHasChanged() above)
+        // runs while the init await is still pending, and must not consume their
+        // flags — otherwise the overlay/selection is never synced at all.
+        if (_isLoading) return;
+
+        // A deferred Continuous → SinglePage switch (the toggle or the PD1 thread
+        // select): the single-page canvas/text-layer/overlay refs are fresh only
+        // after the swap rendered, so the render + selection/overlay setup runs here.
+        if (_singlePagePending)
+        {
+            if (_canvasRef.Context is not null)
+            {
+                _singlePagePending = false;
+                await RenderCurrentPageAsync();
+                if (!_useFallback && (EnableAnnotations || EnableTextSelectionEvents))
+                {
+                    await SetupSelectionAsync();
+                    await RefreshAnnotationOverlayAsync();
+                }
+            }
         }
 
         if (EnableAnnotations && !_useFallback && !_annotationsLoaded)
@@ -323,500 +718,41 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _customOverlaySynced = true;
             await RefreshAnnotationOverlayAsync();
         }
-    }
 
-    // ── JS invokable ─────────────────────────────────────────────────────────
-
-    /// <summary>Receives the total page count after the JavaScript PDF loader finishes.</summary>
-    [JSInvokable]
-    public void OnPdfLoaded(int totalPages)
-    {
-        _totalPages = totalPages;
-        _isLoading = false;
-        _loadError = null;
-        if (OnDocumentLoaded.HasDelegate)
-        {
-            _ = InvokeAsync(() => OnDocumentLoaded.InvokeAsync(totalPages));
-        }
-
-        InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>Receives a PDF load failure notification from JavaScript and switches to fallback rendering.</summary>
-    [JSInvokable]
-    public void OnPdfLoadError(string message)
-    {
-        _useFallback = true;
-        _isLoading = false;
-        _loadError = Loc["TmPdfViewer_LoadError"];
-        InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>Handles thumbnail page selection from the JavaScript thumbnail renderer.</summary>
-    [JSInvokable]
-    public async Task OnThumbnailClicked(int pageNum)
-    {
-        if (pageNum < 1 || pageNum > _totalPages) return;
-        _currentPage = pageNum;
-        await PageChanged.InvokeAsync(_currentPage);
-        await RenderCurrentPageAsync();
-        try { await JS.InvokeVoidAsync("tmPdfViewer.highlightThumbnail", _thumbnailsRef, _currentPage); }
-        catch { }
-    }
-
-    /// <summary>Receives search result counts from the JavaScript search implementation.</summary>
-    [JSInvokable]
-    public void OnSearchResults(int totalMatches, int[] matchesPerPage)
-    {
-        _searchTotalMatches = totalMatches;
-        _searchCurrentMatch = totalMatches > 0 ? 1 : 0;
-        InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>Receives the active search match position (1-based) and its page from JavaScript.</summary>
-    [JSInvokable]
-    public async Task OnSearchActiveChanged(int activeMatch, int pageNumber)
-    {
-        _searchCurrentMatch = activeMatch;
-        if (pageNumber >= 1 && pageNumber <= _totalPages && pageNumber != _currentPage)
-        {
-            _currentPage = pageNumber;
-            await PageChanged.InvokeAsync(_currentPage);
-            if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
-            {
-                try { await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation); }
-                catch { }
-            }
-            await RefreshAnnotationOverlayAsync();
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>Receives a text selection captured from the JavaScript text layer.</summary>
-    /// <param name="text">Selected text.</param>
-    /// <param name="page">One-based page the selection belongs to.</param>
-    /// <param name="rects">Flat list of normalized rectangles: x, y, width, height per rectangle.</param>
-    [JSInvokable]
-    public async Task OnTextSelectionChanged(string? text, int page, double[]? rects)
-    {
-        var normalized = BuildRects(rects);
-        if (string.IsNullOrWhiteSpace(text) || normalized.Count == 0)
-        {
-            _pendingSelection = null;
-        }
-        else
-        {
-            var pageNumber = page >= 1 ? page : _currentPage;
-            _pendingSelection = new PdfTextSelection(text!, pageNumber, normalized);
-            if (OnTextSelected.HasDelegate)
-            {
-                await OnTextSelected.InvokeAsync(_pendingSelection);
-            }
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private static List<DocumentCommentRect> BuildRects(double[]? flat)
-    {
-        var result = new List<DocumentCommentRect>();
-        if (flat is null)
-        {
-            return result;
-        }
-
-        for (var i = 0; i + 3 < flat.Length; i += 4)
-        {
-            var rect = DocumentCommentRect.Create(flat[i], flat[i + 1], flat[i + 2], flat[i + 3]);
-            if (rect.IsValid)
-            {
-                result.Add(rect);
-            }
-        }
-
-        return result;
-    }
-
-    // ── Navigation ────────────────────────────────────────────────────────────
-
-    private async Task GoToPreviousPageAsync()
-    {
-        if (_currentPage <= 1) return;
-        _currentPage--;
-        await PageChanged.InvokeAsync(_currentPage);
-        await RenderCurrentPageAsync();
-    }
-
-    private async Task GoToNextPageAsync()
-    {
-        if (_currentPage >= _totalPages) return;
-        _currentPage++;
-        await PageChanged.InvokeAsync(_currentPage);
-        await RenderCurrentPageAsync();
-    }
-
-    private async Task RenderCurrentPageAsync()
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("tmPdfViewer.renderPage", _canvasRef, _currentPage, _scale, Rotation);
-            if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation);
-            }
-            await RefreshAnnotationOverlayAsync();
-            await RedrawSearchHighlightsAsync();
-        }
-        catch { }
-    }
-
-    // ── Zoom ──────────────────────────────────────────────────────────────────
-
-    private async Task ZoomInAsync()
-    {
-        var next = _zoomSteps.FirstOrDefault(z => z > _scale);
-        if (next == 0) return;
-        _scale = next;
-        await ScaleChanged.InvokeAsync(_scale);
-        await ApplyZoomAsync();
-    }
-
-    private async Task ZoomOutAsync()
-    {
-        var prev = _zoomSteps.LastOrDefault(z => z < _scale);
-        if (prev == 0) return;
-        _scale = prev;
-        await ScaleChanged.InvokeAsync(_scale);
-        await ApplyZoomAsync();
-    }
-
-    private async Task ApplyZoomAsync()
-    {
-        try
-        {
-            if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation);
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.setScale", _canvasRef, _scale);
-                if (ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents)
-                {
-                    await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation);
-                }
-                await RefreshAnnotationOverlayAsync();
-                await RedrawSearchHighlightsAsync();
-            }
-        }
-        catch { }
-    }
-
-    // ── Rotation ──────────────────────────────────────────────────────────────
-
-    /// <summary>Rotate the document 90 degrees clockwise.</summary>
-    public async Task RotateAsync()
-    {
-        Rotation = (Rotation + 90) % 360;
-        if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
-        {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation); }
-            catch { }
-        }
-        else
-        {
-            await RenderCurrentPageAsync();
-        }
-    }
-
-    // ── View Mode ─────────────────────────────────────────────────────────────
-
-    private async Task SetViewModeAsync(PdfViewMode mode)
-    {
-        _viewMode = mode;
-        await ViewModeChanged.InvokeAsync(mode);
-        await SwitchViewModeAsync();
-    }
-
-    private async Task SwitchViewModeAsync()
-    {
-        if (_viewMode == PdfViewMode.Continuous)
-        {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.renderAllPages", _continuousRef, _canvasRef, _scale, Rotation); }
-            catch { }
-        }
-        else
-        {
-            await RenderCurrentPageAsync();
-        }
-    }
-
-    private async Task ToggleSearchAsync()
-    {
-        _searchVisible = !_searchVisible;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    // ── Search ────────────────────────────────────────────────────────────────
-
-    private async Task HandleSearchKeyUpAsync(KeyboardEventArgs e)
-    {
-        if (e.Key != "Enter" || string.IsNullOrEmpty(_searchQuery))
-        {
-            return;
-        }
-
-        var queryChanged = !string.Equals(_searchQuery, _lastSearchedQuery, StringComparison.Ordinal);
-        if (queryChanged || _searchTotalMatches == 0)
-        {
-            await PerformSearchAsync();
-        }
-        else if (e.ShiftKey)
-        {
-            await PreviousMatchAsync();
-        }
-        else
-        {
-            await NextMatchAsync();
-        }
-    }
-
-    private async Task PerformSearchAsync()
-    {
-        if (string.IsNullOrEmpty(_searchQuery))
-        {
-            await ClearSearchAsync();
-            return;
-        }
-
-        _lastSearchedQuery = _searchQuery;
-        try
-        {
-            await JS.InvokeVoidAsync("tmPdfViewer.search", _canvasRef, _searchLayerRef, _searchQuery, _dotNetRef);
-        }
-        catch { }
-    }
-
-    /// <summary>Moves the search selection to the next match and scrolls it into view.</summary>
-    public async Task NextMatchAsync()
-    {
-        if (_searchTotalMatches == 0) return;
-        try { await JS.InvokeVoidAsync("tmPdfViewer.searchNext", _canvasRef, _searchLayerRef); }
-        catch { }
-    }
-
-    /// <summary>Moves the search selection to the previous match and scrolls it into view.</summary>
-    public async Task PreviousMatchAsync()
-    {
-        if (_searchTotalMatches == 0) return;
-        try { await JS.InvokeVoidAsync("tmPdfViewer.searchPrev", _canvasRef, _searchLayerRef); }
-        catch { }
-    }
-
-    private async Task RedrawSearchHighlightsAsync()
-    {
-        if (!_searchVisible || _useFallback || string.IsNullOrEmpty(_searchQuery) || _searchLayerRef.Context is null)
-        {
-            return;
-        }
-
-        try { await JS.InvokeVoidAsync("tmPdfViewer.redrawSearch", _canvasRef, _searchLayerRef, _currentPage); }
-        catch { }
-    }
-
-    private async Task ClearSearchAsync()
-    {
-        _searchQuery = null;
-        _lastSearchedQuery = null;
-        _searchTotalMatches = 0;
-        _searchCurrentMatch = 0;
-        try { await JS.InvokeVoidAsync("tmPdfViewer.clearSearch", _canvasRef, _searchLayerRef); }
-        catch { }
-        await InvokeAsync(StateHasChanged);
-    }
-
-    // ── Annotations ─────────────────────────────────────────────────────────
-
-    private async Task LoadAnnotationsAsync()
-    {
-        try
-        {
-            _threads = (await EffectiveAnnotationProvider.GetThreadsAsync(AnnotationDocumentId)).ToList();
-            await AnnotationsChanged.InvokeAsync(_threads);
-        }
-        catch
-        {
-            _threads = [];
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task SetupSelectionAsync()
-    {
-        if (_selectionEnabled || _useFallback)
-        {
-            return;
-        }
-
-        try
-        {
-            await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _canvasRef, _textLayerRef, _currentPage, _scale, Rotation);
-            await JS.InvokeVoidAsync("tmPdfViewer.enableSelection", _canvasRef, _textLayerRef, _dotNetRef);
-            _selectionEnabled = true;
-        }
-        catch { }
-    }
-
-    private async Task RefreshAnnotationOverlayAsync()
-    {
-        if (_useFallback)
-        {
-            return;
-        }
-
-        try
-        {
-            if (EnableAnnotations && _annotationOverlayRef.Context is not null)
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _canvasRef, _annotationOverlayRef);
-            }
-
-            if (OverlayContent is not null && _customOverlayRef.Context is not null)
-            {
-                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _canvasRef, _customOverlayRef);
-            }
-        }
-        catch { }
-    }
-
-    private DocumentCommentUser ResolveAuthor()
-        => CurrentUser ?? new DocumentCommentUser
-        {
-            UserId = "anonymous",
-            DisplayName = Loc["TmPdfViewer_AnonymousUser"]
-        };
-
-    private async Task CreateThreadFromSelectionAsync(string body)
-    {
-        if (_pendingSelection is null || !_pendingSelection.IsValid || string.IsNullOrWhiteSpace(body))
-        {
-            return;
-        }
-
-        var request = new DocumentCommentThreadCreateRequest
-        {
-            Anchor = _pendingSelection.ToAnchor(),
-            Body = body
-        };
-
-        try
-        {
-            var created = await EffectiveAnnotationProvider.CreateThreadAsync(AnnotationDocumentId, request, ResolveAuthor());
-            _pendingSelection = null;
-            _selectedThreadId = created.Id;
-            await LoadAnnotationsAsync();
-            await RefreshAnnotationOverlayAsync();
-        }
-        catch { }
-    }
-
-    private async Task ReplyToThreadAsync(DocumentCommentReplyRequest request)
-    {
-        try
-        {
-            await EffectiveAnnotationProvider.ReplyAsync(AnnotationDocumentId, request, ResolveAuthor());
-            await LoadAnnotationsAsync();
-        }
-        catch { }
-    }
-
-    private async Task ResolveThreadAsync(string threadId)
-    {
-        try
-        {
-            await EffectiveAnnotationProvider.ResolveAsync(AnnotationDocumentId, threadId, ResolveAuthor());
-            await LoadAnnotationsAsync();
-            await RefreshAnnotationOverlayAsync();
-        }
-        catch { }
-    }
-
-    private async Task ReopenThreadAsync(string threadId)
-    {
-        try
-        {
-            await EffectiveAnnotationProvider.ReopenAsync(AnnotationDocumentId, threadId, ResolveAuthor());
-            await LoadAnnotationsAsync();
-            await RefreshAnnotationOverlayAsync();
-        }
-        catch { }
-    }
-
-    private async Task DeleteCommentAsync(DocumentCommentDeleteRequest request)
-    {
-        try
-        {
-            // Decide selection clearing from the pre-delete state: an in-memory provider may
-            // alias the same thread instances, so inspect the count before the mutation.
-            var target = _threads.FirstOrDefault(thread => string.Equals(thread.Id, request.ThreadId, StringComparison.Ordinal));
-            var threadWillBeRemoved = target is null || target.Comments.Count <= 1;
-
-            await EffectiveAnnotationProvider.DeleteAsync(AnnotationDocumentId, request);
-
-            if (threadWillBeRemoved && string.Equals(_selectedThreadId, request.ThreadId, StringComparison.Ordinal))
-            {
-                _selectedThreadId = null;
-            }
-
-            await LoadAnnotationsAsync();
-            await RefreshAnnotationOverlayAsync();
-        }
-        catch { }
-    }
-
-    private async Task SelectThreadAsync(string? threadId)
-    {
-        _selectedThreadId = threadId;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task SetShowResolvedAnnotationsAsync(bool value)
-    {
-        _showResolvedAnnotations = value;
-        await InvokeAsync(StateHasChanged);
-        await RefreshAnnotationOverlayAsync();
-    }
-
-    private async Task DismissSelectionAsync()
-    {
-        _pendingSelection = null;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task ToggleAnnotationsPanelAsync()
-    {
-        _annotationsPanelVisible = !_annotationsPanelVisible;
-        await InvokeAsync(StateHasChanged);
-        await RefreshAnnotationOverlayAsync();
+        // The pinch zoom binds to the active wrap; a fresh wrap element (the view-mode
+        // swap, a re-created sheet container) re-wires it, everything else is a no-op.
+        await SetupPinchAsync();
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /// <summary>Navigates to a specific page.</summary>
-    public async Task GoToPageAsync(int page)
-    {
-        if (page < 1 || page > _totalPages) return;
-        _currentPage = page;
-        await PageChanged.InvokeAsync(_currentPage);
-        await RenderCurrentPageAsync();
-    }
+    /// <summary>Navigates to a specific page. In continuous mode the page wrap is
+    /// scrolled into view instead of re-rendering a single canvas. A fit mode recomputes
+    /// inside <see cref="RenderCurrentPageAsync"/> for the new page size.</summary>
+    public Task GoToPageAsync(int page) => NavigateToPageAsync(page);
 
-    /// <summary>Sets the zoom scale directly.</summary>
+    /// <summary>
+    /// Opens the mobile thumbnails sheet. Public API for hosts that fold the viewer's
+    /// Pages entry into their own mobile action bar (<see cref="ShowMobileActionBar"/> false);
+    /// a no-op on desktop/tablet layouts and without <see cref="ShowThumbnails"/>.
+    /// </summary>
+    public Task OpenThumbnailsSheetAsync()
+        => !ShowThumbnails || _useFallback ? Task.CompletedTask : SetThumbnailsSheetAsync(true);
+
+    /// <summary>
+    /// Opens the search input. Public API for hosts that fold the viewer's Search entry
+    /// into their own mobile action bar (<see cref="ShowMobileActionBar"/> false); a no-op
+    /// when the search is not offered (<see cref="ShowSearch"/> false) or already open.
+    /// </summary>
+    public Task OpenSearchAsync()
+        => !ShowSearch || _searchVisible || _useFallback ? Task.CompletedTask : ToggleSearchAsync();
+
+    /// <summary>Sets the zoom scale directly. Switches an active fit mode back to
+    /// <see cref="PdfZoomMode.Custom"/> — an explicit scale is a user decision.</summary>
     public async Task SetScaleAsync(double scale)
     {
         if (scale is <= 0 or > 5) return;
+        await SwitchToCustomZoomAsync();
         _scale = scale;
         await ScaleChanged.InvokeAsync(_scale);
         await ApplyZoomAsync();
@@ -829,7 +765,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     {
         if (_pdfInitialized && !_useFallback)
         {
-            try { await JS.InvokeVoidAsync("tmPdfViewer.destroy", _canvasRef); }
+            try { await JS.InvokeVoidAsync("tmPdfViewer.destroy", _rootRef); }
             catch { }
         }
         _dotNetRef?.Dispose();

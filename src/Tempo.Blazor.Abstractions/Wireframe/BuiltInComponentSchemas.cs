@@ -2217,6 +2217,15 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showToolbar",       "Show Toolbar",       PropType.Bool,   true,           cat: "Appearance"),
                 P("showSearch",        "Show Search",        PropType.Bool,   false,          cat: "Appearance"),
                 P("enableAnnotations", "Enable Annotations", PropType.Bool,   false,          cat: "Appearance"),
+                // Mirrors the redesigned viewer chrome (TmPdfViewer.ShowThumbnails, ViewMode,
+                // ShowHeader, Title, ZoomMode); the static stencil keeps the pdf-viewer role.
+                P("showThumbnails",    "Show Thumbnails",    PropType.Bool,   false,          cat: "Appearance"),
+                P("viewMode",          "View Mode",          PropType.Enum,   "single",       cat: "State",
+                    opts: ["single", "continuous"]),
+                P("showHeader",        "Show Header",        PropType.Bool,   false,          cat: "Appearance"),
+                P("title",             "Title",              PropType.String, cat: "Content"),
+                P("zoomMode",          "Zoom Mode",          PropType.Enum,   "auto",         cat: "State",
+                    opts: ["auto", "custom", "fit-width", "fit-page"]),
             ]
         };
 
@@ -2232,6 +2241,13 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["browse", "highlight", "comment", "stamp", "draw"], cat: "State"),
                 P("showPanel",       "Show Panel",       PropType.Bool,   true,           cat: "Appearance"),
                 P("allowExport",     "Allow Export",     PropType.Bool,   true,           cat: "Appearance"),
+                // Mirrors the redesigned annotator chrome (one toolbar merged into the viewer
+                // via ToolbarStart/ToolbarEnd plus an optional header row); the static stencil
+                // keeps the pdf-annotator role.
+                P("showThumbnails",  "Show Thumbnails",  PropType.Bool,   false,          cat: "Appearance"),
+                P("showSearch",      "Show Search",      PropType.Bool,   false,          cat: "Appearance"),
+                P("showHeader",      "Show Header",      PropType.Bool,   false,          cat: "Appearance"),
+                P("title",           "Title",            PropType.String, cat: "Content"),
             ]
         };
 

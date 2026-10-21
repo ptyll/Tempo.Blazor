@@ -31,6 +31,12 @@
       "description": "Callback invoked when the selected thread id changes."
     },
     {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id, used for comment permission checks."
+    },
+    {
       "name": "ShowResolved",
       "type": "bool",
       "isRequired": false,
@@ -55,11 +61,17 @@
       "description": "Pending annotation draft awaiting a note, when present."
     },
     {
+      "name": "ShowChrome",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel renders its own header (title + ✕ close). Default true — the docked desktop/tablet presentation. When the panel is hosted inside the annotator's mobile bottom sheet (FZE-8), the sheet header owns the title and the close button, so the host passes false and the panel renders only the resolved filter and its body, with the draft composer pinned to the sheet bottom and its buttons split across one row (phase 8 review 12)."
+    },
+    {
       "name": "DraftColor",
       "type": "string",
       "isRequired": false,
-      "default": "\"#2563eb\"",
-      "description": "Color used for the draft indicator."
+      "default": "PdfAnnotationColorHelper.DefaultColor",
+      "description": "Color used for the draft indicator. Defaults to DefaultColor."
     },
     {
       "name": "Disabled",
@@ -86,6 +98,12 @@
       "description": "Callback invoked when a reply is requested."
     },
     {
+      "name": "OnEditRequested",
+      "type": "EventCallback<DocumentCommentEditRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when an existing comment body is edited."
+    },
+    {
       "name": "OnResolveRequested",
       "type": "EventCallback<string>",
       "isRequired": false,
@@ -102,6 +120,12 @@
       "type": "EventCallback<DocumentCommentDeleteRequest>",
       "isRequired": false,
       "description": "Callback invoked when deleting a comment is requested."
+    },
+    {
+      "name": "OnCloseRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked when the panel's close button is pressed."
     }
   ]
 }

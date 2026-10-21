@@ -16,7 +16,14 @@ public static partial class MarkupSnapshot
     {
         ArgumentNullException.ThrowIfNull(markup);
 
-        var withoutBlazor = BlazorAttribute().Replace(markup.Replace("\r\n", "\n").Replace('\r', '\n'), string.Empty);
+        // ICU-based globalization stacks (Linux) render the en-US AM/PM designator after U+202F
+        // where the goldens, captured under Windows NLS, carry a plain U+0020 (U+00A0 likewise).
+        // Collapse the space variants onto U+0020 so goldens stay stable across platforms.
+        var withoutBlazor = BlazorAttribute().Replace(markup
+            .Replace("\r\n", "\n")
+            .Replace('\r', '\n')
+            .Replace('\u202F', ' ')
+            .Replace('\u00A0', ' '), string.Empty);
         var withStableIds = ReplaceInstanceIds(withoutBlazor);
         var collapsed = CollapseInterTagWhitespace(withStableIds);
         return ClassAttribute().Replace(collapsed, NormalizeClassAttribute);

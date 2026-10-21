@@ -1,54 +1,247 @@
 /* TmPdfViewer scoped styles */
 
 .tm-pdf-viewer {
+    /* Component-local tokens: aliases of core tokens resolved at the component root, NOT new
+       palette entries — the shadow and the sidebar width stay overridable per component without
+       inventing global names. */
+    --tm-pdf-page-shadow: var(--tm-shadow-card);
+    --tm-pdf-panel-width: 140px;
+
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--tm-border, #e5e7eb);
-    border-radius: var(--tm-radius-lg, 8px);
-    background: var(--tm-surface, #ffffff);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-bg-surface);
     overflow: hidden;
-    font-family: var(--tm-font-sans, ui-sans-serif, system-ui, sans-serif);
-    color: var(--tm-text, #111827);
+    font-family: var(--tm-font-sans);
+    color: var(--tm-text-primary);
+
+    /* FZE-7: the viewer is its own query container — everything below the root adapts to the
+       viewer's width, not the viewport's (a narrow Notion column is mobile on a desktop page).
+       The markup branch (compact row, action bar, sheets) resolves from the same width through
+       the wrapping TmLayoutObserver. */
+    container-type: inline-size;
+    container-name: tm-pdf-viewer;
 }
 
-/* ── Toolbar ─────────────────────────────────────────────────────────────── */
-
-.tm-pdf-viewer__toolbar {
+/* ── Toolbar (a core TmToolbar: Overflow=Menu, tm-toolbar.js measures the row) ──
+   The TmToolbar root is a child-component root and carries no viewer scope attribute,
+   so every rule that reaches the toolbar (its root included) goes through ::deep. */
+.tm-pdf-viewer ::deep .tm-pdf-viewer__toolbar {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-1, 4px);
-    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
-    background: var(--tm-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-border-color);
     min-height: 40px;
-    flex-wrap: wrap;
 }
 
-.tm-pdf-viewer__pagination,
-.tm-pdf-viewer__zoom,
-.tm-pdf-viewer__rotation,
-.tm-pdf-viewer__view-mode,
+/* Keep the previous density: the core row gap is one step wider. */
+.tm-pdf-viewer ::deep .tm-toolbar-start,
+.tm-pdf-viewer ::deep .tm-toolbar-actions {
+    gap: var(--tm-space-1);
+}
+
+/* A toolbar section (Navigation | Zoom | Rotate | Mode || Search | Comments):
+   the group owns the flex alignment, its aria-label names it for AT. */
+.tm-pdf-viewer ::deep .tm-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+/* The toolbar's trailing section (file links in the no-header case + the host's
+   ToolbarEnd slot): the core .tm-toolbar-actions box; the start section's flex: 1
+   provides the push, so nested groups never double it. */
+.tm-pdf-viewer ::deep .tm-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+/* The compact 28px chrome of the previous phases rides the toolbar buttons too while they
+   render icon-only (the core --icon-only modifier flips exactly when a label appears);
+   the comment-count toggle is excluded — it carries data and sizes to its content. */
+.tm-pdf-viewer ::deep button.tm-pdf-viewer__btn.tm-toolbar-btn--icon-only {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
 .tm-pdf-viewer__file-actions {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-1, 4px);
+    gap: var(--tm-space-2);
 }
 
-.tm-pdf-viewer__page-label,
-.tm-pdf-viewer__zoom-label {
-    font-size: 13px;
+/* ── Page input ──────────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__page-input {
+    width: 3.5rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
     font-variant-numeric: tabular-nums;
-    color: var(--tm-text-muted, #6b7280);
-    min-width: 80px;
     text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.tm-pdf-viewer__page-input::-webkit-outer-spin-button,
+.tm-pdf-viewer__page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.tm-pdf-viewer__page-input:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+    outline: none;
+}
+
+.tm-pdf-viewer__page-count {
+    font-size: var(--tm-font-size-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--tm-text-secondary);
     user-select: none;
+}
+
+/* ── Zoom dropdown (PD2) ─────────────────────────────────────────────────── */
+
+/* The wrapper reserves the label width (5.5rem) and is never squeezed below it (::deep —
+   the dropdown root is a child component and carries no viewer scope attribute): a squeezed
+   trigger wraps its label onto a second line and grows the row; the shrinkable page input
+   takes the compression instead. */
+.tm-pdf-viewer ::deep .tm-pdf-viewer__zoom {
+    min-width: 5.5rem;
+    flex-shrink: 0;
+}
+
+.tm-pdf-viewer ::deep .tm-pdf-viewer__zoom .tm-dropdown-trigger {
+    font-size: var(--tm-font-size-sm);
+    font-variant-numeric: tabular-nums;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    /* One line, always: the "Fit Width" label (or the percentage) must not wrap the
+       toolbar start section onto a second row at a narrow container. */
+    white-space: nowrap;
+}
+
+/* ── View mode segment: inherit the core segmented radio, tightened for the toolbar ── */
+
+.tm-pdf-viewer__view-mode {
+    gap: var(--tm-space-0-5);
+}
+
+/* ── Comments toggle ─────────────────────────────────────────────────────── */
+
+/* Compound selector: it must beat `.tm-pdf-viewer__btn { width: 28px; padding: 0 }`
+   which appears later in this sheet at the same specificity. The toggle carries the
+   open-thread count, so it sizes to its content instead of the 28px icon button. */
+.tm-pdf-viewer__btn.tm-pdf-viewer__comments-toggle {
+    width: auto;
+    min-width: 28px;
+    white-space: nowrap;
+    padding: 0 var(--tm-space-2);
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-pdf-viewer__comments-count {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Header (G9) ─────────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-wrap: wrap;
+}
+
+.tm-pdf-viewer__header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-pdf-viewer__header-titles {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tm-pdf-viewer__header-title {
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-pdf-viewer__header-subtitle {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-pdf-viewer__header-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    margin-left: auto;
+}
+
+/* ── File links ──────────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
+    text-decoration: none;
+    color: var(--tm-text-primary);
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.tm-pdf-viewer__link:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* Download is the primary action of the viewer chrome; Open the secondary one. */
+.tm-pdf-viewer__link--primary {
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-pdf-viewer__link--primary:hover {
+    background: var(--tm-color-primary-hover);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-pdf-viewer__link--secondary {
+    border: 1px solid var(--tm-border-color);
 }
 
 .tm-pdf-viewer__separator {
     width: 1px;
     height: 20px;
-    background: var(--tm-border, #e5e7eb);
-    margin: 0 var(--tm-space-1, 4px);
+    background: var(--tm-border-color);
+    margin: 0 var(--tm-space-1);
 }
 
 .tm-pdf-viewer__btn {
@@ -59,15 +252,15 @@
     height: 28px;
     padding: 0;
     border: none;
-    border-radius: var(--tm-radius, 6px);
+    border-radius: var(--tm-radius-control);
     background: transparent;
-    color: var(--tm-text, #111827);
+    color: var(--tm-text-primary);
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
 }
 
 .tm-pdf-viewer__btn:hover:not(:disabled) {
-    background: var(--tm-hover, #e5e7eb);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-pdf-viewer__btn:disabled {
@@ -76,24 +269,28 @@
 }
 
 .tm-pdf-viewer__btn--active {
-    background: var(--tm-primary-100, #dbeafe);
-    color: var(--tm-primary, #3b82f6);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
-.tm-pdf-viewer__link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1, 4px);
-    padding: 2px 8px;
-    border-radius: var(--tm-radius, 6px);
-    font-size: 13px;
-    text-decoration: none;
-    color: var(--tm-text, #111827);
-    transition: background 0.15s;
-}
+/* FZE-7: a finger cannot hit a 28px icon button — every viewer-owned control meets the
+   shared touch target on a coarse pointer. (Toolbar buttons carry the same minimum through
+   the core .tm-toolbar coarse rule; the compat .tm-pdf-viewer__btn class rides them too.)
+   The page input, the search input and the file links join them: min-height only where a
+   width minimum would fight the flex row. */
+@media (pointer: coarse) {
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__btn,
+    .tm-pdf-viewer__comments-toggle,
+    .tm-pdf-viewer__link,
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom .tm-dropdown-trigger {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 
-.tm-pdf-viewer__link:hover {
-    background: var(--tm-hover, #e5e7eb);
+    .tm-pdf-viewer__page-input,
+    .tm-pdf-viewer__search-input {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 /* ── Search bar ──────────────────────────────────────────────────────────── */
@@ -101,38 +298,53 @@
 .tm-pdf-viewer__search-bar {
     display: flex;
     align-items: center;
-    gap: var(--tm-space-2, 8px);
-    padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
-    background: var(--tm-surface-elevated, #f9fafb);
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-pdf-viewer__search-input {
     flex: 1;
-    border: 1px solid var(--tm-border, #e5e7eb);
-    border-radius: var(--tm-radius, 6px);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
     padding: 4px 8px;
-    font-size: 13px;
-    background: var(--tm-surface, #ffffff);
-    color: var(--tm-text, #111827);
+    font-size: var(--tm-font-size-sm);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     outline: none;
 }
 
 .tm-pdf-viewer__search-input:focus {
-    border-color: var(--tm-primary, #3b82f6);
-    box-shadow: 0 0 0 2px var(--tm-primary-100, #dbeafe);
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-pdf-viewer__search-count {
-    font-size: 12px;
-    color: var(--tm-text-muted, #6b7280);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* ── PD1: annotations single-page hint (continuous mode) ─────────────────── */
+
+.tm-pdf-viewer__annotations-hint {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-info-text);
+    background: var(--tm-color-info-subtle);
+    border-bottom: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
 }
 
 /* ── Body layout ─────────────────────────────────────────────────────────── */
 
 .tm-pdf-viewer__body {
+    position: relative;
     display: flex;
     flex: 1;
     overflow: hidden;
@@ -140,31 +352,87 @@
 
 /* ── Canvas wrap ─────────────────────────────────────────────────────────── */
 
+/* FZE-9 touch: pan-x/pan-y keeps the one-finger scroll AND blocks the native page
+   pinch-zoom, which the core pointer-gesture.js pinch (a JS pointer gesture) owns instead.
+   The annotator's draw surface tightens this to touch-action: none for the ink stroke. */
 .tm-pdf-viewer__canvas-wrap {
+    scrollbar-gutter: stable;
     position: relative;
     flex: 1;
     overflow: auto;
+    touch-action: pan-x pan-y;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    background: var(--tm-bg-subtle, #f3f4f6);
-    padding: var(--tm-space-4, 16px);
+    /* The workspace under the page: --tm-bg-workspace tracks the theme (white light,
+       the indigo off-white, the deep dark) and stays the phase-2 token-propagation
+       contract the theme screenshot test pins; the page surfaces pop against it. */
+    background: var(--tm-bg-workspace);
+    padding: var(--tm-space-4);
 }
 
 .tm-pdf-viewer__canvas {
     display: block;
     margin-inline: auto;
-    background: var(--tm-surface, #ffffff);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    border-radius: var(--tm-radius-sm, 4px);
+    background: var(--tm-bg-surface);
+    box-shadow: var(--tm-pdf-page-shadow);
+    border-radius: var(--tm-radius-sm);
 }
 
 .tm-pdf-viewer__text-layer {
     position: absolute;
-    top: var(--tm-space-4, 16px);
+    top: var(--tm-space-4);
     left: 50%;
     transform: translateX(-50%);
+    /* PDF.js rotation contract: the layer rotates around its layout top-left corner
+       (the official .textLayer origin), never around its center. */
+    transform-origin: 0 0;
     pointer-events: auto;
+    /* PDF.js v5 TextLayer contract: the layer is one line-box tall per glyph row and
+       clips the (invisible) span boxes to the page — the mirror of the official
+       .textLayer rule. The box size itself is the viewport size set by pdf-viewer.js. */
+    line-height: 1;
+    overflow: hidden;
+    text-align: initial;
+}
+
+/* Rotation (PDF.js `data-main-rotation`): the TextLayer container keeps the UNROTATED
+   page box — setLayerDimensions writes pageWidth × pageHeight × --total-scale-factor
+   inline and tags data-main-rotation — while the canvas is re-rendered at the rotated
+   viewport size. The CSS rotation maps the unrotated box back onto that canvas. The
+   single-page layer is anchored at the canvas center-x (left: 50%), so the pre-rotation
+   shifts below are halves of the UNROTATED box: after the rotate(90/270) the -50%
+   Y-shift lands as the exact ±(rotated width / 2) centering, which a translateX(-50%)
+   prepend could not express (its percentage resolves against the unrotated width). */
+.tm-pdf-viewer__text-layer[data-main-rotation="90"] {
+    transform: rotate(90deg) translateY(-50%);
+}
+
+.tm-pdf-viewer__text-layer[data-main-rotation="180"] {
+    transform: rotate(180deg) translate(-50%, -100%);
+}
+
+.tm-pdf-viewer__text-layer[data-main-rotation="270"] {
+    transform: rotate(270deg) translate(-100%, -50%);
+}
+
+/* The TextLayer spans paint nothing (FZE-9: no doubled glyphs under the canvas) but stay
+   fully opaque so the native selection highlight — and its touch handles — render at full
+   strength (an `opacity` on the span would fade the highlight too). Positioning, font size
+   and the width-correcting transform are the TextLayer's own inline styles; these rules
+   supply the presentation half of the official .textLayer :is(span, br) contract. */
+.tm-pdf-viewer__text-layer ::deep :is(span, br) {
+    position: absolute;
+    margin: 0;
+    white-space: pre;
+    color: transparent;
+    cursor: text;
+    transform-origin: 0% 0%;
+    user-select: text;
+}
+
+.tm-pdf-viewer__text-layer ::deep :is(span, div)::selection {
+    background: color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 /* ── Search highlight layer (children injected by JS) ────────────────────── */
@@ -179,14 +447,14 @@
 
 .tm-pdf-viewer__search-layer ::deep .tm-pdf-search-highlight {
     position: absolute;
-    background: color-mix(in srgb, var(--tm-warning, #f59e0b) 38%, transparent);
+    background: color-mix(in srgb, var(--tm-color-warning) 38%, transparent);
     border-radius: 2px;
     pointer-events: none;
 }
 
 .tm-pdf-viewer__search-layer ::deep .tm-pdf-search-highlight--active {
-    background: color-mix(in srgb, var(--tm-warning, #f59e0b) 68%, transparent);
-    outline: 1px solid var(--tm-warning, #f59e0b);
+    background: color-mix(in srgb, var(--tm-color-warning) 68%, transparent);
+    outline: 1px solid var(--tm-color-warning);
 }
 
 /* ── Annotation overlay (sized to canvas by JS; layer fills it) ──────────── */
@@ -201,46 +469,196 @@
 /* ── Continuous scroll wrap ──────────────────────────────────────────────── */
 
 .tm-pdf-viewer__continuous-wrap {
+    scrollbar-gutter: stable;
     flex: 1;
     overflow: auto;
-    background: var(--tm-bg-subtle, #f3f4f6);
-    padding: var(--tm-space-4, 16px);
+    /* FZE-9 touch: same contract as the canvas wrap — one finger scrolls, the core
+       pinch owns the zoom. */
+    touch-action: pan-x pan-y;
+    /* The workspace under the pages — the same --tm-bg-workspace ground as the
+       single-page canvas wrap, so both modes read as one workspace. */
+    background: var(--tm-bg-workspace);
+    padding: var(--tm-space-4);
+}
+
+/* The continuous pages and the thumbnails are DOM built by pdf-viewer.js — they never
+   carry the scope attribute, so every rule must opt into ::deep. The page inner is the
+   positioning context for the per-page text/search layers; it shrink-wraps the canvas. */
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page {
+    position: relative;
+    margin-bottom: var(--tm-space-4);
+    display: flex;
+    justify-content: center;
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page-inner {
+    position: relative;
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page canvas {
+    display: block;
+    /* The page surface reads as paper on the tinted workspace. */
+    background: var(--tm-bg-surface);
+    box-shadow: var(--tm-pdf-page-shadow);
+    border-radius: var(--tm-radius-sm);
+}
+
+/* Skeleton shimmer for pages that are not painted yet — the placeholder box shows
+   a quiet animated surface until the canvas backing store arrives. */
+@keyframes tm-pdf-page-shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page canvas:not([data-rendered]) {
+    background: linear-gradient(100deg,
+        var(--tm-bg-surface) 40%,
+        var(--tm-bg-surface-secondary) 50%,
+        var(--tm-bg-surface) 60%);
+    background-size: 200% 100%;
+    animation: tm-pdf-page-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page canvas:not([data-rendered]) {
+        animation: none;
+        background: var(--tm-bg-muted);
+    }
+}
+
+/* Per-page text layer of the continuous renderer — JS sizes it to the canvas box
+   (the shared __text-layer class centers itself in the single-page canvas wrap). */
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: none;
+    /* The per-page layers are built by pdf-viewer.js and never carry the Blazor scope
+       attribute, so the scoped base rule above cannot give them the rotation origin —
+       without it they would spin around their center instead of the page corner. */
+    transform-origin: 0 0;
+    z-index: 1;
+}
+
+/* Rotation for the continuous per-page layers (JS-built DOM → ::deep). These layers sit
+   at the page-inner's top-left corner — exactly the official PDF.js inset:0 placement —
+   so the official [data-main-rotation] transforms apply unchanged: each maps the
+   unrotated page box onto the rotated canvas box. */
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="90"] {
+    transform: rotate(90deg) translateY(-100%);
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="180"] {
+    transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="270"] {
+    transform: rotate(270deg) translateX(-100%);
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__search-layer {
+    width: 100%;
+    height: 100%;
 }
 
 /* ── Thumbnails sidebar ──────────────────────────────────────────────────── */
 
 .tm-pdf-viewer__thumbnails {
-    width: 140px;
+    width: var(--tm-pdf-panel-width);
     flex-shrink: 0;
-    overflow-y: auto;
-    background: var(--tm-surface-elevated, #f9fafb);
-    border-right: 1px solid var(--tm-border, #e5e7eb);
-    padding: var(--tm-space-2, 8px);
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-border-color);
+}/* Header owns the title + collapse button; the list below scrolls. */
+.tm-pdf-viewer__thumbnails-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
-.tm-pdf-thumbnail {
+.tm-pdf-viewer__thumbnails-title {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+    user-select: none;
+}
+
+.tm-pdf-viewer__thumbnails-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--tm-space-2);
+}
+
+/* Collapsed rail: keeps one finger-reachable reopen affordance at the left edge. */
+.tm-pdf-viewer__thumbnails-rail {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: var(--tm-space-1);
+    background: var(--tm-color-surface-elevated);
+    border-right: 1px solid var(--tm-border-color);
+}
+
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail {
     cursor: pointer;
-    margin-bottom: var(--tm-space-2, 8px);
-    padding: var(--tm-space-1, 4px);
-    border-radius: var(--tm-radius, 6px);
+    margin-bottom: var(--tm-space-2);
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
     transition: background 0.15s;
 }
 
-.tm-pdf-thumbnail:hover {
-    background: var(--tm-hover, #e5e7eb);
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail:hover,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail:hover {
+    background: var(--tm-color-surface-hover);
 }
 
-.tm-pdf-thumbnail--active {
-    background: var(--tm-primary-100, #dbeafe);
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail--active,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail--active {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail > canvas,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail > canvas {
+    display: block;
+    width: 100%;
+    border-radius: var(--tm-radius-xs);
+}
+
+.tm-pdf-viewer__thumbnails ::deep .tm-pdf-thumbnail__label,
+.tm-pdf-viewer__thumbnails-list--sheet ::deep .tm-pdf-thumbnail__label {
+    text-align: center;
+    margin-top: var(--tm-space-0-5);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
 }
 
 /* ── Fallback embed ──────────────────────────────────────────────────────── */
+
+.tm-pdf-viewer__fallback {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.tm-pdf-viewer__fallback ::deep .tm-pdf-viewer__load-error {
+    flex: 0 0 auto;
+    margin: var(--tm-space-3);
+}
 
 .tm-pdf-viewer__embed {
     flex: 1;
     width: 100%;
     border: none;
-    background: var(--tm-surface, #ffffff);
+    background: var(--tm-bg-surface);
 }
 
 /* ── Empty state ─────────────────────────────────────────────────────────── */
@@ -251,73 +669,188 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--tm-space-3, 12px);
-    color: var(--tm-text-muted, #6b7280);
-    font-size: 14px;
-    padding: var(--tm-space-8, 32px);
+    gap: var(--tm-space-3);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    padding: var(--tm-space-8);
 }
 
-/* ── Dark mode overrides ─────────────────────────────────────────────────── */
+/* ── Loading status (absolute overlay above the body content) ────────────── */
 
-[data-theme="dark"] .tm-pdf-viewer,
-.tm-dark .tm-pdf-viewer {
-    border-color: var(--tm-border-dark, #374151);
-    background: var(--tm-surface-dark, #1f2937);
-    color: var(--tm-text-dark, #f9fafb);
+.tm-pdf-viewer__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-text-secondary);
+    background: color-mix(in srgb, var(--tm-bg-surface-secondary) 85%, transparent);
 }
 
-[data-theme="dark"] .tm-pdf-viewer__toolbar,
-[data-theme="dark"] .tm-pdf-viewer__search-bar,
-.tm-dark .tm-pdf-viewer__toolbar,
-.tm-dark .tm-pdf-viewer__search-bar {
-    background: var(--tm-surface-elevated-dark, #111827);
-    border-bottom-color: var(--tm-border-dark, #374151);
+.tm-pdf-viewer__loading-text {
+    font-size: var(--tm-font-size-sm);
+    user-select: none;
 }
 
-[data-theme="dark"] .tm-pdf-viewer__canvas-wrap,
-[data-theme="dark"] .tm-pdf-viewer__continuous-wrap,
-.tm-dark .tm-pdf-viewer__canvas-wrap,
-.tm-dark .tm-pdf-viewer__continuous-wrap {
-    background: var(--tm-bg-subtle-dark, #111827);
+/* ── Responsive presentation (container query on the viewer's own width) ────
+   The markup branch (compact row, action bar, sheets) resolves from the wrapping
+   TmLayoutObserver; these rules adapt the presentation inside the same mode. The
+   boundary is the shared TmBreakpoints.Sm literal, half-open. */
+@container tm-pdf-viewer (width < 640px) {
+    /* Compact single row: everything stays on ONE line (flex-wrap: nowrap) — the core
+       TmToolbar overflow moves the lowest-priority buttons into "More" instead, and the
+       host content (annotator tools) wraps inside its own group. The page count stays
+       visible as the compact "1/120" (input + "/N" count) — one glyph less than desktop. */
+    .tm-pdf-viewer__page-count {
+        font-size: var(--tm-font-size-xs);
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar-divider {
+        display: none;
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar-start,
+    .tm-pdf-viewer ::deep .tm-toolbar-actions {
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    /* The page input shares the row but never yields: flex-shrink: 0 keeps its value
+       legible — min-width floors it at the touch target and at three digits (3ch), so the
+       number can no longer clip under compression. The zoom trigger and the "More" overflow
+       absorb the space instead. */
+    .tm-pdf-viewer__page-input {
+        width: 3rem;
+        min-width: max(var(--tm-touch-target), 3ch);
+        flex-shrink: 0;
+    }
+
+    /* The navigation group must be allowed to compress with it: the group's own min-content
+       would otherwise keep the input's reserved width and overflow a narrow container
+       (::deep — the group root is a child component). */
+    .tm-pdf-viewer ::deep .tm-toolbar-group[data-tm-group="navigation"] {
+        min-width: 0;
+    }
+
+    /* The zoom trigger is the "%" glyph on a mobile layout (ZoomTriggerText) — drop the
+       reserved label width so the row keeps its single line. */
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom {
+        min-width: 0;
+    }
+
+    /* Hledání přes celou šířku: the bar stays one row — the input takes the remaining
+       width (min-width: 0 lets it shrink) and the ✕ close button always has its place. */
+    .tm-pdf-viewer__search-bar {
+        flex-wrap: nowrap;
+    }
+
+    .tm-pdf-viewer__search-input {
+        flex: 1;
+        min-width: 0;
+    }
 }
 
-[data-theme="dark"] .tm-pdf-viewer__canvas,
-.tm-dark .tm-pdf-viewer__canvas {
-    background: var(--tm-surface-dark, #1f2937);
+/* Ultra-narrow containers (a 320px phone, a narrow Notion column): below ~280px of viewer
+   width the full compact row — two pinned chevrons, the page input, the "/N" count, the zoom
+   trigger and "More" — cannot fit at their touch-target widths, so the zoom trigger and the
+   "More" overflow YIELD their space (a tighter trigger padding keeps the glyphs visible; the
+   row gap tightens too). The count NEVER hides: the input + "/N" pair stays the page
+   indicator at every width (phase 10 review). */
+@container tm-pdf-viewer (width < 280px) {
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__toolbar {
+        padding-inline: var(--tm-space-2);
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar-start {
+        gap: var(--tm-space-1);
+    }
+
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom {
+        flex-shrink: 1;
+    }
+
+    .tm-pdf-viewer ::deep .tm-pdf-viewer__zoom .tm-dropdown-trigger {
+        min-width: 0;
+        padding-inline: var(--tm-space-1);
+        font-size: var(--tm-font-size-xs);
+    }
+
+    .tm-pdf-viewer ::deep .tm-toolbar .tm-toolbar-more {
+        min-width: 0;
+        flex-shrink: 1;
+        padding-inline: var(--tm-space-1);
+    }
 }
 
-[data-theme="dark"] .tm-pdf-viewer__btn:hover:not(:disabled),
-.tm-dark .tm-pdf-viewer__btn:hover:not(:disabled) {
-    background: var(--tm-hover-dark, #374151);
+/* ── Sticky selection CTA (FZE-9, tablet + mobile) ───────────────────────── */
+
+.tm-pdf-viewer__selection-cta {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border-top: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
 }
 
-[data-theme="dark"] .tm-pdf-viewer__btn--active,
-.tm-dark .tm-pdf-viewer__btn--active {
-    background: var(--tm-primary-900, #1e3a8a);
-    color: var(--tm-primary-300, #93c5fd);
+/* The one action row of a touch layout: a prominent primary-tinted call to action and a
+   compact dismiss. Both meet the shared touch target on a coarse pointer. */
+.tm-pdf-viewer__selection-cta-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    text-align: center;
+    cursor: pointer;
 }
 
-[data-theme="dark"] .tm-pdf-viewer__link:hover,
-.tm-dark .tm-pdf-viewer__link:hover {
-    background: var(--tm-hover-dark, #374151);
+/* UX2 (FZE-9 review): the full label stays visible at 390px — the span wraps to a
+   second line instead of being cut by the ellipsis (centered, reduced horizontal
+   padding so two lines still meet the touch target comfortably). */
+.tm-pdf-viewer__selection-cta-button span {
+    min-width: 0;
+    padding: 0 var(--tm-space-1);
+    overflow-wrap: break-word;
+    text-align: center;
+    white-space: normal;
 }
 
-[data-theme="dark"] .tm-pdf-viewer__separator,
-.tm-dark .tm-pdf-viewer__separator {
-    background: var(--tm-border-dark, #374151);
+.tm-pdf-viewer__selection-cta-button:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
 }
 
-[data-theme="dark"] .tm-pdf-viewer__search-input,
-.tm-dark .tm-pdf-viewer__search-input {
-    background: var(--tm-surface-dark, #1f2937);
-    border-color: var(--tm-border-dark, #374151);
-    color: var(--tm-text-dark, #f9fafb);
+.tm-pdf-viewer__selection-cta-dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
 }
 
-[data-theme="dark"] .tm-pdf-viewer__thumbnails,
-.tm-dark .tm-pdf-viewer__thumbnails {
-    background: var(--tm-surface-elevated-dark, #111827);
-    border-right-color: var(--tm-border-dark, #374151);
+.tm-pdf-viewer__selection-cta-dismiss:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
