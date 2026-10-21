@@ -637,6 +637,7 @@
                             {
                                 <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, 0) : null)"
                                     @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, 0, rowItem)) : default)"
+                                    @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(virtualRow, 0)) : default)"
                                     @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid"></td>
                             }
                             @if (Selectable)
@@ -644,6 +645,7 @@
                                 var virtualCheckCol = HasDetail ? 1 : 0;
                                 <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? virtualCheckCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, virtualCheckCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, virtualCheckCol) : null)"
                                     @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, virtualCheckCol, rowItem)) : default)"
+                                    @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(virtualRow, virtualCheckCol)) : default)"
                                     @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     <input type="checkbox"
                                            aria-label="@Loc["TmDataTable_SelectRow"]"
@@ -662,6 +664,7 @@
                                 <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
                                     role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, cellCol) : null)"
                                     @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, cellCol, rowItem)) : default)"
+                                    @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(virtualRow, cellCol)) : default)"
                                     @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     @if (col.CellTemplate is not null)
                                     {
@@ -775,6 +778,7 @@
                                     var expanderRow = currentRowIndex;
                                     <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(expanderRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(expanderRow, 0) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, expanderRow, 0, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(expanderRow, 0)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-row-expander-btn"
                                                 aria-label="@Loc["TmDataTable_ToggleDetail"]"
@@ -795,6 +799,7 @@
                                     var checkRow = currentRowIndex;
                                     <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? checkCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(checkRow, checkCol) : null)" tabindex="@(IsGrid ? CellTabIndex(checkRow, checkCol) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, checkRow, checkCol, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(checkRow, checkCol)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <input type="checkbox"
                                                aria-label="@Loc["TmDataTable_SelectRow"]"
@@ -814,6 +819,7 @@
                                     <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
                                         role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(cellRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(cellRow, cellCol)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         @if (col.CellTemplate is not null)
                                         {
@@ -832,6 +838,7 @@
                                     <td class="tm-data-table__edit-actions @(IsMobileCards ? "tm-data-table__edit-actions--card-footer" : null)"
                                         role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? editCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(editRow, editCol) : null)" tabindex="@(IsGrid ? CellTabIndex(editRow, editCol) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, editRow, editCol, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(editRow, editCol)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--start"
                                                 aria-label="@Loc["TmDataTable_EditRow"]" title="@Loc["TmDataTable_EditRow"]"

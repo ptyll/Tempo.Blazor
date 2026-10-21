@@ -79,6 +79,16 @@ public partial class TmDataTable<TItem>
 
     private bool GridHeaderIsActive => IsGrid && _displayedItems.Count == 0;
 
+    /// <summary>
+    /// Grid mode can only edit in the flat paged row loop: the virtualized branch and
+    /// <see cref="RenderGroupRows"/> never render an editing <c>&lt;tr&gt;</c>. Starting an edit
+    /// there would set <c>_editContext</c> and lock every key (the cell handler returns early for
+    /// every key while an editor is open, and no editor exists to receive Escape).
+    /// </summary>
+    private bool GridCanEdit => Editable && AnyEditableColumn
+        && ScrollMode != DataTableScrollMode.Virtualized
+        && _groupByColumns.Count == 0;
+
     /// <summary>Header row is aria-rowindex 1; a rendered filter row takes 2 and shifts every body row.</summary>
     private int GridBodyRowOffset => 1 + (HasGridFilterRow ? 1 : 0);
 
@@ -209,7 +219,7 @@ public partial class TmDataTable<TItem>
             return Task.CompletedTask;
         }
 
-        return ActivateGridCellAsync(e, col, item);
+        return ActivateGridCellAsync(e, row, col, item);
     }
 
     private Task HandleGridHeaderKeyDownAsync(KeyboardEventArgs e, int col)
@@ -288,8 +298,10 @@ public partial class TmDataTable<TItem>
 
         _gridCellSeeded = true;
         _gridFocusPending = true;
-        if (ScrollMode == DataTableScrollMode.Virtualized)
-            _ = ScrollVirtualRowIntoViewAsync(_activeRow);
+        // The scroll for a row past the rendered window is awaited in
+        // <see cref="FocusActiveGridCellAsync"/> so focus only moves after <Virtualize> has
+        // painted the target rows — a fire-and-forget scroll here raced the render and the
+        // cell was still missing when focusGridCell looked for it.
         StateHasChanged();
     }
 
@@ -326,11 +338,11 @@ public partial class TmDataTable<TItem>
     /// A virtualized row past the rendered window is not in the DOM, so focus has nothing to land
     /// on. Scroll the estimate first; the focus call after the next render finds the cell.
     /// </summary>
-    private async Task ScrollVirtualRowIntoViewAsync(int row)
+    private async Task ScrollVirtualRowIntoViewAsync(int row, int col)
     {
         try
         {
-            await JS.InvokeVoidAsync("tmDataTable.scrollGridToIndex", _tableRef, row, VirtualItemSize);
+            await JS.InvokeVoidAsync("tmDataTable.scrollGridToIndex", _tableRef, row, VirtualItemSize, row, col);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException
                                or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
@@ -339,10 +351,10 @@ public partial class TmDataTable<TItem>
     }
 
     /// <summary>
-    /// Enter activates the row once. Space toggles selection and never activates. On the expander
-    /// or checkbox column the key is handed to that control instead.
+    /// Enter activates the row once. Space toggles selection and never activates. On the expander,
+    /// checkbox or edit-actions column the key is handed to that control instead.
     /// </summary>
-    private Task ActivateGridCellAsync(KeyboardEventArgs e, int col, TItem? item)
+    private Task ActivateGridCellAsync(KeyboardEventArgs e, int row, int col, TItem? item)
     {
         if (item is null || e.Repeat)
             return Task.CompletedTask;
@@ -353,13 +365,18 @@ public partial class TmDataTable<TItem>
             return ToggleRowDetailAsync(item);
         if (Selectable && col == checkCol && e.Key is "Enter" or " ")
             return ToggleRowSelectionAsync(item, new ChangeEventArgs { Value = !IsSelected(item) });
+        // The edit-actions cell shows the Edit button (tabindex=-1 in grid mode), so Enter or
+        // Space there starts the edit the same way the expander and checkbox hand their key to
+        // their control — instead of falling through to the row activation it would otherwise be.
+        if (HasEditActions && col == GridDefaultColumn + _renderedCellColumns.Count && e.Key is "Enter" or " ")
+            return StartEditAtAsync(row, item);
 
         return e.Key switch
         {
-            "Enter" when Editable && AnyEditableColumn && IsEditableColumn(col) => StartEditAtAsync(RowIndexOf(item), item),
+            "Enter" when GridCanEdit && IsEditableColumn(col) => StartEditAtAsync(row, item),
             "Enter" => HandleRowClickAsync(item),
             " " when Selectable => ToggleRowSelectionAsync(item, new ChangeEventArgs { Value = !IsSelected(item) }),
-            "F2" when Editable && AnyEditableColumn => StartEditAtAsync(RowIndexOf(item), item),
+            "F2" when GridCanEdit => StartEditAtAsync(row, item),
             _ => Task.CompletedTask
         };
     }
@@ -370,10 +387,21 @@ public partial class TmDataTable<TItem>
         return index >= 0 && index < _renderedCellColumns.Count && _renderedCellColumns[index].Editable;
     }
 
-    private int RowIndexOf(TItem item)
+    /// <summary>
+    /// A click or a programmatic focus on a cell moves the roving stop, so Shift+Tab then Tab
+    /// returns to the cell the user actually interacted with. It never sets
+    /// <c>_gridFocusPending</c>: the focus is already where the user put it.
+    /// </summary>
+    private void SyncGridCursor(int row, int col)
     {
-        var index = _displayedItems.FindIndex(x => EqualityComparer<TItem>.Default.Equals(x, item));
-        return index >= 0 ? index : _activeRow;
+        if (!IsGrid)
+            return;
+        if (_activeRow == row && _activeCol == col && _gridCellSeeded)
+            return;
+        _activeRow = row;
+        _activeCol = col;
+        _gridCellSeeded = true;
+        StateHasChanged();
     }
 
     /// <summary>
@@ -477,6 +505,11 @@ public partial class TmDataTable<TItem>
         _gridFocusPending = false;
         try
         {
+            // A virtualized target row is not in the DOM until the browser scroll makes
+            // <Virtualize> render it, so the scroll (which also focuses the cell once it exists,
+            // with a bounded retry) runs first; the plain focus call covers every other case.
+            if (ScrollMode == DataTableScrollMode.Virtualized)
+                await ScrollVirtualRowIntoViewAsync(_activeRow, _activeCol);
             await JS.InvokeVoidAsync("tmDataTable.focusGridCell", _tableRef, _activeRow, _activeCol);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException

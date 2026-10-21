@@ -9435,7 +9435,7 @@
           "type": "DataTableKeyboardNavigation",
           "isRequired": false,
           "default": "DataTableKeyboardNavigation.Rows",
-          "description": "Rows (default) keeps one Tab stop per row: Enter activates on keydown, Space on keyup. Grid is opt-in ARIA grid roving tabindex. Arrows, Home, End, PageUp and PageDown move the single active cell (PageUp/PageDown move 10 rows inside the rendered page and do not change the page). Enter activates the row once; Space toggles selection and never activates; F2 starts inline editing when Editable. The expander and the selection checkbox are grid columns — Home lands on them and Enter/Space is handed to that control. An empty grid keeps the tab stop on the column header; a group header is a colspan gridcell that Enter/Space toggles and ArrowRight/ArrowLeft expands or collapses. Virtualized mode addresses rendered cells and scrolls `index * VirtualItemSize` to reach a row that is not rendered yet. While a row is being edited the grid handler returns immediately; Escape cancels and returns focus to the cell. Card layout omits CardRole.Hidden columns from the grid. Grid becomes the default in the next major; set Rows to keep today's behavior."
+          "description": "Rows (default) keeps one Tab stop per row: Enter activates on keydown, Space on keyup. Grid is opt-in ARIA grid roving tabindex. Arrows, Home, End, PageUp and PageDown move the single active cell (PageUp/PageDown move 10 rows inside the rendered page and do not change the page). Enter activates the row once; Space toggles selection and never activates; F2 starts inline editing when Editable — in Grid mode editing works only in the flat paged body (not virtualized or grouped, where no editor renders). Enter or Space on the edit-actions cell starts the row edit. Clicking or focusing a cell moves the roving stop onto it. The expander and the selection checkbox are grid columns — Home lands on them and Enter/Space is handed to that control. An empty grid keeps the tab stop on the column header; a group header is a colspan gridcell that Enter/Space toggles and ArrowRight/ArrowLeft expands or collapses. Virtualized mode addresses rendered cells, scrolls `index * VirtualItemSize` and retries until the target cell is painted, so focus lands on it; the Ctrl+Home/Ctrl+End document scroll default is cancelled. While a row is being edited the grid handler returns immediately; Escape cancels and returns focus to the cell. Card layout omits CardRole.Hidden columns from the grid. Grid becomes the default in the next major; set Rows to keep today's behavior."
         },
         {
           "name": "LayoutChanged",
@@ -27815,6 +27815,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/dashboard-pointer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-grid-keys.test.mjs",
       "kind": "JavaScript"
     },
     {

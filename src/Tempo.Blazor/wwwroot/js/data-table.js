@@ -292,6 +292,13 @@ window.tmDataTable = (function () {
             var target = event.target;
             if (!target || !target.closest) return;
             if (!target.closest('td[role="gridcell"], th[role="columnheader"], td[role="rowheader"]')) return;
+            // Ctrl+Home / Ctrl+End are grid navigation (first / last row) in C#, but the generic
+            // Ctrl guard below lets the browser run its default document scroll to the very top
+            // or bottom, so the page visibly jumps before the nearest-edge scroll pulls it back.
+            if (event.ctrlKey && !event.altKey && !event.metaKey && (event.key === 'Home' || event.key === 'End')) {
+                event.preventDefault();
+                return;
+            }
             if (event.ctrlKey || event.altKey || event.metaKey) return;
             if (isGridEditTarget(target)) return;
             if (GRID_NAV_KEYS.indexOf(event.key) === -1) return;
@@ -364,14 +371,31 @@ window.tmDataTable = (function () {
 
     /**
      * Brings a not-yet-rendered virtualized row into the scroller so the next render can paint it.
-     * The estimate is the same item size Virtualize uses; the real cell is focused afterwards.
+     * The estimate is the same item size Virtualize uses. With `row` and `col` the function also
+     * moves focus itself: `<Virtualize>` paints the target rows a few frames after the scroll, so
+     * an immediate focus would find no cell. The lookup retries inside requestAnimationFrame for a
+     * bounded number of frames and focuses the cell as soon as it exists.
      */
-    function scrollGridToIndex(table, index, itemSize) {
+    function scrollGridToIndex(table, index, itemSize, row, col) {
         if (!table || !table.closest) return;
         var scroller = table.closest('.tm-data-table-scroll') || table.parentElement;
         if (!scroller) return;
         var top = Math.max(0, Number(index) * Number(itemSize || 0));
         try { scroller.scrollTo({ top: top }); } catch (e) { scroller.scrollTop = top; }
+        if (row === undefined || col === undefined) return;
+        var key = String(Number(row)) + ':' + String(Number(col));
+        var frames = 0;
+        var step = function () {
+            var cell = table.querySelector('[data-grid-cell="' + key + '"]');
+            if (cell && typeof cell.focus === 'function') {
+                try { cell.focus({ preventScroll: true }); } catch (e) { cell.focus(); }
+                try { cell.scrollIntoView({ block: 'nearest' }); } catch (e) { /* no scroller */ }
+                return;
+            }
+            if (++frames < 10 && typeof requestAnimationFrame === 'function')
+                requestAnimationFrame(step);
+        };
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);
     }
 
     /**

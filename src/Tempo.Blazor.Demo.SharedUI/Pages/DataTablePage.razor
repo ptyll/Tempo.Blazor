@@ -999,6 +999,25 @@
         <p class="text-sm text-slate-600 mt-3" data-testid="dt-grid-edit-saved" aria-live="polite">@(_gridEditSaved is null ? string.Empty : Loc["TmDataTableDemo_GridEditSaved", _gridEditSaved])</p>
     </div>
 </section>
+<section class="demo-section" data-testid="dt-grid-virtualized">
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            A virtualized grid: Ctrl+End scrolls the window to the last row and focus lands on its cell.
+        </p>
+        <TmDataTable TItem="Employee"
+                     Items="_gridVirtualized"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     ScrollMode="DataTableScrollMode.Virtualized"
+                     VirtualScrollHeight="240px"
+                     ViewContext="grid-keyboard-virtualized"
+                     ShowPagination="false">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name" />
+                <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+</section>
 <!-- Pagination Demo -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">
@@ -1060,6 +1079,10 @@
     ];
     private TmDataTable<Employee>? _gridGroupedTable;
     private bool _gridGroupedApplied;
+    private readonly List<Employee> _gridVirtualized =
+        Enumerable.Range(1, 500)
+            .Select(i => new Employee($"Employee {i:000}", i % 2 == 0 ? "User" : "Admin", "Engineering", 50 + i % 50))
+            .ToList();
 
     private Task OnGridRowClick(Employee employee)
     {

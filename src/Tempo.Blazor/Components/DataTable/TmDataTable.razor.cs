@@ -561,7 +561,10 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     private async Task StartEditAtAsync(int rowIndex, TItem item)
     {
-        if (!Editable || !AnyEditableColumn) return;
+        // Defence in depth for Grid mode: the virtualized and grouped branches render no editing
+        // row, so an edit started there would lock the keyboard (GridKeyboard owns the same gate
+        // on the Enter/F2 arms). Rows mode keeps its double-click/click paths everywhere.
+        if (!Editable || !AnyEditableColumn || (IsGrid && !GridCanEdit)) return;
         if (_editContext is not null && _editingRowIndex != rowIndex)
         {
             await CancelEditAsync();
@@ -570,6 +573,13 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         SetEditingRow(rowIndex, item);
         // The editing row renders no grid cells, so the cell that held focus is gone. Grid mode hands
         // focus to the editor, or Escape/Enter (answered on the editing row) never reach the table.
+        // The cursor follows the edited row too, so focus returns to it after commit or cancel
+        // instead of the stale cell the roving stop was on before.
+        if (IsGrid)
+        {
+            _activeRow = Math.Max(0, rowIndex);
+            _gridCellSeeded = true;
+        }
         _editorFocusPending = IsGrid;
         StateHasChanged();
         await OnRowEditStart.InvokeAsync(item);
@@ -3138,6 +3148,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, capturedRow, capturedCol, capturedItem)));
         builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
         builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
+        // A mouse click focuses the clicked cell; the roving stop follows so Tab order
+        // (Shift+Tab, Tab) resumes from the cell the user actually interacted with.
+        builder.AddAttribute(seq++, "onfocusin", EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(capturedRow, capturedCol)));
     }
 
     private Task HandleGroupHeaderKeyDownAsync(KeyboardEventArgs e, DataGroup<TItem> group)
@@ -3202,6 +3215,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                 builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGroupHeaderKeyDownAsync(e, g)));
                 builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
                 builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
+                var capturedGroupRow = groupIndex;
+                builder.AddAttribute(seq++, "onfocusin", EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(capturedGroupRow, 0)));
             }
 
             // Toggle button. In Grid mode it is not its own tab stop: the header cell is.
