@@ -266,4 +266,139 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
 
         doc.Elements.Should().BeEmpty();
     }
+
+    // ── Phase 2: TmIcon instead of emoji / unicode glyphs ──────────────────────
+
+    private static readonly string[] EmojiGlyphs =
+    [
+        "↖", "✋", "↩", "↪", "🔒", "📁", "📂", "🧲", "📏", "🎨", "🖌", "📐", "◧", "◨",
+        "→", "⬇", "⬆", "⬅", "➡", "⇹", "⇔", "↔", "↕", "✏", "✓", "✕", "▾", "◻"
+    ];
+
+    [Fact]
+    public void Toolbar_RendersTmIcons_NotEmoji()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(null, doc);
+
+        var buttons = cut.FindAll(".tm-wd-editor__btn");
+        buttons.Should().NotBeEmpty();
+
+        foreach (var button in buttons)
+        {
+            foreach (var glyph in EmojiGlyphs)
+                button.TextContent.Should().NotContain(glyph, $"'{button.GetAttribute("aria-label")}' must render a TmIcon, not a glyph");
+        }
+
+        // Every icon-only button of the toolbar row carries an svg icon (and keeps its accessible name).
+        var iconOnly = cut.FindAll(".tm-wd-editor__toolbar .tm-wd-editor__btn--icon");
+        iconOnly.Should().NotBeEmpty();
+        foreach (var button in iconOnly)
+        {
+            button.QuerySelector("svg.tm-icon").Should().NotBeNull($"'{button.GetAttribute("aria-label")}' is icon-only");
+            (button.GetAttribute("aria-label") ?? button.GetAttribute("title")).Should().NotBeNullOrWhiteSpace();
+        }
+    }
+
+    [Fact]
+    public void Toolbar_ZoomAndPanelToggles_AreIconButtons()
+    {
+        var cut = RenderEditor();
+
+        cut.Find("button[aria-label='Zoom out'] svg.tm-icon").Should().NotBeNull();
+        cut.Find("button[aria-label='Zoom in'] svg.tm-icon").Should().NotBeNull();
+        cut.Find("button[aria-label='Hide toolbox'] svg.tm-icon").Should().NotBeNull();
+        cut.Find("button[aria-label='Hide properties panel'] svg.tm-icon").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void PropertiesPanelArrangeButtons_RenderTmIcons_NotArrowGlyphs()
+    {
+        var registry = new WireframeComponentRegistry();
+        registry.RegisterDefinition(MakeDef("TmButton"));
+        Services.AddSingleton(registry);
+
+        var doc = NewDocument();
+        for (var i = 0; i < 3; i++)
+            doc.Elements.Add(WireframeDocumentExtensions.NewElement("TmButton", i * 200, 0));
+        var ids = doc.Elements.Select(e => e.Id).ToArray();
+
+        var cut = Render<TmWireframePropertiesPanel>(p => p
+            .Add(c => c.Document, doc)
+            .Add(c => c.SelectedIds, ids));
+
+        var panelButtons = cut.FindAll(".tm-wd-props .tm-wd-editor__btn--icon");
+        panelButtons.Count.Should().BeGreaterThanOrEqualTo(6, "six alignment buttons render for a multi selection");
+        foreach (var button in panelButtons)
+        {
+            button.QuerySelector("svg.tm-icon").Should().NotBeNull();
+            (button.GetAttribute("aria-label") ?? "").Should().NotBeNullOrWhiteSpace("an icon-only button needs an accessible name");
+            foreach (var glyph in EmojiGlyphs)
+                button.TextContent.Should().NotContain(glyph);
+        }
+
+        cut.Find(".tm-wd-props__empty-icon, .tm-wd-props").Should().NotBeNull();
+    }
+    // ── Phase 2: insertion centre is clamped into the page ─────────────────────
+
+    [Fact]
+    public void ToolboxActivation_ClampsTheOriginInsideThePage()
+    {
+        var doc = NewDocument();   // page 1200 x 800
+        var cut = RenderEditor(p => p.Add(c => c.GridSize, 0), doc);
+        var canvas = cut.FindComponent<TmWireframeDesignerCanvas>();
+
+        // The user panned far right/below the page: the viewport centre lies outside the page.
+        cut.InvokeAsync(() => canvas.Instance.OnViewBoxChanged(2000, 1500, 800, 600)).GetAwaiter().GetResult();
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
+
+        var el = doc.Elements.Should().ContainSingle().Subject;
+        el.X.Should().Be(1200 - 120, "the 120 px wide element pins to the right page edge (viewport centre 2400 clamps to 1080)");
+        el.Y.Should().Be(800 - 36, "the 36 px high element pins to the bottom page edge (viewport centre 1800 clamps to 764)");
+        el.X.Should().BeGreaterThanOrEqualTo(0);
+        el.Y.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public void ToolboxActivation_NegativeViewportCentre_ClampsToZero()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(p => p.Add(c => c.GridSize, 0), doc);
+        var canvas = cut.FindComponent<TmWireframeDesignerCanvas>();
+
+        cut.InvokeAsync(() => canvas.Instance.OnViewBoxChanged(-900, -700, 400, 300)).GetAwaiter().GetResult();
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
+
+        var el = doc.Elements.Should().ContainSingle().Subject;
+        el.X.Should().Be(0);
+        el.Y.Should().Be(0);
+    }
+
+    [Fact]
+    public void ToolboxActivation_GridSizeZero_DoesNotSnap()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(p => p.Add(c => c.GridSize, 0), doc);
+        var canvas = cut.FindComponent<TmWireframeDesignerCanvas>();
+        cut.InvokeAsync(() => canvas.Instance.OnViewBoxChanged(203, 101, 800, 600)).GetAwaiter().GetResult();
+
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
+
+        var el = doc.Elements.Should().ContainSingle().Subject;
+        el.X.Should().BeApproximately(603 - 60, 0.001, "GridSize=0 disables snapping, so the centre is exact");
+        el.Y.Should().BeApproximately(401 - 18, 0.001);
+    }
+
+    // ── Phase 2: the toolbox follows the editor read-only state ────────────────
+
+    [Fact]
+    public void ReadOnlyEditor_ToolboxItemsAreAriaDisabled()
+    {
+        var cut = RenderEditor(p => p.Add(c => c.ReadOnly, true));
+
+        var item = cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']");
+        item.GetAttribute("aria-disabled").Should().Be("true");
+        item.ClassList.Should().Contain("tm-wd-toolbox__item--disabled");
+        item.GetAttribute("draggable").Should().Be("false");
+    }
 }

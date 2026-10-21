@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.DocumentLibrary;
+using Tempo.Blazor.Helpers;
 
 namespace Tempo.Blazor.Components.Files;
 
@@ -9,8 +11,12 @@ namespace Tempo.Blazor.Components.Files;
 /// a folder tree, breadcrumb, searchable list/grid of documents, optional folder/document
 /// management, and a link-or-copy choice. Emits a <see cref="DocumentOpenResult"/> on confirm.
 /// </summary>
-public partial class TmDocumentOpenDialog : ComponentBase
+public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
 {
+    private const string GuardModulePath = "./_content/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor.js";
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
     // ── Parameters ─────────────────────────────────────────────────────────────
 
     /// <summary>The library to browse. Required.</summary>
@@ -75,6 +81,11 @@ public partial class TmDocumentOpenDialog : ComponentBase
 
     private CancellationTokenSource? _searchCts;
 
+    // Space scroll guard (TmDocumentOpenDialog.razor.js): attached to the dialog root while it is open.
+    private ElementReference _root;
+    private LazyJsModule? _guardModule;
+    private bool _guardAttached;
+
     private enum DialogView { List, Grid }
 
     private bool CanSearch => Provider.Capabilities.HasFlag(DocumentLibraryCapabilities.Search);
@@ -95,6 +106,35 @@ public partial class TmDocumentOpenDialog : ComponentBase
         else if (!Open)
         {
             _wasOpen = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Open && !_guardAttached && _root.Id is not null)
+        {
+            _guardAttached = true;
+            _guardModule ??= new LazyJsModule(JS, GuardModulePath);
+            await _guardModule.TryInvokeVoidAsync("attachSpaceGuard", _root);
+        }
+        else if (!Open && _guardAttached)
+        {
+            _guardAttached = false;
+            if (_guardModule is { IsImported: true })
+            {
+                await _guardModule.TryInvokeVoidAsync("detachSpaceGuard", _root);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        if (_guardModule is not null)
+        {
+            await _guardModule.DisposeAsync();
         }
     }
 

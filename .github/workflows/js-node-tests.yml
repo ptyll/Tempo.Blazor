@@ -38,6 +38,9 @@ jobs:
       - name: Diagram editor
         run: npm run test:diagram-editor
 
+      - name: Wireframe editor
+        run: npm run test:wireframe
+
       - name: Reporting modules
         run: npm run test:reporting-modules
 

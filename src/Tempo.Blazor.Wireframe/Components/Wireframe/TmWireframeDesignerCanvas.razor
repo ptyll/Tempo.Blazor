@@ -18,14 +18,16 @@
                 <pattern id="@_gridSmallId" width="@_gs" height="@_gs"
                          patternUnits="userSpaceOnUse">
                     <path d="M @_gs 0 L 0 0 0 @_gs"
-                          fill="none" stroke="#e5e7eb" stroke-width="0.5"/>
+                          fill="none" stroke-width="0.5" stroke-opacity="0.55"
+                          style="stroke: var(--tm-wd-grid-minor)" data-wd-paint="stroke"/>
                 </pattern>
                 <pattern id="@_gridLargeId" width="@_gl" height="@_gl"
                          patternUnits="userSpaceOnUse">
                     <rect width="@_gl" height="@_gl"
                           fill="url(#@_gridSmallId)"/>
                     <path d="M @_gl 0 L 0 0 0 @_gl"
-                          fill="none" stroke="#d1d5db" stroke-width="1"/>
+                          fill="none" stroke-width="1"
+                          style="stroke: var(--tm-wd-grid-major)" data-wd-paint="stroke"/>
                 </pattern>
             }
             @* Connector arrowhead markers *@
@@ -44,9 +46,11 @@
         </defs>
 
         @* Canvas background + grid *@
-        <rect x="0" y="0"
+        <rect x="0" y="0" class="tm-wd-canvas__page"
               width="@(Document?.Width ?? 1200)" height="@(Document?.Height ?? 800)"
-              fill="white" stroke="#d1d5db" stroke-width="1" rx="4"/>
+              stroke-width="1" rx="4"
+              style="fill: var(--tm-wd-canvas-bg); stroke: var(--tm-wd-canvas-border)"
+              data-wd-paint="fill stroke"/>
         @if (ShowGrid)
         {
             <rect x="0" y="0"
@@ -100,7 +104,7 @@
                     @* Label (rendered as MarkupString to avoid Razor <text> conflict) *@
                     @if (!string.IsNullOrEmpty(c.Label))
                     {
-                        @((MarkupString)$"""<text x="{lx}" y="{ly}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-family="ui-sans-serif,system-ui" fill="#374151" class="tm-wd-connector__label" pointer-events="none">{WireframeSvg.Escape(c.Label)}</text>""")
+                        @((MarkupString)$"""<text x="{lx}" y="{ly}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-family="ui-sans-serif,system-ui" style="fill: var(--tm-wd-paper-ink)" data-wd-paint="fill" class="tm-wd-connector__label" pointer-events="none">{WireframeSvg.Escape(c.Label)}</text>""")
                     }
 
                     @* Waypoint handles (visible when connector is selected) *@
@@ -112,11 +116,12 @@
                             var wpx = wp.X.ToString("0.##", CultureInfo.InvariantCulture);
                             var wpy = wp.Y.ToString("0.##", CultureInfo.InvariantCulture);
                             <circle cx="@wpx" cy="@wpy" r="4"
-                                    fill="white" stroke="#3b82f6" stroke-width="1.5"
+                                    stroke-width="1.5"
                                     class="tm-wd-connector__waypoint"
                                     data-waypoint-index="@i"
                                     pointer-events="all"
-                                    style="cursor:move" />
+                                    data-wd-paint="fill stroke"
+                                    style="fill: var(--tm-wd-handle-fill); stroke: var(--tm-wd-accent); cursor:move" />
                         }
                     }
                 </g>
@@ -165,8 +170,8 @@
                             @((Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __fb) =>
                             {
                                 __fb.AddMarkupContent(0,
-                                    $"<rect width='{w}' height='{h}' rx='4' fill='#f9fafb' stroke='#9ca3af' stroke-width='1' stroke-dasharray='6 3'></rect>" +
-                                    $"<text x='4' y='14' font-size='10' fill='#6b7280' font-family='ui-sans-serif,system-ui'>{WireframeSvg.Escape(Loc["TmWireframeCanvas_UnknownComponent", el.Type])}</text>");
+                                    $"<rect width='{w}' height='{h}' rx='4' stroke-width='1' stroke-dasharray='6 3' style='fill: var(--tm-wd-placeholder-fill); stroke: var(--tm-wd-placeholder-stroke)' data-wd-paint='fill stroke'></rect>" +
+                                    $"<text x='4' y='14' font-size='10' style='fill: var(--tm-wd-placeholder-ink)' data-wd-paint='fill' font-family='ui-sans-serif,system-ui'>{WireframeSvg.Escape(Loc["TmWireframeCanvas_UnknownComponent", el.Type])}</text>");
                             })
                         }
                     </svg>

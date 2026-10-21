@@ -10,7 +10,7 @@ namespace Tempo.Blazor.E2E;
 /// and dark. Editor / export / layers land in <c>__screenshots__/wireframe/baseline/</c>, the open
 /// dialog in <c>__screenshots__/document-library/baseline/</c> — committed, durable directories
 /// (vstest deletes the per-run TestResults folder); every file is also attached to the test result.
-/// Review them against <c>output/imagegen/tempo-reimagined/Tempo.Blazor.Wireframe/</c>
+/// Review them against <c>output/imagegen/tempo-reimagined/Tempo.Blazor.Wireframe/</c> (rewrite the committed set with <c>TM_E2E_UPDATE_BASELINE=1</c>)
 /// (the findings table lives in the phase notes). Besides capturing, each state asserts that the
 /// component really rendered, so a blank/failed page cannot become a "baseline".
 /// </summary>
@@ -23,9 +23,21 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
     private static string ScreenshotRoot =>
         Path.Combine(FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "__screenshots__");
 
-    private static string WireframeDirectory => Path.Combine(ScreenshotRoot, "wireframe", "baseline");
+    /// <summary>
+    /// The committed baselines are only rewritten on purpose: set <c>TM_E2E_UPDATE_BASELINE=1</c>. Without it the
+    /// captures go to the (git-ignored) per-run TestResults folder and are attached to the test result, so the
+    /// full lane never dirties the working tree.
+    /// </summary>
+    private static bool UpdateBaseline =>
+        string.Equals(Environment.GetEnvironmentVariable("TM_E2E_UPDATE_BASELINE"), "1", StringComparison.Ordinal);
 
-    private static string DocumentLibraryDirectory => Path.Combine(ScreenshotRoot, "document-library", "baseline");
+    private static string WireframeDirectory => UpdateBaseline
+        ? Path.Combine(ScreenshotRoot, "wireframe", "baseline")
+        : Path.Combine(FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "TestResults", "wireframe-baseline");
+
+    private static string DocumentLibraryDirectory => UpdateBaseline
+        ? Path.Combine(ScreenshotRoot, "document-library", "baseline")
+        : Path.Combine(FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "TestResults", "document-library-baseline");
 
     [TestMethod]
     [TestCategory("WASM")]

@@ -4,6 +4,21 @@
 
 ### Fixed
 
+- **Wireframe toolbox insertion could land outside the page.** The insert-at-centre origin was clamped only to
+  non-negative coordinates, so after panning away from the page a click inserted an element far outside it. The
+  origin is now clamped into the page (`0 ≤ x ≤ pageWidth − w`, `0 ≤ y ≤ pageHeight − h`) and snapped to the grid only
+  while snapping is on (`GridSize > 0`).
+
+- **Wireframe SVG/PNG/PDF export carried the editing chrome of a selected connector.** `exportSvg` stripped the
+  selection, rubber band and handles but not the connector waypoint circles (`.tm-wd-connector__waypoint`), the
+  alignment guides or the connector preview, so exporting while a connector was selected put blue handles into the
+  file. They are removed now, and every token-painted canvas node is baked to explicit colours (`data-wd-paint`).
+
+- **Space on a focused `TmDocumentOpenDialog` row or grid card scrolled the list.** The rows and cards are
+  `div[tabindex=0]` whose Space activation runs on keyup; the browser's default scroll on Space keydown is now
+  cancelled by a scoped listener (`TmDocumentOpenDialog.razor.js`) that fires only when the keydown target IS a row or
+  a card - never for an input/button inside the dialog and never for Tab (no blanket `preventDefault`,
+  `docs/keyboard-activation-convention.md`).
 - **Wireframe "Export PDF" opened the dialog with PNG selected.** `TmWireframeEditor` set its internal
   `_exportDialogFormat` but never handed it to `TmWireframeExportDialog`. The dialog has a new
   `InitialFormat` parameter (`"png"` default, `"pdf"`) that the editor now passes, so the *Export PDF* menu
@@ -1137,6 +1152,62 @@
 
 ### Breaking / Migration
 
+- **Wireframe editor: `--tm-wd-*` are now aliases of the core `--tm-*` tokens; a consumer palette override moves to
+  `--tm-*`.** `_wireframe-editor.css` no longer ships a palette of its own (`--tm-wd-accent: #3b82f6`,
+  `--tm-wd-border: #d1d5db`, …). Every `--tm-wd-*` is `var(--tm-…)` (`--tm-wd-accent` = `--tm-color-primary`,
+  `--tm-wd-border` = `--tm-border-color`, `--tm-wd-bg-surface` = `--tm-bg-surface`, the workspace behind the page =
+  `--tm-bg-workspace`, radii = `--tm-radius-control` / `--tm-radius-card`, font = `--tm-font-sans`). Dark mode and the
+  opt-in indigo theme therefore reach the editor with no editor-specific CSS. The aliases are re-declared on every
+  editor surface root, so a `[data-theme="dark"]` / `.tm-dark` region nested below `<html>` resolves them too.
+  Impact: a host that re-coloured the editor by overriding `--tm-wd-*` on `:root` still works for the properties it
+  names (the aliases stay overridable), but the supported route is the core token, and a `--tm-wd-*` override placed
+  on `:root` no longer wins over the surface-root declaration for the editor's own subtree.
+  Before: `:root { --tm-wd-accent: #7c3aed; --tm-wd-border: #cbd5e1; }`
+  After: `:root { --tm-color-primary: #7c3aed; --tm-border-color: #cbd5e1; }` (or, for one editor only,
+  `.my-editor .tm-wd-editor { --tm-wd-accent: #7c3aed; }`).
+  The wireframe PAGE is paper: `--tm-wd-canvas-bg` aliases the theme-invariant `--tm-paper` (like the diagram
+  editor's page), because the stencil components are drawn light-on-paper; the SVG/PNG/PDF export therefore looks
+  the same in every theme (`exportSvg` bakes the computed paints into explicit colours).
+
+- **Wireframe editor: the dark-mode hack was removed.** `[data-theme="dark"] .tm-wd-editor { --tm-wd-…: #1e293b … }`
+  and `[data-theme="dark"] .tm-wd-canvas__svg rect[fill="white"] { fill: #1e293b }` are gone - the page is no longer
+  inverted (it is paper) and the chrome follows `tokens-dark.css`.
+  Before: a dark theme turned every `<rect fill="white">` of the canvas SVG slate.
+  After: the canvas SVG keeps explicit paper paints; override `--tm-wd-canvas-bg` (not an attribute selector) to
+  change the page colour, e.g. `.tm-dark .tm-wd-editor { --tm-wd-canvas-bg: var(--tm-bg-surface); }`.
+
+- **Wireframe editor toolbar: emoji and Unicode glyphs became `TmIcon`; icon buttons are 32 px.** The ↖ ✋ → ↩ ↪ ⬇ ⬆
+  🔒 📁 📂 ⇹ ⇔ 🧲 📏 🎨 🖌️ 📐 − + ✓ ✕ ◧ ◨ ▾ glyphs inside `.tm-wd-editor__btn` (and the properties panel's align / z-order
+  buttons, the toolbox search clear, the page-tab close/add) render an `svg.tm-icon` instead. Toolbar buttons are
+  `var(--tm-space-8)` (32 px, was 26 px). Class names, `aria-label`s and `title`s are unchanged; the six align buttons
+  of the properties panel gained an `aria-label`.
+  Impact: selectors or tests that matched the glyph text (`button:has-text("✕")`) must match the accessible name.
+  Before: `page.Locator("button:has-text('✓')")`
+  After: `page.GetByRole(AriaRole.Button, new() { Name = "Apply" })`
+
+- **`TmDocumentOpenDialog` no longer falls back to indigo `#4f46e5`; its colour comes from `--tm-color-primary`.**
+  The stylesheet used invented aliases with hex fallbacks (`var(--tm-primary, #4f46e5)`, `--tm-primary-soft`,
+  `--tm-hover-bg`, `--tm-text-color`, `--tm-danger`, `--tm-surface-2`); none of those tokens exist, so the fallbacks
+  always painted. They are replaced by `--tm-color-primary`, `--tm-color-primary-subtle`, `--tm-color-surface-hover`,
+  `--tm-text-primary`, `--tm-color-danger(-subtle)` and `--tm-bg-surface-secondary`.
+  Before: the selected folder, list toggle and breadcrumb were indigo in every theme (and dark mode kept light fills).
+  After: they use the library's primary colour - blue by default, indigo with `data-tm-theme="indigo"`, and the dark
+  variant in dark mode. Hosts that want the old indigo set `data-tm-theme="indigo"` on `<html>` (or override
+  `--tm-color-primary`). A selected row/card now carries a primary marker (inset bar / ring), not only a faint tint.
+
+- **`TmDocumentOpenDialog` column headers are the grid items themselves.** The `role="columnheader"` wrappers no
+  longer use `style="display:contents"` (a `display: contents` element can disappear from the accessibility tree);
+  `role="columnheader"` and `aria-sort` sit on `div.tm-dod-colhead`, a direct child of `.tm-dod-list-head`.
+  Impact: `.tm-dod-col-name` / `.tm-dod-col-modified` keep their classes and their parent still carries
+  `aria-sort`; only an inline-style assertion on the wrapper would notice.
+  Before: `<div role="columnheader" aria-sort="ascending" style="display:contents"><button class="tm-dod-col-name">`
+  After: `<div class="tm-dod-colhead" role="columnheader" aria-sort="ascending"><button class="tm-dod-col-name">`
+
+- **`TmWireframeEditor` read-only now also mutes the toolbox, and the toolbox label says "click or drag".**
+  `TmWireframeToolbox` has a new `ReadOnly` parameter (the editor passes its effective state): items become
+  `aria-disabled="true"`, `draggable="false"`, muted (`tm-wd-toolbox__item--disabled`) and never raise
+  `OnComponentActivated`. The `TmWireframeToolbox_DragOntoCanvas` text changed from "Drag {0} onto canvas" to
+  "Add {0} to canvas (or drag)" in all four resource files; hosts that override the key keep their text.
 - **`TmWireframeEditor` no longer assigns `ReadOnly` / `ShowRulers`, and its Read-only toggle cannot unlock a
   host-pinned `ReadOnly="true"`.** The built-in Read-only/Edit button and the rulers button used to write
   `ReadOnly = !ReadOnly` / `ShowRulers = !ShowRulers` into the component's own `[Parameter]`s, which the host

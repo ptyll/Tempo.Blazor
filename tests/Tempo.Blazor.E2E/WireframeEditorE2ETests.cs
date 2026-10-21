@@ -58,6 +58,12 @@ public class WireframeEditorE2ETests : WasmTestBase
 
     private static ILocator FirstEditor(IPage page) => page.Locator(".tm-wd-editor").First;
 
+    /// <summary>Waits until the FIRST editor holds exactly <paramref name="count"/> elements (no fixed sleep).</summary>
+    private static Task WaitForElementCountAsync(IPage page, int count) =>
+        page.WaitForFunctionAsync(
+            "n => document.querySelectorAll('.tm-wd-editor')[0].querySelectorAll('g[data-el-id]').length === n",
+            count, new PageWaitForFunctionOptions { Timeout = 10_000 });
+
     private static async Task<string> AddElementAsync(IPage page, string componentType = "", int x = 400, int y = 300)
     {
         var type = string.IsNullOrEmpty(componentType) ? "TmButton" : componentType;
@@ -845,7 +851,7 @@ public class WireframeEditorE2ETests : WasmTestBase
         var before = await editor.Locator("g[data-el-id]").CountAsync();
 
         await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
-        await page.WaitForTimeoutAsync(800);
+        await WaitForElementCountAsync(page, before + 1);
 
         Assert.AreEqual(before + 1, await editor.Locator("g[data-el-id]").CountAsync(),
             "A click on a toolbox item must insert exactly one element");
@@ -875,12 +881,12 @@ public class WireframeEditorE2ETests : WasmTestBase
 
         await item.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(600);
+        await WaitForElementCountAsync(page, before + 1);
         Assert.AreEqual(before + 1, await editor.Locator("g[data-el-id]").CountAsync(), "Enter inserts exactly one element");
 
         await item.FocusAsync();
         await page.Keyboard.PressAsync("Space");
-        await page.WaitForTimeoutAsync(600);
+        await WaitForElementCountAsync(page, before + 2);
         Assert.AreEqual(before + 2, await editor.Locator("g[data-el-id]").CountAsync(), "Space inserts exactly one element");
     }
 
@@ -900,7 +906,9 @@ public class WireframeEditorE2ETests : WasmTestBase
         if (await item.CountAsync() > 0 && await item.IsVisibleAsync())
         {
             await item.ClickAsync(new LocatorClickOptions { Force = true });
-            await page.WaitForTimeoutAsync(500);
+            // Negative assertion: nothing to wait FOR, so wait for the click round-trip (a frame after the
+            // handler ran) and then assert the count did not move.
+            await page.EvaluateAsync("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))");
         }
         Assert.AreEqual(before, await readOnly.Locator("g[data-el-id]").CountAsync(),
             "A read-only editor must not accept toolbox insertion");

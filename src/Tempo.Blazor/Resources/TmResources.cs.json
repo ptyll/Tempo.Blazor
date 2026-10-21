@@ -5259,7 +5259,7 @@
   "TmWireframeProps_ZIndex": "Z-Index",
   "TmWireframeToolbox_ClearSearch": "Vymazat hledání",
   "TmWireframeToolbox_CustomComponentTooltip": "Vlastní komponenta",
-  "TmWireframeToolbox_DragOntoCanvas": "Přetáhněte {0} na plátno",
+  "TmWireframeToolbox_DragOntoCanvas": "Přidat {0} na plátno (nebo přetáhnout)",
   "TmWireframeToolbox_FilterAll": "Vše",
   "TmWireframeToolbox_FilterBuiltIn": "Vestavěné",
   "TmWireframeToolbox_FilterCustom": "Vlastní",

@@ -31,6 +31,12 @@ public partial class TmWireframeToolbox : ComponentBase
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
 
+    /// <summary>
+    /// When <c>true</c> the palette is shown but inert: items are <c>aria-disabled</c>, muted, not draggable and
+    /// never raise <see cref="OnComponentActivated"/>. <c>TmWireframeEditor</c> passes its effective read-only state.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     private ElementReference _containerRef;
@@ -132,7 +138,8 @@ public partial class TmWireframeToolbox : ComponentBase
         _             => Loc["TmWireframeToolbox_FilterAll"],
     };
 
-    private Task ActivateAsync(string componentType) => OnComponentActivated.InvokeAsync(componentType);
+    private Task ActivateAsync(string componentType)
+        => ReadOnly ? Task.CompletedTask : OnComponentActivated.InvokeAsync(componentType);
 
     /// <summary>
     /// Keyboard activation for the <c>div[role=button]</c> item (no native activation exists, so it is

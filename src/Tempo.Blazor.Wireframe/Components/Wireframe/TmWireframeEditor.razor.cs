@@ -916,8 +916,10 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     /// <summary>
     /// Top-left origin that centres an element of the given size on the visible canvas area
-    /// (the viewBox last reported by the JS canvas, or the document extent before the first report),
-    /// snapped to the grid when snapping is on and clamped to non-negative coordinates.
+    /// (the viewBox last reported by the JS canvas, or the document extent before the first report).
+    /// Snapped to the grid only when snapping is on (<see cref="GridSize"/> &gt; 0), then clamped INTO the
+    /// page - <c>0 ≤ x ≤ pageWidth − w</c>, <c>0 ≤ y ≤ pageHeight − h</c> - so an element inserted while the
+    /// user has panned away from the page still lands on it (an element wider than the page pins to 0).
     /// </summary>
     private (double X, double Y) GetVisibleCentreOrigin(double w, double h)
     {
@@ -939,7 +941,9 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             y = Math.Round(y / GridSize) * GridSize;
         }
 
-        return (Math.Max(0, x), Math.Max(0, y));
+        var maxX = Math.Max(0, (_activePage?.Width  ?? _document?.Width  ?? 1200) - w);
+        var maxY = Math.Max(0, (_activePage?.Height ?? _document?.Height ?? 800) - h);
+        return (Math.Clamp(x, 0, maxX), Math.Clamp(y, 0, maxY));
     }
 
     // ── Minimap navigation ────────────────────────────────────────────────────

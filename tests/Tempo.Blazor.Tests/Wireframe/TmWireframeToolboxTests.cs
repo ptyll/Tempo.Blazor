@@ -406,4 +406,61 @@ public class TmWireframeToolboxTests : LocalizationTestBase
 
         cut.Find(".tm-wd-toolbox__item-preview svg").Should().NotBeNull();
     }
+
+    // ── Phase 2: label, read-only, icon ────────────────────────────────────────
+
+    [Fact]
+    public void Toolbox_ItemLabel_AdvertisesClickAndDrag()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons", displayName: "Button")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.Find(".tm-wd-toolbox__item").GetAttribute("aria-label").Should().Be("Add Button to canvas (or drag)");
+    }
+
+    [Fact]
+    public void Toolbox_ReadOnly_MarksItemsAriaDisabledAndStopsActivation()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+        var activated = new List<string>();
+
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.OnComponentActivated, Microsoft.AspNetCore.Components.EventCallback.Factory.Create<string>(this, (Action<string>)activated.Add)));
+
+        var item = cut.Find(".tm-wd-toolbox__item");
+        item.GetAttribute("aria-disabled").Should().Be("true");
+        item.GetAttribute("draggable").Should().Be("false");
+        item.ClassList.Should().Contain("tm-wd-toolbox__item--disabled");
+
+        item.Click();
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+
+        activated.Should().BeEmpty("a read-only toolbox never raises OnComponentActivated");
+    }
+
+    [Fact]
+    public void Toolbox_Editable_ItemsAreNotAriaDisabled()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.Find(".tm-wd-toolbox__item").HasAttribute("aria-disabled").Should().BeFalse();
+        cut.Find(".tm-wd-toolbox__item").ClassList.Should().NotContain("tm-wd-toolbox__item--disabled");
+    }
+
+    [Fact]
+    public void Toolbox_ClearSearch_RendersTmIcon()
+    {
+        Services.AddSingleton(BuildRegistry(MakeDef("TmButton", "Buttons")));
+        var cut = Render<TmWireframeToolbox>();
+
+        cut.Find("input[type=\"search\"]").Input("but");
+
+        cut.Find(".tm-wd-toolbox__search-clear svg.tm-icon").Should().NotBeNull();
+        cut.Find(".tm-wd-toolbox__search-clear").TextContent.Should().NotContain("✕");
+    }
 }

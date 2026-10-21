@@ -1,14 +1,18 @@
+/* TmDocumentOpenDialog — every colour, radius and space reads a canonical core token (no hex, no
+   fallbacks, no invented aliases: docs/css-token-aliases.md). The accent therefore follows
+   --tm-color-primary in the default blue theme, the opt-in indigo theme and dark mode alike. */
+
 .tm-document-open-dialog {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--tm-space-3);
     min-height: 420px;
 }
 
 .tm-dod-toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--tm-space-2);
 }
 
 .tm-dod-toolbar-spacer {
@@ -17,10 +21,12 @@
 
 .tm-dod-search {
     flex: 0 1 280px;
-    padding: 6px 10px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: 6px;
-    font-size: 14px;
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
 }
 
 .tm-dod-new-folder,
@@ -28,41 +34,41 @@
 .tm-dod-delete {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
+    gap: var(--tm-space-1-5);
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
     background: transparent;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: 6px;
-    font-size: 13px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
     cursor: pointer;
-    color: var(--tm-text-color, #374151);
+    color: var(--tm-text-primary);
 }
 
 .tm-dod-new-folder:hover,
 .tm-dod-rename:hover,
 .tm-dod-delete:hover {
-    background: var(--tm-hover-bg, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dod-view-toggle {
     display: inline-flex;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: 6px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
     overflow: hidden;
 }
 
 .tm-dod-view-list,
 .tm-dod-view-grid {
-    padding: 6px 8px;
+    padding: var(--tm-space-1-5) var(--tm-space-2);
     background: transparent;
     border: 0;
     cursor: pointer;
-    color: var(--tm-text-muted, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dod-view--active {
-    background: var(--tm-primary-soft, #eef2ff);
-    color: var(--tm-primary, #4f46e5);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 .tm-dod-new-folder-bar,
@@ -70,54 +76,56 @@
 .tm-dod-delete-confirm {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
-    background: var(--tm-surface-2, #f9fafb);
-    border: 1px solid var(--tm-border-color, #e5e7eb);
-    border-radius: 6px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
 }
 
 .tm-dod-new-folder-input,
 .tm-dod-rename-input {
     flex: 1;
-    padding: 6px 10px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: 6px;
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
 }
 
 .tm-dod-rename-error {
-    color: var(--tm-danger, #dc2626);
-    font-size: 12px;
+    color: var(--tm-color-danger);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-dod-breadcrumb {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--tm-space-1);
     flex-wrap: wrap;
-    font-size: 13px;
+    font-size: var(--tm-font-size-sm);
 }
 
 .tm-dod-crumb {
     background: transparent;
     border: 0;
-    padding: 2px 4px;
-    color: var(--tm-primary, #4f46e5);
+    padding: var(--tm-space-0-5) var(--tm-space-1);
+    color: var(--tm-color-primary);
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--tm-radius-sm);
 }
 
 .tm-dod-crumb:hover {
-    background: var(--tm-hover-bg, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dod-crumb-sep {
-    color: var(--tm-text-muted, #9ca3af);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-dod-body {
     display: flex;
-    gap: 12px;
+    gap: var(--tm-space-3);
     flex: 1;
     min-height: 320px;
 }
@@ -126,41 +134,41 @@
     flex: 0 0 200px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    border-right: 1px solid var(--tm-border-color, #e5e7eb);
-    padding-right: 8px;
+    gap: var(--tm-space-0-5);
+    border-right: 1px solid var(--tm-border-color);
+    padding-right: var(--tm-space-2);
     overflow: auto;
 }
 
 .tm-dod-tree-node {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
+    gap: var(--tm-space-1-5);
+    padding: var(--tm-space-1-5) var(--tm-space-2);
     background: transparent;
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--tm-radius-control);
     text-align: left;
     cursor: pointer;
-    font-size: 13px;
-    color: var(--tm-text-color, #374151);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
 }
 
 .tm-dod-tree-node:hover {
-    background: var(--tm-hover-bg, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dod-tree-node--active {
-    background: var(--tm-primary-soft, #eef2ff);
-    color: var(--tm-primary, #4f46e5);
-    font-weight: 600;
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
 }
 
 .tm-dod-content {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--tm-space-2);
     overflow: auto;
 }
 
@@ -171,16 +179,17 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 48px 12px;
-    color: var(--tm-text-muted, #6b7280);
+    gap: var(--tm-space-2-5);
+    padding: var(--tm-space-12) var(--tm-space-3);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dod-retry {
-    padding: 6px 14px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: 6px;
+    padding: var(--tm-space-1-5) var(--tm-space-3-5);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
     background: transparent;
+    color: var(--tm-text-primary);
     cursor: pointer;
 }
 
@@ -192,13 +201,20 @@
 .tm-dod-list-head {
     display: grid;
     grid-template-columns: 1fr 120px 120px;
-    gap: 8px;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--tm-border-color, #e5e7eb);
-    font-size: 12px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
+    border-bottom: 1px solid var(--tm-border-color);
+    font-size: var(--tm-font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--tm-text-muted, #6b7280);
+    color: var(--tm-text-secondary);
+}
+
+/* The column header IS the grid item (role=columnheader + aria-sort live on it), so the accessibility
+   tree keeps the header; the sort button inside fills it. */
+.tm-dod-colhead {
+    display: flex;
+    min-width: 0;
 }
 
 .tm-dod-col-name,
@@ -217,58 +233,65 @@
 .tm-dod-row {
     display: grid;
     grid-template-columns: 1fr 120px 120px;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-2-5);
     align-items: center;
     cursor: pointer;
-    border-radius: 6px;
-    font-size: 14px;
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
 }
 
 .tm-dod-row:hover {
-    background: var(--tm-hover-bg, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
-.tm-dod-row--selected {
-    background: var(--tm-primary-soft, #eef2ff);
+/* Selection is a primary marker (an inset bar) on top of the tint, so it never reads as plain hover. */
+.tm-dod-row--selected,
+.tm-dod-row--selected:hover {
+    background: var(--tm-color-primary-subtle);
+    box-shadow: inset 3px 0 0 var(--tm-color-primary);
 }
 
 .tm-dod-cell-name {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--tm-space-2);
 }
 
 .tm-dod-cell-modified,
 .tm-dod-cell-author {
-    font-size: 13px;
-    color: var(--tm-text-muted, #6b7280);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dod-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-    padding: 4px;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-1);
 }
 
 .tm-dod-card {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 8px;
-    border: 1px solid var(--tm-border-color, #e5e7eb);
-    border-radius: 8px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     cursor: pointer;
 }
 
 .tm-dod-card:hover {
-    border-color: var(--tm-primary, #4f46e5);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-dod-card--selected {
-    border-color: var(--tm-primary, #4f46e5);
-    box-shadow: 0 0 0 2px var(--tm-primary-soft, #eef2ff);
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+    box-shadow: 0 0 0 2px var(--tm-color-primary);
 }
 
 .tm-dod-card-preview {
@@ -276,8 +299,8 @@
     align-items: center;
     justify-content: center;
     aspect-ratio: 4 / 3;
-    background: var(--tm-surface-2, #f9fafb);
-    border-radius: 6px;
+    background: var(--tm-bg-surface-secondary);
+    border-radius: var(--tm-radius-control);
     overflow: hidden;
 }
 
@@ -287,7 +310,7 @@
 }
 
 .tm-dod-card-name {
-    font-size: 13px;
+    font-size: var(--tm-font-size-sm);
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
@@ -296,18 +319,19 @@
 
 .tm-dod-load-more {
     align-self: center;
-    margin-top: 8px;
-    padding: 6px 16px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
-    border-radius: 6px;
+    margin-top: var(--tm-space-2);
+    padding: var(--tm-space-1-5) var(--tm-space-4);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
     background: transparent;
+    color: var(--tm-text-primary);
     cursor: pointer;
 }
 
 .tm-dod-footer {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--tm-space-3);
     width: 100%;
 }
 
@@ -318,52 +342,59 @@
 .tm-dod-mode {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 13px;
+    gap: var(--tm-space-3);
+    font-size: var(--tm-font-size-sm);
 }
 
 .tm-dod-mode-option {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--tm-space-1);
     cursor: pointer;
     white-space: nowrap;
 }
 
+/* The native radio takes the theme primary (blue / indigo / dark) instead of the browser default. */
+.tm-dod-mode input[type="radio"] {
+    accent-color: var(--tm-color-primary);
+}
+
 .tm-dod-mode-hint {
-    color: var(--tm-text-muted, #6b7280);
-    font-size: 12px;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-dod-delete-confirm {
     flex-wrap: wrap;
     justify-content: flex-start;
-    border-color: var(--tm-danger, #dc2626);
-    background: var(--tm-danger-soft, #fef2f2);
+    border-color: var(--tm-color-danger);
+    background: var(--tm-color-danger-subtle);
 }
 
 .tm-dod-delete-confirm > span {
     flex: 1 1 100%;
-    margin-bottom: 4px;
+    margin-bottom: var(--tm-space-1);
 }
 
 .tm-dod-delete-confirm-ok,
 .tm-dod-delete-confirm-cancel {
-    padding: 6px 14px;
-    border-radius: 6px;
+    padding: var(--tm-space-1-5) var(--tm-space-3-5);
+    border-radius: var(--tm-radius-control);
     border: 1px solid transparent;
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--tm-font-size-sm);
 }
 
+/* Ink on the danger fill goes through --tm-text-inverse: white on the light #dc2626 (4.8:1), the dark
+   slate on the lighter dark-theme danger — the same pairing .tm-btn-danger uses. */
 .tm-dod-delete-confirm-ok {
-    color: #fff;
-    background: var(--tm-danger, #dc2626);
+    color: var(--tm-text-inverse);
+    background: var(--tm-color-danger);
 }
 
 .tm-dod-delete-confirm-cancel {
-    color: var(--tm-text-color, #374151);
-    border-color: var(--tm-border-color, #d1d5db);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color);
     background: transparent;
 }
 

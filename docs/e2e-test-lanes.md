@@ -60,6 +60,8 @@ JS engine unit tests run separately and are cheap enough for every commit:
 - `npm run test:diagram-editor` — `src/Tempo.Blazor.DiagramEditor/wwwroot/js` (touch session
   stack over the real core helpers, plus the engine tests that load `diagram-editor.js` in a
   `node:vm` context).
+- `npm run test:wireframe` — `src/Tempo.Blazor.Wireframe/wwwroot/js` (`wireframe-designer.js` loaded in a
+  `node:vm` context: export paint baking).
 
 CI: `.github/workflows/js-node-tests.yml` runs all four lanes on every push and pull request.
 

@@ -20,6 +20,13 @@
       "description": "Additional CSS class applied to the toolbox wrapper."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "Shows the palette inert: items are aria-disabled, muted (tm-wd-toolbox__item--disabled), not draggable and never raise OnComponentActivated. TmWireframeEditor passes its effective read-only state (host ReadOnly or the user Read-only toggle)."
+    },
+    {
       "name": "ComponentScope",
       "type": "WireframeComponentScope?",
       "isRequired": false,
@@ -30,6 +37,8 @@
     "tm-wd-toolbox",
     "tm-wd-toolbox__search",
     "tm-wd-toolbox__item",
+    "tm-wd-toolbox__item--disabled",
+    "tm-wd-toolbox__item-preview-paper",
     "tm-wd-toolbox__category"
   ],
   "examples": [

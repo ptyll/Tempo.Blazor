@@ -9,7 +9,7 @@
     @if (!_elements.Any() && !_connectors.Any())
     {
         <div class="tm-wd-props__empty">
-            <span class="tm-wd-props__empty-icon">◻</span>
+            <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
             <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
         </div>
     }
@@ -115,20 +115,19 @@
                 </div>
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label">@Loc["TmWireframeProps_ZIndex"]</label>
-                    <div style="display:flex;gap:4px;">
-                        <input class="tm-wd-props__input"
+                    <div class="tm-wd-props__row">
+                        <input class="tm-wd-props__input tm-wd-props__input--grow"
                                type="number" step="1"
                                value="@_elements[0].ZIndex"
-                               @oninput="@(e => OnZIndexChanged(e))"
-                               style="flex:1;" />
+                               @oninput="@(e => OnZIndexChanged(e))" />
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon"
                                 title="@Loc["TmWireframeProps_SendToBack"]"
                                 aria-label="@Loc["TmWireframeProps_SendToBack"]"
-                                @onclick="OnSendToBack">⬇</button>
+                                @onclick="OnSendToBack"><TmIcon Name="@IconNames.SendToBack" /></button>
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--icon"
                                 title="@Loc["TmWireframeProps_BringToFront"]"
                                 aria-label="@Loc["TmWireframeProps_BringToFront"]"
-                                @onclick="OnBringToFront">⬆</button>
+                                @onclick="OnBringToFront"><TmIcon Name="@IconNames.BringToFront" /></button>
                     </div>
                 </div>
                 <div class="tm-wd-props__field">
@@ -144,7 +143,7 @@
                                checked="@_elements[0].IsLocked"
                                @onchange="@(e => OnLockChanged(e))" />
                         <span class="tm-wd-props__toggle-track"></span>
-                        <span style="font-size:12px;">@Loc["TmWireframeProps_Locked"]</span>
+                        <span class="tm-wd-props__toggle-label">@Loc["TmWireframeProps_Locked"]</span>
                     </label>
                 </div>
                 @if (!string.IsNullOrEmpty(_elements[0].GroupId))
@@ -188,20 +187,20 @@
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label">@Loc["TmWireframe_Align"]</label>
-                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignLeft"]" @onclick="() => OnAlign(WireframeAlignment.Left)">⬅</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterH"]" @onclick="() => OnAlign(WireframeAlignment.CenterH)">↔</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignRight"]" @onclick="() => OnAlign(WireframeAlignment.Right)">➡</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignTop"]" @onclick="() => OnAlign(WireframeAlignment.Top)">⬆</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterV"]" @onclick="() => OnAlign(WireframeAlignment.CenterV)">↕</button>
-                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignBottom"]" @onclick="() => OnAlign(WireframeAlignment.Bottom)">⬇</button>
+                    <div class="tm-wd-props__row tm-wd-props__row--wrap">
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignLeft"]" aria-label="@Loc["TmWireframe_AlignLeft"]" @onclick="() => OnAlign(WireframeAlignment.Left)"><TmIcon Name="@IconNames.AlignLeft" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterH"]" aria-label="@Loc["TmWireframe_AlignCenterH"]" @onclick="() => OnAlign(WireframeAlignment.CenterH)"><TmIcon Name="@IconNames.AlignCenter" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignRight"]" aria-label="@Loc["TmWireframe_AlignRight"]" @onclick="() => OnAlign(WireframeAlignment.Right)"><TmIcon Name="@IconNames.AlignRight" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignTop"]" aria-label="@Loc["TmWireframe_AlignTop"]" @onclick="() => OnAlign(WireframeAlignment.Top)"><TmIcon Name="@IconNames.ArrowUpFromLine" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignCenterV"]" aria-label="@Loc["TmWireframe_AlignCenterV"]" @onclick="() => OnAlign(WireframeAlignment.CenterV)"><TmIcon Name="@IconNames.AlignVerticalDistributeCenter" /></button>
+                        <button class="tm-wd-editor__btn tm-wd-editor__btn--icon" title="@Loc["TmWireframe_AlignBottom"]" aria-label="@Loc["TmWireframe_AlignBottom"]" @onclick="() => OnAlign(WireframeAlignment.Bottom)"><TmIcon Name="@IconNames.ArrowDownToLine" /></button>
                     </div>
                 </div>
                 @if (_elements.Count >= 3)
                 {
                     <div class="tm-wd-props__field">
                         <label class="tm-wd-props__label">@Loc["TmWireframe_Distribute"]</label>
-                        <div style="display:flex;gap:4px;">
+                        <div class="tm-wd-props__row">
                             <button class="tm-wd-editor__btn tm-wd-editor__btn--text" title="@Loc["TmWireframe_DistributeHorizontal"]" @onclick="() => OnDistribute(WireframeDistribution.Horizontal)">@Loc["TmWireframe_DistributeHorizontal"]</button>
                             <button class="tm-wd-editor__btn tm-wd-editor__btn--text" title="@Loc["TmWireframe_DistributeVertical"]" @onclick="() => OnDistribute(WireframeDistribution.Vertical)">@Loc["TmWireframe_DistributeVertical"]</button>
                         </div>
@@ -218,7 +217,7 @@
             <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_FormatPainter"]</summary>
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
-                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <div class="tm-wd-props__row tm-wd-props__row--wrap">
                         <button class="tm-wd-editor__btn tm-wd-editor__btn--text"
                                 title="@Loc["TmWireframe_CopyStyle"]"
                                 disabled="@(_elements.Count != 1 || ReadOnly)"

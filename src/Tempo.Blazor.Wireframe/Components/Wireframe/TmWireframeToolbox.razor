@@ -17,7 +17,9 @@
         {
             <button class="tm-wd-toolbox__search-clear"
                     @onclick="ClearSearch"
-                    aria-label="@Loc["TmWireframeToolbox_ClearSearch"]">✕</button>
+                    aria-label="@Loc["TmWireframeToolbox_ClearSearch"]">
+                <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+            </button>
         }
     </div>
 
@@ -59,11 +61,12 @@
                     <div class="tm-wd-toolbox__category-items">
                         @foreach (var def in items)
                         {
-                            <div class="tm-wd-toolbox__item"
-                                 draggable="true"
+                            <div class="tm-wd-toolbox__item @(ReadOnly ? "tm-wd-toolbox__item--disabled" : "")"
+                                 draggable="@(ReadOnly ? "false" : "true")"
                                  data-component-type="@def.Type"
                                  title="@def.DisplayName (@def.DefaultWidth×@def.DefaultHeight)"
                                  aria-label="@Loc["TmWireframeToolbox_DragOntoCanvas", def.DisplayName]"
+                                 aria-disabled="@(ReadOnly ? "true" : null)"
                                  role="button"
                                  tabindex="0"
                                  @onclick="@(() => ActivateAsync(def.Type))"
@@ -71,7 +74,8 @@
                                  @onkeyup="@((e) => OnItemKeyUp(e, def.Type))">
 
                                 @* SVG preview *@
-                                <div class="tm-wd-toolbox__item-preview" aria-hidden="true">
+                                <div class="tm-wd-toolbox__item-preview-paper" aria-hidden="true">
+                                <div class="tm-wd-toolbox__item-preview">
                                     <svg width="56" height="32"
                                          viewBox="0 0 @def.DefaultWidth.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) @def.DefaultHeight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
                                          xmlns="http://www.w3.org/2000/svg"
@@ -85,6 +89,7 @@
                                                 H     = def.DefaultHeight
                                             }, __b))
                                     </svg>
+                                </div>
                                 </div>
 
                                 @* Label + badge *@

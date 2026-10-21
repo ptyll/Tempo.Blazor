@@ -221,4 +221,15 @@ public class WireframeExportTests : LocalizationTestBase
         cut.FindAll("button").First(b => b.TextContent.Contains("Export")).Click();
         captured!.FileName.Should().Be("second");
     }
+
+    [Fact]
+    public void ExportDialog_Cancel_IsASecondaryButton_NotGhost()
+    {
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        var cancel = cut.FindAll("button").First(b => b.TextContent.Contains("Cancel"));
+        cancel.ClassList.Should().Contain("tm-btn-secondary", "the outline Cancel reads as a real action next to Export");
+        cancel.ClassList.Should().NotContain("tm-btn-ghost");
+    }
 }

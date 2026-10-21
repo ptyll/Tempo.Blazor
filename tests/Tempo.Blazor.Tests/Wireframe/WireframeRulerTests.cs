@@ -235,7 +235,7 @@ public class WireframeRulerTests : LocalizationTestBase
 
         // All lines should be tick lines (same stroke color as ticks), not cursor lines
         var cursorLines = cut.FindAll("line")
-            .Where(l => l.GetAttribute("stroke")?.Contains("3b82f6") == true)
+            .Where(l => l.GetAttribute("stroke")?.Contains("--tm-wd-ruler-cursor") == true)
             .ToList();
         cursorLines.Should().BeEmpty();
     }
@@ -248,7 +248,7 @@ public class WireframeRulerTests : LocalizationTestBase
             .Add(p => p.IndicatorPos, 150.0));
 
         var cursorLines = cut.FindAll("line")
-            .Where(l => l.GetAttribute("stroke")?.Contains("3b82f6") == true)
+            .Where(l => l.GetAttribute("stroke")?.Contains("--tm-wd-ruler-cursor") == true)
             .ToList();
         cursorLines.Should().HaveCount(1);
     }

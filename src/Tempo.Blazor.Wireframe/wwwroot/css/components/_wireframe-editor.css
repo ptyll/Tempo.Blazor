@@ -6,40 +6,90 @@
    BEM-style prefix: tm-wd-*
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Shared design tokens (local fallbacks for standalone use) ── */
+/* ── Design tokens: --tm-wd-* are ALIASES of the core --tm-* tokens ────────────
+   The editor owns no palette. Dark mode (tokens-dark.css), the opt-in indigo theme and consumer
+   overrides of --tm-* all reach the editor through these aliases; to restyle the editor, override
+   the core token (or, for one editor, an individual --tm-wd-* alias on its root).
 
-:root {
-  --tm-wd-font:          ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --tm-wd-font-mono:     ui-monospace, "Cascadia Code", monospace;
-  --tm-wd-radius-sm:     3px;
-  --tm-wd-radius:        4px;
-  --tm-wd-radius-lg:     6px;
+   The aliases are declared on :root, on the theme boundaries ([data-theme], [class~="tm-dark"], [data-tm-theme]) and
+   on the portaled .tm-wd-export-dialog - NEVER on an in-editor selector (.tm-wd-editor, .tm-wd-toolbox, …).
+   A custom property substitutes its var() where it is declared, so a [data-theme="dark"] / .tm-dark region
+   nested below <html> needs the aliases re-declared at its boundary (otherwise it keeps the LIGHT values
+   computed on :root); and a consumer override such as `.my-editor .tm-wd-editor { --tm-wd-accent: … }` only
+   propagates to the toolbox, props, layers, minimap and rulers when none of those re-declares the alias. */
 
-  /* Wireframe palette – intentionally flat, no shadows */
-  --tm-wd-bg-surface:    #ffffff;
+:root,
+[data-theme],
+[class~="tm-dark"],
+[data-tm-theme],
+.tm-wd-export-dialog {
+  --tm-wd-font:          var(--tm-font-sans);
+  --tm-wd-font-mono:     var(--tm-font-mono);
+  --tm-wd-radius-sm:     var(--tm-radius-sm);
+  --tm-wd-radius:        var(--tm-radius-control);
+  --tm-wd-radius-lg:     var(--tm-radius-card);
+
+  /* Surfaces, borders, text */
+  --tm-wd-bg-surface:    var(--tm-bg-surface);
   --tm-wd-fill:          var(--tm-wd-bg-surface);
-  --tm-wd-bg-subtle:     #f9fafb;
-  --tm-wd-bg-muted:      #f3f4f6;
-  --tm-wd-border:        #d1d5db;
-  --tm-wd-border-focus:  #3b82f6;
-  --tm-wd-text:          #374151;
-  --tm-wd-text-muted:    #6b7280;
-  --tm-wd-text-light:    #9ca3af;
-  --tm-wd-accent:        #3b82f6;
-  --tm-wd-accent-subtle: #dbeafe;
-  --tm-wd-danger:        #ef4444;
-  --tm-wd-danger-subtle: #fee2e2;
-  --tm-wd-guide-color:   #3b82f6;
+  --tm-wd-bg-subtle:     var(--tm-bg-surface-secondary);
+  --tm-wd-bg-muted:      var(--tm-bg-muted);
+  --tm-wd-border:        var(--tm-border-color);
+  --tm-wd-border-focus:  var(--tm-border-color-focus);
+  --tm-wd-text:          var(--tm-text-primary);
+  --tm-wd-text-muted:    var(--tm-text-secondary);
+  --tm-wd-text-light:    var(--tm-text-tertiary);
 
-  /* Toolbar */
-  --tm-wd-toolbar-h:     42px;
-  --tm-wd-toolbar-bg:    #ffffff;
+  /* Accent and status */
+  --tm-wd-accent:        var(--tm-color-primary);
+  --tm-wd-accent-subtle: var(--tm-color-primary-subtle);
+  --tm-wd-danger:        var(--tm-color-danger);
+  --tm-wd-danger-subtle: var(--tm-color-danger-subtle);
+  --tm-wd-danger-text:   var(--tm-color-danger-text);
+  --tm-wd-danger-border: var(--tm-color-danger-soft-border);
+  --tm-wd-warning-subtle: var(--tm-color-warning-subtle);
+  --tm-wd-warning-text:  var(--tm-color-warning-text);
+  --tm-wd-guide-color:   var(--tm-color-primary);
 
-  /* Side panels */
-  --tm-wd-toolbox-w:     220px;
-  --tm-wd-props-w:       280px;
+  /* Canvas. The workspace follows the theme (--tm-bg-workspace: white by default, the indigo off-white / dark slate),
+     tinted 6 % toward the text colour so the white page always stands out from it, also in the default
+     light theme where the workspace itself is white;
+     the PAGE drawn on it is paper — theme-invariant by design (--tm-paper*), exactly like the
+     diagram editor's page: the wireframe components are drawn light-on-white, so a dark page would
+     turn their ink invisible, and the SVG/PNG/PDF export (always explicit colours) then matches what
+     the user saw. The minor grid step is the paper border at half opacity (stroke-opacity on the
+     path), so it stays faint on the paper without a colour-mix the exporter could not rasterise. */
+  --tm-wd-canvas-surface: color-mix(in srgb, var(--tm-bg-workspace), var(--tm-text-primary) 6%);
+  --tm-wd-canvas-bg:      var(--tm-paper);
+  --tm-wd-canvas-border:  var(--tm-paper-border);
+  --tm-wd-paper-ink:      var(--tm-paper-ink);
+  --tm-wd-grid-minor:     var(--tm-paper-border);
+  --tm-wd-grid-major:     var(--tm-paper-border);
+  --tm-wd-handle-fill:    var(--tm-paper);
+  --tm-wd-page-shadow:    color-mix(in srgb, var(--tm-paper-ink) 28%, transparent);
+  --tm-wd-placeholder-fill:   var(--tm-paper-backdrop);
+  --tm-wd-placeholder-stroke: var(--tm-paper-border);
+  --tm-wd-placeholder-ink:    var(--tm-paper-ink-muted);
+
+  /* Minimap card: a thumbnail of the paper page, so it stays light-on-paper in every theme. */
+  --tm-wd-minimap-page:       var(--tm-paper);
+  --tm-wd-minimap-page-edge:  var(--tm-paper-border);
+  --tm-wd-minimap-box:        var(--tm-paper-backdrop);
+  --tm-wd-minimap-box-edge:   var(--tm-paper-ink-muted);
+
+  /* Rulers */
+  --tm-wd-ruler-bg:      var(--tm-bg-muted);
+  --tm-wd-ruler-tick:    var(--tm-text-tertiary);
+  --tm-wd-ruler-text:    var(--tm-text-secondary);
+  --tm-wd-ruler-cursor:  var(--tm-color-primary);
+
+  /* Toolbar and side panels (8 px rhythm: 3rem = 6 x 8 px, 14rem and 18rem = multiples of 8 px) */
+  --tm-wd-toolbar-h:     calc(var(--tm-space-8) + var(--tm-space-4));
+  --tm-wd-toolbar-bg:    var(--tm-bg-surface);
+  --tm-wd-btn-size:      var(--tm-space-8);
+  --tm-wd-toolbox-w:     calc(var(--tm-space-16) * 3.5);
+  --tm-wd-props-w:       calc(var(--tm-space-16) * 4.5);
 }
-
 /* ════════════════════════════════════════════════════════════════
    1. EDITOR SHELL
    ════════════════════════════════════════════════════════════════ */
@@ -51,9 +101,9 @@
   height: 100%;
   min-height: 500px;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
-  background: var(--tm-wd-bg-muted);
+  background: var(--tm-wd-canvas-surface);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius-lg);
   overflow: hidden;
@@ -73,23 +123,23 @@
 .tm-wd-editor__toolbar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--tm-space-0-5);
   height: var(--tm-wd-toolbar-h);
-  padding: 0 8px;
+  padding: 0 var(--tm-space-2);
   background: var(--tm-wd-toolbar-bg);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-editor__title {
-  height: 26px;
-  padding: 0 8px;
+  height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2);
   border: 1px solid transparent;
   border-radius: var(--tm-wd-radius);
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text);
   min-width: 0;
   max-width: 220px;
@@ -113,9 +163,9 @@
 
 .tm-wd-editor__toolbar-sep {
   width: 1px;
-  height: 20px;
+  height: var(--tm-space-5);
   background: var(--tm-wd-border);
-  margin: 0 4px;
+  margin: 0 var(--tm-space-1);
   flex-shrink: 0;
 }
 
@@ -129,14 +179,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 26px;
-  min-width: 26px;
-  padding: 0 6px;
+  height: var(--tm-wd-btn-size);
+  min-width: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-1-5);
   border: 1px solid transparent;
   border-radius: var(--tm-wd-radius);
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   cursor: pointer;
   white-space: nowrap;
@@ -150,7 +200,8 @@
 }
 
 .tm-wd-editor__btn:active:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--tm-wd-bg-muted);
+  border-color: var(--tm-wd-border);
 }
 
 .tm-wd-editor__btn:disabled {
@@ -165,22 +216,30 @@
 }
 
 .tm-wd-editor__btn--text {
-  padding: 0 8px;
+  padding: 0 var(--tm-space-2);
   min-width: auto;
 }
 
 .tm-wd-editor__btn--icon {
-  font-size: 15px;
   padding: 0;
+}
+
+/* TmIcon inside a toolbar button follows the button colour (currentColor) and never shrinks. */
+.tm-wd-editor__btn .tm-icon {
+  flex-shrink: 0;
+}
+
+.tm-wd-editor__btn-label {
+  margin-inline-start: var(--tm-space-1);
 }
 
 /* ── Zoom label ── */
 
 .tm-wd-editor__zoom-label {
   display: inline-block;
-  min-width: 40px;
+  min-width: var(--tm-space-10);
   text-align: center;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   font-variant-numeric: tabular-nums;
   color: var(--tm-wd-text-muted);
   user-select: none;
@@ -191,32 +250,33 @@
 .tm-wd-editor__btn--canvas-size {
   font-variant-numeric: tabular-nums;
   color: var(--tm-wd-text-muted);
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
   letter-spacing: 0.02em;
 }
 
 .tm-wd-editor__canvas-size-input {
-  width: 52px;
-  padding: 2px 4px;
+  width: calc(var(--tm-space-12) + var(--tm-space-1));
+  height: var(--tm-wd-btn-size);
+  padding: var(--tm-space-0-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border);
-  border-radius: 4px;
+  border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-fill);
   color: var(--tm-wd-text);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   font-variant-numeric: tabular-nums;
   text-align: center;
   outline: none;
 }
 
 .tm-wd-editor__canvas-size-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+  border-color: var(--tm-wd-border-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-wd-editor__canvas-size-sep {
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
-  padding: 0 2px;
+  padding: 0 var(--tm-space-0-5);
   user-select: none;
 }
 
@@ -228,25 +288,25 @@
 
 .tm-wd-editor__dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--tm-space-1));
   left: 0;
   z-index: 200;
-  min-width: 130px;
+  min-width: calc(var(--tm-space-16) * 2);
   background: var(--tm-wd-bg-surface);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: var(--tm-shadow-popover);
   overflow: hidden;
 }
 
 .tm-wd-editor__dropdown-item {
   display: block;
   width: 100%;
-  padding: 7px 12px;
+  padding: var(--tm-space-2) var(--tm-space-3);
   border: none;
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   text-align: left;
   cursor: pointer;
@@ -259,7 +319,7 @@
 
 .tm-wd-editor__dropdown-sep {
   height: 1px;
-  margin: 4px 8px;
+  margin: var(--tm-space-1) var(--tm-space-2);
   background: var(--tm-wd-border);
 }
 
@@ -280,12 +340,12 @@
 .tm-wd-editor__error-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
   background: var(--tm-wd-danger-subtle);
-  border-bottom: 1px solid #fca5a5;
-  font-size: 13px;
-  color: #991b1b;
+  border-bottom: 1px solid var(--tm-wd-danger-border);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-wd-danger-text);
   flex-shrink: 0;
 }
 
@@ -293,15 +353,15 @@
   margin-left: auto;
   border: none;
   background: transparent;
-  color: #991b1b;
+  color: var(--tm-wd-danger-text);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 4px;
+  font-size: var(--tm-font-size-sm);
+  padding: 0 var(--tm-space-1);
   border-radius: var(--tm-wd-radius-sm);
 }
 
 .tm-wd-editor__error-close:hover {
-  background: #fecaca;
+  background: var(--tm-wd-danger-border);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -330,21 +390,21 @@
 .tm-wd-toolbox__search {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-2);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-toolbox__search-input {
   flex: 1;
-  height: 26px;
-  padding: 0 8px;
+  height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-muted);
   font-family: var(--tm-wd-font);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text);
   min-width: 0;
   transition: border-color 0.15s, background 0.15s;
@@ -357,13 +417,12 @@
 }
 
 .tm-wd-toolbox__search-clear {
-  width: 22px;
-  height: 22px;
+  width: var(--tm-space-6);
+  height: var(--tm-space-6);
   border: none;
   border-radius: var(--tm-wd-radius-sm);
   background: transparent;
   color: var(--tm-wd-text-muted);
-  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -380,20 +439,20 @@
 
 .tm-wd-toolbox__filters {
   display: flex;
-  gap: 2px;
-  padding: 6px 8px 4px;
+  gap: var(--tm-space-0-5);
+  padding: var(--tm-space-1-5) var(--tm-space-2) var(--tm-space-1);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-toolbox__filter-btn {
-  height: 22px;
-  padding: 0 8px;
+  height: var(--tm-space-6);
+  padding: 0 var(--tm-space-2);
   border: 1px solid transparent;
   border-radius: var(--tm-wd-radius-sm);
   background: transparent;
   font-family: var(--tm-wd-font);
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
   cursor: pointer;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
@@ -416,7 +475,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px 0;
+  padding: var(--tm-space-1) 0;
 }
 
 /* ── Category (native <details>) ── */
@@ -432,13 +491,13 @@
 .tm-wd-toolbox__category-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: var(--tm-space-1-5);
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
   list-style: none;
   cursor: pointer;
   user-select: none;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--tm-wd-text-muted);
@@ -454,13 +513,14 @@
 
 .tm-wd-toolbox__category-header::before {
   content: "▶";
-  font-size: 8px;
+  font-size: var(--tm-font-size-xs);
+  transform: scale(0.65);
   transition: transform 0.15s;
   flex-shrink: 0;
 }
 
 .tm-wd-toolbox__category[open] > .tm-wd-toolbox__category-header::before {
-  transform: rotate(90deg);
+  transform: rotate(90deg) scale(0.65);
 }
 
 .tm-wd-toolbox__category-name {
@@ -468,7 +528,7 @@
 }
 
 .tm-wd-toolbox__category-count {
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-light);
   font-weight: 400;
 }
@@ -476,8 +536,8 @@
 .tm-wd-toolbox__category-items {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  padding: 4px 6px 8px;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-1-5) var(--tm-space-2);
 }
 
 /* ── Component item ── */
@@ -486,8 +546,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-surface);
@@ -500,12 +560,12 @@
 .tm-wd-toolbox__item:hover {
   border-color: var(--tm-wd-accent);
   background: var(--tm-wd-bg-subtle);
-  box-shadow: 0 1px 4px rgba(59,130,246,0.1);
+  box-shadow: var(--tm-shadow-sm);
 }
 
 .tm-wd-toolbox__item:focus-visible {
-  outline: 2px solid var(--tm-wd-accent);
-  outline-offset: 1px;
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-wd-toolbox__item:active {
@@ -513,16 +573,39 @@
   background: var(--tm-wd-accent-subtle);
 }
 
+/* Read-only editor: the palette stays visible but muted and inert (aria-disabled on the item). */
+.tm-wd-toolbox__item--disabled,
+.tm-wd-toolbox__item--disabled:hover,
+.tm-wd-toolbox__item--disabled:active {
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-color: var(--tm-wd-border);
+  background: var(--tm-wd-bg-surface);
+  box-shadow: none;
+}
+
 .tm-wd-toolbox__item-preview {
   display: block;
-  width: 56px;
-  height: 32px;
+  width: calc(var(--tm-space-8) * 1.75);
+  height: var(--tm-space-8);
   overflow: visible;
   pointer-events: none;
 }
 
+/* The mini stencil is drawn light-on-paper (like the canvas page), so its tile is paper in every
+   theme - a white-filled preview on a dark tile was baseline finding #5. */
+.tm-wd-toolbox__item-preview-paper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tm-space-0-5);
+  background: var(--tm-wd-canvas-bg);
+  border: 1px solid var(--tm-wd-canvas-border);
+  border-radius: var(--tm-radius-xs);
+}
+
 .tm-wd-toolbox__item-name {
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
   text-align: center;
   line-height: 1.2;
@@ -534,29 +617,29 @@
 
 .tm-wd-toolbox__item-badge {
   position: absolute;
-  top: 2px;
-  right: 3px;
-  font-size: 8px;
-  font-weight: 700;
+  top: var(--tm-space-0-5);
+  right: var(--tm-space-0-5);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-bold);
   line-height: 1;
-  padding: 1px 3px;
-  border-radius: 2px;
+  padding: var(--tm-space-0-5) var(--tm-space-1);
+  border-radius: var(--tm-radius-xs);
   background: var(--tm-wd-bg-muted);
   color: var(--tm-wd-text-light);
 }
 
 .tm-wd-toolbox__item-badge--custom {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--tm-wd-warning-subtle);
+  color: var(--tm-wd-warning-text);
 }
 
 /* ── Empty state ── */
 
 .tm-wd-toolbox__empty {
-  padding: 24px 16px;
+  padding: var(--tm-space-6) var(--tm-space-4);
   text-align: center;
   color: var(--tm-wd-text-light);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   font-style: italic;
 }
 
@@ -587,7 +670,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--tm-wd-bg-muted);
+  background: var(--tm-wd-canvas-surface);
 }
 
 .tm-wd-canvas-wrap {
@@ -596,6 +679,13 @@
   position: relative;
   overflow: hidden;
   outline: none;
+}
+
+/* The page lifts off the workspace: in the default light theme the workspace is white too, so the 1px paper
+   border alone would leave the page edge almost invisible. The shadow is presentation only (the export
+   serializes explicit attributes and drops it with the stylesheet). */
+.tm-wd-canvas__page {
+  filter: drop-shadow(0 1px 3px var(--tm-wd-page-shadow));
 }
 
 .tm-wd-canvas__svg {
@@ -659,7 +749,7 @@
 
 .tm-wd-connector--selected .tm-wd-connector__path {
   stroke: var(--tm-wd-accent);
-  filter: drop-shadow(0 0 2px rgba(59,130,246,0.4));
+  filter: drop-shadow(0 0 2px var(--tm-wd-accent));
 }
 
 .tm-wd-connector__waypoint {
@@ -695,42 +785,41 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--tm-space-2);
   height: 100%;
   color: var(--tm-wd-text-light);
-  font-size: 13px;
-  padding: 24px;
+  font-size: var(--tm-font-size-sm);
+  padding: var(--tm-space-6);
   text-align: center;
 }
 
 .tm-wd-props__empty-icon {
-  font-size: 28px;
   opacity: 0.4;
 }
 
 /* ── Header ── */
 
 .tm-wd-props__header {
-  padding: 10px 12px 8px;
+  padding: var(--tm-space-2-5) var(--tm-space-3) var(--tm-space-2);
   border-bottom: 1px solid var(--tm-wd-border);
   flex-shrink: 0;
 }
 
 .tm-wd-props__type-badge {
   display: inline-block;
-  padding: 1px 7px;
-  border-radius: 10px;
+  padding: var(--tm-space-0-5) var(--tm-space-2);
+  border-radius: var(--tm-radius-full);
   background: var(--tm-wd-accent-subtle);
   color: var(--tm-wd-accent);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   letter-spacing: 0.02em;
-  margin-bottom: 3px;
+  margin-bottom: var(--tm-space-0-5);
 }
 
 .tm-wd-props__subtitle {
   display: block;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -750,12 +839,12 @@
 .tm-wd-props__section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
+  gap: var(--tm-space-1-5);
+  padding: var(--tm-space-2) var(--tm-space-2-5);
   list-style: none;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--tm-wd-text-muted);
@@ -771,26 +860,27 @@
 
 .tm-wd-props__section-header::before {
   content: "▶";
-  font-size: 8px;
+  font-size: var(--tm-font-size-xs);
+  transform: scale(0.65);
   transition: transform 0.15s;
   flex-shrink: 0;
 }
 
 .tm-wd-props__section[open] > .tm-wd-props__section-header::before {
-  transform: rotate(90deg);
+  transform: rotate(90deg) scale(0.65);
 }
 
 .tm-wd-props__section-body {
-  padding: 6px 10px 10px;
+  padding: var(--tm-space-1-5) var(--tm-space-2-5) var(--tm-space-2-5);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--tm-space-2);
 }
 
 .tm-wd-props__section-body--grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--tm-space-2);
 }
 
 /* ── Field ── */
@@ -798,7 +888,7 @@
 .tm-wd-props__field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--tm-space-0-5);
 }
 
 .tm-wd-props__field--error .tm-wd-props__input,
@@ -809,17 +899,17 @@
 .tm-wd-props__label {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 500;
+  gap: var(--tm-space-0-5);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text-muted);
   user-select: none;
 }
 
 .tm-wd-props__required {
   color: var(--tm-wd-danger);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: var(--tm-font-weight-bold);
+  font-size: var(--tm-font-size-xs);
   line-height: 1;
 }
 
@@ -828,13 +918,13 @@
 .tm-wd-props__input,
 .tm-wd-props__select {
   width: 100%;
-  height: 26px;
-  padding: 0 7px;
+  height: var(--tm-wd-btn-size);
+  padding: 0 var(--tm-space-2);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-muted);
   font-family: var(--tm-wd-font);
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text);
   transition: border-color 0.15s, background 0.15s;
   box-sizing: border-box;
@@ -863,7 +953,7 @@
 }
 
 .tm-wd-props__error-msg {
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-danger);
   line-height: 1.3;
 }
@@ -873,7 +963,7 @@
 .tm-wd-props__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--tm-space-1-5);
   cursor: pointer;
   user-select: none;
 }
@@ -888,9 +978,9 @@
 
 .tm-wd-props__toggle-track {
   display: inline-block;
-  width: 32px;
-  height: 18px;
-  border-radius: 9px;
+  width: var(--tm-space-8);
+  height: var(--tm-space-5);
+  border-radius: var(--tm-radius-full);
   background: var(--tm-wd-border);
   position: relative;
   transition: background 0.2s;
@@ -900,13 +990,13 @@
 .tm-wd-props__toggle-track::after {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  top: var(--tm-space-0-5);
+  left: var(--tm-space-0-5);
+  width: calc(var(--tm-space-5) - var(--tm-space-1));
+  height: calc(var(--tm-space-5) - var(--tm-space-1));
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-wd-handle-fill);
+  box-shadow: var(--tm-shadow-sm);
   transition: transform 0.2s;
 }
 
@@ -915,7 +1005,7 @@
 }
 
 .tm-wd-props__toggle input:checked ~ .tm-wd-props__toggle-track::after {
-  transform: translateX(14px);
+  transform: translateX(calc(var(--tm-space-5) - var(--tm-space-1)));
 }
 
 .tm-wd-props__toggle input:indeterminate ~ .tm-wd-props__toggle-track {
@@ -927,15 +1017,15 @@
 .tm-wd-props__color-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--tm-space-1-5);
 }
 
 .tm-wd-props__color-swatch {
-  width: 26px;
-  height: 26px;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
-  padding: 1px;
+  padding: var(--tm-space-0-5);
   cursor: pointer;
   flex-shrink: 0;
   background: none;
@@ -944,7 +1034,7 @@
 .tm-wd-props__color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .tm-wd-props__color-swatch::-webkit-color-swatch {
   border: none;
-  border-radius: 2px;
+  border-radius: var(--tm-radius-xs);
 }
 
 .tm-wd-props__color-row .tm-wd-props__input {
@@ -958,8 +1048,8 @@
 
 .tm-wd-editor__minimap-wrap {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: var(--tm-space-3);
+  right: var(--tm-space-3);
   z-index: 10;
 }
 
@@ -967,7 +1057,7 @@
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
   background: var(--tm-wd-bg-surface);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: var(--tm-shadow-card);
   overflow: hidden;
   opacity: 0.9;
   transition: opacity 0.15s;
@@ -981,13 +1071,25 @@
   display: block;
 }
 
+.tm-wd-minimap__box {
+  fill: var(--tm-wd-minimap-box);
+  stroke: var(--tm-wd-minimap-box-edge);
+}
+
+.tm-wd-minimap__box--selected {
+  fill: var(--tm-wd-accent-subtle);
+  stroke: var(--tm-wd-accent);
+}
+
 .tm-wd-minimap__viewport {
   /* Cursor is set inline in Razor; SVG pointer-events handled via JS */
+  fill: color-mix(in srgb, var(--tm-wd-accent) 10%, transparent);
+  stroke: var(--tm-wd-accent);
 }
 
 .tm-wd-minimap__empty {
-  padding: 8px 12px;
-  font-size: 11px;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-light);
   font-style: italic;
 }
@@ -1030,8 +1132,8 @@
   background: var(--tm-wd-bg-surface);
   border: 1px solid var(--tm-wd-border);
   border-radius: var(--tm-wd-radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  padding: 4px 0;
+  box-shadow: var(--tm-shadow-popover);
+  padding: var(--tm-space-1) 0;
   font-family: var(--tm-wd-font);
   pointer-events: auto;
 }
@@ -1039,11 +1141,11 @@
 .tm-wd-editor__context-item {
   display: block;
   width: 100%;
-  padding: 6px 14px;
+  padding: var(--tm-space-1-5) var(--tm-space-3-5);
   border: none;
   background: transparent;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   color: var(--tm-wd-text);
   text-align: left;
   cursor: pointer;
@@ -1056,8 +1158,8 @@
 }
 
 .tm-wd-editor__context-item:focus-visible {
-  outline: 2px solid var(--tm-wd-border-focus);
-  outline-offset: -2px;
+  outline: 2px solid transparent;
+  box-shadow: inset 0 0 0 2px var(--tm-wd-border-focus);
 }
 
 .tm-wd-editor__context-item:disabled {
@@ -1070,37 +1172,37 @@
 }
 
 .tm-wd-editor__context-item--danger {
-  color: var(--tm-wd-danger, #ef4444);
+  color: var(--tm-wd-danger);
 }
 
 .tm-wd-editor__context-item--danger:hover {
-  background: var(--tm-wd-danger-subtle, rgba(239,68,68,0.08));
+  background: var(--tm-wd-danger-subtle);
 }
 
 .tm-wd-editor__context-sep {
   height: 1px;
-  margin: 4px 10px;
+  margin: var(--tm-space-1) var(--tm-space-2-5);
   background: var(--tm-wd-border);
 }
 
 .tm-wd-editor__context-heading {
   display: block;
-  padding: 4px 14px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: var(--tm-space-1) var(--tm-space-3-5);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   color: var(--tm-wd-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.04em;
   user-select: none;
 }
 
 .tm-wd-editor__context-submenu {
-  padding: 2px 0;
+  padding: var(--tm-space-0-5) 0;
 }
 
 .tm-wd-editor__context-submenu .tm-wd-editor__context-item {
-  padding-left: 24px;
-  font-size: 12px;
+  padding-left: var(--tm-space-6);
+  font-size: var(--tm-font-size-xs);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1110,8 +1212,8 @@
 .tm-wd-editor__page-tabs {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 8px 0;
+  gap: var(--tm-space-0-5);
+  padding: var(--tm-space-1) var(--tm-space-2) 0;
   background: var(--tm-wd-toolbar-bg);
   border-bottom: 1px solid var(--tm-wd-border);
   overflow-x: auto;
@@ -1121,11 +1223,11 @@
 .tm-wd-editor__page-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 6px 6px 0 0;
-  font-size: 12px;
-  font-weight: 500;
+  gap: var(--tm-space-1-5);
+  padding: var(--tm-space-1-5) var(--tm-space-3);
+  border-radius: var(--tm-radius-md) var(--tm-radius-md) 0 0;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text-muted);
   background: transparent;
   border: 1px solid transparent;
@@ -1156,12 +1258,12 @@
 }
 
 .tm-wd-editor__page-tab-input {
-  width: 100px;
-  padding: 2px 4px;
-  font-size: 12px;
+  width: calc(var(--tm-space-20) + var(--tm-space-5));
+  padding: var(--tm-space-0-5) var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
   font-family: inherit;
   border: 1px solid var(--tm-wd-border-focus);
-  border-radius: 3px;
+  border-radius: var(--tm-wd-radius-sm);
   background: var(--tm-wd-bg-surface);
   color: var(--tm-wd-text);
   outline: none;
@@ -1171,22 +1273,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: var(--tm-space-4);
+  height: var(--tm-space-4);
   padding: 0;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--tm-wd-radius-sm);
   background: transparent;
   color: var(--tm-wd-text-muted);
-  font-size: 13px;
+  font-size: var(--tm-font-size-sm);
   line-height: 1;
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
 
 .tm-wd-editor__page-tab-close:hover {
-  background: var(--tm-wd-danger-subtle, rgba(239,68,68,0.08));
-  color: var(--tm-wd-danger, #ef4444);
+  background: var(--tm-wd-danger-subtle);
+  color: var(--tm-wd-danger);
 }
 
 .tm-wd-editor__page-tab-add,
@@ -1194,13 +1296,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 10px;
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--tm-wd-radius);
   background: transparent;
   color: var(--tm-wd-text-muted);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
   white-space: nowrap;
@@ -1234,12 +1336,12 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 28px;
+  height: var(--tm-space-7);
   background: transparent;
   border: none;
   color: var(--tm-wd-text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-wd-layers__toggle:hover {
@@ -1262,15 +1364,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: var(--tm-space-1-5) var(--tm-space-2-5);
   border-bottom: 1px solid var(--tm-wd-border);
 }
 
 .tm-wd-layers__title {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.04em;
   color: var(--tm-wd-text-muted);
   margin: 0;
 }
@@ -1279,8 +1381,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--tm-space-6);
+  height: var(--tm-space-6);
   background: transparent;
   border: none;
   color: var(--tm-wd-text-muted);
@@ -1298,15 +1400,15 @@
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
-  padding: 4px;
-  gap: 2px;
+  padding: var(--tm-space-1);
+  gap: var(--tm-space-0-5);
 }
 
 .tm-wd-layers__item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-1-5);
   border-radius: var(--tm-wd-radius-sm);
   cursor: pointer;
   user-select: none;
@@ -1322,15 +1424,15 @@
   align-items: center;
   color: var(--tm-wd-text-light);
   cursor: grab;
-  font-size: 10px;
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-wd-layers__active {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--tm-space-5);
+  height: var(--tm-space-5);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -1338,9 +1440,9 @@
 }
 
 .tm-wd-layers__radio {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: var(--tm-space-2-5);
+  height: var(--tm-space-2-5);
+  border-radius: var(--tm-radius-full);
   border: 1.5px solid var(--tm-wd-border);
   background: var(--tm-wd-bg-surface);
   display: inline-block;
@@ -1358,15 +1460,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--tm-space-5);
+  height: var(--tm-space-5);
   background: transparent;
   border: none;
   color: var(--tm-wd-text-muted);
   cursor: pointer;
   padding: 0;
   border-radius: var(--tm-wd-radius-sm);
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
 }
 
 .tm-wd-layers__visibility:hover,
@@ -1382,12 +1484,12 @@
 
 .tm-wd-layers__name {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 2px 4px;
+  padding: var(--tm-space-0-5) var(--tm-space-1);
   border-radius: var(--tm-wd-radius-sm);
 }
 
@@ -1397,8 +1499,8 @@
 
 .tm-wd-layers__name-input {
   flex: 1;
-  font-size: 12px;
-  padding: 2px 4px;
+  font-size: var(--tm-font-size-xs);
+  padding: var(--tm-space-0-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border-focus);
   border-radius: var(--tm-wd-radius-sm);
   background: var(--tm-wd-bg-surface);
@@ -1407,15 +1509,15 @@
 }
 
 .tm-wd-layers__move-section {
-  padding: 8px 10px;
+  padding: var(--tm-space-2) var(--tm-space-2-5);
   border-top: 1px solid var(--tm-wd-border);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--tm-space-1);
 }
 
 .tm-wd-layers__move-label {
-  font-size: 11px;
+  font-size: var(--tm-font-size-xs);
   color: var(--tm-wd-text-muted);
 }
 
@@ -1426,58 +1528,34 @@
 .tm-wd-export-dialog {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 8px 0;
+  gap: var(--tm-space-4);
+  padding: var(--tm-space-2) 0;
 }
 
 .tm-wd-export-dialog__field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--tm-space-1-5);
 }
 
 .tm-wd-export-dialog__field--inline {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: var(--tm-space-2);
 }
 
 .tm-wd-export-dialog__label {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
   color: var(--tm-wd-text);
 }
 
 /* ════════════════════════════════════════════════════════════════
-   10. DARK MODE
+   10. FOCUS-VISIBLE (keyboard accessibility)
    ════════════════════════════════════════════════════════════════ */
 
-[data-theme="dark"] .tm-wd-editor,
-.tm-dark .tm-wd-editor {
-  --tm-wd-bg-surface:    #1e293b;
-  --tm-wd-bg-subtle:     #1e293b;
-  --tm-wd-bg-muted:      #0f172a;
-  --tm-wd-border:        #334155;
-  --tm-wd-border-focus:  #60a5fa;
-  --tm-wd-text:          #e2e8f0;
-  --tm-wd-text-muted:    #94a3b8;
-  --tm-wd-text-light:    #64748b;
-  --tm-wd-accent:        #60a5fa;
-  --tm-wd-accent-subtle: rgba(59,130,246,0.15);
-  --tm-wd-toolbar-bg:    #1e293b;
-  --tm-wd-danger-subtle: rgba(239,68,68,0.15);
-}
-
-/* Invert wireframe SVG fills for dark mode */
-[data-theme="dark"] .tm-wd-canvas-wrap .tm-wd-canvas__svg rect[fill="white"],
-.tm-dark .tm-wd-canvas-wrap .tm-wd-canvas__svg rect[fill="white"] {
-  fill: #1e293b;
-}
-
-/* ════════════════════════════════════════════════════════════════
-   11. FOCUS-VISIBLE (keyboard accessibility)
-   ════════════════════════════════════════════════════════════════ */
-
+/* Core two-layer ring (surface gap + primary): visible on every surface in light, dark and indigo.
+   The transparent outline is what forced-colors mode paints in the system colour. */
 .tm-wd-editor__btn:focus-visible,
 .tm-wd-toolbox__filter-btn:focus-visible,
 .tm-wd-toolbox__search-input:focus-visible,
@@ -1497,8 +1575,9 @@
 .tm-wd-editor__page-tab-close:focus-visible,
 .tm-wd-editor__page-tab-dup:focus-visible,
 .tm-wd-editor__page-tab-input:focus-visible {
-  outline: 2px solid var(--tm-wd-border-focus);
+  outline: 2px solid transparent;
   outline-offset: 1px;
+  box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
@@ -1534,4 +1613,22 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
 }
+}
+
+/* Properties panel layout helpers (replace inline styles). */
+.tm-wd-props__row {
+  display: flex;
+  gap: var(--tm-space-1);
+}
+
+.tm-wd-props__row--wrap {
+  flex-wrap: wrap;
+}
+
+.tm-wd-props__input--grow {
+  flex: 1;
+}
+
+.tm-wd-props__toggle-label {
+  font-size: var(--tm-font-size-xs);
 }

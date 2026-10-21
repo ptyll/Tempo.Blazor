@@ -369,7 +369,7 @@ window.tmWireframeDesigner = {
             line.setAttribute('y1', g.from);
             line.setAttribute('x2', g.x);
             line.setAttribute('y2', g.to);
-            line.setAttribute('stroke', 'var(--tm-wd-guide-color, #3b82f6)');
+            line.style.stroke = 'var(--tm-wd-guide-color)';
             line.setAttribute('stroke-width', '1');
             line.setAttribute('stroke-dasharray', '4 4');
             line.setAttribute('class', 'tm-wd-guide');
@@ -382,7 +382,7 @@ window.tmWireframeDesigner = {
             line.setAttribute('y1', g.y);
             line.setAttribute('x2', g.to);
             line.setAttribute('y2', g.y);
-            line.setAttribute('stroke', 'var(--tm-wd-guide-color, #3b82f6)');
+            line.style.stroke = 'var(--tm-wd-guide-color)';
             line.setAttribute('stroke-width', '1');
             line.setAttribute('stroke-dasharray', '4 4');
             line.setAttribute('class', 'tm-wd-guide');
@@ -1311,7 +1311,7 @@ window.tmWireframeDesigner = {
             border.setAttribute('width',  r.w + 2);
             border.setAttribute('height', r.h + 2);
             border.setAttribute('fill',   'none');
-            border.setAttribute('stroke', '#3b82f6');
+            border.style.stroke = 'var(--tm-wd-accent)';
             border.setAttribute('stroke-width', '1.5');
             border.setAttribute('stroke-dasharray', '4 2');
             border.setAttribute('rx', '2');
@@ -1337,8 +1337,8 @@ window.tmWireframeDesigner = {
                     dot.setAttribute('width',  8);
                     dot.setAttribute('height', 8);
                     dot.setAttribute('rx',     2);
-                    dot.setAttribute('fill',   'white');
-                    dot.setAttribute('stroke', '#3b82f6');
+                    dot.style.fill = 'var(--tm-wd-handle-fill)';
+                    dot.style.stroke = 'var(--tm-wd-accent)';
                     dot.setAttribute('stroke-width', '1.5');
                     dot.setAttribute('data-handle', h.key);
                     dot.setAttribute('pointer-events', 'all');
@@ -1351,8 +1351,8 @@ window.tmWireframeDesigner = {
                 rotHandle.setAttribute('cx', r.x + r.w / 2);
                 rotHandle.setAttribute('cy', r.y - 12);
                 rotHandle.setAttribute('r', 5);
-                rotHandle.setAttribute('fill', 'white');
-                rotHandle.setAttribute('stroke', '#3b82f6');
+                rotHandle.style.fill = 'var(--tm-wd-handle-fill)';
+                rotHandle.style.stroke = 'var(--tm-wd-accent)';
                 rotHandle.setAttribute('stroke-width', '1.5');
                 rotHandle.setAttribute('data-rotate-handle', 'true');
                 rotHandle.setAttribute('pointer-events', 'all');
@@ -1365,7 +1365,7 @@ window.tmWireframeDesigner = {
                 rotLine.setAttribute('y1', r.y);
                 rotLine.setAttribute('x2', r.x + r.w / 2);
                 rotLine.setAttribute('y2', r.y - 7);
-                rotLine.setAttribute('stroke', '#3b82f6');
+                rotLine.style.stroke = 'var(--tm-wd-accent)';
                 rotLine.setAttribute('stroke-width', '1');
                 rotLine.setAttribute('stroke-dasharray', '2 2');
                 rotLine.setAttribute('pointer-events', 'none');
@@ -1383,7 +1383,7 @@ window.tmWireframeDesigner = {
         const path = document.createElementNS(ns, 'path');
         path.setAttribute('d', 'M ' + x + ' ' + y);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', '#3b82f6');
+        path.style.stroke = 'var(--tm-wd-accent)';
         path.setAttribute('stroke-width', '2');
         path.setAttribute('stroke-dasharray', '4 2');
         path.setAttribute('pointer-events', 'none');
@@ -1399,8 +1399,8 @@ window.tmWireframeDesigner = {
         rect.setAttribute('y',      y);
         rect.setAttribute('width',  0);
         rect.setAttribute('height', 0);
-        rect.setAttribute('fill',   'rgba(59,130,246,0.08)');
-        rect.setAttribute('stroke', '#3b82f6');
+        rect.style.fill = 'color-mix(in srgb, var(--tm-wd-accent) 8%, transparent)';
+        rect.style.stroke = 'var(--tm-wd-accent)';
         rect.setAttribute('stroke-width', '1');
         rect.setAttribute('stroke-dasharray', '4 2');
         rect.setAttribute('pointer-events', 'none');
@@ -1497,17 +1497,53 @@ window.tmWireframeDesigner = {
             e.dataTransfer.setData('text/plain', type);
             e.dataTransfer.effectAllowed = 'copy';
         });
+        // Space scroll guard. A toolbox item is a div[role=button][tabindex=0] (non-native), so its Space
+        // activation runs on KEYUP in C# and the browser's default for Space keydown - scrolling the palette -
+        // must be cancelled. Scoped on purpose (docs/keyboard-activation-convention.md): only when the
+        // keydown target IS an item, so a Space typed into the search box and Tab are never touched.
+        toolboxElement.addEventListener('keydown', function (e) {
+            if (e.key === ' ' && e.target && e.target.classList && e.target.classList.contains('tm-wd-toolbox__item')) {
+                e.preventDefault();
+            }
+        });
     },
 
+    // ── Export: bake token paints into explicit colours ───────────────────────
+    // The canvas paints its page, grid and handles through var(--tm-wd-*) so dark mode and the indigo
+    // theme reach it. A serialized export is standalone (the PNG/PDF rasteriser has no stylesheet and
+    // no custom properties), so every node flagged data-wd-paint gets the paint the LIVE canvas computes
+    // written back as an explicit presentation attribute, and the var() style is dropped. The page is
+    // paper (--tm-paper), so the export is identical in every theme.
+    _bakePaints: function (liveRoot, cloneRoot) {
+        const live = liveRoot.querySelectorAll('[data-wd-paint]');
+        const baked = cloneRoot.querySelectorAll('[data-wd-paint]');
+        const count = Math.min(live.length, baked.length);
+        for (let i = 0; i < count; i++) {
+            const computed = window.getComputedStyle(live[i]);
+            const props = (live[i].getAttribute('data-wd-paint') || '').split(/\s+/).filter(Boolean);
+            props.forEach(function (prop) {
+                const value = computed.getPropertyValue(prop);
+                if (value) {
+                    baked[i].setAttribute(prop, value);
+                    baked[i].style.removeProperty(prop);
+                }
+            });
+            if (!baked[i].getAttribute('style')) baked[i].removeAttribute('style');
+            baked[i].removeAttribute('data-wd-paint');
+        }
+    },
     // ── Export SVG (strip UI overlays) ────────────────────────────────────────
 
     exportSvg: function (svgElement) {
         const inst = this.instances.get(svgElement.id);
         if (!inst) return '';
         const clone = inst.svg.cloneNode(true);
+        // Bake FIRST: the live and cloned trees are index-paired, so the strip below (which removes
+        // data-wd-paint nodes such as selection chrome) must not run before the pairing is used.
+        this._bakePaints(inst.svg, clone);
         // Strip all interactive / UI-only layers
         clone.querySelectorAll(
-            '.tm-wd-selection, .tm-wd-rubber, .tm-wd-grid-overlay, .tm-wd-ruler, .tm-wd-waypoint-handle, .tm-wd-rotate-handle, .tm-wd-resize-handle'
+            '.tm-wd-selection, .tm-wd-rubber, .tm-wd-grid-overlay, .tm-wd-ruler, .tm-wd-waypoint-handle, .tm-wd-rotate-handle, .tm-wd-resize-handle, .tm-wd-connector__waypoint, .tm-wd-guide, .tm-wd-connector-preview'
         ).forEach(el => el.remove());
         return clone.outerHTML;
     },

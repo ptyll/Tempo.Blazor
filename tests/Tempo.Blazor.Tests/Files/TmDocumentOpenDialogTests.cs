@@ -567,4 +567,72 @@ public class TmDocumentOpenDialogTests : LocalizationTestBase
         after.First(n => n.TextContent.Contains("Designs")).GetAttribute("aria-selected").Should().Be("true");
         after.First(n => n.TextContent.Contains("All documents")).GetAttribute("aria-selected").Should().Be("false");
     }
+
+    // ── Phase 2 carry-forward (phase-1 review): grid-item column headers + Space scroll guard ──
+
+    [Fact]
+    public void SortHeader_ColumnHeaderIsTheGridItem_NotADisplayContentsWrapper()
+    {
+        var cut = RenderOpen(Seeded());
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        foreach (var selector in new[] { ".tm-dod-col-name", ".tm-dod-col-modified" })
+        {
+            var header = cut.Find(selector).ParentElement!;
+            header.GetAttribute("role").Should().Be("columnheader");
+            header.GetAttribute("aria-sort").Should().NotBeNull();
+            (header.GetAttribute("style") ?? "").Should().NotContain("display:contents",
+                "display:contents drops the element from the accessibility tree in some engines — the header is the grid item itself");
+            header.ParentElement!.ClassList.Should().Contain("tm-dod-list-head", "the header is a direct grid child of the head row");
+        }
+    }
+
+    private const string SpaceGuardModule = "./_content/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor.js";
+
+    [Fact]
+    public void Open_AttachesTheSpaceScrollGuard_ToTheDialogRoot()
+    {
+        var guard = JSInterop.SetupModule(SpaceGuardModule);
+        guard.Mode = JSRuntimeMode.Loose;
+
+        var cut = RenderOpen(Seeded());
+
+        cut.WaitForAssertion(() => guard.Invocations["attachSpaceGuard"].Should().ContainSingle(),
+            TimeSpan.FromSeconds(5));
+        guard.Invocations["attachSpaceGuard"].Single().Arguments.Should().HaveCount(1,
+            "only the dialog root travels — the module knows the .tm-dod-row / .tm-dod-card targets itself");
+    }
+
+    [Fact]
+    public void Closed_DoesNotImportTheSpaceScrollGuard()
+    {
+        var guard = JSInterop.SetupModule(SpaceGuardModule);
+        guard.Mode = JSRuntimeMode.Loose;
+
+        Render<TmDocumentOpenDialog>(p => p
+            .Add(c => c.Provider, Seeded())
+            .Add(c => c.Kind, TempoDocumentKind.Wireframe)
+            .Add(c => c.Open, false));
+
+        guard.Invocations["attachSpaceGuard"].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RowAndCardActivation_StillExactlyOnce_AfterTheGuard()
+    {
+        // The guard only suppresses the browser's default scroll on Space keydown; activation stays on keyup.
+        var selected = new List<DocumentOpenResult>();
+        var cut = RenderOpen(Seeded(), p => p.Add(c => c.OnSelected,
+            Microsoft.AspNetCore.Components.EventCallback.Factory.Create<DocumentOpenResult>(this, selected.Add)));
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        cut.FindAll(".tm-dod-row").First().KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-dod-row--selected").Should().BeEmpty("Space selects on keyup, not on keydown");
+        cut.FindAll(".tm-dod-row").First().KeyUp(new KeyboardEventArgs { Key = " " });
+
+        cut.FindAll(".tm-dod-row--selected").Should().ContainSingle();
+        selected.Should().BeEmpty();
+    }
 }

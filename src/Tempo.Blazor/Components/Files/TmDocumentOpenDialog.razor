@@ -12,7 +12,7 @@
          OnClose="CancelAsync"
          Class="tm-dod-modal">
     <ChildContent>
-        <div class="tm-document-open-dialog">
+        <div class="tm-document-open-dialog" @ref="_root">
 
             @* Toolbar *@
             <div class="tm-dod-toolbar">
@@ -151,16 +151,16 @@
                     else if (_view == DialogView.List)
                     {
                         <div class="tm-dod-list" role="grid">
-                            @* aria-sort is only valid on columnheader: the wrappers use display:contents so the
-                               three-column grid of .tm-dod-list-head keeps its exact layout. *@
+                            @* aria-sort is only valid on columnheader: the header element IS the grid item of
+                               .tm-dod-list-head (no display:contents wrapper), so the accessibility tree keeps it. *@
                             <div class="tm-dod-list-head" role="row">
-                                <div role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Name)" style="display:contents">
+                                <div class="tm-dod-colhead" role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Name)">
                                     <button type="button" class="tm-dod-col-name"
                                             @onclick="@(() => SortByAsync(DocumentLibrarySortField.Name))">
                                         @Loc["TmDocumentOpenDialog_ColumnName"]
                                     </button>
                                 </div>
-                                <div role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Modified)" style="display:contents">
+                                <div class="tm-dod-colhead" role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Modified)">
                                     <button type="button" class="tm-dod-col-modified"
                                             @onclick="@(() => SortByAsync(DocumentLibrarySortField.Modified))">
                                         @Loc["TmDocumentOpenDialog_ColumnModified"]

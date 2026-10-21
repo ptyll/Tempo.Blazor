@@ -2,7 +2,7 @@
   "itemName": "TmDocumentOpenDialog",
   "kind": "Component",
   "category": "Files",
-  "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: a folder tree, breadcrumb, searchable list/grid of documents, optional folder/document management, and a link-or-copy choice. Emits a DocumentOpenResult on confirm.",
+  "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: a folder tree, breadcrumb, searchable list/grid of documents, optional folder/document management, and a link-or-copy choice. Emits a DocumentOpenResult on confirm. Colours come only from canonical core tokens (--tm-color-primary, --tm-color-primary-subtle, --tm-color-surface-hover, --tm-text-primary, --tm-color-danger(-subtle), --tm-bg-surface-secondary), so the accent follows the default blue, the opt-in indigo theme and dark mode; there is no hex fallback.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Files",
   "sourcePath": "src/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor",

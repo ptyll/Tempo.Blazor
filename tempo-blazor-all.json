@@ -12709,7 +12709,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: a folder tree, breadcrumb, searchable list/grid of documents, optional folder/document management, and a link-or-copy choice. Emits a DocumentOpenResult on confirm.",
+          "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: a folder tree, breadcrumb, searchable list/grid of documents, optional folder/document management, and a link-or-copy choice. Emits a DocumentOpenResult on confirm. Colours come only from canonical core tokens (--tm-color-primary, --tm-color-primary-subtle, --tm-color-surface-hover, --tm-text-primary, --tm-color-danger(-subtle), --tm-bg-surface-secondary), so the accent follows the default blue, the opt-in indigo theme and dark mode; there is no hex fallback.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor",
           "documentationStatus": "merged",
@@ -27874,6 +27874,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-dod-space-guard.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-editor-shell.test.mjs",
           "kind": "JavaScript"
         },
@@ -38631,7 +38635,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Top-level wireframe editor component. Composes the canvas, toolbox, properties panel, minimap, and toolbar into a fully working editor. Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode, and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is editable from the toolbar.",
+          "description": "Top-level wireframe editor component. Composes the canvas, toolbox, properties panel, minimap, and toolbar into a fully working editor. Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode, and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is editable from the toolbar. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px).",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeEditor.razor",
           "documentationStatus": "merged",
@@ -38793,9 +38797,58 @@
           "cssClasses": [
             "tm-wd-editor",
             "tm-wd-editor__toolbar",
+            "tm-wd-editor__btn",
+            "tm-wd-editor__btn--icon",
+            "tm-wd-editor__btn--active",
             "tm-wd-editor__canvas-wrap",
             "tm-wd-editor__toolbox-wrap",
             "tm-wd-editor__props-wrap"
+          ],
+          "cssVariables": [
+            {
+              "name": "--tm-wd-accent",
+              "description": "Accent (selection, active button, handles). Alias of --tm-color-primary; follows the default blue, the opt-in indigo theme (data-tm-theme=\"indigo\") and dark mode."
+            },
+            {
+              "name": "--tm-wd-bg-surface",
+              "description": "Toolbar, panel and dialog surface. Alias of --tm-bg-surface."
+            },
+            {
+              "name": "--tm-wd-bg-muted",
+              "description": "Hover/muted fill. Alias of --tm-bg-muted."
+            },
+            {
+              "name": "--tm-wd-border",
+              "description": "Hairlines and control borders. Alias of --tm-border-color."
+            },
+            {
+              "name": "--tm-wd-text",
+              "description": "Primary text. Alias of --tm-text-primary."
+            },
+            {
+              "name": "--tm-wd-text-muted",
+              "description": "Secondary text. Alias of --tm-text-secondary."
+            },
+            {
+              "name": "--tm-wd-canvas-surface",
+              "description": "Workspace behind the page. Alias of --tm-bg-workspace (indigo off-white / dark slate)."
+            },
+            {
+              "name": "--tm-wd-canvas-bg",
+              "description": "The wireframe PAGE. Alias of the theme-invariant --tm-paper: wireframe components are drawn light-on-paper, so the page stays paper in dark mode and the SVG/PNG/PDF export matches the screen."
+            },
+            {
+              "name": "--tm-wd-grid-minor",
+              "description": "Minor grid step (drawn at 55% opacity). Alias of --tm-paper-border."
+            },
+            {
+              "name": "--tm-wd-grid-major",
+              "description": "Major grid step. Alias of --tm-paper-border."
+            },
+            {
+              "name": "--tm-wd-btn-size",
+              "description": "Toolbar button edge (32px = --tm-space-8; 8px rhythm)."
+            }
           ],
           "examples": [
             {
@@ -38821,7 +38874,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "Modal dialog for exporting a wireframe. Lets the user choose a file name, output format (PNG or PDF), image scale (1x-3x, PNG only), and whether to include the background, then raises OnExport with the assembled export options.",
+          "description": "Modal dialog for exporting a wireframe. Lets the user choose a file name, output format (PNG or PDF), image scale (1x-3x, PNG only), and whether to include the background, then raises OnExport with the assembled export options. The footer pairs a Secondary (outline) Cancel with the Primary Export button.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeExportDialog.razor",
           "documentationStatus": "merged",
@@ -39192,12 +39245,21 @@
               "type": "EventCallback<string>",
               "isRequired": false,
               "description": "Raised when the user activates a component by click, tap or keyboard (Enter/Space), exactly once per gesture - the non-drag alternative to HTML5 drag-and-drop. Payload is the component type string (e.g. 'TmButton'); the editor inserts it centred in the visible canvas area."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the palette inert: items are aria-disabled, muted (tm-wd-toolbox__item--disabled), not draggable and never raise OnComponentActivated. TmWireframeEditor passes its effective read-only state (host ReadOnly or the user Read-only toggle).",
+              "defaultValue": "false"
             }
           ],
           "cssClasses": [
             "tm-wd-toolbox",
             "tm-wd-toolbox__search",
             "tm-wd-toolbox__item",
+            "tm-wd-toolbox__item--disabled",
+            "tm-wd-toolbox__item-preview-paper",
             "tm-wd-toolbox__category"
           ],
           "examples": [
@@ -39220,6 +39282,10 @@
         },
         {
           "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/wireframe-designer.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Wireframe/wwwroot/js/__tests__/wireframe-designer-export.test.mjs",
           "kind": "JavaScript"
         },
         {

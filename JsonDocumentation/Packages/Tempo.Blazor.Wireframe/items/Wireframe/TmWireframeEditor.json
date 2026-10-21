@@ -2,7 +2,7 @@
   "itemName": "TmWireframeEditor",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "Top-level wireframe editor component. Composes the canvas, toolbox, properties panel, minimap, and toolbar into a fully working editor. Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode, and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is editable from the toolbar.",
+  "description": "Top-level wireframe editor component. Composes the canvas, toolbox, properties panel, minimap, and toolbar into a fully working editor. Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode, and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is editable from the toolbar. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
@@ -155,9 +155,25 @@
   "cssClasses": [
     "tm-wd-editor",
     "tm-wd-editor__toolbar",
+    "tm-wd-editor__btn",
+    "tm-wd-editor__btn--icon",
+    "tm-wd-editor__btn--active",
     "tm-wd-editor__canvas-wrap",
     "tm-wd-editor__toolbox-wrap",
     "tm-wd-editor__props-wrap"
+  ],
+  "cssVariables": [
+    { "name": "--tm-wd-accent", "description": "Accent (selection, active button, handles). Alias of --tm-color-primary; follows the default blue, the opt-in indigo theme (data-tm-theme=\"indigo\") and dark mode." },
+    { "name": "--tm-wd-bg-surface", "description": "Toolbar, panel and dialog surface. Alias of --tm-bg-surface." },
+    { "name": "--tm-wd-bg-muted", "description": "Hover/muted fill. Alias of --tm-bg-muted." },
+    { "name": "--tm-wd-border", "description": "Hairlines and control borders. Alias of --tm-border-color." },
+    { "name": "--tm-wd-text", "description": "Primary text. Alias of --tm-text-primary." },
+    { "name": "--tm-wd-text-muted", "description": "Secondary text. Alias of --tm-text-secondary." },
+    { "name": "--tm-wd-canvas-surface", "description": "Workspace behind the page. Alias of --tm-bg-workspace (indigo off-white / dark slate)." },
+    { "name": "--tm-wd-canvas-bg", "description": "The wireframe PAGE. Alias of the theme-invariant --tm-paper: wireframe components are drawn light-on-paper, so the page stays paper in dark mode and the SVG/PNG/PDF export matches the screen." },
+    { "name": "--tm-wd-grid-minor", "description": "Minor grid step (drawn at 55% opacity). Alias of --tm-paper-border." },
+    { "name": "--tm-wd-grid-major", "description": "Major grid step. Alias of --tm-paper-border." },
+    { "name": "--tm-wd-btn-size", "description": "Toolbar button edge (32px = --tm-space-8; 8px rhythm)." }
   ],
   "examples": [
     {

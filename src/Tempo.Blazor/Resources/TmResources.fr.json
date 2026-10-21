@@ -5238,7 +5238,7 @@
   "TmWireframeProps_ZIndex": "Z-Index",
   "TmWireframeToolbox_ClearSearch": "Clear search",
   "TmWireframeToolbox_CustomComponentTooltip": "Custom component",
-  "TmWireframeToolbox_DragOntoCanvas": "Drag {0} onto canvas",
+  "TmWireframeToolbox_DragOntoCanvas": "Ajouter {0} au canevas (ou glisser)",
   "TmWireframeToolbox_FilterAll": "All",
   "TmWireframeToolbox_FilterBuiltIn": "Built-in",
   "TmWireframeToolbox_FilterCustom": "Custom",

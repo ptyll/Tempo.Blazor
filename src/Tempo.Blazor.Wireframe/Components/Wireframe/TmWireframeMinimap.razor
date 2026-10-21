@@ -35,7 +35,8 @@
             <rect x="0" y="0"
                   width="@F(Document.Width)"
                   height="@F(Document.Height)"
-                  fill="#f9fafb" stroke="#e5e7eb" stroke-width="1" />
+                  stroke-width="1"
+                  style="fill: var(--tm-wd-minimap-page); stroke: var(--tm-wd-minimap-page-edge)" />
 
             @* ── Element boxes ───────────────────────────────────────────── *@
             @foreach (var el in Document.Elements.OrderBy(e => e.ZIndex))
@@ -44,8 +45,7 @@
                 <rect x="@F(el.X)" y="@F(el.Y)"
                       width="@F(Math.Max(1, el.W))"
                       height="@F(Math.Max(1, el.H))"
-                      fill="@(isSelected ? "#dbeafe" : "#e5e7eb")"
-                      stroke="@(isSelected ? "#3b82f6" : "#9ca3af")"
+                      class="@(isSelected ? "tm-wd-minimap__box tm-wd-minimap__box--selected" : "tm-wd-minimap__box")"
                       stroke-width="@(isSelected ? "2" : "1")"
                       rx="1" />
             }
@@ -57,8 +57,6 @@
                       y="@F(vp.Y)"
                       width="@F(Math.Max(1, vp.W))"
                       height="@F(Math.Max(1, vp.H))"
-                      fill="rgba(59,130,246,0.08)"
-                      stroke="#3b82f6"
                       stroke-width="@F(1.5 / scale)"
                       stroke-dasharray="@F(4 / scale) @F(3 / scale)"
                       rx="1"
