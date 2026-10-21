@@ -3,6 +3,7 @@ using FluentAssertions;
 using NSubstitute;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.DataTable;
+using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -46,6 +47,31 @@ public class TmMultiViewListToolbarTests : LocalizationTestBase
             .Add(c => c.ShowItemCount, true));
 
         cut.Find(".tm-mvl-item-count").TextContent.Should().Be("Items: 2");
+    }
+
+    [Fact]
+    public async Task ItemCount_StepsAsideWhileTheFilterResultPreviewShowsTheSameCount()
+    {
+        var provider = CreateViewProvider();
+        provider.GetViewsAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IEnumerable<DataTableView>>([]));
+
+        var cut = Render<TmMultiViewList<MvlToolbarItem>>(p => p
+            .Add(c => c.Items, SampleItems())
+            .Add(c => c.ShowItemCount, true)
+            .Add(c => c.ShowFilterResultPreview, true)
+            .Add(c => c.ViewContext, "test-context")
+            .Add(c => c.ViewProvider, provider)
+            .Add(c => c.ExternalFilterDefinitions, [new FilterDefinition { FieldName = "Title", FieldLabel = "Title" }]));
+
+        cut.FindAll(".tm-mvl-item-count").Should().ContainSingle("without active filters there is no preview to duplicate");
+
+        var builder = cut.FindComponent<TmFilterBuilder>();
+        await cut.InvokeAsync(() => builder.Instance.OnFiltersChanged.InvokeAsync(
+            new List<ActiveFilter> { new("Title", "Title", FilterOperator.Contains, "Item 1", "Item 1") }));
+
+        cut.FindAll(".tm-mvl-item-count").Should().BeEmpty(
+            "the result preview already prints the matching count — two identical numbers are noise");
     }
 
     [Fact]

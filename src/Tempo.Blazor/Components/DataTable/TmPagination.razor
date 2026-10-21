@@ -6,6 +6,8 @@
      @attributes="AdditionalAttributes">
     @if (Compact)
     {
+        @* Compact states the page, it never drops the controls: a reader who cannot see the page
+           buttons still has to be able to move. *@
         <span class="tm-pagination-info" data-testid="@TestId("pagination-info")">
             @Loc["TmDataTable_CompactPage", CurrentPage, TotalPages]
         </span>
@@ -26,7 +28,7 @@
             <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
         </button>
 
-        @foreach (var pageNum in (Compact ? Array.Empty<int>() : GetPageNumbers()))
+        @foreach (var pageNum in GetPageNumbers())
         {
             @if (pageNum == -1)
             {
@@ -97,7 +99,11 @@
     /// <summary>Whether the pagination is disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
 
-    /// <summary>Whether to render the compact page-count presentation.</summary>
+    /// <summary>
+    /// Whether to state the current page as "Page X of Y" ahead of the controls. It never removes
+    /// the page buttons or the previous/next controls — a compact pager is a labelled pager, not a
+    /// smaller one.
+    /// </summary>
     [Parameter] public bool Compact { get; set; }
 
     /// <summary>

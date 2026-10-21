@@ -182,6 +182,64 @@ public class TmViewManagerPhase9Tests : LocalizationTestBase
         toggle.GetAttribute("title").Should().BeNull();
     }
 
+    [Fact]
+    public async Task Failed_reload_after_set_default_is_reported_and_skips_OnSetDefault()
+    {
+        var views = Views.Select(Clone).ToList();
+        var provider = Provider(views);
+        var loadCalls = 0;
+        provider.GetViewsAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                // Load 1: initialization, load 2: opening the panel, load 3: the reload after the write.
+                if (++loadCalls >= 3)
+                    throw new InvalidOperationException("provider down");
+                return views.ToList();
+            });
+        DataTableView? notified = null;
+        var cut = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, Context)
+            .Add(c => c.CurrentUserId, User)
+            .Add(c => c.AllowSetDefault, true)
+            .Add(c => c.OnSetDefault, EventCallback.Factory.Create<DataTableView>(this, v => notified = v)));
+
+        await cut.InvokeAsync(() => { });
+        cut.Find(".tm-view-manager-toggle").Click();
+
+        cut.Find(".tm-view-set-default-btn").Click();
+        await cut.InvokeAsync(() => { });
+
+        await provider.Received(1).SetDefaultViewAsync(Context, "v2", Arg.Any<string?>(), User, Arg.Any<CancellationToken>());
+        cut.Find(".tm-view-error").TextContent.Should().Be("Could not set the default view.");
+        notified.Should().BeNull("a failed reload is a set-default failure, not a success");
+    }
+
+    [Fact]
+    public async Task Set_default_announces_a_status_message_and_names_the_star()
+    {
+        var views = Views.Select(Clone).ToList();
+        var provider = Provider(views);
+        var cut = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, Context)
+            .Add(c => c.CurrentUserId, User)
+            .Add(c => c.AllowSetDefault, true));
+
+        await cut.InvokeAsync(() => { });
+        cut.Find(".tm-view-manager-toggle").Click();
+
+        var action = cut.FindAll(".tm-view-set-default-btn").Single();
+        action.GetAttribute("title").Should().Be("Set Quarterly pipeline review for the northern region as default");
+
+        action.Click();
+        await cut.InvokeAsync(() => { });
+
+        var status = cut.Find(".tm-view-manager-panel [role='status']");
+        status.GetAttribute("aria-live").Should().Be("polite");
+        status.TextContent.Should().Be("Quarterly pipeline review for the northern region is now the default view.");
+    }
+
     private static DataTableView Clone(DataTableView view) => new()
     {
         Id = view.Id,

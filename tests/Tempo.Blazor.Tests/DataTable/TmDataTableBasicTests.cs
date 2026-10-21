@@ -47,13 +47,26 @@ public class TmDataTableBasicTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmDataTable_Loading_Shows_Spinner()
+    public void TmDataTable_Loading_ShowsSkeletonRows_WithOneCellPerColumn()
     {
         var cut = Render<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People)
-            .Add(c => c.IsLoading, true));
+            .Add(c => c.IsLoading, true)
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Name").Add(x => x.Field, x => x.Name))
+            .AddChildContent<TmDataTableColumn<BasicPerson>>(c => c.Add(x => x.Title, "Age").Add(x => x.Field, x => x.Age)));
 
-        cut.FindAll(".tm-spinner").Should().NotBeEmpty();
+        cut.FindAll(".tm-spinner").Should().BeEmpty("the colspan spinner cell let the column widths jump");
+        var table = cut.Find("table.tm-data-table");
+        var rows = table.QuerySelectorAll("tr.tm-data-table-loading-row");
+        rows.Length.Should().BeGreaterThan(0);
+        var headerCellCount = table.QuerySelectorAll("thead th").Length;
+        headerCellCount.Should().BeGreaterThan(0, $"markup: {cut.Markup[..Math.Min(600, cut.Markup.Length)]}");
+        foreach (var row in rows)
+        {
+            row.QuerySelectorAll("td").Length.Should().Be(headerCellCount,
+                "a skeleton row measures the same columns the data rows will");
+            row.QuerySelectorAll(".tm-skeleton").Should().NotBeEmpty($"row HTML: {row.OuterHtml[..Math.Min(400, row.OuterHtml.Length)]}");
+        }
     }
 
     [Fact]
@@ -64,6 +77,17 @@ public class TmDataTableBasicTests : LocalizationTestBase
             .Add(c => c.EmptyTitle, "No data found"));
 
         cut.FindAll(".tm-empty-state").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void TmDataTable_Empty_Items_ShowsIconAndLocalizedDescription()
+    {
+        var cut = Render<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, new List<BasicPerson>())
+            .Add(c => c.EmptyTitle, "No data found"));
+
+        cut.Find(".tm-empty-state-icon").Should().NotBeNull("a bare text-only empty state was a UX review defect");
+        cut.Find(".tm-empty-state-description").TextContent.Should().Be("No records to display.");
     }
 
     [Fact]

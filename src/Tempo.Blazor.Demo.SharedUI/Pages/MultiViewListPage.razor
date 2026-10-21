@@ -1,5 +1,6 @@
 @page "/multi-view-list"
 @using Tempo.Blazor.Components.DataDisplay
+@inject ITmLocalizer Loc
 @using Tempo.Blazor.Components.DataTable
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
@@ -8,6 +9,127 @@
 
 <PageTitle>Multi View List – Tempo.Blazor</PageTitle>
 
+<!-- Redesign opt-in playground -->
+<section class="demo-section" data-testid="mvl-redesign-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmMvlDemo_RedesignTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            @Loc["TmMvlDemo_RedesignDescription"]
+        </p>
+        <div class="flex flex-wrap gap-3 mb-4">
+            <div data-testid="mvl-redesign-switcher-labels">
+                <TmSelect TValue="ViewSwitcherLabels" Label="@Loc["TmMvlDemo_SwitcherLabels"]"
+                          Options="_switcherLabelOptions" @bind-Value="_redesignSwitcherLabels" />
+            </div>
+            <div data-testid="mvl-redesign-avatar-fallback">
+                <TmSelect TValue="AvatarFallback" Label="@Loc["TmMvlDemo_AvatarFallback"]"
+                          Options="_avatarFallbackOptions" @bind-Value="_redesignAvatarFallback" />
+            </div>
+            <div data-testid="mvl-redesign-cell-layout">
+                <TmSelect TValue="TableCellLayout" Label="@Loc["TmMvlDemo_CellLayout"]"
+                          Options="_cellLayoutOptions" @bind-Value="_redesignCellLayout" />
+            </div>
+            <div data-testid="mvl-redesign-card-activation">
+                <TmSelect TValue="CardActivation" Label="@Loc["TmMvlDemo_CardActivation"]"
+                          Options="_cardActivationOptions" @bind-Value="_redesignCardActivation" />
+            </div>
+            <div data-testid="mvl-redesign-item-count">
+                <TmToggle Label="@Loc["TmMvlDemo_ItemCount"]" @bind-Value="_redesignItemCount" />
+            </div>
+            <div data-testid="mvl-redesign-responsive">
+                <TmToggle Label="@Loc["TmMvlDemo_Responsive"]" @bind-Value="_redesignResponsive" />
+            </div>
+            <div data-testid="mvl-redesign-max-columns">
+                <TmToggle Label="@Loc["TmMvlDemo_MaxColumns"]" @bind-Value="_redesignCapColumns" />
+            </div>
+            <div data-testid="mvl-redesign-item-href">
+                <TmToggle Label="@Loc["TmMvlDemo_ItemHref"]" @bind-Value="_redesignItemHref" />
+            </div>
+            <div data-testid="mvl-redesign-status-variant">
+                <TmToggle Label="@Loc["TmMvlDemo_StatusVariant"]" @bind-Value="_redesignStatusVariant" />
+            </div>
+            <div data-testid="mvl-redesign-group-header">
+                <TmToggle Label="@Loc["TmMvlDemo_GroupHeader"]" @bind-Value="_redesignGroupHeader" />
+            </div>
+            <div data-testid="mvl-redesign-result-preview">
+                <TmToggle Label="@Loc["TmMvlDemo_ResultPreview"]" @bind-Value="_redesignResultPreview" />
+            </div>
+        </div>
+        <div data-testid="mvl-redesign-list">
+            <TmMultiViewList TItem="TeamMember"
+                             Items="_redesignMembers"
+                             ViewContext="mvl-redesign-demo"
+                             TitleField="m => m.Title"
+                             SubTitleField="m => m.SubTitle"
+                             AvatarUrlField="m => m.AvatarUrl"
+                             StatusLabelField="m => m.StatusLabel"
+                             StatusVariantField="@(_redesignStatusVariant ? RedesignStatusVariant : null)"
+                             GroupableFields="_redesignGroupFields"
+                             GroupHeaderTemplate="@(_redesignGroupHeader ? RedesignGroupHeader : null)"
+                             ViewSwitcherLabels="_redesignSwitcherLabels"
+                             AvatarFallback="_redesignAvatarFallback"
+                             TableCellLayout="_redesignCellLayout"
+                             CardActivation="_redesignCardActivation"
+                             ShowItemCount="_redesignItemCount"
+                             Responsive="_redesignResponsive"
+                             MaxCardColumns="@(_redesignCapColumns ? 2 : null)"
+                             ItemHref="@(_redesignItemHref ? RedesignHref : null)"
+                             ShowFilterResultPreview="_redesignResultPreview"
+                             ViewProvider="_redesignViews"
+                             ExternalFilterDefinitions="_redesignFilterDefs"
+                             ShowSearch="true"
+                             ShowViewSwitcher="true" />
+        </div>
+        <div class="mt-4" data-testid="mvl-redesign-cards">
+            <TmMultiViewList TItem="TeamMember"
+                             Items="_redesignMembers"
+                             ViewContext="mvl-redesign-cards"
+                             ViewMode="ListViewMode.Card"
+                             GroupsCollapsedByDefault="false"
+                             TitleField="m => m.Title"
+                             SubTitleField="m => m.SubTitle"
+                             StatusLabelField="m => m.StatusLabel"
+                             GroupableFields="_redesignGroupFields"
+                             ShowSearch="false"
+                             ShowViewSwitcher="false" />
+        </div>
+    </div>
+</section>
+
+<!-- Edge cases: an empty card list and cards with very long titles -->
+<section class="demo-section" data-testid="mvl-edge-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmMvlDemo_EdgeTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">@Loc["TmMvlDemo_EdgeEmptyHeading"]</h3>
+        <div data-testid="mvl-edge-empty">
+            <TmMultiViewList TItem="TeamMember"
+                             Items="_edgeEmptyMembers"
+                             ViewContext="mvl-edge-empty"
+                             ViewMode="ListViewMode.Card"
+                             EmptyTitle="@Loc["TmMvlDemo_EdgeEmptyTitle"]"
+                             TitleField="m => m.Title"
+                             ShowSearch="false"
+                             ShowViewSwitcher="false" />
+        </div>
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmMvlDemo_EdgeLongHeading"]</h3>
+        <div data-testid="mvl-edge-long" style="max-inline-size: 24rem">
+            <TmMultiViewList TItem="TeamMember"
+                             Items="_edgeLongMembers"
+                             ViewContext="mvl-edge-long"
+                             ViewMode="ListViewMode.Card"
+                             AvatarFallback="AvatarFallback.Initials"
+                             TitleField="m => m.Title"
+                             SubTitleField="m => m.SubTitle"
+                             StatusLabelField="m => m.StatusLabel"
+                             ShowSearch="false"
+                             ShowViewSwitcher="false" />
+        </div>
+    </div>
+</section>
 <!-- Page Header -->
 <div class="mb-8">
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Multi View List</h1>
@@ -379,10 +501,76 @@
         }
     ];
 
+    // ── Redesign (opt-in) playground ──
+    private ViewSwitcherLabels _redesignSwitcherLabels = ViewSwitcherLabels.IconsOnly;
+    private AvatarFallback _redesignAvatarFallback = AvatarFallback.None;
+    private TableCellLayout _redesignCellLayout = TableCellLayout.Inline;
+    private CardActivation _redesignCardActivation = CardActivation.Button;
+    private bool _redesignItemCount;
+    private bool _redesignResponsive;
+    private bool _redesignCapColumns;
+    private bool _redesignItemHref;
+    private bool _redesignStatusVariant;
+    private bool _redesignGroupHeader;
+    private bool _redesignResultPreview = true;
+
+    // Built in OnInitialized: the labels come from Loc, which is not available in field initializers.
+    private IReadOnlyList<SelectOption<ViewSwitcherLabels>> _switcherLabelOptions = [];
+    private IReadOnlyList<SelectOption<AvatarFallback>> _avatarFallbackOptions = [];
+    private IReadOnlyList<SelectOption<TableCellLayout>> _cellLayoutOptions = [];
+    private IReadOnlyList<SelectOption<CardActivation>> _cardActivationOptions = [];
+
+    private IReadOnlyList<SelectOption<TEnum>> EnumOptions<TEnum>() where TEnum : struct, Enum =>
+        Enum.GetValues<TEnum>()
+            .Select(value => new SelectOption<TEnum> { Value = value, Label = Loc[$"TmMvlDemo_Enum_{typeof(TEnum).Name}_{value}"] })
+            .ToList();
+
+    private readonly List<TeamMember> _redesignMembers =
+    [
+        new() { Title = "Ada Lovelace", SubTitle = "Senior Developer", Role = "Developer", StatusLabel = "Active" },
+        new() { Title = "Grace Hopper", SubTitle = "Compiler Lead", Role = "Developer", StatusLabel = "Active" },
+        new() { Title = "Alan Turing", SubTitle = "Account Lead", Role = "Analyst", StatusLabel = "Inactive" }
+    ];
+
+    // ── Edge-case playground (fixed data) ──
+    private readonly List<TeamMember> _edgeEmptyMembers = [];
+    private List<TeamMember> _edgeLongMembers = [];
+    private IReadOnlyList<GroupFieldDefinition<TeamMember>> _redesignGroupFields = [];
+
+    private readonly InMemoryViewProvider _redesignViews = new([]);
+
+    private List<FilterDefinition> _redesignFilterDefs = [];
+
+    private static BadgeVariant RedesignStatusVariant(TeamMember member)
+        => member.StatusLabel == "Active" ? BadgeVariant.Success : BadgeVariant.Danger;
+
+    private static string? RedesignHref(TeamMember member) => $"/team/{member.Id}";
+
+    private RenderFragment<DataGroup<TeamMember>> RedesignGroupHeader => group => @<text>
+        <strong>@Loc["TmMvlDemo_GroupHeaderText", group.DisplayValue, group.Count]</strong>
+    </text>;
+
     protected override void OnInitialized()
     {
         _viewProvider = ViewProvider;
         _personProvider = PersonProvider;
+        _switcherLabelOptions = EnumOptions<ViewSwitcherLabels>();
+        _avatarFallbackOptions = EnumOptions<AvatarFallback>();
+        _cellLayoutOptions = EnumOptions<TableCellLayout>();
+        _cardActivationOptions = EnumOptions<CardActivation>();
+        _edgeLongMembers =
+        [
+            new() { Title = Loc["TmMvlDemo_EdgeLongTitle"], SubTitle = Loc["TmMvlDemo_EdgeLongSubtitle"], Role = "Developer", StatusLabel = "Active" },
+            new() { Title = "Grace Hopper", SubTitle = Loc["TmMvlDemo_EdgeLongSubtitle"], Role = "Developer", StatusLabel = "Inactive" }
+        ];
+        _redesignGroupFields =
+        [
+            new GroupFieldDefinition<TeamMember> { FieldName = "Role", Label = Loc["TmMvlDemo_RedesignRole"], FieldAccessor = m => m.Role }
+        ];
+        _redesignFilterDefs =
+        [
+            new() { FieldName = "Role", FieldLabel = Loc["TmMvlDemo_RedesignRole"], FieldType = FilterFieldType.Text }
+        ];
     }
 
     private void OnTeamMemberClick(TeamMember item)

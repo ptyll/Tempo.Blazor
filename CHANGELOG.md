@@ -1018,10 +1018,63 @@
 
 ### Fixed
 
+- **French filter result preview claimed whole millions wrong.** The `TmFilterBuilder_ResultPreview_Many`
+  template was "`{0:N0}` de millions d'enregistrements correspondants", but the `_Many` form is picked for
+  whole millions and the number is formatted in full, so a count of 2 000 000 read "2 000 000 de millions
+  d'enregistrements correspondants". The template is now "`{0:N0}` d'enregistrements correspondants", like
+  every other French `_Many` family. Guarded by a bUnit test.
+
+- **`TmDataTable` client-side result preview counted an edited filter twice.** The table copies the applied
+  builder filters into its own column-filter map; the in-memory count then applied the map *and* the builder's
+  filters, so editing an applied filter (Status=A becomes Status=B) counted "A AND B" — usually 0. The count now
+  merges both filter sources with the same rule the data-provider path already used: the builder's filter wins
+  on its column. Guarded by bUnit (`FilterResultPreviewEditTests`).
+
+- **The filter result preview kept a stale count when the search, column filters or the data changed.**
+  `TmFilterBuilder` only recounted when `ActiveFilters`, `ResultCountProvider` or `ShowResultPreview` changed,
+  but `TmDataTable` and `TmMultiViewList` count with inputs the builder cannot see. Both hosts now pass a new
+  `ResultCountKey` token (below) so the preview recounts with the table.
+
+### Added
+
+- **`TmFilterBuilder.ResultCountKey`** (`object?`, default `null`). Changing this value re-runs the count; hosts
+  pass a token covering inputs outside `ActiveFilters` — search text, column filters, new items or a reloaded
+  data provider. `TmDataTable` and `TmMultiViewList` pass an internal version counter they bump on those changes,
+  so the preview count always matches what the table shows. No default behaviour change for hosts that do not set it.
+
+- **Default (Plain) `TmDataTable` group zone and export menu lost their pre-redesign CSS.** The opt-in gating
+  (`Appearance=Card`) had moved the markup but the stylesheet still styled the default: the group chip rendered
+  as the redesign's subtle pill instead of the original solid primary chip, Expand all / Collapse all had no
+  styling at all (raw browser buttons), and export items were wrapping flex rows instead of single-line
+  `white-space: nowrap` items. The original rules are back as the defaults (tokens instead of the old hex
+  values); the redesign styling is scoped to the Card surface via `.tm-data-table-group-zone--card` and the new
+  `tm-data-table__export-item--rich` modifier that the Card export items carry. Guarded by bUnit
+  (`TmDataTablePhase3OptInTests`) and the `DefaultAppearance_GroupZoneAndExport_KeepTheOriginalLook` E2E.
+
+- **`TmMultiViewList` grouped-card header blended into the card body.** `.tm-mvl-group-header` painted the same
+  surface as `.tm-mvl-group-card` and left a margin gap inside the bordered card. Inside a group card the header
+  now uses `var(--tm-surface-secondary)` with a hairline bottom border and no gap. Guarded by the
+  `GroupedCardHeader_DiffersFromBody_LightAndDark` E2E (light and dark).
+
+- **`TmDataTable` UX defects from the phase 13 screenshot review.** RTL pinned headers reserve the pin glyph (logical padding), long filter placeholders and Scroll cells end in an ellipsis, filter and views sheets use 44px targets and show one Done, and the cards layout drops the "Drag column headers here to group" hint.
+
+- **`TmDataTable` column menu opens with Alt+ArrowDown in a real browser.** The chord was announced (`aria-keyshortcuts`) and
+  opened the menu, but its browser default scrolled the page, the header left the viewport and the overlay dismissed itself
+  as `anchor-hidden` about 150 ms later (`M` was unaffected). `data-table.js` now cancels the default for that chord on a
+  header that announces it (`tmDataTable.attachColumnMenuKeys`, attached only while `ColumnMenuMode` is `Menu`).
+  Found by the phase 13 keyboard E2E; the bUnit test sent the key straight to the header and could not see it.
+
+- **Grid keyboard: F2 / Enter on an editable cell moves focus into the editor.** The editing row renders plain cells, not
+  grid cells, so the cell that held focus vanished and focus fell to the page: Escape (answered on the editing row) never
+  reached the table and a keyboard user could not cancel. `KeyboardNavigation=Grid` now focuses the first editor control
+  (`tmDataTable.focusRowEditor`) and, when the edit is saved, returns focus to the roving cell. `Rows` mode is unchanged.
+
 - **TmOverlayPanel no longer takes a focus-restore id.** `RestoreFocusTargetId` was removed.
   Escape returns focus to the anchor inside `overlay.js` (`anchor.focus({ preventScroll: true })`)
   when focus would otherwise die. An outside click does not: the user clicked somewhere else.
-  Do not pass the old parameter.
+  Behaviour change: an outside click on dead space now leaves focus on `<body>` instead of
+  restoring it to the anchor; Escape still returns focus to the anchor. Migration (before/after)
+  is documented in the Breaking / Migration entry "`TmOverlayPanel.RestoreFocusTargetId` was removed".
 
 - **TmFilterBuilder focuses its own first field option.** Opening the picker no longer runs
   `document.querySelector` through `eval`, so a second builder on the page focuses its own option.
@@ -1042,6 +1095,29 @@
   `tabindex="-1"` so Tab leaves the grid instead of stepping into them.
 
 ### Added
+
+- **Demo: table/list redesign opt-ins.** `/data-table` gains a Redesign (opt-in) playground (every opt-in behind a control that starts at its default, fixed dates, row-activation counter), a 24rem Mobile cards container, a standalone `TmViewManager` with Set as default and `TmFilterBuilder` in `Popover`/`Auto` with `ResultCountProvider`; `/multi-view-list` gains a matching playground. Wireframe stencils for `TmDataTable`, `TmMultiViewList`, `TmViewManager` and `TmFilterBuilder` expose the same opt-ins as props (`appearance`, `mobileLayout`, `showItemCount`, `viewSwitcherLabels`, `columnMenu`, `exportSelected`, `presentation`, `open`). No default changes.
+
+- **Public tokens `--tm-color-primary-solid` and `--tm-color-on-primary-fixed`.**
+  `--tm-color-primary-solid` is `var(--tm-color-primary-600)` in both themes (white on it is 5.17:1;
+  the dark `--tm-color-primary` step is primary-400, and white on that is 2.54:1).
+  `--tm-color-on-primary-fixed` is `var(--tm-color-white)` in both themes. Both are declared in
+  `tokens.css` and re-declared in `tokens-dark.css`, so a wrapper with `data-theme="dark"` does
+  not inherit the finished light colour. The active page button is the first consumer.
+
+- **`TmViewManager.MobilePresentation`** (`PanelPresentation`, default `Popover`). The Views panel was the one toolbar overlay that
+  never offered the mobile sheet: on a 390px viewport it stayed an anchored popover. `Auto` turns it into a full-width
+  bottom sheet on a mobile viewport. `TmDataTable` passes `Auto` when `MobileLayout` is not `None` and
+  `TmMultiViewList` when `Responsive` is on, like the export menu and group picker already do; a table or list without
+  those opt-ins keeps the popover. Found by the phase 13 overlay E2E.
+
+- **Narrow-table toolbar wraps.** The right toolbar group (Choose columns, Views, Sort, Filters, Export) is no longer
+  clipped at 390px: below the table's container breakpoint (and below the 768px viewport breakpoint for a plain table)
+  `.tm-data-table-toolbar-right` gets `flex-wrap: wrap`. No change at wider widths.
+
+- **`TmViewManager.Compact`** (bool, default `false`). When true, the Views toggle adds
+  `tm-btn-sm` so it lines up with the other card-toolbar triggers. `TmDataTable` passes it when
+  `Appearance` is `Card`. The plain toggle is unchanged.
 
 - **Remaining opt-in presentation parameters.** All default `false` or to today's presentation.
   `TmMultiViewList.TableCellLayout.Stacked` drops the subtitle column and renders its value under
@@ -1078,7 +1154,10 @@
   leaves the menu open. `ExportAsync(format)` still
   exports every matching row; `ExportAsync(format, DataTableExportScope.Selected)` exports the
   selection, and `OnExportCompleted` reports the scope on `DataTableExportResult.Scope` (default
-  `All`). The default menu is unchanged.
+  `All`). A custom `IDataTableExporter` takes the scope too: the new
+  `ExportAsync(exporter, DataTableExportScope, string?)` exports the requested rows through any
+  format (JSON, PDF, …) with the same download plumbing; `ExportAsync(exporter)` keeps exporting
+  all rows. The default menu is unchanged.
 
 - **TmDataTable `ColumnMenuMode.Menu`.** Opt-in kebab menu in each data column header
   (`aria-label` "Column options: {column}", `aria-haspopup="menu"`, `aria-expanded`). Items follow
@@ -1304,11 +1383,11 @@
   group contract), while the search control received the standard toolbar-group chrome. The
   Modeling preview hides it with `ShowTitle="false"`.
 
-- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` (renamed from `ExportSelectedOnly`; it filters the exported rows to the checked selection), `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation.
+- **Opt-in table/list redesign controls.** Added `ColumnMenuMode`, `EditActionsMode`, `GroupHeaderTemplate`, `AllowExportSelected` (it filters the exported rows to the checked selection; see Breaking / Migration), `ShowActiveViewName`, `AllowSetDefault`, `OnSetDefault`, `ShowResultPreview`, `TableCellLayout`, `StatusVariantField`, and `CardActivation`. Defaults preserve existing presentation.
 
 - **Phase 7 responsive overlays and filter summary.** The `TmDataTable` export dropdown uses automatic mobile presentation when `MobileLayout` is enabled and stays a popover when it is `None`; `TmMultiViewList` grouping dropdown uses automatic presentation only when `Responsive` is enabled. `ShowFilterSummary` adds an opt-in localized active-filter count and clear control (default false).
 
-- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset.
+- **Mobile data layouts.** `TmDataTable.MobileLayout` opts into `Scroll` or `Cards` while `None` preserves the existing table. `TmDataTableColumn.MobilePinned` pins a mobile scroll column; `CardRole` controls card presentation. `TmMultiViewList.Responsive` enables its responsive table behavior. `CardMode` remains an alias and now also emits the cards class when `MobileLayout` is unset. `MobileLayout=Cards` adds a sort dropdown and a filter sheet to the toolbar (`tm-data-table-mobile-only`, hidden until the table's own container is below 640px): the sort lists each sortable column ascending and descending with the active choice checked, and the filter sheet labels every filterable column. `TmMultiViewList` grows the same toolbar (`tm-mvl-cards-toolbar`) for its card and list views when `Responsive` is set.
 
 - **`TmMultiViewList.ViewSwitcherLabels`.** Default `IconsOnly` keeps today's icon buttons.
   `IconsAndText` adds the localized Table, Card and List names. The radiogroup contract is unchanged.
@@ -1563,9 +1642,10 @@
 - **TmDiagramEditor: new `MobileSheetInitiallyOpen` parameter (default `false`)** — the opt-out
   that restores the pre-2.9.1 mobile open-on-load sheet (see Breaking / Migration).
 
-- **`TmDropdown.OutlineTrigger`.** Renders the trigger as an outlined button
-  (`tm-btn tm-btn-outline`) instead of the default stealth trigger — the data-table toolbar's
-  export dropdown uses it so the trigger reads as a button inside the row.
+- **`TmDropdown.OutlineTrigger`.** Renders the trigger as a small outlined button
+  (`tm-btn tm-btn-outline tm-btn-sm`) instead of the default stealth trigger — the data-table
+  toolbar's export dropdown uses it so the trigger reads as a button inside the row. The small
+  size applies to every `OutlineTrigger` consumer, not only Card mode. See Breaking / Migration.
 
 - **`TmSigningFormRunner` autosave debounce and `TmModelingEditor` loading delays run on an
   injectable `TimeProvider`.** `AddTempoBlazorSigning` / `AddTempoBlazorModeling` register
@@ -1912,7 +1992,8 @@
   `ActionOverflowLayout.Partition` honours the pins for both the action bar and the toolbar.
 - **Menu keyboard for every `role=menu` surface.** `tm-menu-nav.js`, attached by
   `TmOverlayPanel` to each `Role="menu"` panel (popover or sheet): ArrowUp/ArrowDown/Home/End
-  roving over the enabled items, typeahead (diacritic- and case-insensitive) and a roving tabindex —
+  roving (native `disabled` and hidden items are skipped; see the Breaking / Migration entry on
+  `aria-disabled` items), typeahead (diacritic- and case-insensitive) and a roving tabindex —
   `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both overflow menus get the keys from the panel. A menu
   opened from the keyboard also needs its first item focused: `TmDropdown`, `TmSplitButton` and `TmContextMenu`
   each wire `OnOpened` → `focusFirst` through the shared `MenuNavInterop`, and a `TmContextMenu` item activation
@@ -2067,6 +2148,79 @@
 
 ### Breaking / Migration
 
+- **`tm-menu-nav` roving now includes `aria-disabled="true"` items.** Arrow keys, Home/End and
+  typeahead reach an item that is only `aria-disabled` (not natively `disabled`), so its
+  explanation stays reachable for a screen reader. Only items with the native `disabled`
+  attribute or `hidden` are skipped. This module serves every `role=menu` surface
+  (`TmDropdown`, `TmSplitButton`, `TmContextMenu`, overflow menus), not just the data table.
+  The initial focus (`focusFirst`) still skips an `aria-disabled` first item and falls back to
+  the first item only when every item is `aria-disabled`.
+  Before: `aria-disabled="true"` items were skipped by arrow/Home/End/typeahead roving and by the initial focus.
+  After: the menu opens on the first item that is not disabled in either way, and arrow keys
+  stop on the `aria-disabled` item too.
+  Migration: set the native `disabled` (`TmDropdownItem.Disabled`) on items that must stay out
+  of the keyboard order entirely; keep `aria-disabled` only for focusable-but-unavailable
+  choices that carry an explanation.
+
+- **`TmDropdown` outline trigger is now small.** `OutlineTrigger="true"` adds `tm-btn-sm` for
+  every consumer, not only a Card-mode data table.
+  Before: `class="tm-dropdown-trigger tm-btn tm-btn-outline"`
+  After: `class="tm-dropdown-trigger tm-btn tm-btn-outline tm-btn-sm"`
+
+- **`ToolbarMode="SearchOnly"` hides the filter summary and the clear-all buttons.** Search-only
+  owns the search box and nothing else. `TmDataTable` no longer renders
+  `.tm-data-table-filter-summary` or `.tm-col-filter-clear-all` in that mode, and
+  `TmMultiViewList` passes `ShowClearAll="false"` to its filter builder (the inline one and the
+  cards sheet).
+  Before: `ShowClearAll="true"` and the summary rendered whenever filters were active.
+  After: `ShowClearAll="@(!IsContentToolbarMode && !IsSearchToolbarMode)"`, and the summary
+  requires `ShowFilterSummary && !IsContentToolbarMode && !IsSearchToolbarMode`.
+
+- **`TmMultiViewList` avatar column leads the row and turns itself on for initials.** It is now
+  the first column. `AvatarFallback="Initials"` adds it to the visible set on init, and a missing
+  image renders `<span class="tm-mvl-avatar-initials" aria-hidden="true">` instead of an empty cell.
+  Before: the avatar column followed the date column and rendered only `<img alt="">` when a URL
+  was set.
+  After: `@if (_showAvatarColumn) { <th>…</th> }` is the first header, and the cell is
+  `<td>@RenderAvatar(item)</td>`.
+
+- **The active page button uses two new tokens.** `.tm-page-btn-active` no longer paints with the
+  theme-flipping primary step.
+  Before: `background-color: var(--tm-color-primary); color: var(--tm-text-inverse);`
+  After: `background-color: var(--tm-color-primary-solid); color: var(--tm-color-on-primary-fixed);`
+  The new tokens are listed under Added.
+
+- **Dropdown-item hover and the filter-row header use the surface token.**
+  Before: `background-color: var(--tm-color-gray-50);` on `.tm-dropdown-item:hover` and
+  `.tm-filter-row th`.
+  After: `background-color: var(--tm-bg-surface-secondary);` on both. A pinned header uses the
+  same token (`.tm-data-table thead th.tm-col-pinned`), matching `.tm-data-table thead tr`.
+
+- **`TmMultiViewList` item count is a live region.** `.tm-mvl-item-count` now carries
+  `role="status"` and `aria-live="polite"`. The data-table filter summary does not: the result
+  count is already announced by `.tm-data-table-live-count`, and a second polite region on the
+  same filter change spoke twice.
+  Before: `<span class="tm-mvl-item-count">`
+  After: `<span class="tm-mvl-item-count" role="status" aria-live="polite">`
+
+- **Card toolbar sort and filter buttons are small outline buttons.** Their own padding, border
+  and background were removed; the button classes supply them.
+  Before: `<button class="tm-mvl-cards-toolbar__sort">` with
+  `padding: var(--tm-space-1) var(--tm-space-3); border: 1px solid var(--tm-border-color); background: var(--tm-bg-surface);`
+  on `.tm-mvl-cards-toolbar__sort`, `.tm-mvl-cards-toolbar__filter` and
+  `.tm-data-table-cards-toolbar__filter`.
+  After: `<button class="tm-btn tm-btn-outline tm-btn-sm tm-mvl-cards-toolbar__sort">` (the same
+  three classes on the list filter button and `.tm-data-table-cards-toolbar__filter`), and those
+  rules no longer set padding, border or background. `TmViewManager.Compact` (see Added) puts the
+  same classes on the Views toggle when the table appearance is Card.
+
+- **`TmPagination.Compact` no longer hides the page buttons.** It used to replace the page numbers
+  with "Page X of Y". It now only adds that label and keeps previous, next and the page buttons.
+  Before: `Compact="true"` rendered the label and no `.tm-page-btn`.
+  After: `Compact="true"` renders the label and the page buttons. A narrow data table hides its
+  page numbers through `.tm-data-table-pager--responsive` (set when `MobileLayout` is not `None`),
+  not through `Compact`.
+
 - **The default-view marker in `TmViewManager` is now named.** The decorative `★` stays, with
   `aria-hidden="true"`, and a visually hidden "Default view" (`TmViewManager_DefaultView`) names it
   for assistive technology. A custom `ITmLocalizer` must supply that key. <!-- snapshot:dt-viewmanager -->
@@ -2179,23 +2333,88 @@
   - `TmViewManager` items are buttons inside `.tm-view-item-row`, the panel is a `TmOverlayPanel` (the `.tm-overlay` backdrop is gone) and the toggle is `tm-btn-outline` with `aria-expanded` / `aria-haspopup="dialog"`. <!-- snapshot:dt-viewmanager -->
     Before: `<button class="tm-btn tm-btn-secondary tm-view-manager-toggle">`
     After: `<button class="tm-btn tm-btn-outline tm-view-manager-toggle" aria-expanded="true" aria-haspopup="dialog">`
+    View item before/after (exact markup from `git show 259f900a:src/Tempo.Blazor/Components/DataTable/TmViewManager.razor`):
+    Before:
+    ```html
+    <div class="tm-view-item tm-view-item--active" @onclick="() => ApplyViewAsync(view)">
+      <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+    </div>
+    ```
+    After:
+    ```html
+    <div class="tm-view-item-row">
+      <button type="button" class="tm-view-item tm-view-item--active" aria-current="true" @onclick="() => ApplyViewAsync(view)">
+        <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+      </button>
+    </div>
+    ```
+    Backdrop before/after (exact markup from the same commit):
+    Before:
+    ```html
+    <div class="tm-overlay" @onclick="CloseDropdown"></div>
+    ```
+    After: no backdrop element — the panel renders as a `TmOverlayPanel` in the browser top layer (click-outside closing is handled by the overlay panel).
+  - `TmViewManager` announces a completed Set-as-default in a visually-hidden polite live region inside the panel, and each view row carries a stable id (`{toggle-id}-view-{view-id}`) used to restore focus after the row list re-renders. <!-- snapshot:dt-viewmanager -->
+    Before: `<div class="tm-view-manager-panel"><div class="tm-view-section">` and `<button type="button" class="tm-view-item">`
+    After: `<div class="tm-view-manager-panel"><div class="tm-sr-only" role="status" aria-live="polite"></div><div class="tm-view-section">` and `<button type="button" id="…-view-…" class="tm-view-item">`
   - Group toggles and the group-chip remove control use `TmIcon` plus `aria-expanded` / `aria-label` instead of `▼`, `▶` and `×`. <!-- snapshot:dt-grouping --> <!-- snapshot:mvl-grouped -->
     Before: `<button class="tm-data-table-group-chip-remove">×</button>`
     After: `<button class="tm-data-table-group-chip-remove" aria-label="Remove grouping by Role"><svg class="tm-icon">…</svg></button>`
+  - A paged `TmDataTable` states "Page X of Y" in a `span.tm-data-table-page-label` inside `.tm-pagination-center`. The label is hidden above the mobile breakpoint and revealed by the table's own container query, so the page buttons are never removed. <!-- snapshot:dt-paged -->
   - `TmPagination` previous and next buttons use `TmIcon` chevrons instead of `‹` / `›`. <!-- snapshot:pagination-default --> <!-- snapshot:dt-paged -->
     Before: `<button aria-label="Previous">‹</button>`
     After: `<button aria-label="Previous"><svg class="tm-icon">…</svg></button>`
   - `TmColumnFilter` names the input with the column title (`Filter: {0}`) when the column has one. <!-- snapshot:dt-filters -->
     Before: `<input placeholder="Filter" aria-label="Filter" />`
     After: `<input placeholder="Filter: Name" aria-label="Filter: Name" />`
+  - `TmDataTable` announces the result count in a visually-hidden polite live region (`div.tm-data-table-live-count`), so a filter or page change is spoken without moving focus. <!-- snapshot:dt-basic --> <!-- snapshot:dt-cardmode --> <!-- snapshot:dt-filters --> <!-- snapshot:dt-grouping --> <!-- snapshot:dt-viewmanager --> <!-- snapshot:dt-paged --> <!-- snapshot:dt-selectable --> <!-- snapshot:dt-export --> <!-- snapshot:dt-virtualized -->
+  - `TmDataTable` with `ShowFilterSummary="true"` makes the active-filter count a polite live region (`span[role="status"][aria-live="polite"]`) and always renders a visually-hidden twin region (`div.tm-data-table-filter-summary-live`) while filters are allowed, so the first filter change is announced too. No golden snapshot renders the summary (it needs the opt-in `ShowFilterSummary`), so the golden files are unchanged.
+    Before: `<div class="tm-data-table-filter-summary"><span>Filters: 1</span>…</div>` (only while a filter was already active; not announced)
+    After: `<div class="tm-data-table-filter-summary"><span role="status" aria-live="polite">Filters: 1</span>…</div>` plus `<div class="tm-data-table-filter-summary-live tm-sr-only" role="status" aria-live="polite"></div>` rendered from the start.
   - A void checkbox renders its closing tag. <!-- snapshot:dt-selectable -->
     Before: `<input type="checkbox" /></th>`
     After: `<input type="checkbox"></input></th>`
   - `TmMultiViewList` status text is a `TmBadge`, the view switcher is a `radiogroup` named "View" (not "Table view") with one roving `tabindex`, and the group picker button exposes `aria-expanded` / `aria-haspopup`. <!-- snapshot:mvl-table --> <!-- snapshot:mvl-card --> <!-- snapshot:mvl-list --> <!-- snapshot:mvl-grouped -->
     Before: `<span class="tm-mvl-status">Active</span>`
     After: `<span class="tm-badge tm-mvl-status">Active</span>`
-  - `ExportSelectedOnly` was renamed to `AllowExportSelected`. Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
-  - `TmOverlayPanel.RestoreFocusTargetId` was removed. Focus returns to the anchor; do not pass the old parameter.
+  - View switcher before/after (exact markup from `git show 259f900a:src/Tempo.Blazor/Components/DataDisplay/TmMultiViewList.razor`):
+    Before:
+    ```html
+    <div class="tm-mvl-switcher">
+      <button type="button" class="tm-mvl-switch-table tm-mvl-switch--active" aria-label="Table view" @onclick="…"><span>☐</span></button>
+    ```
+    After:
+    ```html
+    <div class="tm-mvl-switcher" role="radiogroup" aria-label="View">
+      <button type="button" class="tm-mvl-switch-table tm-mvl-switch--active" role="radio" aria-checked="true" aria-label="Table view" tabindex="0" @onclick="…" @onkeydown="…"><span>☐</span></button>
+    ```
+    The group label changed from the per-button "Table view" phrasing to one group label "View" (`TmMvl_ViewSwitcher`), and exactly one button carries `tabindex="0"` (roving tabindex).
+
+- **`ExportSelectedOnly` was renamed to `AllowExportSelected`.** <!-- snapshot:dt-export -->
+  Before:
+  ```razor
+  <TmDataTable Data="_items" Selectable="true" ExportSelectedOnly="true" … />
+  ```
+  After:
+  ```razor
+  <TmDataTable Data="_items" Selectable="true" AllowExportSelected="true" … />
+  ```
+  Set the new parameter (and keep the table `Selectable`) to export the checked rows only; the export menu then offers the scope choice, and `DataTableExportResult.Scope` reports which one ran.
+
+- **`TmOverlayPanel.RestoreFocusTargetId` was removed.** Focus returns to the anchor; do not pass the old parameter.
+  Impact: an outside click on dead space now leaves focus where the user clicked (on `<body>`) instead of
+  restoring it to the anchor; Escape still returns focus to the anchor. The same change is described in the
+  Fixed entry of this version (see "TmOverlayPanel no longer takes a focus-restore id").
+  Before:
+  ```razor
+  <TmButton @ref="_trigger">Options</TmButton>
+  <TmOverlayPanel Anchor="@_trigger" RestoreFocusTargetId="options-trigger" … />
+  ```
+  After:
+  ```razor
+  <TmButton @ref="_trigger">Options</TmButton>
+  <TmOverlayPanel Anchor="@_trigger" … />
+  ```
 
 - **`TmDiagramEditor` mobile presentation (DiagramEditor redesign phase 7, G2): a container below
   768px now renders the dedicated mobile layout, replacing the old `max-width: 640px` viewport

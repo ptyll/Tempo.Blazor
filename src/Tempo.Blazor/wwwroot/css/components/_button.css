@@ -159,7 +159,8 @@
   box-shadow: var(--tm-focus-ring);
 }
 
-.tm-btn-outline {
+.tm-btn-outline,
+.tm-dropdown-trigger.tm-btn-outline {
   background-color: transparent;
   border-color: var(--tm-color-primary);
   color: var(--tm-color-primary);

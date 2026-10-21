@@ -14,6 +14,251 @@
     <p class="text-slate-600 dark:text-slate-400">Advanced data tables with sorting, filtering, pagination, and selection capabilities.</p>
 </div>
 
+<!-- Redesign opt-in playground -->
+<section class="demo-section" data-testid="dt-redesign-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_RedesignTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            @Loc["TmDataTableDemo_RedesignDescription"]
+        </p>
+        <div class="flex flex-wrap gap-3 mb-4">
+            <div data-testid="dt-redesign-appearance">
+                <TmSelect TValue="DataTableAppearance" Label="@Loc["TmDataTableDemo_RedesignAppearance"]"
+                          Options="_appearanceOptions" @bind-Value="_redesignAppearance" />
+            </div>
+            <div data-testid="dt-redesign-mobile-layout">
+                <TmSelect TValue="DataTableMobileLayout" Label="@Loc["TmDataTableDemo_RedesignMobileLayout"]"
+                          Options="_mobileLayoutOptions" @bind-Value="_redesignMobileLayout" />
+            </div>
+            <div data-testid="dt-redesign-keyboard">
+                <TmSelect TValue="DataTableKeyboardNavigation" Label="@Loc["TmDataTableDemo_RedesignKeyboard"]"
+                          Options="_keyboardOptions" @bind-Value="_redesignKeyboard" />
+            </div>
+            <div data-testid="dt-redesign-column-menu">
+                <TmSelect TValue="ColumnMenuMode" Label="@Loc["TmDataTableDemo_RedesignColumnMenu"]"
+                          Options="_columnMenuOptions" @bind-Value="_redesignColumnMenu" />
+            </div>
+            <div data-testid="dt-redesign-edit-actions">
+                <TmSelect TValue="EditActionsMode" Label="@Loc["TmDataTableDemo_RedesignEditActions"]"
+                          Options="_editActionsOptions" @bind-Value="_redesignEditActions" />
+            </div>
+            <div data-testid="dt-redesign-export-selected">
+                <TmToggle Label="@Loc["TmDataTableDemo_RedesignExportSelected"]" @bind-Value="_redesignExportSelected" />
+            </div>
+            <div data-testid="dt-redesign-filter-summary">
+                <TmToggle Label="@Loc["TmDataTableDemo_RedesignFilterSummary"]" @bind-Value="_redesignFilterSummary" />
+            </div>
+            <div data-testid="dt-redesign-active-view-name">
+                <TmToggle Label="@Loc["TmDataTableDemo_RedesignActiveViewName"]" @bind-Value="_redesignActiveViewName" />
+            </div>
+            <div data-testid="dt-redesign-set-default">
+                <TmToggle Label="@Loc["TmDataTableDemo_RedesignSetDefault"]" @bind-Value="_redesignAllowSetDefault" />
+            </div>
+            <div data-testid="dt-redesign-result-preview">
+                <TmToggle Label="@Loc["TmDataTableDemo_RedesignResultPreview"]" @bind-Value="_redesignResultPreview" />
+            </div>
+        </div>
+        <div data-testid="dt-redesign-table">
+            <TmDataTable TItem="Employee"
+                         Items="_redesignEmployees"
+                         ViewContext="redesign-demo"
+                         ViewProvider="_redesignViews"
+                         ViewFilterDefinitions="_redesignFilterDefs"
+                         ExternalFilterDefinitions="_redesignFilterDefs"
+                         ShowExternalFilterBuilder="true"
+                         DisplayResolver="ResolveDisplay"
+                         Appearance="_redesignAppearance"
+                         MobileLayout="_redesignMobileLayout"
+                         KeyboardNavigation="_redesignKeyboard"
+                         ColumnMenuMode="_redesignColumnMenu"
+                         EditActionsMode="_redesignEditActions"
+                         AllowExportSelected="_redesignExportSelected"
+                         ShowExport="true"
+                         ShowFilterSummary="_redesignFilterSummary"
+                         ShowActiveViewName="_redesignActiveViewName"
+                         AllowSetDefault="_redesignAllowSetDefault"
+                         ShowFilterResultPreview="_redesignResultPreview"
+                         Selectable="true"
+                         ShowGrouping="true"
+                         Editable="true"
+                         OnRowClick="OnRedesignRowClick"
+                         DefaultPageSize="5">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name"
+                                       Field="e => e.Name" Sortable="true" Filterable="true" Groupable="true"
+                                       CardRole="DataTableCardRole.Title" MobilePinned="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role"
+                                       Field="e => e.Role" Sortable="true" Filterable="true" Groupable="true"
+                                       CardRole="DataTableCardRole.Badge" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColDept"]" PropertyName="Dept"
+                                       Field="e => e.Dept" Sortable="true" Filterable="true"
+                                       FilterType="FilterType.Select" FilterOptions="_deptOptions"
+                                       CardRole="DataTableCardRole.Field" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColHired"]" PropertyName="HiredOn"
+                                       Field="e => e.HiredOn" Sortable="true">
+                        <CellTemplate Context="employee"><span class="whitespace-nowrap">@employee.HiredOn.ToString("yyyy-MM-dd")</span></CellTemplate>
+                    </TmDataTableColumn>
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mt-3" data-testid="dt-row-activations" aria-live="polite">
+            @Loc["TmDataTableDemo_RedesignRowActivations", _redesignActivations]
+        </p>
+    </div>
+
+    <div class="showcase-card mt-4" data-testid="dt-redesign-mobile-cards" style="max-inline-size: 24rem">
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">@Loc["TmDataTableDemo_MobileCardsTitle"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            @Loc["TmDataTableDemo_MobileCardsDescription"]
+        </p>
+        <TmDataTable TItem="Employee"
+                     Items="_redesignEmployees"
+                     ViewContext="redesign-mobile-cards"
+                     MobileLayout="DataTableMobileLayout.Cards"
+                     DefaultPageSize="4">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name"
+                                   Field="e => e.Name" CardRole="DataTableCardRole.Title" MobilePinned="true" />
+                <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role"
+                                   Field="e => e.Role" CardRole="DataTableCardRole.Badge" />
+                <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColDept"]" PropertyName="Dept"
+                                   Field="e => e.Dept" CardRole="DataTableCardRole.Field" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+</section>
+
+<section class="demo-section" data-testid="dt-views-demo" style="max-inline-size: 24rem">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_ViewsTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_ViewsDescription"]</p>
+        <TmViewManager Provider="_standaloneViews"
+                       ViewContext="standalone-views"
+                       ShowActiveViewName="true"
+                       AllowSetDefault="true"
+                       OnSetDefault="OnStandaloneSetDefault" />
+    </div>
+</section>
+
+<section class="demo-section" data-testid="dt-filter-demo">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_FilterDemoTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_FilterDemoDescription"]</p>
+        <div data-testid="dt-filter-popover" class="mb-4">
+            <TmFilterBuilder FilterDefinitions="_standaloneFilterDefs"
+                             ActiveFilters="_standalonePopoverFilters"
+                             OnFiltersChanged="OnStandalonePopoverFilters"
+                             Presentation="FilterBuilderPresentation.Popover"
+                             ShowResultPreview="true"
+                             ResultCountProvider="CountStandaloneMatches" />
+        </div>
+        <div data-testid="dt-filter-auto">
+            <TmFilterBuilder FilterDefinitions="_standaloneFilterDefs"
+                             ActiveFilters="_standaloneAutoFilters"
+                             OnFiltersChanged="OnStandaloneAutoFilters"
+                             Presentation="FilterBuilderPresentation.Auto"
+                             ShowResultPreview="true"
+                             ResultCountProvider="CountStandaloneMatches" />
+        </div>
+    </div>
+</section>
+
+<!-- Edge cases: fixed data so the E2E and screenshot specs are measurements, not guesses -->
+<section class="demo-section" data-testid="dt-edge-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_EdgeTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_EdgeDescription"]</p>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">@Loc["TmDataTableDemo_EdgeEmptyHeading"]</h3>
+        <div data-testid="dt-edge-empty">
+            <TmDataTable TItem="Employee" Items="_edgeEmpty" ViewContext="edge-empty" EmptyTitle="@Loc["TmDataTableDemo_EdgeEmptyTitle"]" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" Sortable="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <div class="mt-4" style="max-inline-size: 24rem" data-testid="dt-edge-empty-cards">
+            <TmDataTable TItem="Employee" Items="_edgeEmpty" ViewContext="edge-empty-cards" MobileLayout="DataTableMobileLayout.Cards"
+                         Appearance="DataTableAppearance.Card" EmptyTitle="@Loc["TmDataTableDemo_EdgeEmptyTitle"]" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" Sortable="true" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeNoResultsHeading"]</h3>
+        <div data-testid="dt-edge-search">
+            <TmDataTable TItem="Employee" Items="_redesignEmployees" ViewContext="edge-search" EmptyTitle="@Loc["TmDataTableDemo_EdgeNoResultsTitle"]" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" Sortable="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeLoadingHeading"]</h3>
+        <div data-testid="dt-edge-loading">
+            <TmDataTable TItem="Employee" Items="_redesignEmployees" ViewContext="edge-loading" IsLoading="true" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeLongHeading"]</h3>
+        <div data-testid="dt-edge-long" style="max-inline-size: 24rem">
+            <TmDataTable TItem="Employee" Items="_edgeLongEmployees" ViewContext="edge-long" ViewProvider="_edgeLongViews"
+                         ShowActiveViewName="true" MobileLayout="DataTableMobileLayout.Scroll" ShowPagination="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" MobilePinned="true" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgeWideHeading"]</h3>
+        <div data-testid="dt-edge-wide">
+            <TmDataTable TItem="Employee" Items="_redesignEmployees" ViewContext="edge-wide" ShowPagination="false" ShowToolbar="false">
+                <ChildContent>
+                    @foreach (var number in Enumerable.Range(1, 15))
+                    {
+                        var column = number;
+                        <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_EdgeColumn", column]" PropertyName="@($"c{column}")"
+                                           Field="@(e => $"{e.Name.Split(' ')[0]} {column}")" Pinned="@(column == 1 ? ColumnPin.Left : ColumnPin.None)" Width="@(column == 1 ? "9rem" : "8rem")" />
+                    }
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-6 mb-2">@Loc["TmDataTableDemo_EdgePagerHeading"]</h3>
+        <div data-testid="dt-edge-pager-wide">
+            <TmDataTable TItem="Employee" Items="_employees" ViewContext="edge-pager-wide" MobileLayout="DataTableMobileLayout.Cards" DefaultPageSize="4" ShowToolbar="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <div class="mt-4" style="max-inline-size: 24rem" data-testid="dt-edge-pager-narrow">
+            <TmDataTable TItem="Employee" Items="_employees" ViewContext="edge-pager-narrow" MobileLayout="DataTableMobileLayout.Cards" DefaultPageSize="4" ShowToolbar="false">
+                <ChildContent>
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColName"]" PropertyName="Name" Field="e => e.Name" CardRole="DataTableCardRole.Title" />
+                    <TmDataTableColumn TItem="Employee" Title="@Loc["TmDataTableDemo_ColRole"]" PropertyName="Role" Field="e => e.Role" CardRole="DataTableCardRole.Field" />
+                </ChildContent>
+            </TmDataTable>
+        </div>    </div>
+</section>
+
 <!-- Forced card layout -->
 <section class="demo-section" data-testid="dt-card-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -117,6 +362,34 @@
                                    aria-label="@Loc["TmDataTableDemo_Note"]"
                                    @bind="transaction.Note" @bind:event="oninput" />
                             <ValidationMessage For="@(() => transaction.Note)" />
+                        </EditTemplate>
+                    </TmDataTableColumn>
+                </ChildContent>
+            </TmDataTable>
+        </div>
+        <div class="mt-4" data-testid="transaction-table-footer">
+            <TmDataTable TItem="TransactionDemo"
+                         Items="_transactions"
+                         ViewContext="transaction-inline-edit-footer-demo"
+                         Editable="true"
+                         EditActionsMode="EditActionsMode.Footer"
+                         OnRowSave="HandleTransactionSaved">
+                <ChildContent>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Date"]" PropertyName="Date" Field="transaction => transaction.Date">
+                        <CellTemplate Context="transaction">@transaction.Date.ToString("d")</CellTemplate>
+                    </TmDataTableColumn>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Amount"]" PropertyName="Amount" Field="transaction => transaction.Amount" Editable="true">
+                        <EditTemplate Context="transaction">
+                            <input class="tm-input" type="number" step="0.01"
+                                   aria-label="@Loc["TmDataTableDemo_Amount"]"
+                                   @bind="transaction.Amount" @bind:event="oninput" />
+                        </EditTemplate>
+                    </TmDataTableColumn>
+                    <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Note"]" PropertyName="Note" Field="transaction => transaction.Note" Editable="true">
+                        <EditTemplate Context="transaction">
+                            <input class="tm-input"
+                                   aria-label="@Loc["TmDataTableDemo_Note"]"
+                                   @bind="transaction.Note" @bind:event="oninput" />
                         </EditTemplate>
                     </TmDataTableColumn>
                 </ChildContent>
@@ -662,6 +935,8 @@
                 <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name"
                                    Sortable="true" Filterable="true" Groupable="true" />
                 <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
+                <TmDataTableColumn TItem="Employee" Title="Score" PropertyName="Score" Field="e => e.Score"
+                                   Sortable="true" Resizable="true" Align="ColumnAlign.Right" />
             </ChildContent>
         </TmDataTable>
     </div>
@@ -727,6 +1002,52 @@
     </div>
 </section>
 
+<section class="demo-section" data-testid="dt-grid-edit">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataTableDemo_GridEditTitle"]</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataTableDemo_GridEditDescription"]</p>
+        <TmDataTable TItem="TransactionDemo"
+                     Items="_gridEditTransactions"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     Editable="true"
+                     ViewContext="grid-keyboard-edit"
+                     ShowToolbar="false"
+                     ShowPagination="false"
+                     OnRowSave="HandleGridEditSaved">
+            <ChildContent>
+                <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Category"]" PropertyName="Category" Field="transaction => transaction.Category" />
+                <TmDataTableColumn TItem="TransactionDemo" Title="@Loc["TmDataTableDemo_Note"]" PropertyName="Note" Field="transaction => transaction.Note" Editable="true">
+                    <EditTemplate Context="transaction">
+                        <input class="tm-input" data-testid="grid-edit-note-input" aria-label="@Loc["TmDataTableDemo_Note"]"
+                               @bind="transaction.Note" @bind:event="oninput" />
+                    </EditTemplate>
+                </TmDataTableColumn>
+            </ChildContent>
+        </TmDataTable>
+        <p class="text-sm text-slate-600 mt-3" data-testid="dt-grid-edit-saved" aria-live="polite">@(_gridEditSaved is null ? string.Empty : Loc["TmDataTableDemo_GridEditSaved", _gridEditSaved])</p>
+    </div>
+</section>
+<section class="demo-section" data-testid="dt-grid-virtualized">
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            A virtualized grid: Ctrl+End scrolls the window to the last row and focus lands on its cell.
+        </p>
+        <TmDataTable TItem="Employee"
+                     Items="_gridVirtualized"
+                     KeyboardNavigation="DataTableKeyboardNavigation.Grid"
+                     ScrollMode="DataTableScrollMode.Virtualized"
+                     VirtualScrollHeight="240px"
+                     ViewContext="grid-keyboard-virtualized"
+                     ShowPagination="false">
+            <ChildContent>
+                <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name" />
+                <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+</section>
 <!-- Pagination Demo -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">
@@ -788,6 +1109,10 @@
     ];
     private TmDataTable<Employee>? _gridGroupedTable;
     private bool _gridGroupedApplied;
+    private readonly List<Employee> _gridVirtualized =
+        Enumerable.Range(1, 500)
+            .Select(i => new Employee($"Employee {i:000}", i % 2 == 0 ? "User" : "Admin", "Engineering", 50 + i % 50))
+            .ToList();
 
     private Task OnGridRowClick(Employee employee)
     {
@@ -809,7 +1134,131 @@
     ];
     private IReadOnlyList<ActiveFilter> _activeEmployeeFilters = [];
 
-    private record Employee(string Name, string Role, string Dept, int Score, string Email = "", int Id = 0, int? ManagerId = null);
+    private record Employee(string Name, string Role, string Dept, int Score, string Email = "", int Id = 0, int? ManagerId = null)
+    {
+        /// <summary>Fixed hire date so the redesign demo never renders a value relative to today.</summary>
+        public DateOnly HiredOn { get; init; } = new(2024, 3, 15);
+    }
+
+    // ── Redesign (opt-in) playground ──
+    private DataTableAppearance _redesignAppearance = DataTableAppearance.Plain;
+    private DataTableMobileLayout _redesignMobileLayout = DataTableMobileLayout.None;
+    private DataTableKeyboardNavigation _redesignKeyboard = DataTableKeyboardNavigation.Rows;
+    private ColumnMenuMode _redesignColumnMenu = ColumnMenuMode.None;
+    private EditActionsMode _redesignEditActions = EditActionsMode.Icons;
+    private bool _redesignExportSelected;
+    private bool _redesignFilterSummary;
+    private bool _redesignActiveViewName;
+    private bool _redesignAllowSetDefault;
+    private bool _redesignResultPreview;
+    private int _redesignActivations;
+
+    // Built in OnInitialized: the labels come from Loc, which is not available in field initializers.
+    private IReadOnlyList<SelectOption<DataTableAppearance>> _appearanceOptions = [];
+    private IReadOnlyList<SelectOption<DataTableMobileLayout>> _mobileLayoutOptions = [];
+    private IReadOnlyList<SelectOption<DataTableKeyboardNavigation>> _keyboardOptions = [];
+    private IReadOnlyList<SelectOption<ColumnMenuMode>> _columnMenuOptions = [];
+    private IReadOnlyList<SelectOption<EditActionsMode>> _editActionsOptions = [];
+
+    private IReadOnlyList<SelectOption<TEnum>> EnumOptions<TEnum>() where TEnum : struct, Enum =>
+        Enum.GetValues<TEnum>()
+            .Select(value => new SelectOption<TEnum> { Value = value, Label = Loc[$"TmDataTableDemo_Enum_{typeof(TEnum).Name}_{value}"] })
+            .ToList();
+
+    private readonly List<Employee> _redesignEmployees =
+    [
+        new("Ada Lovelace", "Admin", "Engineering", 97, "ada@example.com", Id: 1) { HiredOn = new DateOnly(2024, 3, 15) },
+        new("Grace Hopper", "Manager", "Engineering", 94, "grace@example.com", Id: 2) { HiredOn = new DateOnly(2023, 11, 2) },
+        new("Alan Turing", "User", "Sales", 88, "alan@example.com", Id: 3) { HiredOn = new DateOnly(2022, 6, 30) },
+        new("Katherine Johnson", "User", "HR", 91, "katherine@example.com", Id: 4) { HiredOn = new DateOnly(2021, 1, 8) }
+    ];
+
+    // Views and filter labels are localized, so they are created in OnInitialized (see BuildRedesignDemoState).
+    private InMemoryViewProvider _redesignViews = new([]);
+    private List<FilterDefinition> _redesignFilterDefs = [];
+    private InMemoryViewProvider _standaloneViews = new([]);
+    private List<FilterDefinition> _standaloneFilterDefs = [];
+
+    private Task OnStandaloneSetDefault(DataTableView _) => Task.CompletedTask;
+
+    private DataTableView[] BuildDemoViews() =>
+    [
+        new DataTableView { Id = "all", Name = Loc["TmDataTableDemo_ViewAll"], IsDefault = true, Scope = ViewScope.Personal },
+        new DataTableView { Id = "engineering", Name = Loc["TmDataTableDemo_ViewEngineering"], Scope = ViewScope.Personal }
+    ];
+
+    private readonly List<TransactionDemo> _gridEditTransactions =
+    [
+        new() { Date = new DateTime(2026, 7, 21), Amount = 10m, Category = "Travel", Note = "Train to Prague" },
+        new() { Date = new DateTime(2026, 7, 22), Amount = 20m, Category = "Office", Note = "Team supplies" }
+    ];
+    private string? _gridEditSaved;
+
+    private void HandleGridEditSaved(TransactionDemo transaction) => _gridEditSaved = transaction.Note;
+    // ── Edge-case playground (fixed data) ──
+    private readonly List<Employee> _edgeEmpty = [];
+    private List<Employee> _edgeLongEmployees = [];
+    private InMemoryViewProvider _edgeLongViews = new([]);
+
+    private void BuildEdgeDemoState()
+    {
+        _edgeLongEmployees =
+        [
+            new(Loc["TmDataTableDemo_EdgeLongName"], "Admin", "Engineering", 97, "ada@example.com", Id: 901),
+            new("Grace Hopper", "Manager", "Engineering", 94, "grace@example.com", Id: 902)
+        ];
+        _edgeLongViews = new InMemoryViewProvider(
+        [
+            new DataTableView { Id = "long", Name = Loc["TmDataTableDemo_EdgeLongView"], IsDefault = true, Scope = ViewScope.Personal }
+        ]);
+    }
+    private void BuildRedesignDemoState()
+    {
+        _appearanceOptions = EnumOptions<DataTableAppearance>();
+        _mobileLayoutOptions = EnumOptions<DataTableMobileLayout>();
+        _keyboardOptions = EnumOptions<DataTableKeyboardNavigation>();
+        _columnMenuOptions = EnumOptions<ColumnMenuMode>();
+        _editActionsOptions = EnumOptions<EditActionsMode>();
+
+        _redesignViews = new InMemoryViewProvider(BuildDemoViews());
+        _standaloneViews = new InMemoryViewProvider(BuildDemoViews());
+
+        _redesignFilterDefs =
+        [
+            new FilterDefinition { FieldName = "Name", FieldLabel = Loc["TmDataTableDemo_ColName"], FieldType = FilterFieldType.Text },
+            new FilterDefinition { FieldName = "Dept", FieldLabel = Loc["TmDataTableDemo_ColDept"], FieldType = FilterFieldType.Select,
+                Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Sales", "Sales"), new SelectOption<string>("HR", "HR")] }
+        ];
+        _standaloneFilterDefs =
+        [
+            new() { FieldName = "Name", FieldLabel = Loc["TmDataTableDemo_ColName"], FieldType = FilterFieldType.Text }
+        ];
+    }
+
+    private List<ActiveFilter> _standalonePopoverFilters = [];
+    private List<ActiveFilter> _standaloneAutoFilters = [];
+
+    private Task OnStandalonePopoverFilters(IReadOnlyList<ActiveFilter> filters)
+    {
+        _standalonePopoverFilters = filters.ToList();
+        return Task.CompletedTask;
+    }
+
+    private Task OnStandaloneAutoFilters(IReadOnlyList<ActiveFilter> filters)
+    {
+        _standaloneAutoFilters = filters.ToList();
+        return Task.CompletedTask;
+    }
+
+    private Task<int?> CountStandaloneMatches(IReadOnlyList<ActiveFilter> filters, CancellationToken _)
+        => Task.FromResult<int?>(_redesignEmployees.Count(employee =>
+            filters.All(filter => employee.Name.Contains(filter.Value?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase))));
+
+    private Task OnRedesignRowClick(Employee _)
+    {
+        _redesignActivations++;
+        return Task.CompletedTask;
+    }
 
     // ── K2 ergonomics demo (pin/resize/multi-sort/master-detail) ──
     private readonly InMemoryDataTableLayoutStore _layoutStore = new();
@@ -916,6 +1365,8 @@
     {
         _personProvider = PersonProvider;
         _viewProvider = ViewProvider;
+        BuildRedesignDemoState();
+        BuildEdgeDemoState();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

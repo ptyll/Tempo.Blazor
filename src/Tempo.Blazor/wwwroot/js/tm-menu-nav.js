@@ -227,15 +227,20 @@ export function isAttached(menu) {
 }
 
 /**
- * Moves focus to the first enabled menu item inside a host element (the dropdown wrapper: the popover
- * stays in its DOM, so does the sheet). Returns whether something was focused.
+ * Moves focus to the first menu item inside a host element (the dropdown wrapper: the popover
+ * stays in its DOM, so does the sheet). An item that is neither natively disabled nor hidden is
+ * preferred; `aria-disabled="true"` items stay in the roving order (a screen reader must be able
+ * to land on them and hear the `aria-describedby` explanation), but the INITIAL focus still skips
+ * them so a freshly opened menu does not open on an unavailable choice. Falls back to the first
+ * roving item when every item is `aria-disabled`. Returns whether something was focused.
  * @param {ParentNode|null} root the element that contains the open role=menu
  */
 export function focusFirst(root) {
     const menu = root?.querySelector?.('[role="menu"]');
     if (!menu) return false;
-    const first = enabledItems(menu)[0];
-    if (!first) return false;
+    const items = enabledItems(menu);
+    if (items.length === 0) return false;
+    const first = items.find(el => el.getAttribute?.('aria-disabled') !== 'true') ?? items[0];
     first.focus();
     return true;
 }

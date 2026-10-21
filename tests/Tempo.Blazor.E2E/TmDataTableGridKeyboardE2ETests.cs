@@ -101,6 +101,71 @@ public class TmDataTableGridKeyboardE2ETests : WasmTestBase
         await Assertions.Expect(grouped.Locator("[tabindex='0']")).ToHaveCountAsync(1);
     }
 
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Grid_Virtualized_CtrlEnd_FocusesLastRenderedCell()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+
+        var virtualized = page.Locator("[data-testid='dt-grid-virtualized']");
+        await virtualized.ScrollIntoViewIfNeededAsync();
+
+        await virtualized.Locator("td[tabindex='0']").FocusAsync();
+        await page.Keyboard.PressAsync("Control+End");
+
+        // The last row is far outside the rendered window: the scroll must wait for <Virtualize>
+        // to paint it before focus lands, otherwise the stop is on a row with no DOM cell.
+        await Assertions.Expect(virtualized.Locator("td[tabindex='0']")).ToHaveAttributeAsync("data-grid-cell", "499:1");
+        await Assertions.Expect(virtualized.Locator("td[tabindex='0']")).ToBeFocusedAsync();
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Grid_EnterOnEditActionsCell_StartsEdit()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+
+        var section = page.Locator("[data-testid='dt-grid-edit']");
+        await section.ScrollIntoViewIfNeededAsync();
+
+        // The edit button inside the cell is tabindex=-1, so the keyboard user is on the cell
+        // itself: Enter there must start the edit, not activate the row.
+        var actionsCell = section.Locator("tbody tr").First.Locator("td.tm-data-table__edit-actions");
+        await actionsCell.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        await Assertions.Expect(section.Locator("tr.tm-row-editing")).ToHaveCountAsync(1);
+        await Assertions.Expect(section.Locator("[data-testid='grid-edit-note-input']")).ToHaveCountAsync(1);
+
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(section.Locator("tr.tm-row-editing")).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Grid_ClickCell_MoveStop_FocusReturnsToClickedCell()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}{DataTablePage}", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+
+        var section = page.Locator("[data-testid='dt-grid-keyboard-section']");
+        await section.ScrollIntoViewIfNeededAsync();
+
+        var clicked = section.Locator("tbody tr").Nth(1).Locator("td").Nth(1);
+        await clicked.ClickAsync();
+        await Assertions.Expect(clicked).ToHaveAttributeAsync("tabindex", "0");
+
+        // Tab out and back: the roving stop must resume from the clicked cell, not the old one.
+        await page.Keyboard.PressAsync("Shift+Tab");
+        await page.Keyboard.PressAsync("Tab");
+        await Assertions.Expect(clicked).ToBeFocusedAsync();
+    }
+
     private static DirectoryInfo FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

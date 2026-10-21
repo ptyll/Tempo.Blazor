@@ -189,6 +189,92 @@ public class StencilPackRegistryParityTests
     }
 
     [Fact]
+    public void DataTableStencil_ExposesRedesignPropsAndBranchesOnThem()
+    {
+        // Fáze 12: the wireframe stencil must offer the redesign opt-ins and actually draw them, so a
+        // designer can preview cards, a mobile layout and the filter summary before writing markup.
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmDataTable");
+
+        schema.Props.Should().Contain(prop => prop.Name == "appearance" && prop.Type == PropType.Enum
+            && Equals(prop.Default, "plain") && prop.Options!.SequenceEqual(new[] { "plain", "card" }));
+        schema.Props.Should().Contain(prop => prop.Name == "mobileLayout" && prop.Type == PropType.Enum
+            && Equals(prop.Default, "none") && prop.Options!.SequenceEqual(new[] { "none", "scroll", "cards" }));
+        schema.Props.Should().Contain(prop => prop.Name == "showFilterSummary" && prop.Type == PropType.Bool
+            && Equals(prop.Default, false));
+        schema.Props.Should().Contain(prop => prop.Name == "columnMenu" && prop.Type == PropType.Bool);
+        schema.Props.Should().Contain(prop => prop.Name == "exportSelected" && prop.Type == PropType.Bool);
+
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmDataTable\""));
+
+        entry.Should().Contain("appearance == \\\"card\\\"");
+        entry.Should().Contain("mobileLayout == \\\"cards\\\"");
+        entry.Should().Contain("mobileLayout == \\\"scroll\\\"");
+        entry.Should().Contain("showFilterSummary");
+    }
+
+    [Fact]
+    public void MultiViewListStencil_ExposesRedesignPropsAndBranchesOnThem()
+    {
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmMultiViewList");
+
+        schema.Props.Should().Contain(prop => prop.Name == "view" && prop.Type == PropType.Enum
+            && Equals(prop.Default, "list") && prop.Options!.SequenceEqual(new[] { "table", "cards", "list" }));
+        schema.Props.Should().Contain(prop => prop.Name == "responsive" && prop.Type == PropType.Bool
+            && Equals(prop.Default, false));
+        schema.Props.Should().Contain(prop => prop.Name == "showItemCount" && prop.Type == PropType.Bool);
+        schema.Props.Should().Contain(prop => prop.Name == "viewSwitcherLabels" && prop.Type == PropType.Enum);
+
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmMultiViewList\""));
+
+        entry.Should().Contain("view == \\\"cards\\\"");
+        entry.Should().Contain("view == \\\"table\\\"");
+        entry.Should().Contain("responsive");
+    }
+
+    [Fact]
+    public void ViewManagerStencil_ExposesTheOpenPanelVariant()
+    {
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmViewManager");
+
+        schema.Props.Should().Contain(prop => prop.Name == "open" && prop.Type == PropType.Bool
+            && Equals(prop.Default, false));
+
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmViewManager\""));
+
+        entry.Should().Contain("open");
+    }
+
+    [Fact]
+    public void FilterBuilderStencil_ExposesPresentationVariants()
+    {
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmFilterBuilder");
+
+        schema.Props.Should().Contain(prop => prop.Name == "presentation" && prop.Type == PropType.Enum
+            && Equals(prop.Default, "inline") && prop.Options!.SequenceEqual(new[] { "inline", "popover", "auto" }));
+
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmFilterBuilder\""));
+
+        entry.Should().Contain("presentation == \\\"popover\\\"");
+        entry.Should().Contain("presentation == \\\"auto\\\"");
+    }
+
+    [Fact]
     public void ToolbarButtonSchema_ExposesPressedToggle()
     {
         // F12/C2: the toolbar button has a pressed (toggle) state, so the wireframe schema must offer

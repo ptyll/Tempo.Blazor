@@ -292,6 +292,13 @@ window.tmDataTable = (function () {
             var target = event.target;
             if (!target || !target.closest) return;
             if (!target.closest('td[role="gridcell"], th[role="columnheader"], td[role="rowheader"]')) return;
+            // Ctrl+Home / Ctrl+End are grid navigation (first / last row) in C#, but the generic
+            // Ctrl guard below lets the browser run its default document scroll to the very top
+            // or bottom, so the page visibly jumps before the nearest-edge scroll pulls it back.
+            if (event.ctrlKey && !event.altKey && !event.metaKey && (event.key === 'Home' || event.key === 'End')) {
+                event.preventDefault();
+                return;
+            }
             if (event.ctrlKey || event.altKey || event.metaKey) return;
             if (isGridEditTarget(target)) return;
             if (GRID_NAV_KEYS.indexOf(event.key) === -1) return;
@@ -304,7 +311,9 @@ window.tmDataTable = (function () {
     // Arrow keys that scroll the page when a composite widget (a radiogroup) owns them.
     // Tab is deliberately absent: a blanket preventDefault on the container would trap focus.
     var ARROW_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-    var arrowKeyRoots = new Map();
+    // WeakMap: a switcher that unmounts (or whose component is disposed) must not keep its
+    // detached element and listener alive through this module.
+    var arrowKeyRoots = new WeakMap();
 
     /**
      * Cancels the page-scroll default of arrow keys on a composite widget. Only a key whose target
@@ -324,6 +333,49 @@ window.tmDataTable = (function () {
         arrowKeyRoots.set(el, onKey);
     }
 
+    /**
+     * Removes the listener installed by `attachArrowKeyPrevent` and forgets the element. Safe to
+     * call for an element that was never attached.
+     */
+    function detachArrowKeyPrevent(el) {
+        if (!el) return;
+        var onKey = arrowKeyRoots.get(el);
+        if (!onKey) return;
+        el.removeEventListener('keydown', onKey);
+        arrowKeyRoots.delete(el);
+    }
+
+    var menuKeyRoots = new Map();
+
+    /**
+     * Cancels the browser's default for Alt+ArrowDown on a column header that announces it as its
+     * shortcut (aria-keyshortcuts contains "Alt+ArrowDown"). The component opens the column menu on
+     * that chord, but the chord also scrolls the page; the header leaves the viewport and the overlay
+     * dismisses itself as "anchor-hidden" ~150 ms later. Blazor cannot make preventDefault depend on
+     * the key, so the decision lives here. Every other key and every other header is left alone.
+     */
+    function attachColumnMenuKeys(table) {
+        if (!table || !table.addEventListener || menuKeyRoots.has(table)) return;
+        var onKey = function (event) {
+            if (!event.altKey || event.ctrlKey || event.metaKey || event.key !== 'ArrowDown') return;
+            var target = event.target;
+            if (!target || typeof target.closest !== 'function') return;
+            var header = target.closest('th');
+            if (!header || typeof header.getAttribute !== 'function') return;
+            var shortcuts = header.getAttribute('aria-keyshortcuts') || '';
+            if (shortcuts.indexOf('Alt+ArrowDown') === -1) return;
+            event.preventDefault();
+        };
+        table.addEventListener('keydown', onKey);
+        menuKeyRoots.set(table, onKey);
+    }
+
+    function detachColumnMenuKeys(table) {
+        var onKey = menuKeyRoots.get(table);
+        if (!onKey) return;
+        menuKeyRoots.delete(table);
+        table.removeEventListener('keydown', onKey);
+    }
     function detachGridKeys(table) {
         var onKey = gridKeyRoots.get(table);
         if (!onKey) return;
@@ -333,14 +385,31 @@ window.tmDataTable = (function () {
 
     /**
      * Brings a not-yet-rendered virtualized row into the scroller so the next render can paint it.
-     * The estimate is the same item size Virtualize uses; the real cell is focused afterwards.
+     * The estimate is the same item size Virtualize uses. With `row` and `col` the function also
+     * moves focus itself: `<Virtualize>` paints the target rows a few frames after the scroll, so
+     * an immediate focus would find no cell. The lookup retries inside requestAnimationFrame for a
+     * bounded number of frames and focuses the cell as soon as it exists.
      */
-    function scrollGridToIndex(table, index, itemSize) {
+    function scrollGridToIndex(table, index, itemSize, row, col) {
         if (!table || !table.closest) return;
         var scroller = table.closest('.tm-data-table-scroll') || table.parentElement;
         if (!scroller) return;
         var top = Math.max(0, Number(index) * Number(itemSize || 0));
         try { scroller.scrollTo({ top: top }); } catch (e) { scroller.scrollTop = top; }
+        if (row === undefined || col === undefined) return;
+        var key = String(Number(row)) + ':' + String(Number(col));
+        var frames = 0;
+        var step = function () {
+            var cell = table.querySelector('[data-grid-cell="' + key + '"]');
+            if (cell && typeof cell.focus === 'function') {
+                try { cell.focus({ preventScroll: true }); } catch (e) { cell.focus(); }
+                try { cell.scrollIntoView({ block: 'nearest' }); } catch (e) { /* no scroller */ }
+                return;
+            }
+            if (++frames < 10 && typeof requestAnimationFrame === 'function')
+                requestAnimationFrame(step);
+        };
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);
     }
 
     /**
@@ -370,12 +439,20 @@ window.tmDataTable = (function () {
      * top layer (TmOverlayPanel), so it is looked up by id on the document, not inside the table.
      * Arrow / Home / End navigation is owned by tm-menu-nav.js, which TmOverlayPanel attaches to
      * every role="menu" panel — this only moves the initial focus. Sort items are menuitemradio;
-     * every other item is menuitem, so the selector matches both.
+     * every other item is menuitem, so the selector matches both. An `aria-disabled="true"` item
+     * stays in the roving order but must not take the OPENING focus: the first candidate that is
+     * not disabled wins, and an all-disabled menu falls back to the first focusable item.
      */
     function focusColumnMenu(menuId) {
         var menu = document.getElementById(menuId);
         if (!menu) return;
-        var item = menu.querySelector('[role^="menuitem"]:not([disabled])');
+        var focusable = menu.querySelectorAll('[role^="menuitem"]:not([disabled])');
+        if (!focusable.length) return;
+        var item = null;
+        for (var i = 0; i < focusable.length; i++) {
+            if (focusable[i].getAttribute('aria-disabled') !== 'true') { item = focusable[i]; break; }
+        }
+        if (!item) item = focusable[0];
         if (item && typeof item.focus === 'function') {
             try { item.focus({ preventScroll: true }); } catch (e) { item.focus(); }
         }
@@ -405,6 +482,20 @@ window.tmDataTable = (function () {
     }
 
     /**
+     * Moves focus into the first editor of the row that just entered edit mode. The editing row renders
+     * plain cells, not grid cells, so the cell that held focus is gone and focus would fall to the page:
+     * Escape and Enter (answered on the editing row) would never reach the table. Only an editor control
+     * qualifies; a row with none keeps focus where it is.
+     */
+    function focusRowEditor(table) {
+        if (!table || typeof table.querySelector !== 'function') return;
+        var editor = table.querySelector('tr.tm-row-editing td.tm-data-table-cell--editing input, tr.tm-row-editing td.tm-data-table-cell--editing select, tr.tm-row-editing td.tm-data-table-cell--editing textarea, tr.tm-row-editing td.tm-data-table-cell--editing [contenteditable="true"]');
+        if (editor && typeof editor.focus === 'function') {
+            try { editor.focus({ preventScroll: true }); } catch (e) { editor.focus(); }
+        }
+    }
+
+    /**
      * Moves focus onto the filter control the column menu's "Filter" item names. The control is
      * rendered by Blazor before this runs, so a missing element means the column is not filterable.
      */
@@ -416,5 +507,85 @@ window.tmDataTable = (function () {
         }
     }
 
-    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, attachGridKeys, detachGridKeys, scrollGridToIndex, attachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusHeader };
+    /**
+     * Focuses the header filter input the column menu's "Filter" item names — but only when that
+     * input is actually visible. A Cards table in a WIDE container keeps its header (the trigger
+     * button is display:none, the header is not), so the sheet must stay closed and the header
+     * filter takes the focus. Returns true when the input was focused; false tells Blazor to open
+     * the cards filter sheet instead. `checkVisibility` is the honest test; `offsetParent` covers
+     * engines without it (display:none on an ancestor makes offsetParent null).
+     */
+    function focusColumnFilterOrOpenSheet(inputId) {
+        var input = document.getElementById(inputId);
+        if (!input) return false;
+        var visible = typeof input.checkVisibility === 'function'
+            ? input.checkVisibility({ checkVisibilityCSS: true })
+            : input.offsetParent !== null;
+        if (!visible) return false;
+        if (typeof input.focus === 'function') {
+            try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+            try { input.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* no scroller */ }
+        }
+        return true;
+    }
+
+    // wrapper element -> { observer, timer }. A WeakMap so a removed table is collectable.
+    var pinObservers = new WeakMap();
+
+    /**
+     * Recomputes every pinned column's sticky offset from the first header row only, and writes it
+     * once onto the wrapper as `--tm-pin-left-<index>` / `--tm-pin-right-<index>`. Body cells used
+     * to share the running total, so each row landed at the sum of every pinned header; writing the
+     * property on the cell itself was also thrown away by the next Blazor render, which rebuilds
+     * the inline style. The component reads the wrapper property back (`var(--tm-pin-left-N, …)`),
+     * so a re-render keeps the measured value and the C# offset stays the fallback. Debounced so a
+     * resize storm measures once.
+     */
+    function recomputePinnedOffsets(wrapper) {
+        if (!wrapper || !wrapper.querySelectorAll || !wrapper.style) return;
+        var headerRow = wrapper.querySelector('thead tr');
+        if (!headerRow) return;
+        var headers = Array.from(headerRow.children || []).filter(function (cell) {
+            return cell && (cell.tagName === 'TH' || cell.tagName === 'th');
+        });
+        var left = 0;
+        headers.forEach(function (header, index) {
+            if (!header.classList || !header.classList.contains('tm-col-pinned-left')) return;
+            wrapper.style.setProperty('--tm-pin-left-' + index, left + 'px');
+            left += Math.round(header.getBoundingClientRect().width);
+        });
+        var right = 0;
+        for (var i = headers.length - 1; i >= 0; i--) {
+            var header = headers[i];
+            if (!header.classList || !header.classList.contains('tm-col-pinned-right')) continue;
+            wrapper.style.setProperty('--tm-pin-right-' + i, right + 'px');
+            right += Math.round(header.getBoundingClientRect().width);
+        }
+    }
+
+    /**
+     * Watches the table wrapper and recomputes the pinned offsets 100ms after the last resize.
+     * Observing twice is a no-op; dispose detaches the observer.
+     */
+    function observePinnedOffsets(wrapper) {
+        if (!wrapper || pinObservers.has(wrapper) || typeof ResizeObserver !== 'function') return;
+        var state = { timer: 0 };
+        state.observer = new ResizeObserver(function () {
+            clearTimeout(state.timer);
+            state.timer = setTimeout(function () { recomputePinnedOffsets(wrapper); }, 100);
+        });
+        state.observer.observe(wrapper);
+        pinObservers.set(wrapper, state);
+    }
+
+    /** Detaches the pinned-offset observer. Called from the component's dispose. */
+    function disposePinnedOffsets(wrapper) {
+        var state = pinObservers.get(wrapper);
+        if (!state) return;
+        clearTimeout(state.timer);
+        state.observer.disconnect();
+        pinObservers.delete(wrapper);
+    }
+
+    return { startColumnResize, attachColumnResize, detachColumnResize, directionOf, measureColumn, downloadFile, setIndeterminate, focusGridCell, focusRowEditor, attachGridKeys, detachGridKeys, attachColumnMenuKeys, detachColumnMenuKeys, scrollGridToIndex, attachArrowKeyPrevent, detachArrowKeyPrevent, focusColumnMenu, focusColumnFilter, focusColumnFilterOrOpenSheet, focusHeader, observePinnedOffsets, disposePinnedOffsets };
 })();

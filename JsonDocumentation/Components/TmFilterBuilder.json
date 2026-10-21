@@ -64,6 +64,12 @@
       "type": "Func<IReadOnlyList<ActiveFilter>, CancellationToken, Task<int?>>?",
       "isRequired": false,
       "description": "Returns the number of records matching the given filters, or null when unknown. Called with a 300 ms debounce while ShowResultPreview is true. A thrown exception shows nothing and never takes the builder down. An existing Func variable binds directly."
+    },
+    {
+      "name": "ResultCountKey",
+      "type": "object?",
+      "isRequired": false,
+      "description": "Changing this value re-runs the count; hosts pass a token covering inputs outside ActiveFilters (search text, column filters, a reloaded data set). Compare by value, so an incrementing version counter works."
     }
   ],
   "cssClasses": [

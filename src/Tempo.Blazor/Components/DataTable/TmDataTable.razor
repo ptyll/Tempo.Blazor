@@ -5,6 +5,7 @@
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Components.Forms
 @using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Overlay
@@ -17,7 +18,7 @@
     <span style="display:none" aria-hidden="true">@ChildContent</span>
 </CascadingValue>
 
-<div class="@RootCssClass" @attributes="AdditionalAttributes">
+<div class="@RootCssClass" @ref="_wrapperRef" @attributes="AdditionalAttributes">
 
     @* ── Toolbar ─────────────────────────────────────────────── *@
     @if (ShowToolbar && HasVisibleToolbarControls())
@@ -45,6 +46,8 @@
                 {
                     <TmViewManager Provider="ViewProvider"
                                    ViewContext="@ViewContext"
+                                   Compact="@IsRedesigned"
+                                   MobilePresentation="@(MobileLayout != DataTableMobileLayout.None ? PanelPresentation.Auto : PanelPresentation.Popover)"
                                    ShowActiveViewName="@ShowActiveViewName"
                                    AllowSetDefault="@AllowSetDefault"
                                    OnSetDefault="@OnSetDefault"
@@ -58,6 +61,38 @@
                                    CanCreateTenantViews="ViewCanCreateTenantViews"
                                    CurrentUserId="CurrentUserId"
                                    CurrentTenantId="CurrentTenantId" />
+                }
+                @if (ShouldRenderMobileSort())
+                {
+                    @* Hidden until the container is narrow (tm-data-table-mobile-only). The header is
+                       display:none there, so this dropdown is the only sort surface. *@
+                    <TmDropdown Text="@Loc["TmDataTable_MobileSort"]"
+                                Class="tm-data-table-cards-toolbar__sort tm-data-table-mobile-only"
+                                OutlineTrigger="true"
+                                MobilePresentation="PanelPresentation.Auto"
+                                OnSelect="OnCardSortSelectedAsync">
+                        @foreach (var col in CardsSortableColumns)
+                        {
+                            <TmDropdownItem Value="@($"{col.Key}|asc")" Checked="@IsCardSortChecked(col, descending: false)">
+                                @* The menu sits under a button already labelled "Sort", so the items carry
+                                   only the column and the direction — repeating the verb in every entry
+                                   doubled the list's length for scanning and for screen readers. *@
+                                @Loc["TmDataTable_MobileSortAscending", col.Title]
+                            </TmDropdownItem>
+                            <TmDropdownItem Value="@($"{col.Key}|desc")" Checked="@IsCardSortChecked(col, descending: true)">
+                                @Loc["TmDataTable_MobileSortDescending", col.Title]
+                            </TmDropdownItem>
+                        }
+                        <TmDropdownItem Value="@("clear")">@Loc["TmDataTable_ColumnMenu_ClearSort"]</TmDropdownItem>
+                    </TmDropdown>
+                }
+                @if (ShouldRenderMobileFilters())
+                {
+                    <button type="button" @ref="_cardsFilterTrigger" class="tm-btn tm-btn-outline tm-btn-sm tm-data-table-cards-toolbar__filter tm-data-table-mobile-only"
+                            aria-haspopup="dialog" aria-expanded="@(_cardsFilterOpen ? "true" : "false")"
+                            @onclick="OpenCardsFilterAsync">
+                        @Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)
+                    </button>
                 }
                 @if (ShouldRenderExport())
                 {
@@ -98,7 +133,7 @@
                             {
                                 <TmDropdownItem Value="csv"
                                                 Icon="@IconNames.FileText"
-                                                Class="tm-data-table__export-item"
+                                                Class="tm-data-table__export-item tm-data-table__export-item--rich"
                                                 AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "csv" })">
                                     <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportCsvShort"]</span>
                                     <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportCsvDescription"]</span>
@@ -107,7 +142,7 @@
                                 {
                                     <TmDropdownItem Value="xlsx"
                                                     Icon="@IconNames.Table"
-                                                    Class="tm-data-table__export-item"
+                                                    Class="tm-data-table__export-item tm-data-table__export-item--rich"
                                                     AdditionalAttributes="@(new Dictionary<string, object> { ["data-export-format"] = "xlsx" })">
                                         <span class="tm-data-table__export-label">@Loc["TmDataTable_ExportXlsxShort"]</span>
                                         <span class="tm-data-table__export-description">@Loc["TmDataTable_ExportXlsxDescription"]</span>
@@ -147,23 +182,30 @@
                              DisplayResolver="DisplayResolver"
                              ShowResultPreview="ShowFilterResultPreview"
                              ResultCountProvider="ResultCountProvider"
+                             ResultCountKey="_resultCountVersion"
                              ShowClearAll="true" />
         </div>
     }
 
-    @if (ShowFilterSummary && _activeFilters.Count > 0)
+    @if (ShouldRenderFilterSummary() && _activeFilters.Count > 0)
     {
         <div class="tm-data-table-filter-summary">
-            <span>@Loc["TmDataTable_ActiveFilters", _activeFilters.Count]</span>
+            <span role="status" aria-live="polite">@Loc.Plural("TmDataTable_ActiveFilters", _activeFilters.Count)</span>
             <button type="button" class="tm-link-button" @onclick="ClearAllFiltersAsync">@Loc["TmDataTable_ClearFilters"]</button>
         </div>
+    }
+    @if (ShouldRenderFilterSummary())
+    {
+        @* Always present so the first filter change is announced too: a live region that is added to
+           the page together with its text is often not spoken at all. *@
+        <div class="tm-data-table-filter-summary-live tm-sr-only" role="status" aria-live="polite">@FilterSummaryAnnouncement</div>
     }
 
     @* ── Selection bar ────────────────────────────────────────── *@
     @if (_selectedItems.Count > 0)
     {
         <div class="tm-data-table-selection-bar">
-            <span>@Loc["TmDataTable_BulkActions", _selectedItems.Count]</span>
+            <span>@Loc.Plural("TmDataTable_BulkActions", _selectedItems.Count)</span>
             <button class="tm-link-button" type="button" @onclick="DeselectAllAsync">
                 @Loc["TmDataTable_DeselectAll"]
             </button>
@@ -226,6 +268,50 @@
                 </div>
             }
         </div>
+    }
+
+    @* ── Cards filter sheet ───────────────────────────────────── *@
+    @* The sort control is a TmDropdown inside the toolbar. The filter sheet stays here because it
+       carries its own fields; the toolbar button opens it, and so does the column menu's Filter item. *@
+    @if (ShouldRenderMobileFilters())
+    {
+        @* The sheet input gets its own id family (CardsFilterId): the header filter row stays in the
+           DOM (only display:none) while the sheet is open, so reusing ColumnFilterId here would put
+           the same id on two elements and could point TmFormField's label at the hidden header input. *@
+        <TmOverlayPanel @ref="_cardsSheet" Anchor="_cardsFilterTrigger" IsOpen="_cardsFilterOpen" IsOpenChanged="SetCardsFilterOpenAsync"
+                        Placement="OverlayPlacement.Bottom" Align="OverlayAlign.Start" Offset="4"
+                        MobilePresentation="PanelPresentation.Auto" Role="dialog"
+                        AriaLabel="@Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)"
+                        Title="@Loc.Plural("TmDataTable_MobileFilters", ActiveCardFilterCount)"
+                        Class="tm-data-table-cards-sheet">
+            @foreach (var col in CardsFilterableColumns)
+            {
+                <TmFormField Label="@col.Title" For="@CardsFilterId(col.Key)">
+                    <TmColumnFilter ColumnKey="@col.Key"
+                                    InputId="@CardsFilterId(col.Key)"
+                                    ColumnTitle="@col.Title"
+                                    FilterType="@col.FilterType"
+                                    FilterOptions="@col.FilterOptions"
+                                    FilterOperator="@col.FilterOperator"
+                                    Value="@ColumnFilterValue(col.Key)"
+                                    OnFilterChange="f => ApplyFilterAsync(col.Key, f)" />
+                </TmFormField>
+            }
+            <div class="tm-data-table-cards-sheet__footer">
+                <button type="button" class="tm-btn tm-btn-outline" @onclick="ClearAllFiltersAsync">
+                    @Loc["TmDataTable_ClearAll"]
+                </button>
+                @* The sheet presentation already carries a Done button in the drawer header; rendering
+                   the footer's one too put two identical "Done" controls on a phone. The footer Done
+                   exists only for the anchored popover. *@
+                @if (_cardsSheet is null || !_cardsSheet.IsSheet)
+                {
+                    <button type="button" class="tm-btn tm-btn-primary tm-data-table-cards-sheet__done" @onclick="() => SetCardsFilterOpenAsync(false)">
+                        @Loc["Tm_Done"]
+                    </button>
+                }
+            </div>
+        </TmOverlayPanel>
     }
 
     @* ── Table ────────────────────────────────────────────────── *@
@@ -394,6 +480,16 @@
                                                     data-action="@action"
                                                     @onclick="() => RunColumnMenuActionAsync(col, action)"
                                                     @onclick:stopPropagation="true">
+                                                @* The leading check slot is the sighted counterpart of
+                                                   aria-checked (WCAG 1.3.1/1.4.1): it renders on EVERY
+                                                   item — empty on the plain menuitems — so all labels
+                                                   share one alignment edge (see _dropdown.css). *@
+                                                <span class="tm-dropdown-item__check" aria-hidden="true">
+                                                    @if (isSortDirection && isCurrentSort)
+                                                    {
+                                                        <TmIcon Name="@IconNames.Check" Size="IconSize.Sm" />
+                                                    }
+                                                </span>
                                                 @Loc[ColumnMenuActionKey(action)]
                                             </button>
                                         }
@@ -453,7 +549,7 @@
                             <th class="tm-data-table__edit-actions" aria-hidden="true"></th>
                         }
                     </tr>
-                    @if (_visibleColumns.Any(c => c.Filterable))
+                    @if (_hasFilterRow)
                     {
                         <tr class="tm-filter-row" role="@(IsGrid ? "row" : null)" aria-rowindex="@(IsGrid ? 2 : null)">
                             @if (HasDetail) { <th></th> }
@@ -470,9 +566,8 @@
                                                         FilterOptions="@col.FilterOptions"
                                                         FilterOperator="@col.FilterOperator"
                                                         Value="@ColumnFilterValue(col.Key)"
-                                                        ValueChanged="v => OnColumnFilterValueChanged(col.Key, v)"
                                                         OnFilterChange="f => ApplyFilterAsync(col.Key, f)" />
-                                        @if (ShowFilterSummary && !IsContentToolbarMode && _activeFilters.Count > 0 && col.Key == _visibleColumns.Last(c => c.Filterable).Key)
+                                        @if (ShouldRenderFilterSummary() && _activeFilters.Count > 0 && col.Key == _lastFilterableColumnKey)
                                         {
                                             <button type="button" class="tm-col-filter-clear-all" @onclick="ClearAllFiltersAsync">
                                                 @Loc["TmDataTable_ClearFilters"]
@@ -489,11 +584,33 @@
             <tbody>
                 @if (_isLoading || IsLoading)
                 {
-                    <tr>
-                        <td colspan="@ColSpan">
-                            <TmSpinner />
-                        </td>
-                    </tr>
+                    @* Skeleton rows instead of one colspan spinner cell: the auto table layout
+                       measures one cell per column exactly as it will with data, so the column
+                       widths no longer jump when the rows arrive. Decorative only — aria-hidden,
+                       the surrounding busy state is announced elsewhere. *@
+                    for (var skeletonRow = 0; skeletonRow < 4; skeletonRow++)
+                    {
+                        <tr class="tm-data-table-loading-row" aria-hidden="true">
+                            @if (HasDetail)
+                            {
+                                <td class="tm-col-expander"></td>
+                            }
+                            @if (Selectable)
+                            {
+                                <td class="tm-col-check"></td>
+                            }
+                            @foreach (var col in _renderedCellColumns)
+                            {
+                                <td class="@GetCellClass(col)" style="@GetColumnStyle(col)">
+                                    <TmSkeleton Variant="SkeletonVariant.Text" />
+                                </td>
+                            }
+                            @if (HasEditActions)
+                            {
+                                <td class="tm-data-table__edit-actions"></td>
+                            }
+                        </tr>
+                    }
                 }
                 else if (_groupByColumns.Count > 0 && _groupedData is not null)
                 {
@@ -501,8 +618,12 @@
                     @if (_groupedData.Count == 0 && !string.IsNullOrEmpty(EmptyTitle))
                     {
                         <tr>
-                            <td colspan="@ColSpan">
-                                <TmEmptyState Title="@EmptyTitle" />
+                            <td colspan="@ColSpan" class="tm-data-table-empty-cell">
+                                @* The empty state carries an icon and a localized supporting line, so the
+                                   cell is not a bare string floating in the table (UX review, fix round 3). *@
+                                <TmEmptyState Title="@EmptyTitle"
+                                              Icon="@Tempo.Blazor.Components.Icons.IconNames.Database"
+                                              Description="@Loc["TmDataTable_EmptyDescription"]" />
                             </td>
                         </tr>
                     }
@@ -516,8 +637,12 @@
                     @if (!string.IsNullOrEmpty(EmptyTitle))
                     {
                         <tr>
-                            <td colspan="@ColSpan">
-                                <TmEmptyState Title="@EmptyTitle" />
+                            <td colspan="@ColSpan" class="tm-data-table-empty-cell">
+                                @* The empty state carries an icon and a localized supporting line, so the
+                                   cell is not a bare string floating in the table (UX review, fix round 3). *@
+                                <TmEmptyState Title="@EmptyTitle"
+                                              Icon="@Tempo.Blazor.Components.Icons.IconNames.Database"
+                                              Description="@Loc["TmDataTable_EmptyDescription"]" />
                             </td>
                         </tr>
                     }
@@ -541,6 +666,7 @@
                             {
                                 <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, 0) : null)"
                                     @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, 0, rowItem)) : default)"
+                                    @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(virtualRow, 0)) : default)"
                                     @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid"></td>
                             }
                             @if (Selectable)
@@ -548,6 +674,7 @@
                                 var virtualCheckCol = HasDetail ? 1 : 0;
                                 <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? virtualCheckCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, virtualCheckCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, virtualCheckCol) : null)"
                                     @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, virtualCheckCol, rowItem)) : default)"
+                                    @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(virtualRow, virtualCheckCol)) : default)"
                                     @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     <input type="checkbox"
                                            aria-label="@Loc["TmDataTable_SelectRow"]"
@@ -566,6 +693,7 @@
                                 <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
                                     role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(virtualRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(virtualRow, cellCol) : null)"
                                     @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, virtualRow, cellCol, rowItem)) : default)"
+                                    @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(virtualRow, cellCol)) : default)"
                                     @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                     @if (col.CellTemplate is not null)
                                     {
@@ -679,6 +807,7 @@
                                     var expanderRow = currentRowIndex;
                                     <td class="tm-col-expander" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(expanderRow, 0) : null)" tabindex="@(IsGrid ? CellTabIndex(expanderRow, 0) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, expanderRow, 0, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(expanderRow, 0)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-row-expander-btn"
                                                 aria-label="@Loc["TmDataTable_ToggleDetail"]"
@@ -699,6 +828,7 @@
                                     var checkRow = currentRowIndex;
                                     <td class="tm-col-check @(IsResponsiveScroll ? "tm-col-check--mobile-pinned" : null)" role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? checkCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(checkRow, checkCol) : null)" tabindex="@(IsGrid ? CellTabIndex(checkRow, checkCol) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, checkRow, checkCol, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(checkRow, checkCol)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <input type="checkbox"
                                                aria-label="@Loc["TmDataTable_SelectRow"]"
@@ -718,6 +848,7 @@
                                     <td class="@GetCellClass(col)" style="@GetColumnStyle(col)" data-label="@(IsCardLayout ? col.Title : null)" data-card-role="@(IsMobileCards ? col.CardRole.ToString() : null)"
                                         role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? cellCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(cellRow, cellCol) : null)" tabindex="@(IsGrid ? CellTabIndex(cellRow, cellCol) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, cellRow, cellCol, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(cellRow, cellCol)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         @if (col.CellTemplate is not null)
                                         {
@@ -736,6 +867,7 @@
                                     <td class="tm-data-table__edit-actions @(IsMobileCards ? "tm-data-table__edit-actions--card-footer" : null)"
                                         role="@(IsGrid ? "gridcell" : null)" aria-colindex="@(IsGrid ? editCol + 1 : null)" data-grid-cell="@(IsGrid ? GridCellKey(editRow, editCol) : null)" tabindex="@(IsGrid ? CellTabIndex(editRow, editCol) : null)"
                                         @onkeydown="@(IsGrid ? EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, editRow, editCol, rowItem)) : default)"
+                                        @onfocusin="@(IsGrid ? EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(editRow, editCol)) : default)"
                                         @onkeydown:stopPropagation="@IsGrid" @onkeyup:stopPropagation="@IsGrid">
                                         <button type="button" class="tm-data-table__edit-action tm-data-table__edit-action--start"
                                                 aria-label="@Loc["TmDataTable_EditRow"]" title="@Loc["TmDataTable_EditRow"]"
@@ -761,6 +893,11 @@
             </tbody>
         </table>
     </div>
+    @* The result count, announced. It lives outside the conditional summary so a filter that
+       changes the count is spoken even when no summary slot is rendered, and it stays in the DOM
+       so the live region is not created and destroyed with the number. *@
+    <div class="tm-data-table-live-count tm-sr-only" aria-live="polite" aria-atomic="true">@ResultCountAnnouncement</div>
+
     @* ── Pagination ───────────────────────────────────────────── *@
     @if (PagerRenders)
     {
@@ -784,13 +921,16 @@
             }
 
             @* Center: Page controls + Page size (vše v jednom) *@
-            <div class="tm-pagination-center">
-                <TmPagination Compact="@(MobileLayout != DataTableMobileLayout.None)" CurrentPage="@_currentPage"
+            <div class="tm-pagination-center @(MobileLayout != DataTableMobileLayout.None ? "tm-data-table-pager--responsive" : null)">
+                @* "Page X of Y" is a width decision, not a parameter: the label is in the markup always
+                   and the container query reveals it below 640px, hiding the page numbers beside it. *@
+                <span class="tm-data-table-page-label">@Loc["TmDataTable_CompactPage", _currentPage, _totalPages]</span>
+                <TmPagination CurrentPage="@_currentPage"
                               TotalPages="@_totalPages"
                               TotalCount="@_totalCount"
                               PageSize="@_pageSize"
                               PageSizeOptions="PageSizeOptions"
-                              ShowInfo="@(MobileLayout == DataTableMobileLayout.None && PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
+                              ShowInfo="@(PaginationInfoPlacement == DataTablePaginationInfoPlacement.Pagination)"
                               TestIdPrefix="@TestIdPrefix"
                               AdditionalAttributes="PaginationAttributes"
                               OnPageChange="GoToPageAsync"

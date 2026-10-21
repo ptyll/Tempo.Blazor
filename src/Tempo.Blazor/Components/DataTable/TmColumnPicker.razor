@@ -18,7 +18,7 @@
        titled with the localized column-picker label. *@
     <TmOverlayPanel Anchor="_toggleRef"
                     IsOpen="_open"
-                    IsOpenChanged="@(v => _open = v)"
+                    IsOpenChanged="SetOpen"
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
                     Role="dialog"
@@ -60,9 +60,20 @@
     private bool _open;
     private ElementReference _toggleRef;
 
-    public void Open() => _open = true;
+    /// <summary>
+    /// Opens the panel. The field is what <c>TmOverlayPanel</c> reads, and a caller invoking this
+    /// from outside a render (a parent, a test) has no render of its own, so the method requests one.
+    /// </summary>
+    public void Open()
+    {
+        _open = true;
+        StateHasChanged();
+    }
 
     private void ToggleOpen() => _open = !_open;
+
+    /// <summary>The overlay reports its own close (Escape, outside press); the field must follow.</summary>
+    private void SetOpen(bool open) => _open = open;
 
     private Task Toggle(string key) => OnToggleColumn.InvokeAsync(key);
 

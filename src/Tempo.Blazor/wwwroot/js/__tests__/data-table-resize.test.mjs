@@ -349,3 +349,26 @@ test('attachArrowKeyPrevent cancels arrows on the matching child and leaves Tab 
     root.dispatch('keydown', outside);
     assert.notEqual(outside.defaultPrevented, true, 'a non-matching target keeps the browser default');
 });
+
+test('detachArrowKeyPrevent stops cancelling arrows and forgets the element', () => {
+    const root = el(['tm-mvl-switcher']);
+    const radio = el([], root);
+    radio.closest = (selector) => (selector === "[role='radio']" ? radio : null);
+
+    tmDataTable.attachArrowKeyPrevent(root, "[role='radio']");
+    tmDataTable.detachArrowKeyPrevent(root);
+
+    const arrow = { key: 'ArrowRight', target: radio, preventDefault() { arrow.defaultPrevented = true; } };
+    root.dispatch('keydown', arrow);
+    assert.notEqual(arrow.defaultPrevented, true, 'after a detach an arrow keeps the browser default');
+
+    // A second detach (or a detach of an unknown element) is a safe no-op.
+    tmDataTable.detachArrowKeyPrevent(root);
+    tmDataTable.detachArrowKeyPrevent(null);
+
+    // Re-attach works again after a detach.
+    tmDataTable.attachArrowKeyPrevent(root, "[role='radio']");
+    const arrow2 = { key: 'ArrowLeft', target: radio, preventDefault() { arrow2.defaultPrevented = true; } };
+    root.dispatch('keydown', arrow2);
+    assert.equal(arrow2.defaultPrevented, true, 'a re-attached listener cancels arrows again');
+});

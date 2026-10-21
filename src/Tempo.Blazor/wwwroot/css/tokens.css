@@ -4,6 +4,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
+  /* Native controls (checkbox, scrollbar, <select> popup) are drawn by the browser and follow
+     color-scheme, which accent-color does NOT affect: the unchecked box stayed white in dark mode
+     until this was declared. Light is the library's default theme. */
+  color-scheme: light;
+
   /* ── Color Palette ──────────────────────────────────────────── */
 
   /* Primary (blue) */
@@ -315,6 +320,9 @@
      and silently ignore the documented contract. --tm-data-table-row-height stays inline. */
   --tm-data-table-cell-py: var(--tm-space-3);
   --tm-data-table-cell-px: var(--tm-space-4);
+  /* Column pin toggle: its square size and its inset from the header's inline-end edge. The RTL pinned header reserves both. */
+  --tm-data-table-pin-glyph: 1.1rem;
+  --tm-data-table-pin-inset: var(--tm-space-1-5);
   --tm-color-surface:          var(--tm-bg-surface);
   --tm-color-surface-secondary: var(--tm-bg-surface-secondary);
   --tm-color-surface-elevated: var(--tm-color-white);
@@ -353,6 +361,13 @@
      dark block. Because --tm-text-inverse is flipped in tokens-dark.css, this covers BOTH theming
      APIs and every use site at once. Light is unchanged: --tm-text-inverse is white there. */
   --tm-color-on-primary:       var(--tm-text-inverse);
+  /* Ink that stays white in both themes. The page-ink token is near-black in dark mode, so it
+     cannot label a primary fill there. */
+  --tm-color-on-primary-fixed: var(--tm-color-white);
+  /* Fill behind white text. The dark primary step is primary-400, and white on it is 2.54:1, so an
+     active page number cannot use it. primary-600 holds 5.17:1 against white and 7.02:1 against the
+     dark page ink, so one step serves both themes. */
+  --tm-color-primary-solid: var(--tm-color-primary-600);
   --tm-color-primary-bg:       var(--tm-color-primary);
   --tm-color-primary-bg-subtle: var(--tm-color-primary-subtle);
   /* Older name for --tm-color-on-primary. It aliases the other one instead of repeating its value:

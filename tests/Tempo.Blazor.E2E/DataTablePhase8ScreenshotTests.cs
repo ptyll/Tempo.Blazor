@@ -1,49 +1,34 @@
 using Microsoft.Playwright;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Tempo.Blazor.E2E.DataTableE2EKit;
 
 namespace Tempo.Blazor.E2E;
 
+/// <summary>
+/// Phase 13 (13.1): the old class chose the multi-view list's card mode by button TEXT and fell through
+/// silently when the button was missing, so "multi-view-list-cards-1440.png" showed a table. It now
+/// switches with <c>.tm-mvl-switch-card</c> and asserts the card grid is there. PNGs are produced by
+/// <see cref="DataTableRedesignBaselineScreenshots"/>.
+/// </summary>
 [TestClass]
 public sealed class DataTablePhase8ScreenshotTests : WasmTestBase
 {
     [TestMethod]
     [TestCategory("WASM")]
-    public async Task Phase8_CapturesDesktopGroupedAndMultiViewCards()
+    public async Task Phase8_GroupedTableAndMultiViewCards_AreInTheExpectedState()
     {
-        var page = await CreatePageAsync();
-        await page.SetViewportSizeAsync(1440, 900);
+        var page = await OpenAsync(Browser, BaseUrl, "/data-table", new Options(1440, 900), RegisterContext);
+        await Assertions.Expect(page.Locator("[data-testid='dt-ergonomics-section'] .tm-data-table-wrapper")).ToBeVisibleAsync();
+        var grouped = page.Locator("[data-testid='datatable-rowattrs-grouped']");
+        await grouped.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(grouped.Locator("tr.tm-data-table-group-row").First).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
-        await page.GotoAsync(BaseUrl + "/data-table");
-        await page.WaitForSelectorAsync(".tm-data-table", new PageWaitForSelectorOptions { Timeout = 30000 });
-        await Shot(page, "[data-testid='dt-ergonomics-section'] .tm-data-table-wrapper", "desktop-table-1440.png");
-        await Shot(page, "[data-testid='datatable-rowattrs-grouped']", "grouped-table-1440.png");
-
-        await page.GotoAsync(BaseUrl + "/multi-view-list");
-        await page.WaitForSelectorAsync(".tm-multi-view-list", new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.Locator(".tm-multi-view-list").Nth(1).ScrollIntoViewIfNeededAsync();
-        var projects = page.Locator(".tm-multi-view-list").Nth(1);
-        var cardsButton = projects.Locator("button").Filter(new LocatorFilterOptions { HasText = "Cards" });
-        if (await cardsButton.CountAsync() > 0)
-            await cardsButton.First.ClickAsync();
-        await Shot(page, ".tm-multi-view-list", "multi-view-list-cards-1440.png");
-    }
-
-    private static async Task Shot(IPage page, string selector, string name)
-    {
-        var directory = Path.Combine(FindRoot(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "data-table-redesign");
-        Directory.CreateDirectory(directory);
-        await page.Locator(selector).First.ScreenshotAsync(new LocatorScreenshotOptions
-        {
-            Path = Path.Combine(directory, name),
-            Timeout = 30000
-        });
-    }
-
-    private static string FindRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx")))
-            dir = dir.Parent;
-        return dir?.FullName ?? Directory.GetCurrentDirectory();
+        var list = await OpenAsync(Browser, BaseUrl, "/multi-view-list", new Options(1440, 900), RegisterContext);
+        var cards = list.Locator("[data-testid='mvl-redesign-list']");
+        await cards.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(cards.Locator(".tm-mvl-card-grid")).ToHaveCountAsync(0, new() { Timeout = 15_000 });
+        await cards.Locator(".tm-mvl-switch-card").ClickAsync();
+        await Assertions.Expect(cards.Locator(".tm-mvl-card-grid")).ToBeVisibleAsync();
+        Assert.AreEqual(3, await cards.Locator(".tm-mvl-card").CountAsync(), "three people render as three cards");
+        Assert.AreEqual(0, await cards.Locator("table").CountAsync(), "card mode shows no table");
     }
 }

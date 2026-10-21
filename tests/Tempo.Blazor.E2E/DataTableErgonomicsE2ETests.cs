@@ -164,7 +164,10 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
 
-        var editButtons = section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" });
+        // Scoped to the default table: the section also demonstrates EditActionsMode.Footer in a
+        // second table, which exposes its own Edit row actions.
+        var defaultTable = section.Locator("[data-testid='transaction-table']");
+        var editButtons = defaultTable.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" });
         Assert.AreEqual(3, await editButtons.CountAsync(), "Every editable row should expose an accessible Edit row action.");
         await editButtons.First.ClickAsync();
 
@@ -175,7 +178,7 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Cancel" }).WaitForAsync();
 
         // Starting a second row replaces the active edit row instead of leaving two editing rows.
-        await section.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" }).First.ClickAsync();
+        await defaultTable.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" }).First.ClickAsync();
         Assert.AreEqual(1, await editing.CountAsync(), "Starting another row must preserve the single-row edit invariant.");
         Assert.AreEqual(49.5m, decimal.Parse(
             await editing.Locator("input[type='number']").InputValueAsync(),
@@ -192,6 +195,46 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await Assertions.Expect(editing).ToHaveCountAsync(1);
         await editing.Locator("input").First.PressAsync("Enter");
         await Assertions.Expect(editing).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task DataTable_InlineEdit_FooterActions_FitTheirLabelsAndDoNotOverlap()
+    {
+        // EditActionsMode.Footer renders icon + visible label, but the base rule squeezes every
+        // edit action into a 32px icon square: the label would overflow and the legacy sibling
+        // margin would double the flex gap. Both are guarded here by live geometry.
+        var page = await OpenPageAsync();
+
+        var table = page.Locator("[data-testid='transaction-table-footer']");
+        await table.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await table.ScrollIntoViewIfNeededAsync();
+
+        await table.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Edit row" }).First.ClickAsync();
+        var footer = table.Locator(".tm-data-table__edit-footer-actions");
+        await footer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        var save = footer.Locator(".tm-data-table__edit-action--save");
+        var cancel = footer.Locator(".tm-data-table__edit-action--cancel");
+
+        var geometry = await save.EvaluateAsync<string>(@"el => {
+            const r = el.getBoundingClientRect();
+            const pair = el.nextElementSibling ? el.nextElementSibling.getBoundingClientRect() : null;
+            return JSON.stringify({
+                width: r.width,
+                scrollWidth: el.scrollWidth,
+                nextX: pair ? pair.x : null,
+                end: r.x + r.width
+            });
+        }");
+        using var doc = System.Text.Json.JsonDocument.Parse(geometry);
+        var root = doc.RootElement;
+        Assert.IsTrue(root.GetProperty("width").GetDouble() >= root.GetProperty("scrollWidth").GetDouble() - 0.5,
+            $"the Save button must fit its label (width {root.GetProperty("width")}, scrollWidth {root.GetProperty("scrollWidth")})");
+        var nextX = root.GetProperty("nextX");
+        Assert.IsFalse(nextX.ValueKind == System.Text.Json.JsonValueKind.Null, "the Cancel button must sit beside Save");
+        Assert.IsTrue(nextX.GetDouble() >= root.GetProperty("end").GetDouble() - 0.5,
+            "the Save and Cancel buttons must not overlap");
     }
 
     [TestMethod]
@@ -226,6 +269,64 @@ public class DataTableErgonomicsE2ETests : WasmTestBase
         await Assertions.Expect(editing).ToHaveCountAsync(0);
         await Assertions.Expect(section.Locator("tbody tr").First).ToContainTextAsync("88.25");
         await Assertions.Expect(section.Locator("[data-testid='dt-inline-save-result']")).ToContainTextAsync("OnRowSave");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task DataTable_ExportSelected_DisabledScopeHint_StaysReadable()
+    {
+        // WCAG 1.4.3: the unavailable CONTROL may fade, the instructional text must not. The
+        // "Select rows to export them" hint has to keep opacity 1 and >=4.5:1 contrast against
+        // the menu surface in both themes while the option is aria-disabled. Opacity is read
+        // from the export-scope ITEM (the element the generic dropdown fade actually targets) —
+        // opacity does not inherit, so the description span's own computed value would read 1
+        // even while its ancestor fades it out of visibility.
+        var page = await OpenPageAsync();
+        var section = page.Locator("[data-testid='dt-export-section']");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+        var trigger = section.Locator(".tm-data-table__export .tm-dropdown-trigger");
+
+        const string probe = """
+            () => {
+                const description = document.querySelector("[data-export-scope='selected'] .tm-data-table__export-description");
+                if (!description) return null;
+                const scope = description.closest('[data-export-scope]');
+                if (!scope) return null;
+                const parse = value => (value.match(/[\d.]+/g) ?? []).map(Number);
+                const channel = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+                const luminance = rgb => 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+                let node = description, background = null;
+                while (node && node !== document.documentElement) {
+                    const c = parse(getComputedStyle(node).backgroundColor);
+                    if (c.length >= 3 && (c.length < 4 || c[3] > 0)) { background = c.slice(0, 3); break; }
+                    node = node.parentElement;
+                }
+                if (!background) return null;
+                const ink = parse(getComputedStyle(description).color).slice(0, 3);
+                const l1 = luminance(ink), l2 = luminance(background);
+                const contrast = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+                return JSON.stringify({ opacity: getComputedStyle(scope).opacity, contrast });
+            }
+            """;
+
+        foreach (var (theme, dark) in new[] { ("light", false), ("dark", true) })
+        {
+            if (dark) await ToggleDarkModeAsync(page);
+
+            await trigger.ClickAsync();
+            var state = await page.WaitForFunctionAsync(
+                probe, null, new PageWaitForFunctionOptions { Timeout = 10000 });
+            var json = await state.JsonValueAsync<string>();
+
+            Assert.IsNotNull(json, $"the disabled scope hint was not rendered in {theme} mode");
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            Assert.AreEqual("1", doc.RootElement.GetProperty("opacity").GetString(),
+                $"hint opacity must stay 1 in {theme} mode (the disabled fade must not cover the hint)");
+            var contrast = doc.RootElement.GetProperty("contrast").GetDouble();
+            Assert.IsTrue(contrast >= 4.5, $"hint contrast must be >= 4.5:1 in {theme} mode, got {contrast:0.00}");
+            await page.Keyboard.PressAsync("Escape");
+        }
     }
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)

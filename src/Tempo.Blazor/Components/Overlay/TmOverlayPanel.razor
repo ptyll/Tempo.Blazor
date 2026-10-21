@@ -320,7 +320,12 @@
 
     private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
 
-    private bool IsSheet => ResolvedPresentation == PanelPresentation.Sheet;
+    /// <summary>
+    /// Whether the panel currently presents as a bottom sheet rather than the anchored popover.
+    /// Consumers read it to drop content the sheet already renders itself — e.g. a footer "Done"
+    /// button that would duplicate the sheet header's one.
+    /// </summary>
+    public bool IsSheet => ResolvedPresentation == PanelPresentation.Sheet;
 
     private PanelPresentation ResolvedPresentation => MobilePresentation == PanelPresentation.Auto
         ? (Context.IsMobile ? PanelPresentation.Sheet : PanelPresentation.Popover)

@@ -1,9 +1,11 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using System.Text.RegularExpressions;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Dropdowns;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.DataTable;
 
@@ -207,5 +209,78 @@ public class TmDataTablePhase3OptInTests : LocalizationTestBase
         cut.Find(".tm-data-table__edit-action--start").Click();
         cut.Find(".tm-data-table__edit-actions").TextContent.Should().NotContain("Save");
         cut.Find(".tm-data-table__edit-action--save").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Export_Default_ItemDoesNotGetTheCardRichClass()
+    {
+        var cut = RenderTable(showExport: true);
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        cut.Find("[data-export-format='csv']").ClassList
+            .Should().NotContain("tm-data-table__export-item--rich");
+    }
+
+    [Fact]
+    public void Export_Card_ItemGetsTheCardRichClass()
+    {
+        var cut = RenderTable(appearance: DataTableAppearance.Card, showExport: true);
+        cut.Find(".tm-data-table__export .tm-dropdown-trigger").Click();
+
+        cut.Find("[data-export-format='csv']").ClassList
+            .Should().Contain("tm-data-table__export-item--rich");
+    }
+
+    [Fact]
+    public void Stylesheet_ExportItem_DefaultIsNowrapAndNotFlex_CardIsRich()
+    {
+        var css = ThemeCss.ComponentCss("_data-table.css");
+        var baseItem = RuleFor(css, ".tm-data-table__export-item");
+        baseItem.Should().Contain("white-space: nowrap");
+        baseItem.Should().NotContain("display: flex");
+
+        var rich = RuleFor(css, ".tm-data-table__export-item--rich");
+        rich.Should().Contain("display: flex");
+        rich.Should().Contain("flex-wrap: wrap");
+    }
+
+    [Fact]
+    public void Stylesheet_GroupChip_DefaultIsSolidPrimary_CardIsTheSubtlePill()
+    {
+        var css = ThemeCss.ComponentCss("_data-table.css");
+        var chip = RuleFor(css, ".tm-data-table-group-chip");
+        chip.Should().Contain("background: var(--tm-color-primary)");
+        chip.Should().Contain("color: var(--tm-text-inverse)");
+        chip.Should().Contain("border-radius: var(--tm-radius-md)");
+
+        var cardChip = RuleFor(css, ".tm-data-table-group-zone--card .tm-data-table-group-chip");
+        cardChip.Should().Contain("background: var(--tm-color-primary-subtle)");
+
+        var expand = RuleFor(css, ".tm-data-table-group-expand-all");
+        expand.Should().Contain("border: 1px solid var(--tm-border-color)");
+        expand.Should().Contain("background: var(--tm-surface)");
+        expand.Should().Contain("font-size: var(--tm-font-size-xs)");
+    }
+
+    [Fact]
+    public void Stylesheet_MvlGroupedCardHeader_DiffersFromTheBody()
+    {
+        var css = ThemeCss.ComponentCss("_multi-view-list.css");
+        var rule = RuleFor(css, ".tm-mvl-group-card > .tm-mvl-group-header");
+        rule.Should().Contain("background: var(--tm-surface-secondary)");
+        rule.Should().Contain("margin-bottom: 0");
+        rule.Should().Contain("border-bottom: 1px solid var(--tm-border-color)");
+    }
+
+    /// <summary>Returns the body of the first rule whose selector contains <paramref name="selectorFragment"/>.</summary>
+    private static string RuleFor(string css, string selectorFragment)
+    {
+        foreach (Match m in Regex.Matches(css, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)}"))
+        {
+            if (m.Groups["sel"].Value.Contains(selectorFragment, StringComparison.Ordinal))
+                return m.Groups["body"].Value;
+        }
+
+        throw new Xunit.Sdk.XunitException($"No rule for '{selectorFragment}'");
     }
 }

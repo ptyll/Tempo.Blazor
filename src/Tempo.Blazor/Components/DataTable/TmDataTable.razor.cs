@@ -6,6 +6,7 @@ using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
 
@@ -103,6 +104,13 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private string ColumnMenuId(string columnKey) => $"{_idBase}-col-menu-{ColumnIdFragment(columnKey)}";
 
     private string ColumnFilterId(string columnKey) => $"{_idBase}-col-filter-{ColumnIdFragment(columnKey)}";
+
+    /// <summary>
+    /// The cards sheet's filter inputs must not share ids with the header filter row: the thead is
+    /// only <c>display:none</c> while the sheet is open, so both inputs are in the DOM at once and
+    /// a duplicate id is invalid HTML (and could point a label at the hidden header input).
+    /// </summary>
+    private string CardsFilterId(string columnKey) => $"{_idBase}-cards-filter-{ColumnIdFragment(columnKey)}";
 
     private Task ToggleColumnMenuAsync(TmDataTableColumn<TItem> col)
     {
@@ -243,6 +251,11 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                 await OnToggleColumnAsync(col.Key);
                 break;
             case "filter":
+                // The choice between the header filter and the cards sheet cannot be made from the
+                // layout flags alone: a Cards table in a WIDE container still shows the header and
+                // its filter row, and only the narrow container hides them. The action names the
+                // header filter unconditionally; OnAfterRenderAsync asks the browser whether that
+                // input is actually visible and falls back to the cards sheet when it is not.
                 _columnMenuFocusKey = col.Key;
                 break;
         }
@@ -296,10 +309,78 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             RefreshClientItems();
     }
 
-    /// <summary>Removes every sort descriptor and re-queries, so the table returns to its unsorted order.</summary>
-    private async Task ClearColumnSortAsync(TmDataTableColumn<TItem> col)
+    // ── Cards sort & filter ───────────────────────────────────────
+    // The card header is display:none below 640px, so sort and filter need a home a finger can
+    // reach. Both live in the toolbar (never in ContentOnly) and the container query reveals them.
+    // Sort is a dropdown of column × direction; filter is a sheet of labelled fields.
+
+    private bool _cardsFilterOpen;
+    private string? _cardsFilterFocusKey;
+    private ElementReference _cardsFilterTrigger;
+    private TmOverlayPanel? _cardsSheet;
+
+    /// <summary>The cards sort control exists for Cards alone, and never in a content-only toolbar.</summary>
+    private bool ShouldRenderMobileSort() =>
+        MobileLayout == DataTableMobileLayout.Cards && !IsContentToolbarMode && CardsSortableColumns.Any();
+
+    /// <summary>The cards filter control exists for Cards alone, and only while a column can be filtered.</summary>
+    private bool ShouldRenderMobileFilters() =>
+        MobileLayout == DataTableMobileLayout.Cards && !IsContentToolbarMode && CardsFilterableColumns.Any();
+
+    private IEnumerable<TmDataTableColumn<TItem>> CardsSortableColumns =>
+        _visibleColumns.Where(c => c.Sortable);
+
+    private IEnumerable<TmDataTableColumn<TItem>> CardsFilterableColumns =>
+        _visibleColumns.Where(c => c.Filterable);
+
+    /// <summary>How many columns currently carry a filter, so the button can say "Filters (N)".</summary>
+    private int ActiveCardFilterCount =>
+        CardsFilterableColumns.Count(col => _activeFilters.ContainsKey(col.Key));
+
+    private Task SetCardsFilterOpenAsync(bool open)
     {
-        if (!_sortDescriptors.Any(d => string.Equals(d.Column, col.Key, StringComparison.Ordinal)))
+        _cardsFilterOpen = open && CardsFilterableColumns.Any();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OpenCardsFilterAsync() => SetCardsFilterOpenAsync(true);
+
+    /// <summary>
+    /// A sort choice from the cards dropdown. <c>clear</c> drops every descriptor; anything else is
+    /// <c>{columnKey}|asc</c> or <c>{columnKey}|desc</c>.
+    /// </summary>
+    private Task OnCardSortSelectedAsync(string value)
+    {
+        if (value == "clear")
+            return ClearColumnSortAsync();
+
+        var separator = value.IndexOf('|');
+        if (separator <= 0)
+            return Task.CompletedTask;
+
+        var key = value[..separator];
+        var descending = value[(separator + 1)..] == "desc";
+        var col = CardsSortableColumns.FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.Ordinal));
+        return col is null
+            ? Task.CompletedTask
+            : SortColumnAsync(col, descending ? DataTableSortDirection.Descending : DataTableSortDirection.Ascending);
+    }
+
+    /// <summary>True when this column-and-direction pair is the active sort, so the dropdown can check it.</summary>
+    private bool IsCardSortChecked(TmDataTableColumn<TItem> col, bool descending)
+    {
+        var direction = ColumnSortDirection(col);
+        return descending
+            ? direction == DataTableSortDirection.Descending
+            : direction == DataTableSortDirection.Ascending;
+    }
+
+    /// <summary>Removes every sort descriptor and re-queries, so the table returns to its unsorted order.</summary>
+    private Task ClearColumnSortAsync() => ClearColumnSortAsync(null);
+
+    private async Task ClearColumnSortAsync(TmDataTableColumn<TItem>? col)
+    {
+        if (col is not null && !_sortDescriptors.Any(d => string.Equals(d.Column, col.Key, StringComparison.Ordinal)))
             return;
 
         _sortDescriptors.Clear();
@@ -461,6 +542,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     [Parameter] public RenderFragment? RowEditValidator { get; set; }
 
     private int _editingRowIndex = -1;
+    private bool _editorFocusPending;
     private bool AnyEditableColumn => _columns.Any(c => c.Editable && c.EditTemplate is not null);
     private bool HasEditActions => Editable
         && ShowEditButtons
@@ -482,13 +564,26 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     private async Task StartEditAtAsync(int rowIndex, TItem item)
     {
-        if (!Editable || !AnyEditableColumn) return;
+        // Defence in depth for Grid mode: the virtualized and grouped branches render no editing
+        // row, so an edit started there would lock the keyboard (GridKeyboard owns the same gate
+        // on the Enter/F2 arms). Rows mode keeps its double-click/click paths everywhere.
+        if (!Editable || !AnyEditableColumn || (IsGrid && !GridCanEdit)) return;
         if (_editContext is not null && _editingRowIndex != rowIndex)
         {
             await CancelEditAsync();
         }
 
         SetEditingRow(rowIndex, item);
+        // The editing row renders no grid cells, so the cell that held focus is gone. Grid mode hands
+        // focus to the editor, or Escape/Enter (answered on the editing row) never reach the table.
+        // The cursor follows the edited row too, so focus returns to it after commit or cancel
+        // instead of the stale cell the roving stop was on before.
+        if (IsGrid)
+        {
+            _activeRow = Math.Max(0, rowIndex);
+            _gridCellSeeded = true;
+        }
+        _editorFocusPending = IsGrid;
         StateHasChanged();
         await OnRowEditStart.InvokeAsync(item);
     }
@@ -523,6 +618,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             _editContext = null;
             _editingRowIndex = -1;
             _editHasErrors = false;
+            if (IsGrid)
+                _gridFocusPending = true;
         }
 
         StateHasChanged();
@@ -743,10 +840,24 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>Exports the current filter/sort result set (all pages) and triggers a browser download.</summary>
     /// <param name="exporter">Format-specific exporter (CSV, XLSX, …).</param>
     /// <param name="fileName">Optional file name; defaults to the view context plus the exporter extension.</param>
-    public async Task ExportAsync(IDataTableExporter exporter, string? fileName = null)
+    public Task ExportAsync(IDataTableExporter exporter, string? fileName = null)
+        => ExportAsync(exporter, DataTableExportScope.All, fileName);
+
+    /// <summary>
+    /// Exports rows of the requested scope with a custom exporter (JSON, PDF, …) and triggers a
+    /// browser download.
+    /// </summary>
+    /// <param name="exporter">Format-specific exporter.</param>
+    /// <param name="scope">
+    /// <see cref="DataTableExportScope.All"/> exports every row matching the current filter and
+    /// sort; <see cref="DataTableExportScope.Selected"/> exports the checked rows, sorted like the
+    /// current view, with any row no longer in that view appended in the order it was checked.
+    /// </param>
+    /// <param name="fileName">Optional file name; defaults to the view context plus the exporter extension.</param>
+    public async Task ExportAsync(IDataTableExporter exporter, DataTableExportScope scope, string? fileName = null)
     {
         ArgumentNullException.ThrowIfNull(exporter);
-        var data = await BuildExportDataAsync();
+        var data = await BuildExportDataAsync(scope);
         var bytes = exporter.Export(data);
         var name = fileName ?? $"{ViewContext}.{exporter.FileExtension}";
         try
@@ -920,6 +1031,16 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private string _searchText = string.Empty;
     private string? _lastSearchTextParam;
     private List<ActiveFilter> _externalFilters = [];
+
+    /// <summary>
+    /// Bumped whenever an input the filter builder cannot see changes (search text, column filters,
+    /// new items, a provider reload). Passed as the builder's <c>ResultCountKey</c> so the preview
+    /// recount instead of keeping a stale number.
+    /// </summary>
+    private int _resultCountVersion;
+
+    /// <summary>The <see cref="Items"/> reference the preview-invalidation counter last saw.</summary>
+    private IEnumerable<TItem>? _lastCountedItems;
     private string? _activeViewId;
 
     // ── Grouping state ─────────────────────────────────────────
@@ -1014,7 +1135,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     private string PaginationContainerClass =>
         MobileLayout == DataTableMobileLayout.None
             ? "tm-pagination-container"
-            : "tm-pagination-container tm-pagination-compact";
+            : "tm-pagination-container tm-data-table-pager--responsive";
 
     /// <summary>
     /// High-level preset that controls which toolbar chrome elements are rendered.
@@ -1167,6 +1288,24 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             TotalCount: _totalCount,
             StartItem: _totalCount == 0 ? 0 : 1,
             EndItem: _totalCount);
+
+    /// <summary>
+    /// What the polite live region announces: the same sentence the visible summary prints, so a
+    /// screen reader hears the count a sighted reader sees. A custom template has no text to lift,
+    /// and the Card appearance prints its own "Total N" sentence instead of the ranged one, so both
+    /// fall back to the total.
+    /// </summary>
+    private string ResultCountAnnouncement => PaginationInfoTemplate is not null || IsRedesigned
+        ? Loc.Plural("TmDataTable_TotalItems", _totalCount)
+        : Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount];
+
+    /// <summary>
+    /// What the always-present filter-summary live region carries: empty while no filter is active
+    /// (so the region exists before the text and the first filter change is announced), the plural
+    /// filter count afterwards.
+    /// </summary>
+    private string FilterSummaryAnnouncement =>
+        _activeFilters.Count > 0 ? Loc.Plural("TmDataTable_ActiveFilters", _activeFilters.Count) : string.Empty;
 
     /// <summary>The single condition the paging footer's visibility is decided by.</summary>
     private bool PagerRenders =>
@@ -1340,6 +1479,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     private bool IsAllSelected => _displayedItems.Count > 0 && _displayedItems.All(IsSelected);
     private bool IsPartiallySelected => _selectedItems.Count > 0 && !IsAllSelected;
+
+    /// <summary>Last value handed to <c>setIndeterminate</c>. Null until the first successful call.</summary>
+    private bool? _lastSelectAllIndeterminate;
     private ElementReference _selectAllRef;
     private bool IsSelected(TItem item) => _selectedItems.Contains(item);
     private int ColSpan => Math.Max(1, (HasDetail ? 1 : 0) + (Selectable ? 1 : 0) + _visibleColumns.Count + (HasEditActions ? 1 : 0));
@@ -1419,7 +1561,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         ShouldRenderSearch() ||
         ShouldRenderColumnPicker() ||
         ShouldRenderViewManager() ||
-        ShouldRenderExport();
+        ShouldRenderExport() ||
+        ShouldRenderMobileSort() ||
+        ShouldRenderMobileFilters();
 
     private bool IsFullToolbarMode => ToolbarMode == DataToolbarMode.Full;
     private bool IsSearchToolbarMode => ToolbarMode == DataToolbarMode.SearchOnly;
@@ -1453,6 +1597,16 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     /// <summary>True when the redesigned "Add grouping" dropdown should be rendered. Content-only and search-only toolbars keep the drop zone only.</summary>
     private bool ShouldRenderAddGrouping() =>
         ShowGrouping && IsRedesigned && !IsContentToolbarMode && !IsSearchToolbarMode;
+
+    /// <summary>
+    /// True when the active-filter summary and its clear-all link are allowed to render. The number
+    /// of active filters is a data check and stays in the markup, the same way
+    /// <c>TmMultiViewList.ShouldRenderItemCount()</c> keeps data checks separate. The summary renders
+    /// outside the toolbar <c>div</c>, so it is deliberately not counted by
+    /// <see cref="HasVisibleToolbarControls"/>.
+    /// </summary>
+    private bool ShouldRenderFilterSummary() =>
+        ShowFilterSummary && (IsFullToolbarMode || IsActionsToolbarMode);
 
     private bool ShouldRenderExternalFilterBuilder() =>
         IsFullToolbarMode &&
@@ -1529,6 +1683,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             _searchText = SearchText!;
             _currentPage = 1;
             _groupPageRequests.Clear();
+            _resultCountVersion++;
         }
         else if (SearchText is null && _lastSearchTextParam is not null)
         {
@@ -1549,7 +1704,14 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
         // Re-apply when Items collection reference changes in client-side mode
         if (DataProvider is null)
+        {
+            if (!ReferenceEquals(_lastCountedItems, Items))
+            {
+                _lastCountedItems = Items;
+                _resultCountVersion++;
+            }
             RefreshClientItems();
+        }
     }
 
     // ── Column registration ───────────────────────────────────────
@@ -1580,6 +1742,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                     .ThenBy(c => c.Order));
         RecomputeSticky();
         RebuildRenderedCellColumns();
+        RebuildRowLoopCaches();
         // Hiding, reordering or switching layout can drop the column the cursor sits on.
         // Without this the active column stays past the last rendered cell and the grid
         // has no tabindex=0.
@@ -1612,23 +1775,40 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _stickyLeft.Clear();
         _stickyRight.Clear();
 
-        // Left-pinned columns stack from the container edge. Leading utility columns (expander,
-        // checkbox) are not sticky, so their width is not reserved — a pinned column simply sticks
-        // over them once they scroll away.
-        var leftOffset = IsResponsiveScroll && Selectable ? 44 : 0;
-        foreach (var col in _visibleColumns.Where(c => GetPin(c) == ColumnPin.Left))
+        // Left-pinned columns stack from the container edge. The selection column's width is not
+        // reserved here: the stylesheet shifts the stack by --tm-data-table-mobile-checkbox-width
+        // when the responsive checkbox column is pinned, so the offset stays RTL-safe.
+        // The pin groups are partitioned once: the old two Where() scans walked every visible
+        // column twice, and the row loop used to scan them again per cell.
+        _leftPinnedColumns.Clear();
+        _rightPinnedColumns.Clear();
+        foreach (var col in _visibleColumns)
+        {
+            switch (GetPin(col))
+            {
+                case ColumnPin.Left: _leftPinnedColumns.Add(col); break;
+                case ColumnPin.Right: _rightPinnedColumns.Add(col); break;
+            }
+        }
+
+        var leftOffset = 0;
+        foreach (var col in _leftPinnedColumns)
         {
             _stickyLeft[col.Key] = leftOffset;
             leftOffset += GetPixelWidth(col) ?? DefaultPinnedWidth;
         }
 
         var rightOffset = 0;
-        foreach (var col in _visibleColumns.Where(c => GetPin(c) == ColumnPin.Right).Reverse())
+        for (var i = _rightPinnedColumns.Count - 1; i >= 0; i--)
         {
+            var col = _rightPinnedColumns[i];
             _stickyRight[col.Key] = rightOffset;
             rightOffset += GetPixelWidth(col) ?? DefaultPinnedWidth;
         }
     }
+
+    private readonly List<TmDataTableColumn<TItem>> _leftPinnedColumns = [];
+    private readonly List<TmDataTableColumn<TItem>> _rightPinnedColumns = [];
 
     private string GetColumnStyle(TmDataTableColumn<TItem> col)
     {
@@ -1648,16 +1828,59 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         switch (GetPin(col))
         {
             case ColumnPin.Left when _stickyLeft.TryGetValue(col.Key, out var l):
+                // The offset travels as a custom property: the stylesheet turns it into
+                // inset-inline-start, so an RTL table sticks the column to the correct edge
+                // without the component knowing the writing direction. The C# value is only the
+                // fallback — data-table.js measures the header and writes --tm-pin-left-<index>
+                // on the wrapper, and a re-render must keep reading that measured value.
                 parts.Add("position:sticky");
-                parts.Add($"left:{l}px");
+                parts.Add(PinOffsetStyle("left", PinColumnIndex(col), l));
                 break;
             case ColumnPin.Right when _stickyRight.TryGetValue(col.Key, out var r):
                 parts.Add("position:sticky");
-                parts.Add($"right:{r}px");
+                parts.Add(PinOffsetStyle("right", PinColumnIndex(col), r));
                 break;
         }
 
         return string.Join(";", parts);
+    }
+
+    /// <summary>
+    /// Index of the column inside the first header row, counting the detail and selection columns
+    /// that render before the data columns. The pin script keys its measured offset by this index,
+    /// and the header renders <see cref="_renderedCellColumns"/> — a Cards layout leaves a
+    /// <see cref="DataTableCardRole.Hidden"/> column out, so counting <see cref="_visibleColumns"/>
+    /// would read the previous column's <c>--tm-pin-*</c> value.
+    /// </summary>
+    private int PinColumnIndex(TmDataTableColumn<TItem> col)
+    {
+        var index = 0;
+        if (HasDetail) index++;
+        if (Selectable) index++;
+        foreach (var rendered in _renderedCellColumns)
+        {
+            if (ReferenceEquals(rendered, col) || string.Equals(rendered.Key, col.Key, StringComparison.Ordinal))
+                return index;
+            index++;
+        }
+
+        return index;
+    }
+
+    /// <summary>
+    /// <c>--tm-pin-left: var(--tm-pin-left-N, &lt;fallback&gt;px)</c> (and <c>--tm-pin-right: var(--tm-pin-right-N, &lt;fallback&gt;px)</c>
+    /// for a right-pinned column; both are component-local properties). The wrapper owns the measured
+    /// value; the inline property is what the stylesheet reads, and the fallback keeps the column
+    /// stuck before the first measurement (and in tests, where no script runs).
+    /// </summary>
+    private static string PinOffsetStyle(string edge, int index, int fallbackPx)
+    {
+        var i = index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var px = fallbackPx.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        // Literal property names (no {edge} interpolation) so the token audit sees both declarations.
+        return edge == "right"
+            ? $"--tm-pin-right:var(--tm-pin-right-{i},{px}px)"
+            : $"--tm-pin-left:var(--tm-pin-left-{i},{px}px)";
     }
 
     private string GetPinClass(TmDataTableColumn<TItem> col)
@@ -1708,6 +1931,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     // ── Column resize: pointer (data-table.js over pointer-drag.js) + keyboard ──
 
     private ElementReference _tableRef;
+    private ElementReference _wrapperRef;
     private bool _resizeAttached;
 
     /// <inheritdoc />
@@ -1724,6 +1948,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             try
             {
                 await JS.InvokeVoidAsync("tmDataTable.attachColumnResize", _tableRef, _dotNetRef);
+                await JS.InvokeVoidAsync("tmDataTable.observePinnedOffsets", _wrapperRef);
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException
                                    or TaskCanceledException or ObjectDisposedException)
@@ -1734,19 +1959,43 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         }
 
         // "Filter" closes the menu first; the control it names is focused once the menu is gone,
-        // so focus never lands inside a panel that is about to unmount.
+        // so focus never lands inside a panel that is about to unmount. The browser decides which
+        // surface the focus goes to: the header filter when it is actually visible (a Cards table
+        // in a wide container keeps its header), otherwise the cards filter sheet.
         if (_columnMenuFocusKey is { } focusKey)
         {
             _columnMenuFocusKey = null;
             try
             {
-                await JS.InvokeVoidAsync("tmDataTable.focusColumnFilter", ColumnFilterId(focusKey));
+                var headerVisible = await JS.InvokeAsync<bool>(
+                    "tmDataTable.focusColumnFilterOrOpenSheet", ColumnFilterId(focusKey));
+                if (!headerVisible && CardsFilterableColumns.Any())
+                {
+                    _cardsFilterOpen = true;
+                    _cardsFilterFocusKey = focusKey;
+                    StateHasChanged();
+                }
             }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException
                                    or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
             {
-                // No JS (tests, prerender): the filter row is already rendered, so the control is
-                // reachable by Tab. The id contract is what the tests assert.
+                // No JS (tests, prerender): the header filter row is already rendered, so the
+                // control is reachable by Tab. The id contract is what the tests assert.
+            }
+        }
+        else if (_cardsFilterFocusKey is { } cardsFocusKey)
+        {
+            _cardsFilterFocusKey = null;
+            try
+            {
+                // The sheet's inputs carry their own id family — the header row is still in the
+                // DOM (only display:none), so the header id here would resolve to the wrong input.
+                await JS.InvokeVoidAsync("tmDataTable.focusColumnFilter", CardsFilterId(cardsFocusKey));
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                   or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+            {
+                // No JS (tests, prerender): the sheet is rendered, so the control is reachable.
             }
         }
 
@@ -1768,17 +2017,26 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
         if (Selectable)
         {
-            try
+            // The mixed state is a DOM property JS has to write, but it only changes when the
+            // selection does — re-rendering a sort or a page change must not pay the interop.
+            var indeterminate = IsPartiallySelected;
+            if (indeterminate != _lastSelectAllIndeterminate)
             {
-                await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, IsPartiallySelected);
-            }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException
-                                   or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
-            {
+                try
+                {
+                    await JS.InvokeVoidAsync("tmDataTable.setIndeterminate", _selectAllRef, indeterminate);
+                    _lastSelectAllIndeterminate = indeterminate;
+                }
+                catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                       or InvalidOperationException or TaskCanceledException or ObjectDisposedException)
+                {
+                }
             }
         }
 
         await SyncGridKeysAsync();
+        await SyncColumnMenuKeysAsync();
+        await FocusRowEditorAsync();
         await FocusActiveGridCellAsync();
     }
 
@@ -1983,6 +2241,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _dotNetRef = null;
         if (_gridKeysAttached)
             _ = DetachGridKeysAsync();
+        if (_columnMenuKeysAttached)
+            _ = DetachColumnMenuKeysAsync();
     }
 
     /// <inheritdoc />
@@ -1990,6 +2250,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         if (_gridKeysAttached)
             await DetachGridKeysAsync();
+        if (_columnMenuKeysAttached)
+            await DetachColumnMenuKeysAsync();
         Dispose();
     }
 
@@ -1998,6 +2260,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         try
         {
             await JS.InvokeVoidAsync("tmDataTable.detachColumnResize", _tableRef);
+            await JS.InvokeVoidAsync("tmDataTable.disposePinnedOffsets", _wrapperRef);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException
                                or TaskCanceledException or ObjectDisposedException)
@@ -2181,6 +2444,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             if (generation == _loadGeneration)
             {
                 _isLoading = false;
+                _resultCountVersion++; // the data behind the preview count may have moved
                 StateHasChanged();
             }
         }
@@ -2252,14 +2516,34 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
     // ── Filter / Search ───────────────────────────────────────────
 
-    private async Task ApplyFilterAsync(string columnKey, DataTableFilter? filter)
+    private Task ApplyFilterAsync(string columnKey, DataTableFilter? filter)
+        // The typed callback is the commit. It used to write the map itself while the string callback
+        // removed from it, so the two disagreed about the value; both now end in SetColumnFilterAsync.
+        => SetColumnFilterAsync(columnKey, filter?.Value?.ToString(), filter?.Operator);
+
+    /// <summary>
+    /// The single place a column filter is written. An empty value removes the filter; anything
+    /// else replaces it. <c>TmColumnFilter.ValueChanged</c> is deliberately not bound: it fires on
+    /// every keystroke, and writing there would reload the table twice per committed edit. The
+    /// row reads the value back from the filter map, so the keystroke has nothing to store.
+    /// </summary>
+    private async Task SetColumnFilterAsync(string columnKey, string? value, string? op = null)
     {
-        if (filter is null)
+        if (string.IsNullOrEmpty(value))
+        {
             _activeFilters.Remove(columnKey);
+        }
         else
-            _activeFilters[columnKey] = filter;
+        {
+            var column = _columns.FirstOrDefault(c => c.Key == columnKey);
+            _activeFilters[columnKey] = new DataTableFilter(
+                columnKey,
+                op ?? column?.FilterOperator ?? FilterOperator.Contains.ToString(),
+                value);
+        }
 
         _currentPage = 1;
+        _resultCountVersion++;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -2271,6 +2555,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _searchText = value ?? string.Empty;
         _currentPage = 1;
         _groupPageRequests.Clear();
+        _resultCountVersion++;
 
         // In controlled mode, advance the last-seen parameter so the upcoming
         // parent rerender from @bind-SearchText does not trigger a duplicate reload.
@@ -2288,6 +2573,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         _activeFilters.Remove(columnKey);
         _currentPage = 1;
+        _resultCountVersion++;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -2300,6 +2586,7 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         _searchText = string.Empty;
         _currentPage = 1;
         _groupPageRequests.Clear();
+        _resultCountVersion++;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -2342,16 +2629,21 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
 
             return table.CountClientItems(filters);
         }
+    }
 
-        private static List<DataTableFilter> MergeExternalFilters(
-            IReadOnlyList<DataTableFilter> current,
-            IReadOnlyList<ActiveFilter> external)
-        {
-            var externalColumns = new HashSet<string>(external.Select(f => f.FieldName), StringComparer.Ordinal);
-            var merged = current.Where(f => !externalColumns.Contains(f.Column)).ToList();
-            merged.AddRange(external.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)));
-            return merged;
-        }
+    /// <summary>
+    /// Combines the table's own column filters with the filter builder's filters. The builder's
+    /// filters win on their columns: an applied filter being edited is replaced by its draft, not
+    /// counted next to it. Both the provider query and the client-side count share this rule.
+    /// </summary>
+    private static List<DataTableFilter> MergeExternalFilters(
+        IReadOnlyList<DataTableFilter> current,
+        IReadOnlyList<ActiveFilter> external)
+    {
+        var externalColumns = new HashSet<string>(external.Select(f => f.FieldName), StringComparer.Ordinal);
+        var merged = current.Where(f => !externalColumns.Contains(f.Column)).ToList();
+        merged.AddRange(external.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)));
+        return merged;
     }
 
     /// <summary>How many in-memory rows match the table's current search, column filters and these external filters.</summary>
@@ -2368,19 +2660,11 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                        ?.Contains(search, StringComparison.OrdinalIgnoreCase) == true));
         }
 
-        foreach (var filter in _activeFilters.Values)
+        foreach (var filter in MergeExternalFilters(_activeFilters.Values.ToList(), externalFilters))
         {
             var col = _columns.FirstOrDefault(c => c.Key == filter.Column);
             if (col?.Field != null)
                 items = ApplyClientFilter(items, col.Field, filter);
-        }
-
-        foreach (var filter in externalFilters)
-        {
-            var col = _columns.FirstOrDefault(c => c.Key == filter.FieldName);
-            if (col?.Field is null) continue;
-            items = ApplyClientFilter(items, col.Field,
-                new DataTableFilter(filter.FieldName, filter.Operator.ToString(), filter.Value));
         }
 
         return items.Count();
@@ -2711,12 +2995,6 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
             ? filter.Value?.ToString() ?? string.Empty
             : string.Empty;
 
-    private void OnColumnFilterValueChanged(string columnKey, string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-            _activeFilters.Remove(columnKey);
-    }
-
     // ── Grouping ────────────────────────────────────────────────────
 
     /// <summary>Add a column to the grouping configuration.</summary>
@@ -2946,6 +3224,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
         builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGridKeyDownAsync(e, capturedRow, capturedCol, capturedItem)));
         builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
         builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
+        // A mouse click focuses the clicked cell; the roving stop follows so Tab order
+        // (Shift+Tab, Tab) resumes from the cell the user actually interacted with.
+        builder.AddAttribute(seq++, "onfocusin", EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(capturedRow, capturedCol)));
     }
 
     private Task HandleGroupHeaderKeyDownAsync(KeyboardEventArgs e, DataGroup<TItem> group)
@@ -3010,6 +3291,8 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
                 builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleGroupHeaderKeyDownAsync(e, g)));
                 builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
                 builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
+                var capturedGroupRow = groupIndex;
+                builder.AddAttribute(seq++, "onfocusin", EventCallback.Factory.Create<FocusEventArgs>(this, () => SyncGridCursor(capturedGroupRow, 0)));
             }
 
             // Toggle button. In Grid mode it is not its own tab stop: the header cell is.
@@ -3428,6 +3711,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     {
         var parts = new List<string>();
         if (IsMobilePinned(col)) parts.Add("data-mobile-pinned");
+        // The kebab overlays the inline end of the header; the th must reserve its width so it
+        // never paints over the label, the sort arrow or the multi-sort index.
+        if (ShowColumnMenu && ColumnMenuMode == ColumnMenuMode.Menu) parts.Add("tm-col-has-menu");
         if (col.Sortable) parts.Add("tm-col-sortable");
         if (col.Groupable) parts.Add("tm-col-groupable");
         var headerSort = GetColumnSort(col.Key);
@@ -3441,6 +3727,9 @@ public partial class TmDataTable<TItem> : IDisposable, IAsyncDisposable
     }
 
     private string GetCellClass(TmDataTableColumn<TItem> col)
+        => _cellClassByKey.TryGetValue(col.Key, out var cached) ? cached : BuildCellClass(col);
+
+    private string BuildCellClass(TmDataTableColumn<TItem> col)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(col.CssClass)) parts.Add(col.CssClass);

@@ -121,9 +121,8 @@ public sealed class MarkupClassCoverageTests
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
-        // AllowExportSelected: the scope choice reuses .tm-data-table__export-item; the extra
-        // class only marks the choice, and the selected state has its own rule.
-        "tm-data-table__export-scope",
+        // ("tm-data-table__export-scope" left the inventory: the disabled-state rules
+        // (.tm-data-table__export-scope[aria-disabled=…] in _data-table.css) now style it.)
         "tm-date-today-btn",
         "tm-datetime-range-end",
         "tm-datetime-range-start",
@@ -189,8 +188,6 @@ public sealed class MarkupClassCoverageTests
         // role/id/aria-labelledby and the consumer's AdditionalAttributes — and needs no paint.
         "tm-overlay-panel-sheet__content",
         "tm-pagination-controls",
-        "tm-pagination-next",
-        "tm-pagination-prev",
         "tm-query-input__overlay-text",
         "tm-rating__star--empty",
         // F10 moved the RTE dialogs onto TmModal: the footer buttons became TmButtons whose
