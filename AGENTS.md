@@ -106,6 +106,7 @@ npm run test:document-editor
 npm run test:reporting-modules
 npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
+npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)
 ```
 
 ### Package Creation
@@ -601,6 +602,7 @@ Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`
 - `Tempo.Blazor.Signing`: `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js` (loaded by `TmPdfTemplateDesigner` as an ES module)
+- `Tempo.Blazor.EmailTemplates`: `_content/Tempo.Blazor.EmailTemplates/tm-email-save-shortcut.js` (loaded by `TmEmailTemplateEditor` as an ES module; cancels the browser's Save-page default for Ctrl/⌘+S only, one listener per editor element) and `tm-email-variable-insert.js` (caret insertion for the variable picker). Its `__tests__/*.test.mjs` files live inside `wwwroot` (the packages' node lanes import the modules directly) and are excluded from the published static web assets by the csproj.
 
 ## Security Considerations
 
@@ -622,7 +624,8 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
 
-`.github/workflows/js-node-tests.yml` runs the four Node lanes on every push/PR.
+`.github/workflows/js-node-tests.yml` runs the five Node lanes on every push/PR (document-editor,
+reporting-modules, overlay, diagram-editor, email-templates).
 
 ## Useful Commands Reference
 

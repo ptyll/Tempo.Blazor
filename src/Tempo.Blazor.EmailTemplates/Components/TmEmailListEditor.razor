@@ -9,22 +9,22 @@
         <div class="tm-email-list-editor__item" data-tm-list-item>
             <div class="tm-email-list-editor__item-actions">
                 <button type="button" data-tm-list-action="up" aria-label="@Loc["EmailEditor_Action_MoveUp"]"
-                        @onclick="() => MoveAsync(index, -1)">
+                        disabled="@ReadOnly" @onclick="() => MoveAsync(index, -1)">
                     <TmIcon Name="chevron-up" Size="IconSize.Xs" />
                 </button>
                 <button type="button" data-tm-list-action="down" aria-label="@Loc["EmailEditor_Action_MoveDown"]"
-                        @onclick="() => MoveAsync(index, 1)">
+                        disabled="@ReadOnly" @onclick="() => MoveAsync(index, 1)">
                     <TmIcon Name="chevron-down" Size="IconSize.Xs" />
                 </button>
                 <button type="button" data-tm-list-action="remove" aria-label="@Loc["EmailEditor_Action_Delete"]"
-                        @onclick="() => RemoveAsync(index)">
+                        disabled="@ReadOnly" @onclick="() => RemoveAsync(index)">
                     <TmIcon Name="trash-2" Size="IconSize.Xs" />
                 </button>
             </div>
-            <TmEmailObjectFields Target="item" Primary="ItemPrimary" OnChanged="OnChanged" />
+            <TmEmailObjectFields Target="item" Primary="ItemPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
-    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="plus"
+    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="plus" Disabled="ReadOnly"
               OnClick="AddAsync" data-tm-list-add="true">@Loc["EmailEditor_List_Add"]</TmButton>
 </div>
 
@@ -38,20 +38,29 @@
     /// <summary>Raised after the list or any item changes.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
+    /// <summary>
+    /// Renders the list read-only: the native controls are disabled <b>and</b> every mutating method returns
+    /// early, so a host that emulates a click (bUnit, a synthetic event) still cannot change the document.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     private async Task AddAsync()
     {
+        if (ReadOnly) return;
         Items.Add(new TItem());
         await OnChanged.InvokeAsync();
     }
 
     private async Task RemoveAsync(int index)
     {
+        if (ReadOnly) return;
         if (index >= 0 && index < Items.Count) Items.RemoveAt(index);
         await OnChanged.InvokeAsync();
     }
 
     private async Task MoveAsync(int index, int direction)
     {
+        if (ReadOnly) return;
         var target = index + direction;
         if (index < 0 || target < 0 || target >= Items.Count) return;
         (Items[index], Items[target]) = (Items[target], Items[index]);

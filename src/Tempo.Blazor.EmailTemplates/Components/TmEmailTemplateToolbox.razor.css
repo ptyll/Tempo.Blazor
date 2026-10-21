@@ -59,3 +59,16 @@
     background: var(--tm-color-border-strong, #cbd5e1);
     border-radius: var(--tm-radius-xs, 0.125rem);
 }
+
+/* Read-only palette: the tiles stay visible and readable but advertise "not available" with the cursor, the
+   native disabled state and aria-disabled — no grab cursor, no hover highlight (nothing would happen). */
+.tm-email-toolbox[data-tm-readonly="true"] .tm-email-toolbox__item {
+    cursor: not-allowed;
+    color: var(--tm-color-text-secondary, #4b5563);
+    background: var(--tm-color-surface-muted, #f7f7f8);
+}
+
+.tm-email-toolbox[data-tm-readonly="true"] .tm-email-toolbox__item:hover {
+    border-color: var(--tm-color-border, #e2e2e2);
+    background: var(--tm-color-surface-muted, #f7f7f8);
+}

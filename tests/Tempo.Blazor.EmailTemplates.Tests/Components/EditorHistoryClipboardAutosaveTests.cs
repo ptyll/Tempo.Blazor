@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.EmailTemplates;
+using Tempo.Blazor.EmailTemplates.Abstractions.Editing;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model.Blocks;
 using Tempo.Blazor.EmailTemplates.Components;
@@ -94,22 +95,28 @@ public class EditorHistoryClipboardAutosaveTests : BunitContext
     [Fact]
     public void AutoSave_FiresAfterDebounceInterval()
     {
+        // Fáze 7 (B1): OnAutoSave is gone — auto-save calls OnSave with Trigger = AutoSave.
         var time = new FakeTimeProvider();
-        EmailTemplateDocument? saved = null;
+        var triggers = new List<EmailSaveTrigger>();
         var doc = new EmailTemplateDocument();
 
         var cut = Render<TmEmailTemplateEditor>(p => p
             .Add(c => c.Document, doc)
             .Add(c => c.TimeProvider, time)
             .Add(c => c.AutoSave, new AutoSaveOptions { Enabled = true, Interval = TimeSpan.FromSeconds(2) })
-            .Add(c => c.OnAutoSave, d => saved = d));
+            .Add(c => c.OnSave, (EmailSaveRequest request) =>
+            {
+                triggers.Add(request.Trigger);
+                return Task.FromResult(EmailSaveResult.Saved());
+            }));
 
         cut.Find("[data-tm-block=\"text\"]").Click(); // a change schedules auto-save
-        saved.Should().BeNull();
+        triggers.Should().BeEmpty();
 
         time.Advance(TimeSpan.FromSeconds(2));
 
-        saved.Should().NotBeNull();
+        cut.WaitForAssertion(() => triggers.Should().ContainSingle());
+        triggers[0].Should().Be(EmailSaveTrigger.AutoSave);
     }
 
     [Fact]
@@ -122,7 +129,11 @@ public class EditorHistoryClipboardAutosaveTests : BunitContext
         var cut = Render<TmEmailTemplateEditor>(p => p
             .Add(c => c.Document, doc)
             .Add(c => c.TimeProvider, time)
-            .Add(c => c.OnAutoSave, _ => fired = true));
+            .Add(c => c.OnSave, (EmailSaveRequest _) =>
+            {
+                fired = true;
+                return Task.FromResult(EmailSaveResult.Saved());
+            }));
 
         cut.Find("[data-tm-block=\"text\"]").Click();
         time.Advance(TimeSpan.FromMinutes(1));

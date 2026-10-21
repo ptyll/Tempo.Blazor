@@ -6,7 +6,7 @@
   "packageId": "Tempo.Blazor.EmailTemplates",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTableEditor.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -24,6 +24,13 @@
       "isRequired": true,
       "description": "Raised after the table changes.",
       "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the grid read-only: the native controls are disabled and every mutating method returns early, so a host that emulates a cell edit (bUnit, a synthetic event) cannot change the document."
     }
   ]
 }

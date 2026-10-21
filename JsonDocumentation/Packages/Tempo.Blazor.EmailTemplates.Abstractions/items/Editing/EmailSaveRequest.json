@@ -1,0 +1,36 @@
+{
+  "kind": "Record",
+  "category": "Editing",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+  "description": "One save request. Document is a deep copy (snapshot) taken at request time, so the host may serialize or persist it asynchronously while the user keeps editing; Revision is the editor's monotonic document revision the snapshot was taken at.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveRequest.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "CancellationToken",
+      "kind": "Property",
+      "type": "CancellationToken",
+      "description": "Cancelled when the editor is disposed, so the host can abandon its own I/O. Pass it to your store/HTTP calls instead of ignoring it."
+    },
+    {
+      "name": "Document",
+      "kind": "Property",
+      "type": "EmailTemplateDocument",
+      "description": "The document snapshot to persist."
+    },
+    {
+      "name": "Revision",
+      "kind": "Property",
+      "type": "long",
+      "description": "The editor revision the snapshot was taken at."
+    },
+    {
+      "name": "Trigger",
+      "kind": "Property",
+      "type": "EmailSaveTrigger",
+      "description": "What asked for this save."
+    }
+  ],
+  "itemName": "EmailSaveRequest"
+}

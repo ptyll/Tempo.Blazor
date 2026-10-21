@@ -3,7 +3,7 @@
 @inject IJSRuntime JS
 
 <div class="tm-email-variables" data-tm-variable-picker>
-    <TmSearchInput Value="_search" ValueChanged="OnSearchChanged"
+    <TmSearchInput Value="_search" ValueChanged="OnSearchChanged" Disabled="ReadOnly"
                    Placeholder="@Loc["EmailEditor_Variables_Search"]" />
     @if (Filtered.Count == 0)
     {
@@ -17,7 +17,7 @@
                 var path = variable.Path;
                 <li>
                     <button type="button" class="tm-email-variables__item" data-tm-variable="@path"
-                            @onclick="() => InsertAsync(path)">
+                            disabled="@ReadOnly" @onclick="() => InsertAsync(path)">
                         <code>@Token(path)</code>
                         @if (variable.Kind == VariableKind.Collection)
                         {
@@ -36,6 +36,12 @@
 
     /// <summary>Raised with the <c>{{ path }}</c> token when a variable is chosen.</summary>
     [Parameter] public EventCallback<string> OnInsert { get; set; }
+
+    /// <summary>
+    /// Renders the picker read-only: inserting a variable edits the document, so the list is disabled and
+    /// <see cref="InsertAsync"/> never calls the host's <see cref="OnInsert"/>.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
 
     private string _search = string.Empty;
 
@@ -57,6 +63,7 @@
     /// </summary>
     private async Task InsertAsync(string path)
     {
+        if (ReadOnly) return;
         var token = Token(path);
         var inserted = false;
         try

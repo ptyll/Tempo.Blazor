@@ -2,11 +2,11 @@
   "itemName": "TmEmailPropertyPanel",
   "kind": "Component",
   "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "description": "Context-sensitive property inspector for the currently selected section, column, or block. Renders the element's common fields plus type-specific editors such as rich-text content, raw HTML, image upload, and variable insertion.",
   "packageId": "Tempo.Blazor.EmailTemplates",
-  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailPropertyPanel.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -17,6 +17,12 @@
       "isRequired": true,
       "description": "The document being edited.",
       "editorRequired": true
+    },
+    {
+      "name": "ImageUpload",
+      "type": "ImageUploadOptions?",
+      "isRequired": false,
+      "description": "Client-side limits applied to a picked image before OnImageUpload runs; null uses the ImageUploadOptions defaults (5 MB, images only)."
     },
     {
       "name": "OnChanged",
@@ -31,9 +37,15 @@
       "description": "Optional host upload handler: receives a picked file and returns the hosted image URL."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders the inspector read-only: every control inside the panel is disabled natively and the upload affordance is hidden, so no property change can reach the document."
+    },
+    {
       "name": "SelectedId",
       "type": "Guid?",
-      "isRequired": true,
+      "isRequired": false,
       "description": "The selected node id (block, section or column); null edits the document settings.",
       "editorRequired": true
     },

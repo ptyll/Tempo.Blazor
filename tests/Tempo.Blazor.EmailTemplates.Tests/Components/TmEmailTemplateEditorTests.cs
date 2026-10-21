@@ -1,4 +1,5 @@
 using Tempo.Blazor.EmailTemplates.Abstractions;
+using Tempo.Blazor.EmailTemplates.Abstractions.Editing;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -49,9 +50,12 @@ public class TmEmailTemplateEditorTests : BunitContext
     }
 
     [Fact]
-    public void Save_InvokesOnSaveWithTheDocument()
+    public void Save_InvokesOnSaveWithASnapshotOfTheDocument()
     {
-        EmailTemplateDocument? saved = null;
+        // Fáze 7 (B1): OnSave is a Func<EmailSaveRequest, Task<EmailSaveResult>> that receives a deep-copy
+        // snapshot plus the trigger, the revision and the editor's cancellation token — the old
+        // EventCallback<EmailTemplateDocument> could not report an outcome at all.
+        EmailSaveRequest? captured = null;
         var doc = new EmailTemplateDocument { Name = "X" };
         var doc2section = new EmailSection();
         doc2section.Columns.Add(new EmailColumn());
@@ -59,11 +63,18 @@ public class TmEmailTemplateEditorTests : BunitContext
 
         var cut = Render<TmEmailTemplateEditor>(p => p
             .Add(c => c.Document, doc)
-            .Add(c => c.OnSave, d => saved = d));
+            .Add(c => c.OnSave, (EmailSaveRequest request) =>
+            {
+                captured = request;
+                return Task.FromResult(EmailSaveResult.Saved());
+            }));
 
         cut.Find("[data-tm-save]").Click();
 
-        saved.Should().BeSameAs(doc);
+        captured.Should().NotBeNull();
+        captured!.Document.Should().NotBeSameAs(doc, "the host persists a snapshot, not the live instance");
+        captured.Document.Name.Should().Be("X");
+        captured.Trigger.Should().Be(EmailSaveTrigger.Manual);
     }
 
     [Fact]

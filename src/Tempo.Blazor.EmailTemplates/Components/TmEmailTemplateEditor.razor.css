@@ -1,6 +1,12 @@
 .tm-email-editor {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
+    /* The editor is a host-laid-out item, so it fills the lane it is given instead of shrinking to its
+       content: a flex item's automatic minimum (min-inline-size: auto) otherwise keeps a wide canvas from
+       ever shrinking, and the whole editor overflowed/mis-measured inside a normal page column. */
+    inline-size: 100%;
+    min-inline-size: 0;
     block-size: 100%;
     min-block-size: 0;
     background: var(--tm-color-surface, #ffffff);
@@ -23,8 +29,17 @@
     gap: var(--tm-space-1, 0.25rem);
 }
 
-.tm-email-editor__toolbar-spacer {
-    flex: 1 1 auto;
+/* The badge and the Save button never wrap apart: the group takes the remaining bar width (basis 0 keeps
+   its hypothetical size off the wrap calculation) and pins its content to the right edge, so the primary
+   action stays where the user last saw it no matter how long the host's message is. */
+.tm-email-editor__save-chrome {
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-2, 0.5rem);
+    min-inline-size: 0;
 }
 
 .tm-email-editor__status {
@@ -92,4 +107,170 @@
     align-items: center;
     gap: var(--tm-space-2);
     margin-inline-start: auto;
+}
+
+/* ── Save contract (Fáze 7) ──────────────────────────────────────────────────────────────── */
+
+/* The command bar carries task groups separated by hairlines instead of one undifferentiated row.
+   The bar is the query container: a `container-type: inline-size` element computes its own inline size
+   without its contents, which zeroes a flex item whose basis is `auto` (the editor is one inside a host's
+   flex row) — the toolbar instead stretches to the editor's width on the cross axis, so it can carry the
+   container without changing the editor's layout. */
+.tm-email-editor__toolbar {
+    container: tm-email-editor / inline-size;
+    flex-wrap: wrap;
+}
+
+.tm-email-editor__toolbar-sep {
+    flex: 0 0 auto;
+    inline-size: 1px;
+    block-size: var(--tm-space-4, 1rem);
+    background: var(--tm-color-border, #e2e2e2);
+}
+
+/* Icon-only below 1200px — the accessible name comes from the button's aria-label at every width. */
+.tm-email-editor__btn-label {
+    display: none;
+}
+
+@container tm-email-editor (min-width: 1200px) {
+    .tm-email-editor__btn-label {
+        display: inline;
+    }
+}
+
+/* The badge never grows the bar: it truncates, and its own message is the host's (possibly long) reason. */
+.tm-email-editor__save-status {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--tm-space-1, 0.25rem);
+    max-inline-size: 44ch;
+    min-inline-size: 0;
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-full, 999px);
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    line-height: 1.4;
+}
+
+.tm-email-editor__save-label {
+    flex: 0 0 auto;
+    font-weight: var(--tm-font-weight-medium, 500);
+    white-space: nowrap;
+}
+
+.tm-email-editor__save-message {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    opacity: 0.9;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-email-editor__save-status--dirty {
+    background: var(--tm-color-warning-bg-subtle, #fffbeb);
+    border-color: var(--tm-color-warning-soft-border, #fde68a);
+    color: var(--tm-color-warning-text, #92400e);
+}
+
+.tm-email-editor__save-status--saving {
+    background: var(--tm-color-surface-muted, #f7f7f8);
+    border-color: var(--tm-color-border, #e2e2e2);
+    color: var(--tm-color-text-muted, #6b7280);
+}
+
+.tm-email-editor__save-status--saved {
+    background: var(--tm-color-success-subtle, #ecfdf5);
+    border-color: var(--tm-color-success-soft-border, #a7f3d0);
+    color: var(--tm-color-success-text, #065f46);
+}
+
+.tm-email-editor__save-status--failed {
+    background: var(--tm-color-danger-subtle, #fef2f2);
+    border-color: var(--tm-color-danger-soft-border, #fecaca);
+    color: var(--tm-color-danger-text, #991b1b);
+}
+
+/* A conflict is NOT "unsaved changes": the dirty pill is a light warning tint, so the conflict carries the
+   stronger warning border and an alert-triangle icon. Told apart at a glance, not by reading the words. */
+.tm-email-editor__save-status--conflict {
+    background: var(--tm-color-warning-soft, #fffbeb);
+    border-color: var(--tm-color-warning-strong, #b45309);
+    border-inline-start-width: 3px;
+    color: var(--tm-color-warning-text, #92400e);
+}
+
+/* Narrow editor: below ~900px the bar is icon-only (every action hides its label exactly the same way), so
+   the status collapses to a full-size 24px severity chip instead of a squeezed sliver — a pill truncated to
+   a few pale pixels told the user nothing, and a wide pill pushed the primary Save button out of the row.
+   The words live in `title` and, for a failure/conflict, in the alert below. */
+@container tm-email-editor (max-width: 900px) {
+    .tm-email-editor__save-status {
+        flex: 0 0 auto;
+        inline-size: var(--tm-space-6, 1.5rem);
+        min-inline-size: var(--tm-space-6, 1.5rem);
+        justify-content: center;
+        padding-inline: 0;
+    }
+
+    .tm-email-editor__save-label,
+    .tm-email-editor__save-message {
+        display: none;
+    }
+}
+
+/* ── Read-only (Fáze 7) ──────────────────────────────────────────────────────────────────── */
+
+/* A read-only editor is a different mode, not a dimmed editor: the badge says so, the Save button is gone
+   (there is nothing it could do) and unsaved changes stay visible only as a secondary fact. */
+.tm-email-editor__readonly {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1, 0.25rem);
+    min-inline-size: 0;
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border: 1px solid var(--tm-color-border, #e2e2e2);
+    border-radius: var(--tm-radius-full, 999px);
+    background: var(--tm-color-surface-muted, #f7f7f8);
+    color: var(--tm-color-text-secondary, #4b5563);
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.tm-email-editor__readonly-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-email-editor__readonly-dirty {
+    padding-inline-start: var(--tm-space-1, 0.25rem);
+    border-inline-start: 1px solid var(--tm-color-border, #e2e2e2);
+    color: var(--tm-color-text-secondary, #4b5563);
+    font-weight: var(--tm-font-weight-regular, 400);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Failed/Conflict alert (Fáze 7) ─────────────────────────────────────────────────────── */
+
+/* Under the command bar and outside the save chrome: the host's reason is a sentence, not a pill label, and
+   the retry action has to stay reachable however long that sentence is. */
+.tm-email-editor__save-alert {
+    margin: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem) 0;
+}
+
+.tm-email-editor__save-alert-message {
+    margin: 0;
+    font-weight: var(--tm-font-weight-medium, 500);
+    overflow-wrap: anywhere;
+}
+
+.tm-email-editor__save-alert-hint {
+    margin: var(--tm-space-1, 0.25rem) 0 var(--tm-space-2, 0.5rem);
+    font-size: var(--tm-font-size-sm, 0.875rem);
 }

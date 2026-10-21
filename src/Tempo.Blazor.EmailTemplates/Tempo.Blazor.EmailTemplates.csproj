@@ -27,6 +27,14 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!-- The node:test files for the package's ES modules live inside wwwroot (the root package.json is
+       "type": "module", so they import the modules directly) and are a test asset, not a published one:
+       keeping them as Content shipped __tests__/*.test.mjs to every consumer's static web assets. -->
+  <ItemGroup>
+    <Content Remove="wwwroot\**\__tests__\**" />
+    <None Include="wwwroot\**\__tests__\**" Pack="false" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor\Tempo.Blazor.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.EmailTemplates.Abstractions\Tempo.Blazor.EmailTemplates.Abstractions.csproj" />

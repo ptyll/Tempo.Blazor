@@ -2,11 +2,11 @@
   "itemName": "TmEmailTemplateToolbox",
   "kind": "Component",
   "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "description": "Palette of email building blocks from the block registry, grouped by category, plus a set of column-layout presets. Clicking or dragging a block raises the add/drag callbacks, and choosing a preset inserts a new section.",
   "packageId": "Tempo.Blazor.EmailTemplates",
-  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateToolbox.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -28,6 +28,12 @@
       "type": "EventCallback<BlockDescriptor>",
       "isRequired": false,
       "description": "Raised when a block drag starts (for drag-and-drop onto the canvas)."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true the tiles stay visible but inert: not draggable, aria-disabled, and neither a click nor a keyboard activation raises OnAddBlock/OnAddSection."
     }
   ]
 }

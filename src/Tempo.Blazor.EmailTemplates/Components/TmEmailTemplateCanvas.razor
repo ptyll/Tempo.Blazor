@@ -2,6 +2,7 @@
 
 <div class="tm-email-canvas-doc" data-tm-canvas-doc tabindex="0"
      role="list" aria-label="@Loc["EmailEditor_Panel_Blocks"]"
+     data-tm-readonly="@(ReadOnly ? "true" : "false")"
      @onkeydown="HandleKeyDownAsync">
     @if (Document.Sections.Count == 0)
     {
@@ -16,33 +17,36 @@
                  aria-label="@Loc["EmailEditor_Toolbox_Layouts"]"
                  aria-selected="@AriaSelected(section.Id)"
                  @onclick="() => SelectAsync(section.Id)" @onclick:stopPropagation="true">
-                <div class="tm-email-canvas-section__toolbar">
-                    <button type="button" data-tm-section-action="add-column"
-                            aria-label="@Loc["EmailEditor_Section_AddColumn"]"
-                            @onclick="() => AddColumnAsync(section)" @onclick:stopPropagation="true">
-                        <TmIcon Name="columns" Size="IconSize.Xs" />
-                    </button>
-                    <button type="button" data-tm-section-action="up"
-                            aria-label="@Loc["EmailEditor_Action_MoveUp"]"
-                            @onclick="() => MoveSectionAsync(section, -1)" @onclick:stopPropagation="true">
-                        <TmIcon Name="chevron-up" Size="IconSize.Xs" />
-                    </button>
-                    <button type="button" data-tm-section-action="down"
-                            aria-label="@Loc["EmailEditor_Action_MoveDown"]"
-                            @onclick="() => MoveSectionAsync(section, 1)" @onclick:stopPropagation="true">
-                        <TmIcon Name="chevron-down" Size="IconSize.Xs" />
-                    </button>
-                    <button type="button" data-tm-section-action="duplicate"
-                            aria-label="@Loc["EmailEditor_Action_Duplicate"]"
-                            @onclick="() => DuplicateSectionAsync(section)" @onclick:stopPropagation="true">
-                        <TmIcon Name="copy" Size="IconSize.Xs" />
-                    </button>
-                    <button type="button" data-tm-section-action="delete"
-                            aria-label="@Loc["EmailEditor_Action_Delete"]"
-                            @onclick="() => DeleteSectionAsync(section)" @onclick:stopPropagation="true">
-                        <TmIcon Name="trash-2" Size="IconSize.Xs" />
-                    </button>
-                </div>
+                @if (!ReadOnly)
+                {
+                    <div class="tm-email-canvas-section__toolbar">
+                        <button type="button" data-tm-section-action="add-column"
+                                aria-label="@Loc["EmailEditor_Section_AddColumn"]"
+                                @onclick="() => AddColumnAsync(section)" @onclick:stopPropagation="true">
+                            <TmIcon Name="columns" Size="IconSize.Xs" />
+                        </button>
+                        <button type="button" data-tm-section-action="up"
+                                aria-label="@Loc["EmailEditor_Action_MoveUp"]"
+                                @onclick="() => MoveSectionAsync(section, -1)" @onclick:stopPropagation="true">
+                            <TmIcon Name="chevron-up" Size="IconSize.Xs" />
+                        </button>
+                        <button type="button" data-tm-section-action="down"
+                                aria-label="@Loc["EmailEditor_Action_MoveDown"]"
+                                @onclick="() => MoveSectionAsync(section, 1)" @onclick:stopPropagation="true">
+                            <TmIcon Name="chevron-down" Size="IconSize.Xs" />
+                        </button>
+                        <button type="button" data-tm-section-action="duplicate"
+                                aria-label="@Loc["EmailEditor_Action_Duplicate"]"
+                                @onclick="() => DuplicateSectionAsync(section)" @onclick:stopPropagation="true">
+                            <TmIcon Name="copy" Size="IconSize.Xs" />
+                        </button>
+                        <button type="button" data-tm-section-action="delete"
+                                aria-label="@Loc["EmailEditor_Action_Delete"]"
+                                @onclick="() => DeleteSectionAsync(section)" @onclick:stopPropagation="true">
+                            <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                        </button>
+                    </div>
+                }
                 <div class="tm-email-canvas-section__columns">
                     @foreach (var column in section.Columns)
                     {
@@ -51,7 +55,7 @@
                              aria-selected="@AriaSelected(column.Id)"
                              style="@ColumnFlex(column)"
                              @onclick="() => SelectAsync(column.Id)" @onclick:stopPropagation="true">
-                            @if (section.Columns.Count > 1)
+                            @if (section.Columns.Count > 1 && !ReadOnly)
                             {
                                 <button type="button" class="tm-email-canvas-column__remove"
                                         data-tm-column-action="remove"
@@ -88,33 +92,36 @@
                                 }
                                 <div class="tm-email-canvas-block @SelectedClass(block.Id)"
                                      data-tm-block-id="@block.Id" role="listitem" tabindex="0"
-                                     draggable="true"
+                                     draggable="@(ReadOnly ? null : "true")"
                                      aria-label="@Loc[$"block.{BlockKey(block)}.name"]"
                                      aria-selected="@AriaSelected(block.Id)"
                                      @ondragstart="() => OnBlockDragStart.InvokeAsync(block.Id)"
                                      @onclick="() => SelectAsync(block.Id)" @onclick:stopPropagation="true">
-                                    <div class="tm-email-canvas-block__toolbar">
-                                        <button type="button" data-tm-block-action="up"
-                                                aria-label="@Loc["EmailEditor_Action_MoveUp"]"
-                                                @onclick="() => MoveBlockAsync(block, -1)" @onclick:stopPropagation="true">
-                                            <TmIcon Name="chevron-up" Size="IconSize.Xs" />
-                                        </button>
-                                        <button type="button" data-tm-block-action="down"
-                                                aria-label="@Loc["EmailEditor_Action_MoveDown"]"
-                                                @onclick="() => MoveBlockAsync(block, 1)" @onclick:stopPropagation="true">
-                                            <TmIcon Name="chevron-down" Size="IconSize.Xs" />
-                                        </button>
-                                        <button type="button" data-tm-block-action="duplicate"
-                                                aria-label="@Loc["EmailEditor_Action_Duplicate"]"
-                                                @onclick="() => DuplicateBlockAsync(block)" @onclick:stopPropagation="true">
-                                            <TmIcon Name="copy" Size="IconSize.Xs" />
-                                        </button>
-                                        <button type="button" data-tm-block-action="delete"
-                                                aria-label="@Loc["EmailEditor_Action_Delete"]"
-                                                @onclick="() => DeleteBlockAsync(block)" @onclick:stopPropagation="true">
-                                            <TmIcon Name="trash-2" Size="IconSize.Xs" />
-                                        </button>
-                                    </div>
+                                    @if (!ReadOnly)
+                                    {
+                                        <div class="tm-email-canvas-block__toolbar">
+                                            <button type="button" data-tm-block-action="up"
+                                                    aria-label="@Loc["EmailEditor_Action_MoveUp"]"
+                                                    @onclick="() => MoveBlockAsync(block, -1)" @onclick:stopPropagation="true">
+                                                <TmIcon Name="chevron-up" Size="IconSize.Xs" />
+                                            </button>
+                                            <button type="button" data-tm-block-action="down"
+                                                    aria-label="@Loc["EmailEditor_Action_MoveDown"]"
+                                                    @onclick="() => MoveBlockAsync(block, 1)" @onclick:stopPropagation="true">
+                                                <TmIcon Name="chevron-down" Size="IconSize.Xs" />
+                                            </button>
+                                            <button type="button" data-tm-block-action="duplicate"
+                                                    aria-label="@Loc["EmailEditor_Action_Duplicate"]"
+                                                    @onclick="() => DuplicateBlockAsync(block)" @onclick:stopPropagation="true">
+                                                <TmIcon Name="copy" Size="IconSize.Xs" />
+                                            </button>
+                                            <button type="button" data-tm-block-action="delete"
+                                                    aria-label="@Loc["EmailEditor_Action_Delete"]"
+                                                    @onclick="() => DeleteBlockAsync(block)" @onclick:stopPropagation="true">
+                                                <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                                            </button>
+                                        </div>
+                                    }
                                     @RenderPreview(block)
                                 </div>
                             }
@@ -158,6 +165,13 @@
     /// <summary>Raised when an existing block begins being dragged.</summary>
     [Parameter] public EventCallback<Guid> OnBlockDragStart { get; set; }
 
+    /// <summary>
+    /// When true the canvas renders the document read-only: no inline block/section actions, no draggable
+    /// blocks, no drop zones and no keyboard shortcut mutates the document (selection and navigation stay
+    /// available so the inspector can still show what is selected).
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     private bool IsSelected(Guid id) => SelectedId == id;
 
     private string SelectedClass(Guid id) => IsSelected(id) ? "is-selected" : string.Empty;
@@ -187,6 +201,11 @@
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
     {
+        if (ReadOnly && e.Key is "Delete" or "Backspace")
+        {
+            return;
+        }
+
         if (e.Key == "Escape")
         {
             await SelectedIdChanged.InvokeAsync(null);
@@ -214,7 +233,7 @@
             case "ArrowUp":
                 await NavigateAsync(selected, -1);
                 break;
-            case "d" or "D" when e.CtrlKey:
+            case "d" or "D" when e.CtrlKey && !ReadOnly:
                 await DuplicateSelectionAsync(selected);
                 break;
         }
@@ -254,6 +273,7 @@
 
     private async Task MoveBlockAsync(EmailBlockBase block, int direction)
     {
+        if (ReadOnly) return;
         var column = Document.FindParentColumn(block.Id);
         if (column is null) return;
         var index = IndexOf(column.Blocks, b => b.Id == block.Id);
@@ -265,6 +285,7 @@
 
     private async Task DuplicateBlockAsync(EmailBlockBase block)
     {
+        if (ReadOnly) return;
         var copy = Document.DuplicateBlock(block.Id);
         if (copy is not null) await SelectedIdChanged.InvokeAsync(copy.Id);
         await OnDocumentChanged.InvokeAsync();
@@ -272,6 +293,7 @@
 
     private async Task DeleteBlockAsync(EmailBlockBase block)
     {
+        if (ReadOnly) return;
         Document.RemoveBlock(block.Id);
         if (SelectedId == block.Id) await SelectedIdChanged.InvokeAsync(null);
         await OnDocumentChanged.InvokeAsync();
@@ -281,6 +303,7 @@
 
     private async Task AddColumnAsync(EmailSection section)
     {
+        if (ReadOnly) return;
         var column = new EmailColumn();
         section.AddColumn(column);
         await SelectedIdChanged.InvokeAsync(column.Id);
@@ -289,6 +312,7 @@
 
     private async Task RemoveColumnAsync(EmailSection section, EmailColumn column)
     {
+        if (ReadOnly) return;
         section.RemoveColumn(column.Id);
         if (SelectedId == column.Id) await SelectedIdChanged.InvokeAsync(null);
         await OnDocumentChanged.InvokeAsync();
@@ -296,6 +320,7 @@
 
     private async Task DuplicateSectionAsync(EmailSection section)
     {
+        if (ReadOnly) return;
         var copy = Document.DuplicateSection(section.Id);
         if (copy is not null) await SelectedIdChanged.InvokeAsync(copy.Id);
         await OnDocumentChanged.InvokeAsync();
@@ -303,6 +328,7 @@
 
     private async Task DeleteSectionAsync(EmailSection section)
     {
+        if (ReadOnly) return;
         Document.RemoveSection(section.Id);
         if (SelectedId == section.Id) await SelectedIdChanged.InvokeAsync(null);
         await OnDocumentChanged.InvokeAsync();
@@ -310,6 +336,7 @@
 
     private async Task MoveSectionAsync(EmailSection section, int direction)
     {
+        if (ReadOnly) return;
         var index = IndexOf(Document.Sections, s => s.Id == section.Id);
         var target = index + direction;
         if (index < 0 || target < 0 || target >= Document.Sections.Count) return;

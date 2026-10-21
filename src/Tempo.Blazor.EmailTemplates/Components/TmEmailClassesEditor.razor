@@ -8,17 +8,17 @@
             <div class="tm-email-classes__class-head">
                 <code>.@name</code>
                 <button type="button" data-tm-class-remove aria-label="@Loc["EmailEditor_Action_Delete"]"
-                        @onclick="() => RemoveAsync(name)">
+                        disabled="@ReadOnly" @onclick="() => RemoveAsync(name)">
                     <TmIcon Name="trash-2" Size="IconSize.Xs" />
                 </button>
             </div>
-            <TmEmailKeyValueEditor Items="Attributes.Classes[name]" OnChanged="OnChanged" />
+            <TmEmailKeyValueEditor Items="Attributes.Classes[name]" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
     <div class="tm-email-classes__add">
-        <TmTextInput Placeholder="@Loc["EmailEditor_Classes_NewName"]" Value="_newName"
+        <TmTextInput Placeholder="@Loc["EmailEditor_Classes_NewName"]" Value="_newName" Disabled="ReadOnly"
                      ValueChanged="v => _newName = v" />
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus"
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
                   data-tm-class-add="true" OnClick="AddAsync">@Loc["EmailEditor_Classes_Add"]</TmButton>
     </div>
 </div>
@@ -30,10 +30,14 @@
     /// <summary>Raised after the class definitions change.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
+    /// <summary>Renders the named-class list read-only (disabled controls plus early returns in every mutator).</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     private string _newName = string.Empty;
 
     private async Task AddAsync()
     {
+        if (ReadOnly) return;
         var name = _newName.Trim();
         if (string.IsNullOrEmpty(name) || Attributes.Classes.ContainsKey(name)) return;
         Attributes.Classes[name] = new Dictionary<string, string>();
@@ -43,6 +47,7 @@
 
     private async Task RemoveAsync(string name)
     {
+        if (ReadOnly) return;
         Attributes.Classes.Remove(name);
         await OnChanged.InvokeAsync();
     }

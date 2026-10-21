@@ -30,3 +30,21 @@
     flex: 1 1 auto;
     min-height: 0;
 }
+
+/* Fáze 7 demo: the host-save-result switch sits in the page bar next to the read-only toggle. */
+.tm-demo-email-editor-page__simulate {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-secondary, #616e7c);
+}
+
+.tm-demo-email-editor-page__simulate select {
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border: 1px solid var(--tm-color-border, #e4e7eb);
+    border-radius: var(--tm-radius-md, 0.375rem);
+    background: var(--tm-bg-surface, #fff);
+    color: inherit;
+    font: inherit;
+}

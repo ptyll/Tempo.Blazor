@@ -7,10 +7,26 @@
 <div class="tm-demo-email-editor-page" data-tm-email-editor-page>
     <div class="tm-demo-email-editor-page__bar">
         <TmButton Variant="ButtonVariant.Ghost" Icon="arrow-left" OnClick="Back" data-tm-back>Back</TmButton>
-        @if (_status is not null)
-        {
-            <span class="tm-demo-email-editor-page__status" data-tm-save-status>@_status</span>
-        }
+
+        @* Fáze 7 demo: the editor owns the dirty flag and the save outcome, the host only reports results.
+           These two controls exercise the paths a host has to handle — a read-only editor, and a save the
+           host rejects (failed) or refuses as stale (conflict). *@
+        <TmToggle Label="Read-only" Value="_readOnly" ValueChanged="OnReadOnlyChanged" data-tm-demo-readonly />
+        <label class="tm-demo-email-editor-page__simulate">
+            <span>Host save result</span>
+            <select data-tm-demo-simulate @onchange="OnSimulationChanged">
+                <option value="real">Call the API</option>
+                <option value="failed">Simulate failure</option>
+                <option value="failed-long">Simulate a long failure message</option>
+                <option value="conflict">Simulate conflict</option>
+            </select>
+        </label>
+        @* The editor's own badge already reports the save state; this is the HOST's view of the same thing,
+           i.e. what arrived through IsDirtyChanged — the guard/leave flow keys off exactly this flag. The
+           wording stays plain ("unsaved changes yes/no") instead of naming the internal flag. *@
+        <span class="tm-demo-email-editor-page__status" data-tm-demo-dirty="@(_isDirty ? "true" : "false")">
+            Host: unsaved changes @(_isDirty ? "yes" : "no")
+        </span>
     </div>
 
     @if (_loading)
@@ -24,8 +40,14 @@
     else
     {
         <div class="tm-demo-email-editor-page__editor">
-            <TmEmailTemplateEditor @bind-Document="_document" OnSave="SaveAsync"
-                                   AutoSave="_autoSave" OnAutoSave="SaveAsync" />
+            <TmEmailTemplateEditor @ref="_editor"
+                                   Document="_document"
+                                   DocumentChanged="OnDocumentChangedAsync"
+                                   OnSave="SaveAsync"
+                                   IsDirtyChanged="OnIsDirtyChanged"
+                                   ReadOnly="_readOnly"
+                                   AutoSave="_autoSave"
+                                   ImageUpload="_imageUpload" />
         </div>
     }
 </div>
@@ -34,11 +56,15 @@
     /// <summary>The template id from the route.</summary>
     [Parameter] public Guid Id { get; set; }
 
+    private TmEmailTemplateEditor? _editor;
     private EmailTemplateDocument? _document;
     private EmailTemplateDetailDto? _detail;
     private bool _loading = true;
-    private string? _status;
+    private bool _readOnly;
+    private bool _isDirty;
+    private string _simulation = "real";
     private readonly AutoSaveOptions _autoSave = new() { Enabled = true, Interval = TimeSpan.FromSeconds(3) };
+    private readonly ImageUploadOptions _imageUpload = new() { Accept = "image/*", MaxBytes = 2 * 1024 * 1024 };
 
     protected override async Task OnParametersSetAsync()
     {
@@ -48,24 +74,67 @@
         _loading = false;
     }
 
-    private async Task SaveAsync(EmailTemplateDocument document)
+    /// <summary>
+    /// The host side of the save contract (§3.2): answer with a real <see cref="EmailSaveResult"/> — never
+    /// "saved" unless the API confirmed the write. The editor shows the dirty state and the outcome; the host
+    /// owns the persistence and the revision/ETag. Wire <c>SaveAsync()</c> into
+    /// <c>TmNavigationGuard.OnSaveAndLeave</c> for a leave-guard:
+    /// <c>OnSaveAndLeave="@(async () => (await _editor!.SaveAsync()).IsSaved)"</c>.
+    /// </summary>
+    private async Task<EmailSaveResult> SaveAsync(EmailSaveRequest request)
     {
-        if (_detail is null) return;
-        _status = "Saving…";
-        StateHasChanged();
+        if (_detail is null) return EmailSaveResult.Failed("The template is not loaded.");
 
-        var ok = await Api.UpdateAsync(Id, new UpdateEmailTemplateRequest
+        switch (_simulation)
         {
-            Name = string.IsNullOrWhiteSpace(document.Name) ? _detail.Name : document.Name,
-            Subject = document.Subject,
-            Preheader = document.Preheader,
-            Language = document.Language,
-            IsActive = _detail.IsActive,
-            ContentJson = EmailTemplateSerializer.Serialize(document),
-            SampleDataJson = _detail.SampleDataJson,
-        });
-        _status = ok ? "Saved" : "Save failed";
-        StateHasChanged();
+            case "failed":
+                return EmailSaveResult.Failed("Simulated failure: the demo host did NOT save the template.");
+            case "failed-long":
+                // A realistic server reason (about 200 characters): the narrow-layout E2E proves the alert
+                // wraps it and the Save button stays beside the badge.
+                return EmailSaveResult.Failed(
+                    "Simulated failure: the server rejected the template because the preheader is longer than "
+                    + "the configured limit, the footer contains an unreachable image host, and the stored "
+                    + "sample data no longer matches the current variable schema.");
+            case "conflict":
+                return EmailSaveResult.Conflict("Simulated conflict: someone else saved a newer revision.");
+        }
+
+        try
+        {
+            await Api.UpdateAsync(Id, new UpdateEmailTemplateRequest
+            {
+                Name = string.IsNullOrWhiteSpace(request.Document.Name) ? _detail.Name : request.Document.Name,
+                Subject = request.Document.Subject,
+                Preheader = request.Document.Preheader,
+                Language = request.Document.Language,
+                IsActive = _detail.IsActive,
+                ContentJson = EmailTemplateSerializer.Serialize(request.Document),
+                SampleDataJson = _detail.SampleDataJson,
+            }, request.CancellationToken);
+
+            return EmailSaveResult.Saved();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            return EmailSaveResult.Conflict(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return EmailSaveResult.Failed(ex.Message);
+        }
+    }
+
+    private void OnReadOnlyChanged(bool value) => _readOnly = value;
+
+    private void OnSimulationChanged(ChangeEventArgs e) => _simulation = e.Value?.ToString() ?? "real";
+
+    private void OnIsDirtyChanged(bool isDirty) => _isDirty = isDirty;
+
+    private Task OnDocumentChangedAsync(EmailTemplateDocument document)
+    {
+        _document = document;
+        return Task.CompletedTask;
     }
 
     private void Back() => Nav.NavigateTo("/email-templates");

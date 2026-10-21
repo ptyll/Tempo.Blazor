@@ -1,45 +1,55 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
+@inject IServiceProvider Services
 
-<div class="tm-email-properties" data-tm-properties-panel>
+<div class="tm-email-properties" data-tm-properties-panel data-tm-readonly="@(ReadOnly ? "true" : "false")">
     @{
         var block = SelectedId is Guid id ? Document.FindBlock(id) : null;
         var section = SelectedId is Guid sid ? DocumentTree.AllSections(Document).FirstOrDefault(s => s.Id == sid) : null;
         var column = SelectedId is Guid cid ? DocumentTree.AllColumns(Document).FirstOrDefault(c => c.Id == cid) : null;
     }
 
+    @* Read-only: the whole control group is disabled natively. A `disabled` fieldset is what the
+       browser and the accessibility tree read, so nothing inside can be typed, toggled or clicked;
+       display:contents in the scoped CSS keeps the fieldset out of the layout. *@
+    <fieldset class="tm-email-properties__fieldset" disabled="@ReadOnly" data-tm-properties-fieldset>
     @if (block is not null)
     {
         <header class="tm-email-properties__header" data-tm-prop-target="block">@Loc[$"block.{BlockKey(block)}.name"]</header>
-        <TmEmailObjectFields Target="block" Primary="PrimaryFor(block)" Exclude="ExcludeFor(block)" OnChanged="OnChanged" />
+        <TmEmailObjectFields Target="block" Primary="PrimaryFor(block)" Exclude="ExcludeFor(block)" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         @switch (block)
         {
             case EmailTextBlock textBlock:
                 <div class="tm-email-properties__group" data-tm-rich-content>
                     <header class="tm-email-properties__subheader">@Loc["EmailEditor_Field_Content"]</header>
-                    <TmRichEditorSimple Value="@textBlock.Content"
-                                        ValueChanged="@(v => { textBlock.Content = v; return OnChanged.InvokeAsync(); })" />
+                    <TmRichEditorSimple Value="@textBlock.Content" IsDisabled="ReadOnly"
+                                        ValueChanged="@(v => SetAsync(() => textBlock.Content = v))" />
                 </div>
                 <details class="tm-email-properties__group" data-tm-variables="text">
                     <summary>@Loc["EmailEditor_Variables_Title"]</summary>
                     <TmEmailVariablePicker Variables="EffectiveVariables"
-                                           OnInsert="@(t => { textBlock.Content += t; return OnChanged.InvokeAsync(); })" />
+                                           ReadOnly="ReadOnly"
+                                           OnInsert="@(t => AppendAsync(textBlock, t))" />
                 </details>
                 break;
             case EmailRawBlock raw:
                 <TmAlert Severity="AlertSeverity.Warning" data-tm-raw-warning="true">@Loc["EmailEditor_Raw_Warning"]</TmAlert>
-                <TmTextArea Label="@Loc["EmailEditor_Field_Content"]" Rows="8" Value="@raw.Content"
-                            ValueChanged="@(v => { raw.Content = v; return OnChanged.InvokeAsync(); })" />
+                <TmTextArea Label="@Loc["EmailEditor_Field_Content"]" Rows="8" Value="@raw.Content" Disabled="ReadOnly"
+                            ValueChanged="@(v => SetAsync(() => raw.Content = v))" />
                 break;
             case EmailImageBlock image:
                 @if (string.IsNullOrWhiteSpace(image.Alt))
                 {
                     <TmAlert Severity="AlertSeverity.Warning" data-tm-alt-warning="true">@Loc["EmailEditor_Image_AltRequired"]</TmAlert>
                 }
-                @if (OnImageUpload is not null)
+                @if (OnImageUpload is not null && !ReadOnly)
                 {
                     <div class="tm-email-properties__group" data-tm-image-upload>
                         <header class="tm-email-properties__subheader">@Loc["EmailEditor_Image_Upload"]</header>
-                        <TmFileDropZone Accept="image/*" InputAriaLabel="@Loc["EmailEditor_Image_Upload"]"
+                        @if (_imageUploadError is not null)
+                        {
+                            <TmAlert Severity="AlertSeverity.Error" data-tm-image-upload-error="true">@_imageUploadError</TmAlert>
+                        }
+                        <TmFileDropZone Accept="@EffectiveImageUpload.Accept" InputAriaLabel="@Loc["EmailEditor_Image_Upload"]"
                                         InputTestId="tm-image-upload" OnFilesSelected="e => UploadImageAsync(image, e)" />
                     </div>
                 }
@@ -52,81 +62,83 @@
         {
             case EmailSocialBlock social:
                 <TmEmailListEditor TItem="EmailSocialElement" Items="social.Elements"
-                                   ItemPrimary="@(new[] { "Name", "Href", "Label" })" OnChanged="OnChanged" />
+                                   ItemPrimary="@(new[] { "Name", "Href", "Label" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
                 break;
             case EmailNavbarBlock navbar:
                 <TmEmailListEditor TItem="EmailNavbarLink" Items="navbar.Links"
-                                   ItemPrimary="@(new[] { "Text", "Href" })" OnChanged="OnChanged" />
+                                   ItemPrimary="@(new[] { "Text", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
                 break;
             case EmailCarouselBlock carousel:
                 <TmEmailListEditor TItem="EmailCarouselImage" Items="carousel.Images"
-                                   ItemPrimary="@(new[] { "Src", "Alt", "Href" })" OnChanged="OnChanged" />
+                                   ItemPrimary="@(new[] { "Src", "Alt", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
                 break;
             case EmailAccordionBlock accordion:
                 <TmEmailListEditor TItem="EmailAccordionItem" Items="accordion.Items"
-                                   ItemPrimary="@(new[] { "Title", "Content" })" OnChanged="OnChanged" />
+                                   ItemPrimary="@(new[] { "Title", "Content" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
                 break;
             case EmailTableBlock table:
-                <TmEmailTableEditor Block="table" OnChanged="OnChanged" />
+                <TmEmailTableEditor Block="table" OnChanged="OnChanged" ReadOnly="ReadOnly" />
                 break;
         }
         <div class="tm-email-properties__group" data-tm-classes>
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_MjClass_Title"]</header>
-            <TmTextInput Value="@string.Join(' ', block.MjClasses)"
-                         ValueChanged="@(v => { block.MjClasses = Split(v); return OnChanged.InvokeAsync(); })" />
+            <TmTextInput Value="@string.Join(' ', block.MjClasses)" Disabled="ReadOnly" data-tm-mjclasses
+                         ValueChanged="@(v => SetAsync(() => block.MjClasses = Split(v)))" />
         </div>
         <div class="tm-email-properties__group" data-tm-extra>
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
-            <TmEmailKeyValueEditor Items="block.ExtraAttributes" OnChanged="OnChanged" />
+            <TmEmailKeyValueEditor Items="block.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
     else if (section is not null)
     {
         <header class="tm-email-properties__header" data-tm-prop-target="section">@Loc["EmailEditor_Properties_Section"]</header>
-        <TmEmailObjectFields Target="section" Primary="SectionPrimary" OnChanged="OnChanged" />
+        <TmEmailObjectFields Target="section" Primary="SectionPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         <div class="tm-email-properties__group" data-tm-extra>
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
-            <TmEmailKeyValueEditor Items="section.ExtraAttributes" OnChanged="OnChanged" />
+            <TmEmailKeyValueEditor Items="section.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
     else if (column is not null)
     {
         <header class="tm-email-properties__header" data-tm-prop-target="column">@Loc["EmailEditor_Properties_Column"]</header>
-        <TmEmailObjectFields Target="column" Primary="ColumnPrimary" OnChanged="OnChanged" />
+        <TmEmailObjectFields Target="column" Primary="ColumnPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         <div class="tm-email-properties__group" data-tm-extra>
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_ExtraAttributes_Title"]</header>
-            <TmEmailKeyValueEditor Items="column.ExtraAttributes" OnChanged="OnChanged" />
+            <TmEmailKeyValueEditor Items="column.ExtraAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
     else
     {
         <header class="tm-email-properties__header" data-tm-prop-target="document">@Loc["EmailEditor_Properties_Document"]</header>
-        <TmEmailObjectFields Target="Document" Primary="DocumentPrimary" OnChanged="OnChanged" />
+        <TmEmailObjectFields Target="Document" Primary="DocumentPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         <details class="tm-email-properties__group" data-tm-variables="subject">
             <summary>@Loc["EmailEditor_Variables_Title"]</summary>
             <TmEmailVariablePicker Variables="EffectiveVariables"
-                                   OnInsert="@(t => { Document.Subject += t; return OnChanged.InvokeAsync(); })" />
+                                   ReadOnly="ReadOnly"
+                                   OnInsert="@(t => AppendSubjectAsync(t))" />
         </details>
-        <TmEmailObjectFields Target="Document.Styles" Primary="StylesPrimary" OnChanged="OnChanged" />
+        <TmEmailObjectFields Target="Document.Styles" Primary="StylesPrimary" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         <div class="tm-email-properties__group" data-tm-head="fonts">
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Fonts"]</header>
             <TmEmailListEditor TItem="EmailFont" Items="Document.Styles.Fonts"
-                               ItemPrimary="@(new[] { "Name", "Href" })" OnChanged="OnChanged" />
+                               ItemPrimary="@(new[] { "Name", "Href" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
         <div class="tm-email-properties__group" data-tm-head="styles">
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Styles"]</header>
             <TmEmailListEditor TItem="EmailStyle" Items="Document.Styles.Styles"
-                               ItemPrimary="@(new[] { "Css", "Inline" })" OnChanged="OnChanged" />
+                               ItemPrimary="@(new[] { "Css", "Inline" })" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
         <div class="tm-email-properties__group" data-tm-head="classes">
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_Classes"]</header>
-            <TmEmailClassesEditor Attributes="Document.Styles.Attributes" OnChanged="OnChanged" />
+            <TmEmailClassesEditor Attributes="Document.Styles.Attributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
         <div class="tm-email-properties__group" data-tm-head="html-attributes">
             <header class="tm-email-properties__subheader">@Loc["EmailEditor_Head_HtmlAttributes"]</header>
-            <TmEmailHtmlAttributesEditor Selectors="Document.Styles.HtmlAttributes" OnChanged="OnChanged" />
+            <TmEmailHtmlAttributesEditor Selectors="Document.Styles.HtmlAttributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
+</fieldset>
 </div>
 
 @code {
@@ -144,6 +156,40 @@
 
     /// <summary>Optional host upload handler: receives a picked file and returns the hosted image URL.</summary>
     [Parameter] public Func<IBrowserFile, Task<string>>? OnImageUpload { get; set; }
+
+    /// <summary>
+    /// Client-side limits applied to a picked image <b>before</b> <see cref="OnImageUpload"/> runs;
+    /// <see langword="null"/> uses the <see cref="ImageUploadOptions"/> defaults (5 MB, images only).
+    /// </summary>
+    [Parameter] public ImageUploadOptions? ImageUpload { get; set; }
+
+    /// <summary>
+    /// Renders the inspector read-only: every control inside the panel is disabled natively and the
+    /// upload affordance is hidden, so no property change can reach the document.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    private string? _imageUploadError;
+
+    /// <summary>
+    /// Applies one inspector mutation unless the panel is read-only, then reports it. A disabled control is
+    /// not enough: a test or a synthesised event still delivers the change, and the write would land in the
+    /// document even though nothing is committed.
+    /// </summary>
+    private Task SetAsync(Action apply)
+    {
+        if (ReadOnly) return Task.CompletedTask;
+        apply();
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task AppendAsync(EmailTextBlock block, string token)
+        => SetAsync(() => block.Content += token);
+
+    private Task AppendSubjectAsync(string token)
+        => SetAsync(() => Document.Subject += token);
+
+    private ImageUploadOptions EffectiveImageUpload => ImageUpload ?? new ImageUploadOptions();
 
     private IReadOnlyList<TemplateVariableInfo> EffectiveVariables =>
         Variables
@@ -165,12 +211,90 @@
     private static IReadOnlyList<string> ExcludeFor(EmailBlockBase block) =>
         block is EmailTextBlock or EmailRawBlock ? ContentOnly : Array.Empty<string>();
 
+    /// <summary>
+    /// Validates the picked file against <see cref="ImageUploadOptions"/> <b>before</b> calling the host, and
+    /// turns a host exception or an empty URL into a localized error in the panel: the block's <c>Src</c>
+    /// only changes when the host answered a real URL.
+    /// </summary>
     private async Task UploadImageAsync(EmailImageBlock image, InputFileChangeEventArgs e)
     {
-        if (OnImageUpload is null || e.File is null) return;
-        image.Src = await OnImageUpload(e.File);
-        await OnChanged.InvokeAsync();
+        if (ReadOnly || OnImageUpload is null || e.File is null) return;
+
+        _imageUploadError = null;
+        var file = e.File;
+        var options = EffectiveImageUpload;
+
+        if (!IsAcceptedType(file.ContentType, options.Accept))
+        {
+            _imageUploadError = Loc["EmailEditor_Image_Upload_TypeNotAllowed", options.Accept];
+            StateHasChanged();
+            return;
+        }
+
+        if (file.Size > options.MaxBytes)
+        {
+            _imageUploadError = Loc["EmailEditor_Image_Upload_TooLarge", FormatBytes(options.MaxBytes)];
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var url = await OnImageUpload(file);
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                _imageUploadError = Loc["EmailEditor_Image_Upload_EmptyUrl"];
+                StateHasChanged();
+                return;
+            }
+
+            image.Src = url;
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            var logger = Services.GetService(typeof(ILogger<TmEmailPropertyPanel>)) as ILogger<TmEmailPropertyPanel>;
+            logger?.LogError(ex, "The host's image upload handler failed; the block keeps its previous source.");
+            _imageUploadError = Loc["EmailEditor_Image_Upload_Failed"];
+            StateHasChanged();
+        }
     }
+
+    /// <summary>Matches a MIME type against the <c>accept</c> attribute syntax (comma separated, <c>*</c> wildcards).</summary>
+    private static bool IsAcceptedType(string? contentType, string? accept)
+    {
+        if (string.IsNullOrWhiteSpace(contentType)) return false;
+        if (string.IsNullOrWhiteSpace(accept)) return true;
+
+        foreach (var candidate in accept.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (candidate is "*" or "*/*") return true;
+            var slash = candidate.IndexOf('/');
+            if (slash < 0)
+            {
+                // A bare extension list (".png,.jpg") — compare the file's type family loosely.
+                if (contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return true;
+                continue;
+            }
+
+            var type = candidate[..slash];
+            var subtype = candidate[(slash + 1)..];
+            if (!string.Equals(type, "*", StringComparison.OrdinalIgnoreCase)
+                && !contentType.StartsWith(type + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (subtype is "*" || contentType.EndsWith("/" + subtype, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+
+        return false;
+    }
+
+    private static string FormatBytes(long bytes)
+        => bytes >= 1024 * 1024
+            ? string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.#} MB", bytes / (1024d * 1024d))
+            : string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.#} KB", bytes / 1024d);
 
     private static List<string> Split(string value) =>
         value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();

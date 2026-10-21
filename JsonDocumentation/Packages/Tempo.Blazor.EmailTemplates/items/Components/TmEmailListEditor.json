@@ -6,7 +6,7 @@
   "packageId": "Tempo.Blazor.EmailTemplates",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailListEditor.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -31,6 +31,13 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised after the list or any item changes."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the list read-only: the native controls are disabled and every mutating method returns early, so a host that emulates a click (bUnit, a synthetic event) still cannot change the document."
     }
   ],
   "typeParameters": [

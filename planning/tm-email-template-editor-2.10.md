@@ -452,8 +452,9 @@ public Task<EmailSaveResult> SaveAsync();
 - `OnSave == null` nebo `ReadOnly` → `SaveAsync()` vrátí `Failed` **bez** volání hostitele (žádný no-op).
 - Autosave s `IsDirty == false` se **nevolá**.
 - `CancellationToken` v requestu se zruší při `Dispose` editoru; host ho má předat do svého I/O.
-- Po `Conflict` se autosave **pozastaví** do úspěšného `Manual`/`Programmatic` uložení nebo do předání
-  nové reference `Document`.
+- Po `Conflict` se autosave **pozastaví** do úspěšného **ne-autosave** uložení (`Manual`, `Shortcut` i
+  `Programmatic` — viz D26 v [5.2](#52-nová-rozhodnutí-z-review-2026-10-20)) nebo do předání nové
+  reference `Document`.
 - Nová reference `Document` (jiná instance) resetuje baseline (snapshot), `IsDirty = false` a undo historii.
 - Verzování/ETag drží **hostitel** (editor posílá jen `Revision` svého lokálního stavu).
 
@@ -473,12 +474,53 @@ public Task<EmailSaveResult> SaveAsync();
 | `ShowSaveButton` / `ShowSaveStatus` | ne (aditivní, default `true`) | 7 | `ShowSaveStatus` = odznak stavu uložení. |
 | `ImageUploadOptions { Accept, MaxBytes }` | ne (aditivní) | 7 | Namespace `Tempo.Blazor.EmailTemplates`; validace **před** `OnImageUpload`, porušení = lokalizovaná chyba a `Src` se nezmění. |
 
-Napojení dirty guardu (ověřená signatura `TmNavigationGuard.OnSaveAndLeave` = `Func<Task<bool>>?`):
+Napojení dirty guardu (ověřená signatura `TmNavigationGuard.OnSaveAndLeave` = `Func<Task<bool>>?`).
+`IsDirty` je **stav, který si hostitel drží sám** z `IsDirtyChanged` — `_editor.IsDirty` v markupu se
+vyhodnotí jen při renderu, takže guard by později pracoval se zastaralou hodnotou:
 
 ```razor
-<TmNavigationGuard IsDirty="_editor.IsDirty"
-                   OnSaveAndLeave="@(async () => (await _editor.SaveAsync()).IsSaved)" />
+<TmEmailTemplateEditor @ref="_editor" Document="_document"
+                       IsDirtyChanged="d => _dirty = d" OnSave="SaveAsync" />
+
+<TmNavigationGuard IsDirty="_dirty"
+                   OnSaveAndLeave="@(async () => _editor is not null && (await _editor.SaveAsync()).IsSaved)" />
 ```
+
+> **Stav po Fázi 7 (implementováno 2026-10-21).** Kontrakt výše je splněn beze změny jmen/typů:
+> `Editing` namespace (`EmailSaveTrigger`, `EmailSaveRequest`, `EmailSaveStatus`, `EmailSaveResult`),
+> `OnSave` = `Func<EmailSaveRequest, Task<EmailSaveResult>>?`, `OnAutoSave` zrušen (autosave volá `OnSave`
+> s `Trigger = AutoSave`), `IsDirty`/`IsSaving` vlastněné editorem, `SaveAsync()` veřejné (privátní cesta
+> se jmenuje `RequestSaveAsync`), `ReadOnly`, `ToolbarStart`/`ToolbarEnd`, `ShowSaveButton`/`ShowSaveStatus`,
+> `ImageUploadOptions`.
+> Doplňky implementace, které kontrakt nezakazuje: (a) „Uloženo {relativní čas}" je obnovováno
+> jednou za minutu z `TimeProvider` a relativní frázi skládá **jádrový `ITmRelativeTimeFormatter`**
+> (hostitel ho může vyměnit; formát „Uloženo {0}" zůstává textem editoru) — `EmailEditor_Relative_*`
+> proto zanikly; (b) `Ctrl+S` ruší výchozí akci prohlížeče „uložit stránku" jen pro ten
+> akord, přes vlastní ES modul balíčku `wwwroot/tm-email-save-shortcut.js` — modul drží listener
+> **per element** (`WeakMap`), takže dva editory na stránce se navzájem neodzbrojí (repo vzor: modul
+> balíčku jako `tm-email-variable-insert.js`; jádrové editory `Ctrl+S` neřeší, `@onkeydown:preventDefault`
+> je render-time bool, takže by spolkl i Tab); (c) popisky Zpět/Znovu se zobrazí při šířce **kontejneru**
+> ≥ 1200 px (container query na liště) — E2E to ověřuje na vykreslené šířce lišty, ne na viewportu;
+> (d) `ReadOnly` v inspektoru = nativní `disabled` fieldset (display: contents, žádná změna layoutu).
+> **(e) Revize po code review (2026-10-22):** `IsDirty` se počítá proti snapshotu bez `DeepClone`
+> (`UpdatedAt` se dočasně vynuluje v try/finally — běží jen na dispatcheru); výsledek uložení, který
+> dorazí po předání nové reference `Document`, odpovídá jen volajícímu (epoch dokumentu) a nemění
+> baseline/badge/pauzu; `SaveAsync()` skáče na dispatcher přes `InvokeAsync`; fronta uložení znovu
+> kontroluje `_disposed`/`ReadOnly`/`OnSave` u follow-upu a po Conflict nespouští frontu typu AutoSave;
+> `Failed`/`Conflict` mají pod lištou `TmAlert` (`data-tm-save-alert`) s plnou zprávou hostitele, hintem a
+> tlačítkem „Zkusit znovu" (`data-tm-save-retry`, `Trigger = Manual`), zatímco odznak zůstává krátký;
+> odznak už není live region — stav oznamuje jeden `role="status"` announcer (`data-tm-save-announcer`)
+> jen pro potvrzené `Manual`/`Shortcut`/`Programmatic` uložení (Failed/Conflict oznamuje alert s
+> `role="alert"`, aby se neoznamovalo dvakrát); Uložit není během ukládání `disabled`, ale
+> `aria-disabled` (single-flight klik sloučí), `disabled` zůstává jen v `ReadOnly`; read-only režim
+> nahradí save-chrome odznakem „Jen pro čtení" (`data-tm-readonly-badge`) a tlačítko Uložit vůbec
+> nevykreslí; toolbar je rozložený na privátní `RenderFragmenty` (HistoryGroup/ReviewGroup/FileGroup/
+> HelpGroup/SaveButton/SaveBadge), takže F8 může přesunout skupiny do overflow menu beze změny
+> `data-tm-group`/`data-tm-save`/`data-tm-save-badge`; (f) `ReadOnly` je aditivně i na sub-editorech
+> (`TmEmailListEditor`, `TmEmailKeyValueEditor`, `TmEmailTableEditor`, `TmEmailHtmlAttributesEditor`,
+> `TmEmailClassesEditor`, `TmEmailVariablePicker`), protože `disabled` fieldset sám o sobě nestačí —
+> emulovaný event (bUnit, syntetická událost) handler spustí, takže každá mutující metoda má vlastní
+> `if (ReadOnly) return;`.
 
 ### 3.3 Rozvržení a responzivita (`TmEditorShell` ze základu F6, rozhodnutí EM2(a)/EM3)
 
@@ -1055,6 +1097,8 @@ public enum EmailItemEditingMode { Inline, Dialog }
 | `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` / `Breakpoints` / `MobilePanelPresentation` | viz [3.3](#33-rozvržení-a-responzivita-tmeditorshell-ze-základu-f6-rozhodnutí-em2aem3) — mapované 1:1 na `TmEditorShell` | ne | 8 |
 | `ToolboxCollapsed` / `ToolboxCollapsedChanged` | `bool` + `EventCallback<bool>` | ne | 8 |
 | `ShowSaveStatus` | `[Parameter] public bool ShowSaveStatus { get; set; } = true;` | ne | 7 |
+| `ReadOnly` (aditivní na sub-editorech) | `[Parameter] public bool ReadOnly { get; set; }` na `TmEmailTemplateToolbox`, `TmEmailTemplateCanvas`, `TmEmailPropertyPanel`, `TmEmailObjectFields`, `TmEmailListEditor`, `TmEmailKeyValueEditor`, `TmEmailTableEditor`, `TmEmailHtmlAttributesEditor`, `TmEmailClassesEditor`, `TmEmailVariablePicker` — každá mutující metoda má `if (ReadOnly) return;` vedle nativního `disabled` | ne (aditivní, default `false`) | 7 |
+| `ImageUpload` na `TmEmailPropertyPanel` | `[Parameter] public ImageUploadOptions? ImageUpload { get; set; }` (panel validuje **před** `OnImageUpload`) | ne (aditivní) | 7 |
 | `ImportOptions` | `[Parameter] public EmailImportOptions? ImportOptions { get; set; }` (editor + import dialog) | ne | 10 |
 | `JsonStringLocalizer<T>` | `public sealed class JsonStringLocalizer<TResourceSource> : IStringLocalizer<TResourceSource>` — embedded JSON tabulky (`{Marker}.json` + `{Marker}.{culture}.json`), registruje se jako CLOSED generic | ne (aditivní, nový typ; žádný existující člen se nemění) | 5 |
 | První doporučující pravidlo | `LayoutSeverity.Info` = preheader delší než 100 znaků (jedno pravidlo, `DocumentValidationKeys`) | ne (nové pravidlo) | 10 |
@@ -1155,6 +1199,7 @@ popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking ch
 | D23 | **Závažnost render diagnostiky (rozhodnutí uživatele 2026-10-20):** `public enum RenderErrorSeverity { Error = 0, Warning = 1 }`; `RenderError(Message, Line, Column, Key, Severity = Error)` — `Severity` je **poslední** volitelný parametr; `RenderResult.Success = Errors.All(e => e.Severity != Error)`, nově `RenderResult.HasWarnings = Errors.Any(e => e.Severity == Warning)`. Blokovaná URL i odstraněný event handler = **Warning** (HTML je kompletní, `Success` zůstává `true`), takže `POST /api/email-templates/{id}/send` na varování **neodpovídá 422** a náhled mapuje varování na `EmailPreviewStatus.Rendered` s HTML (ne `RenderFailed`). Breaking pro poziční dekonstrukci `RenderError` a binárně (CHANGELOG). |
 | D24 | **Cizí `ITemplateEngine` (rozhodnutí uživatele 2026-10-20):** `EmailTemplateRenderer` s enginem, který není `IEscapingTemplateEngine`, **nevyhazuje** — v konstruktoru jednou zaloguje warning „A custom ITemplateEngine cannot guarantee per-pass HTML escaping; the host is responsible for escaping.“ a použije fallback (`ITemplateEngine.Render`). Per-pass escapování je vlastnost Tempo enginu (`ScribanTemplateEngine`); dokumentováno v XML doc, `TEMPLATE_SYNTAX.md` a CHANGELOG. |
 
+| D26 | **`Conflict` pauza padá i po `Shortcut` uložení (rozhodnutí uživatele 2026-10-22):** po `Conflict` se autosave pozastaví do **úspěšného ne-autosave uložení** — `Manual`, `Shortcut` (Ctrl/⌘+S) i `Programmatic` (`SaveAsync()`), nebo do předání nové reference `Document`. Zdůvodnění: `Ctrl+S` je pro uživatele stejně explicitní zápis jako tlačítko Uložit; když hostitel potvrdí `Saved`, uživatel právě dokázal, že šablona lze znovu zapsat, a držet autosave dál pauznutý by znamenalo, že se další úpravy tiše neukládají. Implementace: `if (trigger is not EmailSaveTrigger.AutoSave) _autoSavePaused = false;` v `Record`, test „Conflict → Ctrl+S Saved → autosave běží". |
 | D25 | **`JsonStringLocalizer<T>` zůstává `public sealed` v `Tempo.Blazor.EmailTemplates.Abstractions.Localization`** (potvrzeno uživatelem 2026-10-20). Necpi ho jako `internal` s `InternalsVisibleTo` do UI balíčku: IVT je vázané na silné jméno **a přesnou verzi** sestavení, takže každý bump verze by tiše rozbil lokalizaci editoru (stejný důvod, proč F6 pinuje Engine na `[2.10.0]`). Veřejný typ je aditivní API (B6) a hostitel ho může použít i pro vlastní markery; registruje ho `AddTempoEmailTemplateModel` (po Fázi 6) vedle validátorů a `AddTempoEmailTemplates` pro editor. |
 
 ### 5.3 Dříve otevřené volby (uzavřeno rozhodnutími D21/D22)

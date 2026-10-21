@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates",
+  "description": "Client-side validation the editor applies to a picked image before it hands the file to OnImageUpload, so a host never pays for an upload it would reject. A rejected file leaves the block's Src untouched and shows a localized error in the property panel.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/ImageUploadOptions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Accept",
+      "kind": "Property",
+      "type": "string",
+      "description": "Gets or sets the accepted MIME types, comma separated, with optional * wildcards (the accept attribute syntax). Defaults to image/*."
+    },
+    {
+      "name": "MaxBytes",
+      "kind": "Property",
+      "type": "long",
+      "description": "Gets or sets the largest accepted file size in bytes. Defaults to 5 MB — the same bound the template import uses."
+    }
+  ],
+  "itemName": "ImageUploadOptions"
+}

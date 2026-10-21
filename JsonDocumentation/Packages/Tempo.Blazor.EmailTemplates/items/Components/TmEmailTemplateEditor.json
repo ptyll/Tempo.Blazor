@@ -2,26 +2,26 @@
   "itemName": "TmEmailTemplateEditor",
   "kind": "Component",
   "category": "Components",
-  "description": "Top-level MJML email template editor. Combines a toolbar (undo/redo, preview, validate, import, export, save with autosave status) with a three-pane layout: a block toolbox, a drag-and-drop canvas, and a property panel for the selected element.",
-  "packageId": "Tempo.Blazor.EmailTemplates",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "Top-level MJML email template editor. Combines a task-grouped command bar (history, review, file, help, host slots, save-status badge and save) with a three-pane layout: a block toolbox, a drag-and-drop canvas and a property panel for the selected element. The host reports every save outcome through OnSave and the editor owns the dirty state (IsDirty/IsDirtyChanged), IsSaving, ReadOnly and the single-flight save queue; SaveAsync() is public for a TmNavigationGuard.OnSaveAndLeave wiring.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateEditor.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
   "parameters": [
     {
-      "name": "Document",
-      "type": "EmailTemplateDocument?",
-      "isRequired": false,
-      "description": "Gets or sets the edited document. Two-way bindable via DocumentChanged."
-    },
-    {
       "name": "AutoSave",
       "type": "AutoSaveOptions?",
       "isRequired": false,
       "description": "Auto-save configuration; when enabled, edits are saved after a debounce interval."
+    },
+    {
+      "name": "Document",
+      "type": "EmailTemplateDocument?",
+      "isRequired": false,
+      "description": "Gets or sets the edited document. Two-way bindable via DocumentChanged."
     },
     {
       "name": "DocumentChanged",
@@ -30,10 +30,22 @@
       "description": "Raised when the document changes (for @bind-Document)."
     },
     {
-      "name": "OnAutoSave",
-      "type": "EventCallback<EmailTemplateDocument>",
+      "name": "FooterActions",
+      "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Raised by auto-save with the current document."
+      "description": "Optional host actions rendered at the end of the preview dialog footer — for example \"Send test email\". The editor never sends anything itself; the host owns that action and its result."
+    },
+    {
+      "name": "ImageUpload",
+      "type": "ImageUploadOptions?",
+      "isRequired": false,
+      "description": "Client-side limits (Accept, MaxBytes) applied to a picked image before OnImageUpload is called. null uses the defaults (5 MB, images only)."
+    },
+    {
+      "name": "IsDirtyChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when IsDirty changes — only on a transition, never on initialization and never for an edit that keeps the document dirty."
     },
     {
       "name": "OnImageUpload",
@@ -43,9 +55,29 @@
     },
     {
       "name": "OnSave",
-      "type": "EventCallback<EmailTemplateDocument>",
+      "type": "Func<EmailSaveRequest, Task<EmailSaveResult>>?",
       "isRequired": false,
       "description": "Raised when the user requests a save."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables every editing path (toolbox, canvas drag&drop and inline actions, inspector inputs, import, undo/redo and the shortcuts that mutate the document) while keeping preview, validation and export available. SaveAsync returns a failed result without calling the host. The component never changes this value itself."
+    },
+    {
+      "name": "ShowSaveButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the Save button is rendered. Defaults to true."
+    },
+    {
+      "name": "ShowSaveStatus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the save-status badge is rendered. Defaults to true; the badge announces unsaved changes, the in-flight save, the relative time of the last confirmed save, a failure with the host's message and a conflict."
     },
     {
       "name": "TimeProvider",
@@ -55,16 +87,23 @@
       "description": "Clock used for auto-save debouncing (overridable in tests)."
     },
     {
+      "name": "ToolbarEnd",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional host actions rendered at the end of the command bar, before the save chrome."
+    },
+    {
+      "name": "ToolbarStart",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional host actions rendered at the start of the command bar (back, title, …)."
+    },
+    {
       "name": "Variables",
       "type": "IReadOnlyList<TemplateVariableInfo>",
       "isRequired": false,
       "default": "Array.Empty<TemplateVariableInfo>()",
       "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
-    },
-    {
-      "name": "FooterActions",
-      "type": "RenderFragment?",
-      "description": "Optional host actions rendered at the end of the preview dialog footer — for example \"Send test email\". The editor never sends anything itself; the host owns that action and its result."
     }
   ]
 }

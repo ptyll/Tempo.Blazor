@@ -104391,6 +104391,7 @@
           "Tempo.Blazor.EmailTemplates.Abstractions",
           "Tempo.Blazor.EmailTemplates.Abstractions.Contracts",
           "Tempo.Blazor.EmailTemplates.Abstractions.Dtos",
+          "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
           "Tempo.Blazor.EmailTemplates.Abstractions.Import",
           "Tempo.Blazor.EmailTemplates.Abstractions.Layout",
           "Tempo.Blazor.EmailTemplates.Abstractions.Localization",
@@ -104995,6 +104996,124 @@
               "description": "Gets the email subject."
             }
           ]
+        },
+        {
+          "itemName": "EmailSaveRequest",
+          "kind": "Record",
+          "category": "Editing",
+          "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+          "description": "One save request. Document is a deep copy (snapshot) taken at request time, so the host may serialize or persist it asynchronously while the user keeps editing; Revision is the editor's monotonic document revision the snapshot was taken at.",
+          "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveRequest.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CancellationToken",
+              "kind": "Property",
+              "type": "CancellationToken",
+              "description": "Cancelled when the editor is disposed, so the host can abandon its own I/O. Pass it to your store/HTTP calls instead of ignoring it."
+            },
+            {
+              "name": "Document",
+              "kind": "Property",
+              "type": "EmailTemplateDocument",
+              "description": "The document snapshot to persist."
+            },
+            {
+              "name": "Revision",
+              "kind": "Property",
+              "type": "long",
+              "description": "The editor revision the snapshot was taken at."
+            },
+            {
+              "name": "Trigger",
+              "kind": "Property",
+              "type": "EmailSaveTrigger",
+              "description": "What asked for this save."
+            }
+          ]
+        },
+        {
+          "itemName": "EmailSaveResult",
+          "kind": "Class",
+          "category": "Editing",
+          "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+          "description": "The host's answer to one EmailSaveRequest. The editor only clears its dirty flag and shows \"Saved\" for Saved; a Failed keeps the document dirty, and a Conflict additionally pauses auto-save until a successful manual/programmatic save or a new document reference.",
+          "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveResult.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Conflict",
+              "kind": "Method",
+              "type": "EmailSaveResult",
+              "description": "Creates a conflict result (a stale revision) carrying the host's optional reason.",
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": "string?",
+                  "default": "null"
+                }
+              ]
+            },
+            {
+              "name": "Failed",
+              "kind": "Method",
+              "type": "EmailSaveResult",
+              "description": "Creates a failure result carrying the host's optional reason.",
+              "parameters": [
+                {
+                  "name": "message",
+                  "type": "string?",
+                  "default": "null"
+                }
+              ]
+            },
+            {
+              "name": "Saved",
+              "kind": "Method",
+              "type": "EmailSaveResult",
+              "description": "Creates the result that confirms the snapshot was persisted."
+            },
+            {
+              "name": "IsSaved",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Gets whether the host confirmed the write — the only state in which the editor may say \"Saved\"."
+            },
+            {
+              "name": "Message",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Gets the host's optional reason for a Failed or Conflict result. The host localizes it; the editor shows it verbatim next to its own localized status label."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "EmailSaveStatus",
+              "description": "Gets the reported outcome."
+            }
+          ]
+        },
+        {
+          "itemName": "EmailSaveStatus",
+          "kind": "Enum",
+          "category": "Editing",
+          "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+          "description": "The outcome a host reports for one save request.",
+          "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveStatus.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "EmailSaveTrigger",
+          "kind": "Enum",
+          "category": "Editing",
+          "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+          "description": "Why a save was requested.",
+          "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveTrigger.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "EmailTemplatesAbstractions",
@@ -109112,12 +109231,12 @@
         }
       ],
       "summary": {
-        "itemCount": 113,
-        "manualItemCount": 113,
-        "generatedItemCount": 113,
+        "itemCount": 117,
+        "manualItemCount": 117,
+        "generatedItemCount": 117,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 113
+        "publicApiTypeCount": 117
       }
     },
     {
@@ -109294,6 +109413,13 @@
               "isRequired": false,
               "description": "Raised after the class definitions change.",
               "editorRequired": true
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the named-class list read-only: the controls are disabled and every mutating method returns early.",
+              "default": "false"
             }
           ]
         },
@@ -109351,6 +109477,13 @@
               "isRequired": false,
               "description": "Raised after the selectors change.",
               "editorRequired": true
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the selector list read-only: the controls are disabled and every mutating method returns early.",
+              "default": "false"
             },
             {
               "name": "Selectors",
@@ -109420,6 +109553,13 @@
               "isRequired": false,
               "description": "Raised after the dictionary changes.",
               "editorRequired": true
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the rows read-only: the inputs and the remove/add controls are disabled and every mutating method returns early, so an emulated edit cannot rewrite the dictionary.",
+              "default": "false"
             }
           ]
         },
@@ -109462,6 +109602,13 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Raised after the list or any item changes."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the list read-only: the native controls are disabled and every mutating method returns early, so a host that emulates a click (bUnit, a synthetic event) still cannot change the document.",
+              "default": "false"
             }
           ]
         },
@@ -109500,6 +109647,12 @@
               "editorRequired": true
             },
             {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders every input disabled, so a read-only inspector shows the values but cannot edit them."
+            },
+            {
               "name": "Target",
               "type": "object",
               "isRequired": true,
@@ -109529,6 +109682,12 @@
               "editorRequired": true
             },
             {
+              "name": "ImageUpload",
+              "type": "ImageUploadOptions?",
+              "isRequired": false,
+              "description": "Client-side limits applied to a picked image before OnImageUpload runs; null uses the ImageUploadOptions defaults (5 MB, images only)."
+            },
+            {
               "name": "OnChanged",
               "type": "EventCallback",
               "isRequired": false,
@@ -109539,6 +109698,12 @@
               "type": "Func<IBrowserFile, Task<string>>?",
               "isRequired": false,
               "description": "Optional host upload handler: receives a picked file and returns the hosted image URL."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the inspector read-only: every control inside the panel is disabled natively and the upload affordance is hidden, so no property change can reach the document."
             },
             {
               "name": "SelectedId",
@@ -109582,6 +109747,13 @@
               "isRequired": false,
               "description": "Raised after the table changes.",
               "editorRequired": true
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the grid read-only: the native controls are disabled and every mutating method returns early, so a host that emulates a cell edit (bUnit, a synthetic event) cannot change the document.",
+              "default": "false"
             }
           ]
         },
@@ -109630,6 +109802,12 @@
               "description": "Raised when a block is dropped into a column at an index."
             },
             {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the canvas renders the document read-only: no inline block/section actions, no draggable blocks, no drop zones and no keyboard shortcut mutates the document (selection and navigation stay available so the inspector can still show what is selected)."
+            },
+            {
               "name": "SelectedId",
               "type": "Guid?",
               "isRequired": false,
@@ -109649,7 +109827,7 @@
           "kind": "Component",
           "category": "Components",
           "namespace": "Tempo.Blazor.EmailTemplates.Components",
-          "description": "Top-level MJML email template editor. Combines a toolbar (undo/redo, preview, validate, import, export, save with autosave status) with a three-pane layout: a block toolbox, a drag-and-drop canvas, and a property panel for the selected element.",
+          "description": "Top-level MJML email template editor. Combines a task-grouped command bar (history, review, file, help, host slots, save-status badge and save) with a three-pane layout: a block toolbox, a drag-and-drop canvas and a property panel for the selected element. The host reports every save outcome through OnSave and the editor owns the dirty state (IsDirty/IsDirtyChanged), IsSaving, ReadOnly and the single-flight save queue; SaveAsync() is public for a TmNavigationGuard.OnSaveAndLeave wiring.",
           "packageId": "Tempo.Blazor.EmailTemplates",
           "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateEditor.razor",
           "documentationStatus": "merged",
@@ -109682,10 +109860,16 @@
               "description": "Optional host actions rendered at the end of the preview dialog footer — for example \"Send test email\". The editor never sends anything itself; the host owns that action and its result."
             },
             {
-              "name": "OnAutoSave",
-              "type": "EventCallback<EmailTemplateDocument>",
+              "name": "ImageUpload",
+              "type": "ImageUploadOptions?",
               "isRequired": false,
-              "description": "Raised by auto-save with the current document."
+              "description": "Client-side limits (Accept, MaxBytes) applied to a picked image before OnImageUpload is called. null uses the defaults (5 MB, images only)."
+            },
+            {
+              "name": "IsDirtyChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when IsDirty changes — only on a transition, never on initialization and never for an edit that keeps the document dirty."
             },
             {
               "name": "OnImageUpload",
@@ -109695,9 +109879,29 @@
             },
             {
               "name": "OnSave",
-              "type": "EventCallback<EmailTemplateDocument>",
+              "type": "Func<EmailSaveRequest, Task<EmailSaveResult>>?",
               "isRequired": false,
               "description": "Raised when the user requests a save."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Disables every editing path (toolbox, canvas drag&drop and inline actions, inspector inputs, import, undo/redo and the shortcuts that mutate the document) while keeping preview, validation and export available. SaveAsync returns a failed result without calling the host. The component never changes this value itself."
+            },
+            {
+              "name": "ShowSaveButton",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the Save button is rendered. Defaults to true."
+            },
+            {
+              "name": "ShowSaveStatus",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the save-status badge is rendered. Defaults to true; the badge announces unsaved changes, the in-flight save, the relative time of the last confirmed save, a failure with the host's message and a conflict."
             },
             {
               "name": "TimeProvider",
@@ -109705,6 +109909,18 @@
               "isRequired": false,
               "default": "TimeProvider.System",
               "description": "Clock used for auto-save debouncing (overridable in tests)."
+            },
+            {
+              "name": "ToolbarEnd",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional host actions rendered at the end of the command bar, before the save chrome."
+            },
+            {
+              "name": "ToolbarStart",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional host actions rendered at the start of the command bar (back, title, …)."
             },
             {
               "name": "Variables",
@@ -109821,6 +110037,12 @@
               "type": "EventCallback<BlockDescriptor>",
               "isRequired": false,
               "description": "Raised when a block drag starts (for drag-and-drop onto the canvas)."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the tiles stay visible but inert: not draggable, aria-disabled, and neither a click nor a keyboard activation raises OnAddBlock/OnAddSection."
             }
           ]
         },
@@ -109871,6 +110093,13 @@
               "type": "EventCallback<string>",
               "isRequired": false,
               "description": "Raised with the {{ path }} token when a variable is chosen."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the picker read-only: inserting a variable edits the document, so the list is disabled and OnInsert is never called.",
+              "default": "false"
             },
             {
               "name": "Variables",
@@ -109938,6 +110167,30 @@
               "kind": "Property",
               "type": "System.Reflection.Assembly",
               "description": "Gets the assembly that contains the email template editor components."
+            }
+          ]
+        },
+        {
+          "itemName": "ImageUploadOptions",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.EmailTemplates",
+          "description": "Client-side validation the editor applies to a picked image before it hands the file to OnImageUpload, so a host never pays for an upload it would reject. A rejected file leaves the block's Src untouched and shows a localized error in the property panel.",
+          "packageId": "Tempo.Blazor.EmailTemplates",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates/ImageUploadOptions.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Accept",
+              "kind": "Property",
+              "type": "string",
+              "description": "Gets or sets the accepted MIME types, comma separated, with optional * wildcards (the accept attribute syntax). Defaults to image/*."
+            },
+            {
+              "name": "MaxBytes",
+              "kind": "Property",
+              "type": "long",
+              "description": "Gets or sets the largest accepted file size in bytes. Defaults to 5 MB — the same bound the template import uses."
             }
           ]
         },
@@ -110105,17 +110358,25 @@
       ],
       "assets": [
         {
+          "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/tm-email-save-shortcut.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/tm-email-variable-insert.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.EmailTemplates/wwwroot/__tests__/tm-email-save-shortcut.test.mjs",
           "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 28,
-        "manualItemCount": 28,
-        "generatedItemCount": 28,
+        "itemCount": 29,
+        "manualItemCount": 29,
+        "generatedItemCount": 29,
         "generatedOnlyItemCount": 0,
         "componentCount": 15,
-        "publicApiTypeCount": 13
+        "publicApiTypeCount": 14
       }
     },
     {
@@ -117699,10 +117960,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3260,
-    "manualItemCount": 3260,
+    "itemCount": 3265,
+    "manualItemCount": 3265,
     "generatedOnlyItemCount": 0,
     "componentCount": 475,
-    "publicApiTypeCount": 2732
+    "publicApiTypeCount": 2737
   }
 }

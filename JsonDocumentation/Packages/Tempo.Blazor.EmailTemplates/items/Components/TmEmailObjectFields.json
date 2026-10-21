@@ -2,22 +2,15 @@
   "itemName": "TmEmailObjectFields",
   "kind": "Component",
   "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "description": "Reflection-driven form that edits the scalar properties of a target model object. Named primary fields are shown first, with the remaining properties collapsed under an \"Advanced\" section, and any property can be excluded when handled elsewhere.",
   "packageId": "Tempo.Blazor.EmailTemplates",
-  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailObjectFields.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
   "parameters": [
-    {
-      "name": "Target",
-      "type": "object",
-      "isRequired": true,
-      "description": "The model object whose scalar properties are edited.",
-      "editorRequired": true
-    },
     {
       "name": "Exclude",
       "type": "IReadOnlyList<string>",
@@ -34,9 +27,22 @@
     {
       "name": "Primary",
       "type": "IReadOnlyList<string>",
-      "isRequired": true,
+      "isRequired": false,
       "default": "Array.Empty<string>()",
       "description": "Property names shown above the \"Advanced\" section, in order.",
+      "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders every input disabled, so a read-only inspector shows the values but cannot edit them."
+    },
+    {
+      "name": "Target",
+      "type": "object",
+      "isRequired": true,
+      "description": "The model object whose scalar properties are edited.",
       "editorRequired": true
     }
   ]

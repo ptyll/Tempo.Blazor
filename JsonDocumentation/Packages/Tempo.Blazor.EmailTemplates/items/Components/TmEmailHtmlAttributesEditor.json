@@ -6,7 +6,7 @@
   "packageId": "Tempo.Blazor.EmailTemplates",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailHtmlAttributesEditor.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -24,6 +24,13 @@
       "isRequired": true,
       "description": "Raised after the selectors change.",
       "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the selector list read-only: the controls are disabled and every mutating method returns early."
     }
   ]
 }

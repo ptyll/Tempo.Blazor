@@ -5,17 +5,17 @@
     {
         var row = _rows[i];
         <div class="tm-email-kv__row" data-tm-kv-row>
-            <TmTextInput Placeholder="@Loc["EmailEditor_KeyValue_Key"]" Value="@row.Key"
+            <TmTextInput Placeholder="@Loc["EmailEditor_KeyValue_Key"]" Value="@row.Key" Disabled="ReadOnly"
                          ValueChanged="v => UpdateKey(row, v)" />
-            <TmTextInput Placeholder="@Loc["EmailEditor_KeyValue_Value"]" Value="@row.Value"
+            <TmTextInput Placeholder="@Loc["EmailEditor_KeyValue_Value"]" Value="@row.Value" Disabled="ReadOnly"
                          ValueChanged="v => UpdateValue(row, v)" />
-            <button type="button" class="tm-email-kv__remove" data-tm-kv-remove
+            <button type="button" class="tm-email-kv__remove" data-tm-kv-remove disabled="@ReadOnly"
                     aria-label="@Loc["EmailEditor_Action_Delete"]" @onclick="() => RemoveAsync(row)">
                 <TmIcon Name="trash-2" Size="IconSize.Xs" />
             </button>
         </div>
     }
-    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="plus"
+    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="plus" Disabled="ReadOnly"
               data-tm-kv-add="true" OnClick="AddAsync">@Loc["EmailEditor_KeyValue_Add"]</TmButton>
 </div>
 
@@ -25,6 +25,12 @@
 
     /// <summary>Raised after the dictionary changes.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>
+    /// Renders the rows read-only: the inputs and the remove/add controls are disabled <b>and</b> every
+    /// mutating method returns early, so an emulated edit cannot rewrite the dictionary.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
 
     private readonly List<Row> _rows = new();
 
@@ -43,24 +49,28 @@
 
     private async Task AddAsync()
     {
+        if (ReadOnly) return;
         _rows.Add(new Row());
         await CommitAsync();
     }
 
     private async Task RemoveAsync(Row row)
     {
+        if (ReadOnly) return;
         _rows.Remove(row);
         await CommitAsync();
     }
 
     private async Task UpdateKey(Row row, string value)
     {
+        if (ReadOnly) return;
         row.Key = value;
         await CommitAsync();
     }
 
     private async Task UpdateValue(Row row, string value)
     {
+        if (ReadOnly) return;
         row.Value = value;
         await CommitAsync();
     }

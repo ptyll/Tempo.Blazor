@@ -8,10 +8,10 @@
                 var row = Block.Rows[r];
                 <tr data-tm-table-row>
                     <td class="tm-email-table-editor__rowctl">
-                        <TmToggle Value="row.IsHeader" Label="@Loc["EmailEditor_Table_HeaderRow"]"
-                                  ValueChanged="@(v => { row.IsHeader = v; return OnChanged.InvokeAsync(); })" />
+                        <TmToggle Value="row.IsHeader" Label="@Loc["EmailEditor_Table_HeaderRow"]" Disabled="ReadOnly"
+                                  ValueChanged="@(v => SetAsync(() => row.IsHeader = v))" />
                         <button type="button" data-tm-table-row-remove aria-label="@Loc["EmailEditor_Action_Delete"]"
-                                @onclick="() => RemoveRowAsync(row)">
+                                disabled="@ReadOnly" @onclick="() => RemoveRowAsync(row)">
                             <TmIcon Name="trash-2" Size="IconSize.Xs" />
                         </button>
                     </td>
@@ -19,8 +19,8 @@
                     {
                         var c = cell;
                         <td data-tm-table-cell>
-                            <TmTextInput Value="@c.Text"
-                                         ValueChanged="@(v => { c.Text = v; return OnChanged.InvokeAsync(); })" />
+                            <TmTextInput Value="@c.Text" Disabled="ReadOnly"
+                                         ValueChanged="@(v => SetAsync(() => c.Text = v))" />
                         </td>
                     }
                 </tr>
@@ -28,11 +28,11 @@
         </tbody>
     </table>
     <div class="tm-email-table-editor__actions">
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus"
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
                   data-tm-table-add-row="true" OnClick="AddRowAsync">@Loc["EmailEditor_Table_AddRow"]</TmButton>
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus"
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
                   data-tm-table-add-col="true" OnClick="AddColumnAsync">@Loc["EmailEditor_Table_AddColumn"]</TmButton>
-        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="minus"
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="minus" Disabled="ReadOnly"
                   data-tm-table-remove-col="true" OnClick="RemoveColumnAsync">@Loc["EmailEditor_Table_RemoveColumn"]</TmButton>
     </div>
 </div>
@@ -44,10 +44,25 @@
     /// <summary>Raised after the table changes.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
+    /// <summary>
+    /// Renders the grid read-only: the native controls are disabled <b>and</b> every mutating method returns
+    /// early, so a host that emulates a cell edit (bUnit, a synthetic event) cannot change the document.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Applies one cell mutation unless the grid is read-only, then reports the change.</summary>
+    private Task SetAsync(Action apply)
+    {
+        if (ReadOnly) return Task.CompletedTask;
+        apply();
+        return OnChanged.InvokeAsync();
+    }
+
     private int ColumnCount => Block.Rows.Count == 0 ? 1 : Block.Rows.Max(r => r.Cells.Count);
 
     private async Task AddRowAsync()
     {
+        if (ReadOnly) return;
         var columns = Math.Max(1, ColumnCount);
         var row = new EmailTableRow();
         for (var i = 0; i < columns; i++) row.Cells.Add(new EmailTableCell());
@@ -57,12 +72,14 @@
 
     private async Task RemoveRowAsync(EmailTableRow row)
     {
+        if (ReadOnly) return;
         Block.Rows.Remove(row);
         await OnChanged.InvokeAsync();
     }
 
     private async Task AddColumnAsync()
     {
+        if (ReadOnly) return;
         if (Block.Rows.Count == 0) Block.Rows.Add(new EmailTableRow());
         foreach (var row in Block.Rows) row.Cells.Add(new EmailTableCell());
         await OnChanged.InvokeAsync();
@@ -70,6 +87,7 @@
 
     private async Task RemoveColumnAsync()
     {
+        if (ReadOnly) return;
         foreach (var row in Block.Rows.Where(r => r.Cells.Count > 0)) row.Cells.RemoveAt(row.Cells.Count - 1);
         await OnChanged.InvokeAsync();
     }

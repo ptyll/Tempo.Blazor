@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Editing",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+  "description": "Why a save was requested.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveTrigger.cs",
+  "documentationStatus": "generated",
+  "itemName": "EmailSaveTrigger"
+}

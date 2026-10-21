@@ -30,6 +30,9 @@
     /// <summary>Raised after any field changes.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
+    /// <summary>Renders every input disabled, so a read-only inspector shows the values but cannot edit them.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     private List<PropertyField> _primary = new();
     private List<PropertyField> _advanced = new();
 
@@ -57,33 +60,37 @@
             case PropertyFieldKind.Text:
                 builder.OpenComponent<TmTextInput>(10);
                 builder.AddComponentParameter(11, nameof(TmTextInput.Label), label);
+                builder.AddComponentParameter(14, nameof(TmTextInput.Disabled), ReadOnly);
                 builder.AddComponentParameter(12, nameof(TmTextInput.Value), field.GetText());
                 builder.AddComponentParameter(13, nameof(TmTextInput.ValueChanged),
-                    EventCallback.Factory.Create<string>(this, async v => { field.SetText(v); await OnChanged.InvokeAsync(); }));
+                    EventCallback.Factory.Create<string>(this, async v => { if (ReadOnly) return; field.SetText(v); await OnChanged.InvokeAsync(); }));
                 builder.CloseComponent();
                 break;
             case PropertyFieldKind.MultilineText:
                 builder.OpenComponent<TmTextArea>(20);
                 builder.AddComponentParameter(21, nameof(TmTextArea.Label), label);
+                builder.AddComponentParameter(24, nameof(TmTextArea.Disabled), ReadOnly);
                 builder.AddComponentParameter(22, nameof(TmTextArea.Value), field.GetText());
                 builder.AddComponentParameter(23, nameof(TmTextArea.ValueChanged),
-                    EventCallback.Factory.Create<string>(this, async v => { field.SetText(v); await OnChanged.InvokeAsync(); }));
+                    EventCallback.Factory.Create<string>(this, async v => { if (ReadOnly) return; field.SetText(v); await OnChanged.InvokeAsync(); }));
                 builder.CloseComponent();
                 break;
             case PropertyFieldKind.Bool:
                 builder.OpenComponent<TmToggle>(30);
                 builder.AddComponentParameter(31, nameof(TmToggle.Label), label);
+                builder.AddComponentParameter(34, nameof(TmToggle.Disabled), ReadOnly);
                 builder.AddComponentParameter(32, nameof(TmToggle.Value), field.GetBool());
                 builder.AddComponentParameter(33, nameof(TmToggle.ValueChanged),
-                    EventCallback.Factory.Create<bool>(this, async v => { field.SetBool(v); await OnChanged.InvokeAsync(); }));
+                    EventCallback.Factory.Create<bool>(this, async v => { if (ReadOnly) return; field.SetBool(v); await OnChanged.InvokeAsync(); }));
                 builder.CloseComponent();
                 break;
             case PropertyFieldKind.Number:
                 builder.OpenComponent<TmNumberInput>(40);
                 builder.AddComponentParameter(41, nameof(TmNumberInput.Label), label);
+                builder.AddComponentParameter(44, nameof(TmNumberInput.Disabled), ReadOnly);
                 builder.AddComponentParameter(42, nameof(TmNumberInput.Value), field.GetNumber());
                 builder.AddComponentParameter(43, nameof(TmNumberInput.ValueChanged),
-                    EventCallback.Factory.Create<int?>(this, async v => { field.SetNumber(v); await OnChanged.InvokeAsync(); }));
+                    EventCallback.Factory.Create<int?>(this, async v => { if (ReadOnly) return; field.SetNumber(v); await OnChanged.InvokeAsync(); }));
                 builder.CloseComponent();
                 break;
         }

@@ -38,6 +38,7 @@
       "Tempo.Blazor.EmailTemplates.Abstractions",
       "Tempo.Blazor.EmailTemplates.Abstractions.Contracts",
       "Tempo.Blazor.EmailTemplates.Abstractions.Dtos",
+      "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
       "Tempo.Blazor.EmailTemplates.Abstractions.Import",
       "Tempo.Blazor.EmailTemplates.Abstractions.Layout",
       "Tempo.Blazor.EmailTemplates.Abstractions.Localization",
@@ -642,6 +643,124 @@
           "description": "Gets the email subject."
         }
       ]
+    },
+    {
+      "itemName": "EmailSaveRequest",
+      "kind": "Record",
+      "category": "Editing",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+      "description": "One save request. Document is a deep copy (snapshot) taken at request time, so the host may serialize or persist it asynchronously while the user keeps editing; Revision is the editor's monotonic document revision the snapshot was taken at.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveRequest.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CancellationToken",
+          "kind": "Property",
+          "type": "CancellationToken",
+          "description": "Cancelled when the editor is disposed, so the host can abandon its own I/O. Pass it to your store/HTTP calls instead of ignoring it."
+        },
+        {
+          "name": "Document",
+          "kind": "Property",
+          "type": "EmailTemplateDocument",
+          "description": "The document snapshot to persist."
+        },
+        {
+          "name": "Revision",
+          "kind": "Property",
+          "type": "long",
+          "description": "The editor revision the snapshot was taken at."
+        },
+        {
+          "name": "Trigger",
+          "kind": "Property",
+          "type": "EmailSaveTrigger",
+          "description": "What asked for this save."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailSaveResult",
+      "kind": "Class",
+      "category": "Editing",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+      "description": "The host's answer to one EmailSaveRequest. The editor only clears its dirty flag and shows \"Saved\" for Saved; a Failed keeps the document dirty, and a Conflict additionally pauses auto-save until a successful manual/programmatic save or a new document reference.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Conflict",
+          "kind": "Method",
+          "type": "EmailSaveResult",
+          "description": "Creates a conflict result (a stale revision) carrying the host's optional reason.",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Failed",
+          "kind": "Method",
+          "type": "EmailSaveResult",
+          "description": "Creates a failure result carrying the host's optional reason.",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "string?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Saved",
+          "kind": "Method",
+          "type": "EmailSaveResult",
+          "description": "Creates the result that confirms the snapshot was persisted."
+        },
+        {
+          "name": "IsSaved",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether the host confirmed the write — the only state in which the editor may say \"Saved\"."
+        },
+        {
+          "name": "Message",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Gets the host's optional reason for a Failed or Conflict result. The host localizes it; the editor shows it verbatim next to its own localized status label."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "EmailSaveStatus",
+          "description": "Gets the reported outcome."
+        }
+      ]
+    },
+    {
+      "itemName": "EmailSaveStatus",
+      "kind": "Enum",
+      "category": "Editing",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+      "description": "The outcome a host reports for one save request.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveStatus.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "EmailSaveTrigger",
+      "kind": "Enum",
+      "category": "Editing",
+      "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+      "description": "Why a save was requested.",
+      "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveTrigger.cs",
+      "documentationStatus": "merged"
     },
     {
       "itemName": "EmailTemplatesAbstractions",
@@ -4759,11 +4878,11 @@
     }
   ],
   "summary": {
-    "itemCount": 113,
-    "manualItemCount": 113,
-    "generatedItemCount": 113,
+    "itemCount": 117,
+    "manualItemCount": 117,
+    "generatedItemCount": 117,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 113
+    "publicApiTypeCount": 117
   }
 }

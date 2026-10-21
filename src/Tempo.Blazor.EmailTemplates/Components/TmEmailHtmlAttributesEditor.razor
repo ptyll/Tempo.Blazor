@@ -6,17 +6,17 @@
         var selector = Selectors[i];
         <div class="tm-email-html-attrs__selector" data-tm-html-selector>
             <div class="tm-email-html-attrs__selector-head">
-                <TmTextInput Placeholder="@Loc["EmailEditor_HtmlAttr_Path"]" Value="@selector.Path"
-                             ValueChanged="@(v => { selector.Path = v; return OnChanged.InvokeAsync(); })" />
+                <TmTextInput Placeholder="@Loc["EmailEditor_HtmlAttr_Path"]" Value="@selector.Path" Disabled="ReadOnly"
+                             ValueChanged="@(v => SetPathAsync(selector, v))" />
                 <button type="button" data-tm-html-selector-remove aria-label="@Loc["EmailEditor_Action_Delete"]"
-                        @onclick="() => RemoveAsync(selector)">
+                        disabled="@ReadOnly" @onclick="() => RemoveAsync(selector)">
                     <TmIcon Name="trash-2" Size="IconSize.Xs" />
                 </button>
             </div>
-            <TmEmailKeyValueEditor Items="selector.Attributes" OnChanged="OnChanged" />
+            <TmEmailKeyValueEditor Items="selector.Attributes" OnChanged="OnChanged" ReadOnly="ReadOnly" />
         </div>
     }
-    <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus"
+    <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
               data-tm-html-add="true" OnClick="AddAsync">@Loc["EmailEditor_HtmlAttr_Add"]</TmButton>
 </div>
 
@@ -27,14 +27,26 @@
     /// <summary>Raised after the selectors change.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
+    /// <summary>Renders the selector list read-only (disabled controls plus early returns in every mutator).</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    private Task SetPathAsync(MjHtmlSelector selector, string path)
+    {
+        if (ReadOnly) return Task.CompletedTask;
+        selector.Path = path;
+        return OnChanged.InvokeAsync();
+    }
+
     private async Task AddAsync()
     {
+        if (ReadOnly) return;
         Selectors.Add(new MjHtmlSelector());
         await OnChanged.InvokeAsync();
     }
 
     private async Task RemoveAsync(MjHtmlSelector selector)
     {
+        if (ReadOnly) return;
         Selectors.Remove(selector);
         await OnChanged.InvokeAsync();
     }

@@ -9,6 +9,7 @@
     "build:document-editor": "node scripts/build-document-editor.mjs",
     "check:document-editor-bundle": "node scripts/build-document-editor.mjs --check",
     "test:reporting-modules": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Reporting/wwwroot/js/reporting",
+    "test:email-templates": "node scripts/run-node-tests.mjs src/Tempo.Blazor.EmailTemplates/wwwroot",
     "test:overlay": "node scripts/run-node-tests.mjs src/Tempo.Blazor/wwwroot/js",
     "test:diagram-editor": "node scripts/run-node-tests.mjs src/Tempo.Blazor.DiagramEditor/wwwroot/js",
     "test:document-editor": "node scripts/run-node-tests.mjs src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas scripts",

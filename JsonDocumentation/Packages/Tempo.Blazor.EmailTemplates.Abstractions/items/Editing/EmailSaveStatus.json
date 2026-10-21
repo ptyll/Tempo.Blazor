@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Editing",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Editing",
+  "description": "The outcome a host reports for one save request.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Editing/EmailSaveStatus.cs",
+  "documentationStatus": "generated",
+  "itemName": "EmailSaveStatus"
+}

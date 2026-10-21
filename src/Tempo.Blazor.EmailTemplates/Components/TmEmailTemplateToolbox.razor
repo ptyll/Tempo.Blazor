@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
 @inject IBlockRegistry Registry
 
-<div class="tm-email-toolbox" data-tm-toolbox-list>
+<div class="tm-email-toolbox" data-tm-toolbox-list data-tm-readonly="@(ReadOnly ? "true" : "false")">
     @foreach (var group in Registry.GetAll().GroupBy(d => d.Category))
     {
         <div class="tm-email-toolbox__group">
@@ -9,12 +9,17 @@
             <div class="tm-email-toolbox__items">
                 @foreach (var descriptor in group)
                 {
+                    @* ReadOnly (A8/D9 in the diagram editor): the palette stays visible and readable
+                       but every tile is inert — not draggable, aria-disabled and guarded, so no click
+                       or key can insert a block. *@
                     <button type="button"
                             class="tm-email-toolbox__item"
                             data-tm-block="@descriptor.Id"
-                            draggable="true"
-                            @ondragstart="() => OnDragBlockStart.InvokeAsync(descriptor)"
-                            @onclick="() => OnAddBlock.InvokeAsync(descriptor)">
+                            draggable="@DraggableAttr"
+                            disabled="@ReadOnly"
+                            aria-disabled="@(ReadOnly ? "true" : null)"
+                            @ondragstart="() => StartDragAsync(descriptor)"
+                            @onclick="() => AddBlockAsync(descriptor)">
                         <TmIcon Name="@descriptor.Icon" Size="IconSize.Sm" />
                         <span>@Loc[descriptor.NameKey]</span>
                     </button>
@@ -31,7 +36,9 @@
                 <button type="button"
                         class="tm-email-toolbox__item tm-email-toolbox__item--layout"
                         data-tm-preset="@preset.Preset"
-                        @onclick="() => OnAddSection.InvokeAsync(preset.Preset)">
+                        disabled="@ReadOnly"
+                        aria-disabled="@(ReadOnly ? "true" : null)"
+                        @onclick="() => AddSectionAsync(preset.Preset)">
                     <span class="tm-email-toolbox__layout-preview">
                         @foreach (var width in preset.Widths)
                         {
@@ -54,4 +61,23 @@
 
     /// <summary>Raised when a layout preset is chosen to add as a new section.</summary>
     [Parameter] public EventCallback<LayoutPreset> OnAddSection { get; set; }
+
+    /// <summary>
+    /// When true the tiles stay visible but inert: not draggable, <c>aria-disabled</c>, and neither a click
+    /// nor a keyboard activation raises <see cref="OnAddBlock"/>/<see cref="OnAddSection"/>.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    // A read-only tile must not advertise a drag affordance at all (draggable="false" is what the
+    // browser and the accessibility tree read).
+    private string? DraggableAttr => ReadOnly ? null : "true";
+
+    private Task AddBlockAsync(BlockDescriptor descriptor)
+        => ReadOnly ? Task.CompletedTask : OnAddBlock.InvokeAsync(descriptor);
+
+    private Task AddSectionAsync(LayoutPreset preset)
+        => ReadOnly ? Task.CompletedTask : OnAddSection.InvokeAsync(preset);
+
+    private Task StartDragAsync(BlockDescriptor descriptor)
+        => ReadOnly ? Task.CompletedTask : OnDragBlockStart.InvokeAsync(descriptor);
 }

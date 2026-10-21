@@ -41,6 +41,9 @@ jobs:
       - name: Reporting modules
         run: npm run test:reporting-modules
 
+      - name: Email templates (Ctrl/⌘+S chord helper)
+        run: npm run test:email-templates
+
       - name: Document editor
         run: npm run test:document-editor
 

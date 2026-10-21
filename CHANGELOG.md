@@ -312,6 +312,91 @@
   the engine is registered. `EmailDocumentVariableExtractor.Extract(document, ITemplateVariableExtractor)`
   is the new overload; the existing `Extract(document)` keeps the baseline behaviour.
 
+- **Editor save contract: the host reports the outcome, the editor owns `IsDirty`/`IsSaving` (§3.2,
+  D1/D2/D16).** `TmEmailTemplateEditor` asks the host through `OnSave` with an `EmailSaveRequest`
+  (deep-copy `Document` snapshot, `Trigger` = `Manual` | `Shortcut` | `AutoSave` | `Programmatic`, the
+  editor `Revision` the snapshot was taken at, and a `CancellationToken` cancelled when the editor is
+  disposed) and shows **exactly** what the host answered: `EmailSaveResult.Saved()` clears the dirty flag
+  and the badge says "Saved <relative time>", `Failed(message)` keeps the document dirty and shows the
+  host's reason, `Conflict(message)` does the same **and pauses auto-save** until a successful
+  **non-auto-save** save (`Manual`, `Shortcut` or `Programmatic` — `Ctrl/⌘+S` lifts the pause too) or a
+  fresh `Document` instance. An exception from the handler is a failed save
+  plus a log entry — never a crash and never "Saved". `IsDirty`/`IsDirtyChanged` (only fires on a
+  transition), `IsSaving`, and the public `SaveAsync()` (wire it into
+  `TmNavigationGuard.OnSaveAndLeave`) complete the host surface. Saving is **single-flight**: at most one
+  host request runs, the Save button stays focusable (it announces `aria-disabled` instead of a native
+  `disabled`, which would drop a keyboard user's focus; the click is merged), and a trigger accepted
+  mid-flight merges into exactly one follow-up save (only while the document is still dirty) whose result
+  answers the merged caller. An outcome that arrives after the host replaced `Document` answers only its
+  caller — it never clears the new document's dirty flag or repaints its badge.
+
+  ```razor
+  <TmEmailTemplateEditor @ref="_editor" @bind-Document="_document" OnSave="SaveAsync"
+                         IsDirtyChanged="d => _dirty = d" />
+
+  @* the host mirrors IsDirtyChanged; reading _editor.IsDirty in markup would be stale at guard time *@
+  <TmNavigationGuard IsDirty="_dirty"
+                     OnSaveAndLeave="@(async () => _editor is not null && (await _editor.SaveAsync()).IsSaved)" />
+
+  @code {
+      async Task<EmailSaveResult> SaveAsync(EmailSaveRequest request)
+      {
+          try
+          {
+              // a 409 means a newer revision exists — the host owns the ETag/revision
+              await Api.SaveAsync(request.Document, request.Revision, request.CancellationToken);
+              return EmailSaveResult.Saved();
+          }
+          catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+          {
+              return EmailSaveResult.Conflict("Someone else saved a newer revision.");
+          }
+          catch (Exception ex)
+          {
+              return EmailSaveResult.Failed(ex.Message);
+          }
+      }
+  }
+  ```
+
+- **Save-status badge, grouped command bar, host toolbar slots and `ReadOnly` (`TmEmailTemplateEditor`).**
+  `ShowSaveStatus` (default `true`) renders a badge with an icon for "Unsaved changes", "Saving…",
+  "Saved <relative time>" (refreshed every minute from `TimeProvider`, the phrase from the core
+  `ITmRelativeTimeFormatter`, so the plural form is the language's own), "Save failed" and
+  "Version conflict" (the last two coloured through the status tokens and told apart from "Unsaved
+  changes" by a stronger border and an alert-triangle icon), coloured through the status tokens.
+  `ShowSaveButton` (default `true`) switches the Save button off, `ToolbarStart`
+  and `ToolbarEnd` are `RenderFragment` slots for the host's own actions (back, title, "Send test email"),
+  and the bar itself is grouped by task — History (Undo/Redo, which spell their labels out at a container
+  width ≥ 1200 px and stay icon + `aria-label` below that) | Review (Preview, Validate) | File (Import,
+  Export) | Help; every action carries `aria-keyshortcuts` and a `title`.
+  A failed or conflicted save also renders a full-width `TmAlert` under the command bar
+  (`[data-tm-save-alert]`, `role="alert"`) with the host's complete message, a localized hint and a
+  "Try again" action (`[data-tm-save-retry]`, a `Manual` save) — the pill badge stays short and truncates
+  with its text in `title`; the badge itself is **no longer a live region**: one visually hidden
+  `role="status"`/`aria-live="polite"` announcer (`[data-tm-save-announcer]`) speaks a confirmed
+  manual/shortcut/programmatic save and stays silent for auto-save, "Saving…" and the minute tick
+  (Failed/Conflict are announced by the alert, so nothing is announced twice).
+  `ReadOnly` disables **every** editing path — the toolbox tiles, canvas drag & drop and
+  inline block/section actions, the inspector's controls (a native `disabled` fieldset **and** a per-method
+  `if (ReadOnly) return;` in every sub-editor, because a disabled control still delivers a synthesised
+  change), import, undo/redo and the document-mutating shortcuts — while preview, validation and export
+  keep working; the save chrome is replaced by a read-only badge with a lock icon
+  (`[data-tm-readonly-badge]`), no Save button is rendered and unsaved changes stay as secondary text.
+  `SaveAsync()` answers `Failed` without calling the host. The component never changes the flag itself, and
+  `Ctrl+S` / `Cmd+S` save through `OnSave` with `Trigger = Shortcut` (the browser's own "save page" default
+  is cancelled for that chord only, by the package's `tm-email-save-shortcut.js` module, which guards each
+  editor element separately so two editors on one page do not disarm each other). New keys in all
+  four tables (`TmEmailResources{,.cs,.sk,.fr}.json`): the five save states, the retry action, the
+  conflict/failure hints, the read-only badge, the save tooltip, the shortcut categories and the
+  image-upload errors (`EmailEditor_Relative_*` was removed — the core formatter supplies the phrase).
+
+- **`ImageUploadOptions` — client-side limits checked before the host's upload handler
+  (`TmEmailTemplateEditor.ImageUpload`, `TmEmailPropertyPanel.ImageUpload`).** `Accept` (the `accept`
+  attribute syntax, default `image/*`) and `MaxBytes` (default 5 MB) are validated **before**
+  `OnImageUpload` runs; a rejected file, a handler exception and an empty URL all produce a localized error
+  in the panel and leave the block's `Src` untouched.
+
 ### Fixed
 
 - **Every key the packages hand to the localizer now resolves (en / cs / sk / fr) — previously the bare
@@ -366,6 +451,71 @@
   options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
 
 ### Breaking / Migration
+
+- **`TmEmailTemplateEditor.OnSave` is a `Func<EmailSaveRequest, Task<EmailSaveResult>>?` and `OnAutoSave` is
+  gone (B1).** The old `EventCallback<EmailTemplateDocument> OnSave` could not report an outcome, so the
+  editor was free to look successful while the host had failed; auto-save had a second, separate callback
+  with the same blind spot. There is now **one** handler that always answers, and the dirty state, the
+  status badge and the `IsDirty` guard all derive from that answer.
+
+  ```razor
+  @* before — two callbacks, no outcome, "Saved" was the editor's own guess *@
+  <TmEmailTemplateEditor @bind-Document="document"
+                         OnSave="SaveAsync"            @* EventCallback<EmailTemplateDocument> *@
+                         AutoSave="autoSave"
+                         OnAutoSave="SaveAsync" />     @* EventCallback<EmailTemplateDocument> *@
+
+  @code {
+      async Task SaveAsync(EmailTemplateDocument document)
+      {
+          await Api.UpdateAsync(Id, ToRequest(document));   // a failure shows up nowhere
+      }
+  }
+  ```
+
+  ```razor
+  @* after — one handler that returns what really happened *@
+  <TmEmailTemplateEditor @ref="editor" @bind-Document="document"
+                         OnSave="SaveAsync"
+                         AutoSave="autoSave"
+                         IsDirtyChanged="d => dirty = d" />
+
+  @code {
+      TmEmailTemplateEditor editor = default!;
+
+      async Task<EmailSaveResult> SaveAsync(EmailSaveRequest request)
+      {
+          // request.Trigger tells Manual / Shortcut / AutoSave / Programmatic apart,
+          // request.Revision is the editor revision the snapshot was taken at,
+          // request.CancellationToken is cancelled when the editor is disposed.
+          try
+          {
+              await Api.UpdateAsync(Id, ToRequest(request.Document), request.CancellationToken);
+              return EmailSaveResult.Saved();
+          }
+          catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+          {
+              return EmailSaveResult.Conflict("Someone else saved a newer revision.");
+          }
+          catch (Exception ex)
+          {
+              return EmailSaveResult.Failed(ex.Message);
+          }
+      }
+  }
+  ```
+
+  Migration checklist: (1) change the handler's signature to
+  `Task<EmailSaveResult> Handler(EmailSaveRequest request)` and read the document from
+  `request.Document`; (2) delete the `OnAutoSave` handler — auto-save now calls the same `OnSave` with
+  `Trigger = AutoSave`; (3) return `Saved()` / `Failed(message)` / `Conflict(message)` instead of silently
+  completing or throwing; (4) if you drove the editor from outside, call `SaveAsync()` (it used to be a
+  private method) and read `.IsSaved` for a leave-guard. **Extra breaking detail:** `IsDirty` is owned by
+  the editor (`public bool IsDirty { get; private set; }`), so `@bind-IsDirty` does not exist — observe
+  `IsDirtyChanged` or read the `@ref` instance (D2); `ReadOnly`, `ToolbarStart`, `ToolbarEnd`,
+  `ShowSaveButton`, `ShowSaveStatus` and `ImageUpload` are additive. The toolbar's "MJML" button now reads
+  **Export** (B10) while keeping `data-tm-mjml-btn`, and its status text moved from a plain span into the
+  save badge (`data-tm-save-badge`, `data-tm-save-state`, `aria-live="polite"`).
 
 - **The local render engine moved into the new package `Tempo.Blazor.EmailTemplates.Engine` (B7).**
   `AddTempoEmailTemplateEngine()` now lives in that assembly (namespace

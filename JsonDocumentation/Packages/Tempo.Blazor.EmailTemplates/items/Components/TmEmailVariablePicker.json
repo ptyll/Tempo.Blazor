@@ -6,7 +6,7 @@
   "packageId": "Tempo.Blazor.EmailTemplates",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailVariablePicker.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -23,6 +23,13 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Raised with the {{ path }} token when a variable is chosen."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the picker read-only: inserting a variable edits the document, so the list is disabled and OnInsert is never called."
     }
   ]
 }

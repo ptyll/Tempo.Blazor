@@ -1,0 +1,30 @@
+/* The inspector is one control group. Read-only wraps it in `fieldset[disabled]` so the browser (and the
+   accessibility tree) makes every control inside inert — the fieldset itself must not disturb the layout,
+   hence display: contents. The min-inline-size reset is what fieldset otherwise forces on a flex child. */
+.tm-email-properties__fieldset {
+    display: contents;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-inline-size: 0;
+}
+
+/* A disabled control keeps its value readable; the opacity only signals "not editable" without hiding it. */
+.tm-email-properties__fieldset[disabled] {
+    opacity: 0.85;
+}
+
+/* A disabled control must still be READABLE: the browser greys text to a ~2.6:1 contrast by default, so the
+   read-only inspector pins the secondary text colour on a muted surface (>= 4.5:1 against both themes) and
+   keeps the value legible instead of dimming the whole panel.
+   ::deep is required: the <input>/<textarea>/<select> elements are rendered by the INPUT components
+   (TmTextInput, TmTextArea, TmToggle…), so they carry those components' scope attribute, never this
+   panel's. A plain descendant rule would silently match nothing. */
+.tm-email-properties__fieldset[disabled] ::deep input,
+.tm-email-properties__fieldset[disabled] ::deep textarea,
+.tm-email-properties__fieldset[disabled] ::deep select {
+    color: var(--tm-color-text-secondary, #4b5563);
+    -webkit-text-fill-color: var(--tm-color-text-secondary, #4b5563);
+    background: var(--tm-color-surface-muted, #f7f7f8);
+    cursor: default;
+}

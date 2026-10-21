@@ -2,11 +2,11 @@
   "itemName": "TmEmailTemplateCanvas",
   "kind": "Component",
   "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "description": "Central editing canvas that renders an email document's sections, columns, and blocks. Supports selection, drag-and-drop, keyboard navigation, and per-section toolbars for adding columns and moving, duplicating, or deleting a section.",
   "packageId": "Tempo.Blazor.EmailTemplates",
-  "namespace": "Tempo.Blazor.EmailTemplates.Components",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateCanvas.razor",
-  "documentationStatus": "generated",
+  "documentationStatus": "merged",
   "requiredImports": [
     "@using Tempo.Blazor.EmailTemplates.Components"
   ],
@@ -43,9 +43,15 @@
       "description": "Raised when a block is dropped into a column at an index."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true the canvas renders the document read-only: no inline block/section actions, no draggable blocks, no drop zones and no keyboard shortcut mutates the document (selection and navigation stay available so the inspector can still show what is selected)."
+    },
+    {
       "name": "SelectedId",
       "type": "Guid?",
-      "isRequired": true,
+      "isRequired": false,
       "description": "The currently selected node id (block, column or section), if any.",
       "editorRequired": true
     },
