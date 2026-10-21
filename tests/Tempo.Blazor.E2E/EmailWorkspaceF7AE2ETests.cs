@@ -83,12 +83,19 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
         var all = await page.Locator("[data-tm-toolbox-list] [data-tm-block]").CountAsync();
         all.Should().Be(14, "the palette shows the whole registry");
 
-        // The editor body is a CHILD component (TmSplitter), so its card spacing/background rule is only
-        // alive through ::deep. A transparent body is the fingerprint of a rule that never matched.
-        var bodyBackground = await page.Locator(".tm-email-editor__body").First
+        // The editor body is the shell's main region (Fáze 8 replaced the local TmSplitter), a CHILD
+        // component's element, so its background rule is alive only through ::deep. A transparent region is
+        // the fingerprint of a rule that never matched.
+        var shellBackground = await page.Locator(".tm-email-editor__shell").First
             .EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
-        bodyBackground.Should().NotBe("rgba(0, 0, 0, 0)",
-            "the workspace surface under the cards comes from .tm-email-editor__body (::deep, child root)");
+        shellBackground.Should().NotBe("rgba(0, 0, 0, 0)",
+            "the workspace surface comes from the shell root through the editor's ::deep rule (Fáze 8: the "
+            + "shell owns the background, the regions are transparent)");
+
+        // The desktop editor keeps BOTH docked panels: the palette is a column, not a rail (Fáze 8 moved the
+        // collapse control onto the shell, whose rail is the collapsed state).
+        (await page.Locator("[data-region='left'] [data-tm-toolbox-list]").CountAsync()).Should().Be(1);
+        (await page.Locator("[data-region='rail-left']").CountAsync()).Should().Be(0);
 
         // Diacritics-insensitive: a Czech user types without them.
         await page.Locator("[data-tm-toolbox-search] input").FillAsync("tlacitko");
@@ -115,13 +122,11 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
             null, new() { Timeout = 10000 });
         (await page.Locator("[data-tm-toolbox-search] input").InputValueAsync()).Should().BeEmpty();
 
-        // The palette header carries its title on the left and the collapse arrow on the right of one row
-        // (the editor no longer renders a second, clipped panel header above it).
-        var titleBox = await page.Locator(".tm-email-toolbox__title").BoundingBoxAsync();
-        var toggleBox = await page.Locator("[data-tm-toolbox-collapse]").BoundingBoxAsync();
-        titleBox!.X.Should().BeLessThan(toggleBox!.X, "the title sits left of the arrow");
-        Math.Abs(titleBox.Y + titleBox.Height / 2 - (toggleBox.Y + toggleBox.Height / 2))
-            .Should().BeLessThan(4, "both are vertically centred on one row");
+        // Fáze 8: the palette no longer draws its own collapse arrow — the shell's panel toggle is the ONE
+        // control for that state (ShowCollapseToggle=false), so the same state cannot be changed twice.
+        (await page.Locator("[data-tm-toolbox-collapse]").CountAsync()).Should().Be(0,
+            "the shell's panel toggle owns the collapse state");
+        (await page.Locator("[data-tm-toolbox-search]").First.IsVisibleAsync()).Should().BeTrue();
         (await page.Locator(".tm-email-editor__panel--toolbox .tm-email-editor__panel-header").CountAsync())
             .Should().Be(0, "the palette owns its header");
     }
@@ -129,27 +134,29 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
     [TestMethod]
     public async Task F7A_2_Toolbox_Collapse_FoldsThePalette_AndBringsItBack()
     {
+        // Fáze 8: collapsing the palette is the SHELL's panel rail. On a 1024 px editor (tablet) at most one
+        // panel is expanded and the inspector wins by default, so the palette starts railed; expanding it
+        // rails the inspector instead. Collapsing it again comes back to the rail.
         var page = await OpenEditorAsync();
         await page.SetViewportSizeAsync(1024, 800);
+        await ForceEditorLayoutAsync(page, "Tablet");
 
-        await page.Locator("[data-tm-toolbox-list] [data-tm-block]").First.WaitForAsync(new() { Timeout = 15000 });
+        await page.WaitForSelectorAsync("[data-region='rail-left'] [data-tm-rail-block]", new() { Timeout = 15000 });
+        (await page.Locator("[data-tm-toolbox-list]").CountAsync()).Should().Be(0,
+            "a collapsed panel is a rail, not a folded list inside a full-width panel");
         await SaveNamedScreenshotAsync(page, "52-panels-narrow-1024.png");
 
-        await page.Locator("[data-tm-toolbox-collapse]").ClickAsync();
-
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-tm-toolbox-root]')?.getAttribute('data-tm-collapsed') === 'true'",
-            null, new() { Timeout = 10000 });
-        (await page.Locator("[data-tm-toolbox-collapse]").GetAttributeAsync("aria-expanded")).Should().Be("false");
+        await page.Locator("[data-region='rail-left'] button.tm-editor-shell__panel-toggle").ClickAsync();
+        await page.WaitForSelectorAsync("[data-region='left'] [data-tm-toolbox-list]", new() { Timeout = 15000 });
         (await page.Locator("[data-tm-toolbox-list] [data-tm-block]").First.IsVisibleAsync())
-            .Should().BeFalse("the tiles are folded away, not just dimmed");
-        await SaveNamedScreenshotAsync(page, "53-toolbox-collapsed-1024.png");
+            .Should().BeTrue("the palette is docked again");
+        (await page.Locator("aside.tm-editor-shell__panel--right").CountAsync()).Should().Be(0,
+            "expanding the palette rails the inspector (one expanded panel on a tablet)");
+        await SaveNamedScreenshotAsync(page, "53-toolbox-expanded-1024.png");
 
-        await page.Locator("[data-tm-toolbox-collapse]").ClickAsync();
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('[data-tm-toolbox-list] [data-tm-block]') !== null",
-            null, new() { Timeout = 10000 });
-        (await page.Locator("[data-tm-toolbox-list] [data-tm-block]").First.IsVisibleAsync()).Should().BeTrue();
+        await page.Locator("button.tm-editor-shell__panel-toggle--left").ClickAsync();
+        await page.WaitForSelectorAsync("[data-region='rail-left'] [data-tm-rail-block]", new() { Timeout = 15000 });
+        (await page.Locator("[data-tm-toolbox-list]").CountAsync()).Should().Be(0);
     }
 
     [TestMethod]

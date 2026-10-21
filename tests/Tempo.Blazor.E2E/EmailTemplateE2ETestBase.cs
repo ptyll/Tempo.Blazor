@@ -29,15 +29,50 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
     protected static string UniqueRecipient(string label)
         => $"e2e-email-{label}-{Guid.NewGuid():N}@tempo.local";
 
-    /// <summary>Opens an email demo route and waits for the Blazor app shell + WASM boot.</summary>
+    /// <summary>
+    /// Opens an email demo route and waits for the Blazor app shell + WASM boot. The EDITOR route gets the
+    /// whole viewport: since Fáze 8 the editor resolves its desktop / tablet / mobile chrome from its own
+    /// CONTAINER, and the demo's fixed 18 rem sidebar leaves a 1440 px window a ~1080 px editor — a tablet.
+    /// These specs are about the desktop editor, so the demo chrome is hidden for them.
+    /// </summary>
     protected async Task<IPage> OpenAsync(string route)
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 900);
+        if (route.Contains("/email-templates/edit", StringComparison.Ordinal))
+        {
+            // Seeded BEFORE the first navigation, so the demo page's remembered LayoutMode survives the
+            // re-navigation a spec performs (a language switch force-reloads the page). Specs that CREATE a
+            // template from the list call ForceEditorLayoutAsync after the editor appears instead — they must
+            // stay free to switch the editor back to Auto for a real narrow-layout case.
+            await page.AddInitScriptAsync(
+                "try { if (!localStorage.getItem('tm-demo-editor-layout')) "
+                + "localStorage.setItem('tm-demo-editor-layout', 'Desktop'); } catch (e) { }");
+        }
+
         await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
+        if (route.Contains("/email-templates/edit", StringComparison.Ordinal))
+        {
+            await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
+            await ForceEditorLayoutAsync(page, "Desktop");
+        }
+
         return page;
+    }
+
+    /// <summary>
+    /// Pins the EDITOR's layout through the demo page's LayoutMode switch. Since Fáze 8 the editor resolves
+    /// its chrome from its own CONTAINER, and the demo's fixed 18 rem sidebar leaves a 1440 px window a
+    /// ~1080 px editor — a TABLET, with the palette railed. These specs describe the DESKTOP editor (docked
+    /// palette + inspector), so they pin that mode instead of depending on the demo's window chrome.
+    /// </summary>
+    protected static async Task ForceEditorLayoutAsync(IPage page, string layout)
+    {
+        await page.SelectOptionAsync("[data-tm-demo-layout]", layout);
+        await page.WaitForSelectorAsync($".tm-editor-shell[data-layout='{layout.ToLowerInvariant()}']",
+            new() { Timeout = 30000 });
     }
 
     /// <summary>Saves a full-page PNG into the repo's named screenshot folder for UX review.</summary>

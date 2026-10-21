@@ -4,120 +4,51 @@
 @inject IServiceProvider Services
 @inject IJSRuntime JS
 
+@* Fáze 8: the editor owns NO layout of its own. The three regions are the CORE TmEditorShell's slots
+   (F6): Header / Toolbar / Left (+ LeftRail) / Canvas / Right / StatusBar / MobileActions. The shell
+   resolves the layout from its own CONTAINER (Breakpoints 768/1200) and renders docked panels on
+   desktop AND tablet (at most one expanded — F6-TABLET-DOCKED-PANELS), a bottom sheet (default) or a
+   Left | Canvas | Right tablist on mobile (EM3). Everything the editor does here is forwarding
+   (D7/D10/D20) plus the two host fragments the shell cannot know about. *@
 <div class="tm-email-editor" data-tm-email-editor tabindex="0" @ref="_rootRef"
      data-tm-readonly="@(ReadOnly ? "true" : "false")"
      data-tm-dirty="@(IsDirty ? "true" : "false")"
      data-tm-saving="@(IsSaving ? "true" : "false")"
      @onkeydown="HandleEditorKeyDownAsync">
-    @* The bar is a host-visible contract only through data-tm-group / data-tm-save / data-tm-save-badge:
-       the groups live in private fragments (HistoryGroup, ReviewGroup, FileGroup, HelpGroup, SaveButton,
-       SaveBadge) so a later phase can move them into an overflow menu or a different shell without
-       changing a single stable selector. *@
-    <div class="tm-email-editor__toolbar" role="group" aria-label="@Loc["EmailEditor_Toolbar_GroupLabel"]">
-        @if (ToolbarStart is not null)
-        {
-            <div class="tm-email-editor__toolbar-group" data-tm-toolbar-start>@ToolbarStart</div>
-            <span class="tm-email-editor__toolbar-sep" role="separator" aria-orientation="vertical"></span>
-        }
-
-        @HistoryGroup
-
-        <span class="tm-email-editor__toolbar-sep" role="separator" aria-orientation="vertical"></span>
-
-        @ReviewGroup
-
-        <span class="tm-email-editor__toolbar-sep" role="separator" aria-orientation="vertical"></span>
-
-        @FileGroup
-
-        <span class="tm-email-editor__toolbar-sep" role="separator" aria-orientation="vertical"></span>
-
-        @HelpGroup
-
-        @if (ToolbarEnd is not null)
-        {
-            <span class="tm-email-editor__toolbar-sep" role="separator" aria-orientation="vertical"></span>
-            <div class="tm-email-editor__toolbar-group" data-tm-toolbar-end>@ToolbarEnd</div>
-        }
-
-        @* Save chrome: the badge and the Save button are ONE nowrap group that fills the remaining bar
-           width instead of two separate wrap candidates. Otherwise a long host message pushed the group to
-           a second row and the primary action jumped under the pointer between save states. *@
-        <div class="tm-email-editor__save-chrome" data-tm-save-chrome>
-            @if (ReadOnly)
-            {
-                @ReadOnlyBadge
-            }
-            else
-            {
-                @SaveBadge
-                @SaveButton
-            }
-        </div>
-    </div>
-
-    @* Failed/Conflict: the host's full reason plus a hint and a retry action, OUTSIDE the save chrome —
-       in a pill it would truncate to a few characters, and the user has to read it to act. The alert's
-       role="alert" is what announces the outcome (the announcer stays silent for Failed/Conflict, so the
-       same news never arrives twice). *@
-    @if (SaveAlertKind is { } alertKind)
-    {
-        <TmAlert Severity="@(alertKind == EditorSaveBadge.Conflict ? AlertSeverity.Warning : AlertSeverity.Error)"
-                 Class="tm-email-editor__save-alert" data-tm-save-alert="@SaveBadgeStateName">
-            <p class="tm-email-editor__save-alert-message">@SaveAlertMessage</p>
-            <p class="tm-email-editor__save-alert-hint">@SaveAlertHint</p>
-            @if (!ReadOnly && ShowSaveButton)
-            {
-                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="rotate-cw"
-                          OnClick="OnRetrySaveAsync" data-tm-save-retry="true">@Loc["EmailEditor_SaveStatus_Retry"]</TmButton>
-            }
-        </TmAlert>
-    }
-
-    <TmSplitter Orientation="SplitterOrientation.Horizontal" AdditionalCssClass="tm-email-editor__body">
-        @* No panel header here: the palette itself pairs its title with the collapse arrow on one row, so a
-           title above it would be a second heading for the same surface (and it clipped in the rail). *@
-        <TmSplitterPane Size="@(ToolboxCollapsedEffective ? "56px" : "20%")" MinSize="@(ToolboxCollapsedEffective ? "56px" : "152px")">
-            <section class="tm-email-editor__panel tm-email-editor__panel--toolbox@(ToolboxCollapsedEffective ? " tm-email-editor__panel--toolbox-collapsed" : "")"
-                     data-tm-toolbox aria-label="@Loc["EmailEditor_Panel_Blocks"]">
-                <div class="tm-email-editor__panel-body">
-                    <TmEmailTemplateToolbox OnAddBlock="AddBlockAsync" OnAddSection="AddSectionAsync"
-                                            OnDragBlockStart="StartBlockDragAsync" ReadOnly="ReadOnly"
-                                            Collapsed="ToolboxCollapsedEffective"
-                                            CollapsedChanged="OnToolboxCollapsedChangedAsync" />
-                </div>
-            </section>
-        </TmSplitterPane>
-        <TmSplitterPane Size="60%" MinSize="260px">
-            <section class="tm-email-editor__canvas" data-tm-canvas aria-label="@Loc["EmailEditor_Toolbar_Preview"]">
-                <TmEmailTemplateCanvas @ref="_canvas" Document="_document" SelectedId="_selectedId"
-                                       SelectedIdChanged="OnSelectionChangedAsync"
-                                       OnDocumentChanged="OnStructuralChangeAsync"
-                                       DragActive="!ReadOnly && _dragPayload is not null"
-                                       OnBlockDragStart="StartExistingBlockDragAsync"
-                                       OnDropInColumn="HandleDropAsync"
-                                       ReadOnly="ReadOnly" />
-            </section>
-        </TmSplitterPane>
-        <TmSplitterPane Size="20%" MinSize="200px">
-            <section class="tm-email-editor__panel" data-tm-properties aria-label="@Loc["EmailEditor_Panel_Properties"]">
-                <header class="tm-email-editor__panel-header">@Loc["EmailEditor_Panel_Properties"]</header>
-                <div class="tm-email-editor__panel-body">
-                    <TmEmailPropertyPanel Document="_document" SelectedId="_selectedId"
-                                          Variables="Variables" OnImageUpload="OnImageUpload"
-                                          ImageUpload="ImageUpload" ReadOnly="ReadOnly"
-                                          OnDuplicate="DuplicateSelectedAsync" OnDelete="DeleteSelectedAsync"
-                                          OnChanged="OnPropertyChangeAsync" />
-                </div>
-            </section>
-        </TmSplitterPane>
-    </TmSplitter>
+    <TmEditorShell Class="tm-email-editor__shell"
+                   LayoutMode="LayoutMode"
+                   InitialMode="InitialMode"
+                   Breakpoints="EffectiveBreakpoints"
+                   ResolvedLayoutChanged="OnResolvedLayoutChangedAsync"
+                   MobilePanelPresentation="MobilePanelPresentation"
+                   ActiveMobilePanel="EffectiveActiveMobilePanel"
+                   ActiveMobilePanelChanged="OnShellActiveMobilePanelChangedAsync"
+                   CollapsedPanels="ShellCollapsedPanels"
+                   CollapsedPanelsChanged="OnShellCollapsedPanelsChangedAsync"
+                   LeftOpen="_leftOpen"
+                   LeftOpenChanged="OnLeftOpenChangedAsync"
+                   RightOpen="_rightOpen"
+                   RightOpenChanged="OnRightOpenChangedAsync"
+                   MobileSheetSnapPoints="MobileSheetSnaps"
+                   MobileSheetSnapIndex="_sheetSnapIndex"
+                   MobileSheetSnapIndexChanged="OnSheetSnapIndexChangedAsync"
+                   LeftTitle="@Loc["EmailEditor_Panel_Blocks"]"
+                   RightTitle="@Loc["EmailEditor_Panel_Properties"]"
+                   CanvasTitle="@Loc["EmailEditor_Panel_Canvas"]"
+                   Header="HeaderSlot"
+                   Toolbar="CommandBar"
+                   Left="ToolboxPanel"
+                   LeftRail="ToolboxRail"
+                   Canvas="CanvasPanel"
+                   Right="InspectorPanel"
+                   StatusBar="StatusBarPanel"
+                   MobileActions="MobileActionItems" />
 
     @* One polite announcer for the outcome the user cannot see (the badge is a visual pill, not a live
        region any more — a live region that also changes on every dirty keystroke would narrate the whole
        editing session). It speaks only for a CONFIRMED manual/shortcut/programmatic save and never for a
        successful auto-save, for "Saving…" or for the minute tick; Failed/Conflict are announced by the
-       alert above (role="alert"), so they are not repeated here. *@
+       alert (role="alert"), so they are not repeated here. *@
     <span class="tm-sr-only" role="status" aria-live="polite" data-tm-save-announcer>@_announcement</span>
 </div>
 
@@ -248,6 +179,202 @@
     [Parameter] public EventCallback<bool> ToolboxCollapsedChanged { get; set; }
 
     /// <summary>
+    /// The layout the editor renders. <see cref="TmLayoutMode.Auto"/> (default) lets the core
+    /// <c>TmEditorShell</c> measure the EDITOR'S OWN CONTAINER — never the viewport — and follow its
+    /// width; a forced value renders that mode without a DOM, which is how a host (and a test) pins a
+    /// tablet or phone layout. The editor keeps no copy of the breakpoint logic: this value is
+    /// forwarded to the shell unchanged.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// The layout rendered before the shell's first measurement. Defaults to
+    /// <see cref="TmLayoutMode.Desktop"/> (a desktop host never sees a wrong compact frame).
+    /// </summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the shell's RESOLVED layout changes (the container crossed a breakpoint, or the host
+    /// forced another <see cref="LayoutMode"/>). The initial value is not a change. Never bind this to
+    /// <see cref="LayoutMode"/> — that would pin the layout and stop the shell from measuring.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+
+    /// <summary>
+    /// The two container widths that decide the layout, forwarded to the shell. <see langword="null"/>
+    /// (default) uses <c>new TmLayoutBreakpoints(768, 1200)</c> (D7): below 768 the editor is a phone
+    /// layout, from 1200 it is the full desktop chrome, in between it is the tablet layout — the pair the
+    /// DiagramEditor uses, chosen because the toolbox and the inspector need the wider canvas before the
+    /// editor may drop a panel.
+    /// </summary>
+    [Parameter] public TmLayoutBreakpoints? Breakpoints { get; set; }
+
+    /// <summary>
+    /// How the two panels present on a mobile layout. <see cref="Tempo.Blazor.Components.Layout.MobilePanelPresentation.Sheet"/>
+    /// (default, EM3) keeps the canvas visible with a bottom sheet — a Bloky | Vlastnosti tab strip inside
+    /// it while both panels are open; <see cref="Tempo.Blazor.Components.Layout.MobilePanelPresentation.Tabs"/>
+    /// is a full-region Bloky | Plátno | Vlastnosti tablist with no sheet.
+    /// </summary>
+    [Parameter] public MobilePanelPresentation MobilePanelPresentation { get; set; }
+
+    /// <summary>
+    /// The panel the mobile layout shows, two-way with <see cref="ActiveMobilePanelChanged"/>. The editor
+    /// switches it to <see cref="EditorShellPanel.Right"/> when the user selects a block (the inspector is
+    /// where that selection is edited), and a host may drive it too.
+    /// </summary>
+    [Parameter] public EditorShellPanel ActiveMobilePanel { get; set; }
+
+    /// <summary>Raised when the user picks another mobile tab, or when the editor follows a selection.</summary>
+    [Parameter] public EventCallback<EditorShellPanel> ActiveMobilePanelChanged { get; set; }
+
+    /// <summary>The layout the shell resolved: the forced <see cref="LayoutMode"/>, else the measured mode, else <see cref="InitialMode"/>.</summary>
+    private TmLayoutMode EffectiveResolvedLayout
+        => LayoutMode != TmLayoutMode.Auto ? LayoutMode : _measuredLayout ?? InitialMode;
+
+    private bool IsMobileLayout => EffectiveResolvedLayout == TmLayoutMode.Mobile;
+
+    /// <summary>
+    /// The mobile panels sheet's snaps: the DEFAULT half snap leaves a phone the tabs plus the palette
+    /// SEARCH box only (a host with its own page chrome above the editor pushes the first block tile below
+    /// the fold — measured at 390 px), so the closed-to-open snap starts at two thirds of the stage, which
+    /// shows the first tile row while the canvas stays visible behind it. The second snap is full height.
+    /// </summary>
+    private static readonly IReadOnlyList<double> MobileSheetSnaps = new[] { 0.65, 1.0 };
+
+    private TmLayoutBreakpoints EffectiveBreakpoints => Breakpoints ?? new TmLayoutBreakpoints(768, 1200);
+
+    private async Task OnResolvedLayoutChangedAsync(TmLayoutMode mode)
+    {
+        if (_measuredLayout == mode) return;
+        _measuredLayout = mode;
+        // The mobile-only chrome (the compact header) is a markup branch, not a CSS step: switching it
+        // needs a render the shell's own callback does not trigger.
+        StateHasChanged();
+        await ResolvedLayoutChanged.InvokeAsync(mode);
+    }
+
+    /// <summary>The D10 mapping: the host's <see cref="ToolboxCollapsed"/> IS the shell's left-panel rail.</summary>
+    private EditorShellPanel ShellCollapsedPanels
+        => ToolboxCollapsedEffective ? EditorShellPanel.Left : EditorShellPanel.None;
+
+    /// <summary>
+    /// The shell changed the collapse set on its own (a tablet rail, the panel toggle): the host hears it
+    /// through <see cref="ToolboxCollapsedChanged"/>, which is the parameter D10 keeps as the public API.
+    /// The right panel's rail is deliberately not surfaced — the editor has no parameter for it, and a
+    /// state the host cannot bind would only be noise.
+    /// </summary>
+    /// <summary>
+    /// The shell's collapse set changed. The host is always told (D10), but the editor only ADOPTS it when a
+    /// USER changed it — a rail the shell imposed on a LAYOUT TRANSITION (the tablet one-expanded-panel rule)
+    /// is a layout state, not a collapsed preference, and adopting it would pin the palette railed for ever
+    /// (measured: the Mobile→Tablet flip raised <c>Left</c> one step before the editor learned the new
+    /// layout, so the stale measurement adopted it and no toggle could ever undo it).
+    /// <para>
+    /// The decision is therefore deferred to <see cref="OnAfterRenderAsync"/>: by then
+    /// <c>ResolvedLayoutChanged</c> has landed, so "the layout changed in this batch" is exact.
+    /// </para>
+    /// </summary>
+    private Task OnShellCollapsedPanelsChangedAsync(EditorShellPanel panels)
+    {
+        if (panels.HasFlag(EditorShellPanel.Left) == ToolboxCollapsedEffective) return Task.CompletedTask;
+        _pendingCollapsedRaise = panels;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Applies the collapse set the shell reported, unless a layout transition produced it. Runs after the
+    /// render so the resolved layout is current (the shell raises its layout callback after the collapse
+    /// one).
+    /// </summary>
+    private async Task ApplyPendingCollapseRaiseAsync()
+    {
+        var layoutNow = EffectiveResolvedLayout;
+        var layoutChanged = _layoutAtLastRender != layoutNow;
+        _layoutAtLastRender = layoutNow;
+
+        if (_pendingCollapsedRaise is not { } pending) return;
+        _pendingCollapsedRaise = null;
+
+        var collapsed = pending.HasFlag(EditorShellPanel.Left);
+        if (layoutChanged || collapsed == ToolboxCollapsedEffective) return;
+
+        _toolboxCollapsedInternal = collapsed;
+        StateHasChanged();
+        await ToolboxCollapsedChanged.InvokeAsync(collapsed);
+    }
+
+    /// <summary>The mobile panel shown: the host's parameter while its callback is bound, else the editor's own state.</summary>
+    private EditorShellPanel EffectiveActiveMobilePanel
+        => ActiveMobilePanelChanged.HasDelegate ? ActiveMobilePanel : _activeMobilePanel ?? ActiveMobilePanel;
+
+    private async Task OnShellActiveMobilePanelChangedAsync(EditorShellPanel panel)
+    {
+        _activeMobilePanel = panel;
+        await ActiveMobilePanelChanged.InvokeAsync(panel);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Shows a panel on a mobile layout (the selection and "add block" flows). A no-op above the mobile
+    /// breakpoint: a desktop host's click must not silently change what the phone layout will show.
+    /// </summary>
+    private async Task ShowMobilePanelAsync(EditorShellPanel panel)
+    {
+        if (!IsMobileLayout) return;
+
+        // The sheet may be CLOSED (the user dismissed it, or an insert collapsed it): a selection has to
+        // bring the panel it needs back, otherwise the tap looks like it did nothing.
+        if (panel == EditorShellPanel.Right) _rightOpen = true;
+        else if (panel == EditorShellPanel.Left) _leftOpen = true;
+
+        if (EffectiveActiveMobilePanel != panel)
+        {
+            _activeMobilePanel = panel;
+            await ActiveMobilePanelChanged.InvokeAsync(panel);
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Collapses the mobile sheet so the just-added block is visible on the canvas (and the focus lands on
+    /// it). Above the mobile breakpoint the docked panels are untouched.
+    /// </summary>
+    private Task CollapseMobileSheetAsync()
+    {
+        if (!IsMobileLayout) return Task.CompletedTask;
+        _mobileOverflowOpen = false;
+        _leftOpen = false;
+        _rightOpen = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnLeftOpenChangedAsync(bool open)
+    {
+        _leftOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task OnRightOpenChangedAsync(bool open)
+    {
+        _rightOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSheetSnapIndexChangedAsync(int index)
+    {
+        _sheetSnapIndex = index;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMobileOverflowOpenChanged(bool open)
+    {
+        _mobileOverflowOpen = open;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Gets whether the document differs from the last state the host confirmed (or the document it handed
     /// over). Owned by the editor — it is not a <c>[Parameter]</c>, so <c>@bind-IsDirty</c> is not used;
     /// observe changes through <see cref="IsDirtyChanged"/>.
@@ -293,6 +420,19 @@
 
     private Guid? _selectedId;
     private bool? _toolboxCollapsedInternal;
+    // The shell's OWN state, mirrored only so the parameters keep their two-way contract (the shell
+    // raises a callback and a host is free to ignore it).
+    private TmLayoutMode? _measuredLayout;
+    private EditorShellPanel? _activeMobilePanel;
+    private bool _mobileOverflowOpen;
+    private bool _leftOpen = true;
+    private bool _rightOpen = true;
+    // Set by a structural change, consumed in OnAfterRenderAsync: the block the caller wants focused.
+    private Guid? _focusBlockAfterRender;
+    // The collapse set the shell reported, applied after the render (see ApplyPendingCollapseRaiseAsync).
+    private EditorShellPanel? _pendingCollapsedRaise;
+    private TmLayoutMode? _layoutAtLastRender;
+    private int _sheetSnapIndex;
     private object? _dragPayload;
     private ITimer? _autoSaveTimer;
     private ITimer? _savedAgeTimer;
@@ -345,52 +485,168 @@
         }),
     };
 
-    // ── Command-bar fragments (the seam a later responsive phase moves into an overflow menu) ──
+    // ── Shell slots (Fáze 8) ─────────────────────────────────────────────────────────────────
     //
     // Hosts and E2E key off data-tm-group / data-tm-save / data-tm-save-badge, never off the position of a
-    // button in the DOM: where a group renders (inline, an overflow "⋯", a mobile action bar) is a layout
-    // detail, so the markup lives in one fragment per task instead of one monolithic bar.
+    // button in the DOM: where a group renders (the command row, the mobile "⋮" overflow, the action bar)
+    // is a layout detail, so each task keeps ONE fragment that the three surfaces reuse. The fragments
+    // are private on purpose — the stable contract is the data-tm-* hook, not the fragment.
 
-    private RenderFragment HistoryGroup => @<div class="tm-email-editor__toolbar-group" data-tm-group="history">
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="rotate-ccw"
-                  AriaLabel="@Loc["EmailEditor_Toolbar_Undo"]" title="@Loc["EmailEditor_Toolbar_Undo"]"
-                  aria-keyshortcuts="Control+Z Meta+Z"
-                  Disabled="@(!_history.CanUndo || ReadOnly)"
-                  OnClick="UndoAsync" data-tm-undo="true">
-            <span class="tm-email-editor__btn-label">@Loc["EmailEditor_Toolbar_Undo"]</span>
-        </TmButton>
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="rotate-cw"
-                  AriaLabel="@Loc["EmailEditor_Toolbar_Redo"]" title="@Loc["EmailEditor_Toolbar_Redo"]"
-                  aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z"
-                  Disabled="@(!_history.CanRedo || ReadOnly)"
-                  OnClick="RedoAsync" data-tm-redo="true">
-            <span class="tm-email-editor__btn-label">@Loc["EmailEditor_Toolbar_Redo"]</span>
-        </TmButton>
+    private RenderFragment CommandBar => @<TmToolbar Overflow="ToolbarOverflow.Menu"
+                                                     Class="tm-email-editor__toolbar"
+                                                     AriaLabel="@Loc["EmailEditor_Toolbar_GroupLabel"]"
+                                                     data-tm-email-toolbar>
+        <ChildContent>
+            @if (ToolbarStart is not null)
+            {
+                <div class="tm-email-editor__toolbar-group" data-tm-toolbar-start>@ToolbarStart</div>
+            }
+
+            <TmToolbarGroup Label="@Loc["EmailEditor_Toolbar_GroupHistory"]" data-tm-group="history">
+                @HistoryButtons
+            </TmToolbarGroup>
+
+            <TmToolbarGroup Label="@Loc["EmailEditor_Toolbar_GroupReview"]" data-tm-group="review">
+                @ReviewButtons
+            </TmToolbarGroup>
+
+            <TmToolbarGroup Label="@Loc["EmailEditor_Toolbar_GroupFile"]" data-tm-group="file">
+                @FileButtons
+            </TmToolbarGroup>
+
+            <TmToolbarGroup Label="@Loc["EmailEditor_Toolbar_GroupHelp"]" data-tm-group="help">
+                @HelpButtons
+            </TmToolbarGroup>
+
+            @if (ToolbarEnd is not null)
+            {
+                <div class="tm-email-editor__toolbar-group" data-tm-toolbar-end>@ToolbarEnd</div>
+            }
+        </ChildContent>
+
+        <Actions>
+            @* Save chrome: ONE nowrap group pinned to the end of the row. The badge lives in the shell's
+               status bar (Fáze 8) — a pill squeezed between the actions and the primary button told the
+               user nothing and a long host message pushed Save onto a second row. *@
+            <div class="tm-email-editor__save-chrome" data-tm-save-chrome>
+                @SaveButton
+            </div>
+        </Actions>
+    </TmToolbar>;
+
+    /// <summary>
+    /// The shell's Header slot. It is ALWAYS supplied (the shell decides nothing about the branch) and the
+    /// slot itself renders only on a mobile layout, reading the layout the shell cascades — never measuring
+    /// on its own. The empty desktop band collapses through :empty in the stylesheet.
+    /// </summary>
+    private RenderFragment HeaderSlot => builder =>
+    {
+        // Built from C#: the slot component is internal (the desktop band must stay empty and the mobile
+        // actions must never exist twice in the DOM), and Razor only resolves markup tags to public
+        // components.
+        builder.OpenComponent<TmEmailMobileHeaderSlot>(0);
+        builder.AddComponentParameter(1, nameof(TmEmailMobileHeaderSlot.ResolvedLayoutChanged),
+            EventCallback.Factory.Create<TmLayoutMode>(this, OnResolvedLayoutChangedAsync));
+        builder.AddComponentParameter(2, nameof(TmEmailMobileHeaderSlot.ChildContent), (RenderFragment)MobileHeader);
+        builder.CloseComponent();
+    };
+
+    /// <summary>
+    /// Mobile header (D20): the primary Save and the host's <see cref="ToolbarStart"/> stay on the bar;
+    /// everything else <see cref="ToolbarEnd"/> and the file/review/help groups move into the "⋮"
+    /// overflow, so the canvas keeps the height. The shell never renders the Toolbar slot on a mobile
+    /// layout — the action bar replaces it.
+    /// </summary>
+    private RenderFragment MobileHeader => @<div class="tm-email-editor__mobile-header" data-tm-mobile-header>
+        @if (ToolbarStart is not null)
+        {
+            <div class="tm-email-editor__toolbar-group tm-email-editor__mobile-title" data-tm-toolbar-start>@ToolbarStart</div>
+        }
+
+        <div class="tm-email-editor__mobile-header-end">
+            @* Read-only shows NO save affordance at all (the status bar carries the read-only badge —
+               rendering it twice would name the mode twice on one screen). *@
+            @SaveButton
+            @MobileOverflow
+        </div>
     </div>;
 
-    private RenderFragment ReviewGroup => @<div class="tm-email-editor__toolbar-group" data-tm-group="review">
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="eye"
-                  OnClick="() => _showPreview = true" data-tm-preview-btn="true">@Loc["EmailEditor_Toolbar_Preview"]</TmButton>
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="check-circle"
-                  OnClick="() => _showValidation = true" data-tm-validate-btn="true">@Loc["EmailEditor_Toolbar_Validate"]</TmButton>
-    </div>;
+    /// <summary>
+    /// The "⋮" overflow of the mobile header. A <see cref="TmPopover"/> (core F3), so its body presents as
+    /// a content-height bottom sheet on a narrow viewport (MobilePresentation=Auto) and stays an anchored
+    /// popover if the host widened the editor again. The body is free content, not a <c>role="menu"</c>:
+    /// it carries the host's own <see cref="ToolbarEnd"/> fragment, which a menu of TmActionItems cannot.
+    /// </summary>
+    private RenderFragment MobileOverflow => @<TmPopover Class="tm-email-editor__mobile-overflow"
+                                                          Position="PopoverPosition.Bottom"
+                                                          Title="@Loc["EmailEditor_Mobile_MoreActions"]"
+                                                          IsOpen="_mobileOverflowOpen"
+                                                          IsOpenChanged="OnMobileOverflowOpenChanged"
+                                                          data-tm-mobile-overflow>
+        <TriggerContent>
+            <span class="tm-email-editor__mobile-overflow-trigger">
+                <TmIcon Name="@IconNames.MoreVertical" Size="IconSize.Sm" />
+            </span>
+        </TriggerContent>
+        <ChildContent>
+            <div class="tm-email-editor__mobile-overflow-panel" data-tm-mobile-overflow-panel>
+                <div class="tm-email-editor__toolbar-group" data-tm-group="review">@ReviewButtons</div>
+                <div class="tm-email-editor__toolbar-group" data-tm-group="file">@FileButtons</div>
+                <div class="tm-email-editor__toolbar-group" data-tm-group="help">@HelpButtons</div>
+                @if (ToolbarEnd is not null)
+                {
+                    <div class="tm-email-editor__toolbar-group" data-tm-toolbar-end>@ToolbarEnd</div>
+                }
+            </div>
+        </ChildContent>
+    </TmPopover>;
 
-    private RenderFragment FileGroup => @<div class="tm-email-editor__toolbar-group" data-tm-group="file">
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="upload" Disabled="@ReadOnly"
-                  OnClick="() => _showImport = true" data-tm-import-btn="true">@Loc["EmailEditor_Toolbar_Import"]</TmButton>
+    private RenderFragment HistoryButtons => @<text>
+        <TmToolbarButton Icon="rotate-ccw" Text="@Loc["EmailEditor_Toolbar_Undo"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Undo"]"
+                         Priority="ToolbarButtonPriority.Primary"
+                         Disabled="@(!_history.CanUndo || ReadOnly)"
+                         OnClick="UndoAsync" data-tm-undo="true"
+                         aria-keyshortcuts="Control+Z Meta+Z" />
+        <TmToolbarButton Icon="rotate-cw" Text="@Loc["EmailEditor_Toolbar_Redo"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Redo"]"
+                         Priority="ToolbarButtonPriority.Primary"
+                         Disabled="@(!_history.CanRedo || ReadOnly)"
+                         OnClick="RedoAsync" data-tm-redo="true"
+                         aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z" />
+    </text>;
+
+    private RenderFragment ReviewButtons => @<text>
+        <TmToolbarButton Icon="eye" Text="@Loc["EmailEditor_Toolbar_Preview"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Preview"]"
+                         Priority="ToolbarButtonPriority.Primary"
+                         OnClick="() => _showPreview = true" data-tm-preview-btn="true" />
+        <TmToolbarButton Icon="check-circle" Text="@Loc["EmailEditor_Toolbar_Validate"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Validate"]"
+                         Priority="ToolbarButtonPriority.Primary"
+                         OnClick="() => _showValidation = true" data-tm-validate-btn="true" />
+    </text>;
+
+    private RenderFragment FileButtons => @<text>
+        <TmToolbarButton Icon="upload" Text="@Loc["EmailEditor_Toolbar_Import"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Import"]"
+                         Priority="ToolbarButtonPriority.Secondary"
+                         Disabled="@ReadOnly"
+                         OnClick="() => _showImport = true" data-tm-import-btn="true" />
         @* EM5 (2.10.0): the visible label is "Export" (the action exports MJML/JSON), the
            data-tm-mjml-btn hook stays because hosts and E2E select the action by it. *@
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="download"
-                  OnClick="() => _showExport = true" data-tm-mjml-btn="true">@Loc["EmailEditor_Toolbar_Export"]</TmButton>
-    </div>;
+        <TmToolbarButton Icon="download" Text="@Loc["EmailEditor_Toolbar_Export"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Export"]"
+                         Priority="ToolbarButtonPriority.Secondary"
+                         OnClick="() => _showExport = true" data-tm-mjml-btn="true" />
+    </text>;
 
-    private RenderFragment HelpGroup => @<div class="tm-email-editor__toolbar-group" data-tm-group="help">
-        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="help-circle"
-                  AriaLabel="@Loc["EmailEditor_Toolbar_Help"]" title="@Loc["EmailEditor_Toolbar_Help"]"
-                  OnClick="() => _showShortcuts = true" data-tm-help-btn="true">
-            <span class="tm-email-editor__btn-label">@Loc["EmailEditor_Toolbar_Help"]</span>
-        </TmButton>
-    </div>;
+    private RenderFragment HelpButtons => @<text>
+        <TmToolbarButton Icon="help-circle" Text="@Loc["EmailEditor_Toolbar_Help"]"
+                         Tooltip="@Loc["EmailEditor_Toolbar_Help"]"
+                         Priority="ToolbarButtonPriority.Secondary"
+                         OnClick="() => _showShortcuts = true" data-tm-help-btn="true" />
+    </text>;
 
     private RenderFragment ReadOnlyBadge => @<div class="tm-email-editor__readonly" data-tm-readonly-badge
                                                 title="@Loc["EmailEditor_ReadOnly_Badge"]">
@@ -421,7 +677,7 @@
     </text>;
 
     private RenderFragment SaveButton => @<text>
-        @if (ShowSaveButton)
+        @if (ShowSaveButton && !ReadOnly)
         {
             @* NOT natively disabled while a save is in flight: a disabled button drops focus (a keyboard user
                who pressed Enter on Save lands on <body>), and the single-flight queue already makes a second
@@ -434,6 +690,130 @@
                       OnClick="OnSaveClickedAsync" data-tm-save="true">@Loc["EmailEditor_Toolbar_Save"]</TmButton>
         }
     </text>;
+
+    /// <summary>
+    /// The shell's status bar: the Failed/Conflict alert (the host's whole reason plus a retry, readable
+    /// without hovering a truncated pill — carry-forward from Fáze 7) above the save-status badge or the
+    /// read-only badge.
+    /// </summary>
+    private RenderFragment StatusBarPanel => @<div class="tm-email-editor__status" data-tm-status>
+        @if (SaveAlertKind is { } alertKind)
+        {
+            <TmAlert Severity="@(alertKind == EditorSaveBadge.Conflict ? AlertSeverity.Warning : AlertSeverity.Error)"
+                     Class="tm-email-editor__save-alert" data-tm-save-alert="@SaveBadgeStateName">
+                <p class="tm-email-editor__save-alert-message">@SaveAlertMessage</p>
+                <p class="tm-email-editor__save-alert-hint">@SaveAlertHint</p>
+                @if (!ReadOnly && ShowSaveButton)
+                {
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="rotate-cw"
+                              OnClick="OnRetrySaveAsync" data-tm-save-retry="true">@Loc["EmailEditor_SaveStatus_Retry"]</TmButton>
+                }
+            </TmAlert>
+        }
+        <div class="tm-email-editor__status-row">
+            @if (ReadOnly)
+            {
+                @ReadOnlyBadge
+            }
+            else
+            {
+                @SaveBadge
+            }
+        </div>
+    </div>;
+
+    // No panel header above the palette: the palette itself pairs its title with the search field, so a
+    // second heading for the same surface would only cost height (and it clipped in the rail).
+    private RenderFragment ToolboxPanel => @<section class="tm-email-editor__panel tm-email-editor__panel--toolbox"
+                                                   data-tm-toolbox aria-label="@Loc["EmailEditor_Panel_Blocks"]">
+        <div class="tm-email-editor__panel-body">
+            <TmEmailTemplateToolbox OnAddBlock="AddBlockAsync" OnAddSection="AddSectionAsync"
+                                    OnDragBlockStart="StartBlockDragAsync" ReadOnly="ReadOnly"
+                                    ShowCollapseToggle="false" />
+        </div>
+    </section>;
+
+    /// <summary>
+    /// The collapsed palette (the shell's <c>LeftRail</c>): every registered block as an icon button,
+    /// finger-sized (<c>--tm-touch-target</c>), with the localized name as its title and accessible name.
+    /// A collapsed panel whose rail was empty would be a dead end.
+    /// </summary>
+    private RenderFragment ToolboxRail => @<div class="tm-email-editor__rail" data-tm-toolbox-rail
+                                               aria-label="@Loc["EmailEditor_Panel_Blocks"]">
+        @foreach (var descriptor in Registry.GetAll())
+        {
+            <button type="button"
+                    class="tm-email-editor__rail-item"
+                    data-tm-rail-block="@descriptor.Id"
+                    title="@Loc[descriptor.NameKey]"
+                    aria-label="@Loc[descriptor.NameKey]"
+                    disabled="@ReadOnly"
+                    @onclick="() => AddBlockAsync(descriptor)">
+                <TmIcon Name="@descriptor.Icon" Size="IconSize.Md" />
+            </button>
+        }
+    </div>;
+
+    private RenderFragment CanvasPanel => @<section class="tm-email-editor__canvas" data-tm-canvas
+                                                  aria-label="@Loc["EmailEditor_Panel_Canvas"]">
+        <TmEmailTemplateCanvas @ref="_canvas" Document="_document" SelectedId="_selectedId"
+                               SelectedIdChanged="OnSelectionChangedAsync"
+                               OnDocumentChanged="OnStructuralChangeAsync"
+                               DragActive="!ReadOnly && _dragPayload is not null"
+                               OnBlockDragStart="StartExistingBlockDragAsync"
+                               OnDropInColumn="HandleDropAsync"
+                               ReadOnly="ReadOnly" />
+    </section>;
+
+    private RenderFragment InspectorPanel => @<section class="tm-email-editor__panel" data-tm-properties
+                                                     aria-label="@Loc["EmailEditor_Panel_Properties"]">
+        <header class="tm-email-editor__panel-header">@Loc["EmailEditor_Panel_Properties"]</header>
+        <div class="tm-email-editor__panel-body">
+            <TmEmailPropertyPanel Document="_document" SelectedId="_selectedId"
+                                  Variables="Variables" OnImageUpload="OnImageUpload"
+                                  ImageUpload="ImageUpload" ReadOnly="ReadOnly"
+                                  OnDuplicate="DuplicateSelectedAsync" OnDelete="DeleteSelectedAsync"
+                                  OnChanged="OnPropertyChangeAsync" />
+        </div>
+    </section>;
+
+    /// <summary>
+    /// The shell's mobile action bar (F5): ONLY undo, redo, preview and validate (D20) — Save is the
+    /// header's primary action, and everything else is a long-tail command in the "⋮" overflow.
+    /// </summary>
+    private IReadOnlyList<TmActionItem> MobileActionItems => new[]
+    {
+        new TmActionItem
+        {
+            Id = "undo",
+            Label = Loc["EmailEditor_Toolbar_Undo"],
+            Icon = "rotate-ccw",
+            Disabled = !_history.CanUndo || ReadOnly,
+            OnClick = EventCallback.Factory.Create(this, UndoAsync),
+        },
+        new TmActionItem
+        {
+            Id = "redo",
+            Label = Loc["EmailEditor_Toolbar_Redo"],
+            Icon = "rotate-cw",
+            Disabled = !_history.CanRedo || ReadOnly,
+            OnClick = EventCallback.Factory.Create(this, RedoAsync),
+        },
+        new TmActionItem
+        {
+            Id = "preview",
+            Label = Loc["EmailEditor_Toolbar_Preview"],
+            Icon = "eye",
+            OnClick = EventCallback.Factory.Create(this, () => { _showPreview = true; return Task.CompletedTask; }),
+        },
+        new TmActionItem
+        {
+            Id = "validate",
+            Label = Loc["EmailEditor_Toolbar_Validate"],
+            Icon = "check-circle",
+            OnClick = EventCallback.Factory.Create(this, () => { _showValidation = true; return Task.CompletedTask; }),
+        },
+    };
 
     /// <summary>
     /// Saves the document through <see cref="OnSave"/> — the hook a host wires into
@@ -518,8 +898,18 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        await AttachSaveShortcutAsync();
+        if (firstRender) await AttachSaveShortcutAsync();
+
+        // A structural change armed the canvas focus; it runs AFTER the render, because the element
+        // reference only exists once the new block is in the DOM (a focus call during the handler would
+        // find the old tree — the block the user just inserted was not in _blockRefs yet).
+        if (_focusBlockAfterRender is { } target)
+        {
+            _focusBlockAfterRender = null;
+            await FocusCanvasAsync(target);
+        }
+
+        await ApplyPendingCollapseRaiseAsync();
     }
 
     // ── Saving ───────────────────────────────────────────────────────────────────────────────
@@ -972,6 +1362,10 @@
         ResolveTargetColumn().Blocks.Add(block);
         _selectedId = block.Id;
         await CommitAsync();
+        // Mobile: the sheet is covering the canvas, so the block the user just inserted has to be
+        // revealed — column click-to-add inserts AFTER the selected block, which can be anywhere.
+        await CollapseMobileSheetAsync();
+        _focusBlockAfterRender = block.Id;
     }
 
     private async Task AddSectionAsync(LayoutPreset preset)
@@ -981,6 +1375,8 @@
         _document.Sections.Add(section);
         _selectedId = section.Id;
         await CommitAsync();
+        await CollapseMobileSheetAsync();
+        _focusBlockAfterRender = section.Id;
     }
 
     private async Task HandleDropAsync((Guid ColumnId, int Index) target)
@@ -1015,11 +1411,13 @@
         await CommitAsync();
     }
 
-    private Task OnSelectionChangedAsync(Guid? id)
+    private async Task OnSelectionChangedAsync(Guid? id)
     {
         _selectedId = id;
+        // A selected block is edited in the inspector, so on a phone layout the sheet follows the
+        // selection (EM3) instead of leaving the user on the palette.
+        if (id is not null) await ShowMobilePanelAsync(EditorShellPanel.Right);
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private Task OnValidationNavigateAsync(Guid? id)
@@ -1108,13 +1506,6 @@
     private bool ToolboxCollapsedEffective
         => ToolboxCollapsedChanged.HasDelegate ? ToolboxCollapsed : (_toolboxCollapsedInternal ?? ToolboxCollapsed);
 
-    private async Task OnToolboxCollapsedChangedAsync(bool collapsed)
-    {
-        _toolboxCollapsedInternal = collapsed;
-        await ToolboxCollapsedChanged.InvokeAsync(collapsed);
-        StateHasChanged();
-    }
-
     /// <summary>Duplicates the selected block as ONE history step (the inspector's header action).</summary>
     private async Task DuplicateSelectedAsync(Guid blockId)
     {
@@ -1161,12 +1552,19 @@
     /// Moves focus back into the canvas after a structural delete. Focus runs after the re-render so the
     /// element reference points at a live node; the canvas focuses the neighbouring block or its own root.
     /// </summary>
-    private async Task FocusAfterDeleteAsync(Guid? neighbour)
+    private Task FocusAfterDeleteAsync(Guid? neighbour) => FocusCanvasAsync(neighbour);
+
+    /// <summary>
+    /// Moves focus into the canvas (the block when it is still rendered, the canvas root otherwise) and
+    /// lets the browser scroll it into view. Used after a structural change that removed or added the
+    /// focused element — focus must never fall to <c>&lt;body&gt;</c>.
+    /// </summary>
+    private async Task FocusCanvasAsync(Guid? id)
     {
         if (_canvas is null) return;
         try
         {
-            await _canvas.FocusAsync(neighbour);
+            await _canvas.FocusAsync(id);
         }
         catch (JSDisconnectedException)
         {

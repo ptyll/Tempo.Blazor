@@ -668,6 +668,10 @@
         }));
         builder.AddComponentParameter(163, nameof(TmPopover.IsOpenChanged),
             EventCallback.Factory.Create<bool>(this, open => OnVariablesOpenChanged(field.Name, open)));
+        // Fáze 8 (closes the F7A carry-forward): on a phone-sized viewport the picker presents as a
+        // content-height bottom sheet instead of an anchored popover the inspector column would clip.
+        // Auto follows the viewport scope (F3); the desktop anchored popover stays the desktop shape.
+        builder.AddComponentParameter(166, nameof(TmPopover.MobilePresentation), PanelPresentation.Auto);
         builder.AddComponentParameter(164, nameof(TmPopover.ChildContent), (RenderFragment)(body =>
         {
             // An OPEN picker is the only state that needs the catalogue: rendering it eagerly would mount a

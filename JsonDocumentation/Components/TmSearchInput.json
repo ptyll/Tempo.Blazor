@@ -8,38 +8,6 @@
   ],
   "parameters": [
     {
-      "name": "Value",
-      "type": "string",
-      "isRequired": false,
-      "default": "Empty",
-      "description": "Current search text."
-    },
-    {
-      "name": "ValueChanged",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Fires when the search value changes. Raised at most once per change: the input element reports a single user edit as both an input and a change event, and the same value is never delivered twice in a row."
-    },
-    {
-      "name": "Placeholder",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Placeholder text. When null, falls back to the localized default."
-    },
-    {
-      "name": "Disabled",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Disables the search input."
-    },
-    {
-      "name": "DebounceMs",
-      "type": "int",
-      "isRequired": false,
-      "default": "0",
-      "description": "Debounce delay in milliseconds (0 = no debounce)."
-    },
-    {
       "name": "AutoComplete",
       "type": "string?",
       "isRequired": false,
@@ -51,6 +19,44 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "DebounceMs",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Debounce delay in milliseconds (0 = no debounce)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the search input."
+    },
+    {
+      "name": "OnKeyDown",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false,
+      "description": "Raised for every key press in the input. A consumer that owns a list under the search (the email variable picker) uses it for arrow-key navigation. Additive: it never blocks typing, and nothing is prevented by the component itself."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text. When null, falls back to the localized default."
+    },
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Current search text."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the search value changes. Raised at most once per change: the input element reports a single user edit as both an input and a change event, and the same value is never delivered twice in a row."
     }
   ],
   "cssClasses": [

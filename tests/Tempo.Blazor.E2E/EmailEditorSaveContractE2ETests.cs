@@ -24,7 +24,45 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
         await page.Locator("[data-tm-new-template]").ClickAsync();
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
         await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 30000 });
+        // These cases are about the SAVE contract on the desktop chrome; the narrow-layout case switches the
+        // editor back to Auto itself.
+        await ForceEditorLayoutAsync(page, "Desktop");
         return page;
+    }
+
+    /// <summary>
+    /// Inserts a text block through whatever palette surface the current layout shows — the docked toolbox,
+    /// the rail, or the mobile panels sheet (which an insert collapses again). Leaves the document dirty.
+    /// </summary>
+    private static async Task AddBlockFromPaletteAsync(IPage page)
+    {
+        var tile = page.Locator("[data-tm-toolbox-list] [data-tm-block='text']");
+        if (await tile.CountAsync() == 0)
+        {
+            // Collapsed to a rail: expand it first.
+            var railToggle = page.Locator("[data-region='rail-left'] button.tm-editor-shell__panel-toggle");
+            if (await railToggle.CountAsync() > 0)
+            {
+                await railToggle.First.ClickAsync();
+                await page.WaitForTimeoutAsync(400);
+            }
+        }
+
+        if (await tile.CountAsync() == 0)
+        {
+            // Mobile: open the panels sheet (it starts on the palette).
+            var bar = page.Locator(".tm-editor-shell__panel-toggle--mobile");
+            if (await bar.CountAsync() > 0)
+            {
+                await bar.First.ClickAsync();
+                await page.WaitForTimeoutAsync(400);
+            }
+        }
+
+        await page.Locator("[data-tm-block='text']").First.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-tm-email-editor]')?.getAttribute('data-tm-dirty') === 'true'",
+            null, new() { Timeout = 15000 });
     }
 
     private static async Task EditSubjectAsync(IPage page, string value)
@@ -249,33 +287,29 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
     {
         var page = await OpenFreshEditorAsync();
 
-        // The editor decides from its OWN rendered width (container query), not the viewport: in this demo
-        // the editor is ~842 px wide at a 1440 px window, so the labels are hidden and the icons carry the
-        // action through their aria-label.
-        var narrowWidth = await ToolbarWidthAsync(page);
-        narrowWidth.Should().BeLessThan(1200, "the demo's editor column is narrower than the label threshold");
-        (await page.Locator("[data-tm-undo] .tm-email-editor__btn-label").IsVisibleAsync())
-            .Should().BeFalse("below 1200 px the icon alone is shown");
+        // Fáze 8: the command row is the CORE TmToolbar, whose label decision is its own (ToolbarLabels.Auto
+        // hides the text below 640 px of TOOLBAR width). The editor no longer carries a 1200 px container rule,
+        // so the contract is now: the label follows the core toolbar, and the accessible name never depends on
+        // the visible text.
+        var barWidth = await ToolbarWidthAsync(page);
+        barWidth.Should().BeGreaterThan(640, "a docked desktop command row is wider than the core label step");
+        (await page.Locator("[data-tm-undo] .tm-toolbar-btn-text").IsVisibleAsync())
+            .Should().BeTrue("above the core label step the action is spelled out");
         (await page.Locator("[data-tm-undo]").GetAttributeAsync("aria-label"))
             .Should().NotBeNullOrWhiteSpace("the accessible name must not depend on the visible label");
-        await SaveNamedScreenshotAsync(page, "38-toolbar-icon-only.png");
-
-        // Give the editor a genuinely wide container (the host decides how wide the editor is) and assert on
-        // the RENDERED toolbar width before checking the label — a data attribute would prove nothing.
-        await page.SetViewportSizeAsync(1920, 1000);
-        await page.AddStyleTagAsync(new()
-        {
-            Content = ".tm-demo-email-editor-page__editor > .tm-email-editor { flex: 1 1 auto; inline-size: 100%; }",
-        });
-        await page.WaitForFunctionAsync(
-            "() => { const bar = document.querySelector('.tm-email-editor__toolbar'); return bar && bar.getBoundingClientRect().width >= 1200; }",
-            null, new() { Timeout = 15000 });
-
-        (await page.Locator("[data-tm-undo] .tm-email-editor__btn-label").IsVisibleAsync())
-            .Should().BeTrue("at a container width of 1200 px and above the action is spelled out");
-        (await page.Locator("[data-tm-undo]").GetAttributeAsync("aria-label"))
-            .Should().NotBeNullOrWhiteSpace("the accessible name is stable across widths");
         await SaveNamedScreenshotAsync(page, "39-toolbar-labels.png");
+
+        // A narrow editor (a phone) drops the command row entirely — the actions live in the header's action
+        // bar instead — so the icon-only state is now the ACTION BAR, where the label always accompanies the
+        // icon and the accessible name is the tile label. The harness pinned the desktop mode for the cases
+        // above; this half needs the editor to follow its container again.
+        await page.SelectOptionAsync("[data-tm-demo-layout]", "Auto");
+        await page.SetViewportSizeAsync(390, 800);
+        await page.WaitForSelectorAsync(".tm-editor-shell[data-layout='mobile']", new() { Timeout = 30000 });
+        (await page.Locator(".tm-mobile-action-bar").CountAsync()).Should().BeGreaterThan(0);
+        (await page.Locator("[data-region='toolbar']").CountAsync()).Should().Be(0,
+            "the mobile action bar replaces the command row");
+        await SaveNamedScreenshotAsync(page, "38-toolbar-icon-only.png");
     }
 
     // ── narrow layouts ──────────────────────────────────────────────────────────────────────
@@ -292,9 +326,16 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
         {
             var page = await OpenFreshEditorAsync();
             await page.SetViewportSizeAsync(width, height);
+            // This case is about the NARROW chrome, so let the editor follow its container again (the base
+            // harness seeds the desktop mode for the specs that need the docked layout).
+            await page.SelectOptionAsync("[data-tm-demo-layout]", "Auto");
+            await page.WaitForSelectorAsync(".tm-editor-shell[data-layout='mobile']", new() { Timeout = 30000 });
             await ChooseHostResultAsync(page, "failed-long");
 
-            await EditSubjectAsync(page, $"Narrow {width} {Guid.NewGuid():N}");
+            // A dirty document without depending on an inspector field: inserting a block is available on
+            // every layout (docked palette on desktop, the panels sheet on a phone), and it is what a user
+            // does before saving anyway.
+            await AddBlockFromPaletteAsync(page);
             await page.Locator("[data-tm-save]").ClickAsync();
             await page.WaitForSelectorAsync("[data-tm-save-badge][data-tm-save-state='failed']", new() { Timeout = 20000 });
 
@@ -303,23 +344,23 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
             (await page.Locator("[data-tm-save-badge]").GetAttributeAsync("title"))
                 .Should().NotBeNullOrWhiteSpace("a truncated badge has to explain itself on hover");
 
+            // Fáze 8: the badge is chrome of the SHELL's status bar, not of the save chrome, so it can no
+            // longer push the primary action aside — the invariant became "Save keeps its own row and the
+            // host's whole reason stays readable in the status bar's alert".
             var saveBox = await save.BoundingBoxAsync();
-            var badgeBox = await page.Locator("[data-tm-save-badge]").BoundingBoxAsync();
             saveBox.Should().NotBeNull();
-            badgeBox.Should().NotBeNull();
-            // Same ROW, not the same top pixel: the chip and the button have different heights and are
-            // centred, so compare the row centres and require the boxes to overlap vertically.
-            var saveCenter = saveBox!.Y + (saveBox.Height / 2);
-            var badgeCenter = badgeBox!.Y + (badgeBox.Height / 2);
-            Math.Abs(saveCenter - badgeCenter).Should().BeLessThan(4,
-                $"the badge and Save must share one row at {width} px (centres {badgeCenter} vs {saveCenter})");
-            badgeBox.Y.Should().BeLessThan(saveBox.Y + saveBox.Height,
-                "their rows must overlap, not stack");
-            saveBox.X.Should().BeGreaterThan(badgeBox.X, "Save follows the badge");
+            saveBox!.Height.Should().BeGreaterThan(0);
+            (await page.Locator("[data-region='status-bar'] [data-tm-save-badge]").CountAsync())
+                .Should().Be(1, "the badge lives in the status bar");
 
             // The full host reason is readable in the alert, not clipped in the pill.
             (await page.Locator("[data-tm-save-alert]").InnerTextAsync())
                 .Should().Contain("the stored sample data no longer matches");
+
+            // No horizontal overflow at either narrow width (the F7A review #12 criterion).
+            var overflow = await page.EvaluateAsync<int>(
+                "() => { const el = document.querySelector('[data-tm-email-editor]'); return Math.round(el.scrollWidth - el.clientWidth); }");
+            overflow.Should().BeLessThanOrEqualTo(0, $"no horizontal overflow at {width} px");
 
             await SaveNamedScreenshotAsync(page, file);
             await page.CloseAsync();

@@ -1,3 +1,13 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   TmEmailTemplateEditor — the editor chrome inside the CORE TmEditorShell (Fáze 8)
+   ───────────────────────────────────────────────────────────────────────────────────────────
+   The editor owns NO layout: the shell resolves desktop / tablet / mobile from its own container
+   (Breakpoints 768/1200) and renders the regions. Everything below is chrome INSIDE a slot.
+   Layout-dependent rules key on the shell's `data-layout` attribute — never on an `@container` or a
+   `@media (…-width)` literal, which would disagree with the markup branch the shell already took
+   (F6-SHELL-BREAKPOINTS). Only pointer/reduced-motion media queries are allowed here.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+
 .tm-email-editor {
     display: flex;
     flex: 1 1 auto;
@@ -14,13 +24,30 @@
     font-family: var(--tm-font-sans);
 }
 
+/* The shell is a CHILD component: its root carries the shell's own scope attribute, so the class the
+   editor passes reaches it but a plain `.tm-email-editor__shell` rule from this stylesheet does not.
+   ::deep from the editor root is what reaches it — the same rule the F7 splitter needed. */
+.tm-email-editor ::deep .tm-email-editor__shell {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    /* The shell draws its own docked chrome; the editor's canvas keeps the workspace tint. */
+    background: var(--tm-bg-workspace);
+}
+
+/* The header slot is supplied at EVERY layout but its content only exists on a mobile one. The shell's
+   header div would otherwise leave an empty band above the command row on desktop — `:empty` ignores the
+   renderer's comment markers, so collapsing it is exact and no mobile control exists twice in the DOM. */
+.tm-email-editor ::deep .tm-editor-shell__header:empty {
+    display: none;
+}
+
+/* ── The command row (desktop and tablet) ──────────────────────────────────────────────── */
+
 .tm-email-editor__toolbar {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
     padding: var(--tm-space-2) var(--tm-space-3);
-    border-block-end: 1px solid var(--tm-color-border);
-    background: var(--tm-color-surface);
 }
 
 .tm-email-editor__toolbar-group {
@@ -29,9 +56,10 @@
     gap: var(--tm-space-1);
 }
 
-/* The badge and the Save button never wrap apart: the group takes the remaining bar width (basis 0 keeps
-   its hypothetical size off the wrap calculation) and pins its content to the right edge, so the primary
-   action stays where the user last saw it no matter how long the host's message is. */
+/* The primary action never wraps away from the row's end: the chrome group takes the remaining width
+   (basis 0 keeps its hypothetical size off the wrap calculation) and pins Save to the right edge. The
+   save-status BADGE is no longer here — it lives in the shell's status bar, where a long host message
+   cannot push the primary button onto a second row. */
 .tm-email-editor__save-chrome {
     display: flex;
     flex: 1 1 0;
@@ -42,31 +70,70 @@
     min-inline-size: 0;
 }
 
-.tm-email-editor__status {
-    min-inline-size: 6ch;
-    font-size: var(--tm-font-size-sm);
-    color: var(--tm-color-text-muted);
+/* ── The compact mobile header (D20) ───────────────────────────────────────────────────── */
+
+.tm-email-editor__mobile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
 }
 
-/* The splitter is a CHILD component: its root carries the splitter's own scope attribute, so a plain
-   `.tm-email-editor__body` rule silently matched nothing. ::deep from the editor root is what reaches it. */
-.tm-email-editor ::deep .tm-email-editor__body {
+.tm-email-editor__mobile-title {
     flex: 1 1 auto;
-    min-block-size: 0;
-    gap: var(--tm-space-4);
-    background: var(--tm-bg-workspace);
+    min-inline-size: 0;
+    overflow: hidden;
 }
 
-/* Every panel is a CARD (redesign reference): radius-lg, a token border, an inner gap, on the workspace
-   surface. The splitter gutter separates them, so no extra margin is needed. */
+.tm-email-editor__mobile-header-end {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+/* The "⋮" is a popover trigger: the trigger must stay a finger-sized target even though its glyph is
+   small, and it must not inherit the popover's inline layout. */
+.tm-email-editor__mobile-overflow-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-editor__mobile-overflow-trigger:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+/* The overflow body: free content (the host's own ToolbarEnd fragment plus the long-tail commands)
+   stacked in one column, so it stays a valid popover/sheet body instead of a role=menu with
+   non-menuitem children. */
+.tm-email-editor__mobile-overflow-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: min(16rem, 100%);
+    padding: var(--tm-space-1);
+}
+
+.tm-email-editor__mobile-overflow-panel .tm-email-editor__toolbar-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-1);
+}
+
+/* ── Panels (the two docked columns / the sheet panels) ───────────────────────────────── */
+
 .tm-email-editor__panel {
     display: flex;
     flex-direction: column;
     block-size: 100%;
     min-block-size: 0;
     min-inline-size: 0;
-    border: var(--tm-border-width) solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
     background: var(--tm-color-surface);
     overflow: hidden;
 }
@@ -90,17 +157,56 @@
     padding: var(--tm-space-3);
 }
 
-/* The collapsed palette keeps its rail (the toggle) reachable in a narrow pane. */
-.tm-email-editor__panel--toolbox .tm-email-editor__panel-header {
-    justify-content: center;
+/* The docked panels are shell columns, not cards: the shell owns the region chrome (its own surface and
+   the separator between a panel and the canvas). Only the sheet presentation gets the inner card look,
+   because there the panel floats above the canvas. */
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__panel {
+    block-size: auto;
+    min-block-size: 0;
+    background: transparent;
 }
 
-/* The collapsed palette is a narrow rail and its own header carries the toggle, so the panel header above it
-   is hidden — otherwise its title is clipped to "Bl…" in a 56 px pane. The class is set on the editor's own
-   <section> (a `:has()` on the child component's markup would never match the scoped attribute). */
-.tm-email-editor__panel--toolbox-collapsed .tm-email-editor__panel-header {
-    display: none;
+/* ── The collapsed palette rail (the shell's LeftRail slot) ───────────────────────────── */
+
+.tm-email-editor__rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-block: var(--tm-space-2);
+    min-inline-size: 0;
 }
+
+.tm-email-editor__rail-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    padding: 0;
+    background: transparent;
+    color: var(--tm-color-text-secondary);
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-email-editor__rail-item:hover:not([disabled]) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-email-editor__rail-item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+.tm-email-editor__rail-item[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── The canvas ───────────────────────────────────────────────────────────────────────── */
 
 .tm-email-editor__canvas {
     display: flex;
@@ -110,69 +216,32 @@
     min-inline-size: 0;
     overflow: auto;
     padding: var(--tm-space-4);
-    border: var(--tm-border-width) solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    background: var(--tm-color-surface-secondary);
 }
 
-/* Preview dialog footer: "Refresh preview" on the left, "Close" + the host's FooterActions on the right.
-   The modal footer is already a flex row with justify-content:flex-end, so without these rules the two
-   wrapper divs stack vertically and both actions end up right-aligned in their own row. */
-.tm-email-editor__preview-footer {
+/* ── The status bar: save badge, read-only badge, the Failed/Conflict alert ───────────── */
+
+.tm-email-editor__status {
     display: flex;
-    flex: 1 1 auto;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: var(--tm-space-2);
-    inline-size: 100%;
+    min-inline-size: 0;
 }
 
-.tm-email-editor__preview-footer-end {
+.tm-email-editor__status-row {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: var(--tm-space-2);
-    margin-inline-start: auto;
+    min-inline-size: 0;
 }
 
-/* ── Save contract (Fáze 7) ──────────────────────────────────────────────────────────────── */
-
-/* The command bar carries task groups separated by hairlines instead of one undifferentiated row.
-   The bar is the query container: a `container-type: inline-size` element computes its own inline size
-   without its contents, which zeroes a flex item whose basis is `auto` (the editor is one inside a host's
-   flex row) — the toolbar instead stretches to the editor's width on the cross axis, so it can carry the
-   container without changing the editor's layout. */
-.tm-email-editor__toolbar {
-    container: tm-email-editor / inline-size;
-    flex-wrap: wrap;
-}
-
-.tm-email-editor__toolbar-sep {
-    flex: 0 0 auto;
-    inline-size: 1px;
-    block-size: var(--tm-space-4);
-    background: var(--tm-color-border);
-}
-
-/* Icon-only below 1200px — the accessible name comes from the button's aria-label at every width. */
-.tm-email-editor__btn-label {
-    display: none;
-}
-
-@container tm-email-editor (min-width: 1200px) {
-    .tm-email-editor__btn-label {
-        display: inline;
-    }
-}
-
-/* The badge never grows the bar: it truncates, and its own message is the host's (possibly long) reason. */
+/* The badge never grows the bar: it truncates, and its own message is the host's (possibly long) reason.
+   A failure/conflict adds the full-width alert above, so the pill is a summary, never the only copy. */
 .tm-email-editor__save-status {
     display: inline-flex;
     flex: 0 1 auto;
     align-items: center;
     gap: var(--tm-space-1);
-    max-inline-size: 44ch;
+    max-inline-size: 60ch;
     min-inline-size: 0;
     padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid transparent;
@@ -229,26 +298,39 @@
     color: var(--tm-color-warning-text);
 }
 
-/* Narrow editor: below ~900px the bar is icon-only (every action hides its label exactly the same way), so
-   the status collapses to a full-size 24px severity chip instead of a squeezed sliver — a pill truncated to
-   a few pale pixels told the user nothing, and a wide pill pushed the primary Save button out of the row.
-   The words live in `title` and, for a failure/conflict, in the alert below. */
-@container tm-email-editor (max-width: 900px) {
-    .tm-email-editor__save-status {
-        flex: 0 0 auto;
-        inline-size: var(--tm-space-6);
-        min-inline-size: var(--tm-space-6);
-        justify-content: center;
-        padding-inline: 0;
-    }
-
-    .tm-email-editor__save-label,
-    .tm-email-editor__save-message {
-        display: none;
-    }
+/* Below the desktop layout the status bar is a narrow strip: the pill collapses to a full-size 24px
+   severity chip instead of a squeezed sliver (a pill truncated to a few pale pixels told the user
+   nothing, and words do not fit next to the primary action). The words live in `title` and, for a
+   failure/conflict, in the alert above. Keyed on the SHELL's decision, never on a local width step. */
+.tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-status,
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-status {
+    position: relative;
+    flex: 0 0 auto;
+    inline-size: var(--tm-space-6);
+    min-inline-size: var(--tm-space-6);
+    justify-content: center;
+    padding-inline: 0;
+    overflow: hidden;
 }
 
-/* ── Read-only (Fáze 7) ──────────────────────────────────────────────────────────────────── */
+/* The words are visually hidden, NOT display:none: the badge keeps its full text in the DOM and in the
+   accessibility tree (a screen reader still reads the state), and `title` carries it for a pointer. */
+.tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-label,
+.tm-email-editor ::deep [data-layout="tablet"] .tm-email-editor__save-message,
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-label,
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__save-message {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── Read-only (Fáze 7) ─────────────────────────────────────────────────────────────────── */
 
 /* A read-only editor is a different mode, not a dimmed editor: the badge says so, the Save button is gone
    (there is nothing it could do) and unsaved changes stay visible only as a secondary fact. */
@@ -283,13 +365,11 @@
     text-overflow: ellipsis;
 }
 
-/* ── Failed/Conflict alert (Fáze 7) ─────────────────────────────────────────────────────── */
+/* ── Failed/Conflict alert (Fáze 7, moved into the status bar by Fáze 8) ────────────────── */
 
-/* Under the command bar and outside the save chrome: the host's reason is a sentence, not a pill label, and
-   the retry action has to stay reachable however long that sentence is. */
 /* Same child-component rule for TmAlert: the class lands on the alert's own root. */
 .tm-email-editor ::deep .tm-email-editor__save-alert {
-    margin: var(--tm-space-2) var(--tm-space-3) 0;
+    min-inline-size: 0;
 }
 
 .tm-email-editor__save-alert-message {
@@ -301,4 +381,52 @@
 .tm-email-editor__save-alert-hint {
     margin: var(--tm-space-1) 0 var(--tm-space-2);
     font-size: var(--tm-font-size-sm);
+}
+
+/* ── Preview dialog footer ────────────────────────────────────────────────────────────── */
+
+/* "Refresh preview" on the left, "Close" + the host's FooterActions on the right. The modal footer is
+   already a flex row with justify-content:flex-end, so without these rules the two wrapper divs stack
+   vertically and both actions end up right-aligned in their own row. */
+.tm-email-editor__preview-footer {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+}
+
+.tm-email-editor__preview-footer-end {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-inline-start: auto;
+}
+
+/* ── Touch ─────────────────────────────────────────────────────────────────────────────── */
+
+/* A coarse pointer needs finger-sized targets on every control the phone layout keeps: the shell sizes
+   its own (rails, tabs, sheet close) with --tm-touch-target, and the palette tiles inside the sheet are
+   sized here (they are a CHILD component's elements, hence ::deep). */
+@media (pointer: coarse) {
+    .tm-email-editor ::deep .tm-email-toolbox__item {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-email-editor ::deep .tm-email-toolbox__collapse {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-email-editor__rail-item,
+    .tm-email-editor__mobile-overflow-trigger {
+        transition: none;
+    }
 }

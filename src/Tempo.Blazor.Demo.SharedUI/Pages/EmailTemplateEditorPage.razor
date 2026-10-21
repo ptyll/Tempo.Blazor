@@ -1,6 +1,8 @@
 @page "/email-templates/edit/{Id:guid}"
+@using Tempo.Blazor.Abstractions.Layout
 @inject IEmailTemplateApiClient Api
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>Edit template</PageTitle>
 
@@ -21,11 +23,35 @@
                 <option value="conflict">Simulate conflict</option>
             </select>
         </label>
+        @* Fáze 8 demo: force the editor's layout instead of resizing the browser. Auto lets the shell
+           measure its own container (the production path); the other three pin a mode so the desktop /
+           tablet / phone chrome can be reviewed side by side. *@
+        <label class="tm-demo-email-editor-page__simulate">
+            <span>Layout</span>
+            <select data-tm-demo-layout @onchange="OnLayoutChanged">
+                <option value="Auto">Auto (container)</option>
+                <option value="Desktop">Desktop</option>
+                <option value="Tablet">Tablet</option>
+                <option value="Mobile">Mobile</option>
+            </select>
+        </label>
+        @* EM3: Sheet is the mobile default (canvas + bottom sheet with Bloky | Vlastnosti), Tabs is the
+           shell's alternative full-region Left | Canvas | Right tablist. *@
+        <label class="tm-demo-email-editor-page__simulate">
+            <span>Mobile panels</span>
+            <select data-tm-demo-presentation @onchange="OnPresentationChanged">
+                <option value="Sheet">Sheet</option>
+                <option value="Tabs">Tabs</option>
+            </select>
+        </label>
         @* The editor's own badge already reports the save state; this is the HOST's view of the same thing,
            i.e. what arrived through IsDirtyChanged — the guard/leave flow keys off exactly this flag. The
            wording stays plain ("unsaved changes yes/no") instead of naming the internal flag. *@
         <span class="tm-demo-email-editor-page__status" data-tm-demo-dirty="@(_isDirty ? "true" : "false")">
             Host: unsaved changes @(_isDirty ? "yes" : "no")
+        </span>
+        <span class="tm-demo-email-editor-page__status" data-tm-demo-resolved-layout="@_resolvedLayout">
+            Layout: @_resolvedLayout
         </span>
     </div>
 
@@ -48,7 +74,10 @@
                                    ReadOnly="_readOnly"
                                    AutoSave="_autoSave"
                                    ImageUpload="_imageUpload"
-                                   Variables="_variables" />
+                                   Variables="_variables"
+                                   LayoutMode="_layoutMode"
+                                   MobilePanelPresentation="_presentation"
+                                   ResolvedLayoutChanged="OnResolvedLayoutChanged" />
         </div>
     }
 </div>
@@ -64,6 +93,10 @@
     private bool _readOnly;
     private bool _isDirty;
     private string _simulation = "real";
+    private bool _preferencesLoaded;
+    private TmLayoutMode _layoutMode = TmLayoutMode.Auto;
+    private MobilePanelPresentation _presentation = MobilePanelPresentation.Sheet;
+    private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
     private readonly AutoSaveOptions _autoSave = new() { Enabled = true, Interval = TimeSpan.FromSeconds(3) };
 
     /// <summary>
@@ -87,6 +120,57 @@
         new("company.support_email", VariableKind.Scalar) { Description = "Support e-mail of the company", Group = "Company" },
     ];
     private readonly ImageUploadOptions _imageUpload = new() { Accept = "image/*", MaxBytes = 2 * 1024 * 1024 };
+
+    /// <summary>
+    /// The demo remembers the reviewer's layout / presentation choice (localStorage), so an E2E that pins a
+    /// mode keeps it across the re-navigations the flow performs (a language switch, a fresh seed template).
+    /// </summary>
+    protected override async Task OnInitializedAsync() => await LoadPreferencesAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // A prerendered host cannot touch storage before the first interactive render: retry ONCE there.
+        if (firstRender) await LoadPreferencesAsync();
+    }
+
+    private async Task LoadPreferencesAsync()
+    {
+        if (_preferencesLoaded) return;
+        try
+        {
+            var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "tm-demo-editor-layout");
+            if (Enum.TryParse<TmLayoutMode>(stored, out var layout) && layout != _layoutMode)
+            {
+                _layoutMode = layout;
+                StateHasChanged();
+            }
+
+            var presentation = await JS.InvokeAsync<string?>("localStorage.getItem", "tm-demo-editor-presentation");
+            if (Enum.TryParse<MobilePanelPresentation>(presentation, out var panels) && panels != _presentation)
+            {
+                _presentation = panels;
+                StateHasChanged();
+            }
+
+            _preferencesLoaded = true;
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // No storage yet (prerender) or none at all (private mode): retried after the first render, then
+            // the switches simply start at their defaults.
+        }
+    }
+
+    private async Task RememberAsync(string key, string value)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", key, value);
+        }
+        catch (JSException)
+        {
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -150,6 +234,23 @@
     private void OnReadOnlyChanged(bool value) => _readOnly = value;
 
     private void OnSimulationChanged(ChangeEventArgs e) => _simulation = e.Value?.ToString() ?? "real";
+
+    private async Task OnPresentationChanged(ChangeEventArgs e)
+    {
+        _presentation = Enum.TryParse<MobilePanelPresentation>(e.Value?.ToString(), out var presentation)
+            ? presentation
+            : MobilePanelPresentation.Sheet;
+        await RememberAsync("tm-demo-editor-presentation", _presentation.ToString());
+    }
+
+    private async Task OnLayoutChanged(ChangeEventArgs e)
+    {
+        _layoutMode = Enum.TryParse<TmLayoutMode>(e.Value?.ToString(), out var mode) ? mode : TmLayoutMode.Auto;
+        await RememberAsync("tm-demo-editor-layout", _layoutMode.ToString());
+    }
+
+    /// <summary>The layout the shell actually resolved — the demo shows it so a reviewer can see the decision.</summary>
+    private void OnResolvedLayoutChanged(TmLayoutMode mode) => _resolvedLayout = mode;
 
     private void OnIsDirtyChanged(bool isDirty) => _isDirty = isDirty;
 

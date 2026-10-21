@@ -526,6 +526,21 @@
   (`14 + 6 × MaxNestingDepth`, decision `EMAIL-IMPORT-JSON-DEPTH`); a plain `Deserialize(json)` without
   options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
 
+- **Responsive editor chrome on the core `TmEditorShell` (Fáze 8).** `TmEmailTemplateEditor` renders
+  through `TmEditorShell` (Header / Toolbar / Left + LeftRail / Canvas / Right / StatusBar /
+  MobileActions): desktop ≥ 1200 px and tablet 768–1199 px keep the docked palette + inspector (the
+  shell rails one of them on a tablet, `F6-TABLET-DOCKED-PANELS`), and below 768 px the canvas keeps the
+  height while a non-modal bottom sheet carries Bloky | Vlastnosti (`MobilePanelPresentation.Sheet`,
+  default) or a Bloky | Plátno | Vlastnosti tablist replaces it (`Tabs`). Mobile chrome follows D20: the
+  **Save button and the host's `ToolbarStart` sit in the header**, `ToolbarEnd` and the
+  Import/Export/Validate/Shortcuts long tail move into the header's „⋮“ overflow, and the action bar
+  carries only Undo / Redo / Preview / Validate. Selecting a block switches the sheet to Vlastnosti;
+  inserting one collapses the sheet and moves the focus (and the scroll) to the new block. The palette's
+  collapsed state is an icon RAIL whose tiles are `--tm-touch-target`-sized, the failed/conflict alert is
+  readable in the status bar (no more hovering a truncated pill), and the editor keeps the command row
+  as a core `TmToolbar Overflow="Menu"` with a `Priority` per action (Save is `Pinned`).
+
+
 ### Breaking / Migration
 
 - **`TmEmailTemplateEditor.OnSave` is a `Func<EmailSaveRequest, Task<EmailSaveResult>>?` and `OnAutoSave` is
@@ -923,6 +938,81 @@
   token); variables extracted from a document keep them `null`. A host that compared `TemplateVariableInfo`
   instances or used them as dictionary keys sees a different `Equals`/`GetHashCode` than before — the
   compiler-visible shape is unchanged.
+
+- **`TmEmailTemplateEditor` renders the core `TmEditorShell` instead of its own `TmSplitter` 20/60/20.**
+  The editor used to lay itself out: a `TmSplitter` with a 20 % palette, a 60 % canvas and a 20 %
+  inspector, plus its own `@container` width steps. None of that could work on a phone (three panes at
+  390 px — the F7 screenshot 40b), and a second layout implementation would drift from the core shell
+  every other editor now uses. The editor now owns **no** layout: the root element is a thin wrapper
+  (`[data-tm-email-editor]`, the keyboard scope) around `TmEditorShell`, which resolves desktop / tablet /
+  mobile from the editor's **own container** (`Breakpoints` default `new TmLayoutBreakpoints(768, 1200)`)
+  and renders docked panels (desktop and tablet, at most one expanded), a bottom sheet with a
+  Bloky | Vlastnosti strip (mobile default) or a Bloky | Plátno | Vlastnosti tablist.
+
+  ```text
+  before (DOM)                                  after (DOM)
+  [data-tm-email-editor]                        [data-tm-email-editor]
+    .tm-email-editor__toolbar                     .tm-editor-shell[data-layout=…]
+    .tm-splitter                                  .tm-editor-shell__header   ← mobile only
+      .tm-email-editor__body                        .tm-editor-shell__toolbar  ← desktop + tablet
+        section[data-tm-toolbox]   (20 %)           .tm-editor-shell__main
+        section[data-tm-canvas]    (60 %)             aside[data-region=left]    → [data-tm-toolbox]
+        section[data-tm-properties](20 %)             div[data-region=canvas]    → [data-tm-canvas]
+                                                      aside[data-region=right]   → [data-tm-properties]
+                                                    .tm-editor-shell__status   → [data-tm-save-badge]
+                                                    .tm-mobile-action-bar      ← mobile only
+  ```
+
+  Migration — the stable selectors are unchanged, the wrapper classes and the layout are not:
+
+  | F7 selector | F8 replacement |
+  |---|---|
+  | `.tm-splitter` | *(gone — the shell is not a splitter)* |
+  | `.tm-email-editor__body` | `.tm-editor-shell__main` |
+  | `.tm-email-editor__toolbar` | still on the command row (now the core `TmToolbar` root) |
+  | `[data-tm-toolbox]`, `[data-tm-canvas]`, `[data-tm-properties]` | unchanged (inside `data-region=left/canvas/right`) |
+  | `[data-tm-save]` | unchanged; on a **mobile** layout it lives in `[data-region=header]` |
+  | `[data-tm-save-badge]` | unchanged; **moved** from the command row to `[data-region=status-bar]` |
+  | `[data-tm-save-alert]`, `[data-tm-save-retry]` | unchanged; also in `[data-region=status-bar]` |
+  | `[data-tm-toolbar-start]`, `[data-tm-toolbar-end]` | unchanged; on mobile `ToolbarEnd` renders inside the header's `[data-tm-mobile-overflow-panel]` |
+  | `[data-tm-group]` (`history`, `review`, `file`, `help`) | unchanged (now on core `TmToolbarGroup`s; the groups' separator spans `.tm-email-editor__toolbar-sep` are gone) |
+  | `.tm-email-editor__btn-label` | `.tm-toolbar-btn-text` (the core toolbar hides labels below its own label breakpoint) |
+  | `[data-tm-toolbox-collapse]` | *(gone — the shell's `button.tm-editor-shell__panel-toggle--left` is the one control; `ShowCollapseToggle="false"`)* |
+  | `[data-tm-toolbox-list]` when `ToolboxCollapsed` | *(gone — a collapsed panel is the shell's `[data-region=rail-left]` rail, not a hidden list)* |
+
+  A host stylesheet that keyed on the editor's own width had to change too: the email stylesheet no
+  longer contains any `@container` or `@media (…-width)` rule. Layout-dependent rules key on the shell's
+  attribute instead — `.tm-editor-shell[data-layout="mobile"] [data-tm-save-badge]`, and the values are
+  `mobile` | `tablet` | `desktop`:
+
+  ```css
+  /* before */
+  @container tm-email-editor (max-width: 900px) { .tm-email-editor__save-label { display: none; } }
+
+  /* after */
+  .tm-editor-shell[data-layout="mobile"] .tm-email-editor__save-label,
+  .tm-editor-shell[data-layout="tablet"] .tm-email-editor__save-label { display: none; }
+  ```
+
+- **New editor parameters `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` / `Breakpoints` /
+  `MobilePanelPresentation` / `ActiveMobilePanel(Changed)` (all additive, §3.3).** They are forwarded to
+  the shell unchanged — the editor keeps no breakpoint logic of its own.
+
+  ```razor
+  @* before — no layout API at all (the editor was always 20/60/20) *@
+  <TmEmailTemplateEditor Document="document" OnSave="SaveAsync" />
+
+  @* after — Auto measures the editor's container; force a mode in a demo or a test *@
+  <TmEmailTemplateEditor Document="document" OnSave="SaveAsync"
+                         LayoutMode="TmLayoutMode.Auto"
+                         MobilePanelPresentation="MobilePanelPresentation.Sheet"
+                         ResolvedLayoutChanged="mode => layout = mode" />
+  ```
+
+  `ToolboxCollapsed` / `ToolboxCollapsedChanged` stay the public API for the palette (D10) and are now
+  the mapping onto `TmEditorShell.CollapsedPanels` (`EditorShellPanel.Left`); a collapse the shell
+  imposes itself (the tablet one-expanded-panel rule) raises `ToolboxCollapsedChanged` too.
+
 
 ## 2.9.1 (unreleased)
 

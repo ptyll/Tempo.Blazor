@@ -38,6 +38,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
 
         await page.Locator("[data-tm-new-template]").ClickAsync();
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
+        await ForceEditorLayoutAsync(page, "Desktop");
         page.Url.Should().Contain("/email-templates/edit/");
         await SaveNamedScreenshotAsync(page, "02-gallery.png");
     }
@@ -339,6 +340,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
         var page = await OpenAsync("/email-templates");
         await page.Locator("[data-tm-new-template]").ClickAsync();
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
+        await ForceEditorLayoutAsync(page, "Desktop");
 
         // Dividers on purpose: an empty text block renders no visible content, so a 30-text-block email
         // would still look like a blank sheet in the screenshot. 30 dividers make the paper visibly long.
@@ -367,6 +369,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
         var page = await OpenAsync("/email-templates");
         await page.Locator("[data-tm-new-template]").ClickAsync();
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
+        await ForceEditorLayoutAsync(page, "Desktop");
 
         // Remove the single section a new template starts with: an empty document has nothing to preview.
         // The section toolbar only becomes clickable on hover, so the click is dispatched to the button
@@ -458,6 +461,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
         var page = await OpenAsync("/email-templates");
         await page.Locator("[data-tm-new-template]").ClickAsync();
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
+        await ForceEditorLayoutAsync(page, "Desktop");
         var editUrl = page.Url;
 
         var subject = $"Persisted {Guid.NewGuid():N}";

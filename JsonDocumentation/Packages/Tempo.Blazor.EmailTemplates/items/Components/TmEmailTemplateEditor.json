@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Components",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
-  "description": "Top-level MJML email template editor. Combines a task-grouped command bar (history, review, file, help, host slots, save-status badge and save) with a three-pane layout: a block toolbox, a drag-and-drop canvas and a property panel for the selected element. The host reports every save outcome through OnSave and the editor owns the dirty state (IsDirty/IsDirtyChanged), IsSaving, ReadOnly and the single-flight save queue; SaveAsync() is public for a TmNavigationGuard.OnSaveAndLeave wiring.",
+  "description": "Top-level MJML email template editor. Renders the core TmEditorShell (Header / Toolbar / Left + LeftRail / Canvas / Right / StatusBar / MobileActions) and owns NO layout of its own: the shell decides desktop (>=1200), tablet (768-1199) and mobile (<768) from the editor's own container, keeps docked panels on desktop AND tablet (at most one expanded) and presents the palette/inspector as a non-modal bottom sheet (default) or a Bloky | Canvas | Vlastnosti tablist on a phone. The command row is a core TmToolbar with Overflow=Menu and a Priority per action (Save is Pinned); the mobile header holds the primary Save and the host's ToolbarStart while ToolbarEnd and the long-tail commands move into the „⋮“ overflow, and the action bar carries only Undo/Redo/Preview/Validate. The host reports every save outcome through OnSave and the editor owns the dirty state (IsDirty/IsDirtyChanged), IsSaving, ReadOnly and the single-flight save queue; SaveAsync() is public for a TmNavigationGuard.OnSaveAndLeave wiring. A failed or conflicting save is shown as an alert in the status bar, so the host's reason is readable without hovering the badge.",
   "packageId": "Tempo.Blazor.EmailTemplates",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateEditor.razor",
   "documentationStatus": "merged",
@@ -12,10 +12,28 @@
   ],
   "parameters": [
     {
+      "name": "ActiveMobilePanel",
+      "type": "EditorShellPanel",
+      "isRequired": false,
+      "description": "The panel the mobile layout shows, two-way with ActiveMobilePanelChanged. The editor switches it to Right when the user selects a block (the inspector is where that selection is edited), and a host may drive it too."
+    },
+    {
+      "name": "ActiveMobilePanelChanged",
+      "type": "EventCallback<EditorShellPanel>",
+      "isRequired": false,
+      "description": "Raised when the user picks another mobile tab, or when the editor follows a block selection."
+    },
+    {
       "name": "AutoSave",
       "type": "AutoSaveOptions?",
       "isRequired": false,
       "description": "Auto-save configuration; when enabled, edits are saved after a debounce interval."
+    },
+    {
+      "name": "Breakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "The two container widths that decide the layout. Null (default) uses new TmLayoutBreakpoints(768, 1200): below 768 the editor is a phone layout, from 1200 the full desktop chrome, in between the tablet layout."
     },
     {
       "name": "Document",
@@ -42,10 +60,28 @@
       "description": "Client-side limits (Accept, MaxBytes) applied to a picked image before OnImageUpload is called. null uses the defaults (5 MB, images only)."
     },
     {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout rendered before the shell's first measurement. Defaults to Desktop, so a desktop host never sees a wrong compact frame."
+    },
+    {
       "name": "IsDirtyChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,
       "description": "Raised when IsDirty changes — only on a transition, never on initialization and never for an edit that keeps the document dirty."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the editor renders. Auto (default) lets the shell measure the editor's own container (never the viewport) and follow its width; a forced value renders that mode without a DOM, which is how a host or a test pins a tablet or phone layout. Forwarded to TmEditorShell unchanged."
+    },
+    {
+      "name": "MobilePanelPresentation",
+      "type": "MobilePanelPresentation",
+      "isRequired": false,
+      "description": "How the two panels present on a mobile layout. Sheet (default) keeps the canvas visible with a bottom sheet — a Blocks | Properties tab strip inside it while both panels are open; Tabs is a full-region Blocks | Canvas | Properties tablist with no sheet."
     },
     {
       "name": "OnImageUpload",
@@ -64,6 +100,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Disables every editing path (toolbox, canvas drag&drop and inline actions, inspector inputs, import, undo/redo and the shortcuts that mutate the document) while keeping preview, validation and export available. SaveAsync returns a failed result without calling the host. The component never changes this value itself."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the shell's resolved layout changes (the container crossed a breakpoint, or the host forced another LayoutMode). The initial value is not a change. Never bind this to LayoutMode — that would pin the layout and stop the shell from measuring."
     },
     {
       "name": "ShowSaveButton",
@@ -102,7 +144,7 @@
       "name": "ToolboxCollapsed",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether the blocks palette is collapsed. The editor mirrors the state it is given and reports every toggle through ToolboxCollapsedChanged; F8 maps the same parameter onto TmEditorShell.CollapsedPanels (D10)."
+      "description": "Whether the blocks palette is collapsed. Maps 1:1 onto TmEditorShell.CollapsedPanels (EditorShellPanel.Left), so the collapsed palette is the shell's rail with icons instead of a hidden list; the palette's own collapse arrow is off (ShowCollapseToggle=false). The editor mirrors the state it is given and reports every toggle — including a rail the shell imposes on a tablet — through ToolboxCollapsedChanged (D10)."
     },
     {
       "name": "ToolboxCollapsedChanged",

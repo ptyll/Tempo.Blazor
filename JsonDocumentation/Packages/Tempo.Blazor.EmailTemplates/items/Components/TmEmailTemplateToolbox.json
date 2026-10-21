@@ -46,6 +46,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "When true the tiles stay visible but inert: not draggable, aria-disabled, and neither a click nor a keyboard activation raises OnAddBlock/OnAddSection."
+    },
+    {
+      "name": "ShowCollapseToggle",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the palette renders its own collapse arrow. Defaults to true; a host that owns the shell chrome sets it to false so the same state has one control instead of two (Faze 8 maps ToolboxCollapsed onto TmEditorShell.CollapsedPanels, whose panel toggle is then the only arrow)."
     }
   ]
 }

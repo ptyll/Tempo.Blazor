@@ -9,48 +9,41 @@
   ],
   "parameters": [
     {
-      "name": "Value",
-      "type": "TValue?",
-      "isRequired": false,
-      "description": "Selected value."
-    },
-    {
-      "name": "ValueChanged",
-      "type": "EventCallback<TValue?>",
-      "isRequired": false,
-      "description": "Fires when the selection changes."
-    },
-    {
-      "name": "Label",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Label shown above the select."
-    },
-    {
-      "name": "Placeholder",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Placeholder option shown when no value is selected. Rendered as <option value=\"\"> mapped to default(TValue) when picked — for a non-nullable TValue that is 0/Guid.Empty/..., which can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound Value may be null should include a null-valued option or set a Placeholder, otherwise the browser shows the first option."
-    },
-    {
-      "name": "PlaceholderSelectable",
+      "name": "AnnounceError",
       "type": "bool",
       "isRequired": false,
-      "default": "False",
-      "description": "When true and Placeholder is set, the placeholder is rendered as a selectable (not disabled) <option value=\"\"> mapped to default(TValue) — typically null for nullable types — so the user can explicitly clear the selection back to empty. When false (default), the placeholder is a disabled, purely decorative option. Accessibility: a selectable placeholder is a real empty choice, not a name for the control — it is NOT used as the <select> aria-label, so set Label whenever this is true to keep an accessible name. Validation: with Required set, picking the selectable placeholder submits the empty value, so native validation reports the field as missing."
+      "default": "true",
+      "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the <select> when the component has no visible Label of its own (e.g. the unit of a number + unit row, whose label names the whole row). When null the previous placeholder-derived name applies. Additive: nothing existing changes."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Manually rendered &lt;option&gt; elements. Use when you need full control over option markup. The bound Value is still preselected — the component writes the &lt;select&gt; value attribute so the browser selects the matching &lt;option&gt; on load. Unlike the Options parameter, a raw &lt;option value=\"@x\"&gt; renders through Blazor's own ambient-culture ToString(), NOT through this component's invariant formatting — so for a non-integer IFormattable TValue (decimal, double, float, DateTime, ...) you must write the value explicitly as value=\"@x.ToString(CultureInfo.InvariantCulture)\" (e.g. \"1.5\", never a culture-specific \"1,5\") to match what HandleChangeAsync's invariant parser accepts; plain string/Guid/enum/integer values are unaffected."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the select."
     },
     {
       "name": "Error",
       "type": "string?",
       "isRequired": false,
       "description": "Validation error message."
-    },
-    {
-      "name": "AnnounceError",
-      "type": "bool",
-      "isRequired": false,
-      "default": "true",
-      "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
     },
     {
       "name": "HelpText",
@@ -66,22 +59,10 @@
       "description": "HTML id attribute."
     },
     {
-      "name": "Class",
+      "name": "Label",
       "type": "string?",
       "isRequired": false,
-      "description": "Additional CSS class(es)."
-    },
-    {
-      "name": "Disabled",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Disables the select."
-    },
-    {
-      "name": "Required",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
+      "description": "Label shown above the select."
     },
     {
       "name": "Options",
@@ -90,10 +71,35 @@
       "description": "Typed option list. When provided, &lt;option&gt; elements are generated automatically. Prefer this over ChildContent."
     },
     {
-      "name": "ChildContent",
-      "type": "RenderFragment?",
+      "name": "Placeholder",
+      "type": "string?",
       "isRequired": false,
-      "description": "Manually rendered &lt;option&gt; elements. Use when you need full control over option markup. The bound Value is still preselected — the component writes the &lt;select&gt; value attribute so the browser selects the matching &lt;option&gt; on load. Unlike the Options parameter, a raw &lt;option value=\"@x\"&gt; renders through Blazor's own ambient-culture ToString(), NOT through this component's invariant formatting — so for a non-integer IFormattable TValue (decimal, double, float, DateTime, ...) you must write the value explicitly as value=\"@x.ToString(CultureInfo.InvariantCulture)\" (e.g. \"1.5\", never a culture-specific \"1,5\") to match what HandleChangeAsync's invariant parser accepts; plain string/Guid/enum/integer values are unaffected."
+      "description": "Placeholder option shown when no value is selected. Rendered as <option value=\"\"> mapped to default(TValue) when picked — for a non-nullable TValue that is 0/Guid.Empty/..., which can collide with a real option, so use a nullable TValue when the user must be able to clear to empty. A nullable select whose bound Value may be null should include a null-valued option or set a Placeholder, otherwise the browser shows the first option."
+    },
+    {
+      "name": "PlaceholderSelectable",
+      "type": "bool",
+      "isRequired": false,
+      "default": "False",
+      "description": "When true and Placeholder is set, the placeholder is rendered as a selectable (not disabled) <option value=\"\"> mapped to default(TValue) — typically null for nullable types — so the user can explicitly clear the selection back to empty. When false (default), the placeholder is a disabled, purely decorative option. Accessibility: a selectable placeholder is a real empty choice, not a name for the control — it is NOT used as the <select> aria-label, so set Label whenever this is true to keep an accessible name. Validation: with Required set, picking the selectable placeholder submits the empty value, so native validation reports the field as missing."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
+    },
+    {
+      "name": "Value",
+      "type": "TValue?",
+      "isRequired": false,
+      "description": "Selected value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TValue?>",
+      "isRequired": false,
+      "description": "Fires when the selection changes."
     }
   ],
   "cssClasses": [
@@ -150,7 +156,7 @@
     },
     {
       "title": "Manual option rendering via ChildContent (with preselection)",
-      "code": "@* Use ChildContent when you need full control over <option> elements\n   instead of using the Options parameter. The bound Value is preselected on\n   load — no need to add a `selected` attribute to the <option> yourself. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_selectedPriority\"\n          Label=\"Priority\">\n    <option value=\"\" disabled>-- Select priority --</option>\n    <option value=\"low\">\uD83D\uDFE2 Low</option>\n    <option value=\"medium\">\uD83D\uDFE1 Medium</option>\n    <option value=\"high\">\uD83D\uDD34 High</option>\n    <option value=\"critical\" disabled>⛔ Critical (admin only)</option>\n</TmSelect>\n\n@code {\n    // Loaded as \"high\" — the dropdown opens on High, not the first option.\n    private string? _selectedPriority = \"high\";\n}"
+      "code": "@* Use ChildContent when you need full control over <option> elements\n   instead of using the Options parameter. The bound Value is preselected on\n   load — no need to add a `selected` attribute to the <option> yourself. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_selectedPriority\"\n          Label=\"Priority\">\n    <option value=\"\" disabled>-- Select priority --</option>\n    <option value=\"low\">🟢 Low</option>\n    <option value=\"medium\">🟡 Medium</option>\n    <option value=\"high\">🔴 High</option>\n    <option value=\"critical\" disabled>⛔ Critical (admin only)</option>\n</TmSelect>\n\n@code {\n    // Loaded as \"high\" — the dropdown opens on High, not the first option.\n    private string? _selectedPriority = \"high\";\n}"
     },
     {
       "title": "Loading options from API on page load",

@@ -48,17 +48,21 @@ public class EmailEditorCssTokenTests
     }
 
     [Fact]
-    public void The_three_editor_panels_are_cards_with_tokens()
+    public void The_editor_panels_and_the_canvas_use_tokens_only()
     {
+        // Fáze 8: the panels are the shell's docked columns, so the SHELL owns the card chrome (its own
+        // surface + the separator) and the editor keeps only the inner column + typography.
         var editor = Stylesheets.Value.Single(s => s.Name == "TmEmailTemplateEditor.razor.css").Text;
 
         var panel = Rule(editor, ".tm-email-editor__panel");
-        panel.Should().Contain("--tm-radius-lg", "the redesign draws every panel as a card");
-        panel.Should().Contain("--tm-color-border");
-        Rule(editor, ".tm-email-editor__body").Should().Contain("--tm-space-4",
-            "the cards are separated by a token gap");
+        panel.Should().Contain("--tm-color-surface");
+        panel.Should().Contain("min-block-size: 0", "a docked column must be able to shrink");
+
+        Rule(editor, ".tm-email-editor__canvas").Should().Contain("--tm-space-4",
+            "the paper keeps the workspace gutter around it");
 
         var header = Rule(editor, ".tm-email-editor__panel-header");
+        header.Should().Contain("--tm-font-size-sm");
         header.Should().NotContain("text-transform: uppercase",
             "panel headers use normal typography, not uppercase micro-labels");
         header.Should().NotContain("--tm-font-size-xs");

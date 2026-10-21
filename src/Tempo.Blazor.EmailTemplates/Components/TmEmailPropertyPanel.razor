@@ -81,6 +81,7 @@
                                                role=button activation control, so a nested TmButton would be a
                                                button inside a button (two activations per press). *@
                                             <TmPopover Title="@Loc["EmailEditor_Variables_Title"]"
+                                                       MobilePresentation="PanelPresentation.Auto"
                                                        IsOpen="_richVariablesOpen"
                                                        IsOpenChanged="@((bool open) => _richVariablesOpen = open)">
                                                 <TriggerContent>

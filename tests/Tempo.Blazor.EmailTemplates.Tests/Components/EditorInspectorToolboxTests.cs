@@ -48,12 +48,16 @@ public class EditorInspectorToolboxTests : EmailEditorTestBase
         });
 
     [Fact]
-    public void Toolbox_collapse_parameter_hides_the_block_list()
+    public void Toolbox_collapse_parameter_rails_the_palette()
     {
+        // Fáze 8 (D10): ToolboxCollapsed is the shell's CollapsedPanels.Left — a collapsed panel is a
+        // RAIL, not a hidden list inside a full-width panel, so the palette itself is not rendered.
         var document = DocWithButton(out _);
         var cut = RenderEditor(document, toolboxCollapsed: true);
 
-        cut.Find("[data-tm-toolbox-list]").HasAttribute("hidden").Should().BeTrue();
+        cut.FindAll("[data-tm-toolbox-list]").Should().BeEmpty("the collapsed palette is a rail, not a hidden list");
+        cut.FindAll("[data-region='rail-left'] [data-tm-rail-block]").Should().NotBeEmpty(
+            "the rail keeps every block one tap away");
     }
 
     [Fact]
@@ -63,7 +67,9 @@ public class EditorInspectorToolboxTests : EmailEditorTestBase
         bool? reported = null;
         var cut = RenderEditor(document, value => reported = value);
 
-        cut.Find("[data-tm-toolbox-collapse]").Click();
+        // The shell's panel toggle is the ONE control for this state: the palette's own arrow is off
+        // (ShowCollapseToggle=false), so the same state cannot be changed from two places.
+        cut.Find("[data-region='left'] ~ button.tm-editor-shell__panel-toggle--left").Click();
 
         reported.Should().BeTrue();
     }

@@ -27,8 +27,11 @@ public class EditorToolbarAndSaveStatusTests : EmailEditorTestBase
             .ToList();
 
         groups.Should().Equal("history", "review", "file", "help");
-        cut.FindAll(".tm-email-editor__toolbar-sep").Count.Should().BeGreaterThanOrEqualTo(3,
-            "the tasks are visually separated");
+        // Fáze 8: the groups are core TmToolbarGroups; the core bar spaces them (and moves the
+        // low-priority ones into the "More" menu when the row runs out of room) instead of hairline
+        // separators the editor drew itself.
+        cut.FindAll(".tm-email-editor__toolbar .tm-toolbar-group").Count.Should().BeGreaterThanOrEqualTo(4);
+        cut.FindAll("[data-tm-save-chrome]").Should().ContainSingle("the primary action closes the row");
     }
 
     [Fact]
@@ -40,9 +43,10 @@ public class EditorToolbarAndSaveStatusTests : EmailEditorTestBase
         {
             var button = cut.Find(selector);
             button.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace(
-                "below 1200px only the icon is visible, so the accessible name must not depend on the label");
-            cut.FindAll($"{selector} .tm-email-editor__btn-label").Should().ContainSingle(
-                "on a wide editor the action is spelled out");
+                "below the toolbar's own label breakpoint only the icon is visible, so the accessible name "
+                + "must not depend on the label");
+            cut.FindAll($"{selector} .tm-toolbar-btn-text").Should().ContainSingle(
+                "the action is spelled out and the core toolbar decides when the label hides");
         }
     }
 

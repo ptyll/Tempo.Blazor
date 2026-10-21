@@ -317,5 +317,11 @@
   "EmailEditor_Length_Unit_Em": "em",
   "EmailEditor_Length_Unit_Rem": "rem",
   "EmailEditor_Length_Unit_Pt": "pt",
-  "EmailEditor_Length_UnitAria": "Unité de {0}"
+  "EmailEditor_Length_UnitAria": "Unité de {0}",
+  "EmailEditor_Panel_Canvas": "Canevas",
+  "EmailEditor_Mobile_MoreActions": "Autres actions",
+  "EmailEditor_Toolbar_GroupHistory": "Historique",
+  "EmailEditor_Toolbar_GroupReview": "Vérification",
+  "EmailEditor_Toolbar_GroupFile": "Fichier",
+  "EmailEditor_Toolbar_GroupHelp": "Aide"
 }
