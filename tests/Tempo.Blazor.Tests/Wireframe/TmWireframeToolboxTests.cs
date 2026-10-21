@@ -285,8 +285,9 @@ public class TmWireframeToolboxTests : LocalizationTestBase
         var cut = Render<TmWireframeToolbox>(p => p
             .Add(x => x.OnComponentActivated, t => activated = t));
 
-        cut.Find(".tm-wd-toolbox__item")
-           .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        var item = cut.Find(".tm-wd-toolbox__item");
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
 
         activated.Should().Be("TmButton");
     }
@@ -307,6 +308,79 @@ public class TmWireframeToolboxTests : LocalizationTestBase
         activated.Should().BeNull();
     }
 
+    // ── Phase 1: click / tap activation + keyboard-activation convention ──────
+
+    [Fact]
+    public void ItemClick_FiresOnComponentActivated()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+
+        cut.Find(".tm-wd-toolbox__item").Click();
+
+        activated.Should().Equal("TmButton");
+    }
+
+    [Fact]
+    public void EnterAndSpace_ActivateExactlyOnce()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+        var item = cut.Find(".tm-wd-toolbox__item");
+
+        // The item is a div[role=button] (non-native): no browser click is synthesised, so the
+        // library emulates — Enter on keydown, Space on keyup, once per press.
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        activated.Should().HaveCount(1);
+
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        activated.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void HeldEnter_AutoRepeat_DoesNotReactivate()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+        var item = cut.Find(".tm-wd-toolbox__item");
+
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", Repeat = true });
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        activated.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void SpaceKeyDown_Alone_DoesNotActivate_UntilKeyUp()
+    {
+        var registry = BuildRegistry(MakeDef("TmButton", "Buttons"));
+        Services.AddSingleton(registry);
+
+        var activated = new List<string>();
+        var cut = Render<TmWireframeToolbox>(p => p
+            .Add(x => x.OnComponentActivated, t => activated.Add(t)));
+        var item = cut.Find(".tm-wd-toolbox__item");
+
+        item.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        activated.Should().BeEmpty();
+
+        item.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        activated.Should().HaveCount(1);
+    }
     // ── Class parameter ────────────────────────────────────────────────────────
 
     [Fact]

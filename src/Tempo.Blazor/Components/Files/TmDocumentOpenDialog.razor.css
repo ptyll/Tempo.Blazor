@@ -366,3 +366,10 @@
     border-color: var(--tm-border-color, #d1d5db);
     background: transparent;
 }
+
+/* Keyboard focus ring for the non-native focusables (rows and grid cards are div[tabindex=0]). */
+.tm-dod-row:focus-visible,
+.tm-dod-card:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}

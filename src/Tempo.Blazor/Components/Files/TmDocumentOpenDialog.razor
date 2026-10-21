@@ -116,6 +116,8 @@
                             <button type="button"
                                     class="tm-dod-tree-node @(path == _currentFolder ? "tm-dod-tree-node--active" : "")"
                                     role="treeitem"
+                                    aria-level="@(depth + 1)"
+                                    aria-selected="@(path == _currentFolder ? "true" : "false")"
                                     style="padding-left:@(8 + depth * 16)px"
                                     @onclick="@(() => NavigateToAsync(path))">
                                 <TmIcon Name="@IconNames.Folder" Size="IconSize.Sm" />
@@ -149,16 +151,22 @@
                     else if (_view == DialogView.List)
                     {
                         <div class="tm-dod-list" role="grid">
-                            <div class="tm-dod-list-head">
-                                <button type="button" class="tm-dod-col-name"
-                                        @onclick="@(() => SortByAsync(DocumentLibrarySortField.Name))">
-                                    @Loc["TmDocumentOpenDialog_ColumnName"]
-                                </button>
-                                <button type="button" class="tm-dod-col-modified"
-                                        @onclick="@(() => SortByAsync(DocumentLibrarySortField.Modified))">
-                                    @Loc["TmDocumentOpenDialog_ColumnModified"]
-                                </button>
-                                <span class="tm-dod-col-author">@Loc["TmDocumentOpenDialog_ColumnAuthor"]</span>
+                            @* aria-sort is only valid on columnheader: the wrappers use display:contents so the
+                               three-column grid of .tm-dod-list-head keeps its exact layout. *@
+                            <div class="tm-dod-list-head" role="row">
+                                <div role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Name)" style="display:contents">
+                                    <button type="button" class="tm-dod-col-name"
+                                            @onclick="@(() => SortByAsync(DocumentLibrarySortField.Name))">
+                                        @Loc["TmDocumentOpenDialog_ColumnName"]
+                                    </button>
+                                </div>
+                                <div role="columnheader" aria-sort="@AriaSort(DocumentLibrarySortField.Modified)" style="display:contents">
+                                    <button type="button" class="tm-dod-col-modified"
+                                            @onclick="@(() => SortByAsync(DocumentLibrarySortField.Modified))">
+                                        @Loc["TmDocumentOpenDialog_ColumnModified"]
+                                    </button>
+                                </div>
+                                <span class="tm-dod-col-author" role="columnheader">@Loc["TmDocumentOpenDialog_ColumnAuthor"]</span>
                             </div>
                             @foreach (var entry in _entries)
                             {
@@ -170,7 +178,8 @@
                                      data-name="@e.Name"
                                      @onclick="@(() => Select(e))"
                                      @ondblclick="@(() => ConfirmAsync(e))"
-                                     @onkeydown="@(ev => OnRowKeyDownAsync(ev, e))">
+                                     @onkeydown="@(ev => OnItemKeyDownAsync(ev, e))"
+                                     @onkeyup="@(ev => OnItemKeyUp(ev, e))">
                                     <span class="tm-dod-cell-name">
                                         <TmIcon Name="@IconNames.FileText" Size="IconSize.Sm" />
                                         @e.Name
@@ -183,15 +192,21 @@
                     }
                     else
                     {
-                        <div class="tm-dod-grid">
+                        <div class="tm-dod-grid" role="listbox" aria-label="@Loc["TmDocumentOpenDialog_Title"]">
                             @foreach (var entry in _entries)
                             {
                                 var e = entry;
                                 <div class="tm-dod-card @(e.Id == _selectedId ? "tm-dod-card--selected" : "")"
+                                     role="option"
+                                     tabindex="0"
+                                     aria-selected="@(e.Id == _selectedId ? "true" : "false")"
+                                     aria-label="@e.Name"
                                      data-id="@e.Id"
                                      data-name="@e.Name"
                                      @onclick="@(() => Select(e))"
-                                     @ondblclick="@(() => ConfirmAsync(e))">
+                                     @ondblclick="@(() => ConfirmAsync(e))"
+                                     @onkeydown="@(ev => OnItemKeyDownAsync(ev, e))"
+                                     @onkeyup="@(ev => OnItemKeyUp(ev, e))">
                                     <div class="tm-dod-card-preview">
                                         @if (!string.IsNullOrEmpty(e.PreviewSvg))
                                         {

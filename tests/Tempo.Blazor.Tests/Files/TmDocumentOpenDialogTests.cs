@@ -431,4 +431,140 @@ public class TmDocumentOpenDialogTests : LocalizationTestBase
         result.Should().NotBeNull();
         result!.Name.Should().Be("Home page");
     }
+
+    // ── Phase 1 (wireframe redesign plan): keyboard + ARIA additions ──────────
+
+    private IRenderedComponent<TmDocumentOpenDialog> RenderGrid(
+        Action<ComponentParameterCollectionBuilder<TmDocumentOpenDialog>>? extra = null)
+    {
+        var cut = RenderOpen(Seeded(), extra);
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+        cut.Find(".tm-dod-view-grid").Click();
+        return cut;
+    }
+
+    [Fact]
+    public void GridCard_IsFocusable_EnterOpens_SpaceSelects()
+    {
+        DocumentOpenResult? result = null;
+        var cut = RenderGrid(p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => result = r));
+
+        AngleSharp.Dom.IElement Card() => cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Home page");
+        Card().GetAttribute("tabindex").Should().Be("0");
+        Card().GetAttribute("role").Should().NotBeNullOrEmpty();
+
+        // Space selects (on keyup, like a native button) without opening.
+        Card().KeyDown(new KeyboardEventArgs { Key = " " });
+        Card().KeyUp(new KeyboardEventArgs { Key = " " });
+        result.Should().BeNull();
+        cut.FindAll(".tm-dod-card--selected").Should().ContainSingle();
+        cut.Find(".tm-dod-card--selected").GetAttribute("data-name").Should().Be("Home page");
+
+        // Enter opens.
+        Card().KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        result.Should().NotBeNull();
+        result!.Name.Should().Be("Home page");
+    }
+
+    [Fact]
+    public void GridCard_Enter_OpensExactlyOnce_EvenWhenHeld()
+    {
+        var results = new List<DocumentOpenResult>();
+        var cut = RenderGrid(p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => results.Add(r)));
+        cut.FindAll(".tm-dod-card").First().KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-dod-card").First().KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        results.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void GridCard_ExposesSelectedState()
+    {
+        var cut = RenderGrid();
+        var card = cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Checkout");
+        card.GetAttribute("aria-selected").Should().Be("false");
+
+        card.Click();
+
+        cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Checkout")
+            .GetAttribute("aria-selected").Should().Be("true");
+    }
+
+    [Fact]
+    public void ListRow_Space_SelectsExactlyOnce_AndDoesNotOpen()
+    {
+        DocumentOpenResult? result = null;
+        var cut = RenderOpen(Seeded(), p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => result = r));
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        cut.FindAll(".tm-dod-row").First().KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-dod-row").First().KeyUp(new KeyboardEventArgs { Key = " " });
+
+        result.Should().BeNull();
+        cut.FindAll(".tm-dod-row--selected").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void SortHeader_HasAriaSort()
+    {
+        var cut = RenderOpen(Seeded());
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        // Default: sorted by name ascending; the other sortable column and the static one are not sorted.
+        SortOf(cut, ".tm-dod-col-name").Should().Be("ascending");
+        SortOf(cut, ".tm-dod-col-modified").Should().Be("none");
+
+        cut.Find(".tm-dod-col-name").Click();
+        cut.WaitForAssertion(() =>
+            SortOf(cut, ".tm-dod-col-name").Should().Be("descending"));
+
+        cut.Find(".tm-dod-col-modified").Click();
+        cut.WaitForAssertion(() =>
+        {
+            SortOf(cut, ".tm-dod-col-modified").Should().Be("ascending");
+            SortOf(cut, ".tm-dod-col-name").Should().Be("none");
+        });
+    }
+
+    private static string? SortOf(IRenderedComponent<TmDocumentOpenDialog> cut, string buttonSelector)
+        => cut.Find(buttonSelector).ParentElement!.GetAttribute("aria-sort");
+
+    [Fact]
+    public void SortHeader_IsAColumnHeader_SoAriaSortIsValid()
+    {
+        var cut = RenderOpen(Seeded());
+        cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        cut.Find(".tm-dod-col-name").ParentElement!.GetAttribute("role").Should().Be("columnheader");
+        cut.Find(".tm-dod-col-modified").ParentElement!.GetAttribute("role").Should().Be("columnheader");
+        cut.Find(".tm-dod-list-head").GetAttribute("role").Should().Be("row");
+    }
+
+    [Fact]
+    public void TreeItem_HasAriaLevelAndAriaSelected()
+    {
+        var cut = RenderOpen(Seeded());
+
+        var nodes = cut.FindAll(".tm-dod-tree-node");
+        var root = nodes.First(n => n.TextContent.Contains("All documents"));
+        var designs = nodes.First(n => n.TextContent.Contains("Designs"));
+        var mobile = nodes.First(n => n.TextContent.Contains("Mobile"));
+
+        root.GetAttribute("aria-level").Should().Be("1");
+        designs.GetAttribute("aria-level").Should().Be("2");
+        mobile.GetAttribute("aria-level").Should().Be("3");
+        root.GetAttribute("aria-selected").Should().Be("true");
+        designs.GetAttribute("aria-selected").Should().Be("false");
+
+        designs.Click();
+        cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
+
+        var after = cut.FindAll(".tm-dod-tree-node");
+        after.First(n => n.TextContent.Contains("Designs")).GetAttribute("aria-selected").Should().Be("true");
+        after.First(n => n.TextContent.Contains("All documents")).GetAttribute("aria-selected").Should().Be("false");
+    }
 }

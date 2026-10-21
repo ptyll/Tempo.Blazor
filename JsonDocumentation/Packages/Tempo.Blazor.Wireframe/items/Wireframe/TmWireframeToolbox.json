@@ -11,7 +11,7 @@
       "name": "OnComponentActivated",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Raised when the user activates a component via keyboard (Enter/Space). Payload is the component type string (e.g. 'TmButton')."
+      "description": "Raised when the user activates a component by click, tap or keyboard (Enter/Space), exactly once per gesture - the non-drag alternative to HTML5 drag-and-drop. Payload is the component type string (e.g. 'TmButton'); the editor inserts it centred in the visible canvas area."
     },
     {
       "name": "Class",

@@ -15,38 +15,45 @@
       "name": "Document",
       "type": "WireframeDocument?",
       "isRequired": true,
-      "editorRequired": true
+      "editorRequired": true,
+      "description": "Document whose active page's layers are listed. Mutated through undoable commands."
     },
     {
       "name": "SelectedElementIds",
       "type": "string[]",
       "isRequired": false,
-      "default": "[]"
+      "default": "[]",
+      "description": "Ids of the currently selected elements; enables the \"Move to layer\" selector when non-empty."
     },
     {
       "name": "ReadOnly",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Disables every mutating control (add, delete, rename, visibility, lock, reorder, move to layer)."
     },
     {
       "name": "Class",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Additional CSS class on the panel root."
     },
     {
       "name": "ActiveLayerId",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Id of the active layer (the one new elements are added to). When null/empty the panel shows the page's default layer as active and reports it once through ActiveLayerIdChanged after the first render."
     },
     {
       "name": "ActiveLayerIdChanged",
       "type": "EventCallback<string?>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised with the new active layer id when the user picks, adds or deletes a layer, and once for the default layer after render."
     },
     {
       "name": "DocumentChanged",
       "type": "EventCallback<WireframeDocument>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised with the (mutated) document after every layer change."
     }
   ]
 }

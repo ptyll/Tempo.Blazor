@@ -153,4 +153,72 @@ public class WireframeExportTests : LocalizationTestBase
 
         closed.Should().BeTrue();
     }
+
+    // ── Phase 1 (wireframe redesign plan): InitialFormat + file-name reset ─────
+
+    [Fact]
+    public void Dialog_PreselectsPdf_WhenInitialFormatPdf()
+    {
+        WireframeExportDialogResult? captured = null;
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true)
+            .Add(p => p.InitialFormat, "pdf")
+            .Add(p => p.OnExport, EventCallback.Factory.Create<WireframeExportDialogResult>(this, r => captured = r)));
+
+        // PDF has no scale option, so only the format select is rendered.
+        cut.FindAll("select").Count.Should().Be(1);
+        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("pdf");
+
+        cut.FindAll("button").First(b => b.TextContent.Contains("Export")).Click();
+
+        captured.Should().NotBeNull();
+        captured!.Format.Should().Be("pdf");
+    }
+
+    [Fact]
+    public void Dialog_UnknownInitialFormat_FallsBackToPng()
+    {
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true)
+            .Add(p => p.InitialFormat, "bmp"));
+
+        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("png");
+    }
+
+    [Fact]
+    public void Dialog_ResetsFormat_ToInitialFormat_OnReopen()
+    {
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true)
+            .Add(p => p.InitialFormat, "png"));
+
+        cut.Find("#wd-export-format").Change("pdf");
+        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("pdf");
+
+        cut.Render(p => p.Add(x => x.Show, false));
+        cut.Render(p => p.Add(x => x.Show, true).Add(x => x.InitialFormat, "png"));
+
+        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("png");
+    }
+
+    [Fact]
+    public void Dialog_ResetsFileName_FromDefaultFileName_OnReopen()
+    {
+        WireframeExportDialogResult? captured = null;
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true)
+            .Add(p => p.DefaultFileName, "first")
+            .Add(p => p.OnExport, EventCallback.Factory.Create<WireframeExportDialogResult>(this, r => captured = r)));
+
+        cut.Find("#wd-export-filename").Input("typed-by-user");
+        cut.Render(p => p.Add(x => x.Show, false));
+
+        // Reopen with a different document title: the field must follow the new default, not the old typing.
+        cut.Render(p => p.Add(x => x.Show, true).Add(x => x.DefaultFileName, "second"));
+
+        cut.Find("#wd-export-filename").GetAttribute("value").Should().Be("second");
+
+        cut.FindAll("button").First(b => b.TextContent.Contains("Export")).Click();
+        captured!.FileName.Should().Be("second");
+    }
 }

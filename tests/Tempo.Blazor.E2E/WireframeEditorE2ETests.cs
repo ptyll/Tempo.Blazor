@@ -811,6 +811,102 @@ public class WireframeEditorE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task ExportPdf_PreselectsPdf()
+    {
+        var page = await PrepareWireframePageAsync();
+        var editor = FirstEditor(page);
+        await editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First.ClickAsync();
+
+        await editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PDF" }).ClickAsync();
+
+        var format = page.Locator("#wd-export-format");
+        await format.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        Assert.AreEqual("pdf", await format.InputValueAsync(), "Export PDF must open the dialog with PDF selected");
+        Assert.AreEqual(0, await page.Locator("#wd-export-scale").CountAsync(), "PDF has no scale option");
+
+        // Edge case: re-opening via PNG must not keep the PDF choice, and the typed file name is reset.
+        await page.Locator("#wd-export-filename").FillAsync("typed-by-user");
+        await page.Locator(".tm-modal button", new() { HasTextString = "Cancel" }).First.ClickAsync();
+        await page.Locator(".tm-wd-export-dialog").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
+
+        await editor.Locator(".tm-wd-editor__dropdown-wrap:has-text('Export')").First.ClickAsync();
+        await editor.Locator(".tm-wd-editor__dropdown-item").Filter(new() { HasText = "PNG" }).ClickAsync();
+        await page.Locator("#wd-export-format").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        Assert.AreEqual("png", await page.Locator("#wd-export-format").InputValueAsync());
+        Assert.AreNotEqual("typed-by-user", await page.Locator("#wd-export-filename").InputValueAsync(),
+            "The file name must be reset from the document title on every open");
+    }
+
+    [TestMethod]
+    public async Task ToolboxClick_AddsElement()
+    {
+        var page = await PrepareWireframePageAsync();
+        var editor = FirstEditor(page);
+        var before = await editor.Locator("g[data-el-id]").CountAsync();
+
+        await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
+        await page.WaitForTimeoutAsync(800);
+
+        Assert.AreEqual(before + 1, await editor.Locator("g[data-el-id]").CountAsync(),
+            "A click on a toolbox item must insert exactly one element");
+
+        // The new element lands inside the visible area of the canvas (not at a fixed corner).
+        var inside = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const svg = document.querySelector('.tm-wd-editor .tm-wd-canvas__svg');
+                const els = svg.querySelectorAll('g[data-el-id]');
+                const last = els[els.length - 1].getBoundingClientRect();
+                const view = svg.getBoundingClientRect();
+                return last.left >= view.left - 1 && last.right <= view.right + 1
+                    && last.top >= view.top - 1 && last.bottom <= view.bottom + 1;
+            }
+            """);
+        Assert.IsTrue(inside, "The inserted element must be inside the visible canvas area");
+    }
+
+    [TestMethod]
+    public async Task ToolboxKeyboard_EnterAndSpace_InsertOneElementEach()
+    {
+        var page = await PrepareWireframePageAsync();
+        var editor = FirstEditor(page);
+        var item = editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First;
+        var before = await editor.Locator("g[data-el-id]").CountAsync();
+
+        await item.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(600);
+        Assert.AreEqual(before + 1, await editor.Locator("g[data-el-id]").CountAsync(), "Enter inserts exactly one element");
+
+        await item.FocusAsync();
+        await page.Keyboard.PressAsync("Space");
+        await page.WaitForTimeoutAsync(600);
+        Assert.AreEqual(before + 2, await editor.Locator("g[data-el-id]").CountAsync(), "Space inserts exactly one element");
+    }
+
+    [TestMethod]
+    public async Task ReadOnlyPreview_HasNoToggle_AndBlocksToolboxInsertion()
+    {
+        var page = await PrepareWireframePageAsync();
+        var readOnly = page.Locator(".tm-wd-editor").Nth(1);
+        await readOnly.ScrollIntoViewIfNeededAsync();
+
+        // Host-pinned ReadOnly="true": there is no toggle that could unlock the preview.
+        Assert.AreEqual(0, await readOnly.Locator("button[aria-label*='edit mode' i]").CountAsync());
+        Assert.AreEqual(0, await readOnly.Locator("button[aria-label*='read-only mode' i]").CountAsync());
+
+        var before = await readOnly.Locator("g[data-el-id]").CountAsync();
+        var item = readOnly.Locator(".tm-wd-toolbox__item").First;
+        if (await item.CountAsync() > 0 && await item.IsVisibleAsync())
+        {
+            await item.ClickAsync(new LocatorClickOptions { Force = true });
+            await page.WaitForTimeoutAsync(500);
+        }
+        Assert.AreEqual(before, await readOnly.Locator("g[data-el-id]").CountAsync(),
+            "A read-only editor must not accept toolbox insertion");
+    }
+
+    [TestMethod]
     public async Task ExportDialog_CanChangeScale()
     {
         var page = await PrepareWireframePageAsync();

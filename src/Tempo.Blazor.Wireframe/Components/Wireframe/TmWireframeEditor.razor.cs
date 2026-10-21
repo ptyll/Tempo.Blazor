@@ -41,8 +41,29 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     /// <summary>Raised after every mutation.</summary>
     [Parameter] public EventCallback<WireframeDocument> DocumentChanged { get; set; }
 
-    /// <summary>Prevent all editing interactions.</summary>
+    /// <summary>
+    /// Host-pinned read-only mode: prevents all editing interactions. The component NEVER assigns
+    /// this parameter — the built-in Read-only/Edit toggle drives an internal user state instead
+    /// (surfaced as <see cref="IsReadOnly"/>) and reports changes through <see cref="ReadOnlyChanged"/>.
+    /// While <c>ReadOnly="true"</c> is pinned and <see cref="ReadOnlyChanged"/> is not bound, the toggle
+    /// is not rendered, so the user cannot unlock the editor. Use <c>@bind-ReadOnly</c> when the host
+    /// wants to follow (and own) the state.
+    /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Raised with the new effective read-only state when the user flips the built-in Read-only/Edit
+    /// toggle. Binding it (<c>@bind-ReadOnly</c>) keeps the toggle available while the host value is
+    /// <c>true</c>, because the host decides whether to accept the change.
+    /// </summary>
+    [Parameter] public EventCallback<bool> ReadOnlyChanged { get; set; }
+
+    /// <summary>
+    /// Effective read-only state: the host-pinned <see cref="ReadOnly"/> parameter OR the user's
+    /// local Read-only toggle. Every editing path (toolbar, keyboard, context menu, import, toolbox
+    /// insertion, canvas interop) is gated on this state.
+    /// </summary>
+    public bool IsReadOnly => ReadOnly || _userReadOnly;
 
     /// <summary>Show the component toolbox panel on the left.</summary>
     [Parameter] public bool ShowToolbox { get; set; } = true;
@@ -68,8 +89,15 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     /// <summary>Always show page tabs even when there is only one page.</summary>
     [Parameter] public bool ShowPageTabs { get; set; } = true;
 
-    /// <summary>Show rulers around the canvas.</summary>
+    /// <summary>
+    /// Initial / host-driven visibility of the rulers around the canvas. The component NEVER assigns
+    /// this parameter — the toolbar toggle flips an internal state and reports it through
+    /// <see cref="ShowRulersChanged"/>; a later change of the parameter value is adopted again.
+    /// </summary>
     [Parameter] public bool ShowRulers { get; set; }
+
+    /// <summary>Raised with the new value when the user toggles the rulers button (use <c>@bind-ShowRulers</c>).</summary>
+    [Parameter] public EventCallback<bool> ShowRulersChanged { get; set; }
 
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
@@ -91,6 +119,12 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     private WireframeDocument? _document;
     private WireframePage?     _activePage;
 
+    // User-toggled read-only / rulers state; deliberately separate from the [Parameter]s, which are never assigned.
+    private bool _userReadOnly;
+    private bool _showRulers;
+    private bool? _lastHostReadOnly;
+    private bool? _lastHostShowRulers;
+
     private string[]         _selectedIds       = [];
     private string[]         _selectedConnectorIds = [];
     private string?          _activeLayerId;
@@ -104,6 +138,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     private double _viewBoxY;
     private double _viewBoxW = 1200;
     private double _viewBoxH = 800;
+    private bool   _viewBoxReported;
 
     // Ruler cursor positions (SVG space)
     private double? _rulerCursorX;
@@ -154,6 +189,20 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     protected override void OnParametersSet()
     {
+        // A host-side change of ReadOnly / ShowRulers wins over the local user state (it is the
+        // source of truth once bound); an unchanged parameter keeps the user's toggle.
+        if (_lastHostReadOnly != ReadOnly)
+        {
+            _lastHostReadOnly = ReadOnly;
+            _userReadOnly = false;
+        }
+
+        if (_lastHostShowRulers != ShowRulers)
+        {
+            _lastHostShowRulers = ShowRulers;
+            _showRulers = ShowRulers;
+        }
+
         // If the caller supplies a new Document reference, adopt it and clear stacks.
         if (Document is not null && !ReferenceEquals(Document, _document))
         {
@@ -213,7 +262,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnConnectorCreated((string FromId, string ToId) args)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var conn = new WireframeConnector
         {
             FromId = args.FromId,
@@ -229,7 +278,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnDeleteConnectors(string[] ids)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         _commandStack.Push(new RemoveConnectorsCommand(_document, ids));
         _selectedConnectorIds = [];
         await DocumentChanged.InvokeAsync(_document);
@@ -238,7 +287,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnConnectorWaypointDragged((string ConnectorId, int WaypointIndex, double X, double Y) args)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var conn = _document.Connectors.FirstOrDefault(c => c.Id == args.ConnectorId);
         if (conn is null) return;
 
@@ -256,7 +305,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnConnectorWaypointAdded((string ConnectorId, double X, double Y) args)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var conn = _document.Connectors.FirstOrDefault(c => c.Id == args.ConnectorId);
         if (conn is null) return;
 
@@ -270,7 +319,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnConnectorDragged((string ConnectorId, double Dx, double Dy) args)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var conn = _document.Connectors.FirstOrDefault(c => c.Id == args.ConnectorId);
         if (conn is null) return;
 
@@ -293,6 +342,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private void OnCanvasViewBoxChanged((double X, double Y, double W, double H) args)
     {
+        _viewBoxReported = true;
         _viewBoxX = args.X;
         _viewBoxY = args.Y;
         _viewBoxW = args.W;
@@ -333,7 +383,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     private async Task ApplyCanvasSize()
     {
         _canvasSizeEditing = false;
-        if (_activePage is null || ReadOnly) return;
+        if (_activePage is null || IsReadOnly) return;
         if (!double.TryParse(_canvasWInput, out var w) || w < 100) return;
         if (!double.TryParse(_canvasHInput, out var h) || h < 100) return;
         if (Math.Abs(w - _activePage.Width) < 0.5 && Math.Abs(h - _activePage.Height) < 0.5) return;
@@ -347,7 +397,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnTitleChanged(ChangeEventArgs e)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         _document.Title = e.Value?.ToString() ?? "";
         await OnDocumentChanged(_document);
     }
@@ -356,14 +406,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnUndoClicked()
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _commandStack.Undo();
         await RerenderCanvas();
     }
 
     private async Task OnRedoClicked()
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _commandStack.Redo();
         await RerenderCanvas();
     }
@@ -372,14 +422,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnBringToFront()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.BringToFrontCommand(_document, _selectedIds));
         await RerenderCanvas();
     }
 
     private async Task OnSendToBack()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.SendToBackCommand(_document, _selectedIds));
         await RerenderCanvas();
     }
@@ -395,7 +445,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnToggleLock()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         var currentlyLocked = IsSelectionLocked();
         if (currentlyLocked)
             _commandStack.Push(new Commands.UnlockElementsCommand(_document, _selectedIds));
@@ -414,14 +464,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnGroup()
     {
-        if (_document is null || _selectedIds.Length < 2 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length < 2 || IsReadOnly) return;
         _commandStack.Push(new Commands.GroupElementsCommand(_document, _selectedIds));
         await RerenderCanvas();
     }
 
     private async Task OnUngroup()
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var groupIds = _selectedIds
             .Select(id => _document.Elements.FirstOrDefault(e => e.Id == id))
             .Where(e => e is not null && e.Type == "__group__")
@@ -434,14 +484,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnAlign(WireframeAlignment alignment)
     {
-        if (_document is null || _selectedIds.Length < 2 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length < 2 || IsReadOnly) return;
         _commandStack.Push(new Commands.AlignElementsCommand(_document, _selectedIds, alignment));
         await RerenderCanvas();
     }
 
     private async Task OnDistribute(WireframeDistribution distribution)
     {
-        if (_document is null || _selectedIds.Length < 3 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length < 3 || IsReadOnly) return;
         _commandStack.Push(new Commands.DistributeElementsCommand(_document, _selectedIds, distribution));
         await RerenderCanvas();
     }
@@ -453,11 +503,15 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             await JS.InvokeVoidAsync("tmWireframeDesigner.setSnapToObjects", _canvas.GetSvgRef(), _snapToObjects);
     }
 
-    private void ToggleRulers() => ShowRulers = !ShowRulers;
+    private async Task ToggleRulers()
+    {
+        _showRulers = !_showRulers;
+        await ShowRulersChanged.InvokeAsync(_showRulers);
+    }
 
     private async Task OnCopyStyle()
     {
-        if (_document is null || _selectedIds.Length != 1 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length != 1 || IsReadOnly) return;
         var el = _document.Elements.FirstOrDefault(e => e.Id == _selectedIds[0]);
         if (el is null) return;
         new Commands.CopyStyleCommand(el, includeSize: false).Execute();
@@ -468,14 +522,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnPasteStyle()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.PasteStyleCommand(_document, _selectedIds, _registry));
         await RerenderCanvas();
     }
 
     private async Task OnPasteSize()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.PasteSizeCommand(_document, _selectedIds));
         await RerenderCanvas();
     }
@@ -559,7 +613,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnDuplicateFromContextMenu()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         var ids = _selectedIds.ToList();
         var newIds = new List<string>();
         foreach (var id in ids)
@@ -585,7 +639,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnDeleteFromContextMenu()
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         if (_selectedIds.Length > 0)
         {
             var ids = _selectedIds.ToArray();
@@ -605,14 +659,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnLockFromContextMenu()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.LockElementsCommand(_document, _selectedIds));
         await RerenderCanvas();
     }
 
     private async Task OnUnlockFromContextMenu()
     {
-        if (_document is null || _selectedIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         _commandStack.Push(new Commands.UnlockElementsCommand(_document, _selectedIds));
         await RerenderCanvas();
     }
@@ -635,7 +689,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnEditConnectorLabelFromContextMenu()
     {
-        if (_document is null || _selectedConnectorIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedConnectorIds.Length == 0 || IsReadOnly) return;
         var connId = _selectedConnectorIds[0];
         var conn = _document.Connectors.FirstOrDefault(c => c.Id == connId);
         if (conn is null) return;
@@ -647,7 +701,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task OnSetConnectorRoutingFromContextMenu(string routing)
     {
-        if (_document is null || _selectedConnectorIds.Length == 0 || ReadOnly) return;
+        if (_document is null || _selectedConnectorIds.Length == 0 || IsReadOnly) return;
         var connId = _selectedConnectorIds[0];
         var conn = _document.Connectors.FirstOrDefault(c => c.Id == connId);
         if (conn is null) return;
@@ -824,23 +878,32 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     // ── Toolbar: Read-only toggle ─────────────────────────────────────────────
 
-    private void ToggleReadOnly() => ReadOnly = !ReadOnly;
+    private async Task ToggleReadOnly()
+    {
+        var next = !IsReadOnly;
+        _userReadOnly = next;
+        await ReadOnlyChanged.InvokeAsync(next);
+    }
+
+    /// <summary>The Read-only/Edit toggle is hidden while the host pins <c>ReadOnly="true"</c> without binding <see cref="ReadOnlyChanged"/>.</summary>
+    private bool ShowReadOnlyToggle => !ReadOnly || ReadOnlyChanged.HasDelegate;
 
     // ── Toolbox keyboard activation ───────────────────────────────────────────
 
     private async Task OnToolboxActivated(string componentType)
     {
-        if (_document is null || _canvas is null || ReadOnly) return;
+        if (_document is null || _canvas is null || IsReadOnly) return;
 
-        // Add at a sensible default position in the visible area
-        var x   = 100.0;
-        var y   = 100.0;
+        // Non-drag alternative to HTML5 drag-and-drop (WCAG 2.5.7): click, tap and Enter/Space on a
+        // toolbox item insert the element centred in the currently visible area of the canvas.
         var def = _registry.GetDef(componentType, ComponentScope);
+        var w   = def?.DefaultWidth  ?? 160;
+        var h   = def?.DefaultHeight ?? 40;
+        var (x, y) = GetVisibleCentreOrigin(w, h);
 
         var el = WireframeDocumentExtensions.NewElement(
             componentType, x, y,
-            def?.DefaultWidth  ?? 160,
-            def?.DefaultHeight ?? 40,
+            w, h,
             def?.Props ?? []);
         el.ZIndex = _document.Elements.Count > 0
             ? _document.Elements.Max(e => e.ZIndex) + 1 : 0;
@@ -849,6 +912,34 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         await _canvas.AddElement(el);
         await _canvas.SelectElements(el.Id);
         OnSelectionChanged([el.Id]);
+    }
+
+    /// <summary>
+    /// Top-left origin that centres an element of the given size on the visible canvas area
+    /// (the viewBox last reported by the JS canvas, or the document extent before the first report),
+    /// snapped to the grid when snapping is on and clamped to non-negative coordinates.
+    /// </summary>
+    private (double X, double Y) GetVisibleCentreOrigin(double w, double h)
+    {
+        double vx = _viewBoxX, vy = _viewBoxY, vw = _viewBoxW, vh = _viewBoxH;
+        if (!_viewBoxReported && _activePage is { } page)
+        {
+            vx = 0;
+            vy = 0;
+            vw = page.Width;
+            vh = page.Height;
+        }
+
+        var x = vx + vw / 2 - w / 2;
+        var y = vy + vh / 2 - h / 2;
+
+        if (GridSize > 0)
+        {
+            x = Math.Round(x / GridSize) * GridSize;
+            y = Math.Round(y / GridSize) * GridSize;
+        }
+
+        return (Math.Max(0, x), Math.Max(0, y));
     }
 
     // ── Minimap navigation ────────────────────────────────────────────────────
@@ -866,7 +957,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task AddPage()
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
 
         var page = new WireframePage
         {
@@ -882,7 +973,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task DuplicatePage()
     {
-        if (_document is null || _activePage is null || ReadOnly) return;
+        if (_document is null || _activePage is null || IsReadOnly) return;
 
         var json = System.Text.Json.JsonSerializer.Serialize(_activePage, WireframeJsonOptions.Default);
         var copy = System.Text.Json.JsonSerializer.Deserialize<WireframePage>(json, WireframeJsonOptions.Default)!;
@@ -896,7 +987,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task DeletePage(string pageId)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         if (_document.Pages.Count <= 1) return;
 
         var page = _document.Pages.FirstOrDefault(p => p.Id == pageId);
@@ -946,14 +1037,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private void StartRenamePage(string pageId)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _renamingPageId = pageId;
         StateHasChanged();
     }
 
     private async Task OnPageRenamed(string pageId, ChangeEventArgs e)
     {
-        if (_document is null || ReadOnly) return;
+        if (_document is null || IsReadOnly) return;
         var page = _document.Pages.FirstOrDefault(p => p.Id == pageId);
         if (page is null) return;
         page.Name = e.Value?.ToString() ?? page.Name;
@@ -963,13 +1054,13 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private void OnPageDragStart(string pageId)
     {
-        if (ReadOnly) return;
+        if (IsReadOnly) return;
         _draggedPageId = pageId;
     }
 
     private void OnPageDrop(string targetPageId)
     {
-        if (_document is null || ReadOnly || _draggedPageId is null || _draggedPageId == targetPageId) return;
+        if (_document is null || IsReadOnly || _draggedPageId is null || _draggedPageId == targetPageId) return;
 
         var draggedIdx = _document.Pages.FindIndex(p => p.Id == _draggedPageId);
         var targetIdx = _document.Pages.FindIndex(p => p.Id == targetPageId);

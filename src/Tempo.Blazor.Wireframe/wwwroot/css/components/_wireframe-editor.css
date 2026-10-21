@@ -1482,7 +1482,21 @@
 .tm-wd-toolbox__filter-btn:focus-visible,
 .tm-wd-toolbox__search-input:focus-visible,
 .tm-wd-props__input:focus-visible,
-.tm-wd-props__select:focus-visible {
+.tm-wd-props__select:focus-visible,
+/* Layers panel controls (all native buttons / inputs) */
+.tm-wd-layers__toggle:focus-visible,
+.tm-wd-layers__add-btn:focus-visible,
+.tm-wd-layers__active:focus-visible,
+.tm-wd-layers__visibility:focus-visible,
+.tm-wd-layers__lock:focus-visible,
+.tm-wd-layers__delete:focus-visible,
+.tm-wd-layers__name-input:focus-visible,
+/* Page tabs and their inline controls */
+.tm-wd-editor__page-tab:focus-visible,
+.tm-wd-editor__page-tab-add:focus-visible,
+.tm-wd-editor__page-tab-close:focus-visible,
+.tm-wd-editor__page-tab-dup:focus-visible,
+.tm-wd-editor__page-tab-input:focus-visible {
   outline: 2px solid var(--tm-wd-border-focus);
   outline-offset: 1px;
 }

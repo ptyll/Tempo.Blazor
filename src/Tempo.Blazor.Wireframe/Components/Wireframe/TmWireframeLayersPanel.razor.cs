@@ -9,13 +9,31 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// <summary>Right-side layers panel for managing wireframe layers.</summary>
 public partial class TmWireframeLayersPanel : ComponentBase
 {
+    /// <summary>Document whose active page's layers are listed. Mutated through undoable commands.</summary>
     [Parameter, EditorRequired] public WireframeDocument? Document { get; set; }
+
+    /// <summary>Ids of the currently selected elements; enables the "Move to layer" selector when non-empty.</summary>
     [Parameter] public string[] SelectedElementIds { get; set; } = [];
+
+    /// <summary>Cascaded command stack of the hosting editor; when absent, layer changes are applied directly (no undo).</summary>
     [CascadingParameter] public WireframeCommandStack? CommandStack { get; set; }
+
+    /// <summary>Disables every mutating control (add, delete, rename, visibility, lock, reorder, move to layer).</summary>
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Additional CSS class on the panel root.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Id of the active layer (the one new elements are added to). When <c>null</c>/empty the panel shows the
+    /// page's default layer as active and reports it once through <see cref="ActiveLayerIdChanged"/> after the first render.
+    /// </summary>
     [Parameter] public string? ActiveLayerId { get; set; }
+
+    /// <summary>Raised with the new active layer id when the user picks, adds or deletes a layer, and once for the default layer after render.</summary>
     [Parameter] public EventCallback<string?> ActiveLayerIdChanged { get; set; }
+
+    /// <summary>Raised with the (mutated) document after every layer change.</summary>
     [Parameter] public EventCallback<WireframeDocument> DocumentChanged { get; set; }
 
     private bool _collapsed;
@@ -26,6 +44,10 @@ public partial class TmWireframeLayersPanel : ComponentBase
     private string? _dragOverLayerId;
     private string? _defaultLayerId;
     private string? _moveTargetLayerId;
+    private string? _reportedDefaultLayerId;
+
+    /// <summary>The active layer shown in the list: the parent's value, or the page's default layer until the parent confirms it.</summary>
+    private string? EffectiveActiveLayerId => string.IsNullOrEmpty(ActiveLayerId) ? _defaultLayerId : ActiveLayerId;
 
     private IEnumerable<WireframeLayer> SortedLayers =>
         Document?.Layers.OrderBy(l => l.Order).ThenBy(l => l.Name) ?? Enumerable.Empty<WireframeLayer>();
@@ -33,13 +55,21 @@ public partial class TmWireframeLayersPanel : ComponentBase
     private List<SelectOption<string>> MoveLayerOptions =>
         SortedLayers.Select(l => new SelectOption<string>(l.Id, l.Name)).ToList();
 
-    protected override void OnParametersSet()
+    protected override void OnParametersSet() => EnsureDefaultLayer();
+
+    /// <summary>
+    /// Announces the default active layer once the panel has rendered it. Done here (awaited) instead of
+    /// fire-and-forget from <c>OnParametersSet</c>, so the parent never re-renders mid-parameter-pass and an
+    /// exception in its handler surfaces on the circuit instead of being swallowed.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        EnsureDefaultLayer();
-        if (string.IsNullOrEmpty(ActiveLayerId) && !string.IsNullOrEmpty(_defaultLayerId))
+        if (string.IsNullOrEmpty(ActiveLayerId)
+            && !string.IsNullOrEmpty(_defaultLayerId)
+            && _reportedDefaultLayerId != _defaultLayerId)
         {
-            ActiveLayerId = _defaultLayerId;
-            ActiveLayerIdChanged.InvokeAsync(_defaultLayerId);
+            _reportedDefaultLayerId = _defaultLayerId;
+            await ActiveLayerIdChanged.InvokeAsync(_defaultLayerId);
         }
     }
 
@@ -85,7 +115,7 @@ public partial class TmWireframeLayersPanel : ComponentBase
         else
             cmd.Execute();
 
-        if (ActiveLayerId == layer.Id)
+        if (EffectiveActiveLayerId == layer.Id)
             await ActiveLayerIdChanged.InvokeAsync(_defaultLayerId);
         await DocumentChanged.InvokeAsync(Document);
     }

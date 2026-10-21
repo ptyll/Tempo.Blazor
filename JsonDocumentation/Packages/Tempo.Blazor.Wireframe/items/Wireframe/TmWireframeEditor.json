@@ -24,7 +24,13 @@
       "type": "bool",
       "isRequired": false,
       "defaultValue": "false",
-      "description": "Prevent all editing interactions (drag, resize, drop, prop changes)."
+      "description": "Host-pinned read-only mode: prevents all editing interactions (drag, resize, drop, prop changes, toolbox insertion). Never assigned by the component - the built-in Read-only/Edit toggle drives an internal user state (IsReadOnly = ReadOnly || user toggle) and reports it through ReadOnlyChanged. While ReadOnly=true is pinned and ReadOnlyChanged is not bound the toggle is not rendered, so the editor cannot be unlocked from the UI; use @bind-ReadOnly to follow and own the state."
+    },
+    {
+      "name": "ReadOnlyChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new effective read-only state when the user flips the Read-only/Edit toggle. Binding it (@bind-ReadOnly) keeps the toggle available while the host value is true."
     },
     {
       "name": "ShowToolbox",
@@ -85,7 +91,13 @@
       "name": "ShowRulers",
       "type": "bool",
       "isRequired": false,
-      "description": "Show rulers around the canvas."
+      "description": "Initial / host-driven visibility of the rulers around the canvas. Never assigned by the component - the toolbar toggle flips an internal state and reports it through ShowRulersChanged; a later change of the parameter value is adopted again."
+    },
+    {
+      "name": "ShowRulersChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised with the new value when the user toggles the rulers button (@bind-ShowRulers)."
     },
     {
       "name": "ComponentScope",

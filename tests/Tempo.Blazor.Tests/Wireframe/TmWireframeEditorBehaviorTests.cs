@@ -1,0 +1,269 @@
+using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Components.Wireframe;
+using Tempo.Blazor.Components.Wireframe.Models;
+using Tempo.Blazor.Tests.Localization;
+
+namespace Tempo.Blazor.Tests.Wireframe;
+
+/// <summary>
+/// Behaviour tests for <see cref="TmWireframeEditor"/> (wireframe redesign plan, phase 1):
+/// the PDF export preselect, the never-assigned <c>[Parameter]</c> contract for
+/// <c>ReadOnly</c> / <c>ShowRulers</c>, and tap/click/keyboard insertion from the toolbox at the
+/// centre of the visible area (the non-drag alternative to HTML5 drag-and-drop, WCAG 2.5.7).
+/// </summary>
+public class TmWireframeEditorBehaviorTests : LocalizationTestBase
+{
+    private const string ReadOnlyOnSelector = "button[aria-label='Switch to read-only mode']";
+    private const string ReadOnlyOffSelector = "button[aria-label='Switch to edit mode']";
+    private const string RulersSelector = "button[aria-label='Show rulers']";
+
+    private static WireframeComponentDef MakeDef(string type, double w = 120, double h = 36)
+        => new()
+        {
+            Type = type,
+            DisplayName = type,
+            Category = "Test",
+            DefaultWidth = w,
+            DefaultHeight = h,
+            IsBuiltIn = true,
+            Props = [],
+            RenderSvg = (_, _) => { }
+        };
+
+    private static WireframeDocument NewDocument()
+    {
+        var doc = new WireframeDocument { Title = "Test", Width = 1200, Height = 800 };
+        doc.EnsureActivePage();
+        return doc;
+    }
+
+    private IRenderedComponent<TmWireframeEditor> RenderEditor(
+        Action<ComponentParameterCollectionBuilder<TmWireframeEditor>>? configure = null,
+        WireframeDocument? document = null)
+    {
+        var registry = new WireframeComponentRegistry();
+        registry.RegisterDefinition(MakeDef("TmButton"));
+        Services.AddSingleton(registry);
+
+        var doc = document ?? NewDocument();
+        return Render<TmWireframeEditor>(p =>
+        {
+            p.Add(c => c.Document, doc);
+            configure?.Invoke(p);
+        });
+    }
+
+    // ── Export PDF ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ExportPdfMenuItem_OpensDialogWithPdfSelected()
+    {
+        var cut = RenderEditor();
+
+        cut.Find("button[aria-label='Export']").Click();
+        cut.FindAll("[role='menuitem']").First(b => b.TextContent.Contains("Export PDF")).Click();
+
+        cut.Find(".tm-wd-export-dialog").Should().NotBeNull();
+        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("pdf");
+    }
+
+    [Fact]
+    public void ExportPngMenuItem_OpensDialogWithPngSelected()
+    {
+        var cut = RenderEditor();
+
+        cut.Find("button[aria-label='Export']").Click();
+        cut.FindAll("[role='menuitem']").First(b => b.TextContent.Contains("Export PNG")).Click();
+
+        cut.Find("#wd-export-format option[selected]").GetAttribute("value").Should().Be("png");
+    }
+
+    // ── Read-only toggle ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void ReadOnlyToggle_RaisesReadOnlyChanged_DoesNotMutateParameter()
+    {
+        var raised = new List<bool>();
+        var cut = RenderEditor(p => p.Add(c => c.ReadOnlyChanged,
+            EventCallback.Factory.Create<bool>(this, v => raised.Add(v))));
+
+        cut.Find(ReadOnlyOnSelector).Click();
+
+        raised.Should().Equal(true);
+        cut.Instance.ReadOnly.Should().BeFalse("the [Parameter] is never assigned by the component");
+        cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeTrue();
+
+        cut.Find(ReadOnlyOffSelector).Click();
+
+        raised.Should().Equal(true, false);
+        cut.Instance.ReadOnly.Should().BeFalse();
+        cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ReadOnlyToggle_PropagatesToInspectorLayersAndContextMenu()
+    {
+        var cut = RenderEditor();
+
+        cut.Find(ReadOnlyOnSelector).Click();
+
+        cut.FindComponent<TmWireframeLayersPanel>().Instance.ReadOnly.Should().BeTrue();
+        cut.FindComponent<TmWireframePropertiesPanel>().Instance.ReadOnly.Should().BeTrue();
+        cut.FindComponent<TmWireframeContextMenu>().Instance.ReadOnly.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HostReadOnlyTrue_CannotBeUnlockedByToggle()
+    {
+        var cut = RenderEditor(p => p.Add(c => c.ReadOnly, true));
+
+        cut.FindAll(ReadOnlyOnSelector).Should().BeEmpty();
+        cut.FindAll(ReadOnlyOffSelector).Should().BeEmpty("a host-pinned read-only editor has no toggle");
+        cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeTrue();
+        cut.FindComponent<TmWireframeLayersPanel>().Instance.ReadOnly.Should().BeTrue();
+        cut.Instance.ReadOnly.Should().BeTrue();
+    }
+
+    [Fact]
+    public void BoundReadOnly_KeepsToggle_AndFollowsHostValue()
+    {
+        // @bind-ReadOnly: the host accepts the change, so the toggle stays usable in both directions.
+        var cut = RenderEditor(p => p.Add(c => c.ReadOnlyChanged,
+            EventCallback.Factory.Create<bool>(this, _ => { })));
+
+        cut.Render(p => p.Add(c => c.ReadOnly, true));
+
+        cut.FindComponent<TmWireframeDesignerCanvas>().Instance.ReadOnly.Should().BeTrue();
+        cut.FindAll(ReadOnlyOffSelector).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task ReadOnly_BlocksToolboxInsertion()
+    {
+        var cut = RenderEditor(p => p.Add(c => c.ReadOnly, true));
+        var doc = cut.FindComponent<TmWireframeDesignerCanvas>().Instance.Document!;
+
+        cut.Find(".tm-wd-toolbox__item").Click();
+        await Task.Yield();
+
+        doc.Elements.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ReadOnlyToggle_SyncsTheJsCanvas_SoDragIsBlockedClientSide()
+    {
+        var cut = RenderEditor();
+
+        cut.Find(ReadOnlyOnSelector).Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Where(i => i.Identifier == "tmWireframeDesigner.setReadOnly")
+                .Select(i => i.Arguments[1]).Should().Equal(true));
+
+        cut.Find(ReadOnlyOffSelector).Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Where(i => i.Identifier == "tmWireframeDesigner.setReadOnly")
+                .Select(i => i.Arguments[1]).Should().Equal(true, false));
+    }
+    // ── Rulers toggle ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public void RulersToggle_RaisesShowRulersChanged_DoesNotMutateParameter()
+    {
+        var raised = new List<bool>();
+        var cut = RenderEditor(p => p.Add(c => c.ShowRulersChanged,
+            EventCallback.Factory.Create<bool>(this, v => raised.Add(v))));
+        cut.FindAll(".tm-wd-ruler").Should().BeEmpty();
+
+        cut.Find(RulersSelector).Click();
+
+        raised.Should().Equal(true);
+        cut.Instance.ShowRulers.Should().BeFalse("the [Parameter] is never assigned by the component");
+        cut.FindAll(".tm-wd-ruler").Should().HaveCount(2);
+
+        cut.Find(RulersSelector).Click();
+
+        raised.Should().Equal(true, false);
+        cut.FindAll(".tm-wd-ruler").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ShowRulersParameter_SeedsAndFollowsHost()
+    {
+        var cut = RenderEditor(p => p.Add(c => c.ShowRulers, true));
+        cut.FindAll(".tm-wd-ruler").Should().HaveCount(2);
+
+        cut.Render(p => p.Add(c => c.ShowRulers, false));
+        cut.FindAll(".tm-wd-ruler").Should().BeEmpty();
+    }
+
+    // ── Toolbox activation → viewport centre ───────────────────────────────────
+
+    [Fact]
+    public void ToolboxActivation_AddsElementAtViewportCenter()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(p => p.Add(c => c.GridSize, 0), doc);
+        var canvas = cut.FindComponent<TmWireframeDesignerCanvas>();
+
+        // JS reports the visible area: x 200..1000, y 100..700 → centre (600, 400).
+        cut.InvokeAsync(() => canvas.Instance.OnViewBoxChanged(200, 100, 800, 600)).GetAwaiter().GetResult();
+
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']")
+           .KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        var el = doc.Elements.Should().ContainSingle().Subject;
+        el.Type.Should().Be("TmButton");
+        // The element is centred on the viewport centre (120×36 default size).
+        el.X.Should().BeApproximately(600 - 60, 0.01);
+        el.Y.Should().BeApproximately(400 - 18, 0.01);
+    }
+
+    [Fact]
+    public void ToolboxClick_AddsElementAtViewportCenter_SnappedToGrid()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(p => p.Add(c => c.GridSize, 8), doc);
+        var canvas = cut.FindComponent<TmWireframeDesignerCanvas>();
+        cut.InvokeAsync(() => canvas.Instance.OnViewBoxChanged(203, 101, 800, 600)).GetAwaiter().GetResult();
+
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
+
+        var el = doc.Elements.Should().ContainSingle().Subject;
+        (el.X % 8).Should().Be(0);
+        (el.Y % 8).Should().Be(0);
+        // Snapping moves the origin by at most half a cell.
+        el.X.Should().BeInRange(603 - 60 - 4, 603 - 60 + 4);
+        el.Y.Should().BeInRange(401 - 18 - 4, 401 - 18 + 4);
+    }
+
+    [Fact]
+    public void ToolboxActivation_BeforeAnyViewBoxReport_UsesInitialViewBoxCentre()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(p => p.Add(c => c.GridSize, 0), doc);
+
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
+
+        var el = doc.Elements.Should().ContainSingle().Subject;
+        // Initial editor view box is 0 0 1200 800 → centre (600, 400).
+        el.X.Should().BeApproximately(600 - 60, 0.01);
+        el.Y.Should().BeApproximately(400 - 18, 0.01);
+    }
+
+    [Fact]
+    public void ToolboxActivation_SelectsTheNewElement_AndSupportsUndo()
+    {
+        var doc = NewDocument();
+        var cut = RenderEditor(null, doc);
+
+        cut.Find(".tm-wd-toolbox__item[data-component-type='TmButton']").Click();
+        doc.Elements.Should().ContainSingle();
+
+        cut.Find("button[aria-label^='Undo']").Click();
+
+        doc.Elements.Should().BeEmpty();
+    }
+}

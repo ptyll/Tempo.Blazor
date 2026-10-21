@@ -66,7 +66,9 @@
                                  aria-label="@Loc["TmWireframeToolbox_DragOntoCanvas", def.DisplayName]"
                                  role="button"
                                  tabindex="0"
-                                 @onkeydown="@((e) => OnItemKeyDown(e, def.Type))">
+                                 @onclick="@(() => ActivateAsync(def.Type))"
+                                 @onkeydown="@((e) => OnItemKeyDown(e, def.Type))"
+                                 @onkeyup="@((e) => OnItemKeyUp(e, def.Type))">
 
                                 @* SVG preview *@
                                 <div class="tm-wd-toolbox__item-preview" aria-hidden="true">

@@ -4,6 +4,37 @@
 
 ### Fixed
 
+- **Wireframe "Export PDF" opened the dialog with PNG selected.** `TmWireframeEditor` set its internal
+  `_exportDialogFormat` but never handed it to `TmWireframeExportDialog`. The dialog has a new
+  `InitialFormat` parameter (`"png"` default, `"pdf"`) that the editor now passes, so the *Export PDF* menu
+  item preselects PDF. Guarded by `TmWireframeEditorBehaviorTests` and the `ExportPdf_PreselectsPdf` E2E.
+
+- **`TmWireframeExportDialog` kept the previous file name after re-opening.** Only format, scale and
+  background were reset on close; the file name was filled once and then stuck. Every closed→open
+  transition now restores file name (from `DefaultFileName`), format (from `InitialFormat`), scale and
+  background.
+
+- **Wireframe toolbox items ignored a click or tap, and Enter/Space dropped every element at (100, 100).**
+  The item had no `@onclick`, so the only non-drag way in was the keyboard, and it always inserted at a fixed
+  point. Click, tap and Enter/Space (once per gesture - Enter on keydown without auto-repeat, Space on keyup,
+  per `docs/keyboard-activation-convention.md`) now raise `OnComponentActivated`, and `TmWireframeEditor`
+  inserts the element centred in the visible canvas area (snapped to the grid, undoable, selected). This is the
+  non-drag alternative to HTML5 drag-and-drop (WCAG 2.5.7).
+
+- **`TmWireframeLayersPanel` announced its default active layer fire-and-forget from `OnParametersSet`.**
+  The report is now awaited from `OnAfterRenderAsync` (once per default layer), so a failing parent handler
+  surfaces instead of being swallowed and the parent no longer re-renders in the middle of a parameter pass.
+  All `[Parameter]`s of the panel carry XML docs.
+
+- **Wireframe keyboard focus was invisible on the layers panel and the page tabs.** The focus-visible block
+  now also covers `.tm-wd-layers__*` controls and `.tm-wd-editor__page-tab*` (same focus colour as the rest of
+  the editor).
+
+- **`TmDocumentOpenDialog` accessibility (additive, no class or layout change).** Grid cards are now focusable
+  (`tabindex="0"`, `role="option"` inside a `role="listbox"`, `aria-selected`): Enter opens, Space selects; list
+  rows use the same Enter/Space contract (Space on keyup). Sortable column headers expose
+  `aria-sort` (`ascending` / `descending` / `none`) through a `columnheader` wrapper (`display: contents`, so the
+  grid layout is unchanged), and folder tree items carry `aria-level` and `aria-selected`.
 - **French filter result preview claimed whole millions wrong.** The `TmFilterBuilder_ResultPreview_Many`
   template was "`{0:N0}` de millions d'enregistrements correspondants", but the `_Many` form is picked for
   whole millions and the number is formatted in full, so a count of 2 000 000 read "2 000 000 de millions
@@ -1106,6 +1137,18 @@
 
 ### Breaking / Migration
 
+- **`TmWireframeEditor` no longer assigns `ReadOnly` / `ShowRulers`, and its Read-only toggle cannot unlock a
+  host-pinned `ReadOnly="true"`.** The built-in Read-only/Edit button and the rulers button used to write
+  `ReadOnly = !ReadOnly` / `ShowRulers = !ShowRulers` into the component's own `[Parameter]`s, which the host
+  could neither observe nor keep - and a viewer rendered with `ReadOnly="true"` could be switched to edit mode
+  by any user. They now drive internal state (`IsReadOnly` = `ReadOnly || user toggle`) and raise the new
+  `ReadOnlyChanged` / `ShowRulersChanged` callbacks. With `ReadOnly="true"` and no `ReadOnlyChanged` bound the
+  toggle is not rendered. `IsReadOnly` is passed to the canvas, properties panel, layers panel and context menu.
+  Before: `<TmWireframeEditor @bind-Document="doc" ReadOnly="true" />` showed a toggle that unlocked editing.
+  After: that editor is a pinned viewer. To let the user toggle and to track the state, bind it:
+  `<TmWireframeEditor @bind-Document="doc" @bind-ReadOnly="readOnly" @bind-ShowRulers="showRulers" />`.
+  Hosts that read the parameter back from the component instance after a user toggle must switch to the
+  callbacks (or `editor.IsReadOnly`).
 - **`tm-menu-nav` roving now includes `aria-disabled="true"` items.** Arrow keys, Home/End and
   typeahead reach an item that is only `aria-disabled` (not natively `disabled`), so its
   explanation stays reachable for a screen reader. Only items with the native `disabled`

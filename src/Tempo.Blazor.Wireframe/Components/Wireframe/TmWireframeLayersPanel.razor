@@ -23,7 +23,7 @@
         <div class="tm-wd-layers__list" role="list" aria-label="@Loc["TmWireframe_LayersTitle"]">
             @foreach (var layer in SortedLayers)
             {
-                var isActive = ActiveLayerId == layer.Id;
+                var isActive = EffectiveActiveLayerId == layer.Id;
                 var isEditing = _editingLayerId == layer.Id;
                 <div class="tm-wd-layers__item"
                      role="listitem"

@@ -38417,7 +38417,7 @@
           "kind": "Component",
           "category": "Wireframe",
           "namespace": "Tempo.Blazor.Components.Wireframe",
-          "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for all mouse/touch interactions. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
+          "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for pan, zoom, drag, resize and selection; the pointer handling is mouse-based for now (touch/pen gestures follow in a later phase), while click/tap and keyboard insertion from the toolbox work on every input type. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
           "packageId": "Tempo.Blazor.Wireframe",
           "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeDesignerCanvas.razor",
           "documentationStatus": "merged",
@@ -38675,8 +38675,14 @@
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
-              "description": "Prevent all editing interactions (drag, resize, drop, prop changes).",
+              "description": "Host-pinned read-only mode: prevents all editing interactions (drag, resize, drop, prop changes, toolbox insertion). Never assigned by the component - the built-in Read-only/Edit toggle drives an internal user state (IsReadOnly = ReadOnly || user toggle) and reports it through ReadOnlyChanged. While ReadOnly=true is pinned and ReadOnlyChanged is not bound the toggle is not rendered, so the editor cannot be unlocked from the UI; use @bind-ReadOnly to follow and own the state.",
               "defaultValue": "false"
+            },
+            {
+              "name": "ReadOnlyChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new effective read-only state when the user flips the Read-only/Edit toggle. Binding it (@bind-ReadOnly) keeps the toggle available while the host value is true."
             },
             {
               "name": "ShowGrid",
@@ -38713,7 +38719,13 @@
               "name": "ShowRulers",
               "type": "bool",
               "isRequired": false,
-              "description": "Show rulers around the canvas."
+              "description": "Initial / host-driven visibility of the rulers around the canvas. Never assigned by the component - the toolbar toggle flips an internal state and reports it through ShowRulersChanged; a later change of the parameter value is adopted again."
+            },
+            {
+              "name": "ShowRulersChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised with the new value when the user toggles the rulers button (@bind-ShowRulers)."
             },
             {
               "name": "ShowToolbar",
@@ -38820,22 +38832,32 @@
             {
               "name": "DefaultFileName",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "File name proposed (and restored) every time the dialog opens."
+            },
+            {
+              "name": "InitialFormat",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Format preselected every time the dialog opens: \"png\" (default) or \"pdf\" (case-insensitive). Any other value falls back to PNG."
             },
             {
               "name": "OnClose",
               "type": "EventCallback",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised when the user cancels, presses Escape or clicks the overlay. The host should set Show to false."
             },
             {
               "name": "OnExport",
               "type": "EventCallback<WireframeExportDialogResult>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised with the chosen file name, format and options when the user confirms the export."
             },
             {
               "name": "Show",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Whether the dialog is visible. Every closed-to-open transition resets the form (file name, format, scale, background)."
             }
           ]
         },
@@ -38855,39 +38877,46 @@
             {
               "name": "ActiveLayerId",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Id of the active layer (the one new elements are added to). When null/empty the panel shows the page's default layer as active and reports it once through ActiveLayerIdChanged after the first render."
             },
             {
               "name": "ActiveLayerIdChanged",
               "type": "EventCallback<string?>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised with the new active layer id when the user picks, adds or deletes a layer, and once for the default layer after render."
             },
             {
               "name": "Class",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Additional CSS class on the panel root."
             },
             {
               "name": "Document",
               "type": "WireframeDocument?",
               "isRequired": true,
+              "description": "Document whose active page's layers are listed. Mutated through undoable commands.",
               "editorRequired": true
             },
             {
               "name": "DocumentChanged",
               "type": "EventCallback<WireframeDocument>",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Raised with the (mutated) document after every layer change."
             },
             {
               "name": "ReadOnly",
               "type": "bool",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Disables every mutating control (add, delete, rename, visibility, lock, reorder, move to layer)."
             },
             {
               "name": "SelectedElementIds",
               "type": "string[]",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "Ids of the currently selected elements; enables the \"Move to layer\" selector when non-empty."
             }
           ]
         },
@@ -39162,7 +39191,7 @@
               "name": "OnComponentActivated",
               "type": "EventCallback<string>",
               "isRequired": false,
-              "description": "Raised when the user activates a component via keyboard (Enter/Space). Payload is the component type string (e.g. 'TmButton')."
+              "description": "Raised when the user activates a component by click, tap or keyboard (Enter/Space), exactly once per gesture - the non-drag alternative to HTML5 drag-and-drop. Payload is the component type string (e.g. 'TmButton'); the editor inserts it centred in the visible canvas area."
             }
           ],
           "cssClasses": [

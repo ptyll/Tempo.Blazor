@@ -273,18 +273,28 @@ public partial class TmDocumentOpenDialog : ComponentBase
 
     // ── Selection ──────────────────────────────────────────────────────────────
 
-    private async Task OnRowKeyDownAsync(KeyboardEventArgs e, DocumentLibraryEntry entry)
+    // Rows (div role=row) and grid cards (div role=option) are non-native focusables, so the library
+    // emulates activation (docs/keyboard-activation-convention.md): Enter opens on keydown (auto-repeat
+    // ignored), Space selects on keyup — where a native button would click.
+    private async Task OnItemKeyDownAsync(KeyboardEventArgs e, DocumentLibraryEntry entry)
     {
-        switch (e.Key)
+        if (e.Key == "Enter" && !e.Repeat)
         {
-            case "Enter":
-                await ConfirmAsync(entry);
-                break;
-            case " ":
-                Select(entry);
-                break;
+            await ConfirmAsync(entry);
         }
     }
+
+    private void OnItemKeyUp(KeyboardEventArgs e, DocumentLibraryEntry entry)
+    {
+        if (e.Key == " ")
+        {
+            Select(entry);
+        }
+    }
+
+    /// <summary>The <c>aria-sort</c> value of a sortable column header.</summary>
+    private string AriaSort(DocumentLibrarySortField field)
+        => _sortField != field ? "none" : _descending ? "descending" : "ascending";
 
     private void Select(DocumentLibraryEntry entry)
     {

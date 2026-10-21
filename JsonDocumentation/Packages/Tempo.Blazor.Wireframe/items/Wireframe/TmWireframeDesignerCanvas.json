@@ -2,7 +2,7 @@
   "itemName": "TmWireframeDesignerCanvas",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for all mouse/touch interactions. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
+  "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for pan, zoom, drag, resize and selection; the pointer handling is mouse-based for now (touch/pen gestures follow in a later phase), while click/tap and keyboard insertion from the toolbox work on every input type. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],

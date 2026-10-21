@@ -119,6 +119,7 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     private ElementReference _wrapRef;
     private DotNetObjectReference<TmWireframeDesignerCanvas>? _dotNetRef;
     private bool _jsInitialized;
+    private bool _jsReadOnly;
 
     // Stable IDs for SVG defs so multiple canvas instances on the same page don't collide
     private readonly string _svgId       = "tm-wd-" + Guid.NewGuid().ToString("N")[..8];
@@ -178,9 +179,19 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
                 canvasHeight   = Document?.Height ?? 800,
             };
 
+            _jsReadOnly = ReadOnly;
             await JS.InvokeVoidAsync("tmWireframeDesigner.init", _svgRef, _dotNetRef, options);
         }
-        else if (_jsInitialized && _currentSelectionIds.Length > 0)
+        else if (_jsInitialized && _jsReadOnly != ReadOnly)
+        {
+            // The editor's Read-only toggle (or a host change) flips ReadOnly after init: keep the JS
+            // pointer handling in sync so drag/resize is blocked client-side too, not only by the
+            // server-side guards.
+            _jsReadOnly = ReadOnly;
+            await JS.InvokeVoidAsync("tmWireframeDesigner.setReadOnly", _svgRef, ReadOnly);
+        }
+
+        if (!firstRender && _jsInitialized && _currentSelectionIds.Length > 0)
         {
             // After Blazor re-renders the SVG (e.g. element resized via Properties Panel),
             // the JS selection handles read data-w/data-h from the DOM. Re-apply the

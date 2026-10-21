@@ -14,22 +14,32 @@
     {
       "name": "Show",
       "type": "bool",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Whether the dialog is visible. Every closed-to-open transition resets the form (file name, format, scale, background)."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised when the user cancels, presses Escape or clicks the overlay. The host should set Show to false."
     },
     {
       "name": "OnExport",
       "type": "EventCallback<WireframeExportDialogResult>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised with the chosen file name, format and options when the user confirms the export."
     },
     {
       "name": "DefaultFileName",
       "type": "string?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "File name proposed (and restored) every time the dialog opens."
+    },
+    {
+      "name": "InitialFormat",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Format preselected every time the dialog opens: \"png\" (default) or \"pdf\" (case-insensitive). Any other value falls back to PNG."
     }
   ]
 }

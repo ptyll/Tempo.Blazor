@@ -22,8 +22,9 @@ public partial class TmWireframeToolbox : ComponentBase
     [Parameter] public string? Class { get; set; }
 
     /// <summary>
-    /// Raised when the user activates an item via keyboard (Enter/Space).
-    /// Carries the component type string so the parent can add it at a default position.
+    /// Raised when the user activates an item by click, tap or keyboard (Enter/Space) — exactly once per
+    /// gesture. This is the non-drag alternative to HTML5 drag-and-drop (WCAG 2.5.7): the parent adds the
+    /// component of the carried type string, typically centred in the visible canvas area.
     /// </summary>
     [Parameter] public EventCallback<string> OnComponentActivated { get; set; }
 
@@ -131,14 +132,22 @@ public partial class TmWireframeToolbox : ComponentBase
         _             => Loc["TmWireframeToolbox_FilterAll"],
     };
 
+    private Task ActivateAsync(string componentType) => OnComponentActivated.InvokeAsync(componentType);
+
     /// <summary>
-    /// Keyboard activation (Enter or Space on a toolbox item).
-    /// Fires <see cref="OnComponentActivated"/> so the parent can add the element
-    /// at a default position without requiring drag-and-drop.
+    /// Keyboard activation for the <c>div[role=button]</c> item (no native activation exists, so it is
+    /// emulated — see docs/keyboard-activation-convention.md): Enter fires on keydown (auto-repeat
+    /// ignored), Space fires on keyup, exactly where a native button would click.
     /// </summary>
     private async Task OnItemKeyDown(KeyboardEventArgs e, string componentType)
     {
-        if (e.Key is "Enter" or " ")
-            await OnComponentActivated.InvokeAsync(componentType);
+        if (e.Key == "Enter" && !e.Repeat)
+            await ActivateAsync(componentType);
+    }
+
+    private async Task OnItemKeyUp(KeyboardEventArgs e, string componentType)
+    {
+        if (e.Key == " ")
+            await ActivateAsync(componentType);
     }
 }
