@@ -49,17 +49,33 @@ internal static class MarkupGuard
     ];
 
     /// <summary>
-    /// SVG animation elements: they can set an <c>href</c> at runtime, so a value that passed the static
-    /// check can still become <c>javascript:</c> when the animation runs. E-mail has no use for them.
+    /// The elements a message never needs and a browser would run (Fáze 10 review, U1): SVG animation elements
+    /// (they can set an <c>href</c> at runtime, so a value that passed the static check can still become
+    /// <c>javascript:</c>), embedded documents and plugins (<c>iframe</c>, <c>frame</c>, <c>frameset</c>,
+    /// <c>object</c>, <c>embed</c>, <c>applet</c>, <c>portal</c>), <c>script</c> (removed together with its
+    /// content), <c>base</c> (it rewrites the resolution of EVERY relative URL in the message) and <c>form</c>
+    /// (it can POST the reader's input to the sender). No "raw block may keep it" opt-in exists: raw HTML is an
+    /// author's opt-in to MARKUP, not to running code.
     /// </summary>
     private static readonly string[] UnsafeElements =
-        ["set", "animate", "animatemotion", "animatetransform", "discard"];
+    [
+        "set", "animate", "animatemotion", "animatetransform", "discard",
+        "script", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "form", "portal",
+    ];
 
     /// <summary>Replaces/removes refused URLs, handlers and unsafe elements in the MJML.</summary>
-    public static MarkupGuardResult ApplyToMjml(string mjml) => Apply(mjml);
+    public static MarkupGuardResult ApplyToMjml(string mjml) => Apply(mjml, null);
 
     /// <summary>Replaces/removes refused URLs, handlers and unsafe elements in the HTML.</summary>
-    public static MarkupGuardResult ApplyToHtml(string html) => Apply(html);
+    /// <param name="html">The compiled markup to guard.</param>
+    /// <param name="permittedImports">
+    /// The <c>@import</c> targets the PIPELINE itself wrote (the <c>mj-font</c> hrefs the compiler turned into an
+    /// <c>@import</c> next to the <c>&lt;link&gt;</c>). Only those exact targets are exempt from the
+    /// <c>@import</c> rule of <see cref="CssSafety"/>: every other one is author-controlled and is refused. A
+    /// caller that guards arbitrary markup passes <see langword="null"/> and gets the strict rule.
+    /// </param>
+    public static MarkupGuardResult ApplyToHtml(string html, IReadOnlyCollection<string>? permittedImports = null)
+        => Apply(html, permittedImports);
 
     /// <summary>
     /// Maps a guard failure (a regular expression that had to be aborted) to the fail-closed
@@ -71,7 +87,7 @@ internal static class MarkupGuard
             $"The rendered markup could not be checked safely ({exception.GetType().Name}); it was discarded.",
             Key: RenderKeys.MarkupTooComplex);
 
-    private static MarkupGuardResult Apply(string markup)
+    private static MarkupGuardResult Apply(string markup, IReadOnlyCollection<string>? permittedImports)
     {
         if (string.IsNullOrEmpty(markup))
         {
@@ -82,6 +98,25 @@ internal static class MarkupGuard
         var scan = HtmlTagTokenizer.Scan(markup);
         var edits = new List<Edit>();
         var skipUntil = -1;
+
+        // The closing-tag lookup is cached per element NAME (Fáze 10 security re-review, U1): an unsafe element
+        // without a closing tag used to make the scan rescan the rest of the document once per element, so
+        // N unclosed "<iframe>"s cost O(N²) (320 KB took ~59 s). Tags arrive in document order, so a cached
+        // position is reusable whenever it is not before the current element; a cached "not found" (-1) stays
+        // valid for every later element, because later searches only cover a smaller tail of the document.
+        var closeCache = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        int FindClose(string name, int from)
+        {
+            if (closeCache.TryGetValue(name, out var cached) && (cached < 0 || cached >= from))
+            {
+                return cached;
+            }
+
+            cached = HtmlTagTokenizer.FindClosingTag(markup, name, from);
+            closeCache[name] = cached;
+            return cached;
+        }
 
         foreach (var tag in scan.Tokens)
         {
@@ -95,9 +130,12 @@ internal static class MarkupGuard
             {
                 state.RemoveElement(tag.Name);
                 var end = tag.End;
-                if (!tag.SelfClosing && !tag.HasRawTextContent)
+                if (!tag.SelfClosing || IsRawTextElement(tag.Name) || OwnsContentEvenWhenSelfClosed(tag.Name))
                 {
-                    var closeStart = HtmlTagTokenizer.FindClosingTag(markup, tag.Name, tag.End + 1);
+                    // The element is removed WITH its content: leaving a script body behind as text would only
+                    // rename the payload. A raw-text element (<c>script</c>) that is never closed owns the rest
+                    // of the document exactly as a browser reads it, so that whole tail goes too.
+                    var closeStart = FindClose(tag.Name, tag.End + 1);
                     if (closeStart >= 0)
                     {
                         var closeEnd = markup.IndexOf('>', closeStart);
@@ -105,6 +143,10 @@ internal static class MarkupGuard
                         {
                             end = closeEnd;
                         }
+                    }
+                    else if (IsRawTextElement(tag.Name))
+                    {
+                        end = markup.Length - 1;
                     }
                 }
 
@@ -123,7 +165,7 @@ internal static class MarkupGuard
             if (tag.HasRawTextContent && tag.Name == "style")
             {
                 var content = markup[tag.ContentStart..tag.ContentEnd];
-                var sanitized = SanitizeStyleSheet(content, state);
+                var sanitized = SanitizeStyleSheet(content, state, permittedImports);
                 if (tag.ContentEnd > tag.ContentStart &&
                     !string.Equals(sanitized, content, StringComparison.Ordinal))
                 {
@@ -131,7 +173,7 @@ internal static class MarkupGuard
                 }
             }
 
-            SanitizeAttributes(markup, tag, state, edits);
+            SanitizeAttributes(markup, tag, state, edits, permittedImports);
         }
 
         if (scan.TruncatedAt >= 0)
@@ -144,7 +186,12 @@ internal static class MarkupGuard
             ApplyEdits(markup, edits), state.BlockedSchemes, state.RemovedEventHandlers, state.RemovedElements);
     }
 
-    private static void SanitizeAttributes(string markup, TagToken tag, State state, List<Edit> edits)
+    private static void SanitizeAttributes(
+        string markup,
+        TagToken tag,
+        State state,
+        List<Edit> edits,
+        IReadOnlyCollection<string>? permittedImports)
     {
         foreach (var attr in tag.Attrs)
         {
@@ -212,7 +259,7 @@ internal static class MarkupGuard
 
             if (name.Equals("style", StringComparison.OrdinalIgnoreCase))
             {
-                var sanitized = SanitizeDeclarations(value, state);
+                var sanitized = SanitizeDeclarations(value, state, permittedImports);
                 if (!string.Equals(sanitized, value, StringComparison.Ordinal))
                 {
                     edits.Add(Edit.Replace(attr.NameStart, attr.InclusiveEnd, Rewrite(name, sanitized)));
@@ -225,10 +272,31 @@ internal static class MarkupGuard
     /// Answers whether the attribute holds a URL. Namespaced forms count too: <c>xlink:href</c>
     /// (SVG) is a link the same way <c>href</c> is.
     /// </summary>
-    private static bool IsUrlAttribute(string name)
+    private static bool IsUrlAttribute(string name) => IsUrlAttributeName(name);
+
+    /// <summary>
+    /// The same answer for the emission side (<see cref="MjmlKnownAttributes"/> / <see cref="MjmlAttributeBuffer"/>):
+    /// a URL-bearing attribute has to pass the scheme allow-list wherever it is written, not only when it is
+    /// guarded.
+    /// </summary>
+    public static bool IsUrlAttributeName(string name)
         => UrlAttributeNames.Contains(name, StringComparer.OrdinalIgnoreCase) ||
             name.EndsWith(":href", StringComparison.OrdinalIgnoreCase) ||
             name.EndsWith(":src", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether the element owns its content as raw text (its closing tag is the only markup in it).</summary>
+    private static bool IsRawTextElement(string name)
+        => name is "script" or "style" or "textarea" or "title";
+
+    /// <summary>
+    /// Answers whether the element owns its content even when the author wrote the tag as self-closing (Fáze 10
+    /// security re-review, U2): HTML has no self-closing syntax for a non-void element, so <c>&lt;iframe/&gt;</c>
+    /// (or <c>&lt;iframe/src=…&gt;</c>, which the tokenizer also reads as self-closing) is an ordinary start tag
+    /// and everything up to its closing tag is its content. Dropping only the tag would leave the payload behind
+    /// as text, or leave an orphaned <c>&lt;/iframe&gt;</c>.
+    /// </summary>
+    private static bool OwnsContentEvenWhenSelfClosed(string name)
+        => name is "iframe" or "object" or "form" or "frameset" or "applet";
 
     /// <summary>An event handler is any attribute whose name starts with <c>on</c>, plus <c>srcdoc</c>.</summary>
     private static bool IsEventHandler(string name)
@@ -255,24 +323,43 @@ internal static class MarkupGuard
     }
 
     /// <summary>
-    /// A stylesheet that still embeds a refused URL or <c>@import</c> after normalisation is dropped
-    /// entirely — a partially rewritten rule could leave a value the browser still resolves.
+    /// A stylesheet that still embeds a refused URL or <c>@import</c> after normalisation, or that carries a
+    /// construct a browser would execute or fetch (<see cref="CssSafety"/>), is dropped entirely — a partially
+    /// rewritten rule could leave a value the browser still resolves.
     /// </summary>
-    private static string SanitizeStyleSheet(string css, State state)
-        => HasBlockedCssReference(css, state) ? string.Empty : css;
-
-    /// <summary>Style attribute: only the declarations that embed a refused URL are dropped.</summary>
-    private static string SanitizeDeclarations(string declarations, State state)
+    private static string SanitizeStyleSheet(string css, State state, IReadOnlyCollection<string>? permittedImports)
     {
-        if (!HasBlockedCssReference(declarations, state))
+        if (HasBlockedCssReference(css, state) || !CssSafety.IsSafe(css, permittedImports))
+        {
+            state.RemoveElement("style");
+            return string.Empty;
+        }
+
+        return css;
+    }
+
+    /// <summary>
+    /// Style attribute: only the declarations that embed a refused URL or that <see cref="CssSafety"/> refuses
+    /// are dropped (the rest of the attribute is the author's CSS and stays).
+    /// </summary>
+    private static string SanitizeDeclarations(
+        string declarations,
+        State state,
+        IReadOnlyCollection<string>? permittedImports)
+    {
+        var blockedReference = HasBlockedCssReference(declarations, state);
+        if (!blockedReference && CssSafety.IsSafe(declarations, permittedImports))
         {
             return declarations;
         }
 
+        state.RemoveElement("style");
+
         var kept = new List<string>();
         foreach (var declaration in declarations.Split(';'))
         {
-            if (!HasBlockedCssReference(declaration, state))
+            if (!HasBlockedCssReference(declaration, state) &&
+                CssSafety.IsSafe(declaration, permittedImports))
             {
                 kept.Add(declaration);
             }
@@ -280,6 +367,13 @@ internal static class MarkupGuard
 
         return kept.Count == 0 ? string.Empty : string.Join(';', kept);
     }
+
+    /// <summary>
+    /// Answers whether a stylesheet embeds a refused URL — the same rule the guard applies to a <c>style</c>
+    /// element, exposed for the EMISSION side: a <c>mj-style</c> payload is written verbatim, so it must not be
+    /// able to fetch or execute anything either (<see cref="CssSafety"/>).
+    /// </summary>
+    public static bool HasBlockedCssReference(string css) => HasBlockedCssReference(css, new State());
 
     /// <summary>
     /// Answers whether a CSS fragment embeds a refused URL: <c>url(…)</c> and <c>image-set(…)</c> targets

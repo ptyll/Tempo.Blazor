@@ -220,6 +220,50 @@ public class MarkupGuardTokenizerTests
         result.RemovedElements.Should().BeEmpty();
     }
 
+    // ── 6b. The closing-tag lookup is cached per element name (security re-review 1) ─────────
+
+    [Theory]
+    [InlineData("<iframe>")]
+    [InlineData("<object>")]
+    [InlineData("<form>")]
+    [InlineData("<frameset>")]
+    public void ApplyToHtml_ManyUnclosedUnsafeElements_StayLinear(string unit)
+    {
+        // Every element of a non-raw-text unsafe name used to rescan the REST of the document for its closing
+        // tag, so N unclosed elements cost O(N²): 320 KB of "<iframe>" took ~59 s. The lookup is cached per NAME
+        // (tags arrive in document order, so a cached position is reusable whenever it is not before the
+        // current element), which makes the whole pass linear again.
+        var markup = string.Concat(Enumerable.Repeat(unit, 125_000));
+        var stopwatch = Stopwatch.StartNew();
+
+        var result = MarkupGuard.ApplyToHtml(markup);
+
+        stopwatch.Stop();
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(1),
+            "the closing-tag lookup must not rescan the document once per element");
+        result.Output.Should().BeEmpty();
+    }
+
+    // ── 6c. A self-closing slash cannot hide an element's content (security re-review 2) ─────
+
+    [Theory]
+    [InlineData("<script/x>alert(1)</script>")]
+    [InlineData("<script/>alert(1)</script>")]
+    [InlineData("<iframe/src=javascript:alert(1)></iframe>")]
+    [InlineData("<object/>alert(1)</object>")]
+    [InlineData("<form/>alert(1)</form>")]
+    [InlineData("<frameset/>alert(1)</frameset>")]
+    public void ApplyToHtml_SelfClosingUnsafeElement_StillRemovesItsContent(string markup)
+    {
+        // HTML has no self-closing syntax for a non-void element: "<script/x>" is a script START tag carrying an
+        // attribute named x, and "<iframe/>" is just an iframe — the content after it still runs/is parsed.
+        // Removing only the tag would leave the payload behind as text, or orphan its "</…>" end tag.
+        var result = MarkupGuard.ApplyToHtml(markup);
+
+        result.Output.Should().NotContain("alert(1)");
+        result.Output.Should().NotContain("</", "the end tag of a removed element must not be left behind");
+    }
+
     // ── 7. Fail-closed Html on an error ─────────────────────────────────────────────────────
 
     [Fact]

@@ -150,6 +150,15 @@ public partial class TmEmailTemplateEditor
     [Parameter] public EventCallback<bool> ToolboxCollapsedChanged { get; set; }
 
     /// <summary>
+    /// The limits every entry point applies to a template document (Fáze 10, D13): the import dialog measures
+    /// the pasted or uploaded input against <see cref="EmailImportOptions.MaxInputBytes"/> (UTF-8 bytes) and
+    /// hands the section/block/depth limits to the importer and the JSON deserializer, and the validation panel
+    /// reports the same limits. <see langword="null"/> (default) means the contract values (5 MB, 200 sections,
+    /// 2000 blocks, nesting 8). Do not tighten it: the default is today's behaviour (B14).
+    /// </summary>
+    [Parameter] public EmailImportOptions? ImportOptions { get; set; }
+
+    /// <summary>
     /// The layout the editor renders. <see cref="TmLayoutMode.Auto"/> (default) lets the core
     /// <c>TmEditorShell</c> measure the EDITOR'S OWN CONTAINER — never the viewport — and follow its
     /// width; a forced value renders that mode without a DOM, which is how a host (and a test) pins a

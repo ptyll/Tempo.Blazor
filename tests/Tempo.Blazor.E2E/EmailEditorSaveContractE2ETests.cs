@@ -271,7 +271,7 @@ public sealed class EmailEditorSaveContractE2ETests : EmailTemplateE2ETestBase
 
         // Preview and export stay available: reading the template is not editing.
         await page.Locator("[data-tm-mjml-btn]").ClickAsync();
-        await page.WaitForSelectorAsync("[data-tm-export-mode='mjml']", new() { Timeout = 20000 });
+        await page.WaitForSelectorAsync("#tab-export-mjml", new() { Timeout = 20000 });
         await SaveNamedScreenshotAsync(page, "37-readonly-export.png");
         await page.Keyboard.PressAsync("Escape");
         await page.WaitForSelectorAsync(".tm-modal-overlay", new() { State = WaitForSelectorState.Detached, Timeout = 15000 });

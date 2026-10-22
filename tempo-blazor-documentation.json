@@ -2859,6 +2859,12 @@
           "description": "Disables the button."
         },
         {
+          "name": "OnCopied",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after the text was written to the clipboard (never when the clipboard refuses the write), so a host can announce the confirmation in its own live region."
+        },
+        {
           "name": "ShowLabel",
           "type": "bool",
           "isRequired": false,
@@ -14989,6 +14995,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class(es) applied to the root container."
+        },
+        {
+          "name": "CopyButtonCopied",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after the copy button wrote the value to the clipboard (never when the clipboard refuses it), so a host can confirm the copy in its own live region."
         },
         {
           "name": "Disabled",

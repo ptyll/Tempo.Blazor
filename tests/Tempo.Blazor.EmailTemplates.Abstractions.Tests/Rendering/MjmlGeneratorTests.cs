@@ -99,8 +99,13 @@ public class MjmlGeneratorTests
 
         var mjml = Generator.Generate(doc);
 
+        // Fáze 10: a COLOUR attribute is now validated instead of escaped — the compiler copies it into the
+        // message's style, where escaping does not help (a quote and a semicolon would open a declaration of
+        // their own). A value that is not a CSS colour is therefore dropped entirely, which is strictly safer
+        // than the escaped text the old assertion pinned.
         mjml.Should().NotContain("<script>alert(1)</script>");
-        mjml.Should().Contain("&lt;script&gt;");
+        mjml.Should().NotContain("&lt;script&gt;", "the value is not a colour, so nothing of it is emitted");
+        mjml.Should().NotContain("background-color=\"\"");
     }
 
     [Fact]

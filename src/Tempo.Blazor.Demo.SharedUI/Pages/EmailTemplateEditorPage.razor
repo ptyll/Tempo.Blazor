@@ -1,5 +1,6 @@
 @page "/email-templates/edit/{Id:guid}"
 @using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.EmailTemplates.Abstractions.Import
 @inject IEmailTemplateApiClient Api
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -46,6 +47,7 @@
                                    Variables="_variables"
                                    LayoutMode="_layoutMode"
                                    ItemEditingMode="_itemEditingMode"
+                                   ImportOptions="_importOptions"
                                    CanvasImageLoading="_canvasImageLoading"
                                    MobilePanelPresentation="_presentation"
                                    ResolvedLayoutChanged="OnResolvedLayoutChanged" />
@@ -112,6 +114,16 @@
                 <option value="Tabs">Tabs</option>
             </select>
         </label>
+        @* Fáze 10 demo: the import limits belong to the HOST (EmailImportOptions). Default is the contract
+           5 MB; "1 kB" exists so the too-large-input path can be exercised without a 6 MB file. *@
+        <label class="tm-demo-email-editor-page__simulate">
+            <span>Import limit</span>
+            <select data-tm-demo-import-limit @onchange="OnImportLimitChanged">
+                <option value="default">5 MB (default)</option>
+                <option value="1024">1 kB</option>
+                <option value="0">Unlimited</option>
+            </select>
+        </label>
         @* The editor's own badge already reports the save state; this is the HOST's view of the same thing,
            i.e. what arrived through IsDirtyChanged — the guard/leave flow keys off exactly this flag. The
            wording stays plain ("unsaved changes yes/no") instead of naming the internal flag. *@
@@ -165,6 +177,12 @@
         new("company.support_email", VariableKind.Scalar) { Description = "Support e-mail of the company", Group = "Company" },
     ];
     private readonly ImageUploadOptions _imageUpload = new() { Accept = "image/*", MaxBytes = 2 * 1024 * 1024 };
+
+    /// <summary>
+    /// The host's import limits (Fáze 10): null = the contract defaults (5 MB, 200 sections, 2000 blocks,
+    /// nesting 8). The demo's switch can tighten <c>MaxInputBytes</c> so the limit path is reviewable.
+    /// </summary>
+    private EmailImportOptions? _importOptions;
 
     /// <summary>
     /// The demo remembers the reviewer's layout / presentation choice (localStorage), so an E2E that pins a
@@ -287,6 +305,15 @@
             : MobilePanelPresentation.Sheet;
         await RememberAsync("tm-demo-editor-presentation", _presentation.ToString());
     }
+
+    /// <summary>Applies the demo's import limit; “Unlimited” raises the contract default rather than removing it.</summary>
+    private void OnImportLimitChanged(ChangeEventArgs e)
+        => _importOptions = e.Value?.ToString() switch
+        {
+            "1024" => new EmailImportOptions { MaxInputBytes = 1024 },
+            "0" => new EmailImportOptions { MaxInputBytes = long.MaxValue },
+            _ => null,
+        };
 
     private void OnCanvasImageLoadingChanged(ChangeEventArgs e)
         => _canvasImageLoading = Enum.TryParse<CanvasImageLoading>(e.Value?.ToString(), out var mode)

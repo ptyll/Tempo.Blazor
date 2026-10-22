@@ -8,8 +8,8 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 /// <param name="BlockedSchemes">Lower-case scheme names that were refused (deduplicated).</param>
 /// <param name="RemovedEventHandlers">Event-handler attribute names that were removed (deduplicated).</param>
 /// <param name="RemovedElements">
-/// Unsafe elements that were removed (deduplicated): an SVG animation element name, or
-/// <c>meta-refresh</c>.
+/// Elements that were removed (deduplicated): an unsafe element name, <c>meta-refresh</c>, or <c>style</c>
+/// when a <c>style</c> block or a <c>style</c> attribute carried a CSS payload the pipeline refuses.
 /// </param>
 internal sealed record MarkupGuardResult(
     string Output,

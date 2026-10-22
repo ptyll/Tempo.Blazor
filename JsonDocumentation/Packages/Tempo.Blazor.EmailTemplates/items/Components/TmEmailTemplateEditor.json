@@ -172,6 +172,12 @@
       "isRequired": false,
       "default": "Array.Empty<TemplateVariableInfo>()",
       "description": "Host-provided variables offered by the variable picker (merged with extracted ones)."
+    },
+    {
+      "name": "ImportOptions",
+      "type": "EmailImportOptions?",
+      "isRequired": false,
+      "description": "The limits every entry point applies to a template document (D13): the import dialog measures the input against MaxInputBytes (UTF-8 bytes) and passes the section/block/depth limits to the importer and the JSON deserializer; the validation panel reports the same limits. null (default) means the contract values (5 MB, 200 sections, 2000 blocks, nesting 8)."
     }
   ]
 }

@@ -38,12 +38,13 @@ public class EmailImportDialogMessageTests : BunitContext, IDisposable
     {
         var cut = Render<TmEmailImportDialog>(p => p.Add(c => c.Show, true));
 
-        cut.Find("[data-tm-import-input]").Input(MjmlWithPreheader(new string('x', 120)));
+        cut.Find("[data-tm-import-input] textarea").Input(MjmlWithPreheader(new string('x', 120)));
 
         var warnings = cut.Find("[data-tm-import-warnings]");
         warnings.TextContent.Should().NotContain("{0}", "the threshold argument must reach the sentence");
         warnings.TextContent.Should().Contain("100", "the rule names the limit it measured");
-        warnings.TextContent.Should().Contain("Preheader", "the sentence is the localized preheader rule");
+        warnings.TextContent.Should().Contain("Úvodní text (preheader)",
+            "the sentence is the localized preheader rule, and it uses the same term as the field label");
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class EmailImportDialogMessageTests : BunitContext, IDisposable
     {
         var cut = Render<TmEmailImportDialog>(p => p.Add(c => c.Show, true));
 
-        cut.Find("[data-tm-import-input]").Input(MjmlWithPreheader(new string('x', 20)));
+        cut.Find("[data-tm-import-input] textarea").Input(MjmlWithPreheader(new string('x', 20)));
 
         cut.FindAll("[data-tm-import-warnings]").Should().BeEmpty();
         cut.Find("[data-tm-import-summary]").Should().NotBeNull();

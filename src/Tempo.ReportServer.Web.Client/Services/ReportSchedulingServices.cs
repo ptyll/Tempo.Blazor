@@ -1,5 +1,6 @@
 using Tempo.Blazor.EmailTemplates.Abstractions.Contracts;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Import;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model.Blocks;
 using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
@@ -994,9 +995,25 @@ public sealed class ReportEmailTemplateGalleryStore : IEmailTemplateStore
 
     private readonly object _gate = new();
     private readonly Dictionary<Guid, EmailTemplateDocument> _documents = new();
+    private readonly EmailImportOptions _importOptions;
 
-    /// <summary>Creates a gallery store with a scheduled report template.</summary>
-    public ReportEmailTemplateGalleryStore() => Seed();
+    /// <summary>Creates a gallery store with a scheduled report template and the default import limits.</summary>
+    public ReportEmailTemplateGalleryStore()
+        : this(null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a gallery store that applies explicit import limits to the content JSON it accepts
+    /// (Fáze 10): the same invariant as the API — a payload the editor's import would refuse is refused
+    /// here too, with the localizable key on <see cref="EmailTemplateSerializationException"/>.
+    /// </summary>
+    /// <param name="importOptions">The limits to apply; defaults to <see cref="EmailImportOptions"/>'s values.</param>
+    public ReportEmailTemplateGalleryStore(EmailImportOptions? importOptions)
+    {
+        _importOptions = importOptions ?? new EmailImportOptions();
+        Seed();
+    }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<EmailTemplateSummaryDto>> ListAsync(CancellationToken cancellationToken = default)
@@ -1025,7 +1042,7 @@ public sealed class ReportEmailTemplateGalleryStore : IEmailTemplateStore
     /// <inheritdoc />
     public Task<EmailTemplateDetailDto> CreateAsync(CreateEmailTemplateRequest request, CancellationToken cancellationToken = default)
     {
-        var document = EmailTemplateMapper.ApplyCreate(request);
+        var document = EmailTemplateMapper.ApplyCreate(request, _importOptions);
         document.Id = Guid.NewGuid();
         lock (_gate)
         {
@@ -1038,7 +1055,7 @@ public sealed class ReportEmailTemplateGalleryStore : IEmailTemplateStore
     /// <inheritdoc />
     public Task<bool> UpdateAsync(Guid id, UpdateEmailTemplateRequest request, CancellationToken cancellationToken = default)
     {
-        var document = EmailTemplateMapper.ApplyUpdate(request);
+        var document = EmailTemplateMapper.ApplyUpdate(request, _importOptions);
         document.Id = id;
         lock (_gate)
         {

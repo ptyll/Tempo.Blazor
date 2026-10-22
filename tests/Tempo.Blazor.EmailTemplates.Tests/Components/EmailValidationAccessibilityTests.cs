@@ -87,7 +87,7 @@ public class EmailValidationAccessibilityTests : BunitContext, IDisposable
         Guid? navigated = null;
         var cut = Panel(document, id => navigated = id);
 
-        var link = cut.Find("[data-tm-validation-severity=\"Error\"] button.tm-email-validation__link");
+        var link = cut.Find("button[data-tm-validation-severity=\"Error\"]");
         link.GetAttribute("type").Should().Be("button");
 
         link.Click();
@@ -115,7 +115,7 @@ public class EmailValidationAccessibilityTests : BunitContext, IDisposable
         var cut = Panel(Document());
 
         cut.Find("[data-tm-validation-ok]").Should().NotBeNull();
-        cut.FindAll(".tm-email-validation__link").Should().BeEmpty("a document-level sentence has nowhere to jump to");
+        cut.FindAll("[data-tm-validation-message]").Should().BeEmpty("a document-level sentence has nowhere to jump to");
     }
 
     private sealed class EchoTmLocalizer : ITmLocalizer

@@ -69,6 +69,22 @@ public class EmailEditorCssTokenTests
     }
 
     [Fact]
+    public void A_layout_dependent_dialog_rule_keys_on_the_resolved_layout_not_on_a_viewport_media_query()
+    {
+        // F8 rule: the breakpoints live in ONE place (TmEditorShell → the data-layout on the dialog root).
+        // A custom @media (width …) in a dialog stylesheet would disagree with the editor the moment a host
+        // changes its breakpoints, and it measures the viewport instead of the container the editor lives in.
+        foreach (var name in new[] { "TmEmailImportDialog.razor.css", "TmEmailExportDialog.razor.css" })
+        {
+            var css = Stylesheets.Value.Single(s => s.Name == name).Text;
+            css.Should().NotContain("@media (width", $"{name} must key on the resolved layout");
+            css.Should().NotContain("@media (max-width", $"{name} must key on the resolved layout");
+            css.Should().Contain("[data-layout=\"mobile\"]",
+                $"{name} shrinks its phone layout through the resolved layout hook");
+        }
+    }
+
+    [Fact]
     public void The_canvas_paper_is_the_theme_invariant_page()
     {
         // Fáze 9A: the canvas paints the E-MAIL, so its paper must stay white/dark-ink in every theme — a

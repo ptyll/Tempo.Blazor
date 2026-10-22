@@ -46,7 +46,8 @@
             }
             @if (ShowCopyButton)
             {
-                <TmCopyButton Text="@Value" Class="tm-code-editor__copy" data-testid="@TestId("copy-button")" />
+                <TmCopyButton Text="@Value" Class="tm-code-editor__copy" data-testid="@TestId("copy-button")"
+                              OnCopied="CopyButtonCopied" />
             }
         </div>
     </div>
@@ -137,6 +138,12 @@
 
     /// <summary>Shows a copy-to-clipboard button in the top-right corner. Defaults to true.</summary>
     [Parameter] public bool ShowCopyButton { get; set; } = true;
+
+    /// <summary>
+    /// Raised after the copy button wrote the value to the clipboard (never when the clipboard refuses
+    /// it), so a host can confirm the copy in its own live region.
+    /// </summary>
+    [Parameter] public EventCallback CopyButtonCopied { get; set; }
 
     /// <summary>Shows a pretty-print button for JSON content. Only rendered when <see cref="Language"/> is "json".</summary>
     [Parameter] public bool ShowFormatButton { get; set; }

@@ -2,8 +2,12 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Import;
 using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
+using Tempo.Blazor.EmailTemplates.Abstractions.Serialization;
 
 namespace Tempo.Blazor.Demo.Api.Tests;
 
@@ -134,5 +138,94 @@ public class EmailTemplateEndpointTests : IClassFixture<WebApplicationFactory<Pr
 
         taken.Should().BeFalse();
         free.Should().BeTrue();
+    }
+
+    // Fáze 10 (carry-forward): the API path applies the same import limits as the editor and reports a
+    // failure as 422 ProblemDetails whose `errors` values are LOCALIZATION KEYS (the client owns the
+    // wording). "What passes the import passes the server" is the invariant being pinned.
+
+    [Fact]
+    public async Task Create_ContentJsonOverMaxInputBytes_Returns422WithTheInputTooLargeKey()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+                services.AddSingleton(new EmailImportOptions { MaxInputBytes = 64 })));
+        var client = factory.CreateClient();
+        var request = NewRequest("Oversized") with { ContentJson = "{\"sections\":[],\"pad\":\"" + new string('x', 200) + "\"}" };
+
+        var response = await client.PostAsJsonAsync("/api/email-templates", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var keys = await ErrorKeysAsync(response);
+        keys.Should().Contain(SerializationKeys.InputTooLarge);
+    }
+
+    [Fact]
+    public async Task Create_NonNumericSchemaVersion_Returns422WithTheInvalidSchemaVersionKey()
+    {
+        var request = NewRequest("Bad schema") with { ContentJson = "{\"schemaVersion\":\"two\",\"sections\":[]}" };
+
+        var response = await _client.PostAsJsonAsync("/api/email-templates", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await ErrorKeysAsync(response)).Should().Contain(SerializationKeys.InvalidSchemaVersion);
+    }
+
+    [Fact]
+    public async Task Create_NewerSchemaVersion_Returns422WithTheUnsupportedSchemaVersionKey()
+    {
+        var request = NewRequest("Newer schema") with { ContentJson = "{\"schemaVersion\":99,\"sections\":[]}" };
+
+        var response = await _client.PostAsJsonAsync("/api/email-templates", request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await ErrorKeysAsync(response)).Should().Contain(SerializationKeys.UnsupportedSchemaVersion);
+    }
+
+    [Fact]
+    public async Task Update_TooManySections_Returns422WithTheSectionsLimitKey()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+                services.AddSingleton(new EmailImportOptions { MaxSections = 1 })));
+        var client = factory.CreateClient();
+        var created = await (await _client.PostAsJsonAsync("/api/email-templates", NewRequest("Limit update")))
+            .Content.ReadFromJsonAsync<EmailTemplateDetailDto>();
+        var update = new UpdateEmailTemplateRequest
+        {
+            Name = "Limited", Subject = "S", Language = "en", IsActive = true,
+            ContentJson = "{\"sections\":[{\"columns\":[]},{\"columns\":[]}]}",
+        };
+
+        var response = await client.PutAsJsonAsync($"/api/email-templates/{created!.Id}", update);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await ErrorKeysAsync(response))
+            .Should().Contain(Tempo.Blazor.EmailTemplates.Abstractions.Rendering.DocumentValidationKeys.TooManySections);
+    }
+
+    [Fact]
+    public async Task Preview_MalformedJson_Returns422WithTheMalformedKey()
+    {
+        var response = await _client.PostAsJsonAsync("/api/email-templates/preview", new RenderPreviewRequest
+        {
+            ContentJson = "{ not json",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await ErrorKeysAsync(response)).Should().Contain(SerializationKeys.Malformed);
+    }
+
+    /// <summary>
+    /// The localization keys of a 422 ProblemDetails: the client turns them into text, so the API must
+    /// never put a half-localized sentence or an exception message there instead.
+    /// </summary>
+    private static async Task<IReadOnlyList<string>> ErrorKeysAsync(HttpResponseMessage response)
+    {
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.TryGetProperty("errors", out var errors)
+            ? errors.EnumerateObject().SelectMany(property => property.Value.EnumerateArray().Select(v => v.GetString() ?? ""))
+                .ToList()
+            : [];
     }
 }

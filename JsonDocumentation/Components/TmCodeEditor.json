@@ -138,6 +138,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Namespaces every internal data-testid as \"{TestIdPrefix}-{name}\" for unique targeting when multiple instances share a page."
+    },
+    {
+      "name": "CopyButtonCopied",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after the copy button wrote the value to the clipboard (never when the clipboard refuses it), so a host can confirm the copy in its own live region."
     }
   ],
   "methods": [

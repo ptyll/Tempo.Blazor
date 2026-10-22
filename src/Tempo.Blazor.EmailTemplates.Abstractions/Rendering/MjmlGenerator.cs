@@ -63,7 +63,7 @@ public sealed class MjmlGenerator
         if (lang is not null) sb.Append(" lang=\"").Append(MjmlEscape.Attribute(lang)).Append('"');
         sb.Append(">\n");
 
-        WriteHead(sb, document, options);
+        WriteHead(sb, document, options, diagnostics);
         WriteBody(sb, document, diagnostics);
 
         sb.Append("</mjml>\n");
@@ -72,7 +72,11 @@ public sealed class MjmlGenerator
 
     // ── Head ────────────────────────────────────────────────────────────────────────────────────
 
-    private void WriteHead(StringBuilder sb, EmailTemplateDocument document, MjmlGeneratorOptions options)
+    private void WriteHead(
+        StringBuilder sb,
+        EmailTemplateDocument document,
+        MjmlGeneratorOptions options,
+        ICollection<RenderError>? diagnostics)
     {
         var styles = document.Styles;
         sb.Append("<mj-head>\n");
@@ -81,69 +85,143 @@ public sealed class MjmlGenerator
             sb.Append("<mj-title>").Append(MjmlEscape.Text(document.Subject)).Append("</mj-title>\n");
         if (!string.IsNullOrEmpty(document.Preheader))
             sb.Append("<mj-preview>").Append(MjmlEscape.Text(document.Preheader)).Append("</mj-preview>\n");
+
+        // Every head element below is a place a foreign template (or a crafted JSON payload) can carry a tag
+        // name, an attribute name and a value, so it goes through the SAME gate as the body: a known mj-* tag,
+        // an allow-listed attribute name, a colour that is a colour and a URL through the allow-list.
         if (!string.IsNullOrEmpty(styles.Breakpoint) && !string.Equals(styles.Breakpoint, "480px", StringComparison.Ordinal))
-            sb.Append("<mj-breakpoint width=\"").Append(MjmlEscape.Attribute(styles.Breakpoint)).Append("\" />\n");
+        {
+            var breakpoint = new MjmlAttributeBuffer("mj-breakpoint", diagnostics)
+                .Optional("width", styles.Breakpoint);
+            if (breakpoint.ToString().Length > 0)
+            {
+                sb.Append("<mj-breakpoint").Append(breakpoint).Append(" />\n");
+            }
+        }
 
         foreach (var font in styles.Fonts)
-            sb.Append("<mj-font name=\"").Append(MjmlEscape.Attribute(font.Name))
-              .Append("\" href=\"").Append(MjmlEscape.Attribute(font.Href)).Append("\" />\n");
+        {
+            var fontAttributes = new MjmlAttributeBuffer("mj-font", diagnostics)
+                .Optional("name", font.Name)
+                .Url("href", font.Href);
+            // A font is an MJML font only when BOTH attributes are there (Fáze 10 security re-review, item 6): a
+            // name the attribute buffer had to drop counts as missing, so checking the href alone would emit
+            // <mj-font href="…" /> — an element the compiler rejects.
+            var fontMarkup = fontAttributes.ToString();
+            if (fontMarkup.Contains(" name=", StringComparison.Ordinal) &&
+                fontMarkup.Contains(" href=", StringComparison.Ordinal))
+            {
+                sb.Append("<mj-font").Append(fontAttributes).Append(" />\n");
+            }
+        }
 
-        WriteAttributes(sb, styles);
+        WriteAttributes(sb, styles, diagnostics);
 
         foreach (var style in styles.Styles)
         {
             sb.Append(style.Inline ? "<mj-style inline=\"inline\">" : "<mj-style>");
-            sb.Append(style.Css).Append("</mj-style>\n");
+            // The CSS of a style block is written verbatim (it IS the payload), so what it may never carry is
+            // the closing tag that would end the block early (a CSS payload has no '<') and the constructs a
+            // browser would execute or fetch (expression(), behavior:, -moz-binding, @import, a refused URL).
+            sb.Append(CssPayload(style.Css)).Append("</mj-style>\n");
         }
 
         if (options.EmitHtmlAttributes && styles.HtmlAttributes.Count > 0)
-            WriteHtmlAttributes(sb, styles);
+            WriteHtmlAttributes(sb, styles, diagnostics);
 
         sb.Append("</mj-head>\n");
     }
 
-    private void WriteAttributes(StringBuilder sb, TemplateStyles styles)
+    private static void WriteAttributes(
+        StringBuilder sb,
+        TemplateStyles styles,
+        ICollection<RenderError>? diagnostics)
     {
         // Apply the global font-family as an mj-all default unless the cascade already sets one.
         var all = new Dictionary<string, string>(styles.Attributes.All, StringComparer.Ordinal);
         if (!all.ContainsKey("font-family") && !string.IsNullOrEmpty(styles.FontFamily))
             all["font-family"] = styles.FontFamily;
 
-        if (all.Count == 0 && styles.Attributes.PerTag.Count == 0 && styles.Attributes.Classes.Count == 0)
+        // A per-component default keyed by a name that is NOT a known MJML component is a tag-name injection
+        // (`mj-text><script>…`): the element would be written with whatever the key holds, so the key itself has
+        // to be a component this pipeline knows.
+        var perTag = styles.Attributes.PerTag
+            .Where(entry => MjmlKnownAttributes.IsKnownTag(entry.Key))
+            .ToList();
+        var classes = styles.Attributes.Classes;
+
+        if (all.Count == 0 && perTag.Count == 0 && classes.Count == 0)
             return;
 
         sb.Append("<mj-attributes>\n");
         // NOTE (E0.9): mj-attributes children MUST use explicit closing tags; self-closing breaks Mjml.Net.
         if (all.Count > 0)
-            sb.Append("<mj-all").Append(Pairs(all)).Append("></mj-all>\n");
-        foreach (var (tag, attrs) in styles.Attributes.PerTag)
-            sb.Append('<').Append(tag).Append(Pairs(attrs)).Append("></").Append(tag).Append(">\n");
-        foreach (var (name, attrs) in styles.Attributes.Classes)
-            sb.Append("<mj-class name=\"").Append(MjmlEscape.Attribute(name)).Append('"')
-              .Append(Pairs(attrs)).Append("></mj-class>\n");
+            sb.Append("<mj-all").Append(Pairs("mj-all", all, diagnostics)).Append("></mj-all>\n");
+        foreach (var (tag, attrs) in perTag)
+            sb.Append('<').Append(tag).Append(Pairs(tag, attrs, diagnostics)).Append("></").Append(tag).Append(">\n");
+        foreach (var (name, attrs) in classes)
+        {
+            var safeName = MjmlKnownAttributes.SafeClassList(name);
+            if (string.IsNullOrEmpty(safeName)) continue;
+
+            sb.Append("<mj-class name=\"").Append(MjmlEscape.Attribute(safeName)).Append('"')
+              .Append(Pairs("mj-class", attrs, diagnostics)).Append("></mj-class>\n");
+        }
+
         sb.Append("</mj-attributes>\n");
     }
 
-    private void WriteHtmlAttributes(StringBuilder sb, TemplateStyles styles)
+    private static void WriteHtmlAttributes(
+        StringBuilder sb,
+        TemplateStyles styles,
+        ICollection<RenderError>? diagnostics)
     {
         sb.Append("<mj-html-attributes>\n");
         foreach (var selector in styles.HtmlAttributes)
         {
             sb.Append("<mj-selector path=\"").Append(MjmlEscape.Attribute(selector.Path)).Append("\">\n");
             foreach (var (name, value) in selector.Attributes)
+            {
+                if (!MjmlKnownAttributes.IsAllowedHtmlAttribute(name))
+                {
+                    continue;
+                }
+
+                if (MjmlKnownAttributes.IsUrl(name))
+                {
+                    sb.Append("<mj-html-attribute name=\"").Append(MjmlEscape.Attribute(name)).Append("\">")
+                      .Append(MjmlEscape.Text(AllowedHref(value))).Append("</mj-html-attribute>\n");
+                    continue;
+                }
+
+                if (!MjmlKnownAttributes.IsSafeValue(name, value))
+                {
+                    diagnostics?.Add(new RenderError(
+                        $"The HTML attribute '{name}' was dropped because its value is not one the message can carry.",
+                        Key: RenderKeys.InvalidAttributeValue,
+                        Severity: RenderErrorSeverity.Warning));
+                    continue;
+                }
+
                 sb.Append("<mj-html-attribute name=\"").Append(MjmlEscape.Attribute(name)).Append("\">")
                   .Append(MjmlEscape.Text(value)).Append("</mj-html-attribute>\n");
+            }
+
             sb.Append("</mj-selector>\n");
         }
+
         sb.Append("</mj-html-attributes>\n");
     }
 
-    private static string Pairs(Dictionary<string, string> attrs)
+    private static string Pairs(string tag, Dictionary<string, string> attrs, ICollection<RenderError>? diagnostics)
     {
-        var sb = new StringBuilder();
+        var buffer = new MjmlAttributeBuffer(tag, diagnostics);
         foreach (var (name, value) in attrs)
-            sb.Append(' ').Append(name).Append("=\"").Append(MjmlEscape.Attribute(value)).Append('"');
-        return sb.ToString();
+        {
+            buffer.Optional(name, value);
+        }
+
+        return buffer.ToString();
     }
 
     // ── Body / layout ─────────────────────────────────────────────────────────────────────────
@@ -153,7 +231,10 @@ public sealed class MjmlGenerator
         var width = document.Styles.ContentWidth;
         sb.Append("<mj-body");
         if (!string.IsNullOrEmpty(width)) sb.Append(" width=\"").Append(MjmlEscape.Attribute(width)).Append('"');
-        sb.Append(" background-color=\"").Append(MjmlEscape.Attribute(document.Styles.BackgroundColor)).Append("\">\n");
+        if (CssColourValue.IsPlausible(document.Styles.BackgroundColor))
+            sb.Append(" background-color=\"").Append(MjmlEscape.Attribute(document.Styles.BackgroundColor.Trim())).Append("\">\n");
+        else
+            sb.Append(">\n");
 
         foreach (var section in document.Sections)
             WriteSection(sb, section, diagnostics);
@@ -163,9 +244,9 @@ public sealed class MjmlGenerator
 
     private void WriteSection(StringBuilder sb, EmailSection section, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Optional("background-color", section.BackgroundColor)
-            .Optional("background-url", section.BackgroundUrl)
+        var a = new MjmlAttributeBuffer("mj-section", diagnostics)
+            .Colour("background-color", section.BackgroundColor)
+            .Url("background-url", section.BackgroundUrl)
             .Optional("background-position", section.BackgroundPosition)
             .Optional("background-repeat", section.BackgroundRepeat)
             .Optional("background-size", section.BackgroundSize)
@@ -185,10 +266,10 @@ public sealed class MjmlGenerator
 
     private void WriteColumn(StringBuilder sb, EmailColumn column, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-column", diagnostics)
             .Optional("width", column.Width)
             .Defaulted("vertical-align", column.VerticalAlign, "top")
-            .Optional("background-color", column.BackgroundColor)
+            .Colour("background-color", column.BackgroundColor)
             .Optional("border", column.Border)
             .Optional("border-radius", column.BorderRadius)
             .Optional("padding", column.Padding)
@@ -209,17 +290,17 @@ public sealed class MjmlGenerator
 
         switch (block)
         {
-            case EmailTextBlock t: WriteText(sb, t); break;
-            case EmailButtonBlock b: WriteButton(sb, b); break;
-            case EmailImageBlock i: WriteImage(sb, i); break;
-            case EmailDividerBlock d: WriteDivider(sb, d); break;
-            case EmailSpacerBlock s: WriteSpacer(sb, s); break;
-            case EmailRawBlock r: WriteRaw(sb, r); break;
+            case EmailTextBlock t: WriteText(sb, t, diagnostics); break;
+            case EmailButtonBlock b: WriteButton(sb, b, diagnostics); break;
+            case EmailImageBlock i: WriteImage(sb, i, diagnostics); break;
+            case EmailDividerBlock d: WriteDivider(sb, d, diagnostics); break;
+            case EmailSpacerBlock s: WriteSpacer(sb, s, diagnostics); break;
+            case EmailRawBlock r: WriteRaw(sb, r, diagnostics); break;
             case EmailTableBlock tb: WriteTable(sb, tb, diagnostics); break;
-            case EmailSocialBlock so: WriteSocial(sb, so); break;
-            case EmailNavbarBlock nv: WriteNavbar(sb, nv); break;
-            case EmailCarouselBlock c: WriteCarousel(sb, c); break;
-            case EmailAccordionBlock ac: WriteAccordion(sb, ac); break;
+            case EmailSocialBlock so: WriteSocial(sb, so, diagnostics); break;
+            case EmailNavbarBlock nv: WriteNavbar(sb, nv, diagnostics); break;
+            case EmailCarouselBlock c: WriteCarousel(sb, c, diagnostics); break;
+            case EmailAccordionBlock ac: WriteAccordion(sb, ac, diagnostics); break;
             case EmailHeroBlock h: WriteHero(sb, h, diagnostics); break;
             case EmailWrapperBlock w: WriteWrapper(sb, w, diagnostics); break;
             case EmailGroupBlock g: WriteGroup(sb, g, diagnostics); break;
@@ -228,10 +309,10 @@ public sealed class MjmlGenerator
         if (hasCondition) sb.Append("{{ end }}\n");
     }
 
-    private void WriteText(StringBuilder sb, EmailTextBlock t)
+    private void WriteText(StringBuilder sb, EmailTextBlock t, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Defaulted("color", t.Color, "#000000")
+        var a = new MjmlAttributeBuffer("mj-text", diagnostics)
+            .Colour("color", t.Color, "#000000")
             .Defaulted("font-family", t.FontFamily, "Ubuntu, Helvetica, Arial, sans-serif")
             .Defaulted("font-size", t.FontSize, "13px")
             .Optional("font-style", t.FontStyle)
@@ -246,14 +327,14 @@ public sealed class MjmlGenerator
         sb.Append("<mj-text").Append(a).Append('>').Append(_sanitizer.SanitizeTemplateContent(t.Content)).Append("</mj-text>\n");
     }
 
-    private void WriteButton(StringBuilder sb, EmailButtonBlock b)
+    private void WriteButton(StringBuilder sb, EmailButtonBlock b, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Optional("href", b.Href)
+        var a = new MjmlAttributeBuffer("mj-button", diagnostics)
+            .Url("href", b.Href)
             .Optional("rel", b.Rel)
             .Defaulted("target", b.Target, "_blank")
-            .Defaulted("background-color", b.BackgroundColor, "#414141")
-            .Defaulted("color", b.Color, "#ffffff")
+            .Colour("background-color", b.BackgroundColor, "#414141")
+            .Colour("color", b.Color, "#ffffff")
             .Optional("font-family", b.FontFamily)
             .Defaulted("font-size", b.FontSize, "13px")
             .Optional("font-style", b.FontStyle)
@@ -274,12 +355,12 @@ public sealed class MjmlGenerator
         sb.Append("<mj-button").Append(a).Append('>').Append(MjmlEscape.Text(b.Text)).Append("</mj-button>\n");
     }
 
-    private void WriteImage(StringBuilder sb, EmailImageBlock i)
+    private void WriteImage(StringBuilder sb, EmailImageBlock i, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Optional("src", i.Src)
+        var a = new MjmlAttributeBuffer("mj-image", diagnostics)
+            .Url("src", i.Src)
             .Raw("alt", i.Alt)
-            .Optional("href", i.Href)
+            .Url("href", i.Href)
             .Optional("rel", i.Rel)
             .Defaulted("target", i.Target, "_blank")
             .Optional("title", i.Title)
@@ -293,10 +374,10 @@ public sealed class MjmlGenerator
         sb.Append("<mj-image").Append(a).Append(" />\n");
     }
 
-    private void WriteDivider(StringBuilder sb, EmailDividerBlock d)
+    private void WriteDivider(StringBuilder sb, EmailDividerBlock d, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Defaulted("border-color", d.BorderColor, "#000000")
+        var a = new MjmlAttributeBuffer("mj-divider", diagnostics)
+            .Colour("border-color", d.BorderColor, "#000000")
             .Defaulted("border-style", d.BorderStyle, "solid")
             .Defaulted("border-width", d.BorderWidth, "4px")
             .Defaulted("width", d.Width, "100%")
@@ -305,25 +386,25 @@ public sealed class MjmlGenerator
         sb.Append("<mj-divider").Append(a).Append(" />\n");
     }
 
-    private void WriteSpacer(StringBuilder sb, EmailSpacerBlock s)
+    private void WriteSpacer(StringBuilder sb, EmailSpacerBlock s, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-spacer", diagnostics)
             .Defaulted("height", s.Height, "20px")
             .BlockCommon(s, null);
         sb.Append("<mj-spacer").Append(a).Append(" />\n");
     }
 
-    private void WriteRaw(StringBuilder sb, EmailRawBlock r)
-        => sb.Append("<mj-raw>").Append(r.Content).Append("</mj-raw>\n");
+    private void WriteRaw(StringBuilder sb, EmailRawBlock r, ICollection<RenderError>? diagnostics)
+        => sb.Append("<mj-raw>").Append(KeepInside(r.Content, "mj-raw")).Append("</mj-raw>\n");
 
     private void WriteTable(StringBuilder sb, EmailTableBlock t, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-table", diagnostics)
             .Defaulted("align", t.Align, "left")
             .Optional("border", t.Border)
             .Defaulted("cellpadding", t.CellPadding, "0")
             .Defaulted("cellspacing", t.CellSpacing, "0")
-            .Defaulted("color", t.Color, "#000000")
+            .Colour("color", t.Color, "#000000")
             .Defaulted("font-family", t.FontFamily, "Ubuntu, Helvetica, Arial, sans-serif")
             .Defaulted("font-size", t.FontSize, "13px")
             .Defaulted("line-height", t.LineHeight, "22px")
@@ -394,18 +475,36 @@ public sealed class MjmlGenerator
         sb.Append(" bgcolor=\"").Append(MjmlEscape.Attribute(cell.BackgroundColor.Trim())).Append('"');
     }
 
+    /// <summary>
+    /// Keeps a verbatim payload inside its element: a closing tag of the OWN element inside the payload would end
+    /// the block early and turn the rest of the payload into document markup, so its <c>&lt;/</c> is escaped.
+    /// Nothing else is touched — raw HTML is a payload by definition (the markup guard and the e-mail client's
+    /// own sandbox are what make it inert; the export is a text file that nothing executes).
+    /// </summary>
+    private static string KeepInside(string content, string elementName)
+        => content.Replace("</" + elementName, "<\\/" + elementName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The CSS of one <c>mj-style</c> block, made unable to leave its element. CSS never contains <c>&lt;</c>, so
+    /// dropping it is lossless for real stylesheets — and it closes the one injection this payload has: a style
+    /// whose text smuggles <c>&lt;/style&gt;&lt;script&gt;</c> into the HTML the compiler produces (and into the
+    /// exported MJML).
+    /// </summary>
+    private static string CssPayload(string css)
+        => CssSafety.IsSafe(css) ? css.Replace("<", string.Empty, StringComparison.Ordinal) : string.Empty;
+
     /// <summary>The cell link as it may be emitted: the value itself, or <c>#</c> for a blocked scheme.</summary>
     private static string AllowedHref(string href)
         => EmailUrlPolicy.IsAllowed(href) ? href : EmailUrlPolicy.BlockedUrlPlaceholder;
 
-    private void WriteSocial(StringBuilder sb, EmailSocialBlock s)
+    private void WriteSocial(StringBuilder sb, EmailSocialBlock s, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-social", diagnostics)
             .Defaulted("mode", s.Mode, "horizontal")
             .Defaulted("align", s.Align, "center")
             .Defaulted("icon-size", s.IconSize, "20px")
             .Defaulted("border-radius", s.BorderRadius, "3px")
-            .Defaulted("color", s.Color, "#333333")
+            .Colour("color", s.Color, "#333333")
             .Defaulted("font-size", s.FontSize, "13px")
             .Optional("font-family", s.FontFamily)
             .Defaulted("line-height", s.LineHeight, "22px")
@@ -415,22 +514,22 @@ public sealed class MjmlGenerator
         sb.Append("<mj-social").Append(a).Append(">\n");
         foreach (var e in s.Elements)
         {
-            var ea = new MjmlAttributeBuffer()
+            var ea = new MjmlAttributeBuffer("mj-social-element", diagnostics)
                 .Optional("name", e.Name)
-                .Optional("href", e.Href)
-                .Optional("src", e.Src)
+                .Url("href", e.Href)
+                .Url("src", e.Src)
                 .Raw("alt", e.Alt)
                 .Defaulted("target", e.Target, "_blank")
-                .Optional("background-color", e.BackgroundColor);
+                .Colour("background-color", e.BackgroundColor);
             sb.Append("<mj-social-element").Append(ea).Append('>')
               .Append(MjmlEscape.Text(e.Label ?? string.Empty)).Append("</mj-social-element>\n");
         }
         sb.Append("</mj-social>\n");
     }
 
-    private void WriteNavbar(StringBuilder sb, EmailNavbarBlock n)
+    private void WriteNavbar(StringBuilder sb, EmailNavbarBlock n, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-navbar", diagnostics)
             .Defaulted("align", n.Align, "center")
             .Optional("base-url", n.BaseUrl)
             .Optional("hamburger", n.Hamburger)
@@ -438,11 +537,11 @@ public sealed class MjmlGenerator
         sb.Append("<mj-navbar").Append(a).Append(">\n");
         foreach (var link in n.Links)
         {
-            var la = new MjmlAttributeBuffer()
-                .Optional("href", link.Href)
+            var la = new MjmlAttributeBuffer("mj-navbar-link", diagnostics)
+                .Url("href", link.Href)
                 .Optional("rel", link.Rel)
                 .Defaulted("target", link.Target, "_blank")
-                .Defaulted("color", link.Color, "#000000")
+                .Colour("color", link.Color, "#000000")
                 .Optional("font-family", link.FontFamily)
                 .Defaulted("font-size", link.FontSize, "13px")
                 .Defaulted("font-weight", link.FontWeight, "normal")
@@ -456,9 +555,9 @@ public sealed class MjmlGenerator
         sb.Append("</mj-navbar>\n");
     }
 
-    private void WriteCarousel(StringBuilder sb, EmailCarouselBlock c)
+    private void WriteCarousel(StringBuilder sb, EmailCarouselBlock c, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-carousel", diagnostics)
             .Defaulted("align", c.Align, "center")
             .Defaulted("border-radius", c.BorderRadius, "6px")
             .Defaulted("icon-width", c.IconWidth, "44px")
@@ -470,22 +569,22 @@ public sealed class MjmlGenerator
         sb.Append("<mj-carousel").Append(a).Append(">\n");
         foreach (var img in c.Images)
         {
-            var ia = new MjmlAttributeBuffer()
-                .Optional("src", img.Src)
+            var ia = new MjmlAttributeBuffer("mj-carousel-image", diagnostics)
+                .Url("src", img.Src)
                 .Raw("alt", img.Alt)
-                .Optional("href", img.Href)
+                .Url("href", img.Href)
                 .Optional("rel", img.Rel)
                 .Defaulted("target", img.Target, "_blank")
                 .Optional("title", img.Title)
-                .Optional("thumbnails-src", img.ThumbnailsSrc);
+                .Url("thumbnails-src", img.ThumbnailsSrc);
             sb.Append("<mj-carousel-image").Append(ia).Append(" />\n");
         }
         sb.Append("</mj-carousel>\n");
     }
 
-    private void WriteAccordion(StringBuilder sb, EmailAccordionBlock ac)
+    private void WriteAccordion(StringBuilder sb, EmailAccordionBlock ac, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-accordion", diagnostics)
             .Defaulted("border", ac.Border, "2px solid black")
             .Defaulted("icon-align", ac.IconAlign, "middle")
             .Defaulted("icon-position", ac.IconPosition, "right")
@@ -498,9 +597,9 @@ public sealed class MjmlGenerator
         sb.Append("<mj-accordion").Append(a).Append(">\n");
         foreach (var item in ac.Items)
         {
-            var ia = new MjmlAttributeBuffer().Optional("background-color", item.BackgroundColor);
+            var ia = new MjmlAttributeBuffer("mj-accordion-element", diagnostics).Colour("background-color", item.BackgroundColor);
             sb.Append("<mj-accordion-element").Append(ia).Append(">\n");
-            var ta = new MjmlAttributeBuffer().Optional("color", item.TitleColor);
+            var ta = new MjmlAttributeBuffer("mj-accordion-title", diagnostics).Colour("color", item.TitleColor);
             sb.Append("<mj-accordion-title").Append(ta).Append('>')
               .Append(MjmlEscape.Text(item.Title)).Append("</mj-accordion-title>\n");
             sb.Append("<mj-accordion-text>").Append(_sanitizer.SanitizeTemplateContent(item.Content)).Append("</mj-accordion-text>\n");
@@ -511,11 +610,11 @@ public sealed class MjmlGenerator
 
     private void WriteHero(StringBuilder sb, EmailHeroBlock h, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
+        var a = new MjmlAttributeBuffer("mj-hero", diagnostics)
             .Defaulted("mode", h.Mode, "fluid-height")
             .Defaulted("height", h.Height, "0px")
-            .Defaulted("background-color", h.BackgroundColor, "#ffffff")
-            .Optional("background-url", h.BackgroundUrl)
+            .Colour("background-color", h.BackgroundColor, "#ffffff")
+            .Url("background-url", h.BackgroundUrl)
             .Optional("background-width", h.BackgroundWidth)
             .Optional("background-height", h.BackgroundHeight)
             .Defaulted("background-position", h.BackgroundPosition, "center center")
@@ -529,9 +628,9 @@ public sealed class MjmlGenerator
 
     private void WriteWrapper(StringBuilder sb, EmailWrapperBlock w, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Optional("background-color", w.BackgroundColor)
-            .Optional("background-url", w.BackgroundUrl)
+        var a = new MjmlAttributeBuffer("mj-wrapper", diagnostics)
+            .Colour("background-color", w.BackgroundColor)
+            .Url("background-url", w.BackgroundUrl)
             .Optional("border", w.Border)
             .Optional("border-radius", w.BorderRadius)
             .Defaulted("text-align", w.TextAlign, "center")
@@ -545,8 +644,8 @@ public sealed class MjmlGenerator
 
     private void WriteGroup(StringBuilder sb, EmailGroupBlock g, ICollection<RenderError>? diagnostics)
     {
-        var a = new MjmlAttributeBuffer()
-            .Optional("background-color", g.BackgroundColor)
+        var a = new MjmlAttributeBuffer("mj-group", diagnostics)
+            .Colour("background-color", g.BackgroundColor)
             .Defaulted("direction", g.Direction, "ltr")
             .Defaulted("vertical-align", g.VerticalAlign, "top")
             .Optional("width", g.Width)

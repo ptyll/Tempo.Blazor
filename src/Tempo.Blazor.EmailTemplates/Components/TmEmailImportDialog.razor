@@ -1,51 +1,53 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
+@using System.Globalization
+@using System.Text
+@inject IBlockRegistry Registry
 
-<TmModal Show="Show" Title="@Loc["EmailEditor_Import_Title"]" Size="ModalSize.Large" OnClose="OnClose">
-    <div class="tm-email-import">
-        <div class="tm-email-import__modes" role="group">
-            <TmButton Size="ButtonSize.Sm" Variant="@ModeVariant(false)" data-tm-import-mode="mjml"
-                      OnClick="() => SetJsonMode(false)">MJML</TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="@ModeVariant(true)" data-tm-import-mode="json"
-                      OnClick="() => SetJsonMode(true)">JSON</TmButton>
+@* §2.4.4–2.4.6 / B12: two modes (MJML / JSON) over a drop zone and a code surface, the limits of
+   EmailImportOptions (MaxInputBytes included) instead of a hard-coded 5 MB, a structure preview with the
+   localized block names, the localized warnings of the import and a real footer. The document is only ever
+   replaced by the caller's OnImport, i.e. after an explicit “Import”.
+   Both modes share ONE body fragment inside their own core TmTabPanel (Fáze 10 review, UX 9), so the strip's
+   aria-controls has a panel to point at. The mode follows the file extension / the pasted content, so a .json
+   file dropped on the MJML tab still imports (Fáze 10 review, UX 12). *@
+<TmModal Show="Show" Title="@Loc["EmailEditor_Import_Title"]" Subtitle="@Loc["EmailEditor_Import_Subtitle"]"
+         Size="ModalSize.Large" LayoutMode="LayoutMode" OnClose="CloseAsync" data-tm-import-dialog>
+    <ChildContent>
+        <div class="tm-email-import" data-tm-import data-tm-import-mode="@(_json ? "json" : "mjml")"
+             data-layout="@LayoutModifier">
+            <TmTabs Variant="TabVariant.Pill" ActiveTabId="@TabId" ActiveTabIdChanged="OnTabChanged"
+                    aria-label="@Loc["EmailEditor_Import_Format"]">
+                <TmTabPanel Id="import-mjml" Title="@Loc["EmailEditor_Format_Mjml"]">@Body</TmTabPanel>
+                <TmTabPanel Id="import-json" Title="@Loc["EmailEditor_Format_Json"]">@Body</TmTabPanel>
+            </TmTabs>
         </div>
-
-        <TmFileDropZone Accept="@(_json ? ".json" : ".mjml,.html,.txt")" InputAriaLabel="@Loc["EmailEditor_Import_Title"]"
-                        InputTestId="tm-import-file" OnFilesSelected="OnFileSelectedAsync" />
-
-        <textarea class="tm-email-import__input" data-tm-import-input rows="14"
-                  placeholder="@Loc["EmailEditor_Import_Placeholder"]"
-                  value="@_input" @oninput="OnInput"></textarea>
-
-        @if (_errors.Count > 0)
-        {
-            <TmAlert Severity="AlertSeverity.Error" data-tm-import-errors="true">
-                <ul>@foreach (var e in _errors) { <li>@e</li> }</ul>
-            </TmAlert>
-        }
-
-        @* The imported document's own findings (a preheader over the limit, an image without alt text) are
-           warnings, not failures. They go through the same formatter as the validation panel, so a rule that
-           names its threshold shows the number instead of a literal „{0}“. *@
-        @if (_warnings.Count > 0)
-        {
-            <TmAlert Severity="AlertSeverity.Info" data-tm-import-warnings="true">
-                <ul>@foreach (var w in _warnings) { <li>@w</li> }</ul>
-            </TmAlert>
-        }
-
-        @if (_errors.Count == 0 && _preview is not null)
-        {
-            <p class="tm-email-import__summary" data-tm-import-summary>
-                @Loc["EmailEditor_Import_Summary", _preview.Sections.Count, _warnings.Count]
-            </p>
-        }
-
-        <TmButton Variant="ButtonVariant.Primary" data-tm-import-confirm="true"
-                  Disabled="@(_preview is null)" OnClick="ConfirmAsync">@Loc["EmailEditor_Import_Confirm"]</TmButton>
-    </div>
+    </ChildContent>
+    @* Direct .tm-btn children: the core footer owns the row layout and the phone sheet gives each of them the
+       full-width treatment (F2). A wrapper would lose both. *@
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" data-tm-import-cancel="true"
+                  OnClick="CloseAsync">@Loc["EmailEditor_Import_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary" Icon="@IconNames.Upload" data-tm-import-confirm="true"
+                  Disabled="@(_preview is null)" OnClick="ConfirmAsync">
+            @Loc["EmailEditor_Import_Confirm"]
+        </TmButton>
+    </Footer>
 </TmModal>
 
 @code {
+    /// <summary>
+    /// How many block rows the structure preview renders. A document can legally carry 2000 blocks; painting
+    /// all of them in a dialog costs more than the import itself, so the list stops and says how many rows are
+    /// left out (the counts in the state card are always complete).
+    /// </summary>
+    private const int StructureRowLimit = 100;
+
+    /// <summary>
+    /// The file types the drop zone accepts, regardless of the active tab: a `.json` file dropped while the MJML
+    /// tab is open has to work, so the WIDGET does not narrow the choice — the mode follows the file.
+    /// </summary>
+    private const string AcceptAll = ".mjml,.html,.json,.txt";
+
     /// <summary>Whether the dialog is shown.</summary>
     [Parameter] public bool Show { get; set; }
 
@@ -55,76 +57,446 @@
     /// <summary>Raised when the dialog is closed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
+    /// <summary>
+    /// The limits applied to the input (D13/B14): <see cref="EmailImportOptions.MaxInputBytes"/> is measured in
+    /// UTF-8 bytes and bounds both the pasted text and the read file, the section/block/depth limits go to the
+    /// importer and to the JSON deserializer. <see langword="null"/> means the contract defaults (5 MB).
+    /// </summary>
+    [Parameter] public EmailImportOptions? ImportOptions { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders in — the editor's already resolved mode, so a phone gets the core sheet
+    /// with the sticky footer (F2) without a second measurement, and a test can force the mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    private enum ImportState
+    {
+        Empty,
+        Success,
+        Warning,
+        Error,
+    }
+
+    /// <summary>One row of the flattened structure preview.</summary>
+    /// <param name="Type">The block kind (shown as a data attribute for tests and hosts).</param>
+    /// <param name="NameKey">The localized toolbox name key of the kind.</param>
+    /// <param name="Nested">Whether the block sits inside a container block.</param>
+    private sealed record StructureBlock(BlockType Type, string NameKey, bool Nested);
+
+    private sealed record StructureColumn(IReadOnlyList<StructureBlock> Blocks);
+
+    private sealed record StructureSection(IReadOnlyList<StructureColumn> Columns);
+
+    private readonly EmailImportOptions _defaultOptions = new();
+    private readonly List<string> _warnings = [];
+    private readonly List<string> _errors = [];
+    private List<StructureSection> _structure = [];
     private string _input = string.Empty;
     private bool _json;
     private EmailTemplateDocument? _preview;
-    private List<string> _warnings = new();
-    private List<string> _errors = new();
+    private ImportState _state = ImportState.Empty;
+    private int _sections;
+    private int _blocks;
+    private int _omittedBlocks;
 
-    private void OnInput(ChangeEventArgs e)
+    private EmailImportOptions Options => ImportOptions ?? _defaultOptions;
+
+    private string TabId => _json ? "import-json" : "import-mjml";
+
+    private string StateName => _state.ToString().ToLowerInvariant();
+
+    private string StateIcon => _state switch
     {
-        _input = e.Value?.ToString() ?? string.Empty;
+        ImportState.Error => IconNames.AlertCircle,
+        ImportState.Warning => IconNames.AlertTriangle,
+        _ => IconNames.CheckCircle,
+    };
+
+    private string StateTitleKey => _state switch
+    {
+        ImportState.Error => "EmailEditor_Import_Failed",
+        ImportState.Warning => "EmailEditor_Import_ImportedWithWarnings",
+        _ => "EmailEditor_Import_Imported",
+    };
+
+    /// <summary>
+    /// The resolved layout as a CSS hook, so the scoped stylesheet shrinks the drop zone on a PHONE by the layout
+    /// the editor already resolved instead of measuring the viewport a second time (F8 rule).
+    /// </summary>
+    private string LayoutModifier => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => "mobile",
+        TmLayoutMode.Tablet => "tablet",
+        TmLayoutMode.Desktop => "desktop",
+        _ => "auto",
+    };
+
+    /// <summary>Everything both modes share: the drop zone, the code surface, the state card and the structure.</summary>
+    private RenderFragment Body => @<text>
+        <TmFileDropZone Accept="@AcceptAll" InputAriaLabel="@Loc["EmailEditor_Import_Title"]"
+                        InputTestId="tm-import-file" OnFilesSelected="OnFileSelectedAsync"
+                        data-tm-import-dropzone="true"
+                        data-tm-import-limit="@Options.MaxInputBytes.ToString(CultureInfo.InvariantCulture)">
+            <ChildContent>
+                <span class="tm-email-import__drop-icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.Upload" Size="IconSize.Lg" />
+                </span>
+                <span class="tm-email-import__drop-action">@Loc["EmailEditor_Import_DropHint"]</span>
+                <span class="tm-email-import__drop-hint">@Loc["EmailEditor_Import_DropFormats"]</span>
+                <span class="tm-email-import__drop-limit">
+                    @Loc["EmailEditor_Import_DropLimit", FormatSize(Options.MaxInputBytes)]
+                </span>
+            </ChildContent>
+        </TmFileDropZone>
+
+        <TmCodeEditor Id="tm-import-input" Language="@(_json ? "json" : "markup")"
+                      Value="_input" ValueChanged="OnInputChangedAsync"
+                      ShowFormatButton="@_json" Rows="6" Wrap="true"
+                      Placeholder="@Loc[_json ? "EmailEditor_Import_PlaceholderJson" : "EmailEditor_Import_Placeholder"]"
+                      Class="tm-email-import__input"
+                      data-tm-import-input="true" />
+
+        @* The state card: what happened, with the counts the user needs to decide. The warnings are a
+           disclosure because a template can produce dozens of them; the summary itself stays compact. *@
+        @if (_state != ImportState.Empty)
+        {
+            <section class="tm-email-import__summary tm-email-import__summary--@StateName"
+                     data-tm-import-summary data-tm-import-state="@StateName"
+                     data-tm-import-sections="@_sections"
+                     data-tm-import-blocks="@_blocks"
+                     data-tm-import-warning-count="@_warnings.Count">
+                <header class="tm-email-import__summary-header">
+                    <span class="tm-email-import__summary-icon" aria-hidden="true">
+                        <TmIcon Name="@StateIcon" Size="IconSize.Sm" />
+                    </span>
+                    <div class="tm-email-import__summary-text">
+                        <p class="tm-email-import__summary-title">@Loc[StateTitleKey]</p>
+                        @if (_state != ImportState.Error)
+                        {
+                            <p class="tm-email-import__summary-counts">
+                                <span>@Loc["EmailEditor_Import_SummarySections", _sections]</span>
+                                <span>@Loc["EmailEditor_Import_SummaryBlocks", _blocks]</span>
+                                @if (_warnings.Count > 0)
+                                {
+                                    <span>@Loc["EmailEditor_Import_SummaryWarnings", _warnings.Count]</span>
+                                }
+                            </p>
+                        }
+                    </div>
+                </header>
+
+                @if (_errors.Count > 0)
+                {
+                    <ul class="tm-email-import__errors" data-tm-import-errors="true" role="alert">
+                        @foreach (var error in _errors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                }
+
+                @* What pressing Import DOES: it replaces the template, and the editor can undo it in one step.
+                   Said next to the primary action's card, because the footer button carries no such promise. *@
+                @if (_preview is not null)
+                {
+                    <p class="tm-email-import__replace-note" data-tm-import-replace-note="true">
+                        @Loc["EmailEditor_Import_ReplaceNote"]
+                    </p>
+                }
+
+                @if (_warnings.Count > 0)
+                {
+                    <details class="tm-email-import__warnings" data-tm-import-warnings="true">
+                        <summary>@Loc["EmailEditor_Import_Warnings", _warnings.Count]</summary>
+                        <ul>
+                            @foreach (var warning in _warnings)
+                            {
+                                <li>@warning</li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </section>
+        }
+
+        @if (_structure.Count > 0)
+        {
+            <section class="tm-email-import__structure" data-tm-import-structure
+                     aria-label="@Loc["EmailEditor_Import_Structure"]">
+                <h4 class="tm-email-import__structure-title">@Loc["EmailEditor_Import_Structure"]</h4>
+                <ul class="tm-email-import__tree">
+                    @foreach (var section in _structure)
+                    {
+                        <li class="tm-email-import__tree-section" data-tm-import-section="true">
+                            <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeSection"]</span>
+                            <ul>
+                                @foreach (var column in section.Columns)
+                                {
+                                    <li class="tm-email-import__tree-column" data-tm-import-column="true">
+                                        <span class="tm-email-import__tree-label">@Loc["EmailEditor_Import_TreeColumn"]</span>
+                                        <ul>
+                                            @foreach (var block in column.Blocks)
+                                            {
+                                                <li class="tm-email-import__tree-block"
+                                                    data-tm-import-block="true"
+                                                    data-tm-import-block-kind="@block.Type"
+                                                    data-tm-import-block-nested="@(block.Nested ? "true" : null)">
+                                                    @Loc[block.NameKey]
+                                                </li>
+                                            }
+                                        </ul>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ul>
+                @if (_omittedBlocks > 0)
+                {
+                    <p class="tm-email-import__structure-more" data-tm-import-structure-more="true">
+                        @Loc["EmailEditor_Import_TreeTruncated", _omittedBlocks]
+                    </p>
+                }
+            </section>
+        }
+    </text>;
+
+    private void OnTabChanged(string tabId)
+    {
+        var json = string.Equals(tabId, "import-json", StringComparison.Ordinal);
+        if (json == _json) return;
+
+        // The pasted text belongs to the mode it was written for; switching the mode re-reads the same text as
+        // the other format, which is what the user asked for (and shows the new mode's own message).
+        _json = json;
         Parse();
+    }
+
+    private Task OnInputChangedAsync(string value)
+    {
+        _input = value;
+        Parse();
+        return Task.CompletedTask;
     }
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         var file = e.File;
         if (file is null) return;
-        using var reader = new StreamReader(file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024));
-        _input = await reader.ReadToEndAsync();
-        Parse();
+
+        if (file.Size > Options.MaxInputBytes)
+        {
+            Fail(Loc["EmailEditor_Import_FileTooLarge", FormatSize(Options.MaxInputBytes)]);
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(Options.MaxInputBytes);
+            using var reader = new StreamReader(stream, Encoding.UTF8);
+            _input = await reader.ReadToEndAsync();
+            ApplyExtension(file.Name);
+            Parse();
+        }
+        catch (IOException)
+        {
+            Fail(Loc["EmailEditor_Import_ReadError"]);
+        }
     }
 
-    private void SetJsonMode(bool json)
+    /// <summary>
+    /// Switches the mode from the FILE NAME: a `.json` file dropped while the MJML tab is open is still JSON
+    /// (the drop zone accepts every supported type, so the tab cannot be the answer). An unknown extension keeps
+    /// whatever the content says (<see cref="Parse"/>).
+    /// </summary>
+    private void ApplyExtension(string? fileName)
     {
-        _json = json;
-        Parse();
+        if (string.IsNullOrEmpty(fileName)) return;
+
+        if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) _json = true;
+        else if (fileName.EndsWith(".mjml", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".html", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".htm", StringComparison.OrdinalIgnoreCase))
+        {
+            _json = false;
+        }
     }
 
+    /// <summary>
+    /// Parses the current input with the configured limits. Every failure becomes a localized sentence: the
+    /// exception message is never shown (it names types and offsets the user cannot act on).
+    /// </summary>
     private void Parse()
     {
         _preview = null;
-        _warnings = new();
-        _errors = new();
+        _warnings.Clear();
+        _errors.Clear();
+        _structure = [];
+        _sections = 0;
+        _blocks = 0;
+        _omittedBlocks = 0;
 
-        if (string.IsNullOrWhiteSpace(_input)) return;
+        if (string.IsNullOrWhiteSpace(_input))
+        {
+            _state = ImportState.Empty;
+            return;
+        }
+
+        // The byte limit is measured BEFORE anything parses: the pasted text can be pasted into a field, so it
+        // has no InputFile to be rejected by, and a 100 MB paste must not reach the parser at all.
+        if (Encoding.UTF8.GetByteCount(_input) > Options.MaxInputBytes)
+        {
+            Fail(Loc["EmailEditor_Import_InputTooLarge", FormatSize(Options.MaxInputBytes)]);
+            return;
+        }
+
+        // The content decides the mode when the user pastes instead of dropping a file: a JSON document starts
+        // with '{', and importing it as MJML can only fail. The other direction is NOT inferred — a user who
+        // pastes MJML into the JSON tab asked for the JSON error.
+        if (!_json && _input.TrimStart().StartsWith('{'))
+        {
+            _json = true;
+        }
 
         if (_json)
         {
             try
             {
-                _preview = EmailTemplateSerializer.Deserialize(_input);
+                _preview = EmailTemplateSerializer.Deserialize(_input, Options);
             }
             catch (EmailTemplateSerializationException ex)
             {
-                _errors.Add(ex.Message);
+                Fail(ValidationMessageText.Of(Loc, ex.Key ?? SerializationKeys.Malformed));
+                return;
             }
         }
         else
         {
-            var result = new MjmlImporter().Import(_input);
+            var result = new MjmlImporter().Import(_input, includeResolver: null, options: Options);
             _preview = result.Document;
-            _warnings = result.Warnings.Select(MessageText).ToList();
-            _errors = result.Errors.Select(MessageText).ToList();
+            _warnings.AddRange(result.Warnings.Select(MessageText));
+            if (result.Errors.Count > 0)
+            {
+                _errors.AddRange(result.Errors.Select(MessageText));
+                _state = ImportState.Error;
+                return;
+            }
         }
+
+        if (_preview is null)
+        {
+            _state = ImportState.Error;
+            return;
+        }
+
+        _sections = DocumentTree.AllSections(_preview).Count();
+        _blocks = DocumentTree.AllBlocks(_preview).Count();
+        _structure = BuildStructure(_preview);
+        _state = _warnings.Count > 0 ? ImportState.Warning : ImportState.Success;
     }
 
-    /// <summary>
-    /// The localized text of one import diagnostic. A rule key resolves through
-    /// <see cref="ValidationMessageText"/> (its threshold is formatted there); a message that carries a
-    /// detail (an element name, a parse position) formats that detail into the sentence.
-    /// </summary>
+    private void Fail(string message)
+    {
+        _preview = null;
+        _warnings.Clear();
+        _structure = [];
+        _errors.Add(message);
+        _state = ImportState.Error;
+    }
+
+    /// <summary>The localized text of one import diagnostic (a rule that names its threshold is formatted).</summary>
     private string MessageText(ImportMessage message)
         => string.Equals(message.Key, DocumentValidationKeys.PreheaderTooLong, StringComparison.Ordinal)
             || message.Detail is null
                 ? ValidationMessageText.Of(Loc, message.Key)
                 : Loc[message.Key, message.Detail];
 
+    /// <summary>
+    /// Builds the section → column → block rows of the structure preview, container children included (and
+    /// flagged), capped at <see cref="StructureRowLimit"/> rows with the omitted count kept for the note.
+    /// </summary>
+    private List<StructureSection> BuildStructure(EmailTemplateDocument document)
+    {
+        var rendered = 0;
+        _omittedBlocks = 0;
+        var sections = new List<StructureSection>(document.Sections.Count);
+
+        foreach (var section in document.Sections)
+        {
+            var columns = new List<StructureColumn>(section.Columns.Count);
+            foreach (var column in section.Columns)
+            {
+                var rows = new List<StructureBlock>();
+                Append(column.Blocks, nested: false, rows, ref rendered);
+                columns.Add(new StructureColumn(rows));
+            }
+
+            sections.Add(new StructureSection(columns));
+        }
+
+        return sections;
+    }
+
+    private void Append(IEnumerable<EmailBlockBase> blocks, bool nested, List<StructureBlock> rows, ref int rendered)
+    {
+        foreach (var block in blocks)
+        {
+            if (rendered >= StructureRowLimit)
+            {
+                _omittedBlocks++;
+                continue;
+            }
+
+            rendered++;
+            rows.Add(new StructureBlock(block.Type, NameKeyOf(block), nested));
+            foreach (var children in ChildBlocks(block))
+            {
+                Append(children, nested: true, rows, ref rendered);
+            }
+        }
+    }
+
+    private static IEnumerable<IReadOnlyList<EmailBlockBase>> ChildBlocks(EmailBlockBase block)
+    {
+        switch (block)
+        {
+            case EmailHeroBlock hero:
+                yield return hero.Blocks.ToList();
+                break;
+            case EmailGroupBlock group:
+                yield return Collect(group.Columns);
+                break;
+            case EmailWrapperBlock wrapper:
+                yield return wrapper.Sections.SelectMany(section => section.Columns).SelectMany(c => c.Blocks).ToList();
+                break;
+        }
+
+        static IReadOnlyList<EmailBlockBase> Collect(IEnumerable<EmailColumn> columns)
+            => columns.SelectMany(column => column.Blocks).ToList();
+    }
+
+    /// <summary>The localized toolbox name of a block kind (the toolbox key table owns these names).</summary>
+    private string NameKeyOf(EmailBlockBase block)
+        => Registry.GetAll().FirstOrDefault(d => d.Type == block.Type)?.NameKey
+           ?? $"block.{block.Type.ToString().ToLowerInvariant()}.name";
+
+    /// <summary>
+    /// The byte limit as the user reads it ("5 MB", "512 kB"). The unit prefix follows the CURRENT CULTURE
+    /// (Czech and Slovak write "kB" the same way, but the decimal separator is a comma there).
+    /// </summary>
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024L) return bytes.ToString(CultureInfo.CurrentCulture) + " B";
+        if (bytes < 1024L * 1024L)
+            return (bytes / 1024d).ToString("0.#", CultureInfo.CurrentCulture) + " kB";
+        return (bytes / (1024d * 1024d)).ToString("0.#", CultureInfo.CurrentCulture) + " MB";
+    }
+
     private async Task ConfirmAsync()
     {
         if (_preview is not null) await OnImport.InvokeAsync(_preview);
     }
 
-    private ButtonVariant ModeVariant(bool json) => _json == json ? ButtonVariant.Primary : ButtonVariant.Ghost;
+    private Task CloseAsync() => OnClose.InvokeAsync();
 }

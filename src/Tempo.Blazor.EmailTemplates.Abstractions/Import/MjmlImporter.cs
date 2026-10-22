@@ -111,6 +111,11 @@ public sealed partial class MjmlImporter
         if (_errors.Count > 0)
             return new ImportResult { Document = null, Warnings = _warnings.ToList(), Errors = _errors.ToList() };
 
+        // Every block kind is audited for the values the pipeline cannot emit (a blocked link scheme, an
+        // unparsable colour), so the warning list is consistent across blocks — a table cell has had its own
+        // report since Fáze 9 and is not repeated here.
+        _warnings.AddRange(ImportValueAudit.Findings(document));
+
         // EI.16: surface content/layout issues found in the imported document as warnings
         // (e.g. foreign templates with images missing alt text).
         foreach (var finding in new Rendering.EmailDocumentValidator().Validate(document))
@@ -323,7 +328,7 @@ public sealed partial class MjmlImporter
         section.FullWidth = a.Take("full-width") is not null;
         section.Padding = a.Take("padding") ?? section.Padding;
         section.TextAlign = a.Take("text-align") ?? section.TextAlign;
-        ApplyCommon(a, v => section.CssClass = v, section.MjClasses, section.ExtraAttributes);
+        ApplyCommon("mj-section", a, v => section.CssClass = v, section.MjClasses, section.ExtraAttributes);
 
         foreach (var child in e.Elements())
         {
@@ -357,7 +362,7 @@ public sealed partial class MjmlImporter
         col.Border = a.Take("border");
         col.BorderRadius = a.Take("border-radius");
         col.Padding = a.Take("padding");
-        ApplyCommon(a, v => col.CssClass = v, col.MjClasses, col.ExtraAttributes);
+        ApplyCommon("mj-column", a, v => col.CssClass = v, col.MjClasses, col.ExtraAttributes);
 
         ImportBlocks(e, col.Blocks, depth);
         return col;
@@ -841,10 +846,18 @@ public sealed partial class MjmlImporter
         block.PaddingBottom = a.Take("padding-bottom");
         block.PaddingLeft = a.Take("padding-left");
         block.ContainerBackgroundColor = a.Take("container-background-color");
-        ApplyCommon(a, v => block.CssClass = v, block.MjClasses, block.ExtraAttributes);
+        ApplyCommon(MjmlTagOf(block), a, v => block.CssClass = v, block.MjClasses, block.ExtraAttributes);
     }
 
-    private static void ApplyCommon(AttrBag a, Action<string?> setCss, IList<string> mjClasses, IDictionary<string, string> extra)
+    /// <summary>
+    /// Moves <c>css-class</c>, <c>mj-class</c> and the remaining attributes onto the model. A remaining attribute
+    /// is re-emitted verbatim by the generator, so it is kept only when the pipeline may actually write it: a
+    /// known attribute of THIS tag (<see cref="Rendering.MjmlKnownAttributes"/>) whose value is one the message
+    /// can carry. Everything else is dropped here and WARNED about
+    /// (<see cref="ImportKeys.DroppedAttribute"/>, carrying the tag and the attribute name, never the value) — the
+    /// alternative is a model value that the export silently refuses on every save.
+    /// </summary>
+    private void ApplyCommon(string tag, AttrBag a, Action<string?> setCss, IList<string> mjClasses, IDictionary<string, string> extra)
     {
         setCss(a.Take("css-class"));
         var mj = a.Take("mj-class");
@@ -852,8 +865,38 @@ public sealed partial class MjmlImporter
             foreach (var mjClass in mj.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                 mjClasses.Add(mjClass);
         foreach (var (name, value) in a.Rest())
+        {
+            if (!Rendering.MjmlKnownAttributes.IsAllowed(tag, name)
+                || !Rendering.MjmlKnownAttributes.IsSafeValue(name, value)
+                || (Rendering.MjmlKnownAttributes.IsUrl(name) && !Rendering.EmailUrlPolicy.IsAllowed(value)))
+            {
+                _warnings.Add(new ImportMessage(ImportKeys.DroppedAttribute, tag + " " + name));
+                continue;
+            }
+
             extra[name] = value;
+        }
     }
+
+    /// <summary>The MJML element name of a block, for the attribute allow-list and the import diagnostics.</summary>
+    private static string MjmlTagOf(EmailBlockBase block) => block.Type switch
+    {
+        BlockType.Text => "mj-text",
+        BlockType.Button => "mj-button",
+        BlockType.Image => "mj-image",
+        BlockType.Divider => "mj-divider",
+        BlockType.Spacer => "mj-spacer",
+        BlockType.Raw => "mj-raw",
+        BlockType.Table => "mj-table",
+        BlockType.Social => "mj-social",
+        BlockType.Navbar => "mj-navbar",
+        BlockType.Carousel => "mj-carousel",
+        BlockType.Accordion => "mj-accordion",
+        BlockType.Hero => "mj-hero",
+        BlockType.Wrapper => "mj-wrapper",
+        BlockType.Group => "mj-group",
+        _ => "mj-text",
+    };
 
     private static void Merge(IDictionary<string, string> target, IReadOnlyDictionary<string, string> source)
     {

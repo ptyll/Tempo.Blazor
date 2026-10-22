@@ -1,12 +1,15 @@
-/* The validation panel's passive note (a check that did not run) and its findings list. The note uses the
-   info tokens instead of a warning colour: nothing failed, so it must not look like a finding of its own. */
+/* The validation surface (Fáze 10, B13): the per-severity count chips, the findings as buttons with an icon,
+   a title and an explanation, and the passive note of a check that did not run. The severity is carried by an
+   icon AND a title, never by colour alone; the pale fill colours (--tm-color-warning, --tm-color-info) are
+   background tints, so the icons use the `-strong`/`-text` tokens that have accessible contrast. */
 
 .tm-email-validation {
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-3);
 }
 
+/* A check that did not run: passive information, so it uses the info tokens instead of a warning colour. */
 .tm-email-validation__note {
     display: flex;
     align-items: flex-start;
@@ -19,11 +22,69 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* The good outcome is a SUCCESS card, not a quiet sentence: the icon and the success text token say "checked,
+   nothing to fix" at a glance, and the surface keeps it distinct from the findings list it replaces. */
 .tm-email-validation__ok {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-success-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-success-subtle);
+}
+
+.tm-email-validation__ok-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-success-text);
+}
+
+.tm-email-validation__ok-text {
     margin: 0;
-    color: var(--tm-color-text-secondary);
+    color: var(--tm-color-text);
     font-size: var(--tm-font-size-sm);
 }
+
+/* ── counts per severity ───────────────────────────────────────────────────────────────────── */
+
+.tm-email-validation__summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-validation__count {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-surface-secondary);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
+}
+
+.tm-email-validation__count--error {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-email-validation__count--warning {
+    color: var(--tm-color-warning-text);
+}
+
+.tm-email-validation__count--info {
+    color: var(--tm-color-info-text);
+}
+
+/* A severity with no findings keeps its chip (the layout stays stable) but drops the severity colour: a red "0"
+   reads as a problem that is not there. */
+.tm-email-validation__count--zero {
+    color: var(--tm-color-text-secondary);
+}
+
+/* ── findings ──────────────────────────────────────────────────────────────────────────────── */
 
 .tm-email-validation__list {
     display: flex;
@@ -34,40 +95,92 @@
     list-style: none;
 }
 
-.tm-email-validation__item {
+.tm-email-validation__row {
     display: flex;
+    min-inline-size: 0;
+}
+
+/* A finding fills its row. It is a <button> when there is a block to jump to and a plain <div> otherwise, so
+   the RESET (border/background/font) has to be complete — a native button look on one and not the other would
+   make two findings of the same list look like different kinds of thing. */
+.tm-email-validation__finding {
+    display: flex;
+    flex: 1 1 auto;
     align-items: flex-start;
     gap: var(--tm-space-2);
+    min-inline-size: 0;
     padding: var(--tm-space-2) var(--tm-space-3);
+    border: 0;
+    border-inline-start: var(--tm-space-1) solid transparent;
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface-secondary);
     color: var(--tm-color-text);
+    font: inherit;
+    text-align: start;
+    text-decoration: none;
+}
+
+button.tm-email-validation__finding {
     cursor: pointer;
+}
+
+button.tm-email-validation__finding:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-email-validation__finding:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-email-validation__icon {
     display: inline-flex;
     flex: 0 0 auto;
+    padding-block-start: var(--tm-space-1);
     color: var(--tm-color-text-secondary);
 }
 
-/* Fáze 7A: every finding carries an icon, so the severity is not signalled by colour alone. Info is a
-   recommendation — it reads as "worth improving", never as a warning colour. */
+.tm-email-validation__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-email-validation__title {
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+.tm-email-validation__description {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-validation__action {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
+}
+
+/* The severity strip and icon colour per level. */
 .tm-email-validation__item--warning {
-    border-inline-start: var(--tm-space-1) solid var(--tm-color-warning-strong);
+    border-inline-start-color: var(--tm-color-warning-strong);
 }
 
 .tm-email-validation__item--error {
-    border-inline-start: var(--tm-space-1) solid var(--tm-color-danger);
+    border-inline-start-color: var(--tm-color-danger);
 }
 
 .tm-email-validation__item--info {
-    border-inline-start: var(--tm-space-1) solid var(--tm-color-info-strong);
+    border-inline-start-color: var(--tm-color-info-strong);
 }
 
-/* The pale fill colours (--tm-color-warning, --tm-color-info) carry a background tint, not text: as the
-   icon colour they measured ~2.3:1 and ~2.9:1 against the surface. The `-strong` tokens are the ones with
-   accessible contrast (>= 4.5:1) in both themes. */
 .tm-email-validation__item--warning .tm-email-validation__icon {
     color: var(--tm-color-warning-strong);
 }
@@ -80,23 +193,10 @@
     color: var(--tm-color-info-strong);
 }
 
-/* A finding that points at a node is a button: it must look like the row it sits in, and it must be the
-   keyboard target (the row keeps its pointer handler). */
-.tm-email-validation__link {
-    display: flex;
-    flex: 1 1 auto;
-    align-items: flex-start;
-    min-inline-size: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
-}
-
-.tm-email-validation__link:focus-visible {
-    outline: 2px solid var(--tm-color-primary);
-    outline-offset: 2px;
+/* A phone: the “Go to” label costs a third of the row, so only its arrow stays. The button's accessible name
+   is still the title plus the action text (it is in the DOM, merely zero-sized), so nothing is lost for AT. */
+@media (width < 768px) {
+    .tm-email-validation__action {
+        font-size: 0;
+    }
 }

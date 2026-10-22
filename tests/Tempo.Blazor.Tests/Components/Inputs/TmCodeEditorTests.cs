@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
 
@@ -262,5 +263,22 @@ public class TmCodeEditorTests : LocalizationTestBase
 
         cut.Find("textarea").Input("{invalid");
         cut.Find("[data-testid='job-attrs-error-message']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TmCodeEditor_ForwardsTheCopyConfirmation_ToTheHost()
+    {
+        // Fáze 10 review (UX 8): the code editor owns the copy button, so the dialog cannot hang its own
+        // handler on the surrounding box — the confirmation has to travel through the component.
+        JSInterop.SetupVoid("navigator.clipboard.writeText", "abc").SetVoidResult();
+        var invocations = 0;
+
+        var cut = Render<TmCodeEditor>(p => p
+            .Add(c => c.Value, "abc")
+            .Add(c => c.CopyButtonCopied, () => invocations++));
+
+        cut.Find(".tm-copy-button").Click();
+
+        invocations.Should().Be(1);
     }
 }

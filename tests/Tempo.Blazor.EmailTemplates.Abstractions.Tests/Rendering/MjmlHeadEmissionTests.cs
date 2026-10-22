@@ -24,6 +24,24 @@ public class MjmlHeadEmissionTests
         mjml.Should().Contain("<mj-style inline=\"inline\">.y{color:blue}</mj-style>");
     }
 
+    [Theory]
+    [InlineData("", "https://f/r.css")]
+    [InlineData("x\" onclick=\"alert(1)", "https://f/r.css")]
+    [InlineData("Roboto", "")]
+    public void Head_EmitsAFontOnlyWhenBothNameAndHrefAreValid(string name, string href)
+    {
+        // Fáze 10 security re-review (item 6): the old guard only asked whether an href survived, so a font
+        // without a name was emitted as <mj-font href="…" /> — an element the compiler rejects. A name that is
+        // dropped by the attribute buffer counts as no name.
+        var doc = new EmailTemplateDocument();
+        doc.Styles.Fonts.Add(new EmailFont { Name = name, Href = href });
+
+        var mjml = Generator.Generate(doc);
+
+        mjml.Should().NotContain("<mj-font");
+        mjml.Should().NotContain("onclick");
+    }
+
     [Fact]
     public void Head_EmitsMjAttributes_WithExplicitCloseTags()
     {

@@ -1,0 +1,45 @@
+/* The export dialog's code surfaces (Fáze 10): one tab strip, the read-only code area and the passive status
+   line of the HTML tab. Everything is token-based, so the dark theme and any host theme follow automatically;
+   the code editor itself is the CORE TmCodeEditor, which owns its own chrome. */
+
+.tm-email-export {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-email-export__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-block-size: 16rem;
+    min-inline-size: 0;
+}
+
+.tm-email-export__code {
+    inline-size: 100%;
+}
+
+/* The code surface is READ-ONLY, so the copy button is its only control: the core editor reveals its
+   corner actions on hover/focus (fine for an editable field, a dead end on touch and invisible in a
+   screenshot), so this dialog pins them visible. ::deep reaches the core component's own markup. */
+.tm-email-export ::deep .tm-code-editor__actions {
+    opacity: 1;
+}
+
+/* A phone: the code surface gives height back to the sheet's sticky footer. Layout-keyed on the resolved mode
+   the editor passed (F8 rule), never on a viewport @media of its own. */
+.tm-email-export[data-layout="mobile"] .tm-email-export__body {
+    min-block-size: 8rem;
+}
+
+/* The loading line of the HTML tab: passive information, so it is not an alert. */
+.tm-email-export__status {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}

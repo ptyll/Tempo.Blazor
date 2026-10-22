@@ -114,6 +114,41 @@ public class TmCopyButtonTests : LocalizationTestBase
         hidden.GetAttribute("aria-hidden").Should().Be("true");
     }
 
+    [Fact]
+    public void CopyButton_OnCopied_FiresAfterASuccessfulWrite()
+    {
+        // Fáze 10 review (UX 8): the host has to be able to announce the copy itself (a live region in the
+        // dialog), which it cannot do from a click on the surrounding box — a click there is not a copy.
+        JSInterop.SetupVoid("navigator.clipboard.writeText", "copy me").SetVoidResult();
+        var invocations = 0;
+
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me")
+            .Add(x => x.OnCopied, () => invocations++));
+
+        cut.Find(".tm-copy-button").Click();
+
+        invocations.Should().Be(1);
+        JSInterop.Invocations["navigator.clipboard.writeText"].Should().ContainSingle();
+    }
+
+    [Fact]
+    public void CopyButton_OnCopied_DoesNotFireWhenTheClipboardRefuses()
+    {
+        // A denied clipboard must not announce "Copied to clipboard": there is nothing on the clipboard.
+        JSInterop.SetupVoid("navigator.clipboard.writeText", "copy me")
+            .SetException(new JSException("denied"));
+        var invocations = 0;
+
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me")
+            .Add(x => x.OnCopied, () => invocations++));
+
+        cut.Find(".tm-copy-button").Click();
+
+        invocations.Should().Be(0);
+    }
+
     // The labelled button renders both states so the wider one reserves the width; the visible label
     // is the one that is not hidden.
     private static string VisibleLabel(IRenderedComponent<TmCopyButton> cut) =>

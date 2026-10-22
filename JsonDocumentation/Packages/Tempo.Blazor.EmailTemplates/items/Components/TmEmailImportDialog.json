@@ -28,6 +28,19 @@
       "type": "EventCallback<EmailTemplateDocument>",
       "isRequired": false,
       "description": "Raised with the imported document when the user confirms."
+    },
+    {
+      "name": "ImportOptions",
+      "type": "EmailImportOptions?",
+      "isRequired": false,
+      "description": "The limits applied to the input (D13): MaxInputBytes is measured in UTF-8 bytes and bounds both the pasted text and the read file; the section/block/depth limits go to the importer and the JSON deserializer. null means the contract defaults (5 MB, 200 sections, 2000 blocks, nesting 8)."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the dialog renders in — the editor's already resolved mode, so a phone gets the core sheet with the sticky footer (F2) without a second measurement."
     }
   ]
 }

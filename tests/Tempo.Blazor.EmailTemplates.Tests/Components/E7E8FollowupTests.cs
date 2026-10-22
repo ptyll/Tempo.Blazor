@@ -112,9 +112,9 @@ public class E7E8FollowupTests : BunitContext
         var doc = DocWith(new EmailTextBlock { Content = "x" });
         var cut = Render<TmEmailExportDialog>(p => p.Add(c => c.Show, true).Add(c => c.Document, doc));
 
-        cut.Find("[data-tm-export-mode=\"json\"]").Click();
+        cut.Find("#tab-export-json").Click();
 
-        cut.Find("[data-tm-export-json]").TextContent.Should().Contain("\"$type\"");
+        cut.Find("[data-tm-export-json] textarea").GetAttribute("value").Should().Contain("\"$type\"");
     }
 
     // ── E8.2 variable picker integration ────────────────────────────────────────────────────

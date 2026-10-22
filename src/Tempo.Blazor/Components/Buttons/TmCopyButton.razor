@@ -51,6 +51,13 @@
     /// </summary>
     [Parameter] public bool ShowLabel { get; set; }
 
+    /// <summary>
+    /// Raised after the text was written to the clipboard, so a host can announce the confirmation in
+    /// its own live region (a read-only code surface has no other place to say it). It is NOT raised
+    /// when the clipboard refuses the write — there is nothing on the clipboard to confirm.
+    /// </summary>
+    [Parameter] public EventCallback OnCopied { get; set; }
+
     // The accessible name is the localized "Copy to clipboard" (or "Copied" after a copy) whether or
     // not the short visible label is shown.
     private string AccessibleName => _copied ? Loc["TmCopyButton_Copied"] : Loc["TmCopyButton_CopyToClipboard"];
@@ -67,6 +74,9 @@
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", Text);
             _copied = true;
             StateHasChanged();
+
+            // Only after a CONFIRMED write: the callback is how the host announces the copy.
+            await OnCopied.InvokeAsync();
 
             await Task.Delay(2000);
             _copied = false;

@@ -1,6 +1,8 @@
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
+using Tempo.Blazor.EmailTemplates.Abstractions.Import;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model;
 using Tempo.Blazor.EmailTemplates.Abstractions.Model.Blocks;
+using Tempo.Blazor.EmailTemplates.Abstractions.Serialization;
 
 namespace Tempo.Blazor.EmailTemplates.Abstractions.Tests.Dtos;
 
@@ -71,5 +73,75 @@ public class EmailTemplateMapperTests
         built.Preheader.Should().Be("Pre");
         built.Language.Should().Be("fr");
         SampleDocuments.CountAllBlocks(built).Should().Be(SampleDocuments.CountAllBlocks(doc));
+    }
+
+    // Fáze 10 (carry-forward): the server path must apply the SAME import limits as the editor, so
+    // "what passes the import passes the server" holds for JSON coming from a client. The exception's
+    // key is what an API turns into a 422 the caller can localize.
+
+    [Fact]
+    public void ToDocument_WithImportOptions_RejectsAPayloadOverMaxInputBytes()
+    {
+        var json = EmailTemplateMapper.ToContentJson(SampleDocuments.FullyPopulated());
+        var options = new EmailImportOptions { MaxInputBytes = 32 };
+
+        var act = () => EmailTemplateMapper.ToDocument(json, options);
+
+        act.Should().Throw<EmailTemplateSerializationException>()
+            .Which.Key.Should().Be(SerializationKeys.InputTooLarge);
+    }
+
+    [Fact]
+    public void ToDocument_WithImportOptions_RejectsMoreSectionsThanTheLimit()
+    {
+        var doc = SampleDocuments.FullyPopulated();
+        var json = EmailTemplateMapper.ToContentJson(doc);
+        var options = new EmailImportOptions { MaxSections = 1 };
+
+        var act = () => EmailTemplateMapper.ToDocument(json, options);
+
+        act.Should().Throw<EmailTemplateSerializationException>()
+            .Which.Key.Should().Be(Abstractions.Rendering.DocumentValidationKeys.TooManySections);
+    }
+
+    [Fact]
+    public void ToDocument_WithImportOptions_RejectsANewerSchemaVersion()
+    {
+        var options = new EmailImportOptions();
+
+        var act = () => EmailTemplateMapper.ToDocument("{\"schemaVersion\":99,\"sections\":[]}", options);
+
+        act.Should().Throw<EmailTemplateSerializationException>()
+            .Which.Key.Should().Be(SerializationKeys.UnsupportedSchemaVersion);
+    }
+
+    [Fact]
+    public void ApplyCreate_WithImportOptions_RejectsAnOversizedPayload()
+    {
+        var request = new CreateEmailTemplateRequest
+        {
+            Name = "New", Subject = "S", Language = "en",
+            ContentJson = EmailTemplateMapper.ToContentJson(SampleDocuments.FullyPopulated()),
+        };
+
+        var act = () => EmailTemplateMapper.ApplyCreate(request, new EmailImportOptions { MaxInputBytes = 16 });
+
+        act.Should().Throw<EmailTemplateSerializationException>()
+            .Which.Key.Should().Be(SerializationKeys.InputTooLarge);
+    }
+
+    [Fact]
+    public void ApplyUpdate_WithImportOptions_RejectsANonNumericSchemaVersion()
+    {
+        var request = new UpdateEmailTemplateRequest
+        {
+            Name = "N", Subject = "S", Language = "en", IsActive = true,
+            ContentJson = "{\"schemaVersion\":\"two\",\"sections\":[]}",
+        };
+
+        var act = () => EmailTemplateMapper.ApplyUpdate(request, new EmailImportOptions());
+
+        act.Should().Throw<EmailTemplateSerializationException>()
+            .Which.Key.Should().Be(SerializationKeys.InvalidSchemaVersion);
     }
 }

@@ -24,6 +24,12 @@
       "isRequired": true,
       "description": "Raised with the offending node id when a finding is clicked.",
       "editorRequired": true
+    },
+    {
+      "name": "ImportOptions",
+      "type": "EmailImportOptions?",
+      "isRequired": false,
+      "description": "The limits the limit rules are measured against; the editor passes the same instance it gave the import dialog, so the panel and the import cannot disagree about what 'too big' means. null means the contract defaults."
     }
   ]
 }

@@ -17,11 +17,22 @@ public static class RenderKeys
     public const string EventHandlerRemoved = "render.markup.event_handler_removed";
 
     /// <summary>
-    /// Markup that can rewrite a link at runtime was removed: an SVG animation element
-    /// (<c>set</c>/<c>animate</c>/<c>animateMotion</c>/<c>animateTransform</c>/<c>discard</c>) or a
-    /// <c>meta http-equiv="refresh"</c> redirect. E-mail has no legitimate use for either.
+    /// Markup that can rewrite a link at runtime or run code was removed: an SVG animation element
+    /// (<c>set</c>/<c>animate</c>/<c>animateMotion</c>/<c>animateTransform</c>/<c>discard</c>), a
+    /// <c>meta http-equiv="refresh"</c> redirect, or a <c>style</c> payload <see cref="CssSafety"/> refuses
+    /// (<c>expression(</c>, <c>behavior:</c>, <c>-moz-binding</c>, <c>@import</c>). E-mail has no legitimate use
+    /// for any of them.
     /// </summary>
     public const string UnsafeElementRemoved = "render.markup.unsafe_element_removed";
+
+    /// <summary>
+    /// An attribute value the message cannot carry was dropped from the generated markup: a value that would
+    /// open a declaration of its own (<c>x;background:url(…)</c> in a <c>padding</c>, a colour or a font stack),
+    /// which the MJML compiler copies verbatim into the element's inline <c>style</c>. The rest of the element
+    /// renders normally. The attribute NAME is reported, never the value. The editor package carries the
+    /// resource entry.
+    /// </summary>
+    public const string InvalidAttributeValue = "render.attribute.invalid_value";
 
     /// <summary>
     /// The rendered markup could not be checked within the guard's regex budget, so it was discarded and

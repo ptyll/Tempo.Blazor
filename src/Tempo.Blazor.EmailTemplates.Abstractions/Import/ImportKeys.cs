@@ -40,4 +40,26 @@ public static class ImportKeys
     /// pipeline renders could carry it.
     /// </summary>
     public const string InvalidTableColor = "import.table.invalid_color";
+
+    /// <summary>
+    /// Any other block's link (button, image, navbar link, social element, carousel image, hero/wrapper/section
+    /// background, <c>mj-font</c>) used a scheme outside the URL allow-list (§3.7a). Same contract as
+    /// <see cref="BlockedTableLink"/>: the value survives for editing and every emission path fail-closes it to
+    /// <c>#</c>. The message carries the refused SCHEME, never the URL.
+    /// </summary>
+    public const string BlockedLink = "import.blocked_link";
+
+    /// <summary>
+    /// A colour value on a block or container is not a CSS colour, so the message cannot carry it (it is
+    /// written into a style). The message carries the PROPERTY name, never the value.
+    /// </summary>
+    public const string InvalidColor = "import.invalid_color";
+
+    /// <summary>
+    /// An imported attribute was dropped because the pipeline may never write it: an event handler
+    /// (<c>on*</c>), <c>style</c>, <c>srcdoc</c>, an attribute this MJML component does not know, a value that
+    /// would open a CSS declaration of its own (<c>x;background:url(…)</c>) or a URL with a refused scheme. The
+    /// detail is the TAG and the ATTRIBUTE NAME, never the value (which may carry crafted markup).
+    /// </summary>
+    public const string DroppedAttribute = "import.dropped_attribute";
 }

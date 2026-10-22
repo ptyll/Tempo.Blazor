@@ -439,8 +439,8 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
             """;
 
         await page.Locator("[data-tm-import-btn]").ClickAsync();
-        await page.WaitForSelectorAsync("[data-tm-import-input]", new() { Timeout = 15000 });
-        await page.Locator("[data-tm-import-input]").FillAsync(mjml);
+        await page.WaitForSelectorAsync("#tm-import-input", new() { Timeout = 15000 });
+        await page.Locator("#tm-import-input").FillAsync(mjml);
         await page.WaitForSelectorAsync("[data-tm-import-summary]", new() { Timeout = 15000 });
         await page.Locator("[data-tm-import-confirm]").ClickAsync();
         await page.WaitForTimeoutAsync(1500);

@@ -155,8 +155,10 @@ public class HostLocalizerFactoryReplacementTests
         var localizer = provider.GetRequiredService<ITmEmailLocalizer>();
 
         // A shipped key with placeholders still formats through the argument overload.
-        InCulture("en", () => localizer["EmailEditor_Import_Summary", 3, 2])
-            .Should().Be("3 sections, 2 warnings");
+        InCulture("en", () => localizer["EmailEditor_Import_SummarySections", 3])
+            .Should().Be("Sections: 3");
+        InCulture("en", () => localizer["EmailEditor_Import_DropLimit", "5 MB"])
+            .Should().Be("Up to 5 MB");
 
         // …and an unknown key must come back as the key, not as a FormatException from string.Format.
         InCulture("en", () => localizer["No_Such_Key", 1])

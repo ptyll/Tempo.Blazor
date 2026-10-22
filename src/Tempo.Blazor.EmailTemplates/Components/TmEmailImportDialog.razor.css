@@ -1,0 +1,222 @@
+/* The import dialog (Fáze 10): the drop zone, the code surface, the state card and the structure preview.
+   The card uses the info/warning/danger text tokens for its icon and a quiet surface for its body, so the
+   severity is never signalled by colour alone (the icon and the title carry it). */
+
+.tm-email-import {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-email-import__drop-icon {
+    display: inline-flex;
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-import__drop-action {
+    font-size: var(--tm-font-size-md);
+    color: var(--tm-color-text);
+}
+
+.tm-email-import__drop-hint {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text);
+}
+
+.tm-email-import__drop-limit {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-import__input {
+    inline-size: 100%;
+}
+
+/* The pasted input is capped: the state card and the structure preview below it are what the user has to
+   act on, so the textarea may not push them under the sheet/dialog footer. ::deep because the textarea
+   belongs to the core TmCodeEditor's own markup. */
+.tm-email-import ::deep .tm-code-editor__textarea {
+    max-block-size: 8rem;
+}
+
+/* ── state card ─────────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-import__summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface-secondary);
+}
+
+.tm-email-import__summary-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+}
+
+.tm-email-import__summary-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-import__summary--success .tm-email-import__summary-icon {
+    color: var(--tm-color-success-strong);
+}
+
+.tm-email-import__summary--warning .tm-email-import__summary-icon {
+    color: var(--tm-color-warning-strong);
+}
+
+.tm-email-import__summary--error .tm-email-import__summary-icon {
+    color: var(--tm-color-danger);
+}
+
+/* The left edge repeats the severity for a scanning eye; the icon and the title repeat it for everyone else. */
+.tm-email-import__summary--success {
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-success-strong);
+}
+
+.tm-email-import__summary--warning {
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-warning-strong);
+}
+
+.tm-email-import__summary--error {
+    border-inline-start: var(--tm-space-1) solid var(--tm-color-danger);
+}
+
+.tm-email-import__summary-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-email-import__summary-title {
+    margin: 0;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+.tm-email-import__summary-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1) var(--tm-space-3);
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-import__errors,
+.tm-email-import__warnings ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding-inline-start: var(--tm-space-5);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text);
+}
+
+.tm-email-import__errors {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-email-import__warnings summary {
+    cursor: pointer;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-email-import__warnings summary:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* ── structure preview ──────────────────────────────────────────────────────────────────────── */
+
+.tm-email-import__structure {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-email-import__structure-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+.tm-email-import__tree,
+.tm-email-import__tree ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding-inline-start: var(--tm-space-4);
+    list-style: none;
+}
+
+.tm-email-import__tree {
+    padding-inline-start: 0;
+    max-block-size: 16rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.tm-email-import__tree-label {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-text);
+}
+
+.tm-email-import__tree-section > .tm-email-import__tree-label {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-email-import__tree-column > .tm-email-import__tree-label,
+.tm-email-import__tree-block {
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-email-import__tree-block {
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-import__tree-block[data-tm-import-block-nested="true"] {
+    font-style: italic;
+}
+
+.tm-email-import__structure-more {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-secondary);
+}
+
+/* What pressing Import does, said in the card next to the counts. */
+.tm-email-import__replace-note {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-color-text-secondary);
+}
+
+/* ── phone ─────────────────────────────────────────────────────────────────────────────────────
+   Keyed on the layout the editor RESOLVED (the data-layout this dialog's root carries), never on a second
+   viewport measurement: the breakpoints live in one place (TmEditorShell), and a custom @media here would
+   disagree with it the moment the host changes its breakpoints (F8 rule). */
+.tm-email-import[data-layout="mobile"] .tm-email-import__tree {
+    max-block-size: 10rem;
+}
+
+/* The drop zone is the tallest thing in the sheet and the least used on a phone (a phone user pastes or picks
+   a file, both of which fit in a short strip): shrinking it keeps the code surface and the state card above
+   the sticky footer without a scroll. */
+.tm-email-import[data-layout="mobile"] ::deep .tm-file-drop-zone__area {
+    min-block-size: 6rem;
+    padding: var(--tm-space-3);
+}

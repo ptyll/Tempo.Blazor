@@ -466,6 +466,81 @@
   `hsl()`, keyword); `EmailColorPolicy` stays the narrower allow-list of the cell `bgcolor`, and
   `TextVersionGenerator` never prints a blocked link.
 
+- **Import dialog rebuilt (`TmEmailImportDialog`).** Two modes (MJML / JSON) as a core `TmTabs`
+  strip, a `TmFileDropZone` that names the supported formats and the limit, and a `TmCodeEditor`
+  instead of a bare `<textarea>`. The limits come from the new `ImportOptions`
+  (`EmailImportOptions`): `MaxInputBytes` (measured in UTF-8 bytes, default 5 MB — the value the
+  dialog used to hard-code) bounds both the pasted text and the read file, and the section/block/depth
+  limits go to `MjmlImporter` and to `EmailTemplateSerializer.Deserialize(json, options)`. A parsed
+  input shows a state card (success / warning / error, with an icon and the section, block and warning
+  counts) that expands into the localized warning list, plus a section → column → block structure
+  preview with the localized block names. Every failure is a localized sentence keyed by
+  `SerializationKeys.*` / `ImportKeys.*` — the exception message never reaches the UI — and a failed
+  parse keeps both the pasted input and the document. The footer carries Zrušit / Importovat with the
+  primary action disabled until the input parses, and the document is replaced only by the caller's
+  `OnImport` (one undo step in the editor).
+- **Export dialog rebuilt (`TmEmailExportDialog`).** Three modes (MJML / JSON / HTML) as a core
+  `TmTabs` strip with a read-only `TmCodeEditor` per mode (correct Prism language), an icon copy
+  button in the code corner with a polite live-region confirmation, and a footer with Zavřít plus a
+  primary “Stáhnout {MJML|JSON|HTML}”. MJML is generated with `MjmlGeneratorOptions.ForExport`
+  (lossless, including `mj-html-attributes`); JSON is the canonical content JSON; HTML goes through
+  `IEmailPreviewRenderer` with `SubstituteVariables = false`, so the exported file keeps the
+  `{{ … }}` tokens, with explicit loading / unavailable / failed states. The download uses the
+  existing core helper `tmDataTable.downloadFile` with the slugged file name
+  (`{slug(name)|email-template}.{mjml|json|html}`) and the right MIME type. Generation happens on
+  OPEN and on a TAB CHANGE only — the old dialog regenerated on every parent render
+  (`OnParametersSet`). The dialog title is “Export” (EM5).
+- **Validation dialog (`TmEmailValidationPanel`).** A per-severity count summary (errors / warnings /
+  suggestions) above findings that are real `<button>` elements (keyboard operable; the old
+  `<li @onclick>` broke the keyboard-activation convention) with a severity icon, a TITLE, a
+  DESCRIPTION and a “Go to” action that jumps to the block. Each rule key now has
+  `{rule}_Title` / `{rule}_Description` in all four tables (`ValidationKeyShape.TitleOf` /
+  `DescriptionOf`), the document is validated when the dialog OPENS (not on every parent render), the
+  host's `ImportOptions` limits are part of the findings, and the dialog has a Zavřít footer.
+- **`TmEmailTemplateEditor.ImportOptions`** (`EmailImportOptions?`, additive): the editor forwards the
+  same limits to the import dialog and the validation panel, so “what the editor accepts” and “what the
+  server accepts” cannot drift apart.
+- **The public surface of the import/export/validation dialogs, confirmed by the user (§3.8/§3.10 of the
+  contract).** `ValidationKeyShape` (`TitleSuffix`/`DescriptionSuffix`/`TitleOf`/`DescriptionOf`) is the
+  one place that composes a rule's `_Title`/`_Description` keys; `ImportKeys.BlockedLink`,
+  `ImportKeys.InvalidColor` and `ImportKeys.DroppedAttribute` are the import-side audit keys (an
+  unusable link, a colour the message cannot carry, an attribute the pipeline may never write — the
+  detail is the tag and the name, never the value); `EmailTemplateMapper.ToDocument(contentJson,
+  EmailImportOptions?)` plus the `ApplyCreate`/`ApplyUpdate` overloads let the SERVER enforce the same
+  limits as the import, and `ReportEmailTemplateGalleryStore(EmailImportOptions?)` applies them to the
+  report-gallery store; `TmEmailValidationPanel.ImportOptions` puts the same limits into the findings;
+  `TmEmailExportDialog.LayoutMode` / `TmEmailImportDialog.LayoutMode` take the editor's already resolved
+  layout. All of it is additive — the parameterless members stay.
+- **`TmCopyButton.OnCopied` and `TmCodeEditor.CopyButtonCopied` (core, additive).** The copy button
+  now tells its host when the text really reached the clipboard (never when the clipboard refuses the
+  write), so a read-only surface can confirm the copy in its OWN live region instead of hanging a
+  handler on the box around it — a click in the box is not a copy.
+- **Copy / retry / large-export affordances of the export dialog (Fáze 10 review).** The copy
+  confirmation comes from `TmCopyButton.OnCopied` and is reset before it is set, so a SECOND copy is
+  announced again; the HTML tab explains a renderer that is not configured
+  (`EmailEditor_Export_HtmlNotConfiguredHelp`) or unreachable (`EmailEditor_Export_HtmlUnreachableHelp`)
+  and the unreachable case offers a real retry (`data-tm-export-retry`); an export over 200 000
+  characters is still complete but renders without syntax highlighting, with a line saying so
+  (`EmailEditor_Export_LargeNoHighlight`). Each format's content lives in the `TmTabPanel` it belongs
+  to, so the strip's `aria-controls` points at a panel that exists.
+- **Import dialog: the mode follows the file/content (Fáze 10 review).** The drop zone accepts
+  `.mjml,.html,.json,.txt` on BOTH tabs, a `.json` file switches the mode, and a pasted document that
+  starts with `{` is parsed as JSON instead of failing as MJML. The pasted text is measured against
+  `EmailImportOptions.MaxInputBytes` BEFORE parsing (`EmailEditor_Import_InputTooLarge`, with the
+  actual limit), and the state card carries the replace note (`EmailEditor_Import_ReplaceNote`) so the
+  destructive step is stated before the user presses Import.
+- **Validation panel: the good outcome and the quiet counts (Fáze 10 review).** “No issues found” is a
+  success card with the check icon and the success text token, a severity whose count is zero drops its
+  severity colour (`tm-email-validation__count--zero`), the “syntax was not checked” note sits under the
+  findings it qualifies, and “Go to” on a DOCUMENT finding opens the e-mail settings (nothing selected)
+  instead of closing the dialog onto an unchanged canvas.
+- **`RenderKeys.InvalidAttributeValue` / `ImportKeys.DroppedAttribute` (additive).** An attribute value
+  the message cannot carry is now reported when the generator drops it, and an imported attribute the
+  pipeline may never write is warned about at import (`import.dropped_attribute`) instead of living in
+  the model as a value every export silently refuses.
+- **Shortcuts help subtitle.** The editor passes
+  `TmKeyboardShortcutsHelp.Description` (“Shortcuts work with an external keyboard.”) and lists ↑ / ↓
+  as two separate key alternatives instead of one chord (F8 API).
 - **Table grid: accessible, sectioned, scrollable (`TmEmailTableEditor`).** The grid is now a
   `<table>` with a `<caption>`, a localized `aria-label` on every cell ("Row {0}, column {1}"), a
   pinned control column (`position: sticky`), a visually distinct header row, a "Header" section with
@@ -479,6 +554,52 @@
 
 ### Changed
 
+- **The MJML HEAD is emitted through the same gate as the body (Fáze 10 review, security blocker).**
+  `mj-attributes` carries a TAG NAME and attribute NAMES, `mj-font` a URL and `mj-html-attributes` a raw
+  name and value — all of them used to be written verbatim, so `<mj-all x" onclick="alert(2)="1">`, a
+  per-component default keyed `mj-text><script>…`, an `mj-html-attribute name="onclick"` or an
+  `mj-font href="javascript:…"` produced a live handler, a script element or a live link in the export.
+  The head now goes through the same rules the body uses: a per-component default's tag must be a known
+  `mj-*` component (`MjmlKnownAttributes.PerTagTargets`), every attribute name has to be one that tag
+  accepts (plus inert `data-*`), a colour has to be a colour (`CssColourValue`), a URL goes through
+  `EmailUrlPolicy` and an HTML attribute name may not be `style`, `srcdoc` or an `on*` handler. The
+  export therefore always stays well-formed XML.
+- **An imported attribute is re-emitted only when this pipeline may write it (Fáze 10 review,
+  security 2).** The DENY filter (reject `on*`/`style`) is replaced by the ALLOW-list
+  `MjmlKnownAttributes.For(tag)` — a deny filter is one invented name away from a live handler
+  (`srcdoc`, `formaction`, `xlink:href`). The value is judged by the kind of the attribute (URL →
+  scheme allow-list, colour → `CssColourValue`, style-bound → `CssStyleValue`, anything else → a value
+  that may not open a CSS declaration: no `; { } < > " ' \`, no `url(`, no `expression(`), a duplicate
+  attribute is emitted once (two of the same name made the export unparsable and let the last one win),
+  and the importer drops the ones it cannot keep WITH a warning. `css-class`/`mj-class` keep only safe
+  class tokens.
+- **Style-bound attribute values are validated at emission (Fáze 10 review, security 3).** `padding`
+  (and its sides), `border*`, `border-radius`, `font-family`, `font-size`, `width`, `height`,
+  `line-height`, `letter-spacing` and the rest of `MjmlKnownAttributes`' style-bound set are copied into
+  the element's inline `style` by the MJML compiler, so `"0;background:url(https://tracker)"` used to
+  become a tracking pixel of its own. `CssStyleValue` allows only the characters a length, number,
+  percentage, hex colour, keyword or font stack needs — a value outside it is dropped and reported
+  (`RenderKeys.InvalidAttributeValue`), never "cleaned up". `container-background-color` is a colour
+  (`MjmlAttributeBuffer.Colour`) and a carousel's `thumbnails-src` a URL (`MjmlAttributeBuffer.Url`).
+- **A `<mj-style>` payload may not carry script-in-CSS constructs (Fáze 10 review, security 6).** The
+  payload used to lose only `<`; `CssSafety` now refuses the whole block when the stylesheet contains
+  `expression(`, `behavior:`, `-moz-binding`, `@import` or a `url(…)`/`image-set(…)` target with a
+  refused scheme (normalised first, so a comment or a CSS escape cannot hide it). Legitimate CSS —
+  including an `https` background image — is unchanged.
+- **The MJML generator now fail-closes every link and filters imported attributes (Fáze 10, export
+  hardening).** `MjmlGenerator` emits `href` / `src` / `background-url` through
+  `EmailUrlPolicy` (`MjmlAttributeBuffer.Url`), so a blocked scheme (`javascript:`, `data:`,
+  `vbscript:`, …) becomes `#` in the generated MJML — the export path runs without `MarkupGuard`, and
+  it must not hand out a live link. The renderer keeps warning and auditing the same scheme:
+  `ModelLinkScanner` now scans EVERY model link (button, image, table cell, navbar, social, carousel,
+  hero/wrapper/section background, `mj-font`), not just table cells, so `RenderKeys.BlockedUrlScheme`
+  (a warning) is unchanged. Attributes preserved from an import (`ExtraAttributes`) are filtered:
+  the name must be a plain lower-case attribute name (never `on*`, never `style`) and a URL-bearing
+  name goes through the same allow-list — previously an imported `onclick` or
+  `href="javascript:…"` was re-emitted verbatim into the export. `css-class` / `mj-class` keep only
+  safe class tokens. A `<mj-style>` CSS payload has every `<` removed (CSS never contains one), which
+  closes a `</style><script>` injection into the compiled HTML; a `<mj-raw>` payload can no longer
+  close its own element early.
 - **Headings `h1`–`h6` are allow-listed by the inline-HTML sanitizer (Fáze 9A review, D28).**
   `HtmlSanitizerPolicy.AllowedTags` — the ONE source both the AngleSharp and the BCL conservative sanitizer
   read — now contains `h1`…`h6`. They are FORMATTING elements exactly like `b`/`i`: both implementations
@@ -806,8 +927,61 @@
   mobile tab without binding `ActiveMobilePanelChanged` could not move the sheet again. It now adopts the
   parameter whenever it differs from the last value seen (the shell's own `_activeParamSeen` pattern).
 
+### Fixed
+
+- **Email import / export / validation dialogs (Fáze 10).** The import dialog no longer hard-codes a
+  5 MB limit, no longer shows a raw `ex.Message` for broken JSON, and no longer shows the parse and
+  warning lists only as a count; the export dialog no longer regenerates the whole MJML on every
+  parent render, no longer offers a bare read-only `<textarea>` without copy or download, and no
+  longer lacks a footer; the validation panel no longer renders findings as `<li @onclick>` (not
+  keyboard operable) and no longer revalidates every template-bearing string on every parent render.
+- **Server-side template JSON applies the import limits (Fáze 10, carry-forward).**
+  `EmailTemplateMapper.ToDocument(contentJson, EmailImportOptions?)` (plus the `ApplyCreate` /
+  `ApplyUpdate` overloads) makes the server path enforce the same limits as the editor, and
+  `Demo.Api`'s email-template endpoints answer `422` ProblemDetails whose `errors` values are
+  LOCALIZATION KEYS (`SerializationKeys.InputTooLarge` / `Malformed` / `InvalidSchemaVersion` /
+  `UnsupportedSchemaVersion`, `validation.limits.*`) instead of a `400` with an English sentence or an
+  unhandled `500`. `ReportEmailTemplateGalleryStore` applies the same limits, so “what passes the
+  import passes the server” holds for JSON sent by a client.
+
 ### Breaking / Migration
 
+- **No implicit Google Fonts import in rendered HTML (Fáze 10 review).** `MjmlNetCompiler` turns off
+  Mjml.Net's built-in font table, so a render no longer emits `<link>`/`@import` for Ubuntu (or any other
+  font the document did not declare), and the markup guard drops every `@import` that is not the `href` of a
+  document `mj-font`. Impact: a template that relied on the implicit Ubuntu webfont now renders with the
+  next family of its `font-family` stack (Helvetica/Arial by default). Migration — declare the webfont
+  explicitly:
+  ```xml
+  <!-- before: implicit, nothing in the template -->
+  <!-- after -->
+  <mj-head><mj-font name="Ubuntu" href="https://fonts.googleapis.com/css?family=Ubuntu" /></mj-head>
+  ```
+  (in the model: add an `EmailFont { Name = "Ubuntu", Href = "https://fonts.googleapis.com/css?family=Ubuntu" }`
+  to `EmailTemplateDocument.Styles.Fonts`). Inline `style`/`<style>` content carrying `expression(`, `behavior:`,
+  `-moz-binding` or a foreign `@import` is now dropped with a `RenderKeys.UnsafeElementRemoved` warning.
+- **A raw block is an opt-in to raw MARKUP, not to markup that RUNS (Fáze 10 review, U1).** The render
+  pipeline's markup guard now ALWAYS removes `script`, `iframe`, `frame`, `frameset`, `object`, `embed`,
+  `applet`, `base`, `form` and `portal` — a raw-text element (`script`) together with its content, up to
+  its closing tag — with a `RenderKeys.UnsafeElementRemoved` warning and a `BlockedMember` audit event.
+  Inbox previews and webmail open the message in a document that runs script, so “the author pasted it
+  into a raw block” was never a reason to hand out a live `<script>`; there is no opt-in flag.
+
+  | Před (before) | Po (after) |
+  | --- | --- |
+  | `<mj-raw><script>init()</script></mj-raw>` rendered a live script element | the element and its body are removed; the rest of the message renders, the render reports a warning and the audit sink sees `BlockedMember`/`script` |
+  | an embedded document (`<iframe>`, `<object>`, `<embed>`, `<applet>`, `<portal>`) survived a render | it is removed, and `<base>`/`<form>` no longer rewrite the message's URLs or POST anywhere |
+
+  An author who needs interactive content in an e-mail is out of scope for a message body: link to a
+  hosted page instead.
+- **An imported attribute outside its tag's allow-list is dropped at import (Fáze 10 review,
+  security 2), which makes a foreign template's round-trip lossy — with a warning.** This is the
+  deliberate cost of replacing the deny filter with an allow-list (`MjmlKnownAttributes`).
+
+  | Před (before) | Po (after) |
+  | --- | --- |
+  | `<mj-text some-future-attr="x">` kept the attribute in `ExtraAttributes` and re-emitted it | the attribute is dropped from the model and reported as `ImportKeys.DroppedAttribute` (`import.dropped_attribute`, detail `mj-text some-future-attr`); `data-*` and every known MJML attribute still survive |
+  | `<mj-text onclick="alert(1)">` was re-emitted verbatim | dropped at import and never emitted (the generator refuses it too) |
 - **Fáze 9A — the canvas renders the E-MAIL, not a structural list (breaking DOM + behaviour).** The
   canvas used to draw every block as a card with a type label and up to 80 characters of stripped text
   (`.tm-email-canvas-block__kind` / `.tm-email-canvas-block__detail`), with a button that looked like a
@@ -1299,6 +1473,23 @@
   full name is in `title`, and `Collapsed` / `CollapsedChanged` fold the palette away. `data-tm-block`,
   `data-tm-preset` and `data-tm-toolbox-list` are preserved; the component root is
   `[data-tm-toolbox-root]` (the editor's panel keeps `data-tm-toolbox`).
+
+- **Email import / export / validation dialogs: the DOM and two parameters changed (B12/B13; the public
+  API stays additive).** Migration for a host test that selected the old markup:
+
+  | Před (before) | Po (after) |
+  | --- | --- |
+  | `<textarea data-tm-import-input>` | `[data-tm-import-input]` root of a `TmCodeEditor`; the editable element is `#tm-import-input` (the textarea) |
+  | `<textarea data-tm-export-mjml>` / `data-tm-export-json` | `[data-tm-export-mjml]` / `[data-tm-export-json]` code editor roots; the text is the textarea's `value` (read it via `#tm-export-mjml-code`) |
+  | `<button data-tm-export-mode="json">` / `data-tm-import-mode` | core `TmTabs` strip: `#tab-export-json`, `#tab-export-mjml`, `#tab-export-html`, `#tab-import-json`, `#tab-import-mjml` |
+  | validation finding: `<li @onclick>` with a nested button | the finding itself is a `<button data-tm-validation-message>` (or a `<div>` when there is nowhere to jump to), with `[data-tm-validation-title]`, `[data-tm-validation-description]` and `[data-tm-validation-action]` |
+  | `[data-tm-import-warnings]` list | `[data-tm-import-warnings]` is the disclosure list; the count moved to `[data-tm-import-warning-count]` on the state card |
+
+  New additive parameters: `TmEmailTemplateEditor.ImportOptions`, `TmEmailImportDialog.ImportOptions`,
+  `TmEmailValidationPanel.ImportOptions` and `TmEmailExportDialog.LayoutMode` /
+  `TmEmailImportDialog.LayoutMode` (the editor passes the layout it already resolved, so a phone gets the
+  core sheet from F2). The export dialog also needs the core `tmDataTable.downloadFile` helper on the host
+  page (`<script src="_content/Tempo.Blazor/js/data-table.js">`), exactly like the core data components.
 
 - **`LayoutSeverity.Info` is a new severity and the preheader has the first recommending rule (B5, D9).**
   `Warning = 0` and `Error = 1` keep their numbers; `Info = 2` is appended, so a `switch` over the enum

@@ -582,6 +582,13 @@
           "editorRequired": true
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the dialog renders in. Auto measures the viewport, so the dialog becomes the core sheet on a phone (F2); the editor passes the layout it already resolved, which keeps the dialog in step with the editor and makes the sheet presentation testable without a DOM."
+        },
+        {
           "name": "OnClose",
           "type": "EventCallback",
           "isRequired": false,
@@ -645,6 +652,19 @@
         "@using Tempo.Blazor.EmailTemplates.Components"
       ],
       "parameters": [
+        {
+          "name": "ImportOptions",
+          "type": "EmailImportOptions?",
+          "isRequired": false,
+          "description": "The limits applied to the input (D13): MaxInputBytes is measured in UTF-8 bytes and bounds both the pasted text and the read file; the section/block/depth limits go to the importer and the JSON deserializer. null means the contract defaults (5 MB, 200 sections, 2000 blocks, nesting 8)."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the dialog renders in — the editor's already resolved mode, so a phone gets the core sheet with the sticky footer (F2) without a second measurement."
+        },
         {
           "name": "OnClose",
           "type": "EventCallback",
@@ -1250,6 +1270,12 @@
           "description": "Client-side limits (Accept, MaxBytes) applied to a picked image before OnImageUpload is called. null uses the defaults (5 MB, images only)."
         },
         {
+          "name": "ImportOptions",
+          "type": "EmailImportOptions?",
+          "isRequired": false,
+          "description": "The limits every entry point applies to a template document (D13): the import dialog measures the input against MaxInputBytes (UTF-8 bytes) and passes the section/block/depth limits to the importer and the JSON deserializer; the validation panel reports the same limits. null (default) means the contract values (5 MB, 200 sections, 2000 blocks, nesting 8)."
+        },
+        {
           "name": "InitialMode",
           "type": "TmLayoutMode",
           "isRequired": false,
@@ -1513,6 +1539,12 @@
           "isRequired": true,
           "description": "The document to validate.",
           "editorRequired": true
+        },
+        {
+          "name": "ImportOptions",
+          "type": "EmailImportOptions?",
+          "isRequired": false,
+          "description": "The limits the limit rules are measured against; the editor passes the same instance it gave the import dialog, so the panel and the import cannot disagree about what 'too big' means. null means the contract defaults."
         },
         {
           "name": "OnNavigate",

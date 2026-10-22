@@ -60,13 +60,18 @@
     <span class="tm-sr-only" role="status" aria-live="polite" data-tm-save-announcer>@_announcement</span>
 </div>
 
-<TmEmailExportDialog Show="_showExport" Document="_document" OnClose="() => _showExport = false" />
-<TmEmailImportDialog Show="_showImport" OnImport="ApplyImportAsync" OnClose="() => _showImport = false" />
+@* Fáze 10: both dialogs take the layout the editor already resolved, so a phone gets the core sheet with
+   the sticky footer from F2 (the editor passes its own resolved mode instead of adding yet another viewport
+   measurement), and the import applies the host's ImportOptions limits. *@
+<TmEmailExportDialog Show="_showExport" Document="_document" LayoutMode="EffectiveResolvedLayout"
+                     OnClose="() => _showExport = false" />
+<TmEmailImportDialog Show="_showImport" LayoutMode="EffectiveResolvedLayout" ImportOptions="ImportOptions"
+                     OnImport="ApplyImportAsync" OnClose="() => _showImport = false" />
 @* XLarge, because the Tablet scene is 768 px (EmailPreviewMetrics.TabletWidth): in a 680 px dialog the
    scene would be clamped to the desktop width, so the device switch would be a label that changes
    nothing. 900 px leaves room for the paper plus its stage margin at every device. *@
 <TmModal Show="_showPreview" Title="@Loc["EmailEditor_Toolbar_Preview"]" Size="ModalSize.XLarge"
-         OnClose="() => _showPreview = false">
+         LayoutMode="EffectiveResolvedLayout" OnClose="() => _showPreview = false">
     <ChildContent>
         <TmEmailTemplatePreview @ref="_preview" Document="_document" />
     </ChildContent>
@@ -85,11 +90,23 @@
         </div>
     </Footer>
 </TmModal>
-<TmModal Show="_showValidation" Title="@Loc["EmailEditor_Validation_Title"]" Size="ModalSize.Medium"
-         OnClose="() => _showValidation = false">
-    <TmEmailValidationPanel Document="_document" OnNavigate="OnValidationNavigateAsync" />
+<TmModal Show="_showValidation" Title="@Loc["EmailEditor_Validation_Title"]"
+         Subtitle="@Loc["EmailEditor_Validation_Subtitle"]" Size="ModalSize.Medium"
+         LayoutMode="EffectiveResolvedLayout" OnClose="() => _showValidation = false"
+         data-tm-validation-dialog="true">
+    <ChildContent>
+        <TmEmailValidationPanel Document="_document" ImportOptions="ImportOptions"
+                                OnNavigate="OnValidationNavigateAsync" />
+    </ChildContent>
+    <Footer>
+        @* The dialog needs its own dismiss in the footer: on a phone the sheet's footer is the sticky action
+           row, and the header close button scrolls away with the body. A direct .tm-btn child on purpose. *@
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" data-tm-validation-close="true"
+                  OnClick="() => _showValidation = false">@Loc["EmailEditor_Validation_Close"]</TmButton>
+    </Footer>
 </TmModal>
 <TmKeyboardShortcutsHelp IsVisible="_showShortcuts" Categories="ShortcutCategories"
+                         Description="@Loc["EmailEditor_Shortcuts_Description"]"
                          OnClose="() => _showShortcuts = false" />
 
 

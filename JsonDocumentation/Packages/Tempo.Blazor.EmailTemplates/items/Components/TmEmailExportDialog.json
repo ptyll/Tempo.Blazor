@@ -29,6 +29,13 @@
       "isRequired": true,
       "description": "Raised when the dialog is closed.",
       "editorRequired": true
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the dialog renders in. Auto measures the viewport, so the dialog becomes the core sheet on a phone (F2); the editor passes the layout it already resolved, which keeps the dialog in step with the editor and makes the sheet presentation testable without a DOM."
     }
   ]
 }

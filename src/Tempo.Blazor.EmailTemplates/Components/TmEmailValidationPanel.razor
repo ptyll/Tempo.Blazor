@@ -3,55 +3,78 @@
 @using Tempo.Blazor.EmailTemplates.Abstractions.Templating
 @inject IServiceProvider Services
 
+@* §2.9.3 / B13: a finding is a real button (keyboard operable — the old <li @onclick> was not), it names the
+   problem with a TITLE and explains it with a DESCRIPTION, the panel counts the findings per severity, and
+   “Go to” is offered only where there is a block to go to. The document is validated when the dialog opens,
+   not on every parent render. *@
 <div class="tm-email-validation" data-tm-validation>
-    @if (_syntaxUnavailable)
-    {
-        @* Passive information, not an alert: nothing failed, one check simply did not run (role="note" so a
-           screen reader announces it without interrupting). The registration hint belongs in the log — an
-           end user cannot register an ITemplateValidator. *@
-        <div class="tm-email-validation__note" role="note" data-tm-validation-unavailable="true">
-            @Loc["EmailEditor_Validation_SyntaxUnavailable"]
-        </div>
-    }
-
     @if (_messages.Count == 0)
     {
-        <p class="tm-email-validation__ok" data-tm-validation-ok>@Loc["EmailEditor_Validation_Valid"]</p>
+        @* The empty state is the GOOD outcome, so it is a success card with the check icon and the success text
+           token — a quiet grey sentence reads like "nothing to report yet", which is the opposite of the truth. *@
+        <div class="tm-email-validation__ok" data-tm-validation-ok role="status">
+            <span class="tm-email-validation__ok-icon" aria-hidden="true">
+                <TmIcon Name="@IconNames.CheckCircle" Size="IconSize.Md" />
+            </span>
+            <p class="tm-email-validation__ok-text">@Loc["EmailEditor_Validation_Valid"]</p>
+        </div>
     }
     else
     {
+        <div class="tm-email-validation__summary" data-tm-validation-summary
+             data-tm-validation-errors="@_errors"
+             data-tm-validation-warnings="@_warnings"
+             data-tm-validation-infos="@_infos">
+            <span class="@CountClass("error", _errors)" data-tm-validation-count="Error">
+                <TmIcon Name="@IconNames.AlertCircle" Size="IconSize.Xs" />
+                @Loc["EmailEditor_Validation_Count_Error", _errors]
+            </span>
+            <span class="@CountClass("warning", _warnings)" data-tm-validation-count="Warning">
+                <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                @Loc["EmailEditor_Validation_Count_Warning", _warnings]
+            </span>
+            <span class="@CountClass("info", _infos)" data-tm-validation-count="Info">
+                <TmIcon Name="@IconNames.Info" Size="IconSize.Xs" />
+                @Loc["EmailEditor_Validation_Count_Info", _infos]
+            </span>
+        </div>
+
         <ul class="tm-email-validation__list">
             @foreach (var message in _messages)
             {
                 var severity = message.Severity.ToString().ToLowerInvariant();
                 var nodeId = Guid.TryParse(message.Path, out var id) ? id : (Guid?)null;
-                <li class="tm-email-validation__item tm-email-validation__item--@severity"
-                    data-tm-validation-message data-tm-validation-severity="@message.Severity"
-                    @onclick="() => NavigateAsync(message.Path)">
-                    @* The severity is spoken before the sentence: the icon is decorative and the colour is not
-                       announced, so without this prefix a screen-reader user hears an error and a suggestion
-                       in the same voice. *@
-                    <span class="tm-sr-only">@SeverityText(message.Severity)</span>
-                    <span class="tm-email-validation__icon" data-tm-validation-icon="@severity" aria-hidden="true">
-                        <TmIcon Name="@IconFor(message.Severity)" Size="IconSize.Sm" />
-                    </span>
+                <li class="tm-email-validation__row">
                     @if (nodeId is { } target)
                     {
-                        @* A finding that points at a node is a real button: the row is clickable for a mouse,
-                           but only the button gives a keyboard user a way to jump to the block. *@
-                        <button type="button" class="tm-email-validation__link"
-                                data-tm-validation-link="@severity"
-                                @onclick="() => OnNavigate.InvokeAsync(target)" @onclick:stopPropagation="true">
-                            <span class="tm-email-validation__text">@TextOf(message)</span>
+                        <button type="button"
+                                class="tm-email-validation__finding tm-email-validation__item--@severity"
+                                data-tm-validation-message data-tm-validation-severity="@message.Severity"
+                                @onclick="() => OnNavigate.InvokeAsync(target)">
+                            @Finding(message)
                         </button>
                     }
                     else
                     {
-                        <span class="tm-email-validation__text">@TextOf(message)</span>
+                        <div class="tm-email-validation__finding tm-email-validation__item--@severity"
+                             data-tm-validation-message data-tm-validation-severity="@message.Severity">
+                            @Finding(message)
+                        </div>
                     }
                 </li>
             }
         </ul>
+    }
+
+    @if (_syntaxUnavailable)
+    {
+        @* Passive information, not an alert: nothing failed, one check simply did not run (role="note" so a
+           screen reader announces it without interrupting). It sits UNDER the findings on purpose — it qualifies
+           them ("the syntax was not checked"), so reading it first would undercut the list. The registration hint
+           belongs in the log: an end user cannot register an ITemplateValidator. *@
+        <div class="tm-email-validation__note" role="note" data-tm-validation-unavailable="true">
+            @Loc["EmailEditor_Validation_SyntaxUnavailable"]
+        </div>
     }
 </div>
 
@@ -59,18 +82,42 @@
     /// <summary>The document to validate.</summary>
     [Parameter, EditorRequired] public EmailTemplateDocument Document { get; set; } = new();
 
-    /// <summary>Raised with the offending node id when a finding is clicked.</summary>
+    /// <summary>Raised with the offending node id when a finding is activated.</summary>
     [Parameter] public EventCallback<Guid?> OnNavigate { get; set; }
 
+    /// <summary>
+    /// The limits the limit rules are measured against (<see cref="EmailImportOptions"/>); the editor passes the
+    /// same instance it gave the import dialog, so the panel and the import cannot disagree about what “too
+    /// big” means. <see langword="null"/> means the contract defaults.
+    /// </summary>
+    [Parameter] public EmailImportOptions? ImportOptions { get; set; }
+
+    private readonly EmailImportOptions _defaultOptions = new();
     private static readonly EmailDocumentValidator Validator = new();
     private IReadOnlyList<DocumentValidationMessage> _messages = Array.Empty<DocumentValidationMessage>();
+    private EmailTemplateDocument? _validatedDocument;
+    private EmailImportOptions? _validatedOptions;
+    private int _errors;
+    private int _warnings;
+    private int _infos;
     private bool _syntaxUnavailable;
     private bool _missingValidatorLogged;
+
+    private EmailImportOptions Options => ImportOptions ?? _defaultOptions;
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // Validation runs when the dialog OPENS (the panel is created with it) and when the host hands over a
+        // new document or limit set. A plain parent re-render must not revalidate every template-bearing string
+        // again — that is a full pass per keystroke of the surrounding editor.
+        if (ReferenceEquals(_validatedDocument, Document) && ReferenceEquals(_validatedOptions, Options)) return;
+
+        _validatedDocument = Document;
+        _validatedOptions = Options;
+
         var messages = new List<DocumentValidationMessage>(Validator.Validate(Document));
+        messages.AddRange(new EmailDocumentLimitsValidator(Options).Validate(Document));
 
         // Template syntax validation of every template-bearing string (E8.7). The panel takes
         // ITemplateValidator — not ITemplateEngine — so an editor without the Engine package can render a
@@ -104,13 +151,54 @@
         _messages = messages
             .OrderBy(message => LayoutSeverityRank.Of(message.Severity))
             .ToList();
+
+        _errors = _messages.Count(message => message.Severity == LayoutSeverity.Error);
+        _warnings = _messages.Count(message => message.Severity == LayoutSeverity.Warning);
+        _infos = _messages.Count(message => message.Severity == LayoutSeverity.Info);
     }
 
+    /// <summary>One finding's body: the decorative icon, the title and the explanation (plus “Go to” inline).</summary>
+    private RenderFragment Finding(DocumentValidationMessage message) => @<text>
+        @* The severity is spoken before the sentence: the icon is decorative and the colour is not announced,
+           so without this prefix a screen-reader user hears an error and a suggestion in the same voice. It
+           sits INSIDE the finding, so it is part of the button's accessible name. *@
+        <span class="tm-sr-only">@SeverityText(message.Severity)</span>
+        <span class="tm-email-validation__icon" data-tm-validation-icon="@message.Severity.ToString().ToLowerInvariant()"
+              aria-hidden="true">
+            <TmIcon Name="@IconFor(message.Severity)" Size="IconSize.Sm" />
+        </span>
+        <span class="tm-email-validation__body">
+            <span class="tm-email-validation__title" data-tm-validation-title>@TitleOf(message.Key)</span>
+            <span class="tm-email-validation__description" data-tm-validation-description>@DescriptionOf(message.Key)</span>
+        </span>
+        @if (Guid.TryParse(message.Path, out _))
+        {
+            <span class="tm-email-validation__action" data-tm-validation-action>
+                @Loc["EmailEditor_Validation_GoTo"]
+                <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Xs" />
+            </span>
+        }
+    </text>;
+
     /// <summary>
-    /// The finding's sentence. Only the preheader rule carries a placeholder — it names the threshold it
-    /// measured, so the message explains itself instead of saying "too long".
+    /// The finding's title (<c>{rule}_Title</c>): a short name a scanning eye can read, with the sentence moved to
+    /// the description. The key parity test guarantees all four tables carry it.
     /// </summary>
-    private string TextOf(DocumentValidationMessage message) => ValidationMessageText.Of(Loc, message.Key);
+    private string TitleOf(string key) => ValidationMessageText.TitleOf(Loc, key);
+
+    /// <summary>
+    /// The finding's explanation (<c>{rule}_Description</c>): what it means and how to fix it, including the
+    /// threshold a measuring rule reports (one formatter, so a <c>{0}</c> is never printed literally).
+    /// </summary>
+    private string DescriptionOf(string key) => ValidationMessageText.DescriptionOf(Loc, key);
+
+    /// <summary>
+    /// The class list of one count chip. A zero count loses its severity colour (and says so with its own class):
+    /// three coloured chips with "0" in two of them read as findings that are not there.
+    /// </summary>
+    private static string CountClass(string severity, int count)
+        => "tm-email-validation__count tm-email-validation__count--" + severity
+           + (count == 0 ? " tm-email-validation__count--zero" : string.Empty);
 
     /// <summary>The spoken name of a severity (<c>EmailEditor_Validation_Severity_*</c>).</summary>
     private string SeverityText(LayoutSeverity severity) => Loc[$"EmailEditor_Validation_Severity_{severity}"];
@@ -138,10 +226,5 @@
                 case EmailRawBlock r: yield return (r.Content, block.Id.ToString()); break;
             }
         }
-    }
-
-    private async Task NavigateAsync(string path)
-    {
-        if (Guid.TryParse(path, out var id)) await OnNavigate.InvokeAsync(id);
     }
 }

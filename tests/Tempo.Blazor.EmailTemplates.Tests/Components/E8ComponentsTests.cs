@@ -158,7 +158,7 @@ public class E8ComponentsTests : BunitContext
             .Add(c => c.Show, true)
             .Add(c => c.Document, DocWithText("hello")));
 
-        cut.Find("[data-tm-export-mjml]").TextContent.Should().Contain("<mjml");
+        cut.Find("[data-tm-export-mjml] textarea").GetAttribute("value").Should().Contain("<mjml");
     }
 
     // ── MJML import (E8.6) ──────────────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ public class E8ComponentsTests : BunitContext
             .Add(c => c.OnImport, d => imported = d));
 
         const string mjml = "<mjml><mj-body><mj-section><mj-column><mj-text>Imported</mj-text></mj-column></mj-section></mj-body></mjml>";
-        cut.Find("[data-tm-import-input]").Input(mjml);
+        cut.Find("[data-tm-import-input] textarea").Input(mjml);
         cut.Find("[data-tm-import-confirm]").Click();
 
         imported.Should().NotBeNull();
@@ -187,7 +187,7 @@ public class E8ComponentsTests : BunitContext
             .Add(c => c.Show, true)
             .Add(c => c.OnImport, d => imported = d));
 
-        cut.Find("[data-tm-import-input]").Input("<html>not mjml</html>");
+        cut.Find("[data-tm-import-input] textarea").Input("<html>not mjml</html>");
 
         cut.FindAll("[data-tm-import-errors]").Should().ContainSingle();
         cut.Find("[data-tm-import-confirm]").Click();

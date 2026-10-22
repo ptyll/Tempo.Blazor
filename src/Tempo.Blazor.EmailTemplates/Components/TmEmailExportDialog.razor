@@ -1,22 +1,48 @@
 @namespace Tempo.Blazor.EmailTemplates.Components
+@using System.Text
+@implements IDisposable
+@inject IServiceProvider Services
+@inject IJSRuntime JS
 
-<TmModal Show="Show" Title="@Loc["EmailEditor_Mjml_Title"]" Size="ModalSize.Large" OnClose="OnClose">
-    <div class="tm-email-export">
-        <div class="tm-email-export__modes" role="group">
-            <TmButton Size="ButtonSize.Sm" Variant="@ModeVariant(false)" data-tm-export-mode="mjml"
-                      OnClick="() => _json = false">MJML</TmButton>
-            <TmButton Size="ButtonSize.Sm" Variant="@ModeVariant(true)" data-tm-export-mode="json"
-                      OnClick="() => _json = true">JSON</TmButton>
+@* §2.4 / B12 / EM5: one code surface per format (MJML / JSON / HTML) with a real footer. The dialog is a
+   self-contained export: it never sends anything, and every generated value is produced on OPEN and on a
+   TAB CHANGE only — generating in the render path fired a new MJML on every parent re-render.
+   Each format's content lives in its own core TmTabPanel (Fáze 10 review, UX 9), so the tab strip's
+   aria-controls has a panel to point at and a screen reader reads the content as the panel it belongs to. *@
+<TmModal Show="Show" Title="@Loc["EmailEditor_Export_Title"]" Subtitle="@Loc["EmailEditor_Export_Subtitle"]"
+         Size="ModalSize.Large" LayoutMode="LayoutMode" OnClose="CloseAsync" data-tm-export-dialog>
+    <ChildContent>
+        <div class="tm-email-export" data-tm-export data-tm-export-mode="@ModeName" data-layout="@LayoutModifier">
+            <TmTabs Variant="TabVariant.Pill" ActiveTabId="@_tabId" ActiveTabIdChanged="OnTabChangedAsync"
+                    aria-label="@Loc["EmailEditor_Export_Format"]">
+                <TmTabPanel Id="@MjmlTabId" Title="@Loc["EmailEditor_Format_Mjml"]">
+                    @FormatPanel(EmailExportFormat.Mjml)
+                </TmTabPanel>
+                <TmTabPanel Id="@JsonTabId" Title="@Loc["EmailEditor_Format_Json"]">
+                    @FormatPanel(EmailExportFormat.Json)
+                </TmTabPanel>
+                <TmTabPanel Id="@HtmlTabId" Title="@Loc["EmailEditor_Format_Html"]">
+                    @FormatPanel(EmailExportFormat.Html)
+                </TmTabPanel>
+            </TmTabs>
+
+            @* The copy confirmation is announced HERE, not by the icon button and not by a click on the box
+               around the code: TmCopyButton is icon-only in the code editor's corner, and a click on the box is
+               not a copy. The button raises OnCopied after a CONFIRMED write, which is the only moment the
+               sentence is true. *@
+            <span class="tm-sr-only" role="status" aria-live="polite" data-tm-export-announcer>@_announcement</span>
         </div>
-        @if (_json)
-        {
-            <textarea class="tm-email-export__code" data-tm-export-json readonly rows="20">@_jsonText</textarea>
-        }
-        else
-        {
-            <textarea class="tm-email-export__code" data-tm-export-mjml readonly rows="20">@_mjml</textarea>
-        }
-    </div>
+    </ChildContent>
+    @* The buttons go STRAIGHT into the footer: the core footer owns the row layout, and on a phone the sheet
+       gives every direct .tm-btn child the full-width treatment (F2). A wrapper would lose both. *@
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" data-tm-export-close="true"
+                  OnClick="CloseAsync">@Loc["EmailEditor_Export_Close"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary" Icon="@IconNames.Download" data-tm-export-download="true"
+                  Disabled="@(CurrentText.Length == 0)" OnClick="DownloadAsync">
+            @Loc["EmailEditor_Export_Download", Loc[FormatNameKey]]
+        </TmButton>
+    </Footer>
 </TmModal>
 
 @code {
@@ -26,21 +52,372 @@
     /// <summary>The document to export.</summary>
     [Parameter, EditorRequired] public EmailTemplateDocument Document { get; set; } = new();
 
+    /// <summary>
+    /// The layout the dialog renders in. <see cref="TmLayoutMode.Auto"/> measures the viewport, so the dialog
+    /// becomes the core sheet on a phone (F2); the editor passes the layout it already resolved, which keeps
+    /// the dialog in step with the editor and makes the sheet presentation testable without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     /// <summary>Raised when the dialog is closed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private static readonly MjmlGenerator Generator = new();
-    private string _mjml = string.Empty;
-    private string _jsonText = string.Empty;
-    private bool _json;
+    /// <summary>
+    /// Generates the MJML of the active tab. It is a property (not a private call) so a test can count the
+    /// generations through <c>InternalsVisibleTo</c> — the contract is “generate on open and on tab change,
+    /// never per parent render”, and only a counted seam proves it.
+    /// </summary>
+    internal Func<EmailTemplateDocument, string> MjmlFactory { get; set; } = document
+        => new MjmlGenerator().Generate(document, MjmlGeneratorOptions.ForExport);
 
-    /// <inheritdoc />
-    protected override void OnParametersSet()
+    /// <summary>
+    /// Counts the copy confirmations. It exists so a test can prove the SECOND copy announces again: the live
+    /// region is reset to the empty string before the sentence is set, and the reset is not observable from the
+    /// settled DOM.
+    /// </summary>
+    internal int AnnouncementVersion { get; private set; }
+
+    /// <summary>
+    /// Above this many characters the code surface renders WITHOUT syntax highlighting: a Prism tokenizer over a
+    /// megabyte of markup blocks the UI thread of the dialog that is trying to show it. The file is unchanged
+    /// (the text is still complete and downloadable) and a line says why the colour is gone.
+    /// </summary>
+    internal const int HighlightLimit = 200_000;
+
+    private const string MjmlTabId = "export-mjml";
+    private const string JsonTabId = "export-json";
+    private const string HtmlTabId = "export-html";
+
+    private enum HtmlExportState
     {
-        if (!Show) return;
-        _mjml = Generator.Generate(Document, MjmlGeneratorOptions.ForExport);
-        _jsonText = EmailTemplateSerializer.Serialize(Document);
+        Idle,
+        Loading,
+        Rendered,
+        Failed,
+        Unavailable,
     }
 
-    private ButtonVariant ModeVariant(bool json) => _json == json ? ButtonVariant.Primary : ButtonVariant.Ghost;
+    private enum UnavailableReason
+    {
+        NotConfigured,
+        Unreachable,
+    }
+
+    private EmailExportFormat _mode = EmailExportFormat.Mjml;
+    private string _tabId = MjmlTabId;
+    private string _mjml = string.Empty;
+    private string _json = string.Empty;
+    private string _html = string.Empty;
+    private HtmlExportState _htmlState = HtmlExportState.Idle;
+    private UnavailableReason _unavailableReason = UnavailableReason.NotConfigured;
+    private IReadOnlyList<RenderError> _htmlErrors = Array.Empty<RenderError>();
+    private string _announcement = string.Empty;
+    private bool _wasShown;
+    private EmailTemplateDocument? _generatedFor;
+    private readonly List<CancellationTokenSource> _liveRenders = [];
+
+    private string ModeName => _mode.ToString().ToLowerInvariant();
+
+    /// <summary>The stable id of the active code surface, so a host (and an E2E) can read the text itself.</summary>
+    private string CodeEditorId => "tm-export-" + ModeName + "-code";
+
+    /// <summary>
+    /// The resolved layout as a CSS hook. The dialog's own root carries it, so the scoped stylesheet can key a
+    /// mobile rule on the LAYOUT the editor resolved instead of on a second viewport measurement (F8 rule).
+    /// </summary>
+    private string LayoutModifier => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => "mobile",
+        TmLayoutMode.Tablet => "tablet",
+        TmLayoutMode.Desktop => "desktop",
+        _ => "auto",
+    };
+
+    private string FormatNameKey => _mode switch
+    {
+        EmailExportFormat.Json => "EmailEditor_Format_Json",
+        EmailExportFormat.Html => "EmailEditor_Format_Html",
+        _ => "EmailEditor_Format_Mjml",
+    };
+
+    /// <summary>The text of the active tab; the empty string means “nothing to copy or download”.</summary>
+    private string CurrentText => TextOf(_mode);
+
+    /// <summary>Whether the active tab is too large to highlight.</summary>
+    private bool IsLarge => CurrentText.Length > HighlightLimit;
+
+    private string TextOf(EmailExportFormat format) => format switch
+    {
+        EmailExportFormat.Json => _json,
+        EmailExportFormat.Html => _htmlState == HtmlExportState.Rendered ? _html : string.Empty,
+        _ => _mjml,
+    };
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        // The generator sanitizes text-block content, so it must be the SAME sanitizer the render pipeline
+        // uses (the authoritative AngleSharp one when the Engine package is registered; the conservative BCL
+        // fallback inside MjmlGenerator otherwise).
+        if (Services.GetService(typeof(IHtmlContentSanitizer)) is IHtmlContentSanitizer sanitizer)
+        {
+            MjmlFactory = document => new MjmlGenerator(sanitizer).Generate(document, MjmlGeneratorOptions.ForExport);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Show)
+        {
+            _wasShown = false;
+            return;
+        }
+
+        // Generation is tied to the OPENING and to a document the host swapped while the dialog stayed open —
+        // never to a plain parent re-render (Blazor calls OnParametersSet on every one of those).
+        if (!_wasShown || !ReferenceEquals(_generatedFor, Document))
+        {
+            _wasShown = true;
+            _generatedFor = Document;
+            _announcement = string.Empty;
+            await GenerateAsync();
+        }
+    }
+
+    private async Task GenerateAsync()
+    {
+        switch (_mode)
+        {
+            case EmailExportFormat.Json:
+                _json = EmailTemplateSerializer.Serialize(Document);
+                break;
+            case EmailExportFormat.Html:
+                await RenderHtmlAsync();
+                break;
+            default:
+                _mjml = MjmlFactory(Document);
+                break;
+        }
+    }
+
+    private async Task OnTabChangedAsync(string tabId)
+    {
+        if (string.Equals(_tabId, tabId, StringComparison.Ordinal)) return;
+
+        _tabId = tabId;
+        _mode = tabId switch
+        {
+            JsonTabId => EmailExportFormat.Json,
+            HtmlTabId => EmailExportFormat.Html,
+            _ => EmailExportFormat.Mjml,
+        };
+        _announcement = string.Empty;
+
+        await GenerateAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Renders the HTML export through the replaceable renderer with <c>SubstituteVariables = false</c>: the
+    /// exported file must keep the <c>{{ … }}</c> placeholders the author wrote, because it is a template, not
+    /// an e-mail. A missing registration and a transport failure are explained instead of showing an empty box,
+    /// and both are RETRYABLE: the failure can be a dropped connection, and the user has no other way back.
+    /// </summary>
+    private async Task RenderHtmlAsync()
+    {
+        if (Services.GetService(typeof(IEmailPreviewRenderer)) is not IEmailPreviewRenderer renderer)
+        {
+            _html = string.Empty;
+            _htmlErrors = [];
+            _unavailableReason = UnavailableReason.NotConfigured;
+            _htmlState = HtmlExportState.Unavailable;
+            return;
+        }
+
+        _html = string.Empty;
+        _htmlErrors = [];
+        _htmlState = HtmlExportState.Loading;
+        StateHasChanged();
+
+        var cts = new CancellationTokenSource();
+        _liveRenders.Add(cts);
+        try
+        {
+            var result = await renderer.RenderAsync(new EmailPreviewRequest
+            {
+                Document = Document,
+                SubstituteVariables = false,
+            }, cts.Token);
+
+            switch (result.Status)
+            {
+                case EmailPreviewStatus.Rendered:
+                    _html = result.Html ?? string.Empty;
+                    _htmlErrors = result.Errors ?? [];
+                    _htmlState = HtmlExportState.Rendered;
+                    break;
+                case EmailPreviewStatus.RenderFailed:
+                    _htmlErrors = result.Errors ?? [];
+                    _htmlState = HtmlExportState.Failed;
+                    break;
+                default:
+                    _unavailableReason = UnavailableReason.Unreachable;
+                    _htmlState = HtmlExportState.Unavailable;
+                    break;
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // A newer render (or the close) superseded this one; it owns the state.
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // A transport failure is "unavailable" (retryable), never the author's fault.
+            _unavailableReason = UnavailableReason.Unreachable;
+            _htmlState = HtmlExportState.Unavailable;
+        }
+        finally
+        {
+            _liveRenders.Remove(cts);
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>One tab's content: the code surface, or the HTML tab's status instead of an empty box.</summary>
+    private RenderFragment FormatPanel(EmailExportFormat format) => @<text>
+        <div class="tm-email-export__body">
+            @if (format == EmailExportFormat.Html && _htmlState != HtmlExportState.Rendered)
+            {
+                @HtmlStatus
+            }
+            else
+            {
+                <TmCodeEditor @key="@format"
+                              Id="@("tm-export-" + format.ToString().ToLowerInvariant() + "-code")"
+                              Language="@(TextOf(format).Length > HighlightLimit ? null : EmailExportFile.Language(format))"
+                              Value="@TextOf(format)"
+                              ReadOnly="true"
+                              Rows="18"
+                              Wrap="true"
+                              ShowCopyButton="true"
+                              CopyButtonCopied="OnCopiedAsync"
+                              Class="tm-email-export__code"
+                              data-tm-export-active="@format.ToString().ToLowerInvariant()"
+                              data-tm-export-mjml="@(format == EmailExportFormat.Mjml ? "true" : null)"
+                              data-tm-export-json="@(format == EmailExportFormat.Json ? "true" : null)"
+                              data-tm-export-html="@(format == EmailExportFormat.Html ? "true" : null)" />
+                @if (TextOf(format).Length > HighlightLimit)
+                {
+                    <p class="tm-email-export__status" data-tm-export-large="true">
+                        @Loc["EmailEditor_Export_LargeNoHighlight"]
+                    </p>
+                }
+            }
+        </div>
+    </text>;
+
+    private RenderFragment HtmlStatus => @<text>
+        @if (_htmlState == HtmlExportState.Loading)
+        {
+            <p class="tm-email-export__status" data-tm-export-loading="true" aria-live="polite">
+                <TmSpinner Size="SpinnerSize.Sm" /> @Loc["EmailEditor_Export_Loading"]
+            </p>
+        }
+        else if (_htmlState == HtmlExportState.Unavailable)
+        {
+            <TmAlert Severity="AlertSeverity.Warning" Title="@Loc["EmailEditor_Export_Unavailable"]"
+                     data-tm-export-unavailable="true" data-tm-export-unavailable-reason="@_unavailableReason">
+                <p>@Loc[_unavailableReason == UnavailableReason.NotConfigured
+                    ? "EmailEditor_Export_HtmlNotConfiguredHelp"
+                    : "EmailEditor_Export_HtmlUnreachableHelp"]</p>
+                @if (_unavailableReason == UnavailableReason.Unreachable)
+                {
+                    <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="@IconNames.RefreshCcw"
+                              data-tm-export-retry="true" OnClick="RetryHtmlAsync">@Loc["EmailEditor_Export_Retry"]</TmButton>
+                }
+            </TmAlert>
+        }
+        else if (_htmlState == HtmlExportState.Failed)
+        {
+            <TmAlert Severity="AlertSeverity.Error" Title="@Loc["EmailEditor_Export_Failed"]"
+                     data-tm-export-failed="true">
+                <ul>
+                    @foreach (var error in _htmlErrors.Where(e => e.Severity == RenderErrorSeverity.Error))
+                    {
+                        <li>@Describe(error)</li>
+                    }
+                </ul>
+            </TmAlert>
+        }
+    </text>;
+
+    /// <summary>Retries the server render of the HTML tab (the reason may be a transient transport failure).</summary>
+    private async Task RetryHtmlAsync()
+    {
+        await RenderHtmlAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Announces a CONFIRMED copy. The live region is emptied first (and given a render of its own, so the DOM
+    /// really changes) and then filled: setting the same sentence twice would be a no-op for a screen reader, and
+    /// the second copy would be silent.
+    /// </summary>
+    private async Task OnCopiedAsync()
+    {
+        AnnouncementVersion++;
+        _announcement = string.Empty;
+        StateHasChanged();
+        // Two renders, not one: the first one must reach the DOM with the EMPTY region, otherwise the browser
+        // only sees the sentence that was already there and a second copy is silent.
+        await Task.Yield();
+        _announcement = Loc["EmailEditor_Export_Copied"];
+        StateHasChanged();
+    }
+
+    /// <summary>Downloads the active format through the core helper (file name + MIME + UTF-8 base64).</summary>
+    private async Task DownloadAsync()
+    {
+        var text = CurrentText;
+        if (text.Length == 0) return;
+
+        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(text));
+        await JS.InvokeVoidAsync(
+            "tmDataTable.downloadFile",
+            EmailExportFile.FileName(Document.Name, _mode),
+            EmailExportFile.MimeType(_mode),
+            base64);
+    }
+
+    private async Task CloseAsync()
+    {
+        CancelRenders();
+        await OnClose.InvokeAsync();
+    }
+
+    private void CancelRenders()
+    {
+        foreach (var running in _liveRenders)
+        {
+            running.Cancel();
+        }
+
+        _liveRenders.Clear();
+    }
+
+    /// <summary>
+    /// Localized text of a render diagnostic (the same rule the preview applies): a keyed diagnostic resolves
+    /// through the editor resources, an MJML compiler message is shown as it came.
+    /// </summary>
+    private string Describe(RenderError error)
+    {
+        if (error.Key is null) return error.Message;
+
+        var text = Loc[error.Key];
+        return string.Equals(text, error.Key, StringComparison.Ordinal) ? error.Message : text;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => CancelRenders();
 }

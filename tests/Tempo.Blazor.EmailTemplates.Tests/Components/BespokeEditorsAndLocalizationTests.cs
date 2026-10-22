@@ -104,8 +104,8 @@ public class BespokeEditorsAndLocalizationTests : BunitContext
         var cut = Render<TmEmailImportDialog>(p => p
             .Add(c => c.Show, true).Add(c => c.OnImport, d => imported = d));
 
-        cut.Find("[data-tm-import-mode=\"json\"]").Click();
-        cut.Find("[data-tm-import-input]").Input("{\"subject\":\"S\",\"sections\":[]}");
+        cut.Find("#tab-import-json").Click();
+        cut.Find("[data-tm-import-input] textarea").Input("{\"subject\":\"S\",\"sections\":[]}");
         cut.Find("[data-tm-import-confirm]").Click();
 
         imported.Should().NotBeNull();
@@ -119,8 +119,8 @@ public class BespokeEditorsAndLocalizationTests : BunitContext
         var cut = Render<TmEmailImportDialog>(p => p
             .Add(c => c.Show, true).Add(c => c.OnImport, d => imported = d));
 
-        cut.Find("[data-tm-import-mode=\"json\"]").Click();
-        cut.Find("[data-tm-import-input]").Input("{ not valid json");
+        cut.Find("#tab-import-json").Click();
+        cut.Find("[data-tm-import-input] textarea").Input("{ not valid json");
 
         cut.FindAll("[data-tm-import-errors]").Should().ContainSingle();
         cut.Find("[data-tm-import-confirm]").Click();

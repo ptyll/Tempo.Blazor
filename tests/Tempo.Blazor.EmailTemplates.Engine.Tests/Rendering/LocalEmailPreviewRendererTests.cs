@@ -151,6 +151,78 @@ public class LocalEmailPreviewRendererTests
         result.Html.Should().Contain("1234.5");
     }
 
+    /// <summary>
+    /// Fáze 10 review (security 5): the HTML EXPORT is the same pipeline as the preview with
+    /// <see cref="EmailPreviewRequest.SubstituteVariables"/> = <see langword="false"/>, so it has to be hostile
+    /// to a hostile document for the same reasons — a raw block's <c>script</c>, an imported extra
+    /// <c>background</c>/<c>thumbnails-src</c> and the MJML head attributes travel through it. The assertion is
+    /// on the PARSED DOM, because the words of a payload may legitimately appear inside escaped text.
+    /// </summary>
+    [Fact]
+    public async Task HostileDocument_ExportRequest_HtmlCarriesNoScriptHandlerOrJavascriptUrl()
+    {
+        var document = new Abstractions.Model.EmailTemplateDocument { Name = "Hostile", Subject = "Hi {{ name }}" };
+        var section = new Abstractions.Model.EmailSection();
+        var column = new Abstractions.Model.EmailColumn();
+
+        column.Blocks.Add(new Abstractions.Model.Blocks.EmailRawBlock
+        {
+            Content = "<script>alert(1)</script><iframe src=\"javascript:alert(2)\"></iframe><p>body</p>",
+        });
+
+        var text = new Abstractions.Model.Blocks.EmailTextBlock { Content = "text" };
+        text.ExtraAttributes["background"] = "javascript:alert(3)";
+        text.ExtraAttributes["onclick"] = "alert(4)";
+        text.ExtraAttributes["srcdoc"] = "<script>alert(5)</script>";
+        column.Blocks.Add(text);
+
+        var carousel = new Abstractions.Model.Blocks.EmailCarouselBlock();
+        carousel.Images.Add(new Abstractions.Model.Blocks.EmailCarouselImage
+        {
+            Src = "https://example.com/a.png",
+            ThumbnailsSrc = "javascript:alert(6)",
+        });
+        column.Blocks.Add(carousel);
+
+        section.Columns.Add(column);
+        document.Sections.Add(section);
+
+        var selector = new Abstractions.Model.MjHtmlSelector { Path = ".promo" };
+        selector.Attributes["onclick"] = "alert(7)";
+        selector.Attributes["href"] = "javascript:alert(8)";
+        document.Styles.HtmlAttributes.Add(selector);
+        document.Styles.Attributes.PerTag["mj-text"] = new()
+        {
+            ["color"] = "red;background-image:url(https://tracker)",
+        };
+        document.Styles.Fonts.Add(new Abstractions.Model.EmailFont { Name = "Evil", Href = "javascript:alert(9)" });
+
+        var result = await Local().RenderAsync(new EmailPreviewRequest
+        {
+            Document = document,
+            SubstituteVariables = false,
+        });
+
+        result.Status.Should().Be(EmailPreviewStatus.Rendered);
+        var html = result.Html;
+        html.Should().NotContain("<script");
+        html.Should().NotContain("javascript:");
+        html.Should().NotContain("url(https://tracker)");
+
+        var parsed = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html);
+        parsed.QuerySelectorAll("script, iframe, frame, frameset, object, embed, applet, base, form, portal")
+            .Should().BeEmpty();
+        foreach (var element in parsed.All)
+        {
+            foreach (var attribute in element.Attributes)
+            {
+                attribute.Name.Should().NotStartWith("on");
+                attribute.Name.Should().NotBe("srcdoc");
+                attribute.Value.Should().NotContain("javascript:");
+            }
+        }
+    }
+
     [Fact]
     public async Task ForeignRenderer_CannotKeepTokens_IsRenderFailedAndNeverSilentlySubstituted()
     {

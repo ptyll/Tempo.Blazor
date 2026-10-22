@@ -145,7 +145,8 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
         var compiled = _compiler.Compile(mjmlGuard.Output);
         errors.AddRange(compiled.Errors);
 
-        var (htmlGuard, htmlGuardFailed) = Guard(() => MarkupGuard.ApplyToHtml(compiled.Html), errors);
+        var (htmlGuard, htmlGuardFailed) = Guard(
+            () => MarkupGuard.ApplyToHtml(compiled.Html, PermittedStyleImports(document)), errors);
         ReportGuardFindings(htmlGuard, errors, reportedSchemes, reportedHandlers, reportedElements, auditor);
 
         var textTemplate = _textGenerator.Generate(document);
@@ -180,6 +181,36 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
             Culture = ResolveDocumentCulture(document.Language),
             UseDocumentLanguageCulture = options.UseDocumentLanguageCulture,
         };
+    }
+
+    /// <summary>
+    /// The <c>@import</c> targets the pipeline itself writes into the compiled HTML (Fáze 10 security re-review,
+    /// item 4). The MJML compiler turns every <c>mj-font</c> into a <c>&lt;link&gt;</c> plus an
+    /// <c>@import</c>, always from the href the generator had already passed through the URL allow-list; the
+    /// guard's CSS rule refuses every OTHER <c>@import</c> (a raw block's stylesheet, an author's <c>mj-style</c>),
+    /// so the pipeline's own font imports are named here explicitly — never matched by a pattern.
+    /// </summary>
+    private static IReadOnlyCollection<string> PermittedStyleImports(EmailTemplateDocument document)
+    {
+        if (document.Styles.Fonts.Count == 0)
+        {
+            return [];
+        }
+
+        var imports = new List<string>(document.Styles.Fonts.Count);
+        foreach (var font in document.Styles.Fonts)
+        {
+            // The generator emits mj-font only when name AND href are usable, so a nameless entry imported
+            // nothing and is not permitted either.
+            if (string.IsNullOrEmpty(font.Name) || string.IsNullOrEmpty(font.Href))
+            {
+                continue;
+            }
+
+            imports.Add(EmailUrlPolicy.IsAllowed(font.Href) ? font.Href : EmailUrlPolicy.BlockedUrlPlaceholder);
+        }
+
+        return imports;
     }
 
     /// <summary>
@@ -256,7 +287,7 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
         HashSet<string> reportedSchemes,
         TemplateSecurityAuditor auditor)
     {
-        foreach (var scheme in ModelLinkScanner.BlockedTableCellSchemes(document))
+        foreach (var scheme in ModelLinkScanner.BlockedModelSchemes(document))
         {
             if (!reportedSchemes.Add(scheme))
             {

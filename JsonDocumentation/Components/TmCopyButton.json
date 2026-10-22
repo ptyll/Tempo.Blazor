@@ -31,6 +31,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Renders the localized Copy/Copied label next to the icon. Defaults to false (icon only)."
+    },
+    {
+      "name": "OnCopied",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after the text was written to the clipboard (never when the clipboard refuses the write), so a host can announce the confirmation in its own live region."
     }
   ],
   "cssClasses": [

@@ -96,12 +96,32 @@ public partial class TmEmailTemplateEditor
         StateHasChanged();
     }
 
-    private Task OnValidationNavigateAsync(Guid? id)
+    /// <summary>
+    /// “Go to” of a validation finding (Fáze 10 review, UX 10): the dialog closes, the target is selected and the
+    /// canvas moves to it through the SAME focus path every structural change uses (a focused element is scrolled
+    /// into view by the browser), and on a phone the Properties sheet follows the selection.
+    /// <para>
+    /// A finding whose path is the DOCUMENT has no block to jump to — its target is the e-mail settings, i.e. the
+    /// inspector with no block selected. Without that arm the dialog simply closed and the user was left on a
+    /// canvas with nothing selected.
+    /// </para>
+    /// </summary>
+    private async Task OnValidationNavigateAsync(Guid? id)
     {
-        _selectedId = id;
         _showValidation = false;
+
+        if (id is { } target && target == _document.Id)
+        {
+            _selectedId = null;
+            await ShowMobilePanelAsync(EditorShellPanel.Right);
+            StateHasChanged();
+            return;
+        }
+
+        _selectedId = id;
+        _focusBlockAfterRender = id;
+        await ShowMobilePanelAsync(EditorShellPanel.Right);
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     private Task OnPropertyChangeAsync() => ReadOnly ? Task.CompletedTask : CommitAsync(coalesceKey: "props");

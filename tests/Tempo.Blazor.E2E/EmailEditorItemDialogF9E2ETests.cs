@@ -107,8 +107,8 @@ public sealed class EmailEditorItemDialogF9E2ETests : EmailTemplateE2ETestBase
     private static async Task<string> ExportMjmlAsync(IPage page)
     {
         await page.ClickAsync("[data-tm-mjml-btn]");
-        await page.WaitForSelectorAsync("[data-tm-export-mjml]", new() { Timeout = 15000 });
-        var mjml = await page.InputValueAsync("[data-tm-export-mjml]");
+        await page.WaitForSelectorAsync("#tm-export-mjml-code", new() { Timeout = 15000 });
+        var mjml = await page.InputValueAsync("#tm-export-mjml-code");
         await page.Locator(".tm-modal-close").First.ClickAsync();
         await page.WaitForTimeoutAsync(200);
         return mjml;

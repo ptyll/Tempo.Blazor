@@ -549,7 +549,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
 
         await page.Locator("[data-tm-import-btn]").ClickAsync();
-        await page.WaitForSelectorAsync("[data-tm-import-input]", new() { Timeout = 15000 });
+        await page.WaitForSelectorAsync("#tm-import-input", new() { Timeout = 15000 });
 
         const string mjml = """
             <mjml><mj-body><mj-section><mj-column>
@@ -557,7 +557,7 @@ public sealed class EmailTemplatesE2ETests : EmailTemplateE2ETestBase
               <mj-button href="https://example.com">Imported CTA</mj-button>
             </mj-column></mj-section></mj-body></mjml>
             """;
-        await page.Locator("[data-tm-import-input]").FillAsync(mjml);
+        await page.Locator("#tm-import-input").FillAsync(mjml);
         await page.WaitForSelectorAsync("[data-tm-import-summary]", new() { Timeout = 15000 });
         await SaveNamedScreenshotAsync(page, "11-import.png");
 

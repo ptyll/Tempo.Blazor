@@ -2861,6 +2861,12 @@
               "description": "Disables the button."
             },
             {
+              "name": "OnCopied",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised after the text was written to the clipboard (never when the clipboard refuses the write), so a host can announce the confirmation in its own live region."
+            },
+            {
               "name": "ShowLabel",
               "type": "bool",
               "isRequired": false,
@@ -14991,6 +14997,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class(es) applied to the root container."
+            },
+            {
+              "name": "CopyButtonCopied",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised after the copy button wrote the value to the clipboard (never when the clipboard refuses it), so a host can confirm the copy in its own live region."
             },
             {
               "name": "Disabled",
@@ -105268,10 +105280,22 @@
           "documentationStatus": "merged",
           "members": [
             {
+              "name": "BlockedLink",
+              "kind": "Field",
+              "type": "string",
+              "description": "Any other block's link (button, image, navbar link, social element, carousel image, hero/wrapper/section background, mj-font) used a scheme outside the URL allow-list (§3.7a). Same contract as BlockedTableLink: the value survives for editing and every emission path fail-closes it to #. The message carries the refused SCHEME, never the URL."
+            },
+            {
               "name": "BlockedTableLink",
               "kind": "Field",
               "type": "string",
               "description": "A table cell's link used a scheme outside the URL allow-list (§3.7a). The value is kept in the model so the editor can show and fix it; every emission path (generator, text version, renderer) fail-closes it."
+            },
+            {
+              "name": "DroppedAttribute",
+              "kind": "Field",
+              "type": "string",
+              "description": "An imported attribute was dropped because the pipeline may never write it: an event handler (on*), style, srcdoc, an attribute this MJML component does not know, a value that would open a CSS declaration of its own (x;background:url(…)) or a URL with a refused scheme. The detail is the TAG and the ATTRIBUTE NAME, never the value (which may carry crafted markup)."
             },
             {
               "name": "ElementWrapped",
@@ -105296,6 +105320,12 @@
               "kind": "Field",
               "type": "string",
               "description": "The input is larger than MaxInputBytes (UTF-8 bytes)."
+            },
+            {
+              "name": "InvalidColor",
+              "kind": "Field",
+              "type": "string",
+              "description": "A colour value on a block or container is not a CSS colour, so the message cannot carry it (it is written into a style). The message carries the PROPERTY name, never the value."
             },
             {
               "name": "InvalidTableColor",
@@ -108663,6 +108693,12 @@
               "description": "Raw markup carried an event-handler attribute (on*) or srcdoc, which was removed because a variable inside it would run as script. The editor package carries the resource entry."
             },
             {
+              "name": "InvalidAttributeValue",
+              "kind": "Field",
+              "type": "string",
+              "description": "An attribute value the message cannot carry was dropped from the generated markup: a value that would open a declaration of its own (x;background:url(…) in a padding, a colour or a font stack), which the MJML compiler copies verbatim into the element's inline style. The rest of the element renders normally. The attribute NAME is reported, never the value. The editor package carries the resource entry."
+            },
+            {
               "name": "InvalidTableCellColor",
               "kind": "Field",
               "type": "string",
@@ -108791,6 +108827,54 @@
                 {
                   "name": "document",
                   "type": "EmailTemplateDocument"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "itemName": "ValidationKeyShape",
+          "kind": "Class",
+          "category": "Rendering",
+          "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+          "description": "The shape of a validation rule's presentation keys: every rule key is one sentence, and the validation dialog shows it as a short title plus a description that says what it means and how to fix it. TitleOf/DescriptionOf build the two keys (for example validation.button.href_missing_Title and _Description) so a host never concatenates the suffix itself.",
+          "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/ValidationKeyShape.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "DescriptionSuffix",
+              "kind": "Field",
+              "type": "string",
+              "description": "The suffix of a rule's description key: validation.button.href_missing_Description."
+            },
+            {
+              "name": "TitleSuffix",
+              "kind": "Field",
+              "type": "string",
+              "description": "The suffix of a rule's title key: validation.button.href_missing_Title."
+            },
+            {
+              "name": "DescriptionOf",
+              "kind": "Method",
+              "type": "string",
+              "description": "The description key of ruleKey: what the finding means and how to fix it.",
+              "parameters": [
+                {
+                  "name": "ruleKey",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "TitleOf",
+              "kind": "Method",
+              "type": "string",
+              "description": "The title key of ruleKey: a short name for the finding.",
+              "parameters": [
+                {
+                  "name": "ruleKey",
+                  "type": "string"
                 }
               ]
             }
@@ -109426,12 +109510,12 @@
         }
       ],
       "summary": {
-        "itemCount": 120,
-        "manualItemCount": 120,
-        "generatedItemCount": 120,
+        "itemCount": 121,
+        "manualItemCount": 121,
+        "generatedItemCount": 121,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 120
+        "publicApiTypeCount": 121
       }
     },
     {
@@ -110018,6 +110102,13 @@
               "editorRequired": true
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders in. Auto measures the viewport, so the dialog becomes the core sheet on a phone (F2); the editor passes the layout it already resolved, which keeps the dialog in step with the editor and makes the sheet presentation testable without a DOM."
+            },
+            {
               "name": "OnClose",
               "type": "EventCallback",
               "isRequired": false,
@@ -110081,6 +110172,19 @@
             "@using Tempo.Blazor.EmailTemplates.Components"
           ],
           "parameters": [
+            {
+              "name": "ImportOptions",
+              "type": "EmailImportOptions?",
+              "isRequired": false,
+              "description": "The limits applied to the input (D13): MaxInputBytes is measured in UTF-8 bytes and bounds both the pasted text and the read file; the section/block/depth limits go to the importer and the JSON deserializer. null means the contract defaults (5 MB, 200 sections, 2000 blocks, nesting 8)."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders in — the editor's already resolved mode, so a phone gets the core sheet with the sticky footer (F2) without a second measurement."
+            },
             {
               "name": "OnClose",
               "type": "EventCallback",
@@ -110686,6 +110790,12 @@
               "description": "Client-side limits (Accept, MaxBytes) applied to a picked image before OnImageUpload is called. null uses the defaults (5 MB, images only)."
             },
             {
+              "name": "ImportOptions",
+              "type": "EmailImportOptions?",
+              "isRequired": false,
+              "description": "The limits every entry point applies to a template document (D13): the import dialog measures the input against MaxInputBytes (UTF-8 bytes) and passes the section/block/depth limits to the importer and the JSON deserializer; the validation panel reports the same limits. null (default) means the contract values (5 MB, 200 sections, 2000 blocks, nesting 8)."
+            },
+            {
               "name": "InitialMode",
               "type": "TmLayoutMode",
               "isRequired": false,
@@ -110949,6 +111059,12 @@
               "isRequired": true,
               "description": "The document to validate.",
               "editorRequired": true
+            },
+            {
+              "name": "ImportOptions",
+              "type": "EmailImportOptions?",
+              "isRequired": false,
+              "description": "The limits the limit rules are measured against; the editor passes the same instance it gave the import dialog, so the panel and the import cannot disagree about what 'too big' means. null means the contract defaults."
             },
             {
               "name": "OnNavigate",
@@ -118856,10 +118972,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3284,
-    "manualItemCount": 3284,
+    "itemCount": 3285,
+    "manualItemCount": 3285,
     "generatedOnlyItemCount": 0,
     "componentCount": 479,
-    "publicApiTypeCount": 2752
+    "publicApiTypeCount": 2753
   }
 }

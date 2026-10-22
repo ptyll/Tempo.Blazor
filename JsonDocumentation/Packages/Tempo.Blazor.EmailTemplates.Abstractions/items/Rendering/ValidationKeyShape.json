@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Rendering",
+  "namespace": "Tempo.Blazor.EmailTemplates.Abstractions.Rendering",
+  "description": "The shape of a validation rule's presentation keys: every rule key is one sentence, and the validation dialog shows it as a short title plus a description that says what it means and how to fix it. TitleOf/DescriptionOf build the two keys (for example validation.button.href_missing_Title and _Description) so a host never concatenates the suffix itself.",
+  "packageId": "Tempo.Blazor.EmailTemplates.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates.Abstractions/Rendering/ValidationKeyShape.cs",
+  "documentationStatus": "generated",
+  "itemName": "ValidationKeyShape"
+}
