@@ -15,6 +15,13 @@
     overflow-y: auto;
 }
 
+/* The search box is a FILTER over the list below it, not a second heading: it keeps a token gap of its
+   own so the first group header does not read as part of the field. ::deep because the wrapper belongs to
+   the child TmSearchInput (this file's scope attribute stops at our own .tm-email-variables root). */
+.tm-email-variables ::deep .tm-input-wrapper {
+    margin-block-end: var(--tm-space-2);
+}
+
 .tm-email-variables__group {
     display: flex;
     flex-direction: column;

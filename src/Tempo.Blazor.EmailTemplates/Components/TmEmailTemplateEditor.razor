@@ -260,7 +260,10 @@
                 <div class="tm-email-editor__toolbar-group" data-tm-group="help">@HelpButtons</div>
                 @if (ToolbarEnd is not null)
                 {
-                    <div class="tm-email-editor__toolbar-group" data-tm-toolbar-end>@ToolbarEnd</div>
+                    @* The host's own fragment cannot be re-wired from here, so the close rides the bubble:
+                       a host command dismisses the overflow the same way the built-in ones do. *@
+                    <div class="tm-email-editor__toolbar-group" data-tm-toolbar-end
+                         @onclick="CloseMobileOverflowAsync">@ToolbarEnd</div>
                 }
             </div>
         </ChildContent>
@@ -291,27 +294,27 @@
     private RenderFragment ValidateButton => @<TmToolbarButton Icon="check-circle" Text="@Loc["EmailEditor_Toolbar_Validate"]"
                                                                Tooltip="@Loc["EmailEditor_Toolbar_Validate"]"
                                                                Priority="ToolbarButtonPriority.Primary"
-                                                               OnClick="() => _showValidation = true" data-tm-validate-btn="true" />;
+                                                               OnClick="OpenValidationAsync" data-tm-validate-btn="true" />;
 
     private RenderFragment FileButtons => @<text>
         <TmToolbarButton Icon="upload" Text="@Loc["EmailEditor_Toolbar_Import"]"
                          Tooltip="@Loc["EmailEditor_Toolbar_Import"]"
                          Priority="ToolbarButtonPriority.Secondary"
                          Disabled="@ReadOnly"
-                         OnClick="() => _showImport = true" data-tm-import-btn="true" />
+                         OnClick="OpenImportAsync" data-tm-import-btn="true" />
         @* EM5 (2.10.0): the visible label is "Export" (the action exports MJML/JSON), the
            data-tm-mjml-btn hook stays because hosts and E2E select the action by it. *@
         <TmToolbarButton Icon="download" Text="@Loc["EmailEditor_Toolbar_Export"]"
                          Tooltip="@Loc["EmailEditor_Toolbar_Export"]"
                          Priority="ToolbarButtonPriority.Secondary"
-                         OnClick="() => _showExport = true" data-tm-mjml-btn="true" />
+                         OnClick="OpenExportAsync" data-tm-mjml-btn="true" />
     </text>;
 
     private RenderFragment HelpButtons => @<text>
         <TmToolbarButton Icon="help-circle" Text="@Loc["EmailEditor_Toolbar_Help"]"
                          Tooltip="@Loc["EmailEditor_Toolbar_Help"]"
                          Priority="ToolbarButtonPriority.Secondary"
-                         OnClick="() => _showShortcuts = true" data-tm-help-btn="true" />
+                         OnClick="OpenShortcutsAsync" data-tm-help-btn="true" />
     </text>;
 
     private RenderFragment ReadOnlyBadge => @<div class="tm-email-editor__readonly" data-tm-readonly-badge

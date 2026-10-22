@@ -1,52 +1,145 @@
 .tm-demo-email-send {
-    padding: var(--tm-space-4, 1rem);
+    padding: var(--tm-space-4);
     max-width: 1280px;
     margin: 0 auto;
 }
 
 .tm-demo-email-send__bar {
     display: flex;
-    align-items: center;
-    gap: var(--tm-space-3, 0.75rem);
-    margin-bottom: var(--tm-space-4, 1rem);
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    margin-bottom: var(--tm-space-4);
 }
 
-.tm-demo-email-send__bar h1 {
-    font-size: var(--tm-font-size-xl, 1.25rem);
-    font-weight: var(--tm-font-weight-semibold, 600);
-    color: var(--tm-text-primary, #1f2933);
+.tm-demo-email-send__heading h1 {
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
     margin: 0;
+}
+
+.tm-demo-email-send__heading p {
+    margin: var(--tm-space-1) 0 0 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
 }
 
 .tm-demo-email-send__layout {
     display: grid;
-    grid-template-columns: minmax(320px, 420px) 1fr;
-    gap: var(--tm-space-6, 1.5rem);
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    gap: var(--tm-space-6);
     align-items: start;
 }
 
 .tm-demo-email-send__form {
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-4, 1rem);
-    padding: var(--tm-space-4, 1rem);
-    background: var(--tm-bg-surface, #fff);
-    border: 1px solid var(--tm-color-border, #e4e7eb);
-    border-radius: var(--tm-radius-lg, 0.75rem);
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg);
+}
+
+.tm-demo-email-send__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin-bottom: var(--tm-space-3);
+}
+
+.tm-demo-email-send__actions {
+    display: flex;
+    justify-content: stretch;
+}
+
+.tm-demo-email-send__actions > * {
+    width: 100%;
+}
+
+/* The primary action and the reason under it are one block: the hint belongs to the button it explains. */
+.tm-demo-email-send__submit {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    inline-size: 100%;
+}
+
+/* ::deep: the class rides on the CHILD TmButton's root, which does not carry this file's scope attribute. */
+.tm-demo-email-send__submit ::deep .tm-demo-email-send__submit-button {
+    inline-size: 100%;
+}
+
+.tm-demo-email-send__hint {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
 }
 
 .tm-demo-email-send__preview {
     position: sticky;
-    top: var(--tm-space-4, 1rem);
-    border: 1px solid var(--tm-color-border, #e4e7eb);
-    border-radius: var(--tm-radius-lg, 0.75rem);
-    overflow: hidden;
-    background: var(--tm-bg-muted, #f5f7fa);
+    top: var(--tm-space-4);
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg);
+    background: var(--tm-bg-muted);
     min-height: 480px;
 }
 
-@media (max-width: 900px) {
+.tm-demo-email-send__preview-title {
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    margin: 0 0 var(--tm-space-3) 0;
+}
+
+/* Below the reference's two-column width (1280) the form and the preview stack in ONE column: a 1024 px
+   tablet kept the two columns and squeezed both (the preview paper was narrower than the message), and the
+   sticky preview only makes sense while it has a column of its own. */
+@media (width < 1280px) {
     .tm-demo-email-send__layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-demo-email-send__preview {
+        position: static;
+    }
+}
+
+/* Phone: the form comes FIRST and the primary action sticks to the bottom edge while the user scrolls the
+   fields. The sticky bar sits inside the form column, so it never covers the preview on a wide screen. */
+@media (width < 640px) {
+    .tm-demo-email-send {
+        padding: var(--tm-space-3);
+    }
+
+    .tm-demo-email-send__bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tm-demo-email-send__layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--tm-space-4);
+    }
+
+    .tm-demo-email-send__form {
+        order: 0;
+    }
+
+    .tm-demo-email-send__preview {
+        order: 1;
+        position: static;
+        min-height: 0;
+    }
+
+    .tm-demo-email-send__actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        padding-block: var(--tm-space-2);
+        padding-block-end: max(var(--tm-space-2), env(safe-area-inset-bottom));
+        background: var(--tm-bg-surface);
+        border-top: 1px solid var(--tm-color-border);
     }
 }

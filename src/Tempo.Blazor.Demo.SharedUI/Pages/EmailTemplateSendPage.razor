@@ -1,14 +1,24 @@
 @page "/email-templates/send/{Id:guid}"
 @using System.Text.Json
 @inject IEmailTemplateApiClient Api
+@inject ITmLocalizer Loc
 @inject NavigationManager Nav
 
-<PageTitle>Send template</PageTitle>
+<PageTitle>@Loc["TmDemo_EmailTemplates_Send_PageTitle"]</PageTitle>
 
+@* Fáze 11 demo: the send page as the reference draws it — a back affordance, the template's name and a one-line
+   explanation, then TWO named sections (Recipients / Variable values) beside the message preview. The preview is
+   the plain message preview (no sample-data editor, no HTML/Text toggle: this page IS the sample data). On a
+   phone the form comes first and "Send e-mail" sticks to the bottom edge.
+   Every string comes from the demo's DemoResources tables (TmDemo_EmailTemplates_Send_*) — the page shipped
+   hardcoded English copy in the first pass, including the reason under a disabled Send. *@
 <div class="tm-demo-email-send" data-tm-email-send-page>
     <div class="tm-demo-email-send__bar">
-        <TmButton Variant="ButtonVariant.Ghost" Icon="arrow-left" OnClick="Back" data-tm-back>Back</TmButton>
-        <h1>@(_detail?.Name ?? "Send")</h1>
+        <TmButton Variant="ButtonVariant.Ghost" Icon="arrow-left" OnClick="Back" data-tm-back>@Loc["TmDemo_EmailTemplates_Send_Back"]</TmButton>
+        <div class="tm-demo-email-send__heading">
+            <h1>@(_detail?.Name ?? Loc["TmDemo_EmailTemplates_Send_TitleFallback"])</h1>
+            <p>@Loc["TmDemo_EmailTemplates_Send_Subtitle"]</p>
+        </div>
     </div>
 
     @if (_loading)
@@ -17,35 +27,64 @@
     }
     else if (_document is null)
     {
-        <TmEmptyState Icon="alert-triangle" Title="Template not found" />
+        <TmEmptyState Icon="alert-triangle" Title="@Loc["TmDemo_EmailTemplates_Send_NotFound"]" />
     }
     else
     {
         <div class="tm-demo-email-send__layout">
-            <div class="tm-demo-email-send__form">
-                <TmTextInput Label="To (comma-separated)" Value="@_to" ValueChanged="v => { _to = v; }" data-tm-to />
-                <TmTextInput Label="Cc (comma-separated)" Value="@_cc" ValueChanged="v => { _cc = v; }" data-tm-cc />
+            <div class="tm-demo-email-send__form" data-tm-send-form>
+                @* TmFormSection owns its own root element and does not splat attributes, so the test hook
+                   lives on a wrapper of OURS (a parameter name it does not declare is a compile error). *@
+                <div data-tm-send-section="recipients">
+                    <TmFormSection Title="@Loc["TmDemo_EmailTemplates_Send_Recipients"]">
+                        <TmTextInput Label="@Loc["TmDemo_EmailTemplates_Send_To"]" Value="@_to" ValueChanged="v => { _to = v; }" data-tm-to />
+                        <TmTextInput Label="@Loc["TmDemo_EmailTemplates_Send_Cc"]" Value="@_cc" ValueChanged="v => { _cc = v; }" data-tm-cc />
+                    </TmFormSection>
+                </div>
 
-                @foreach (var variable in _scalars)
-                {
-                    var path = variable;
-                    <TmTextInput Label="@path" Value="@GetScalar(path)"
-                                 ValueChanged="v => SetScalar(path, v)" data-tm-var="@path" />
-                }
-                @foreach (var variable in _collections)
-                {
-                    var path = variable;
-                    <TmTextArea Label="@($"{path} (JSON array)")" Rows="4" Value="@GetCollection(path)"
-                                ValueChanged="v => SetCollection(path, v)" data-tm-var-collection="@path" />
-                }
+                <div data-tm-send-section="variables">
+                <TmFormSection Title="@Loc["TmDemo_EmailTemplates_Send_VariableValues"]">
+                    @foreach (var variable in _scalars)
+                    {
+                        var path = variable;
+                        @* The field LABEL is the host's description of what the value means (the token path
+                           is only the fallback); data-tm-var-label carries it for the tests, so no second
+                           copy of the same sentence is painted under the input. *@
+                        <div class="tm-demo-email-send__field" data-tm-var-field="@path"
+                             data-tm-var-label="@Describe(path)">
+                            <TmTextInput Label="@Describe(path)" Value="@GetScalar(path)"
+                                         ValueChanged="v => SetScalar(path, v)" data-tm-var="@path" />
+                        </div>
+                    }
+                    @foreach (var variable in _collections)
+                    {
+                        var path = variable;
+                        <TmTextArea Label="@Loc["TmDemo_EmailTemplates_Send_CollectionFormat", Describe(path)]" Rows="4" Value="@GetCollection(path)"
+                                    ValueChanged="v => SetCollection(path, v)" data-tm-var-collection="@path" />
+                    }
+                </TmFormSection>
+                </div>
 
-                <TmButton Variant="ButtonVariant.Primary" Icon="send" OnClick="SendAsync"
-                          Disabled="@(_sending || !HasRecipients)" data-tm-send-submit>Send email</TmButton>
+                <div class="tm-demo-email-send__actions" data-tm-send-actions>
+                    <div class="tm-demo-email-send__submit">
+                        <TmButton Variant="ButtonVariant.Primary" Icon="send" OnClick="SendAsync"
+                                  Class="tm-demo-email-send__submit-button"
+                                  Disabled="@(_sending || !HasRecipients)" data-tm-send-submit>@Loc["TmDemo_EmailTemplates_Send_Submit"]</TmButton>
+                        @* A disabled primary action says WHY it is disabled, right where the user looks. *@
+                        @if (!_sending && !HasRecipients)
+                        {
+                            <span class="tm-demo-email-send__hint" data-tm-send-hint>
+                                @Loc["TmDemo_EmailTemplates_Send_RecipientRequired"]
+                            </span>
+                        }
+                    </div>
+                </div>
 
                 @if (_result is { Success: true })
                 {
                     <TmAlert Severity="AlertSeverity.Success" data-tm-send-success>
-                        Email sent. <a href="http://localhost:5000" target="_blank">Check it in smtp4dev</a>.
+                        @Loc["TmDemo_EmailTemplates_Send_Sent"]
+                        <a href="http://localhost:5000" target="_blank">@Loc["TmDemo_EmailTemplates_Send_SentLink"]</a>
                     </TmAlert>
                 }
                 else if (_result is { Success: false })
@@ -56,9 +95,10 @@
                 }
             </div>
 
-            <div class="tm-demo-email-send__preview">
+            <div class="tm-demo-email-send__preview" data-tm-send-preview>
+                <h2 class="tm-demo-email-send__preview-title">@Loc["TmDemo_EmailTemplates_Send_PreviewTitle"]</h2>
                 <TmEmailTemplatePreview Document="_document" VariablesJson="@BuildVariablesJson()"
-                                       ShowSampleDataEditor="false" />
+                                       ShowSampleDataEditor="false" ShowViewToggle="false" />
             </div>
         </div>
     }
@@ -67,6 +107,20 @@
 @code {
     /// <summary>The template id from the route.</summary>
     [Parameter] public Guid Id { get; set; }
+
+    /// <summary>
+    /// The host's catalogue of human descriptions (Fáze 7A/11): the same metadata the editor's variable picker
+    /// shows. A path that is not in the catalogue keeps its token as the label — never a missing string.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> Descriptions = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["first_name"] = "Recipient's first name",
+        ["newsletter_title"] = "Newsletter title",
+        ["articles"] = "Articles",
+        ["order_id"] = "Order number",
+        ["is_paid"] = "Order is paid",
+        ["customer_name"] = "Customer name",
+    };
 
     private EmailTemplateDetailDto? _detail;
     private EmailTemplateDocument? _document;
@@ -82,6 +136,10 @@
     private readonly Dictionary<string, string> _collectionValues = new();
 
     private bool HasRecipients => SplitAddresses(_to).Count > 0;
+
+    /// <summary>The label a user reads: the host's description, or the token path when the host has none.</summary>
+    private static string Describe(string path)
+        => Descriptions.TryGetValue(path, out var description) ? description : path;
 
     protected override async Task OnParametersSetAsync()
     {

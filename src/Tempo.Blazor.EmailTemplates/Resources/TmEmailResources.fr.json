@@ -475,5 +475,5 @@
   "EmailEditor_Export_LargeNoHighlight": "Le fichier est volumineux ; la coloration syntaxique est désactivée.",
   "EmailEditor_Import_ReplaceNote": "L’import remplace le contenu actuel du modèle. Vous pouvez l’annuler avec Annuler (Ctrl+Z).",
   "EmailEditor_Import_InputTooLarge": "Le code collé dépasse {0}. Raccourcissez ou divisez le modèle.",
-  "EmailEditor_Validation_Subtitle": "Vérifie les problèmes courants du modèle. « Aller à » vous amène à l’endroit concerné."
+  "EmailEditor_Validation_Subtitle": "Vérifie les problèmes courants du modèle. Utilisez « Aller à » pour atteindre l’endroit."
 }

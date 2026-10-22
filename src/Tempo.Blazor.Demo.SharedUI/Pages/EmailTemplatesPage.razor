@@ -1,16 +1,35 @@
 @page "/email-templates"
+@using System.Globalization
 @using Tempo.Blazor.EmailTemplates.Abstractions.Layout
 @inject IEmailTemplateApiClient Api
+@inject ITmLocalizer Loc
 @inject NavigationManager Nav
 
-<PageTitle>Email templates</PageTitle>
+<PageTitle>@Loc["TmDemo_EmailTemplates_PageTitle"]</PageTitle>
 
+@* Fáze 11 demo: the library as the reference draws it — a titled page with a client-side search, a 3/2/1 card
+   grid whose cards carry a HUMAN language badge and four actions, and a destructive delete confirmation with
+   the icon and a phone sheet. The card's secondary actions fold into a "⋮" menu on a phone so the primary
+   action keeps its room; the menu and the buttons call the same handlers.
+   Every string comes from the demo's own DemoResources tables (TmDemo_EmailTemplates_*) through the demo
+   localizer — the list page shipped hardcoded English copy in the first pass. *@
 <div class="tm-demo-email-templates" data-tm-email-templates-page>
     <div class="tm-demo-email-templates__header">
-        <h1>Email templates</h1>
-        <TmButton Variant="ButtonVariant.Primary" Icon="plus" OnClick="CreateNewAsync" data-tm-new-template>
-            New template
-        </TmButton>
+        <div class="tm-demo-email-templates__heading">
+            <h1>@Loc["TmDemo_EmailTemplates_Title"]</h1>
+            <p class="tm-demo-email-templates__subtitle">
+                @Loc["TmDemo_EmailTemplates_Subtitle"]
+            </p>
+        </div>
+        <div class="tm-demo-email-templates__tools">
+            <div class="tm-demo-email-templates__search" data-tm-list-search>
+                <TmSearchInput Value="@_search" ValueChanged="OnSearchChanged"
+                               Placeholder="@Loc["TmDemo_EmailTemplates_Search"]" />
+            </div>
+            <TmButton Variant="ButtonVariant.Primary" Icon="plus" OnClick="CreateNewAsync" data-tm-new-template>
+                @Loc["TmDemo_EmailTemplates_New"]
+            </TmButton>
+        </div>
     </div>
 
     @if (_loading)
@@ -19,28 +38,78 @@
     }
     else if (_templates.Count == 0)
     {
-        <TmEmptyState Icon="mail" Title="No templates yet" Description="Create your first email template." />
+        <TmEmptyState Icon="mail" Title="@Loc["TmDemo_EmailTemplates_EmptyTitle"]"
+                      Description="@Loc["TmDemo_EmailTemplates_EmptyDescription"]" />
+    }
+    else if (Filtered.Count == 0)
+    {
+        @* A search that matches nothing is not an empty library: the state names the term the user typed. *@
+        <div class="tm-demo-email-templates__no-match" data-tm-list-no-match>
+            <TmEmptyState Icon="search" Title="@Loc["TmDemo_EmailTemplates_NoMatchTitle"]"
+                          Description="@Loc["TmDemo_EmailTemplates_NoMatchDescription", _search]" />
+        </div>
     }
     else
     {
         <div class="tm-demo-email-templates__grid">
-            @foreach (var template in _templates)
+            @foreach (var template in Filtered)
             {
-                <div class="tm-demo-email-templates__card" data-tm-template-card data-tm-template-id="@template.Id">
+                var id = template.Id;
+                <div class="tm-demo-email-templates__card" data-tm-template-card data-tm-template-id="@id">
                     <div class="tm-demo-email-templates__card-body">
                         <h3>@template.Name</h3>
-                        <p>@template.Subject</p>
-                        <span class="tm-demo-email-templates__lang">@template.Language</span>
+                        <p>@Loc["TmDemo_EmailTemplates_Subject", template.Subject]</p>
+                        <TmBadge Variant="BadgeVariant.Default" data-tm-card-language>@LanguageName(template.Language)</TmBadge>
                     </div>
                     <div class="tm-demo-email-templates__card-actions">
-                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="edit"
-                                  OnClick="() => Open(template.Id)" data-tm-open>Edit</TmButton>
-                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="send"
-                                  OnClick="() => Send(template.Id)" data-tm-send>Send</TmButton>
-                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="copy"
-                                  OnClick="() => DuplicateAsync(template.Id)" data-tm-duplicate>Duplicate</TmButton>
-                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger" Icon="trash-2"
-                                  OnClick="() => AskDelete(template.Id)" data-tm-delete>Delete</TmButton>
+                        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary" Icon="edit"
+                                  OnClick="() => Open(id)" data-tm-open>@Loc["TmDemo_EmailTemplates_Edit"]</TmButton>
+                        <div class="tm-demo-email-templates__secondary-actions">
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="send"
+                                      OnClick="() => Send(id)" data-tm-send>@Loc["TmDemo_EmailTemplates_Send"]</TmButton>
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Icon="copy"
+                                      OnClick="() => DuplicateAsync(id)" data-tm-duplicate>@Loc["TmDemo_EmailTemplates_Duplicate"]</TmButton>
+                            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" Class="tm-demo-email-templates__delete" Icon="trash-2"
+                                      OnClick="() => AskDelete(id)" data-tm-delete>@Loc["TmDemo_EmailTemplates_Delete"]</TmButton>
+                        </div>
+                        @* Phone only: the same three actions, finger-sized and named, behind one "⋮".
+                           Plain Blazor (an aria-expanded trigger plus a role=menu panel) rather than a
+                           popover/dropdown primitive: the trigger needs its own accessible name and a
+                           nested interactive element inside another one is invalid markup. Two ways out —
+                           Escape (focus returns to the trigger) and a click outside (the backdrop) — so a
+                           menu is never a trap. The key handler sits on the WRAPPER: nothing moves the
+                           focus into the panel when it opens, so an Escape right after the click arrives
+                           at the TRIGGER and a handler on the panel alone would never see it. *@
+                        <div class="tm-demo-email-templates__menu" @onkeydown="OnMenuKeyDownAsync">
+                            <button type="button" class="tm-demo-email-templates__menu-trigger"
+                                    data-tm-card-menu aria-label="@Loc["TmDemo_EmailTemplates_MoreActions"]"
+                                    aria-haspopup="menu"
+                                    aria-expanded="@(_openMenuId == id ? "true" : "false")"
+                                    @ref="_menuTriggerRefs[id]"
+                                    @onclick="() => ToggleMenu(id)">
+                                <TmIcon Name="more-vertical" Size="IconSize.Sm" />
+                            </button>
+                            @if (_openMenuId == id)
+                            {
+                                <div class="tm-demo-email-templates__menu-backdrop" data-tm-card-menu-backdrop
+                                     @onclick="CloseMenuAsync"></div>
+                                <div class="tm-demo-email-templates__menu-panel" role="menu" data-tm-card-menu-panel>
+                                    <button type="button" role="menuitem" data-tm-card-menu-send
+                                            @onclick="() => { _openMenuId = null; Send(id); }">
+                                        <TmIcon Name="send" Size="IconSize.Sm" /> @Loc["TmDemo_EmailTemplates_Send"]
+                                    </button>
+                                    <button type="button" role="menuitem" data-tm-card-menu-duplicate
+                                            @onclick="() => { _openMenuId = null; _ = DuplicateAsync(id); }">
+                                        <TmIcon Name="copy" Size="IconSize.Sm" /> @Loc["TmDemo_EmailTemplates_Duplicate"]
+                                    </button>
+                                    <button type="button" role="menuitem" class="tm-demo-email-templates__menu-danger"
+                                            data-tm-card-menu-delete
+                                            @onclick="() => { _openMenuId = null; AskDelete(id); }">
+                                        <TmIcon Name="trash-2" Size="IconSize.Sm" /> @Loc["TmDemo_EmailTemplates_Delete"]
+                                    </button>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -48,23 +117,69 @@
     }
 </div>
 
-<TmModal Show="_deleteId is not null" Title="Delete template?" Size="ModalSize.Small"
+@* The delete confirmation leaves the phone presentation to the viewport (Auto): the reference draws a
+   centered dialog on a desktop, and forcing Sheet turned the 1440 px confirmation into a bottom sheet. *@
+<TmModal Show="_deleteId is not null" Title="@Loc["TmDemo_EmailTemplates_DeleteTitle"]" Size="ModalSize.Small"
          OnClose="() => _deleteId = null">
     <ChildContent>
-        <p>This template will be permanently deleted.</p>
+        @* Destructive dialogs are recognisable before the text is read: the icon sits in a danger circle. *@
+        <div class="tm-demo-email-templates__confirm">
+            <span class="tm-demo-email-templates__confirm-icon" data-tm-delete-dialog-icon aria-hidden="true">
+                <TmIcon Name="trash-2" Size="IconSize.Lg" />
+            </span>
+            <p>@Loc["TmDemo_EmailTemplates_DeleteBody"]</p>
+        </div>
     </ChildContent>
     <Footer>
-        <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _deleteId = null">Cancel</TmButton>
-        <TmButton Variant="ButtonVariant.Danger" OnClick="ConfirmDeleteAsync" data-tm-confirm-delete>Delete</TmButton>
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _deleteId = null">@Loc["TmDemo_EmailTemplates_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Danger" OnClick="ConfirmDeleteAsync" data-tm-confirm-delete>@Loc["TmDemo_EmailTemplates_Delete"]</TmButton>
     </Footer>
 </TmModal>
 
 @code {
+    /// <summary>
+    /// Case- and diacritics-insensitive comparison (invariant, not the ambient culture): a Czech or Slovak
+    /// user types "sablona" and must find "Šablona" — the first pass claimed this in a comment while
+    /// comparing with <see cref="StringComparison.OrdinalIgnoreCase"/>, which folds case only.
+    /// </summary>
+    private static readonly CompareInfo TextComparer = CultureInfo.InvariantCulture.CompareInfo;
+
     private List<EmailTemplateSummaryDto> _templates = new();
     private bool _loading = true;
     private Guid? _deleteId;
+    private string _search = string.Empty;
+
+    /// <summary>The cards the search leaves. Matches the name AND the subject, diacritics-insensitively.</summary>
+    private List<EmailTemplateSummaryDto> Filtered
+        => string.IsNullOrWhiteSpace(_search)
+            ? _templates
+            : _templates
+                .Where(t => Contains(t.Name, _search) || Contains(t.Subject, _search))
+                .ToList();
 
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    /// <summary>Diacritics-insensitive substring match, so a Czech user can type without them.</summary>
+    private static bool Contains(string? value, string term)
+        => value is not null
+           && TextComparer.IndexOf(value, term, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0;
+
+    /// <summary>The card badge names the language a user recognises, never the ISO code alone.</summary>
+    private string LanguageName(string? code) => code?.ToLowerInvariant() switch
+    {
+        "en" => Loc["TmDemo_EmailTemplates_Language_En"],
+        "cs" => Loc["TmDemo_EmailTemplates_Language_Cs"],
+        "sk" => Loc["TmDemo_EmailTemplates_Language_Sk"],
+        "fr" => Loc["TmDemo_EmailTemplates_Language_Fr"],
+        "de" => Loc["TmDemo_EmailTemplates_Language_De"],
+        "es" => Loc["TmDemo_EmailTemplates_Language_Es"],
+        "it" => Loc["TmDemo_EmailTemplates_Language_It"],
+        "pl" => Loc["TmDemo_EmailTemplates_Language_Pl"],
+        null or "" => Loc["TmDemo_EmailTemplates_Language_Unknown"],
+        _ => code!.ToUpperInvariant(),
+    };
+
+    private void OnSearchChanged(string value) => _search = value ?? string.Empty;
 
     private async Task LoadAsync()
     {
@@ -89,6 +204,36 @@
     private void Open(Guid id) => Nav.NavigateTo($"/email-templates/edit/{id}");
 
     private void Send(Guid id) => Nav.NavigateTo($"/email-templates/send/{id}");
+
+    /// <summary>Which card's "⋮" menu is open (null when none is): one open menu at a time.</summary>
+    private Guid? _openMenuId;
+
+    /// <summary>The open card's trigger, so Escape can hand the focus back where it came from.</summary>
+    private readonly Dictionary<Guid, ElementReference> _menuTriggerRefs = new();
+
+    private void ToggleMenu(Guid id) => _openMenuId = _openMenuId == id ? null : id;
+
+    private async Task CloseMenuAsync()
+    {
+        var closed = _openMenuId;
+        _openMenuId = null;
+        if (closed is { } id && _menuTriggerRefs.TryGetValue(id, out var trigger))
+        {
+            try
+            {
+                await trigger.FocusAsync();
+            }
+            catch (JSException)
+            {
+                // No interop (prerender / bUnit without a DOM): the menu is still closed, which is the
+                // behaviour that matters; the focus move is the courtesy on top of it.
+            }
+        }
+    }
+
+    /// <summary>Escape dismisses the open menu and returns focus to its trigger (WAI-ARIA menu button).</summary>
+    private Task OnMenuKeyDownAsync(KeyboardEventArgs args)
+        => string.Equals(args.Key, "Escape", StringComparison.Ordinal) ? CloseMenuAsync() : Task.CompletedTask;
 
     private async Task DuplicateAsync(Guid id)
     {

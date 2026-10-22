@@ -151,7 +151,7 @@
         </TmFileDropZone>
 
         <TmCodeEditor Id="tm-import-input" Language="@(_json ? "json" : "markup")"
-                      Value="_input" ValueChanged="OnInputChangedAsync"
+                      Value="@_input" ValueChanged="OnInputChangedAsync"
                       ShowFormatButton="@_json" Rows="6" Wrap="true"
                       Placeholder="@Loc[_json ? "EmailEditor_Import_PlaceholderJson" : "EmailEditor_Import_Placeholder"]"
                       Class="tm-email-import__input"

@@ -91,6 +91,34 @@ public class EmailTemplateEndpointTests : IClassFixture<WebApplicationFactory<Pr
     }
 
     [Fact]
+    public async Task Reset_RestoresTheSeededTemplates_AndDropsCreated_AndOverwrittenOnes()
+    {
+        // Fáze 11 (E2E isolation): the email lane opens ONE seed document and the editor auto-saves, so a
+        // polluting spec used to poison every later spec. The lane now resets the store before each spec,
+        // which needs an endpoint that restores the seeds — including a seed overwritten in place.
+        var created = await (await _client.PostAsJsonAsync("/api/email-templates", NewRequest("Reset me")))
+            .Content.ReadFromJsonAsync<EmailTemplateDetailDto>();
+
+        var welcome = await _client.GetFromJsonAsync<EmailTemplateDetailDto>(
+            "/api/email-templates/11111111-1111-1111-1111-111111111111");
+        var polluted = new UpdateEmailTemplateRequest
+        {
+            Name = welcome!.Name, Subject = "POLLUTED", Language = welcome.Language, IsActive = true,
+            ContentJson = "{\"sections\":[]}", SampleDataJson = welcome.SampleDataJson,
+        };
+        (await _client.PutAsJsonAsync($"/api/email-templates/{welcome.Id}", polluted)).EnsureSuccessStatusCode();
+
+        (await _client.PostAsync("/api/email-templates/reset", null)).StatusCode
+            .Should().Be(HttpStatusCode.OK, "the reset endpoint answers 2xx so a spec can fail loudly on it");
+
+        var list = await _client.GetFromJsonAsync<List<EmailTemplateSummaryDto>>("/api/email-templates");
+        list!.Select(t => t.Id).Should().NotContain(created!.Id, "a template created by a spec does not survive");
+        var restored = await _client.GetFromJsonAsync<EmailTemplateDetailDto>(
+            $"/api/email-templates/{welcome.Id}");
+        restored!.Subject.Should().NotBe("POLLUTED", "an overwritten seed comes back from the seed data");
+    }
+
+    [Fact]
     public async Task Preview_SubstitutesVariables()
     {
         var welcome = await _client.GetFromJsonAsync<EmailTemplateDetailDto>(

@@ -475,5 +475,5 @@
   "EmailEditor_Export_LargeNoHighlight": "The file is large, so syntax highlighting is turned off.",
   "EmailEditor_Import_ReplaceNote": "Importing replaces the current template content. You can undo it with Undo (Ctrl+Z).",
   "EmailEditor_Import_InputTooLarge": "The pasted code is larger than {0}. Shorten the template or split it.",
-  "EmailEditor_Validation_Subtitle": "Checks the template for common problems. Use Go to to jump to the spot."
+  "EmailEditor_Validation_Subtitle": "Checks the template for common problems. Select “Go to” to jump to the spot."
 }

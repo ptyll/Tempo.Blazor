@@ -21,9 +21,48 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
     protected static readonly Guid NewsletterTemplateId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     protected static readonly Guid OrderTemplateId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
+    /// <summary>
+    /// The viewport every email spec assumes unless it asks for another one. Since Fáze 11 the width is a
+    /// PARAMETER (<see cref="OpenAsync(string,int,int)"/>), because the screenshot set has to be regenerated
+    /// at 1440 / 1024 / 390 / 320 px and a hard-wired 1440 made that impossible without a second harness.
+    /// </summary>
+    protected const int DefaultViewportWidth = 1440;
+
+    /// <summary>The default viewport height (a desktop laptop frame).</summary>
+    protected const int DefaultViewportHeight = 900;
+
     private const string Smtp4DevBase = "http://localhost:5000";
 
     private static readonly HttpClient Http = new();
+
+    /// <summary>
+    /// Puts the demo API's email store back to its seeded templates before EVERY email spec (Fáze 11).
+    /// <para>
+    /// The lane's specs all open the same seed document and the editor auto-saves, so a spec that imported a
+    /// hostile or otherwise unusual template silently replaced the seed for everyone who ran after it — the
+    /// lane's outcome depended on class discovery order (F7A_4 failed only when the F9A hostile-import spec
+    /// ran first, F10_4 the same way). Resetting first makes each spec order-independent instead of asking
+    /// every future spec to undo its neighbours' writes.
+    /// </para>
+    /// </summary>
+    [TestInitialize]
+    public async Task ResetEmailStoreAsync() => await ResetEmailStoreCoreAsync();
+
+    /// <summary>
+    /// Posts the demo API's reset endpoint; throws when the API refuses, so a broken isolation is loud.
+    /// <para>
+    /// <c>internal</c> (not <c>protected</c>): the render-mode lane derives from
+    /// <see cref="PlaywrightTestBase"/> instead — it boots the Server and InteractiveAuto hosts, not the WASM
+    /// one — and still needs the same reset, because those specs drive the very demo API store the WASM specs
+    /// read.
+    /// </para>
+    /// </summary>
+    internal static async Task ResetEmailStoreCoreAsync()
+    {
+        using var api = DemoApiTestHttp.CreateClient();
+        var response = await api.PostAsync("/api/email-templates/reset", content: null);
+        response.EnsureSuccessStatusCode();
+    }
 
     /// <summary>Builds a unique recipient so concurrent / historical mail on the shared smtp4dev does not collide.</summary>
     protected static string UniqueRecipient(string label)
@@ -35,12 +74,25 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
     /// CONTAINER, and the demo's fixed 18 rem sidebar leaves a 1440 px window a ~1080 px editor — a tablet.
     /// These specs are about the desktop editor, so the demo chrome is hidden for them.
     /// </summary>
-    protected async Task<IPage> OpenAsync(string route)
+    protected async Task<IPage> OpenAsync(string route) => await OpenAsync(route, DefaultViewportWidth, DefaultViewportHeight);
+
+    /// <summary>
+    /// Same as <see cref="OpenAsync(string)"/> with an explicit VIEWPORT (Fáze 11). The screenshot set is
+    /// regenerated at 1440 / 1024 / 390 / 320 px, and a spec that talks about a phone has to boot a phone.
+    /// <para>
+    /// <paramref name="pinDesktopEditor"/> keeps the historical behaviour (the demo's LayoutMode switch is
+    /// forced to Desktop, because the demo chrome leaves a 1440 px window a ~1080 px editor — a tablet).
+    /// A spec that wants the editor to resolve the layout from its container itself passes <c>false</c>;
+    /// that is how the phone / tablet reference screenshots see the real narrow chrome.
+    /// </para>
+    /// </summary>
+    protected async Task<IPage> OpenAsync(string route, int width, int height, bool pinDesktopEditor = true)
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(1440, 900);
-        if (route.Contains("/email-templates/edit", StringComparison.Ordinal))
+        await page.SetViewportSizeAsync(width, height);
+        var isEditorRoute = route.Contains("/email-templates/edit", StringComparison.Ordinal);
+        if (isEditorRoute && pinDesktopEditor)
         {
             // Seeded BEFORE the first navigation, so the demo page's remembered LayoutMode survives the
             // re-navigation a spec performs (a language switch force-reloads the page). Specs that CREATE a
@@ -50,13 +102,32 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
                 "try { if (!localStorage.getItem('tm-demo-editor-layout')) "
                 + "localStorage.setItem('tm-demo-editor-layout', 'Desktop'); } catch (e) { }");
         }
+        else if (isEditorRoute)
+        {
+            // A stale choice from an earlier page in the same context would pin the wrong chrome.
+            await page.AddInitScriptAsync(
+                "try { localStorage.setItem('tm-demo-editor-layout', 'Auto'); } catch (e) { }");
+        }
 
         await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        await WaitForAppReadyAsync(page);
-        if (route.Contains("/email-templates/edit", StringComparison.Ordinal))
+        // The self-hosted WASM demo occasionally exceeds the harness's readiness window on a loaded machine
+        // (the documented recovery in the F9/F10/F11 specs). ONE reload of the same context is the recovery —
+        // by now the app is up and only the first boot was slow — and centralizing it here also covers the
+        // specs that never had it (a cold boot used to fail a whole class at `OpenAsync`).
+        try
+        {
+            await WaitForAppReadyAsync(page);
+        }
+        catch (TimeoutException)
+        {
+            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+            await WaitForAppReadyAsync(page);
+        }
+
+        if (isEditorRoute)
         {
             await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
-            await ForceEditorLayoutAsync(page, "Desktop");
+            if (pinDesktopEditor) await ForceEditorLayoutAsync(page, "Desktop");
         }
 
         return page;

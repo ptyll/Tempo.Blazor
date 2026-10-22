@@ -196,6 +196,20 @@
     display: none;
 }
 
+/* …and the palette's header row is EMPTY on a phone (title hidden above, the collapse toggle is off in this
+   editor), yet it still reserved a row plus a gap under the sheet's tabs. Hiding it removes the second
+   inset that pushed the first block tile below the fold. */
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-toolbox__header {
+    display: none;
+}
+
+/* The sheet's body already carries the drawer's inset (core); the panel's own padding stacked a SECOND one
+   under the tabs — measured ~60 px of dead space between the tabs and the palette's search field
+   (Fáze 11 visual review). The email CSS gives it up, the core stays untouched. */
+.tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__panel-body {
+    padding: 0;
+}
+
 .tm-email-editor ::deep [data-layout="mobile"] .tm-email-editor__panel {
     block-size: auto;
     min-block-size: 0;

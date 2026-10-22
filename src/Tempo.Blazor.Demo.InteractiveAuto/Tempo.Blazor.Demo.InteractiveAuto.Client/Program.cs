@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Configuration;
+using Tempo.Blazor.EmailTemplates;
 using Tempo.Blazor.Demo.Services;
 using Tempo.Blazor.Demo.SharedUI.Localization;
 using Tempo.Blazor.Demo.SharedUI.Services;
@@ -104,6 +105,15 @@ builder.Services.AddTempoBlazorDataTableXlsx();
 builder.Services.AddTempoBlazorNotionEditor();
 builder.Services.AddTempoBlazorSigning();
 builder.Services.AddTempoBlazorReporting();
+// Email template editor (Fáze 11): the EDITOR only — no Scriban/Mjml.Net/AngleSharp in the host — plus the
+// typed API client and the HTTP IEmailPreviewRenderer. The preview and the HTML export render on the demo
+// API through IEmailPreviewRenderer, which is the pattern a real host uses (contract §3.0/§3.5). Registered
+// in every demo host so the editor is proven in all three render modes (WASM / Server / InteractiveAuto).
+builder.Services.AddTempoEmailTemplateEditor();
+builder.Services.AddScoped<Tempo.Blazor.Demo.Services.IEmailTemplateApiClient, Tempo.Blazor.Demo.Services.EmailTemplateApiClient>();
+builder.Services.AddScoped<Tempo.Blazor.EmailTemplates.Abstractions.Rendering.IEmailPreviewRenderer,
+    Tempo.Blazor.Demo.Services.HttpEmailPreviewRenderer>();
+
 builder.Services.AddInMemoryNotifications();
 builder.Services.AddScoped<DemoNotionNotificationService>();
 builder.Services.AddScoped<ITmNotificationService>(sp => sp.GetRequiredService<DemoNotionNotificationService>());

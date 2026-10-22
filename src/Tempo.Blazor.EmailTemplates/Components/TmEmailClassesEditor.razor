@@ -16,7 +16,7 @@
         </div>
     }
     <div class="tm-email-classes__add">
-        <TmTextInput Placeholder="@Loc["EmailEditor_Classes_NewName"]" Value="_newName" Disabled="ReadOnly"
+        <TmTextInput Placeholder="@Loc["EmailEditor_Classes_NewName"]" Value="@_newName" Disabled="ReadOnly"
                      ValueChanged="v => _newName = v" />
         <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" Icon="plus" Disabled="ReadOnly"
                   data-tm-class-add="true" OnClick="AddAsync">@Loc["EmailEditor_Classes_Add"]</TmButton>

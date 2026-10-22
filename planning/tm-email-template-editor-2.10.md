@@ -1400,3 +1400,106 @@ Poznámka k bUnit: `BunitContext.Render()` překreslí celý strom a `ShouldRend
 (ověřeno probe komponentou v této fázi), takže DOM ani čítač v bUnit produkční optimalizaci
 neprokazují — proto testy měří rozhodnutí (`ShouldRenderNow`/`EmailCanvasRenderGate`) přímo a chování
 v prohlížeči hlídá E2E.
+
+## 7. Fáze 11 — demo, E2E a vizuální převzetí
+
+### 7.1 Screenshot sada: reference → screenshot → odchylka
+
+Celá e-mailová sada se od Fáze 11 generuje JEDNÍM spec souborem
+`tests/Tempo.Blazor.E2E/EmailTemplateReferenceShotsE2ETests.cs`, který každé referenční screen-id vyfotí na
+**všech čtyřech podporovaných šířkách**: `--desktop` (1440×900), `--tablet` (1024×768), `--mobile` (390×844) a
+`--mobile-320` (320×720). Tím se završil drift z F5–F10 (každá fáze fotila na tom viewportu, který zrovna
+používala, a 1024/390/320 neexistovaly vůbec).
+
+| reference (output/imagegen/…/Tempo.Blazor.EmailTemplates) | náš screenshot (__screenshots__/email-templates) | odchylka |
+|---|---|---|
+| `email-template-editor--desktop/tablet/mobile.png` | `email-template-editor--{desktop,tablet,mobile,mobile-320}.png` | **záměrná**: breadcrumb + název šablony + „Vše uloženo“ v hlavičce nahrazuje shell (F7/F8) — Save je primární akce v toolbaru, stav uložení je v badge/status baru shellu; horní demo přepínače jsou host chrome dema. Panel nástrojů má jiné bloky (Text/Button/Table/Navbar/Accordion/Image/Social/Carousel/Divider/Spacer/Hero/Wrapper/Group) než reference (Nadpis/Citace/Karta) — registry je daná F4/F7A. |
+| `email-template-editor--toolbar_preview--*.png` | `email-template-editor--toolbar_preview--*.png` | **záměrná**: dialog nese náš toolbar (zařízení Plocha/Tablet/Mobil + HTML/Text), patička „Obnovit náhled“/„Zavřít“; reference kreslí jen přepínač zařízení. Chybí „Odeslat test“ (vymyšleno generátorem). |
+| `email-template-editor--validation_title--*.png` | `email-template-editor--validation_title--*.png` | **záměrná**: závažnosti Error/Warning/Info s ikonou a počty, titulek „Validation“; reference má jen titulek a seznam. |
+| `email-keyboard-shortcuts--*.png` | `email-keyboard-shortcuts--*.png` | **záměrná**: jádrový `TmKeyboardShortcutsHelp` s popisem (F10) místo jednoduchého seznamu v referenci. |
+| `email-table-editor--*.png` | `email-table-editor--*.png` | **záměrná**: mřížka s připnutým řídicím sloupcem, dialog buňky (F9); reference ukazuje jen buňky bez chrome. |
+| `email-variable-picker--*.png` | `email-variable-picker--*.png` | **záměrná**: chip s tokenem + popis hostitele + skupiny (F7A); na mobilu je picker obsah spodního sheetu. |
+| `email-import-dialog--*.png` | `email-import-dialog--*.png` | **záměrná**: drop zóna vždy pro všechny formáty, strukturovaný náhled, limity hostitele (F10). |
+| `email-export-dialog--*.png` | `email-export-dialog--*.png` | **záměrná**: záložky MJML/JSON/HTML + kopírování + stahování se slugem (F10); reference má jen MJML/JSON. |
+| `email-templates-page--*.png` | `email-templates-page--*.png` | **záměrná**: miniatury e-mailů nejsou (analýza je označila jako [D] volitelné a generátorem vymyšlené); karty mají jazykový odznak, hledání, 3/2/1 sloupce, na 390/320 akce v „⋮“ menu. |
+| `email-templates-page--dialog-01--*.png` | `email-templates-page--dialog-01--*.png` | **záměrná**: potvrzovací dialog s ikonou v danger kruhu; prezentace se řídí viewportem (`TmModal.MobilePresentation` = výchozí `Auto`): 1440/1024 centrovaný dialog jako v referenci, 390/320 jádrový sheet (F2). Vynucený `Sheet` (první generace) dělal z desktopové potvrzovky spodní sheet. Pozadí není master-detail (to je hostitelova metadata, ne komponenta). |
+| `email-template-send-page--*.png` | `email-template-send-page--*.png` | **záměrná**: sekce Recipients/Variable values s popisky z hostitelského katalogu (`TemplateVariableInfo.Description`), náhled bez editoru ukázkových dat a bez HTML/Text přepínače; pod 1280 px jedno sloupec (formulář nad náhledem), na mobilu sticky „Send e-mail“ s důvodem, proč je disabled („Enter at least one recipient.“); stav po odeslání + odkaz na smtp4dev zůstává (E2E `09-send-success.png`). |
+
+Odchylky, které analýza označila jako „vymyšleno generátorem“, se **nedělají**: app shell (Projekt Aurora,
+uživatel), „Odeslat test“ v toolbaru, záložky Editor/MJML/Náhled nad plátnem, bloky Nadpis/Citace/Karta a
+dosazené hodnoty proměnných na plátně.
+
+### 7.2 UX nálezy z převzetí screenshotů (opraveno test-first)
+
+| nález | důkaz | oprava |
+|---|---|---|
+| Karta knihovny láme čtyři akce do tří řádků (Edit sám, pak Send/Duplicate, pak Delete) | `email-templates-page--desktop.png` (první generace) | `display: contents` na obalu sekundárních akcí → akce sdílejí jeden zalamující řádek (3+1 při třísloupcové mřížce; Delete zůstává na vlastním řádku s danger inkoustem — vědomě, čtyři tlačítka s ikonami se do ~330 px karty nevejdou); na <640 px je obal skrytý a akce jdou do „⋮“ |
+| „Delete“ nemá danger barvu — vypadá jako druhý ghost | `email-templates-page--desktop.png` | scoped pravidlo musí být `::deep` (třída je na rootu `TmButton`, tedy na elementu child komponenty, který nescopovaný atribut nenosí) |
+| Editor v demu nepustí status bar shellu (nosič stavu uložení) do záběru | `email-template-editor--desktop.png` | **odloženo** (remaining): stránka počítá `height: calc(100vh - 70px)`, ale app shell je ~78 px + dvouřádkový demo bar, takže status bar padne ~25 px pod okraj. Oprava = `calc(100dvh - 5rem)` v `EmailTemplateEditorPage.razor.css`; odloženo, protože mění výšku stage pro všechny responzivní E2E (F8) a vyžaduje nový běh celé lane |
+| Formulářová karta na send page má prázdné místo pod tlačítkem (grid stretch) | `email-template-send-page--desktop.png` | **odloženo** (remaining, kosmetika): `.tm-demo-email-send__form { align-self: start; }`; nemění chování ani dostupnost |
+| Náhled na send page má vlastní přepínač „With sample data / Without substitution“ | `email-template-send-page--desktop.png` | **záměrné**: skrývá se jen editor ukázkových dat a HTML/Text přepínač (`ShowSampleDataEditor=false`, `ShowViewToggle=false`) — substituce je věc náhledu, ne duplikace formuláře |
+| Titulek `h1` má focus ring (host shell) | `email-templates-page--desktop.png`, `email-template-send-page--desktop.png` | **mimo rozsah fáze** (chování app shellu dema pro klávesnicovou orientaci, stejné na ostatních demo stránkách) |
+
+### 7.3 Deterministická e-mailová E2E lane
+
+- **Viewport je parametr.** `EmailTemplateE2ETestBase.OpenAsync(route, width, height, pinDesktopEditor)` —
+  historická konstanta 1440×900 zůstala jako výchozí, takže staré specy se nezměnily, a screenshot sada
+  bootuje 1024/390/320 s vypnutým pinováním desktop layoutu (aby se ukázal skutečný úzký chrome).
+- **Seed se resetuje před každým specem.** `POST /api/email-templates/reset` (Demo API, konvence
+  Gantt/Notion/DocumentEditor) vrací store do seed stavu; `EmailTemplateE2ETestBase` ho volá
+  v `[TestInitialize]`. Tím zmizela order-dependence, kdy spec s hostile importem (F9A) přepsal sdílený seed
+  dokument a rozbil F7A_4/F10_4 podle pořadí objevování tříd.
+- **F7A_6 picker — ROOT CAUSE NALEZENA (Fáze 11).** Příčina není v produktu ani v auto-save: picker
+  remountuje **vlastní screenshot specu**. `SaveNamedScreenshotAsync` je FULL-PAGE capture; ten změní
+  metriky stránky, editor znovu vyhodnotí layout a `TmOverlayPanel` znovu vytvoří svůj obsah — nový
+  `TmEmailVariablePicker` startuje s prázdným filtrem, takže test přečte první nefiltrovaný řádek
+  (`company.support_email` místo `order.total`). Repro: spec
+  `EmailWorkspaceVariablePickerStabilityE2ETests` s vloženým full-page screenshotem spolehlivě shodí marker
+  DOM node (`data-picker-identity` → `null`), zatímco 50 vzorků po 100 ms přes auto-save cyklus marker
+  udrží (produkt i auto-save jsou v pořádku). Oprava: F7A_6 čte filtrovaný řádek PŘED screenshotem a fotí
+  **viewport** (konvence F8 pro scrollující plochu editoru); stabilitu filtru hlídá
+  `EmailWorkspaceVariablePickerStabilityE2ETests.VariablePicker_KeepsItsFilter_AcrossAnAutoSaveCycle`.
+  Zbývá (remaining): filtr se ztratí, když editor skutečně překlopí layout (uživatel mění šířku okna) —
+  oprava by vyžadovala držet stav filtru nad pickerem, tedy nové veřejné API (mimo rámec fáze).
+
+### 7.4 Výsledek e-mailové lane (Fáze 11)
+
+Filtr `EmailTemplate|EmailEditor|EmailWorkspace` = **113 testů** (původních 95 + 18 nových této fáze:
+`EmailTemplateF11DemoE2ETests` 7, `EmailTemplateReferenceShotsE2ETests` 4, `EmailWorkspaceVariablePickerStabilityE2ETests` 1,
+`EmailTemplateServerModeE2ETests` 3, `EmailTemplateInteractiveAutoModeE2ETests` 3).
+
+| běh | výsledek | poznámka |
+|---|---|---|
+| 1 (před opravami) | 105/107 | F5_1 (guard blokoval jazykový přepínač) + F7A_6 (full-page screenshot) — obojí opraveno, příčiny doloženy |
+| 2 | **113/113** | první čistý běh po opravách (25:40) |
+| 3 | **113/113** | druhý čistý běh (26:25) |
+| 4 | 110/113 | všechny tři chyby jsou TIMEOUT na start hostů (`WaitForAppReadyAsync` / `[data-tm-email-editor] to be visible`), žádná aserce; běh trval 31 min místo 26 → přetížený stroj. Zavedena centralizovaná recovery (jeden reload) do `EmailTemplateE2ETestBase.OpenAsync` i do F8 helperu |
+| 5 | 105/113 | přetížený stroj (40:51): padly i Server/IA smoke testy na start hostů, API v době běhu neodpovídalo; nic z toho není aserce ani produktová chyba |
+| 6 | 111/113 | F11_4 (jednorázově; samostatně 3/3 zelené) + F6_Preview_DarkMode (60s timeout na start) |
+
+**Závěr k determinismu:** dvě po sobě jdoucí čisté běhy (113/113) po opravách; další dva běhy padly výhradně na
+colds-tart/readiness timeouty self-hostovaných dem (stroj měl load average ~8 a jeden běh trval o 60 % déle),
+což je známá carry-forward položka `PlaywrightTestBase.WaitForAppReadyAsync` — fáze ji zčásti řeší
+(centralizovaný jednoreload v `EmailTemplateE2ETestBase.OpenAsync` a ve F8 helperu), zbytek patří F12.
+Order-dependence je uzavřená resetem seedu před každým specem (dokázáno: hostile import v F9A už nerozbije F7A_4).
+
+### 7.5 Fáze 11 review (UX ChangesRequested + code review minor) — opraveno test-first
+
+Převzetí screenshotů a code review první generace Fáze 11 vrátily sadu nálezů. Všechny jsou opravené
+(test-first: bUnit pro chování, E2E pro rozměry a screenshoty) a screenshoty jsou přegenerované jedním
+během `EmailTemplateReferenceShotsE2ETests`.
+
+| nález | důkaz (první generace) | oprava |
+|---|---|---|
+| Import dialog otevírá editor s doslovným textem „_input“ | `email-import-dialog--*.png`, kód `Value="_input"` | chybějící `@` u string parametru = LITERÁL. `Value="@_input"` v `TmEmailImportDialog`; stejná chyba v `TmEmailClassesEditor` (`Value="_newName"`). Zbytek výskytů `="_…"` v balíčku jsou výrazy (komponenty ve stejné assembly je Razor type-checkuje) — ověřeno vygenerovaným kódem. bUnit: editor prázdný + placeholder, po vložení obsah |
+| Potvrzovací dialog knihovny byl sheet i na 1440 | `email-templates-page--dialog-01--desktop.png` | `TmModal.MobilePresentation` vynucený `Sheet` odstraněn → výchozí `Auto` (1440/1024 dialog, 390/320 sheet). E2E: `.tm-modal--sheet` na 1440 = 0, na 390 = 1 |
+| Mobilní „⋮“ nezavírá panel po spuštění příkazu | `email-keyboard-shortcuts--mobile.png` (panel zůstal pod dialogem) | příkazy z overflow (Import/Export/Validate/Help) jdou přes `RunFromMobileOverflowAsync`; hostitelský `ToolbarEnd` zavírá přes bubbling. bUnit: po kliku na `[data-tm-help-btn]` panel neexistuje |
+| Send page na 1024 mačkala dva sloupce | `email-template-send-page--tablet.png` | `@media (width < 1280px)`: jeden sloupec, `position: static` u náhledu; sticky Send zůstává < 640 px. E2E 1024: náhled pod formulářem, stejný levý okraj, `position: static` |
+| Disabled Send bez vysvětlení | `email-template-send-page--mobile.png` | hint „Enter at least one recipient.“ (cs/sk/fr v DemoResources) pod tlačítkem; mizí po vyplnění příjemce |
+| Demo stránky měly natvrdo anglické texty | `EmailTemplatesPage`, `EmailTemplateSendPage`, guard texty | klíče `TmDemo_EmailTemplates_*` do `DemoResources{,.cs,.sk,.fr}.json` + demo localizer; hlídá `DemoResourceCompletenessTests` (parita klíčů i placeholderů) a bUnit testy (echo localizer = klíč) |
+| Hledání v knihovně tvrdilo „bez diakritiky“, ale porovnávalo `OrdinalIgnoreCase` | komentář vs. kód | `CompareInfo.IndexOf(…, IgnoreCase \| IgnoreNonSpace)`; bUnit „sablona“ → „Šablona“, „zakazniky“ → „zákazníky“, „DOBRY“ → „Dobrý“ |
+| Menu „⋮“ šlo zavřít jen vlastními položkami | — | Escape (fokus zpět na trigger; handler na obalu, protože fokus zůstává na triggeru) + klik mimo (backdrop). bUnit obojí, E2E Escape + `document.activeElement` |
+| Mezi záložkami sheetu a hledáním palety ~60 px mrtvého místa | `email-template-editor--mobile.png` | dvojí odsazení v email CSS: `panel-body` padding 0 a prázdný `toolbox__header` skrytý na mobilu (jádro nedotčeno). E2E 390: mezera záložky→hledání ≤ 48 px |
+| Pickerské hledání nalepené na první skupinu | `email-variable-picker--*.png` | `margin-block-end: var(--tm-space-2)` na `TmSearchInput` pickeru |
+| `EmailEditor_Validation_Subtitle` bez uvozovek kolem „Go to“ | en/cs/sk/fr tabulky | en „Select “Go to” to jump to the spot.“, cs „Tlačítkem „Přejít“…“, sk „Tlačidlom „Prejsť“…“, fr „Utilisez « Aller à »…“ |
+| Render-mode E2E (Server/IA) neresetovaly seed | `EmailTemplateRenderModesE2ETests` | `[TestInitialize]` volá sdílený `EmailTemplateE2ETestBase.ResetEmailStoreCoreAsync` (nově `internal`) |

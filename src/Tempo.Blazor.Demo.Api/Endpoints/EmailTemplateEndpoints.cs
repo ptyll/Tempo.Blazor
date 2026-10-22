@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentValidation;
+using Tempo.Blazor.Demo.Api.Services;
 using Tempo.Blazor.EmailTemplates.Abstractions.Contracts;
 using Tempo.Blazor.EmailTemplates.Abstractions.Dtos;
 using Tempo.Blazor.EmailTemplates.Abstractions.Import;
@@ -24,6 +25,17 @@ public static class EmailTemplateEndpoints
 
         group.MapGet("/name-available", async (string name, Guid? excludingId, IEmailTemplateStore store, CancellationToken ct) =>
             Results.Ok(await store.IsNameAvailableAsync(name, excludingId, ct)));
+
+        // ── Reset (E2E isolation, Fáze 11) ───────────────────────────────────────────────────
+        // The email lane's specs all open the SAME seed document and the editor auto-saves: a spec that
+        // imports a hostile (or otherwise unusual) template silently replaced the seed for every spec that
+        // ran after it, so the lane outcome depended on class discovery order (F7A_4 / F10_4). A spec now
+        // resets the store FIRST, which makes the lane independent of order.
+        group.MapPost("/reset", (DemoEmailTemplateStore store) =>
+        {
+            store.Reset();
+            return Results.Ok();
+        }).WithName("ResetEmailTemplates");
 
         group.MapPost("/", async (
             CreateEmailTemplateRequest request, IValidator<CreateEmailTemplateRequest> validator,

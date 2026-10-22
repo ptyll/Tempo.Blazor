@@ -419,10 +419,16 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
             "() => { const panel = document.querySelector('[data-tm-variable-picker]')?.closest('.tm-popover__body'); " +
             "return !!panel && getComputedStyle(panel).opacity === '1'; }",
             null, new() { Timeout = 10000 });
-        await SaveNamedScreenshotAsync(page, "57-variable-picker-search.png");
 
+        // Read the filtered row BEFORE the screenshot, and take the VIEWPORT frame rather than a full-page
+        // one: a full-page capture changes the page's captured metrics, the editor re-resolves its layout and
+        // the overlay panel's content is re-created — the picker then legitimately starts from an empty filter
+        // and this assertion reads the first unfiltered row (the F7A_6 flake, reproduced in Fáze 11 by
+        // EmailWorkspaceVariablePickerStabilityE2ETests).
         var totalRow = page.Locator("[data-tm-variable]").First;
         (await totalRow.GetAttributeAsync("data-tm-variable")).Should().Be("order.total");
+        await SaveNamedViewportScreenshotAsync(page, "57-variable-picker-search.png");
+
         await totalRow.ClickAsync();
         await page.WaitForFunctionAsync(
             "() => (document.querySelector('[data-tm-prop=\\'Subject\\'] input')?.value ?? '').includes('{{ order.total }}')",

@@ -24,7 +24,8 @@ public class TmEmailEditorResponsiveReviewFixTests : EmailEditorTestBase
         bool hasActiveMobilePanelCallback = false,
         Action<EditorShellPanel>? activeMobilePanelChanged = null,
         Action<bool>? toolboxCollapsedChanged = null,
-        RenderFragment? toolbarStart = null)
+        RenderFragment? toolbarStart = null,
+        RenderFragment? toolbarEnd = null)
         => Render<TmEmailTemplateEditor>(p =>
         {
             p.Add(c => c.Document, document ?? DocWithTextBlock(out _));
@@ -44,6 +45,7 @@ public class TmEmailEditorResponsiveReviewFixTests : EmailEditorTestBase
                     EventCallback.Factory.Create<bool>(this, collapsed => toolboxCollapsedChanged(collapsed)));
             }
             if (toolbarStart is not null) p.Add(c => c.ToolbarStart, toolbarStart);
+            if (toolbarEnd is not null) p.Add(c => c.ToolbarEnd, toolbarEnd);
         });
 
     // ── Item 2: an insert in the Tabs presentation shows the canvas ─────────────────────────
@@ -182,6 +184,44 @@ public class TmEmailEditorResponsiveReviewFixTests : EmailEditorTestBase
         panel.QuerySelectorAll("[data-tm-preview-btn]").Should().BeEmpty(
             "Preview is one of the four action-bar commands (D20) — a second path to the same modal "
             + "on one phone screen is noise (item 14)");
+    }
+
+    // ── Fáze 11 review: a command from the overflow closes it ─────────────────────────────
+
+    [Fact]
+    public void A_command_from_the_overflow_closes_the_overflow()
+    {
+        var cut = RenderWith();
+        cut.Find("[data-tm-mobile-overflow] .tm-popover__trigger, [data-tm-mobile-overflow] button").Click();
+        cut.FindAll("[data-tm-mobile-overflow-panel]").Should().ContainSingle();
+
+        cut.Find("[data-tm-mobile-overflow-panel] [data-tm-help-btn]").Click();
+
+        cut.FindAll("[data-tm-mobile-overflow-panel]").Should().BeEmpty(
+            "Help opened its own surface: an overflow left open behind it is a second panel the user has "
+            + "to dismiss by hand, and its commands stay clickable under the new dialog");
+        cut.FindComponent<TmKeyboardShortcutsHelp>().Should().NotBeNull("the command itself still ran");
+    }
+
+    [Fact]
+    public void A_host_command_from_the_overflow_closes_the_overflow()
+    {
+        RenderFragment hostAction = builder =>
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "data-tm-host-action", true);
+            builder.AddContent(3, "Host action");
+            builder.CloseElement();
+        };
+        var cut = RenderWith(toolbarEnd: hostAction);
+        cut.Find("[data-tm-mobile-overflow] .tm-popover__trigger, [data-tm-mobile-overflow] button").Click();
+        cut.FindAll("[data-tm-mobile-overflow-panel]").Should().ContainSingle();
+
+        cut.Find("[data-tm-mobile-overflow-panel] [data-tm-host-action]").Click();
+
+        cut.FindAll("[data-tm-mobile-overflow-panel]").Should().BeEmpty(
+            "the host's own fragment lives in the same panel, so its commands close it too");
     }
 
     [Fact]

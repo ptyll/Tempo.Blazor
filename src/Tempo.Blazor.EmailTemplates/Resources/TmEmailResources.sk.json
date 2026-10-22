@@ -475,5 +475,5 @@
   "EmailEditor_Export_LargeNoHighlight": "Súbor je veľký, zvýraznenie syntaxe je vypnuté.",
   "EmailEditor_Import_ReplaceNote": "Import nahradí súčasný obsah šablóny. Vrátiť ho môžete tlačidlom Späť (Ctrl+Z).",
   "EmailEditor_Import_InputTooLarge": "Vložený kód je väčší ako {0}. Šablónu skráťte alebo rozdeľte.",
-  "EmailEditor_Validation_Subtitle": "Kontrola bežných problémov šablóny. Tlačidlom Prejsť sa dostanete na miesto v šablóne."
+  "EmailEditor_Validation_Subtitle": "Kontrola bežných problémov šablóny. Tlačidlom „Prejsť“ sa dostanete na miesto v šablóne."
 }

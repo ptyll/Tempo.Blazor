@@ -246,4 +246,32 @@ public partial class TmEmailTemplateEditor
         _mobileOverflowOpen = open;
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Closes the phone's "⋮" overflow. It is ONE surface for the long-tail commands, so every command
+    /// that opens a surface of its own has to dismiss it first: an overflow left open behind a dialog is a
+    /// second panel the user has to close by hand, and its rows stay clickable underneath the dialog
+    /// (Fáze 11 visual review — Help/Validate/Import/Export all left the panel hanging).
+    /// </summary>
+    private Task CloseMobileOverflowAsync()
+    {
+        _mobileOverflowOpen = false;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Closes the overflow, then runs the command it started (same path on the desktop toolbar).</summary>
+    private Task RunFromMobileOverflowAsync(Action command)
+    {
+        _mobileOverflowOpen = false;
+        command();
+        return Task.CompletedTask;
+    }
+
+    private Task OpenImportAsync() => RunFromMobileOverflowAsync(() => _showImport = true);
+
+    private Task OpenExportAsync() => RunFromMobileOverflowAsync(() => _showExport = true);
+
+    private Task OpenValidationAsync() => RunFromMobileOverflowAsync(() => _showValidation = true);
+
+    private Task OpenShortcutsAsync() => RunFromMobileOverflowAsync(() => _showShortcuts = true);
 }

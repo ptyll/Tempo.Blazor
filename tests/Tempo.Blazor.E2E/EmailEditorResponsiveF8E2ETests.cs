@@ -38,12 +38,26 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         RegisterContext(context);
 
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}{EditorRoute}", new PageGotoOptions
+        for (var attempt = 0; ; attempt++)
         {
-            WaitUntil = WaitUntilState.Load,
-            Timeout = 60000,
-        });
-        await WaitForAppReadyAsync(page);
+            await page.GotoAsync($"{BaseUrl}{EditorRoute}", new PageGotoOptions
+            {
+                WaitUntil = WaitUntilState.Load,
+                Timeout = 60000,
+            });
+            try
+            {
+                await WaitForAppReadyAsync(page);
+                await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
+                break;
+            }
+            catch (TimeoutException) when (attempt < 1)
+            {
+                // Cold boot of the self-hosted apps occasionally exceeds the readiness window: one reload of
+                // the SAME context is the documented recovery (see the F9A/F10 specs).
+            }
+        }
+
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
         await page.WaitForSelectorAsync(".tm-editor-shell[data-layout]", new() { Timeout = 30000 });
         await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 30000 });
@@ -352,6 +366,16 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
 
         // The action bar is the F5 primitive with all four D20 commands.
         await AssertFourActionBarCommandsAsync(page);
+
+        // Fáze 11 review: the sheet BODY already carries the drawer's inset, so the panel's own padding plus
+        // the palette's empty header row stacked a SECOND one — ~60 px of dead space between the tabs and
+        // the palette's search field. A phone cannot spend that height on nothing.
+        var tabsBox = await page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tabs").First.BoundingBoxAsync();
+        var searchField = await page.Locator(".tm-editor-shell__sheet [data-tm-toolbox] input[type='search']").First.BoundingBoxAsync();
+        tabsBox.Should().NotBeNull();
+        searchField.Should().NotBeNull();
+        (searchField!.Y - (tabsBox!.Y + tabsBox.Height)).Should().BeLessThanOrEqualTo(
+            48, $"the palette's search follows the tabs directly (measured {searchField.Y - (tabsBox.Y + tabsBox.Height):0.#} px of dead space)");
 
         // Review item 9: the sheet's default snap shows REAL TILES — the first block is hit-testable at its
         // centre and sits above the action bar's top edge (it used to be just under the fold).

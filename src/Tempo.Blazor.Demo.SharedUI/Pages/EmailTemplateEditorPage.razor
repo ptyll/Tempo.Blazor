@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.EmailTemplates.Abstractions.Import
 @inject IEmailTemplateApiClient Api
+@inject ITmLocalizer Loc
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
@@ -9,6 +10,24 @@
 
 <div class="tm-demo-email-editor-page" data-tm-email-editor-page
      data-tm-demo-resolved="@_resolvedLayout">
+    @* Fáze 11: the leave guard. The editor owns the dirty flag (IsDirtyChanged), the PAGE owns SaveAsync,
+       so the guard's "Save and leave" path calls the very same host save the toolbar uses — a host that
+       wires this gets "you have unsaved changes" for free and never loses an edit to a stray click. *@
+    @* BeforeUnloadPrompt stays OFF in the demo: the browser-level prompt ALSO hijacks the reloads this
+       very demo performs (the language switcher force-loads the page), and a dismissed prompt cancels the
+       navigation — the switch then looks broken. The in-app dialog below is the capability this page
+       demonstrates; a host that only navigates inside the SPA can keep the browser prompt on. *@
+    @* The guard's four answers are demo COPY, not core defaults: they come from the demo's DemoResources
+       tables, so the leave prompt speaks Czech/Slovak/French with the rest of the page. *@
+    <TmNavigationGuard IsDirty="_isDirty"
+                       BeforeUnloadPrompt="false"
+                       ShouldGuard="ShouldGuardNavigation"
+                       OnSaveAndLeave="SaveAndLeaveAsync"
+                       ConfirmTitle="@Loc["TmDemo_EmailTemplates_Guard_Title"]"
+                       ConfirmMessage="@Loc["TmDemo_EmailTemplates_Guard_Message"]"
+                       SaveAndLeaveText="@Loc["TmDemo_EmailTemplates_Guard_SaveAndLeave"]"
+                       ConfirmLeaveText="@Loc["TmDemo_EmailTemplates_Guard_Leave"]"
+                       CancelText="@Loc["TmDemo_EmailTemplates_Guard_Stay"]" />
     @* Review fix (fáze 8, item 9): on a phone the demo's own switch bar ate ~300 px of the stage, so the
        sheet's default snap showed the tabs and the search box and the first block tile sat below the fold.
        The controls move into a collapsed disclosure there and the editor takes the rest of the viewport
@@ -295,6 +314,28 @@
     }
 
     private void OnReadOnlyChanged(bool value) => _readOnly = value;
+
+    /// <summary>
+    /// Guards LEAVING the editor, not every location change. The demo's language switcher reloads the SAME
+    /// route (<c>NavigateTo(uri, forceLoad: true)</c>) and Blazor routes that through the same
+    /// <c>LocationChanging</c> pipeline — a guard that blocked it would make the language switch look broken
+    /// (measured: F5_1 hung on the Slovak switch because the document was dirty from an inserted block).
+    /// A host that wants to guard a reload as well simply drops this predicate.
+    /// </summary>
+    private bool ShouldGuardNavigation(string targetUri)
+        => !targetUri.Contains("/email-templates/edit/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The guard's "Save and leave" answer: exactly the host save the toolbar triggers, reported as
+    /// <c>true</c> only when the API confirmed the write — a failed save keeps the user on the page with the
+    /// editor's own failure badge telling them why (rule: the editor never claims success it did not get).
+    /// </summary>
+    private async Task<bool> SaveAndLeaveAsync()
+    {
+        if (_editor is null) return false;
+        var result = await _editor.SaveAsync();
+        return result.IsSaved;
+    }
 
     private void OnSimulationChanged(ChangeEventArgs e) => _simulation = e.Value?.ToString() ?? "real";
 
