@@ -77,7 +77,7 @@ public class DocumentLibraryRedesignE2ETests : WasmTestBase
         await page.ClickAsync("[data-testid=open-dialog-btn]");
         await page.WaitForSelectorAsync(".tm-document-open-dialog",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
-        await page.WaitForSelectorAsync(".tm-dod-tree-node", new PageWaitForSelectorOptions { Timeout = 20_000 });
+        await page.WaitForSelectorAsync(".tm-dod-tree-node, .tm-dod-folder-row", new PageWaitForSelectorOptions { Timeout = 20_000 });
         // The modal slides in: never capture / measure mid-animation.
         await page.EvaluateAsync("async () => { await Promise.all(document.getAnimations().map(a => a.finished.catch(() => { }))); }");
     }
@@ -366,17 +366,21 @@ public class DocumentLibraryRedesignE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("Edge (review hint): at a narrow viewport the footer collapses without clipping Open - every footer control stays inside the viewport")]
+    [Description("Edge (review hint): at a narrow viewport the footer collapses without clipping Open - every footer control stays inside the viewport (below 640 px of dialog body the dialog is the phase-9 mobile panel: folder rows instead of the tree)")]
     public async Task DocLib_NarrowViewport_FooterNeverClipsOpen()
     {
         foreach (var width in new[] { 700, 600 })
         {
             var page = await OpenPageAsync(width, 800);
             await OpenDialogAsync(page);
-            await Node(page, "Designs").ClickAsync();
+            // The layout decides how a folder is entered: a tree item (tablet / desktop) or a drill-down row (mobile).
+            await page.Locator(".tm-dod-tree-node, .tm-dod-folder-row").Filter(new() { HasTextString = "Designs" }).First.ClickAsync();
+            await page.Locator(".tm-dod-row").First.WaitForAsync();
             await page.Locator(".tm-dod-row").First.ClickAsync();
 
-            foreach (var selector in new[] { ".tm-dod-cancel", ".tm-dod-open" })
+            // The mobile panel has no Cancel button (its header close button cancels); every control that exists must stay inside.
+            var mobile = await page.Locator(".tm-dod").GetAttributeAsync("data-layout") == "mobile";
+            foreach (var selector in mobile ? new[] { ".tm-dod-open" } : new[] { ".tm-dod-cancel", ".tm-dod-open" })
             {
                 var box = await page.Locator(selector).BoundingBoxAsync();
                 Assert.IsNotNull(box, $"{selector} at {width}px");

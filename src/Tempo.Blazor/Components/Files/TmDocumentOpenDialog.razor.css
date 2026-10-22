@@ -589,7 +589,7 @@
     flex-wrap: wrap;
 }
 
-/* A very narrow container (phone width, until the mobile phase) gives the tree even less. */
+/* A forced Tablet layout in a very narrow container still shows the tree: it gets even less. (The measured mobile layout has no tree.) */
 @container tm-layout (width < 640px) {
     .tm-dod-tree {
         flex-basis: 152px;
@@ -662,4 +662,452 @@
         width: var(--tm-space-8);
         height: var(--tm-space-8);
     }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   Mobile layout (wireframe redesign plan ce19aa8c, phase 9) — a FULLSCREEN panel (TmModal MobilePresentation=Fullscreen).
+   Structure: [sticky head: search / back + breadcrumb + view toggle / inline bars] [scrolling content: folder rows, document
+   rows] [sticky footer: Link / Copy cards, action bar + Open]. The modal's own parts (body, footer) belong to TmModal, so they are
+   reached through ::deep from the host wrapper (display: contents; it takes no part in the host's layout).
+   ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-dod-host {
+    display: contents;
+}
+
+/* The body hands its whole height to the observer root and the dialog root, so ONE region (the content) scrolls and the head and
+   the footer never leave the screen. overflow-y stays auto: with a very short visible viewport (the keyboard open) the body scrolls
+   as a last resort instead of squeezing the content to nothing. */
+.tm-dod-host ::deep .tm-dod-modal--mobile .tm-modal-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.tm-dod-host ::deep .tm-dod-modal--mobile .tm-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-dod-host ::deep .tm-dod-modal--mobile .tm-modal-footer {
+    padding-bottom: calc(var(--tm-space-3) + env(safe-area-inset-bottom, 0px));
+}
+
+.tm-dod--mobile {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 0;
+}
+
+.tm-dod-mobile-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+.tm-dod--mobile .tm-dod-search {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-dod-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-dod-back {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: 0;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-dod-back:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-dod-back:focus-visible,
+.tm-dod-folder-row:focus-visible,
+.tm-dod-inline-cancel:focus-visible,
+.tm-dod-new-folder-confirm:focus-visible,
+.tm-dod-rename-confirm:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* One line of path: the earlier crumbs give way (ellipsis), the current place and the home icon never shrink to nothing. */
+.tm-dod--mobile .tm-dod-breadcrumb {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.tm-dod--mobile .tm-dod-crumb {
+    flex: 0 1 auto;
+    min-width: 0;
+    min-height: var(--tm-touch-target);
+    padding-inline: var(--tm-space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-dod--mobile .tm-dod-crumb--current {
+    flex-shrink: 1;
+}
+
+.tm-dod--mobile .tm-dod-crumb-sep {
+    flex: 0 0 auto;
+}
+
+.tm-dod--mobile .tm-dod-view-toggle {
+    flex: 0 0 auto;
+}
+
+/* Inline bars: the field takes a full row, the buttons sit below it (320 px has no room for a field and two buttons side by side). */
+.tm-dod--mobile .tm-dod-new-folder-bar,
+.tm-dod--mobile .tm-dod-rename-bar,
+.tm-dod--mobile .tm-dod-delete-confirm {
+    flex-wrap: wrap;
+}
+
+.tm-dod--mobile .tm-dod-new-folder-input,
+.tm-dod--mobile .tm-dod-rename-input {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-font-size-md);
+}
+
+.tm-dod-inline-cancel,
+.tm-dod--mobile .tm-dod-new-folder-confirm,
+.tm-dod--mobile .tm-dod-rename-confirm,
+.tm-dod--mobile .tm-dod-delete-confirm-ok,
+.tm-dod--mobile .tm-dod-delete-confirm-cancel {
+    flex: 1 1 0;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1-5) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-dod--mobile .tm-dod-new-folder-confirm,
+.tm-dod--mobile .tm-dod-rename-confirm {
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+/* The delete confirmation keeps its danger fill / ink (set above for the desktop). */
+.tm-dod--mobile .tm-dod-delete-confirm-ok {
+    background: var(--tm-color-danger);
+    border-color: transparent;
+    color: var(--tm-text-inverse);
+}
+
+.tm-dod--mobile .tm-dod-delete-confirm > span {
+    flex-basis: 100%;
+}
+
+.tm-dod--mobile .tm-dod-rename-error {
+    flex-basis: 100%;
+}
+
+/* The scrolling region. */
+.tm-dod-content--mobile {
+    flex: 1 1 auto;
+    min-height: 7rem;
+    gap: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* Drill-down folder rows: a native button per folder (it activates natively), icon chip, name over a quiet "Folder" line, chevron. */
+.tm-dod-folders {
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-dod-folder-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    width: 100%;
+    min-height: calc(var(--tm-touch-target) + var(--tm-space-4));
+    padding: var(--tm-space-2) var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border: 0;
+    border-bottom: 1px solid var(--tm-border-color);
+    color: var(--tm-text-primary);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-dod-folder-row:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+/* The virtual Recent row: a clock chip in the neutral tone, so it never reads as a real folder. */
+.tm-dod-folder-row--recent .tm-dod-folder-icon {
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+}
+
+.tm-dod-folder-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-10);
+    block-size: var(--tm-space-10);
+    background: var(--tm-color-primary-subtle);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-primary);
+}
+
+.tm-dod-folder-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+}
+
+.tm-dod-folder-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-dod-folder-kind {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-dod-folder-chevron {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--tm-text-secondary);
+}
+
+/* Two-line document rows: preview thumb, name over "date · author", and the row menu. The base row grid (name / date / author) is replaced. */
+.tm-dod--mobile .tm-dod-list {
+    gap: 0;
+}
+
+.tm-dod--mobile .tm-dod-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--tm-space-2);
+    min-height: calc(var(--tm-touch-target) + var(--tm-space-8));
+    padding: var(--tm-space-2) var(--tm-space-2) var(--tm-space-2) var(--tm-space-4);
+}
+
+.tm-dod-row-main {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-dod-row-preview {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-12);
+    block-size: var(--tm-space-12);
+    background: var(--tm-bg-surface-secondary);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    overflow: hidden;
+}
+
+.tm-dod-row-preview ::deep svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.tm-dod-row-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+}
+
+.tm-dod-row-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-dod-row-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+/* The ⋯ trigger is TmDropdown's own button: icon-only. Its text (the row's name for the sheet title and the accessible name) stays in
+   the DOM but is visually hidden; the trailing chevron is dropped. */
+.tm-dod-row-menu {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-dod-row-menu ::deep .tm-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-dod-row-menu ::deep .tm-dropdown-trigger:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+.tm-dod-row-menu ::deep .tm-dropdown-trigger:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+/* The trigger's label span is rendered by TmDropdown (no class hook from here), so the shared .tm-sr-only utility cannot be added to it: the same clip lives here. */
+.tm-dod-row-menu ::deep .tm-dropdown-trigger > span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tm-dod-row-menu ::deep .tm-dropdown-trigger > svg:last-child {
+    display: none;
+}
+
+.tm-dod--mobile .tm-dod-card {
+    min-width: 0;
+}
+
+.tm-dod--mobile .tm-dod-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: var(--tm-space-3) var(--tm-space-4);
+}
+
+.tm-dod--mobile .tm-dod-load-more {
+    align-self: stretch;
+    min-height: var(--tm-touch-target);
+    margin: var(--tm-space-3) var(--tm-space-4);
+}
+
+.tm-dod--mobile .tm-dod-empty,
+.tm-dod--mobile .tm-dod-loading,
+.tm-dod--mobile .tm-dod-error {
+    padding-block: var(--tm-space-8);
+}
+
+/* Footer: compact Link / Copy cards above ONE row holding the action bar and the primary Open. */
+.tm-dod-footer--mobile {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+}
+
+.tm-dod-mode--compact {
+    flex: 0 0 auto;
+    gap: var(--tm-space-2);
+}
+
+.tm-dod-mode--compact .tm-dod-mode-card {
+    align-items: center;
+    padding: var(--tm-space-2) var(--tm-space-2-5);
+    min-height: var(--tm-touch-target);
+}
+
+.tm-dod-mode--compact .tm-dod-mode-card input[type="radio"] {
+    margin: 0;
+}
+
+/* Compact: the card is its title. The hint stays in the DOM (a screen reader still gets what each choice does) and is visually hidden by the shared .tm-sr-only utility (base.css), added in the markup. */
+
+.tm-dod-mode--compact .tm-dod-mode-title {
+    min-width: 0;
+    font-size: var(--tm-font-size-sm);
+}
+
+/* With the on-screen keyboard open the footer keeps ONLY what a field being edited can still need: the bar and the primary Open stay,
+   the Link / Copy cards step aside (they come back with the keyboard). */
+.tm-dod-host ::deep .tm-dod-keyboard .tm-dod-mode--compact {
+    display: none;
+}
+
+/* The row wraps when the bar and Open do not fit side by side (320 px): Open then takes its own full-width row. */
+.tm-dod-footer-mobile-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+}
+
+.tm-dod-footer-mobile-row ::deep .tm-mobile-action-bar {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.tm-dod-footer-mobile-row ::deep .tm-mobile-action-bar__bar {
+    height: 100%;
+    padding: 0;
+    border-top: 0;
+    background: transparent;
+}
+
+.tm-dod-footer-mobile-row ::deep .tm-dod-open {
+    flex: 1 1 5.5rem;
+    align-self: stretch;
+    min-height: var(--tm-touch-target);
 }

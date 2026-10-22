@@ -20,7 +20,10 @@ namespace Tempo.Blazor.Components.Files;
 /// collapse/expand or step to the parent/first child, Home/End jump, Enter/Space navigate). The list rows and
 /// grid cards are one roving tab stop each with the arrow keys (the grid steps by its measured column count).
 /// The dialog measures its own body and switches to a compact tree and a footer with the buttons on their own row
-/// when the container is narrow; <see cref="LayoutMode"/> forces that for tests and hosts.
+/// when the container is narrow; <see cref="LayoutMode"/> forces that for tests and hosts. Below 640 px (the mobile layout)
+/// it becomes a fullscreen panel: no tree, the subfolders of the current folder as drill-down rows with a back button and the
+/// breadcrumb, documents as two-line rows with a preview and a per-row "⋯" menu, and a sticky footer with the Link / Copy cards,
+/// a <see cref="Tempo.Blazor.Components.Actions.TmMobileActionBar"/> (New folder / Rename / Delete) and the primary Open.
 /// </remarks>
 public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
 {
@@ -72,10 +75,12 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
     [Parameter] public bool ShowRecent { get; set; }
 
     /// <summary>
-    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> (default) measures the dialog body and goes compact
-    /// (narrow tree, footer buttons on their own row) below 768 px; <see cref="TmLayoutMode.Tablet"/> and
-    /// <see cref="TmLayoutMode.Mobile"/> force the compact layout and <see cref="TmLayoutMode.Desktop"/> the wide one,
-    /// without importing the observer script — so a test or a host renders a layout without a DOM.
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> (default) measures the dialog body: below 768 px it goes
+    /// compact (narrow tree, footer buttons on their own row) and below 640 px it becomes the mobile layout — a fullscreen
+    /// panel with drill-down folder rows, two-line document rows, a row menu and a sticky footer holding the action bar.
+    /// <see cref="TmLayoutMode.Tablet"/> forces the compact layout, <see cref="TmLayoutMode.Mobile"/> the fullscreen mobile
+    /// layout and <see cref="TmLayoutMode.Desktop"/> the wide one, without importing the observer script — so a test or a
+    /// host renders a layout without a DOM. The returned <see cref="DocumentOpenResult"/> is the same in every layout.
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
@@ -134,6 +139,18 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
     private const int NarrowBelowPx = TmBreakpoints.Sm; // mirrored by the stylesheet's @container tm-layout (width < 640px)
     private const int CompactBelowPx = TmBreakpoints.Md; // below this the layout is Tablet (compact tree, footer on its own row)
     private static readonly TmLayoutBreakpoints ContainerBreakpoints = new(NarrowBelowPx, CompactBelowPx);
+
+    // Hysteresis against a presentation flap. The dialog body is narrower than the fullscreen body at the same viewport: the dialog
+    // loses the overlay padding, the modal margin and the body padding on both sides (2 * (16 + 16 + 24) = 112 px between 640 and 767 px),
+    // the fullscreen mobile body has none of them (it is edge to edge). The viewport that measured "mobile" in the dialog therefore
+    // measures 112 px WIDER once the panel is up and would resolve to "tablet" again, swapping the dialog back in, forever. While the
+    // panel is up the observer classifies with a mobile threshold that many pixels wider, so one viewport stays mobile in both
+    // presentations. 640 + 112 = 752 stays below the 768 tablet step, so the tablet band remains reachable.
+    // SOURCE TOKENS (keep in step if any of them changes): .tm-modal-overlay padding var(--tm-space-4) = 16 px and .tm-modal margin
+    // var(--tm-space-4) = 16 px below 768 px (both _modal.css), .tm-modal-body padding var(--tm-space-6) = 24 px (_modal.css); each is
+    // paid on BOTH sides: 2 * (16 + 16 + 24) = 112. The bUnit hysteresis test pins 752 = 640 + 112 and the tablet band below 768.
+    private const int FullscreenChromePx = 112;
+    private static readonly TmLayoutBreakpoints FullscreenBreakpoints = new(NarrowBelowPx + FullscreenChromePx, CompactBelowPx);
     private TmLayoutObserver? _observer;
 
     private CancellationTokenSource? _searchCts;
@@ -146,6 +163,10 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
     private ElementReference _root;
     private LazyJsModule? _guardModule;
     private bool _guardAttached;
+    private string? _guardRootId;
+    private bool _liftAttached;
+    private bool _liftRequested;
+    private string? _liftRootId;
 
     private enum DialogView { List, Grid }
 
@@ -157,9 +178,22 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
     /// <summary>The layout in force: the forced <see cref="LayoutMode"/>, or what the observer measured (Desktop before the first measurement).</summary>
     private TmLayoutMode Resolved => LayoutMode != TmLayoutMode.Auto
         ? LayoutMode
-        : _observer?.Resolved ?? TmLayoutMode.Desktop;
+        : _observer?.Resolved ?? FirstFrameLayout;
+
+    /// <summary>The viewport's layout (an app-level <c>TmLayoutObserver IsViewportScope</c>), when the host provides one.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// The layout of the first frame, before the dialog body is measured. A phone-width viewport (below 640 px) makes the body narrower
+    /// still, so with a viewport scope the dialog opens straight into the mobile layout instead of flashing the wide dialog first;
+    /// without one it is Desktop, like every other measuring component.
+    /// </summary>
+    private TmLayoutMode FirstFrameLayout => Viewport is { IsMobile: true } ? TmLayoutMode.Mobile : TmLayoutMode.Desktop;
 
     private bool Compact => Resolved != TmLayoutMode.Desktop;
+
+    /// <summary>The mobile layout: a fullscreen panel, drill-down folders, two-line rows, the action bar in the footer.</summary>
+    private bool Mobile => Resolved == TmLayoutMode.Mobile;
 
     private string LayoutCss => Resolved switch
     {
@@ -199,19 +233,47 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Open && !_guardAttached && _root.Id is not null)
+        // Both registrations are keyed by _treeId (a per-instance constant), never by the element a later call would have to hold again:
+        // Blazor may replace the dialog root when the presentation flips between the dialog and the fullscreen panel, and a detach that
+        // handed over a different element than the attach saw would leave the listener (and the overlay padding) behind forever.
+        // The root's ElementReference id tells a replaced root from the same one; the module moves the registration to the new root.
+        if (Open && _root.Id is not null && (!_guardAttached || _guardRootId != _root.Id))
         {
             _guardAttached = true;
+            _guardRootId = _root.Id;
             _guardModule ??= new LazyJsModule(JS, GuardModulePath);
-            await _guardModule.TryInvokeVoidAsync("attachSpaceGuard", _root);
+            await _guardModule.TryInvokeVoidAsync("attachSpaceGuard", _root, _treeId);
         }
         else if (!Open && _guardAttached)
         {
             _guardAttached = false;
+            _guardRootId = null;
             if (_guardModule is { IsImported: true })
             {
-                await _guardModule.TryInvokeVoidAsync("detachSpaceGuard", _root);
+                await _guardModule.TryInvokeVoidAsync("detachSpaceGuard", _treeId);
             }
+        }
+
+        // Mobile: the fullscreen panel is fixed to the LAYOUT viewport, which an on-screen keyboard does not shrink (TmModal only
+        // tracks the keyboard for a bottom sheet). The dialog's module pads the overlay by the hidden gap (the measure the
+        // bottom sheets use) so the sticky footer - the action bar and the primary Open - stays on screen while a field
+        // is being edited. Attached while the mobile panel is up; the module's answer decides whether it is (false = the overlay is not
+        // in the DOM yet: the module retries on animation frames and the next render asks again, idempotently).
+        if (Open && Mobile && _root.Id is not null && (!_liftAttached || _liftRootId != _root.Id))
+        {
+            _liftRootId = _root.Id;
+            _guardModule ??= new LazyJsModule(JS, GuardModulePath);
+            var (ok, attached) = await _guardModule.TryInvokeAsync<bool>("attachKeyboardLift", _root, _treeId);
+            _liftAttached = ok && attached;
+            _liftRequested = true;
+            if (!_liftAttached)
+            {
+                _liftRootId = null;
+            }
+        }
+        else if ((_liftAttached || _liftRequested) && !(Open && Mobile))
+        {
+            await DetachKeyboardLiftAsync();
         }
 
         if (Open && _pendingFocus is { } focus && _root.Id is not null)
@@ -222,6 +284,18 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Releases every listener the lift added (window resize, visualViewport resize / scroll), cancels a pending retry and restores the overlay.
+    private async Task DetachKeyboardLiftAsync()
+    {
+        _liftAttached = false;
+        _liftRequested = false;
+        _liftRootId = null;
+        if (_guardModule is { IsImported: true })
+        {
+            await _guardModule.TryInvokeVoidAsync("detachKeyboardLift", _treeId);
+        }
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
@@ -229,10 +303,28 @@ public partial class TmDocumentOpenDialog : ComponentBase, IAsyncDisposable
         _searchCts?.Dispose();
         if (_guardModule is not null)
         {
-            await _guardModule.DisposeAsync();
+            // The listeners live on window / visualViewport, which outlive this component: release them BEFORE the module reference goes.
+            // TryInvokeVoidAsync swallows JSDisconnectedException (a torn-down circuit has nothing left to release).
+            if (_liftAttached || _liftRequested)
+            {
+                await DetachKeyboardLiftAsync();
+            }
+
+            if (_guardAttached)
+            {
+                _guardAttached = false;
+                await _guardModule.TryInvokeVoidAsync("detachSpaceGuard", _treeId);
+            }
+
+            try
+            {
+                await _guardModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
         }
     }
-
     private void ResetState()
     {
         _loading = false;

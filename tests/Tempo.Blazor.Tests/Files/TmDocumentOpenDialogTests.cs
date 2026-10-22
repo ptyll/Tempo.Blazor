@@ -604,8 +604,8 @@ public class TmDocumentOpenDialogTests : LocalizationTestBase
 
         cut.WaitForAssertion(() => guard.Invocations["attachSpaceGuard"].Should().ContainSingle(),
             TimeSpan.FromSeconds(5));
-        guard.Invocations["attachSpaceGuard"].Single().Arguments.Should().HaveCount(1,
-            "only the dialog root travels — the module knows the .tm-dod-row / .tm-dod-card targets itself");
+        guard.Invocations["attachSpaceGuard"].Single().Arguments.Should().HaveCount(2,
+            "only the dialog root and the per-instance registration key travel — the module knows the .tm-dod-row / .tm-dod-card targets itself");
     }
 
     [Fact]

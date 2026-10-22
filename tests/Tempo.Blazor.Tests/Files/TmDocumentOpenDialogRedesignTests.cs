@@ -532,14 +532,6 @@ public class TmDocumentOpenDialogRedesignTests : LocalizationTestBase
         footer.QuerySelector(".tm-dod-footer-actions .tm-dod-open").Should().NotBeNull();
     }
 
-    [Fact]
-    public void Mobile_LayoutMode_UsesTheCompactRules_TooUntilPhase9()
-    {
-        var cut = RenderOpen(Seeded(), p => p.Add(c => c.LayoutMode, TmLayoutMode.Mobile));
-
-        cut.Find(".tm-dod-tree").ClassList.Should().Contain("tm-dod-tree--narrow");
-        cut.Find(".tm-dod-footer").ClassList.Should().Contain("tm-dod-footer--own-row");
-    }
 
     // ── Recent (opt-in, provider unchanged) ─────────────────────────────────
 

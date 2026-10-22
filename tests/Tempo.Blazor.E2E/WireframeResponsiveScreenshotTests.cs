@@ -164,7 +164,8 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             await dialogPage.ClickAsync("[data-testid=open-dialog-btn]");
             await dialogPage.WaitForSelectorAsync(".tm-document-open-dialog",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 20_000 });
-            await dialogPage.Locator(".tm-dod-tree-node", new() { HasTextString = "Designs" }).First
+            // Desktop / tablet enter a folder through the tree; the mobile layout (phase 9) through a drill-down folder row.
+            await dialogPage.Locator(".tm-dod-tree-node, .tm-dod-folder-row", new() { HasTextString = "Designs" }).First
                 .DispatchEventAsync("click");
             // Attached: at 320 px the fixed-width tree can push the list out of the visible area (baseline finding).
             await dialogPage.WaitForSelectorAsync(".tm-dod-row",

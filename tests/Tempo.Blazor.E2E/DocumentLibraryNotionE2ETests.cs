@@ -196,6 +196,101 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
         await SaveScreenshotAsync(page, "06-mcp-after.png", "phase4");
     }
 
+    /// <summary>Phase 9 captures go to the git-ignored TestResults folder; only <c>TM_E2E_UPDATE_BASELINE=1</c> rewrites the committed set.</summary>
+    private static async Task SaveMobileScreenshotAsync(IPage page, string fileName)
+    {
+        var update = string.Equals(Environment.GetEnvironmentVariable("TM_E2E_UPDATE_BASELINE"), "1", StringComparison.Ordinal);
+        var dir = update
+            ? Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "document-library", "mobile")
+            : Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "TestResults", "document-library-mobile");
+        Directory.CreateDirectory(dir);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(dir, fileName), Type = ScreenshotType.Png });
+    }
+
+    /// <summary>A touch context (the base class opens a mouse one): the Notion demo page at a phone viewport, seeded empty.</summary>
+    private async Task<IPage> OpenNotionTouchEditorAsync(int width, int height)
+    {
+        await ResetNotionDemoDataAsync();
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        await context.AddInitScriptAsync("window.localStorage.setItem('tm-demo-culture', 'en');");
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/notion-editor", new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
+        await page.WaitForFunctionAsync("() => window.tmNotionDemo && typeof window.tmNotionDemo.seedEmptyPage === 'function'", null, new PageWaitForFunctionOptions { Timeout = 60000 });
+        await page.EvaluateAsync("() => window.tmNotionDemo.seedEmptyPage()");
+        await page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 60000 });
+        return page;
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [DataRow(390, 844)]
+    [DataRow(320, 640)]
+    [Description("Phase 9: the Notion wireframe block opens the dialog as a fullscreen panel on a phone - drill down, pick, switch to Copy, Open - and nothing scrolls horizontally")]
+    public async Task DocLibMobile_NotionBlock_InsertExisting_DrillDown_Copy_Open(int width, int height)
+    {
+        var page = await OpenNotionTouchEditorAsync(width, height);
+        await InsertWireframeBlockAsync(page);
+        await page.WaitForSelectorAsync(".tm-notion-tempo-block__insert-existing", new PageWaitForSelectorOptions { Timeout = 10000 });
+        await page.Locator(".tm-notion-tempo-block__insert-existing").First.DispatchEventAsync("click");
+
+        await page.WaitForSelectorAsync(".tm-document-open-dialog", new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        await page.WaitForSelectorAsync(".tm-dod-folder-row", new PageWaitForSelectorOptions { Timeout = 15000 });
+        Assert.AreEqual("mobile", await page.Locator(".tm-dod").GetAttributeAsync("data-layout"));
+        Assert.AreEqual(1, await page.Locator(".tm-modal--fullscreen-presentation").CountAsync());
+        Assert.AreEqual(0, await page.Locator(".tm-dod-tree").CountAsync());
+
+        // The mode choice the Notion blocks need is still there, above the action bar; every footer control is on screen.
+        Assert.AreEqual(2, await page.Locator(".tm-dod-mode-card").CountAsync());
+        foreach (var selector in new[] { ".tm-dod-open", ".tm-dod-mode", ".tm-mobile-action-bar__bar" })
+        {
+            var box = await page.Locator(selector).First.BoundingBoxAsync();
+            Assert.IsNotNull(box, selector);
+            Assert.IsTrue(box!.X >= -0.5 && box.X + box.Width <= width + 0.5 && box.Y + box.Height <= height + 0.5, $"{selector} inside the {width}x{height} viewport ({box.X},{box.Y},{box.Width},{box.Height})");
+        }
+
+        var overflow = await page.EvaluateAsync<double>("() => document.documentElement.scrollWidth - document.documentElement.clientWidth");
+        Assert.IsTrue(overflow <= 1, $"no horizontal page scroll ({overflow}px)");
+
+        await page.Locator(".tm-dod-folder-row[data-path$='/Designs']").First.TapAsync();
+        await page.WaitForSelectorAsync(".tm-dod-row");
+        var docId = await page.Locator(".tm-dod-row").First.GetAttributeAsync("data-id");
+        await page.Locator(".tm-dod-row").First.TapAsync();
+        await page.Locator(".tm-dod-mode-card", new() { HasTextString = "Link to file" }).TapAsync();
+        await SaveMobileScreenshotAsync(page, $"mobile-{width}-notion-dialog.png");
+        await page.Locator(".tm-dod-open").TapAsync();
+
+        // Link mode: the block renders the linked document's preview and subscribes to its changes.
+        await page.WaitForSelectorAsync(".tm-notion-wireframe-block__svg-container svg", new PageWaitForSelectorOptions { Timeout = 15000 });
+        await page.WaitForSelectorAsync($".tm-notion-wireframe-block[data-doclib-subscribed='{docId}']", new PageWaitForSelectorOptions { Timeout = 15000 });
+        Assert.AreEqual(0, await page.Locator(".tm-document-open-dialog").CountAsync(), "the dialog closes after Open");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("Phase 9: the Notion block opens the same dialog as the desktop dialog (tree, Cancel) in a wide container - the layout follows the viewport")]
+    public async Task DocLibMobile_NotionBlock_Desktop_KeepsTheDialog()
+    {
+        var page = await OpenNotionEditorAsync(1280, 800);
+        await SeedEmptyPageAsync();
+        await InsertWireframeBlockAsync(page);
+        await page.WaitForSelectorAsync(".tm-notion-tempo-block__insert-existing", new PageWaitForSelectorOptions { Timeout = 10000 });
+        await page.ClickAsync(".tm-notion-tempo-block__insert-existing");
+
+        await page.WaitForSelectorAsync(".tm-document-open-dialog", new PageWaitForSelectorOptions { Timeout = 15000 });
+        Assert.AreEqual("desktop", await page.Locator(".tm-dod").GetAttributeAsync("data-layout"));
+        Assert.AreEqual(1, await page.Locator(".tm-dod-tree").CountAsync());
+        Assert.AreEqual(0, await page.Locator(".tm-modal--fullscreen-presentation").CountAsync());
+    }
+
     [TestMethod]
     public async Task DocLibShot2_PlaceholderWithInsertExisting()
     {

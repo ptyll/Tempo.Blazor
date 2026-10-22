@@ -340,4 +340,26 @@ public class TmLayoutObserverTests : LocalizationTestBase
             builder.CloseElement();
         }
     }
+
+    [Fact]
+    public void ChangingBreakpoints_ReRegistersTheObserver_SoTheSameWidthIsReclassified()
+    {
+        // TmDocumentOpenDialog widens its mobile threshold while its fullscreen panel is up (hysteresis): the observer must hand the new
+        // pair to the module, which classifies with what it was given - otherwise the widened threshold would never apply.
+        var module = JSInterop.SetupModule(ModulePath);
+        var observe = module.SetupVoid("observe", invocation => true);
+
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.Breakpoints, new TmLayoutBreakpoints(640, 768))
+            .AddChildContent("<span>auto</span>"));
+        observe.Invocations.Should().ContainSingle();
+
+        cut.Render(parameters => parameters.Add(p => p.Breakpoints, new TmLayoutBreakpoints(752, 768)));
+
+        observe.Invocations.Should().HaveCount(2, "a changed pair re-registers once");
+        observe.Invocations.Last().Arguments[3].Should().BeEquivalentTo(new { breakpoints = new { sm = 752, md = 768, lg = 768 } });
+
+        cut.Render(parameters => parameters.Add(p => p.Breakpoints, new TmLayoutBreakpoints(752, 768)));
+        observe.Invocations.Should().HaveCount(2, "an equal pair (records compare by value) is not a change");
+    }
 }

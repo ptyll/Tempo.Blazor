@@ -74,6 +74,18 @@
 
 ### Added
 
+- **`TmDocumentOpenDialog` mobile layout: a fullscreen panel with drill-down folders (wireframe redesign plan ce19aa8c, phase 9, WF4).** In a dialog body narrower than
+  640 px - or with `LayoutMode="TmLayoutMode.Mobile"` - the dialog renders `TmModal` with `MobilePresentation=Fullscreen` and an inline footer that never leaves the screen:
+  a sticky head (search at full width; a back button, the breadcrumb and the list / grid switch; the inline new-folder, rename and delete-confirm bars, usable at 320 px),
+  ONE scrolling region and a sticky footer. There is **no tree**: the subfolders of the current folder (taken from the folder tree the dialog already holds - no provider
+  member is added) are `button.tm-dod-folder-row` rows with a chevron, a tap drills in, the back button steps one level up and a crumb jumps to that level (focus follows: to the
+  back button after a drill, to the folder row that was left after a step back). Documents are two-line rows (`.tm-dod-row-name`; `.tm-dod-row-meta` = `date · author`) with a
+  thumbnail rendered from `PreviewSvg` through the same path as the grid (the file icon when there is none; no new `MarkupString` source) and a per-row **more menu**
+  (`.tm-dod-row-menu`, a `TmDropdown` presenting as a bottom sheet titled "More actions for {name}") with Rename / Delete that reuse the desktop flow. The footer holds the Link / Copy
+  choice as compact radio cards (`.tm-dod-mode--compact`, the hint stays for assistive technology) above a `TmMobileActionBar` (New folder / Rename / Delete, gated by the provider's
+  capabilities) beside the primary **Open**; the header close button is the Cancel. With the on-screen keyboard open the footer stays inside the visible viewport (the overlay is padded by the
+  hidden gap, the Link / Copy cards step aside). `DocumentOpenResult`, `ITempoDocumentLibraryProvider` and every public parameter are unchanged; `LayoutMode=Mobile` is now a layout of its own.
+  New localization keys (en / cs / sk / fr): `TmDocumentOpenDialog_Back`, `_FolderRow`, `_FolderKind`, `_More`, `_ActionsLabel`. Demo `/document-open-dialog` gains a *Mobile* layout option and wraps its controls on a phone.
 - **`TmDocumentOpenDialog` redesign: opt-in "Recent" node and a testable `LayoutMode` (wireframe redesign plan ce19aa8c, phase 8, WF4).** Two new
   opt-in parameters, no `ITempoDocumentLibraryProvider` / `DocumentOpenResult` change. `ShowRecent` (default `false`) adds a virtual **Recent** node above the
   folder tree; selecting it issues `BrowseAsync` with `FolderPath = null`, `SortField = Modified`, `Descending = true`, `Take = PageSize` (the sort buttons are
@@ -1261,6 +1273,39 @@
 
 ### Breaking / Migration
 
+- **`TmDocumentOpenDialog` is a fullscreen, drill-down panel below 640 px (redesign plan ce19aa8c, phase 9) - it used to be the desktop dialog squeezed into the width.**
+  Impact: the public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, `ShowRecent`, `LayoutMode`, ...), `DocumentOpenResult` and `ITempoDocumentLibraryProvider`
+  are unchanged, and so are desktop and tablet (including a *forced* `Tablet` layout on a phone viewport: a layout you force always wins). What changes is the DOM of the **mobile** layout - a
+  dialog body below 640 px (a phone, or a narrow host container) or `LayoutMode="Mobile"`, which until now reused the tablet rules: (1) the modal root is `.tm-modal--fullscreen-presentation` (was a
+  `.tm-modal--sheet` bottom sheet on a phone viewport and an XLarge dialog in a narrow container) and the host wrapper `.tm-dod-host` (`display: contents`) exists; (2) **there is no
+  `.tm-dod-tree` / `[role=tree]` / `.tm-dod-tree-node`** - a test or a host that entered a folder by clicking a tree item must click `.tm-dod-folder-row[data-path$="/Designs"]` (a native `button`,
+  one tap drills in) and go back with `.tm-dod-back` or a crumb; (3) document rows are two lines (`.tm-dod-row-name` / `.tm-dod-row-meta` / `.tm-dod-row-preview`) - the list header
+  and the `.tm-dod-cell-*` cells are not rendered, and the grid is two columns; (4) **Rename, Delete and New folder are `TmMobileActionBar` tiles** in the footer
+  (`[data-action-id="rename"]` / `delete` / `new-folder`, inside `.tm-modal-footer`) instead of `.tm-dod-rename` / `.tm-dod-delete` / `.tm-dod-new-folder` toolbar buttons - the inline bars
+  (`.tm-dod-new-folder-bar`, `.tm-dod-rename-bar`, `.tm-dod-delete-confirm`) are unchanged but sit in the sticky head above the list and the first two gain a Cancel (`.tm-dod-inline-cancel`); (5) **there is
+  no `.tm-dod-cancel` button** in the mobile footer (the header close button cancels and raises `OnCancelled`); `.tm-dod-open` and the Link / Copy cards (`.tm-dod-mode-link` / `.tm-dod-mode-copy`,
+  now `.tm-dod-mode--compact`) stay; (6) a **double click / double tap on a row or card selects only** on mobile (a drill-down tap followed by a quick tap on the row that lands at the same spot would
+  have opened a document the user only meant to select) - Open is the button, or Enter on the focused row; desktop and tablet still open on a double click; (7) the Auto measurement uses a wider
+  mobile threshold (640 + 112 px) while the fullscreen panel is up, so one viewport width stays mobile in both presentations instead of flapping between the dialog and the panel; with an
+  app-level `TmLayoutObserver IsViewportScope` the first frame is already the mobile layout.
+  Before / after:
+  ```csharp
+  // before: a phone opened the desktop dialog squeezed into the width - the tree was the way into a folder
+  await page.Locator(".tm-dod-tree-node", new() { HasTextString = "Designs" }).ClickAsync();
+  await page.ClickAsync(".tm-dod-rename");                  // toolbar button, disabled until a row is selected
+  await page.ClickAsync(".tm-dod-cancel");
+
+  // after: layout-aware - a drill-down row and the footer action bar on mobile, the tree and the toolbar elsewhere
+  await page.Locator(".tm-dod-tree-node, .tm-dod-folder-row", new() { HasTextString = "Designs" }).First.ClickAsync();
+  await page.ClickAsync(".tm-dod-rename, [data-action-id=rename]");
+  await page.ClickAsync(".tm-modal-close");                 // the mobile Cancel (desktop / tablet keep .tm-dod-cancel too)
+  ```
+  ```razor
+  @* unchanged: the same markup renders the dialog on a desktop and the fullscreen panel on a phone; pin either with LayoutMode *@
+  <TmDocumentOpenDialog Provider="library" Kind="TempoDocumentKind.Wireframe" @bind-Open="open" OnSelected="Picked" />
+  <TmDocumentOpenDialog Provider="library" Kind="TempoDocumentKind.Wireframe" @bind-Open="open" LayoutMode="TmLayoutMode.Mobile" OnSelected="Picked" />
+  ```
+  The three Notion blocks (wireframe, diagram, spreadsheet) host the dialog with `ShowModeToggle=true` and need no change: the Link / Copy choice stays, as compact cards above the action bar.
 - **`TmDocumentOpenDialog` is a wider modal with a collapsible tree, always-visible actions and radio-card modes (redesign plan ce19aa8c, phase 8).**
   Impact: the public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, ...), `DocumentOpenResult` and every `.tm-dod-*` selector the
   Notion / Diagram / Spreadsheet blocks and the E2E suites use stay, but the DOM and look changed:

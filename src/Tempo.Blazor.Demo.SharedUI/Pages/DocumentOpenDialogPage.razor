@@ -11,12 +11,12 @@
     <p class="text-slate-600 dark:text-slate-400">
         A Word-like open dialog over the document library. Browse the collapsible folder tree, search, switch between
         list and grid, sort, manage folders/documents, and pick a document to link or copy. "Show Recent" adds the
-        opt-in Recent node (the provider decides what a null folder returns: the demo store lists the root documents).
+        opt-in Recent node (the provider decides what a null folder returns: the demo store lists the root documents). In a container narrower than 640 px (or with Layout = Mobile) the dialog is a fullscreen panel: drill-down folder rows, two-line document rows with a preview, a row menu and a sticky action bar.
     </p>
 </div>
 
 <section class="demo-section mb-10">
-    <div class="flex items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
         <label class="text-sm text-slate-600 dark:text-slate-300">Document kind:</label>
         <select class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                 @bind="_kind" data-testid="kind-select">
@@ -36,6 +36,7 @@
             <option value="@TmLayoutMode.Auto">Auto (measured)</option>
             <option value="@TmLayoutMode.Desktop">Desktop</option>
             <option value="@TmLayoutMode.Tablet">Tablet</option>
+            <option value="@TmLayoutMode.Mobile">Mobile</option>
         </select>
 
         <button class="px-4 py-1.5 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700"

@@ -12707,7 +12707,7 @@
       "kind": "Component",
       "category": "Files",
       "namespace": "Tempo.Blazor.Components.Files",
-      "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: an XLarge modal with a collapsible WAI-ARIA folder tree (one roving tab stop, arrow keys), a right-pane breadcrumb (home icon, › separators), a searchable list/grid of documents with a sort indicator, always-visible actions (Rename/Delete disabled until a document is selected), an optional virtual \"Recent\" node (ShowRecent) and a link-or-copy choice presented as radio cards. Emits a DocumentOpenResult on confirm. The dialog measures its own body: in a container narrower than 768 px (or with LayoutMode=Tablet/Mobile) the tree narrows and Cancel / Open take their own footer row. Colours come only from canonical core tokens (--tm-color-primary, --tm-color-primary-subtle, --tm-color-surface-hover, --tm-text-primary, --tm-color-danger(-subtle), --tm-bg-surface-secondary), so the accent follows the default blue, the opt-in indigo theme and dark mode; there is no hex fallback.",
+      "description": "A Word-like \"Open document\" dialog over an ITempoDocumentLibraryProvider: an XLarge modal with a collapsible WAI-ARIA folder tree (one roving tab stop, arrow keys), a right-pane breadcrumb (home icon, › separators), a searchable list/grid of documents with a sort indicator, always-visible actions (Rename/Delete disabled until a document is selected), an optional virtual \"Recent\" node (ShowRecent) and a link-or-copy choice presented as radio cards. Emits a DocumentOpenResult on confirm. The dialog measures its own body: below 768 px (or with LayoutMode=Tablet) the tree narrows and Cancel / Open take their own footer row; below 640 px (or with LayoutMode=Mobile) it is a fullscreen panel (TmModal MobilePresentation=Fullscreen) - no tree, the subfolders of the current folder as drill-down rows with a back button and the breadcrumb, two-line document rows with the PreviewSvg thumbnail and a per-row more menu (Rename / Delete), the Link / Copy radio cards as compact cards above a sticky TmMobileActionBar (New folder / Rename / Delete) beside the primary Open (the header close button is the Cancel), a footer that stays above the on-screen keyboard, and no double-tap open (Open is explicit). The returned DocumentOpenResult and the provider contract are identical in every layout. Colours come only from canonical core tokens (--tm-color-primary, --tm-color-primary-subtle, --tm-color-surface-hover, --tm-text-primary, --tm-color-danger(-subtle), --tm-bg-surface-secondary), so the accent follows the default blue, the opt-in indigo theme and dark mode; there is no hex fallback.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Files/TmDocumentOpenDialog.razor",
       "documentationStatus": "merged",
@@ -12734,7 +12734,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Auto",
-          "description": "The layout the dialog renders. Auto measures the dialog body and goes compact (narrow tree, footer buttons on their own row) below 768 px; Tablet and Mobile force the compact layout and Desktop the wide one without importing the observer script, so a test or a host renders a layout without a DOM."
+          "description": "The layout the dialog renders. Auto measures the dialog body: below 768 px it goes compact (narrow tree, footer buttons on their own row) and below 640 px it becomes the mobile layout - a fullscreen panel with drill-down folder rows, two-line document rows, a row menu and a sticky footer holding the action bar. Tablet forces the compact layout, Mobile the fullscreen mobile layout and Desktop the wide one, all without importing the observer script, so a test or a host renders a layout without a DOM. The returned DocumentOpenResult is the same in every layout."
         },
         {
           "name": "OnCancelled",
@@ -12839,7 +12839,33 @@
         "tm-dod-mode-card--selected",
         "tm-dod-mode-title",
         "tm-dod-mode-hint",
-        "tm-dod-footer-actions"
+        "tm-dod-footer-actions",
+        "tm-dod--mobile",
+        "tm-dod-modal--mobile",
+        "tm-dod-host",
+        "tm-dod-mobile-head",
+        "tm-dod-nav",
+        "tm-dod-back",
+        "tm-dod-content--mobile",
+        "tm-dod-folders",
+        "tm-dod-folder-row",
+        "tm-dod-folder-row--recent",
+        "tm-dod-folder-icon",
+        "tm-dod-folder-text",
+        "tm-dod-folder-name",
+        "tm-dod-folder-kind",
+        "tm-dod-folder-chevron",
+        "tm-dod-row-main",
+        "tm-dod-row-preview",
+        "tm-dod-row-text",
+        "tm-dod-row-name",
+        "tm-dod-row-meta",
+        "tm-dod-row-menu",
+        "tm-dod-inline-cancel",
+        "tm-dod-footer--mobile",
+        "tm-dod-footer-mobile-row",
+        "tm-dod-mode--compact",
+        "tm-dod-keyboard"
       ]
     },
     {
