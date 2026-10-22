@@ -439,7 +439,7 @@ public class WireframePropertiesPanelRenderTests : LocalizationTestBase
     // ── Empty selection: canvas / page / grid ─────────────────────────────────
 
     [Fact]
-    public void EmptySelection_ShowsCanvasPageGridSections_ThenTheSelectionHint()
+    public void EmptySelection_ShowsCanvasPageGridSections_ThenTheSelectionHintWithoutAnEmptyCollapsible()
     {
         var cut = RenderPanel(NewDoc());
 
@@ -454,7 +454,7 @@ public class WireframePropertiesPanelRenderTests : LocalizationTestBase
         cut.Find("details[data-testid='wd-section-grid'] summary").TextContent.Should().Be("Grid");
 
         cut.Find(".tm-wd-props__empty").TextContent.Should().Contain("Select an element on the canvas");
-        cut.Find("details[data-testid='wd-section-selection'] summary").TextContent.Should().Be("Selection");
+        cut.FindAll("details[data-testid='wd-section-selection']").Should().BeEmpty("the hint is the whole content: no empty 'Selection' collapsible around it");
     }
 
     [Fact]

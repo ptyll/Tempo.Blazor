@@ -69,6 +69,27 @@
 
 ### Added
 
+- **Wireframe canvas: touch and pen (redesign plan ce19aa8c, phase 5).** The canvas now works with a finger and a pen on a tablet (full
+  editing from the tablet up; the mobile layout stays viewing plus light edits). One finger or pen selects, drags (single, multi, groups),
+  resizes through the eight handles, rotates, rubber-bands, draws connectors with the connector tool and drags connector waypoints;
+  **two fingers pinch-zoom and pan** (zoom clamped to 0.15x-5x, the toolbar read-out follows); a **500 ms hold opens the context menu**
+  beside the finger; a **double-tap** is a double-click (adds a connector waypoint). On a coarse pointer the selection handles are painted
+  1.5x larger and every handle gets an invisible hit area of at least 24 screen px (`--tm-wd-handle-hit`, `--tm-touch-target` = 44px on a
+  coarse pointer), the connector waypoint gets a finger-sized hit circle, and `.tm-wd-canvas__svg` claims the touch (`touch-action: none`).
+  Every gesture runs on the shared core helpers - `pointer-drag.js` (`attach`, incl. the long-press) and `pointer-gesture.js`
+  (`attachPinch`) - loaded from `wireframe-designer.js`; the package only adds `wireframe-gestures.mjs` (pure maths: double-tap, coarse
+  handle sizes, pinch to viewBox, nudge step). A mouse is unchanged (HTML5 toolbox drag-and-drop, right-click menu, middle-button pan,
+  Space+drag, wheel); Escape, a `pointercancel`, a second finger, a read-only flip and disposal roll a gesture back and commit nothing.
+  Non-drag alternatives (WCAG 2.5.7): arrow keys nudge the selection (Shift = one grid cell; read-only and locked elements are skipped),
+  the inspector X/Y/W/H fields resize, the zoom buttons zoom, a toolbox tap / Enter / Space inserts. New: `TmWireframeDesignerCanvas.OnZoomChangedEvent`,
+  `TmWireframePagesPanel.ShowTitle`, `--tm-wd-handle-hit`, `npm run test:wireframe`.
+- **Wireframe phase 4 review fixes.** `RenameElementCommand` and `ResizeCanvasCommand` remember the page they were created on, so Undo / Redo
+  still reach it after a page switch; undoing a canvas resize now tells the canvas script the size changed back; the inspector explains a
+  rejected canvas size (`TmWireframeProps_CanvasSizeRange`, `role="alert"`, `aria-invalid`) instead of ignoring it; the Pages tab no longer
+  repeats the word "Pages" (`TmWireframePagesPanel.ShowTitle`, default `true`); an empty selection shows the hint without an empty
+  "Selection" collapsible; the toolbox grid
+  uses equal-width cells with an ellipsis label; the toolbar wrapper no longer repeats `role="group"` / `aria-label`; the initial zoom
+  read-out shows the real fitted scale of a page wider than the viewport.
 - **Wireframe editor restructured onto `TmEditorShell` (redesign plan ce19aa8c, phase 4; WF1, WF2, WF3).** The desktop editor follows the
   reference hierarchy: an opt-in header (`ShowHeader`, `HeaderStart`, `HeaderActions`, `Title` — the host brings its own Open/Save), ONE
   `TmToolbar` command row (named groups, per-button `Priority`, `Labels=Auto`, `Overflow=Menu`, Export as the pinned primary action), a left
@@ -1185,6 +1206,37 @@
 
 ### Breaking / Migration
 
+- **The wireframe canvas listens to Pointer Events instead of mouse events (redesign plan ce19aa8c, phase 5).**
+  Impact: `wireframe-designer.js` no longer registers `mousedown` / `mousemove` / `mouseup` on the canvas `<svg>` or the document; the
+  same gestures now arrive as `pointerdown` / `pointermove` / `pointerup` / `pointercancel` (a mouse, a finger and a pen all produce them),
+  the context-menu dismiss listens to `pointerdown` instead of `mousedown`, and the `<svg>` carries `touch-action: none`. The script
+  also loads three ES modules from next to it (`../../Tempo.Blazor/js/pointer-drag.js`, `pointer-gesture.js` and its own
+  `wireframe-gestures.mjs`), so the host must serve `_content/Tempo.Blazor/js/` and `_content/Tempo.Blazor.Wireframe/js/` (every
+  default static-web-asset host does) and a strict CSP that allows `wireframe-designer.js` must allow those modules too.
+  The `[JSInvokable]` surface of `TmWireframeDesignerCanvas` and every Blazor parameter are unchanged. A host that attached its own
+  `mousedown` listener to the canvas to observe clicks must switch to `pointerdown` (pointer events also fire for touch); a test that
+  drives the canvas with `dispatchEvent(new MouseEvent('mousedown', ...))` must dispatch `PointerEvent`s, or use Playwright's real
+  mouse / touch input, which produces both.
+  Before:
+
+  ```js
+  document.querySelector('.tm-wd-canvas__svg').addEventListener('mousedown', e => track(e.clientX, e.clientY));
+  ```
+
+  After:
+
+  ```js
+  document.querySelector('.tm-wd-canvas__svg').addEventListener('pointerdown', e => track(e.clientX, e.clientY));
+  ```
+
+  Also: a rotated element now keeps its rotation while it is dragged or nudged (the live preview used to drop it until Blazor
+  re-rendered), and the selection handles are drawn 1.5x larger with extra invisible hit rects on a coarse pointer
+  (`[data-handle-hit]`, `.tm-wd-connector__waypoint-hit`); a stylesheet or test that counted `[data-handle]` elements must expect the
+  extra hit rects there (they carry the same `data-handle` key).
+
+- **The `data-tm-group` set of the wireframe toolbar is frozen (phase 4 review).** Hosts and tests key off the attribute, never off the
+  position of a group: `tools`, `history`, `arrange`, `group`, `align`, `snap`, `format`, `view`, `zoom`, `file`. A group may
+  move between the bar and the "More" menu as the width changes; the name set only ever grows by an additive, documented entry.
 - **`TmWireframeEditor` renders through the core `TmEditorShell`: new DOM, one `TmToolbar` command row, named groups and visible labels (redesign plan ce19aa8c, phase 4).**
   Impact: a test, script or stylesheet that targeted the old structure must move. The editor was a flat column of
   `.tm-wd-editor__toolbar` (≈35 hand-written `.tm-wd-editor__btn` buttons and four hand-rolled dropdowns), the page tabs, and a

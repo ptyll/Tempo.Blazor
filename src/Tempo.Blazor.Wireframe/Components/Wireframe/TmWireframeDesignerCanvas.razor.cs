@@ -113,6 +113,13 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     /// <summary>Raised when mouse moves over the canvas (SVG coordinates).</summary>
     [Parameter] public EventCallback<(double SvgX, double SvgY)> OnCanvasMouseMoved { get; set; }
 
+    /// <summary>
+    /// Raised with the new zoom factor (screen pixels per SVG unit, clamped to 0.15–5) after the user zooms the canvas
+    /// with the mouse wheel, a trackpad pinch or a two-finger pinch. The toolbar's zoom buttons set the zoom through
+    /// <see cref="SetZoom"/> instead and do not raise it.
+    /// </summary>
+    [Parameter] public EventCallback<double> OnZoomChangedEvent { get; set; }
+
     // ── Internal state ───────────────────────────────────────────────────────
 
     private ElementReference _svgRef;
@@ -120,6 +127,8 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     private DotNetObjectReference<TmWireframeDesignerCanvas>? _dotNetRef;
     private bool _jsInitialized;
     private bool _jsReadOnly;
+    private double _jsCanvasW;
+    private double _jsCanvasH;
 
     // Stable IDs for SVG defs so multiple canvas instances on the same page don't collide
     private readonly string _svgId       = "tm-wd-" + Guid.NewGuid().ToString("N")[..8];
@@ -185,7 +194,14 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             };
 
             _jsReadOnly = ReadOnly;
+            _jsCanvasW = options.canvasWidth;
+            _jsCanvasH = options.canvasHeight;
             await JS.InvokeVoidAsync("tmWireframeDesigner.init", _svgRef, _dotNetRef, options);
+
+            // The page is fitted into the viewport by the svg itself (preserveAspectRatio=meet), so a page wider than
+            // the viewport starts zoomed out: tell the host the real scale instead of letting it show 100 %.
+            var fitted = await JS.InvokeAsync<double>("tmWireframeDesigner.getScale", _svgRef);
+            if (fitted > 0) await OnZoomChangedEvent.InvokeAsync(fitted);
         }
         else if (_jsInitialized && _jsReadOnly != ReadOnly)
         {
@@ -194,6 +210,14 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             // server-side guards.
             _jsReadOnly = ReadOnly;
             await JS.InvokeVoidAsync("tmWireframeDesigner.setReadOnly", _svgRef, ReadOnly);
+        }
+
+        if (_jsInitialized && Document is not null
+            && (Math.Abs(_jsCanvasW - Document.Width) > 0.001 || Math.Abs(_jsCanvasH - Document.Height) > 0.001))
+        {
+            // The page size changed behind the canvas' back (Undo / Redo of a canvas resize, a page switch, a swapped
+            // document): the JS engine keeps its own copy for fit-to-view, so it is told here, once per change.
+            await UpdateCanvasSize(Document.Width, Document.Height);
         }
 
         if (!firstRender && _jsInitialized && _currentSelectionIds.Length > 0)
@@ -618,9 +642,9 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
         await NotifyAndRender();
     }
 
-    /// <summary>Zoom level changed by wheel.</summary>
+    /// <summary>Zoom level changed by the wheel, a trackpad pinch or a two-finger pinch.</summary>
     [JSInvokable]
-    public Task OnZoomChanged(double scale) => Task.CompletedTask;
+    public async Task OnZoomChanged(double scale) => await OnZoomChangedEvent.InvokeAsync(scale);
 
     /// <summary>ViewBox updated after pan.</summary>
     [JSInvokable]
@@ -644,6 +668,14 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public async Task OnCanvasContextMenu(double svgX, double svgY, double screenX, double screenY)
         => await OnCanvasContextMenuRequested.InvokeAsync((svgX, svgY, screenX, screenY));
+
+    /// <summary>
+    /// The script saw a press outside the open context menu (or Escape): raise <see cref="OnCloseContextMenu"/>. The method name is
+    /// the one <c>wireframe-designer.js</c> has always called; until now nothing on the canvas answered it, so clicking or tapping
+    /// away from the menu threw a JS interop error and left the menu open.
+    /// </summary>
+    [JSInvokable("CloseContextMenu")]
+    public async Task JsCloseContextMenu() => await OnCloseContextMenu.InvokeAsync();
 
     // ── Public API ───────────────────────────────────────────────────────────
 
@@ -715,6 +747,8 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     public async Task UpdateCanvasSize(double w, double h)
     {
         if (!_jsInitialized) return;
+        _jsCanvasW = w;
+        _jsCanvasH = h;
         await JS.InvokeVoidAsync("tmWireframeDesigner.updateCanvasSize", _svgRef, w, h);
     }
 

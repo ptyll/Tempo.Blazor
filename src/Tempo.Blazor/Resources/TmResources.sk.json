@@ -5280,6 +5280,7 @@
   "TmWireframeProps_Device_Android": "Android",
   "TmWireframeProps_Device_Custom": "Vlastné",
   "TmWireframeProps_PageName": "Názov",
+  "TmWireframeProps_CanvasSizeRange": "Šírka a výška plátna musia byť medzi {0} a {1}.",
   "TmWireframeProps_ShowGrid": "Zobraziť mriežku",
   "TmWireframeProps_GridSize": "Veľkosť mriežky (0 = prichytávanie vypnuté)",
   "TmWireframeProps_ElementName": "Názov",

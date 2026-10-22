@@ -66,6 +66,7 @@
   --tm-wd-grid-minor:     var(--tm-paper-border);
   --tm-wd-grid-major:     var(--tm-paper-border);
   --tm-wd-handle-fill:    var(--tm-paper);
+  --tm-wd-handle-hit:     var(--tm-space-6);
   --tm-wd-page-shadow:    color-mix(in srgb, var(--tm-paper-ink) 28%, transparent);
   --tm-wd-placeholder-fill:   var(--tm-paper-backdrop);
   --tm-wd-placeholder-stroke: var(--tm-paper-border);
@@ -711,7 +712,7 @@
 
 .tm-wd-toolbox__category-items {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--tm-space-1);
   padding: var(--tm-space-1) var(--tm-space-1-5) var(--tm-space-2);
 }
@@ -722,6 +723,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;
   gap: var(--tm-space-1);
   padding: var(--tm-space-1-5) var(--tm-space-1);
   border: 1px solid var(--tm-wd-border);
@@ -883,6 +885,12 @@
   width: 100%;
   height: 100%;
   cursor: default;
+  /* The canvas owns every touch on it: one finger selects / drags / rubber-bands, two fingers pinch and pan
+     (pointer-drag.js + pointer-gesture.js are attached with touchAction: null, so this rule is what stops the browser
+     scrolling the page or zooming it instead). The page around the editor still scrolls from outside the canvas. */
+  touch-action: none;
+  /* iOS would open its callout / magnifier on the long-press that opens the element menu */
+  -webkit-touch-callout: none;
   /* prevent text selection during rubber-band drag */
   user-select: none;
   -webkit-user-select: none;
@@ -898,6 +906,34 @@
 
 .tm-wd-handle {
   cursor: pointer;
+}
+
+/* Coarse pointer (a finger): the handles are painted 1.5x larger by wireframe-designer.js and get an invisible hit
+   rect of at least --tm-wd-handle-hit (24 px by default, the 44 px touch target on a coarse pointer) so a fingertip
+   lands on them; the connector waypoint gets its hit circle from the same token. */
+@media (pointer: coarse) {
+  :root,
+  [data-theme],
+  [class~="tm-dark"],
+  [data-tm-theme],
+  .tm-wd-export-dialog {
+    --tm-wd-handle-hit: var(--tm-touch-target);
+  }
+}
+
+.tm-wd-connector__waypoint-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .tm-wd-connector__waypoint-hit {
+    pointer-events: all;
+    /* The circle radius is a geometry property (CSS can size it): half the token, in svg units at zoom 1. */
+    r: calc(var(--tm-wd-handle-hit) / 2);
+    cursor: move;
+  }
 }
 
 /* ── JS-rendered rubber band ── */
@@ -1357,6 +1393,24 @@
 
 .tm-wd-editor__context-item--danger:hover {
   background: var(--tm-wd-danger-subtle);
+}
+
+/* Coarse pointer: the menu a long-press opens is a finger menu - every entry reaches the 44 px touch target (the menu
+   already scrolls inside max-height: 80vh, so the taller list never leaves the viewport). */
+@media (pointer: coarse) {
+  .tm-wd-editor__context-item {
+    min-block-size: var(--tm-touch-target);
+    display: flex;
+    align-items: center;
+  }
+
+  /* 44 px entries make the element menu taller than the 80vh cap, which would push Lock and Delete (the commands a finger
+     reaches for most) below the fold of a 768 px tablet. The cap is lifted to the whole viewport minus a small margin; a
+     shorter viewport still scrolls inside the menu and never chains the scroll to the page. */
+  .tm-wd-editor__context-menu {
+    max-height: calc(100vh - var(--tm-space-4));
+    overscroll-behavior: contain;
+  }
 }
 
 .tm-wd-editor__context-sep {

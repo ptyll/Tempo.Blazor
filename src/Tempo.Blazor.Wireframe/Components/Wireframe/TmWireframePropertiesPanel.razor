@@ -31,19 +31,27 @@
                 <div class="tm-wd-props__row">
                     <div class="tm-wd-props__field">
                         <label class="tm-wd-props__label" for="@_canvasWId">@Loc["TmWireframe_CanvasWidth"]</label>
-                        <input id="@_canvasWId" class="tm-wd-props__input" type="number" min="100" max="9999" step="1"
+                        <input id="@_canvasWId" class="tm-wd-props__input @(_canvasSizeInvalid ? "tm-wd-props__input--error" : null)" type="number" min="100" max="9999" step="1"
                                data-testid="wd-canvas-width"
+                               aria-invalid="@(_canvasSizeInvalid ? "true" : null)"
+                               aria-describedby="@(_canvasSizeInvalid ? _canvasErrorId : null)"
                                value="@_canvasWInput" disabled="@canvasDisabled"
-                               @oninput="e => _canvasWInput = e.Value?.ToString() ?? string.Empty" />
+                               @oninput="e => OnCanvasSizeInput(e, true)" />
                     </div>
                     <div class="tm-wd-props__field">
                         <label class="tm-wd-props__label" for="@_canvasHId">@Loc["TmWireframe_CanvasHeight"]</label>
-                        <input id="@_canvasHId" class="tm-wd-props__input" type="number" min="100" max="9999" step="1"
+                        <input id="@_canvasHId" class="tm-wd-props__input @(_canvasSizeInvalid ? "tm-wd-props__input--error" : null)" type="number" min="100" max="9999" step="1"
                                data-testid="wd-canvas-height"
+                               aria-invalid="@(_canvasSizeInvalid ? "true" : null)"
+                               aria-describedby="@(_canvasSizeInvalid ? _canvasErrorId : null)"
                                value="@_canvasHInput" disabled="@canvasDisabled"
-                               @oninput="e => _canvasHInput = e.Value?.ToString() ?? string.Empty" />
+                               @oninput="e => OnCanvasSizeInput(e, false)" />
                     </div>
                 </div>
+                @if (_canvasSizeInvalid)
+                {
+                    <span id="@_canvasErrorId" class="tm-wd-props__error-msg" role="alert" data-testid="wd-canvas-error">@Loc["TmWireframeProps_CanvasSizeRange", MinCanvasSize, MaxCanvasSize]</span>
+                }
                 <div class="tm-wd-props__row">
                     <button type="button" class="tm-wd-editor__btn tm-wd-editor__btn--text"
                             data-testid="wd-canvas-apply"
@@ -90,16 +98,11 @@
             </div>
         </details>
 
-        @* ── Selection hint ───────────────────────────────────────────────── *@
-        <details class="tm-wd-props__section" open data-testid="wd-section-selection">
-            <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionSelection"]</summary>
-            <div class="tm-wd-props__section-body">
-                <div class="tm-wd-props__empty">
-                    <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
-                    <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
-                </div>
-            </div>
-        </details>
+        @* ── Selection hint (no empty collapsible: the hint is the whole content) ── *@
+        <div class="tm-wd-props__empty" data-testid="wd-selection-hint">
+            <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
+            <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
+        </div>
     }
     else if (_connectors.Any())
     {

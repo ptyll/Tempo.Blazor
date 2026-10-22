@@ -44,7 +44,7 @@
       "type": "bool",
       "isRequired": false,
       "defaultValue": "true",
-      "description": "Show the right-hand inspector and the Layers tab of the left panel. Collapsing the inspector is shell state (the strip toggle or the Properties panel entry in the More menu)."
+      "description": "Show the right-hand inspector. false also hides the Layers tab of the left panel (the two lived together in the right column before the shell restructure). Collapsing the inspector is shell state (the strip toggle or the Properties panel entry in the More menu)."
     },
     {
       "name": "ShowMinimap",

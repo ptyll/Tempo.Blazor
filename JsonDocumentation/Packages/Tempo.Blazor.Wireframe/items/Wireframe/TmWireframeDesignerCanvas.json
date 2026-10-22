@@ -2,7 +2,7 @@
   "itemName": "TmWireframeDesignerCanvas",
   "kind": "Component",
   "category": "Wireframe",
-  "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for pan, zoom, drag, resize and selection; the pointer handling is mouse-based for now (touch/pen gestures follow in a later phase), while click/tap and keyboard insertion from the toolbox work on every input type. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
+  "description": "SVG-based wireframe canvas. Renders WireframeDocument elements as scalable SVG shapes and handles pan, zoom, drag-move, resize (8-handle), rubber-band multi-select, element drop from toolbox, keyboard nudge, and context menu. Communicates with wireframe-designer.js for pan, zoom, drag, resize and selection; every gesture is a Pointer Event, so a mouse, a finger and a pen all work. One pointer selects, drags (single or multi, groups included), resizes through the 8 handles, rotates, rubber-bands, draws connectors (connector tool) and drags connector waypoints, all on the shared pointer-drag.js helper; a 500 ms touch hold opens the context menu beside the finger; two fingers pinch-zoom and pan (the shared pointer-gesture.js, zoom clamped to 0.15x-5x) and ctrl+wheel / trackpad pinch zooms around the cursor; a double-tap is a double-click (adds a connector waypoint). On a coarse pointer the selection handles are painted 1.5x larger with an invisible hit area of at least 24 screen px, and the svg claims the touch (touch-action: none). The non-drag alternatives are the arrow keys (Shift = one grid cell), the inspector X/Y/W/H fields, the zoom buttons and tap / Enter / Space insertion from the toolbox. A mouse keeps the middle-button pan, Space+drag and the right-click menu. Hosts that listened to mouse events on the canvas svg now get pointer events (see the CHANGELOG migration note); the HTML5 toolbox drag-and-drop is unchanged. All mutations go through the cascaded WireframeCommandStack when available. Typically used as a child of TmWireframeEditor rather than directly.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
@@ -44,7 +44,7 @@
       "type": "bool",
       "isRequired": false,
       "defaultValue": "false",
-      "description": "Disables all editing interactions (drag, resize, drop). Pan via middle-mouse or Space+drag still works."
+      "description": "Disables all editing interactions (drag, resize, rotate, drop, nudge, long-press menu). Navigation stays: the pan tool, Space+drag, the middle mouse button, two-finger pinch/pan and the wheel."
     },
     {
       "name": "ComponentScope",
@@ -117,6 +117,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the canvas wrapper div."
+    },
+    {
+      "name": "OnZoomChangedEvent",
+      "type": "EventCallback<double>",
+      "isRequired": false,
+      "description": "Raised with the new zoom factor (screen pixels per SVG unit, 0.15-5) after the user zooms with the mouse wheel, a trackpad pinch or a two-finger pinch, and once after the first render with the real fitted scale. The editor uses it for its zoom read-out; the toolbar zoom buttons set the zoom through SetZoom and do not raise it."
     },
     {
       "name": "OnCopyStyleRequested",
@@ -197,7 +203,8 @@
   ],
   "cssClasses": [
     "tm-wd-canvas-wrap",
-    "tm-wd-canvas__svg"
+    "tm-wd-canvas__svg",
+    "tm-wd-connector__waypoint-hit"
   ],
   "examples": [
     {

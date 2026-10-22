@@ -126,6 +126,13 @@ preventDefault. Keys inside an open row menu do not reach the row shortcuts. Mov
 | `canvas` | page tabs (`PageNavigation=Tabs`), import banner, rulers, the canvas, the context menu and the minimap card. |
 | `right` | `TmWireframePropertiesPanel` (the inspector). |
 
+**Frozen toolbar contract.** The `data-tm-group` set is `tools | history | arrange | group | align | snap | format | view | zoom | file` and is **frozen**:
+hosts and tests key off the attribute, never off where a group sits (a group moves between the bar and the "More" menu as the width
+changes), and the set only ever grows by an additive, documented entry. If presets are ever added they reuse the DiagramEditor names
+(`ToolbarPreset` / `ToolbarGroups`) rather than more `Show*` booleans. The toolbar wrapper carries no `role` / `aria-label` of its own:
+the `TmToolbar` inside carries the accessible name. **Export** and **Import** stay `Pinned` (the toolbar only measures a
+collapsible item once it has a menu representation; a file picker has none, so Import never leaves the bar).
+
 **"More" menu.** The format painter (Copy style / Paste style / Paste size — also in the inspector's *Format painter* section), the
 Read-only toggle (absent while the host pins `ReadOnly="true"`), Show rulers and the Components / Properties panel toggles are
 checkable or plain entries of the toolbar's "More" menu (`OverflowOnly`); the bar commands collapse into it by `Priority`
@@ -152,6 +159,40 @@ tooltip, the MCP tools (`addElement`, `updateElement`, the author payload, the i
 **Toolbox.** A 3-column grid of tiles; a tile shows the component's `TmIcon` (`WireframeComponentDef.Icon`) and name, the mini stencil SVG is
 the fallback for a missing / undrawable icon. The toolbox re-renders only for its own events or changed parameters (render gate), so a
 left-tab switch and opening "More" leave the canvas and the toolbox alone (`RenderCount` tests).
+## Touch and pen (phase 5)
+
+The canvas is Pointer Events end to end (a mouse, a finger and a pen). Nothing in the package implements a drag, a long-press or a pinch of
+its own: `wireframe-designer.js` attaches sessions of the shared core helpers ([touch-interaction.md](touch-interaction.md)) and only the
+pure wireframe maths live in `wireframe-gestures.mjs` (node-tested by `npm run test:wireframe`).
+
+| Gesture | Input | Helper | What it does |
+|---|---|---|---|
+| Press | mouse / finger / pen | `pointer-drag.js` `attach` | selects the element (Shift = toggle); a tap commits nothing |
+| Drag | mouse / finger / pen | `attach` (threshold 5 px) | moves the selection (groups included), grid snap, magnetic guides; one `OnElementMoved` / `OnElementsMoved` on release |
+| Resize / rotate / waypoint | mouse / finger / pen | `attach` (threshold 0) | the eight handles, the rotate handle, a connector waypoint; Shift snaps rotation to 15° |
+| Rubber band / connector tool / pan tool | mouse / finger / pen | `attach` | selection rectangle, connector drawn onto the element under the pointer (`elementFromPoint`), canvas pan |
+| Pinch + two-finger pan | two fingers | `pointer-gesture.js` `attachPinch` | zoom around the fingers, clamped to 0.15×–5×; `onStart` cancels every single-finger session |
+| Long-press (500 ms) | touch | `attach` with `longPressMs: 500` | opens the context menu parked beside the finger; the native touch `contextmenu` is ignored so it never opens twice |
+| Double-tap | touch / pen | `createDoubleTapTracker` (wireframe-gestures) | the same as a double-click: adds a connector waypoint |
+| Middle button, Space+drag, wheel, ctrl+wheel | mouse | plain listeners | pan, pan, zoom, trackpad-pinch zoom |
+
+**Touch targets.** On `(pointer: coarse)` the selection handles are painted 1.5× larger and every handle gets an invisible hit rect
+(`[data-handle-hit]`, the same `data-handle` key) of at least `--tm-wd-handle-hit` screen pixels (24 px, `--tm-touch-target` = 44 px
+on a coarse pointer), capped so the handles of a small element never overlap; the rects follow every zoom change. A selected connector's
+waypoints get a finger-sized transparent circle (`.tm-wd-connector__waypoint-hit`). `.tm-wd-canvas__svg` has `touch-action: none` in CSS
+(the helpers are attached with `touchAction: null`), so the page around the editor still scrolls from outside the canvas.
+
+**Cancel and read-only.** Escape, a `pointercancel`, the second finger of a pinch, disposal and a flip to read-only restore the live DOM
+(transform, size, rotation, viewBox, connector circles) verbatim and notify .NET of nothing; the pinch and the pan tool keep working
+read-only. A rotated element keeps its rotation while it is dragged.
+
+**Non-drag alternatives (WCAG 2.5.7).** Arrow keys nudge the selection (1 unit, Shift = one grid cell, 10 with snapping off; read-only
+and locked elements are skipped), the inspector X / Y / W / H fields resize and move (one undoable step), the toolbar zoom buttons are the
+pinch alternative, and a toolbox tap / Enter / Space inserts. The toolbox keeps HTML5 drag-and-drop for the mouse; touch inserts by tap.
+
+**Zoom read-out.** `OnZoomChangedEvent` (wheel, trackpad pinch, two-finger pinch, and once after the first render with the real fitted
+scale) keeps the toolbar percentage and the rulers in step with the canvas.
+
 ## E2E anchors (stable selectors)
 
 `.tm-wd-editor`, `.tm-wd-editor__toolbar`, `[data-region="left|canvas|right|toolbar|header"]`, the core `.tm-toolbar` /

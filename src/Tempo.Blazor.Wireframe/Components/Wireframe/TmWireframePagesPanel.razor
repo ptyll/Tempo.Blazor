@@ -2,9 +2,12 @@
 @using Tempo.Blazor.Components.Wireframe.Models
 
 <div class="tm-wd-pages @Class" data-testid="wd-pages-panel">
-    <div class="tm-wd-pages__header">
-        <h3 class="tm-wd-pages__title">@Loc["TmWireframePages_Title"]</h3>
-    </div>
+    @if (ShowTitle)
+    {
+        <div class="tm-wd-pages__header">
+            <h3 class="tm-wd-pages__title">@Loc["TmWireframePages_Title"]</h3>
+        </div>
+    }
 
     @{
         var pages = Document?.Pages ?? [];

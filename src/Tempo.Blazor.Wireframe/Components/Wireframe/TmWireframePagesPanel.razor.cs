@@ -34,6 +34,12 @@ public partial class TmWireframePagesPanel : ComponentBase
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Whether the panel renders its own "Pages" heading. Defaults to <c>true</c> for standalone use; a host whose tab or
+    /// section already says "Pages" (the editor's left panel) passes <c>false</c> so the word is not repeated.
+    /// </summary>
+    [Parameter] public bool ShowTitle { get; set; } = true;
+
     /// <summary>Additional CSS class on the panel root.</summary>
     [Parameter] public string? Class { get; set; }
 

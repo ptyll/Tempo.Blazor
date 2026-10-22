@@ -133,6 +133,21 @@ public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
 
     private string _canvasWInput = "";
     private string _canvasHInput = "";
+    private bool _canvasSizeInvalid;
+    private string _canvasErrorId => _idPrefix + "-canvas-error";
+
+    /// <summary>Smallest accepted canvas edge in SVG units (the inputs' <c>min</c>).</summary>
+    internal const double MinCanvasSize = 100;
+
+    /// <summary>Largest accepted canvas edge in SVG units (the inputs' <c>max</c>).</summary>
+    internal const double MaxCanvasSize = 9999;
+
+    private void OnCanvasSizeInput(ChangeEventArgs e, bool isWidth)
+    {
+        var text = e.Value?.ToString() ?? string.Empty;
+        if (isWidth) _canvasWInput = text; else _canvasHInput = text;
+        _canvasSizeInvalid = false;   // typing again withdraws the message until the next Apply
+    }
     private string? _seededPageId;
     private double _seededW = double.NaN, _seededH = double.NaN;
     private bool _customPresetChosen;
@@ -230,6 +245,7 @@ public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
         if (page is null) { _seededPageId = null; return; }
         if (_seededPageId == page.Id && _seededW.Equals(page.Width) && _seededH.Equals(page.Height)) return;
 
+        _canvasSizeInvalid = false;
         _seededPageId = page.Id;
         _seededW = page.Width;
         _seededH = page.Height;
@@ -268,14 +284,21 @@ public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
         }
 
         _customPresetChosen = false;
+        _canvasSizeInvalid = false;
         await ResizeCanvasAsync(preset.Width!.Value, preset.Height!.Value);
     }
 
     private async Task OnApplyCanvasSize()
     {
         if (ReadOnly || Document?.ActivePage is null) return;
-        if (!double.TryParse(_canvasWInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var w) || w < 100) return;
-        if (!double.TryParse(_canvasHInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var h) || h < 100) return;
+        if (!double.TryParse(_canvasWInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var w) || w < MinCanvasSize || w > MaxCanvasSize
+            || !double.TryParse(_canvasHInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var h) || h < MinCanvasSize || h > MaxCanvasSize)
+        {
+            _canvasSizeInvalid = true;   // announced (role=alert) instead of silently doing nothing
+            return;
+        }
+
+        _canvasSizeInvalid = false;
         await ResizeCanvasAsync(w, h);
     }
 

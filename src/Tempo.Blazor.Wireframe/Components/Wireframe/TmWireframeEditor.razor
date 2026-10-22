@@ -86,7 +86,7 @@
 
     // ── Command row: a core TmToolbar ─────────────────────────────────────────
 
-    private RenderFragment? ToolbarSlot => !ShowToolbar ? null : @<div class="tm-wd-editor__toolbar" role="group" aria-label="@Loc["TmWireframe_ToolbarAriaLabel"]" data-testid="wd-toolbar">
+    private RenderFragment? ToolbarSlot => !ShowToolbar ? null : @<div class="tm-wd-editor__toolbar" data-testid="wd-toolbar">
         @if (!HasHeader)
         {
             @TitleInput
@@ -394,6 +394,7 @@
                                                OnCloseContextMenu="CloseContextMenu"
                                                OnViewBoxChangedEvent="OnCanvasViewBoxChanged"
                                                OnCanvasMouseMoved="OnCanvasMouseMoved"
+                                               OnZoomChangedEvent="OnCanvasZoomChanged"
                                                Class="tm-wd-editor__canvas" />
 
                     @* Context menu (right-click) *@

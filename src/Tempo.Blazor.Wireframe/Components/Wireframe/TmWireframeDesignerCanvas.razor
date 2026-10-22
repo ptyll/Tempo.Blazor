@@ -115,6 +115,11 @@
                             var wp = c.Waypoints[i];
                             var wpx = wp.X.ToString("0.##", CultureInfo.InvariantCulture);
                             var wpy = wp.Y.ToString("0.##", CultureInfo.InvariantCulture);
+                            @* Finger-sized invisible hit circle (active on a coarse pointer only: CSS owns pointer-events and the radius) *@
+                            <circle cx="@wpx" cy="@wpy" r="12"
+                                    fill="transparent"
+                                    class="tm-wd-connector__waypoint-hit"
+                                    data-waypoint-index="@i" />
                             <circle cx="@wpx" cy="@wpy" r="4"
                                     stroke-width="1.5"
                                     class="tm-wd-connector__waypoint"

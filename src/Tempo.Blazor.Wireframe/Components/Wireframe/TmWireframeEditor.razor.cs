@@ -78,9 +78,10 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     [Parameter] public bool ShowToolbox { get; set; } = true;
 
     /// <summary>
-    /// Show the right-hand inspector and the Layers tab of the left panel (the two lived together in the right column
-    /// before the shell restructure). Collapsing the inspector is shell state: the shell's strip toggle or the
-    /// Properties panel entry in the toolbar's "More" menu.
+    /// Show the right-hand inspector. <c>false</c> also hides the Layers tab of the left panel (the two lived together
+    /// in the right column before the shell restructure), so a host that wants Layers without the inspector cannot get it
+    /// from this switch. Collapsing the inspector is shell state: the shell's strip toggle or the Properties panel entry
+    /// in the toolbar's "More" menu.
     /// </summary>
     [Parameter] public bool ShowPropertiesPanel { get; set; } = true;
 
@@ -908,6 +909,13 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         var prev = ZoomSteps.LastOrDefault(z => z < _zoomLevel - 1e-9);
         if (prev == 0) prev = ZoomSteps[0];
         await ApplyZoom(prev);
+    }
+
+    /// <summary>A wheel, trackpad or two-finger pinch zoomed the canvas: keep the toolbar read-out and the rulers in step.</summary>
+    private void OnCanvasZoomChanged(double scale)
+    {
+        _zoomLevel = Math.Clamp(scale, 0.15, 5.0);
+        StateHasChanged();
     }
 
     private async Task ApplyZoom(double level)

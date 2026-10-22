@@ -145,6 +145,7 @@ internal sealed class TmWireframeSidePanel : ComponentBase
                 panel.AddComponentParameter(3, nameof(TmWireframePagesPanel.ActivePageChanged), ActivePageChanged);
                 panel.AddComponentParameter(4, nameof(TmWireframePagesPanel.ReadOnly), ReadOnly);
                 panel.AddComponentParameter(5, nameof(TmWireframePagesPanel.Class), "tm-wd-editor__pages");
+                panel.AddComponentParameter(6, nameof(TmWireframePagesPanel.ShowTitle), false);   // the tab already says "Pages"
                 panel.CloseComponent();
             });
         }

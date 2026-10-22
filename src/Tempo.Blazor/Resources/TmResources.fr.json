@@ -5259,6 +5259,7 @@
   "TmWireframeProps_Device_Android": "Android",
   "TmWireframeProps_Device_Custom": "Personnalisé",
   "TmWireframeProps_PageName": "Nom",
+  "TmWireframeProps_CanvasSizeRange": "La largeur et la hauteur du canevas doivent être comprises entre {0} et {1}.",
   "TmWireframeProps_ShowGrid": "Afficher la grille",
   "TmWireframeProps_GridSize": "Taille de la grille (0 = magnétisme désactivé)",
   "TmWireframeProps_ElementName": "Nom",

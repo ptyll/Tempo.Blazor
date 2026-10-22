@@ -5238,6 +5238,7 @@
   "TmWireframeProps_Device_Android": "Android",
   "TmWireframeProps_Device_Custom": "Custom",
   "TmWireframeProps_PageName": "Name",
+  "TmWireframeProps_CanvasSizeRange": "Canvas width and height must be between {0} and {1}.",
   "TmWireframeProps_ShowGrid": "Show grid",
   "TmWireframeProps_GridSize": "Grid size (0 = snapping off)",
   "TmWireframeProps_ElementName": "Name",
