@@ -327,6 +327,74 @@
     white-space: nowrap;
 }
 
+/* The no-matches verdict rides the count's slot (pdf-search-count test id) but reads
+   as a verdict, not data: the info-text pair keeps it quiet and non-alarming. */
+.tm-pdf-viewer__search-count--empty {
+    color: var(--tm-color-info-text);
+    font-variant-numeric: normal;
+}
+
+/* ── FZE-11: floating search card (desktop/tablet, SearchPresentation.Floating) ──
+   Anchored top-right over `.tm-pdf-viewer__body` — OUTSIDE the scroll wraps (they are
+   the only scrollables, so a page scroll never carries the card away) and below the
+   toolbar (the body is the flex sibling after it). The elevated surface + card shadow +
+   card radius come from the canonical core tokens; the short fade respects
+   prefers-reduced-motion. */
+
+.tm-pdf-viewer__search-card {
+    position: absolute;
+    top: var(--tm-space-3);
+    right: var(--tm-space-3);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-color-surface-elevated);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+    color: var(--tm-text-primary);
+    animation: tm-pdf-search-card-in 120ms ease-out;
+}
+
+/* The card shrink-wraps its content, so the input needs an intrinsic width — a fixed
+   character count keeps the digits of the counter stable while typing. */
+.tm-pdf-viewer__search-card .tm-pdf-viewer__search-input {
+    flex: 0 1 auto;
+    width: 20ch;
+    min-width: 8ch;
+}
+
+/* The ✕ close is a DIFFERENT command than the ⊗ clear: a hairline divider separates it
+   from the query row (the gap is reclaimed so the divider hugs the row's edge). */
+.tm-pdf-viewer__search-close {
+    width: auto;
+    margin-left: calc(-1 * var(--tm-space-2));
+    padding-left: var(--tm-space-3);
+    border-left: 1px solid var(--tm-border-color);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+@keyframes tm-pdf-search-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(calc(-1 * var(--tm-space-1)));
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-viewer__search-card {
+        animation: none;
+    }
+}
+
 /* ── PD1: annotations single-page hint (continuous mode) ─────────────────── */
 
 .tm-pdf-viewer__annotations-hint {
@@ -369,6 +437,15 @@
        contract the theme screenshot test pins; the page surfaces pop against it. */
     background: var(--tm-bg-workspace);
     padding: var(--tm-space-4);
+}
+
+/* FZE-11: the floating search card overlays the body's top strip. While it is open, the
+   wraps keep natively aligned content (block:'start' page navigation) clear of the card
+   (card top offset + its touch-tallest height + one gap). The search path itself uses the
+   measured card rect — see _scrollToActive in pdf-viewer.js. */
+.tm-pdf-viewer__body:has(> .tm-pdf-viewer__search-card) > .tm-pdf-viewer__canvas-wrap,
+.tm-pdf-viewer__body:has(> .tm-pdf-viewer__search-card) > .tm-pdf-viewer__continuous-wrap {
+    scroll-padding-top: calc(var(--tm-space-3) + var(--tm-touch-target) + var(--tm-space-4));
 }
 
 .tm-pdf-viewer__canvas {

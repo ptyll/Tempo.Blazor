@@ -41,6 +41,26 @@ public enum PdfZoomMode
 }
 
 /// <summary>
+/// How the viewer presents its search UI on desktop and tablet layouts. Driven by
+/// <see cref="TmPdfViewer.SearchPresentation"/>; a mobile layout always keeps the
+/// in-flow search bar (the sheet-style presentation).
+/// </summary>
+public enum PdfSearchPresentation
+{
+    /// <summary>
+    /// The pre-2.9.1 in-flow search bar under the toolbar (a full-width row with the
+    /// input, the match counter and the prev/next buttons).
+    /// </summary>
+    Inline,
+    /// <summary>
+    /// Default. A floating search card anchored top-right over the page body — outside
+    /// the scroll area, never covering the toolbar. Escape closes it and returns focus
+    /// to the toolbar's search toggle.
+    /// </summary>
+    Floating
+}
+
+/// <summary>
 /// A reusable PDF viewer component powered by PDF.js v5.
 /// Supports page navigation, zoom, rotation, text layer, thumbnails, search, and continuous scroll.
 /// </summary>
@@ -84,6 +104,30 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
 
     /// <summary>Whether to show a search input. Default is false.</summary>
     [Parameter] public bool ShowSearch { get; set; }
+
+    /// <summary>
+    /// How the search UI is presented on desktop and tablet layouts. Default
+    /// <see cref="PdfSearchPresentation.Floating"/> (since 2.9.1): a card anchored
+    /// top-right over the page body, outside the scroll area. Set
+    /// <see cref="PdfSearchPresentation.Inline"/> to restore the pre-2.9.1 in-flow bar
+    /// under the toolbar. A mobile layout always keeps the in-flow bar.
+    /// </summary>
+    [Parameter] public PdfSearchPresentation SearchPresentation { get; set; } = PdfSearchPresentation.Floating;
+
+    /// <summary>
+    /// Whether the document header's default subtitle appends the formatted file size
+    /// ("Pages: N · 1.4 MB"). Only applies when <see cref="ShowHeader"/> is true and
+    /// no explicit <see cref="Subtitle"/> is given. Default is true.
+    /// </summary>
+    [Parameter] public bool ShowFileSize { get; set; } = true;
+
+    /// <summary>
+    /// The document's byte size shown in the header. When set, this host-supplied value
+    /// wins over the length the viewer obtains from PDF.js
+    /// (<c>getDownloadInfo</c> → <see cref="OnDocumentLengthKnown"/>); when omitted and
+    /// the size is unknown, the subtitle keeps its pages-only form.
+    /// </summary>
+    [Parameter] public long? FileSize { get; set; }
 
     /// <summary>
     /// Whether the viewer renders its own mobile action bar (Pages | Search | Comments).
@@ -265,6 +309,13 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private bool _isLoading;
     private int _currentPage = 1;
     private int _totalPages;
+    /// <summary>
+    /// The byte length reported by JavaScript once the document has loaded
+    /// (<see cref="OnDocumentLengthKnown"/>). Null when the length is unknown —
+    /// a failed or missing <c>getDownloadInfo</c> reports nothing and the header
+    /// keeps its pages-only subtitle.
+    /// </summary>
+    private long? _reportedLength;
     private double _scale = 1.0;
     /// <summary>
     /// Scale bounds shared with the JS fit computation (pdf-viewer.js clamps to the same
@@ -318,6 +369,16 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private string? _lastSearchedQuery;
     private int _searchTotalMatches;
     private int _searchCurrentMatch;
+    /// <summary>The last executed search completed with zero matches: the localized
+    /// no-matches verdict renders in the live region and the input flags aria-invalid
+    /// until a new search runs or the query is cleared.</summary>
+    private bool _searchRanWithNoMatches;
+    /// <summary>The floating search card's input; focused when the card opens so typing
+    /// can start immediately (bUnit has no live element — the focus is best-effort).</summary>
+    private ElementReference _searchInputRef;
+    /// <summary>The search input must be focused in the next OnAfterRenderAsync pass
+    /// (the card has to render first).</summary>
+    private bool _pendingSearchInputFocus;
 
     // Annotation state
     private bool _annotationsLoaded;
@@ -421,6 +482,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _isLoading = true;
             _loadError = null;
             _totalPages = 0;
+            _reportedLength = null;
             _singlePagePending = false;
             _fitPending = false;
             // Render keys are per document: a new Url must re-render thumbnails
@@ -671,6 +733,20 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             if (EffectiveZoomMode is not PdfZoomMode.Custom && !_useFallback && _totalPages > 0)
             {
                 await ApplyZoomModeAsync();
+            }
+        }
+
+        // The floating search card just opened: move the caret into its input. Runs
+        // BEFORE the loading short-circuit — the card renders while the document is
+        // still downloading and focusing must not wait for the load. Best-effort: bUnit
+        // (no live element) and a card disposed before the pass both throw harmlessly.
+        if (_pendingSearchInputFocus)
+        {
+            _pendingSearchInputFocus = false;
+            if (_searchInputRef.Context is not null)
+            {
+                try { await _searchInputRef.FocusAsync(); }
+                catch { /* no live element — skip the focus move */ }
             }
         }
 

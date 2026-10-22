@@ -32,6 +32,14 @@ const RENDER_STUB = `export async function renderPageToCanvas(options) {
 };
 export function isRenderingCancelled(err) { return err?.name === 'RenderingCancelledException'; };`;
 
+// Mirrors the real pdf-viewer-filesize.mjs contract: reads the length off the open
+// document's getDownloadInfo() — the promise a test can keep pending indefinitely.
+const FILESIZE_STUB = `export async function documentLength(pdfDoc) {
+  if (!pdfDoc || typeof pdfDoc.getDownloadInfo !== 'function') return null;
+  const info = await pdfDoc.getDownloadInfo();
+  return Number.isFinite(info?.length) && info.length >= 0 ? Math.round(info.length) : null;
+};`;
+
 function fakeElement(tag) {
     return {
         tagName: tag,
@@ -88,6 +96,7 @@ async function loadViewer(testContext) {
         intersectionObservers: [],
         loadedPages: [],
         loadErrors: [],
+        documentLengths: [],
     };
     const docRequest = makeDocRequest();
 
@@ -151,6 +160,7 @@ async function loadViewer(testContext) {
     await writeFile(path.join(dir, 'pdf.min.mjs'), PDF_STUB, 'utf8');
     await writeFile(path.join(dir, 'pdf-viewer-size.mjs'), SIZE_STUB, 'utf8');
     await writeFile(path.join(dir, 'pdf-viewer-render.mjs'), RENDER_STUB, 'utf8');
+    await writeFile(path.join(dir, 'pdf-viewer-filesize.mjs'), FILESIZE_STUB, 'utf8');
     const viewerPath = path.join(dir, 'pdf-viewer.js');
     await copyFile(VIEWER_JS, viewerPath);
 
@@ -167,6 +177,7 @@ async function loadViewer(testContext) {
         invokeMethodAsync(name, ...args) {
             if (name === 'OnPdfLoaded') registry.loadedPages.push(args[0]);
             if (name === 'OnPdfLoadError') registry.loadErrors.push(args[0]);
+            if (name === 'OnDocumentLengthKnown') registry.documentLengths.push(args[0]);
             return Promise.resolve();
         },
     };
@@ -244,6 +255,38 @@ test('enableSelection and syncOverlay no-op while pending, then apply to the loa
     assert.equal(env.registry.listeners.removed[0].handler, env.registry.listeners.added[0].handler);
     assert.equal(env.registry.listeners.removed[1].handler, env.registry.listeners.added[1].handler);
     assert.equal(env.registry.resizeObservers[0].disconnected, true, 'destroy disconnects overlay observers');
+});
+
+// ── FZE-11: the file-size lookup never blocks init ────────────────────────────
+
+test('init resolves while getDownloadInfo is still pending and reports the length later', async (t) => {
+    const env = await loadViewer(t);
+    const rootEl = fakeRootEl(fakeCanvas());
+    const doc = fakePdfDoc(3);
+    let resolveLength;
+    // getDownloadInfo stays pending until the test resolves it: a BLOCKING lookup
+    // would hold init (and the first paint) hostage until then.
+    doc.getDownloadInfo = () => new Promise(resolve => { resolveLength = resolve; });
+
+    const initPromise = env.viewer.init(rootEl, 'https://example.com/slow-size.pdf', env.dotNet);
+    env.docRequest.resolve(doc);
+    await Promise.race([
+        initPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('init awaited the file-size lookup')), 2000)),
+    ]);
+
+    assert.deepEqual(env.registry.loadedPages, [3], 'OnPdfLoaded fired before the size was known');
+    assert.deepEqual(env.registry.documentLengths, [], 'no length is reported while getDownloadInfo is pending');
+
+    // Let the background module import settle so documentLength() has called
+    // getDownloadInfo() (the executor assigns resolveLength).
+    await flush();
+    assert.equal(typeof resolveLength, 'function', 'the background lookup started');
+
+    resolveLength({ length: 123456 });
+    await flush();
+    assert.deepEqual(env.registry.documentLengths, [123456],
+        'the background lookup reports the length once getDownloadInfo settles');
 });
 
 test('destroy() during a pending load aborts the entry and the stale download is discarded', async (t) => {

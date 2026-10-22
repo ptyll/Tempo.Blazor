@@ -23,6 +23,32 @@
 
 ### Added
 
+- **TmPdfViewer: counter-clockwise rotation (FZE-11).** `RotateCounterClockwiseAsync()` rotates
+  0° → 270° → 180° → 90° — the exact inverse of `RotateAsync()`, which keeps its clockwise
+  behavior. `AllowRotation` now renders both directions in the `data-tm-group="rotate"` group
+  (`rotate-ccw` and `rotate-cw` icons, localized tooltips `TmPdfViewer_RotateCounterClockwise` /
+  `TmPdfViewer_RotateClockwise`); on a mobile layout both are "More"-menu overflow entries.
+  Continuous mode rebuilds the placeholders and preserves the scroll position through the same
+  path as the clockwise rotation, and the text layer follows PDF.js' `data-main-rotation`.
+
+- **TmPdfViewer: the document header's default subtitle can show the file size (FZE-11).** With
+  `ShowHeader` (and no explicit `Subtitle`), the subtitle becomes "Pages: N · 1.4 MB" — the byte
+  size arrives from PDF.js `getDownloadInfo` through the new `OnDocumentLengthKnown` interop
+  callback and is formatted by a package-internal `PdfFileSizeFormatter` (current culture digits,
+  localized `TmPdfViewer_FileSize_B/_KB/_MB/_GB` units). `ShowFileSize` (default `true`) turns the
+  append-off, and a host-supplied `FileSize` (nullable `long`) wins over the JS-reported length;
+  when the size is unknown (a stream without a length) the subtitle keeps its pages-only form.
+
+- **TmPdfViewer: floating search card (FZE-11).** The new `SearchPresentation` parameter
+  (`PdfSearchPresentation`) defaults to `Floating` on desktop and tablet: a `role="search"` card
+  anchored top-right over the page body — outside the scroll area, never covering the toolbar,
+  painted above the docked panels. The card carries the input, the "N of M" counter, prev/next,
+  clear and close; Enter walks forward, Shift+Enter backward, and Escape (or ✕) closes the card
+  and returns focus to the toolbar's search toggle. The `pdf-search-input/-count/-prev/-next/
+  -clear/-close` test ids are unchanged and `pdf-search-card` is new. `Inline` renders the
+  pre-2.9.1 bar unchanged, and a mobile layout keeps the sheet-style bar in both presentations
+  (see Breaking / Migration for the default change).
+
 - **PdfViewer & Annotator redesign — plan summary (phases 1–10).** `Tempo.Blazor.PdfViewer`
   (`TmPdfViewer`, `TmPdfAnnotator`, the two thread panels and the annotation layers) was rebuilt
   against the reference mockups: wave-0 bug/a11y fixes independent of the redesign (phase 1 —
@@ -351,6 +377,34 @@
   needs per docs/localization-plurals.md).
 
 ### Breaking / Migration
+
+- **TmPdfViewer: the search UI defaults to the Floating card (FZE-11).** The new
+  `SearchPresentation` parameter defaults to `PdfSearchPresentation.Floating`: on desktop and
+  tablet the search UI renders as a card anchored top-right over the page body
+  (`data-testid="pdf-search-card"`, `role="search"`) instead of the full-width
+  `.tm-pdf-viewer__search-bar` row under the toolbar. A host that keyed off the bar's markup
+  (or its `.tm-pdf-viewer__search-input` row layout) should either opt back with
+  `SearchPresentation="PdfSearchPresentation.Inline"` — which renders the pre-2.9.1 markup
+  unchanged — or restyle against the card (`.tm-pdf-viewer__search-card`). Mobile layouts are
+  unaffected: the sheet-style bar stays in both presentations.
+
+```razor
+@* BEFORE (2.9.0) — the search UI was a full-width bar under the toolbar *@
+<TmPdfViewer Url="@url" ShowSearch="true" />
+
+@* AFTER (2.9.1) — default Floating card over the page body *@
+<TmPdfViewer Url="@url" ShowSearch="true" />
+
+@* AFTER — opt back into the pre-2.9.1 in-flow bar *@
+<TmPdfViewer Url="@url" ShowSearch="true" SearchPresentation="PdfSearchPresentation.Inline" />
+```
+
+- **TmPdfViewer: the clockwise rotate tooltip is now `TmPdfViewer_RotateClockwise` (FZE-11).**
+  `AllowRotation` renders two direction buttons, so the single "Rotate" label
+  (`TmPdfViewer_Rotate`, kept as the group's accessible name) was split into
+  `TmPdfViewer_RotateClockwise` and `TmPdfViewer_RotateCounterClockwise`. Hosts that override
+  the old key for custom wording must add the two new keys (all four languages ship them);
+  the `rotate-cw` button no longer reads `TmPdfViewer_Rotate`.
 
 - **TmPdfViewer + TmPdfAnnotator: the annotation-card time stamps and counted texts changed
   format (FZE-9).** `TmPdfThread_ReplyCount` is no longer the neutral `"Replies: {0}"`

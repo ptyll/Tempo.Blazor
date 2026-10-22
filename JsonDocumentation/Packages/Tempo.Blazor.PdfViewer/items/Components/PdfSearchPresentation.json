@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "How the viewer presents its search UI on desktop and tablet layouts, driven by TmPdfViewer.SearchPresentation. Floating (the default since 2.9.1) anchors a role=search card top-right over the page body — outside the scroll area and never covering the toolbar; Escape closes it and returns focus to the toolbar's search toggle. Inline restores the pre-2.9.1 full-width bar under the toolbar. A mobile layout always keeps the in-flow (sheet-style) bar regardless of this value.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+  "documentationStatus": "generated",
+  "itemName": "PdfSearchPresentation"
+}

@@ -313,6 +313,30 @@ public partial class TmPdfViewer
     public async Task RotateAsync()
     {
         Rotation = (Rotation + 90) % 360;
+        await ApplyRotationAsync();
+    }
+
+    /// <summary>
+    /// Rotate the document 90 degrees counter-clockwise (FZE-11) — the inverse of
+    /// <see cref="RotateAsync"/>: 0 → 270 → 180 → 90 → 0. Continuous mode rebuilds the
+    /// placeholders and preserves the scroll position through the same path as the
+    /// clockwise rotation; the text layer follows the rotation attribute PDF.js writes
+    /// (<c>data-main-rotation</c>).
+    /// </summary>
+    public async Task RotateCounterClockwiseAsync()
+    {
+        Rotation = (Rotation + 270) % 360;
+        await ApplyRotationAsync();
+    }
+
+    /// <summary>
+    /// The shared rotation apply path: in Continuous mode the pages re-render (the JS
+    /// side recomputes the placeholders and preserves the scroll position) and an active
+    /// fit mode recomputes for the flipped aspect ratio; single-page re-renders the
+    /// current page (which refits inside <see cref="RenderCurrentPageAsync"/>).
+    /// </summary>
+    private async Task ApplyRotationAsync()
+    {
         if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
         {
             await RenderContinuousPagesAsync();
@@ -445,8 +469,32 @@ public partial class TmPdfViewer
     private async Task ToggleSearchAsync()
     {
         _searchVisible = !_searchVisible;
+        // The floating card is focus-managed: once it renders, its input takes the caret
+        // (OnAfterRenderAsync consumes the flag). The Inline bar and the mobile sheet keep
+        // their own flow — no focus move there.
+        _pendingSearchInputFocus = _searchVisible && !_useFallback
+            && SearchPresentation == PdfSearchPresentation.Floating
+            && !IsMobileLayout;
         await InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>
+    /// Closes the floating search card and returns focus to the toolbar's search toggle
+    /// (FZE-11) — both the Escape path and the card's ✕ button share it, so a keyboard
+    /// user never drops to <c>document.body</c> when the card disappears. The restore is
+    /// best-effort: without the JS module (the fallback embed) the card still closes.
+    /// </summary>
+    private async Task CloseSearchCardAsync()
+    {
+        _searchVisible = false;
+        await InvokeAsync(StateHasChanged);
+        try { await JS.InvokeVoidAsync("tmPdfViewer.focusSearchToggle", _rootRef); }
+        catch { }
+    }
+
+    /// <summary>Escape inside the floating search card closes it and restores the focus.</summary>
+    private Task HandleSearchCardKeyDownAsync(KeyboardEventArgs e)
+        => e.Key == "Escape" ? CloseSearchCardAsync() : Task.CompletedTask;
 
     // ── Search ────────────────────────────────────────────────────────────────
 
@@ -521,6 +569,7 @@ public partial class TmPdfViewer
         _lastSearchedQuery = null;
         _searchTotalMatches = 0;
         _searchCurrentMatch = 0;
+        _searchRanWithNoMatches = false;
         try { await JS.InvokeVoidAsync("tmPdfViewer.clearSearch", _rootRef, _searchLayerRef); }
         catch { }
         await InvokeAsync(StateHasChanged);

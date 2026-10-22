@@ -657,6 +657,20 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SearchPresentation_PassedToViewer()
+    {
+        // The default is the viewer's own Floating default — the annotator only forwards.
+        Render().FindComponent<TmPdfViewer>().Instance.SearchPresentation
+            .Should().Be(PdfSearchPresentation.Floating);
+
+        var inline = Render(configure: p => p
+            .Add(x => x.ShowSearch, true)
+            .Add(x => x.SearchPresentation, PdfSearchPresentation.Inline));
+        inline.FindComponent<TmPdfViewer>().Instance.SearchPresentation
+            .Should().Be(PdfSearchPresentation.Inline);
+    }
+
+    [Fact]
     public void AllowRotation_PassedToViewer()
     {
         var cut = Render(configure: p => p.Add(x => x.AllowRotation, true));
@@ -668,7 +682,7 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
         cut.InvokeAsync(() => viewer.OnPdfLoaded(4));
         cut.Render();
         cut.Find(".tm-pdf-viewer__toolbar")
-            .QuerySelector("button[aria-label='Rotate']")
+            .QuerySelector("button[aria-label='Rotate clockwise']")
             .Should().NotBeNull("the viewer renders the rotation button inside the merged toolbar");
 
         var off = Render();

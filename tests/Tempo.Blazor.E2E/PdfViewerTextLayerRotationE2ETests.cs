@@ -47,7 +47,10 @@ public class PdfViewerTextLayerRotationE2ETests : WasmTestBase
     /// </summary>
     private static async Task ClickRotateAsync(ILocator section)
     {
-        var direct = section.Locator("[data-tm-group='rotate'] button").First;
+        // FZE-11: the group renders BOTH directions; the rotation ladder below is the
+        // clockwise one (90° → 180° → 270°), so pin the CW button — not just the first
+        // rotate button in the group (that is now the counter-clockwise one).
+        var direct = section.Locator("[data-tm-group='rotate'] button[title='Rotate clockwise']").First;
         if (await direct.IsVisibleAsync())
         {
             await direct.ClickAsync();
@@ -55,7 +58,7 @@ public class PdfViewerTextLayerRotationE2ETests : WasmTestBase
         }
 
         await section.Locator(".tm-toolbar-more").First.ClickAsync();
-        await section.Locator(".tm-toolbar-more__item").Filter(new() { HasText = "Rotate" }).First
+        await section.Locator(".tm-toolbar-more__item").Filter(new() { HasText = "Rotate clockwise" }).First
             .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
     }
 
@@ -220,4 +223,163 @@ public class PdfViewerTextLayerRotationE2ETests : WasmTestBase
             """,
             new { title, page = pageNumber, rotation },
             new PageWaitForFunctionOptions { Timeout = 60000 });
+
+// ══════════════════════════════════════════════════════════════════════════
+// FZE-11: counter-clockwise rotation
+// ══════════════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Clicks the counter-clockwise rotate action. FZE-11 renders BOTH directions in the
+/// rotate group, so the CCW button is pinned by its localized tooltip (the CW ladder
+/// above pins the clockwise one).
+/// </summary>
+private static async Task ClickRotateCounterClockwiseAsync(ILocator section)
+{
+    var direct = section.Locator("[data-tm-group='rotate'] button[title='Rotate counter-clockwise']").First;
+    if (await direct.IsVisibleAsync())
+    {
+        await direct.ClickAsync();
+        return;
+    }
+
+    await section.Locator(".tm-toolbar-more").First.ClickAsync();
+    await section.Locator(".tm-toolbar-more__item").Filter(new() { HasText = "Rotate counter-clockwise" }).First
+        .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+}
+
+[TestMethod]
+[TestCategory("WASM")]
+public async Task PdfViewer_Toolbar_RotatePairStaysOnBarAt1440()
+{
+    // Review: the desktop rotate group is icon-only (localized text in tooltip +
+    // aria-label), so BOTH directions fit on the 1440 toolbar — neither collapses
+    // into the "More" menu.
+    var page = await OpenPdfPageAsync();
+    var section = Section(page, "Page Rotation");
+
+    await section.Locator("[data-tm-group='rotate']").First
+        .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+
+    foreach (var title in new[] { "Rotate counter-clockwise", "Rotate clockwise" })
+    {
+        var button = section.Locator($"[data-tm-group='rotate'] button[title='{title}']").First;
+        Assert.AreEqual(null, await button.GetAttributeAsync("aria-hidden"),
+            $"'{title}' must be on the bar (not collapsed into More) at 1440.");
+        Assert.IsTrue(await button.IsVisibleAsync(), $"'{title}' must be visible at 1440.");
+    }
+}
+
+[TestMethod]
+[TestCategory("WASM")]
+public async Task PdfViewer_Rotate_CounterClockwise_TextLayerAligned()
+{
+    var page = await OpenPdfPageAsync();
+    var section = Section(page, "Page Rotation");
+
+    await section.Locator(".tm-pdf-viewer__page-input").First
+        .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+
+    // One CCW step from 0° lands on 270° — the mirrored hard case (axes swap at 90/270).
+    await ClickRotateCounterClockwiseAsync(section);
+    await WaitForLayerAsync(page, "Page Rotation", null, 270);
+
+    var m = await MeasureAsync(page, "Page Rotation", null);
+    AssertAligned(m, "single page after counter-clockwise rotate to 270°");
+
+    await SaveScreenshotAsync(page, section, "rotate-ccw-desktop");
+}
+
+[TestMethod]
+[TestCategory("WASM")]
+public async Task PdfViewer_Rotate_CcwThenCw_RestoresOrientation()
+{
+    var page = await OpenPdfPageAsync();
+    var section = Section(page, "Page Rotation");
+
+    await section.Locator(".tm-pdf-viewer__page-input").First
+        .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+
+    // CCW then CW are inverses: the document returns to 0° with a rendered layer.
+    await ClickRotateCounterClockwiseAsync(section);
+    await WaitForLayerAsync(page, "Page Rotation", null, 270);
+    await ClickRotateAsync(section);
+    await WaitForLayerAsync(page, "Page Rotation", null, 0);
+
+    var m = await MeasureAsync(page, "Page Rotation", null);
+    AssertAligned(m, "single page restored to 0° after CCW then CW");
+}
+
+[TestMethod]
+[TestCategory("WASM")]
+public async Task PdfViewer_Continuous_RotateCcw_PreservesScroll()
+{
+    var page = await OpenPdfPageAsync();
+    var section = Section(page, "Continuous Scroll");
+
+    // Lazy render queue: page 1 is painted before anything else.
+    await WaitForLayerAsync(page, "Continuous Scroll", 1, 0);
+
+    // Scroll the continuous column to a non-zero offset, then rotate CCW. The rebuild
+    // replaces the per-page DOM; the scroll anchor keeps the CONTENT anchored — the page
+    // containing the scroll position stays the same even though the raw scrollTop shifts
+    // when the placeholders flip their aspect ratio.
+    await section.Locator(".tm-pdf-viewer__continuous-wrap").First.EvaluateAsync("el => el.scrollTo(0, 1200)");
+    await page.WaitForTimeoutAsync(300);
+    var before = await TopVisiblePageAsync(page);
+    Assert.IsTrue(before > 1, $"precondition: scrolled past page 1 (top page was {before}).");
+
+    await ClickRotateCounterClockwiseAsync(section);
+    await WaitForLayerAsync(page, "Continuous Scroll", 1, 270);
+
+    var after = await TopVisiblePageAsync(page);
+    Assert.AreEqual(before, after,
+        "CCW rotation must preserve the scroll anchor: the same page stays at the viewport top.");
+}
+
+/// <summary>The 1-based page whose box contains the continuous wrap's scroll position.</summary>
+private static async Task<int> TopVisiblePageAsync(IPage page)
+    => await page.EvaluateAsync<int>(@"
+() => {
+    const wrap = document.querySelector('section .tm-pdf-viewer__continuous-wrap');
+    if (!wrap) return 0;
+    const wrapBox = wrap.getBoundingClientRect();
+    for (const page of wrap.querySelectorAll('.tm-pdf-viewer__page')) {
+        const box = page.getBoundingClientRect();
+        if (box.top <= wrapBox.top && box.bottom > wrapBox.top) {
+            return parseInt(page.getAttribute('data-page'), 10);
+        }
+    }
+    return 0;
+    }");
+
+/// <summary>Parks pointer/focus and captures a section screenshot into
+/// <c>__screenshots__/pdf-viewer</c> (the UX-review evidence for FZE-11).</summary>
+private async Task SaveScreenshotAsync(IPage page, ILocator section, string name)
+{
+    await section.EvaluateAsync("el => el.scrollIntoView({ block: 'start', behavior: 'instant' })");
+    await page.WaitForTimeoutAsync(400);
+    await page.Mouse.MoveAsync(0, 0);
+    await page.EvaluateAsync("() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
+    var directory = Path.Combine(FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "__screenshots__", "pdf-viewer");
+    Directory.CreateDirectory(directory);
+    var path = Path.Combine(directory, name + ".png");
+    await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false, Timeout = 60_000 });
+    TestContext.AddResultFile(path);
+}
+
+private static string FindRepoRoot()
+{
+    var current = new DirectoryInfo(AppContext.BaseDirectory);
+    while (current is not null)
+    {
+        if (File.Exists(Path.Combine(current.FullName, "TempoBlazor.slnx")))
+        {
+            return current.FullName;
+        }
+
+        current = current.Parent!;
+    }
+
+    throw new InvalidOperationException("Could not locate TempoBlazor.slnx.");
+}
 }

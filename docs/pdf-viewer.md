@@ -87,7 +87,7 @@ The toolbar is the core `TmToolbar` (`Overflow=Menu`, priority-based "More"). Th
 |-------|----------|
 | `navigation` | Prev, editable page `<input type="number" inputmode="numeric">` (Enter/blur navigates; out-of-range reverts), Next, `/N` count |
 | `zoom` | Zoom out, `TmDropdown` presets (50/75/100/125/150/200 % + Fit width + Fit page), zoom in |
-| `rotate` | Rotate button (`AllowRotation`) |
+| `rotate` | Rotate counter-clockwise + rotate clockwise (`AllowRotation`) |
 | `view` | The single/continuous segmented control (`ShowViewModeToggle`) |
 | `panels` | The "Pages" thumbnails toggle |
 | `search` | The search toggle (`ShowSearch`) |
@@ -103,12 +103,35 @@ controls the visible labels; on a tablet layout they render below the icons.
 ### Header and slots
 
 `ShowHeader="true"` renders a document header above the toolbar: `Title`, a subtitle
-(`Subtitle`, defaulting to a neutral "Pages: N" once loaded), the `HeaderStart` slot, and the
+(`Subtitle`, defaulting to a neutral "Pages: N" once loaded — extended with the localized file
+size, "Pages: N · 1.4 MB", while `ShowFileSize` is on and a size is known: the host `FileSize`
+wins over the PDF.js `getDownloadInfo` report; an explicit `Subtitle` is never augmented), the
+`HeaderStart` slot, and the
 `HeaderActions` slot after the **Download (primary)** and **Open (secondary)** links — with the
 header on, those two move out of the toolbar. `ToolbarStart` / `ToolbarEnd` compose host groups
 into the toolbar (this is how `TmPdfAnnotator` merges its tools), and
 `SelectionCtaContent` fills the sticky in-flow selection CTA row that sits **outside** the scroll
 area (a zoom or scroll never carries it away).
+
+### Search presentation
+
+`SearchPresentation` (`PdfSearchPresentation`, default **`Floating`** since 2.9.1) decides how
+the search UI presents on desktop and tablet: **Floating** renders a `role="search"` card
+anchored top-right over `.tm-pdf-viewer__body` — outside the scroll wraps, never covering the
+toolbar and painted above the docked panels (`pdf-search-card` test id, elevated surface +
+card shadow/radius tokens, a `prefers-reduced-motion`-aware entrance). The card keeps every
+stable `pdf-search-*` test id; Enter walks forward, Shift+Enter backward, and Escape (from the
+input, the prev/next/clear buttons or ✕) closes it and returns focus to the toolbar's search
+toggle — or, when the toggle has overflowed into the "More" menu, to the More trigger, else to
+the viewer root. Opening the card (`ToggleSearchAsync` / `OpenSearchAsync`) moves the caret
+into `pdf-search-input` after the render. A zero-match search renders the localized
+`TmPdfViewer_SearchNoMatches` verdict inside `pdf-search-count`, flags the input
+`aria-invalid`, and both live in an always-present `role="status"` live region. While the card
+is open the scroll wraps keep natively aligned content (block:'start' page navigation and the
+active search match) clear of the card strip (`scroll-padding-top` + the measured card rect in
+`_scrollToActive`). **Inline** renders the pre-2.9.1
+full-width bar under the toolbar unchanged, and a mobile layout always keeps the sheet-style
+bar in both presentations.
 
 ### Zoom modes
 
@@ -303,6 +326,14 @@ summary:
    Hosts overriding those keys must ship the plural forms.
 9. **Continuous** — annotations and `OverlayContent` are single-page only (PD1); text-selection
    annotation creation is disabled in Continuous.
+10. **Search presentation** — `SearchPresentation` defaults to **`Floating`**: on desktop/tablet
+   the search UI is a card anchored over the page body (focus lands in its input; Escape
+   restores the toolbar focus; a zero-match search renders `TmPdfViewer_SearchNoMatches`).
+   Hosts that want the pre-2.9.1 full-width bar set `SearchPresentation="PdfSearchPresentation.Inline"`.
+11. **Rotate tooltips** — the single `TmPdfViewer_Rotate` label became a direction pair:
+   `TmPdfViewer_RotateCounterClockwise` + `TmPdfViewer_RotateClockwise`. Hosts overriding
+   resource keys must ship both (the desktop/tablet rotate group is icon-only — the full text
+   rides the tooltip and aria-label).
 
 ## Testing
 

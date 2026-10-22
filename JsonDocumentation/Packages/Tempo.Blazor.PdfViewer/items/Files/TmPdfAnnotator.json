@@ -142,6 +142,13 @@
       "description": "Whether the viewer's search is offered. Default is false; passed through to the embedded viewer."
     },
     {
+      "name": "SearchPresentation",
+      "type": "PdfSearchPresentation",
+      "isRequired": false,
+      "default": "PdfSearchPresentation.Floating",
+      "description": "How the embedded viewer presents its search UI on desktop and tablet layouts. Default Floating (a card anchored over the page body); passed through to the embedded viewer. A mobile layout always keeps the in-flow bar."
+    },
+    {
       "name": "AllowRotation",
       "type": "bool",
       "isRequired": false,

@@ -455,9 +455,12 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `ShowTextLayer` | `bool` | `false` | Render a selectable text layer over the canvas |
 | `ShowViewModeToggle` | `bool` | `false` | Show the single/continuous segmented control |
 | `ShowMobileActionBar` | `bool` | `true` | Render the mobile `TmMobileActionBar` (Pages \| Search \| Comments); hosts folding these entries into their own bar pass `false` and use `OpenThumbnailsSheetAsync()` / `OpenSearchAsync()` |
-| `AllowRotation` | `bool` | `false` | Show the rotation button |
+| `AllowRotation` | `bool` | `false` | Show the rotation button (both directions, icon-only on desktop/tablet with the localized text in tooltip + aria-label) |
 | `AllowDownload` | `bool` | `true` | Show the Download action (primary; moves into the header with `ShowHeader`) |
 | `ShowOpenLink` | `bool` | `true` | Show the "Open in new tab" link |
+| `SearchPresentation` | `PdfSearchPresentation` | `Floating` | Desktop/tablet search presentation: `Floating` (card anchored over the body; Escape restores the toolbar focus) or `Inline` (the pre-2.9.1 in-flow bar); mobile always keeps the in-flow bar |
+| `ShowFileSize` | `bool` | `true` | Append the formatted file size to the default header subtitle (with `ShowHeader`) |
+| `FileSize` | `long?` | `null` | Host-supplied byte size; wins over the PDF.js-reported length (`getDownloadInfo`) |
 | `ShowHeader` | `bool` | `false` | Show the document header above the toolbar |
 | `Title` / `Subtitle` | `string?` | `null` | Header text; the subtitle defaults to a neutral page count ("Pages: N") |
 | `ThumbnailsCollapsed` / `ThumbnailsCollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | Two-way collapsed thumbnails (toolbar "Pages" toggle + sidebar button drive it) |
@@ -478,7 +481,8 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `SelectionCtaContent` | `RenderFragment?` | `null` | Content of the sticky in-flow selection CTA row (outside the scroll area) |
 
 Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
-`NextMatchAsync()` / `PreviousMatchAsync()`, `OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`.
+`RotateCounterClockwiseAsync()`, `NextMatchAsync()` / `PreviousMatchAsync()`,
+`OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`.
 
 ### Toolbar, layout and zoom
 
@@ -520,8 +524,8 @@ Comment / Stamp / Draw — `PdfAnnotatorMode`, two-way `Mode`), the color label
 merge into the embedded viewer's toolbar through `ToolbarStart`/`ToolbarEnd`; the export group
 ("Export PDF | Export flattened | Print" — `AllowExport`, `ExportFileName`, `ExportAsync(flatten)`,
 `PrintAsync()`) lives in the header row when `ShowHeader` is true. Pass-through parameters:
-`ShowThumbnails`, `ShowSearch`, `AllowRotation`, `ThumbnailsCollapsed` (two-way),
-`ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
+`ShowThumbnails`, `ShowSearch`, `SearchPresentation`, `AllowRotation`,
+`ThumbnailsCollapsed` (two-way), `ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
 `SinglePage` (PD1) and never offers the continuous toggle. `ShowViewerToolbar` (default `true`)
 is kept for compatibility: when `false`, the viewer chrome is hidden and the annotator renders a
 compact tools row of its own. Responsive (`LayoutMode`, default `Auto`): **desktop** keeps the

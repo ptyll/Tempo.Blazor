@@ -103,6 +103,20 @@ window.tmPdfViewer = (function () {
         return _downloadModulePromise;
     }
 
+    // The document-length lookup lives in pdf-viewer-filesize.mjs, node-tested the
+    // same way; a null answer (unknown length, rejected getDownloadInfo) reports nothing.
+    let _filesizeModule = null;
+    let _filesizeModulePromise = null;
+    function _ensureFilesizeModule() {
+        if (_filesizeModule) return Promise.resolve(_filesizeModule);
+        if (!_filesizeModulePromise) {
+            _filesizeModulePromise = import(_scriptDir + 'pdf-viewer-filesize.mjs')
+                .then(mod => { _filesizeModule = mod; return mod; })
+                .catch(e => { _filesizeModulePromise = null; throw e; });
+        }
+        return _filesizeModulePromise;
+    }
+
     // ── FZE-9: the pinch lives in the CORE sibling module ───────────────────
     // Multi-pointer gestures are never copied into a package (docs/touch-interaction.md,
     // "Multi-pointer gestures"). Referenced packages' static web assets are served as
@@ -221,6 +235,21 @@ window.tmPdfViewer = (function () {
                 await renderPage(rootEl, 1, 1.0, 0);
             }
             dotNetRef.invokeMethodAsync('OnPdfLoaded', pdfDoc.numPages).catch(console.error);
+            // FZE-11: report the byte length for the header's file-size subtitle. The
+            // lookup runs in the BACKGROUND — init must resolve as soon as page 1 is
+            // painted and never wait on getDownloadInfo (a still-streaming download
+            // would hold the viewer hostage). It normalizes a missing/rejected
+            // getDownloadInfo to null and reports nothing then — the header keeps its
+            // pages-only subtitle. Superseded loads (destroyed or re-initialized root)
+            // stay quiet, exactly like OnPdfLoaded.
+            _ensureFilesizeModule()
+                .then(m => m.documentLength(pdfDoc))
+                .then(len => {
+                    if (len !== null && _docs.get(rootEl)?.token === token) {
+                        dotNetRef.invokeMethodAsync('OnDocumentLengthKnown', len).catch(() => { });
+                    }
+                })
+                .catch(() => { /* unknown length — never report */ });
         } catch (err) {
             // Only the owner of the root reports failures; a superseded load stays quiet.
             if (_docs.get(rootEl)?.token === token) {
@@ -842,24 +871,68 @@ window.tmPdfViewer = (function () {
         });
     }
 
+    // The floating search card overlays the body's top strip: a highlight that is inside
+    // the scroller box may still sit UNDER the card. The gap keeps the parked highlight
+    // clear of the card's edge (the card's --tm-space-2 inner rhythm).
+    const SEARCH_CARD_GAP = 8;
+
+    // The card of the VIEWER that owns the search layer (the demo page renders several
+    // viewers at once — a document-wide lookup could steal another viewer's card box).
+    function _searchCardRect(searchLayerEl) {
+        const root = searchLayerEl?.closest?.('.tm-pdf-viewer');
+        return root?.querySelector?.('.tm-pdf-viewer__search-card')?.getBoundingClientRect?.() ?? null;
+    }
+
+    // How far below the container's top edge the card's bottom (+gap) sits — the inset the
+    // wraps' scroll-padding reserves. 0 without a card. The visible-page tracker reads the
+    // same effective top, so scrollIntoView(block:'start') + scroll-padding and the page
+    // indicator always agree on which page the user is actually looking at.
+    function _effectiveTopInset(containerEl) {
+        if (typeof document === 'undefined') return 0;
+        const root = containerEl?.closest?.('.tm-pdf-viewer');
+        const card = root?.querySelector?.('.tm-pdf-viewer__search-card');
+        if (!card) return 0;
+        const cardRect = card.getBoundingClientRect?.();
+        const containerRect = containerEl.getBoundingClientRect?.();
+        if (!cardRect || !containerRect) return 0;
+        const inset = (cardRect.bottom + SEARCH_CARD_GAP) - containerRect.top;
+        return inset > 0 ? Math.min(inset, containerRect.height) : 0;
+    }
+
     // Scrolls the active highlight into view — but only when it is not already
     // fully visible inside its scroll container. `block: 'center'` here used to
     // drag the wrap so far that the viewport's top edge landed on page N−1 and
     // the page indicator regressed; 'nearest' scrolls the minimum distance, and
-    // an already-visible highlight scrolls nothing at all.
+    // an already-visible highlight scrolls nothing at all. When the floating
+    // search card is open, its bottom edge (+gap) counts as the scroller's top:
+    // a highlight hidden behind the card counts as NOT visible and is pushed
+    // below it with an explicit scrollBy (scrollIntoView cannot see the card —
+    // the card is not the scroller and not in the scroll path).
     function _scrollToActive(searchLayerEl) {
         if (!searchLayerEl) return;
         const active = searchLayerEl.querySelector('[data-active="1"]');
         if (!active || typeof active.scrollIntoView !== 'function') return;
         const scroller = _closestScrollContainer(active);
+        const cardRect = _searchCardRect(searchLayerEl);
         if (scroller) {
             const activeRect = active.getBoundingClientRect();
             const scrollerRect = scroller.getBoundingClientRect();
-            if (activeRect.top >= scrollerRect.top && activeRect.bottom <= scrollerRect.bottom) {
-                return; // already visible — keep the scroll position (and page indicator) stable
+            const topLimit = cardRect
+                ? Math.max(scrollerRect.top, cardRect.bottom + SEARCH_CARD_GAP)
+                : scrollerRect.top;
+            if (activeRect.top >= topLimit && activeRect.bottom <= scrollerRect.bottom) {
+                return; // already visible (and clear of the card) — keep scroll stable
             }
         }
         active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (cardRect && scroller && typeof scroller.scrollBy === 'function') {
+            const nowRect = active.getBoundingClientRect();
+            const hiddenByCard = nowRect.top < cardRect.bottom + SEARCH_CARD_GAP
+                && nowRect.bottom > cardRect.top;
+            if (hiddenByCard) {
+                scroller.scrollBy({ top: (cardRect.bottom + SEARCH_CARD_GAP) - nowRect.top });
+            }
+        }
     }
 
     // Nearest ancestor with a scrollable overflow-y (the continuous wrap or the
@@ -1061,15 +1134,19 @@ window.tmPdfViewer = (function () {
     }
 
     // Visible-page report with an inline fallback (mirrors computeVisiblePage: the
-    // page containing the viewport's top edge) for a failed module import.
+    // page containing the viewport's top edge) for a failed module import. The top
+    // edge sits below the floating search card when it is open (the same effective
+    // top the scroll-padding and _scrollToActive use), so page navigation that
+    // aligns with the scroll padding does not report the page one above.
     function _reportVisiblePage(state, containerEl) {
+        const topInset = _effectiveTopInset(containerEl);
         let visible;
         if (_continuousModule) {
             const metas = _collectPageMetas(containerEl);
-            visible = _continuousModule.computeVisiblePage(metas, containerEl.scrollTop, containerEl.clientHeight);
+            visible = _continuousModule.computeVisiblePage(metas, containerEl.scrollTop + topInset, containerEl.clientHeight);
         } else {
             const containerTop = containerEl.getBoundingClientRect().top;
-            const scrollTop = containerEl.scrollTop;
+            const scrollTop = containerEl.scrollTop + topInset;
             visible = 0;
             for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
                 const top = wrap.getBoundingClientRect().top - containerTop + scrollTop;
@@ -1688,6 +1765,32 @@ window.tmPdfViewer = (function () {
         return true;
     }
 
+    // Restores focus to the toolbar's search toggle — the Escape path of the floating
+    // search card (FZE-11): the card closes and the keyboard user keeps their place on
+    // the toolbar. The toggle is marked with data-tm-search-toggle (prefix-independent),
+    // not data-testid, whose value can carry a host TestIdPrefix. When the toggle has
+    // overflowed into the "More" menu it renders collapsed (inert) — focusing it would
+    // be a no-op that drops the user on a dead end, so the toolbar's More trigger takes
+    // the focus instead; with no toolbar at all, the viewer root (tabindex=-1) does.
+    function focusSearchToggle(rootEl) {
+        const toggle = rootEl?.querySelector?.('[data-tm-search-toggle="true"]');
+        if (toggle && !toggle.hasAttribute('inert')) {
+            toggle.focus();
+            return true;
+        }
+        const moreTrigger = rootEl?.querySelector?.('.tm-toolbar button.tm-toolbar-more');
+        if (moreTrigger) {
+            moreTrigger.focus();
+            return true;
+        }
+        if (rootEl) {
+            rootEl.tabIndex = -1;
+            rootEl.focus();
+            return true;
+        }
+        return false;
+    }
+
     return {
         isAvailable,
         init,
@@ -1713,6 +1816,7 @@ window.tmPdfViewer = (function () {
         clearFit,
         clearSelection,
         scrollCardIntoView,
+        focusSearchToggle,
         // Internal (test surface): the pure selection-report identity (M3).
         _selectionKey,
         downloadUrl,

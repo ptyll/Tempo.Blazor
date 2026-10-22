@@ -122,6 +122,32 @@ public partial class TmPdfViewer
         await InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>
+    /// Receives the document's byte length from JavaScript (PDF.js <c>getDownloadInfo</c>)
+    /// once the document has loaded (FZE-11). JavaScript reports <em>nothing</em> when the
+    /// length is unknown — a rejected or field-less <c>getDownloadInfo</c> leaves
+    /// <see cref="_reportedLength"/> null, so the header keeps its pages-only subtitle.
+    /// A host-supplied <see cref="FileSize"/> wins over this value (see
+    /// <see cref="EffectiveFileSize"/>).
+    /// </summary>
+    [JSInvokable]
+    public void OnDocumentLengthKnown(long length)
+    {
+        if (length < 0)
+        {
+            return;
+        }
+
+        _reportedLength = length;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The effective header file size: the host-supplied <see cref="FileSize"/> when set,
+    /// otherwise the JS-reported length; null when neither is known.
+    /// </summary>
+    internal long? EffectiveFileSize => FileSize ?? _reportedLength;
+
     /// <summary>Receives a PDF load failure notification from JavaScript and switches to fallback rendering.</summary>
     [JSInvokable]
     public void OnPdfLoadError(string message)
@@ -153,6 +179,9 @@ public partial class TmPdfViewer
     {
         _searchTotalMatches = totalMatches;
         _searchCurrentMatch = totalMatches > 0 ? 1 : 0;
+        // A completed search with zero matches announces the localized no-matches verdict
+        // (the live region) and flags the input aria-invalid until a new search/clear.
+        _searchRanWithNoMatches = totalMatches == 0;
         InvokeAsync(StateHasChanged);
     }
 

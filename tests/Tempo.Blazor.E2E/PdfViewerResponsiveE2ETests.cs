@@ -129,6 +129,36 @@ public class PdfViewerResponsiveE2ETests : WasmTestBase
         await ParkAndShootAsync(page, section, ShotDir("pdf-viewer"), "tablet-comments-sheet");
     }
 
+    // ── FZE-11: the floating search card on a tablet layout ──────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_SearchCard_Tablet()
+    {
+        // 1180×820 (the tablet reference viewport): the demo column keeps the viewer
+        // container well inside the 640–1023px tablet band.
+        var page = await OpenAsync(PdfPage, 1180, 820, touch: true);
+        var section = Section(page, "Document Search").First;
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+        await WaitForLoadedViewerAsync(section);
+
+        var input = section.Locator("[data-testid='pdf-search-input']").First;
+        await input.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await input.FillAsync("the");
+        await input.PressAsync("Enter");
+
+        // Tablet floats the card too (the in-flow bar is the mobile sheet contract).
+        var card = section.Locator("[data-testid='pdf-search-card']").First;
+        await card.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        Assert.AreEqual(0, await section.Locator(".tm-pdf-viewer__search-bar").CountAsync(),
+            "a tablet layout must not render the in-flow search bar.");
+        var count = section.Locator("[data-testid='pdf-search-count']").First;
+        await count.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+
+        await ParkAndShootAsync(page, section, ShotDir("pdf-viewer"), "search-card-tablet");
+    }
+
     [TestMethod]
     [TestCategory("WASM")]
     public async Task PdfViewer_Mobile_FitWidthNoHorizontalScroll()

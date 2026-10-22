@@ -136,6 +136,14 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     /// <summary>Whether the viewer's search is offered. Default is false; passed through to the embedded viewer.</summary>
     [Parameter] public bool ShowSearch { get; set; }
 
+    /// <summary>
+    /// How the embedded viewer presents its search UI on desktop and tablet layouts.
+    /// Default <see cref="PdfSearchPresentation.Floating"/> (a card anchored over the page
+    /// body); passed through to the embedded viewer. A mobile layout always keeps the
+    /// in-flow bar.
+    /// </summary>
+    [Parameter] public PdfSearchPresentation SearchPresentation { get; set; } = PdfSearchPresentation.Floating;
+
     /// <summary>Whether the viewer's rotation button is offered. Default is false; passed through to the embedded viewer.</summary>
     [Parameter] public bool AllowRotation { get; set; }
 

@@ -85,6 +85,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "PdfSearchPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "How the viewer presents its search UI on desktop and tablet layouts, driven by TmPdfViewer.SearchPresentation. Floating (the default since 2.9.1) anchors a role=search card top-right over the page body — outside the scroll area and never covering the toolbar; Escape closes it and returns focus to the toolbar's search toggle. Inline restores the pre-2.9.1 full-width bar under the toolbar. A mobile layout always keeps the in-flow (sheet-style) bar regardless of this value.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "PdfTextSelection",
       "kind": "Record",
       "category": "Components",
@@ -477,6 +487,13 @@
           "type": "IReadOnlyDictionary<string, string>?",
           "isRequired": false,
           "description": "Annotation colors per role, keyed by role."
+        },
+        {
+          "name": "SearchPresentation",
+          "type": "PdfSearchPresentation",
+          "isRequired": false,
+          "default": "PdfSearchPresentation.Floating",
+          "description": "How the embedded viewer presents its search UI on desktop and tablet layouts. Default Floating (a card anchored over the page body); passed through to the embedded viewer. A mobile layout always keeps the in-flow bar."
         },
         {
           "name": "ShowHeader",
@@ -1280,6 +1297,12 @@
           "description": "Enables text selection events (OnTextSelected) without turning on the built-in annotation layer and panel. Default is false."
         },
         {
+          "name": "FileSize",
+          "type": "long?",
+          "isRequired": false,
+          "description": "The document's byte size shown in the header. When set, this host-supplied value wins over the length the viewer obtains from PDF.js getDownloadInfo; when omitted and the size is unknown, the subtitle keeps its pages-only form."
+        },
+        {
           "name": "HeaderActions",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -1349,10 +1372,24 @@
           "description": "Callback when the scale changes."
         },
         {
+          "name": "SearchPresentation",
+          "type": "PdfSearchPresentation",
+          "isRequired": false,
+          "default": "PdfSearchPresentation.Floating",
+          "description": "How the search UI is presented on desktop and tablet layouts. Default Floating (since 2.9.1): a card anchored top-right over the page body, outside the scroll area; Escape closes it and returns focus to the toolbar's search toggle. Set Inline to restore the pre-2.9.1 in-flow bar under the toolbar. A mobile layout always keeps the in-flow bar."
+        },
+        {
           "name": "SelectionCtaContent",
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Content rendered in the in-flow sticky selection CTA row, outside the scroll area (since 2.9.1). Hosts (the annotator) supply their own sticky selection actions here; the viewer's own comment CTA is independent and may render in the same row."
+        },
+        {
+          "name": "ShowFileSize",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the document header's default subtitle appends the formatted file size (\"Pages: N \\u00b7 1.4 MB\"). Only applies when ShowHeader is true and no explicit Subtitle is given. Default is true."
         },
         {
           "name": "ShowHeader",
@@ -1595,6 +1632,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-filesize.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-fit.mjs",
       "kind": "JavaScript"
     },
@@ -1631,6 +1672,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-filesize.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-fit.test.mjs",
       "kind": "JavaScript"
     },
@@ -1660,11 +1705,11 @@
     }
   ],
   "summary": {
-    "itemCount": 17,
-    "manualItemCount": 17,
-    "generatedItemCount": 17,
+    "itemCount": 18,
+    "manualItemCount": 18,
+    "generatedItemCount": 18,
     "generatedOnlyItemCount": 0,
     "componentCount": 11,
-    "publicApiTypeCount": 6
+    "publicApiTypeCount": 7
   }
 }
