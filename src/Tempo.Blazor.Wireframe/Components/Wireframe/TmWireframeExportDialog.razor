@@ -8,6 +8,8 @@
          OnClose="OnClose"
          Title="@Loc["TmWireframeExportDialog_Title"]"
          ShowDefaultFooterButtons="false"
+         MobilePresentation="MobilePresentation"
+         FooterLayout="FooterLayout.Inline"
          Size="ModalSize.Medium"
          CloseOnOverlayClick="true"
          CloseOnEscape="true">
@@ -73,6 +75,13 @@
 
     /// <summary>Raised with the chosen file name, format and options when the user confirms the export.</summary>
     [Parameter] public EventCallback<WireframeExportDialogResult> OnExport { get; set; }
+
+    /// <summary>
+    /// How the dialog presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> (default) follows the core viewport scope: a bottom sheet
+    /// on a phone, the centred dialog otherwise. A forced value pins one presentation (used by tests and host layouts). The footer is always
+    /// inline (Cancel and Export side by side, sticky in the sheet).
+    /// </summary>
+    [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
 
     /// <summary>File name proposed (and restored) every time the dialog opens. Falls back to an empty field when <c>null</c>.</summary>
     [Parameter] public string? DefaultFileName { get; set; }

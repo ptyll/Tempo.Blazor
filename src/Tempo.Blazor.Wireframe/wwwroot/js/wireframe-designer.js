@@ -45,6 +45,9 @@ window.tmWireframeDesigner = {
             svg: svgElement,
             dotNetRef: dotNetRef,
             readOnly: !!opts.readOnly,
+            // Mobile viewing + light edits (G2): no resize / rotate handles, no rubber band, no connector tool / waypoints; a
+            // one-finger drag on the empty canvas pans. Driven by TmWireframeDesignerCanvas.LightEditing.
+            lightEditing: !!opts.lightEditing,
             gridSize: opts.gridSize || 8,
             showGrid: opts.showGrid !== false,
             canvasW: opts.canvasWidth || 1200,
@@ -171,6 +174,21 @@ window.tmWireframeDesigner = {
         }
     },
 
+    /**
+     * Switches the mobile viewing + light edits profile (the editor crossed its 768 px breakpoint). Entering it rolls back a resize /
+     * rotate / waypoint gesture in flight and removes the handles; leaving it brings them back.
+     */
+    setLightEditing: function (svgElement, light) {
+        const inst = this.instances.get(svgElement.id);
+        if (!inst) return;
+        inst.lightEditing = !!light;
+        if (inst.lightEditing) {
+            [inst.resizeSession, inst.rotateSession, inst.waypointSession].forEach(function (session) { if (session) session.cancel('light-editing'); });
+            if (inst.toolMode === 'connector') this.setToolMode(svgElement, 'select');
+        }
+        this._updateHandles(inst);
+    },
+
     // ── Tool mode (select / pan) ──────────────────────────────────────────────
 
     setToolMode: function (svgElement, mode) {
@@ -264,6 +282,18 @@ window.tmWireframeDesigner = {
         document.addEventListener('keyup',       inst._onKeyUp);
         // Shift+F10 / the ContextMenu key also make the browser fire a native contextmenu on the focused wrapper (not the svg):
         // keep it from opening a second, native menu over ours.
+        // Release-click guard of the mobile long-press sheet: the first click after the hold that opened it is swallowed, and ANY new press
+        // disarms it (a real press means the user is interacting with the sheet or another control).
+        inst._onReleaseClick = (e) => {
+            if (!inst.holdClickArmed) return;
+            if (Date.now() - (inst.lastHoldMenuAt || 0) > 5000) { inst.holdClickArmed = false; return; }
+            inst.holdClickArmed = false;
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopPropagation) e.stopPropagation();
+        };
+        inst._onReleasePress = () => { inst.holdClickArmed = false; };
+        document.addEventListener('click', inst._onReleaseClick, true);
+        document.addEventListener('pointerdown', inst._onReleasePress, true);
         inst._onDocContextMenu = (e) => {
             if (Date.now() - (inst.lastKeyMenuAt || 0) < 1000 && inst.svg && inst.svg.closest && e.target && e.target.closest
                 && e.target.closest('.tm-wd-canvas-wrap') === inst.svg.closest('.tm-wd-canvas-wrap')) e.preventDefault();
@@ -304,6 +334,8 @@ window.tmWireframeDesigner = {
         document.removeEventListener('keydown',     inst._onKeyDown);
         document.removeEventListener('keyup',       inst._onKeyUp);
         document.removeEventListener('contextmenu', inst._onDocContextMenu);
+        document.removeEventListener('click', inst._onReleaseClick, true);
+        document.removeEventListener('pointerdown', inst._onReleasePress, true);
 
         this._cancelMiddlePan(inst);
         this._unobserveResize(inst);
@@ -370,7 +402,7 @@ window.tmWireframeDesigner = {
             threshold: gestures.HANDLE_DRAG_THRESHOLD,
             suppressClick: false,
             onPress: function (info) {
-                if (inst.readOnly) return false;
+                if (inst.readOnly || inst.lightEditing) return false;
                 const handle = info.event.target && info.event.target.closest ? info.event.target.closest('[data-handle]') : null;
                 const selG = handle && handle.closest('.tm-wd-selection');
                 if (!selG) return false;
@@ -406,7 +438,7 @@ window.tmWireframeDesigner = {
             threshold: gestures.HANDLE_DRAG_THRESHOLD,
             suppressClick: false,
             onPress: function (info) {
-                if (inst.readOnly) return false;
+                if (inst.readOnly || inst.lightEditing) return false;
                 const handle = info.event.target && info.event.target.closest ? info.event.target.closest('[data-rotate-handle]') : null;
                 const selG = handle && handle.closest('.tm-wd-selection');
                 if (!selG) return false;
@@ -444,7 +476,7 @@ window.tmWireframeDesigner = {
             threshold: gestures.HANDLE_DRAG_THRESHOLD,
             suppressClick: false,
             onPress: function (info) {
-                if (inst.readOnly) return false;
+                if (inst.readOnly || inst.lightEditing) return false;
                 const grip = info.event.target && info.event.target.closest
                     ? info.event.target.closest('.tm-wd-connector__waypoint, .tm-wd-connector__waypoint-hit') : null;
                 const connG = grip && grip.closest('[data-connector-id]');
@@ -529,6 +561,9 @@ window.tmWireframeDesigner = {
                 }
                 if (inst.bodyDrag) inst.bodyDrag.cancel('long-press-menu');
                 inst.lastHoldMenuAt = Date.now();
+                // Light editing presents the menu as a MODAL bottom sheet that opens under the still-pressed finger: the compatibility click
+                // of the lift would land on its backdrop or an entry and dismiss / run it. Arm the release-click guard (see _onReleaseClick).
+                if (inst.lightEditing) inst.holdClickArmed = true;
                 self._openContextMenuAt(inst, inst.holdHit, info.x, info.y, gestures.TOUCH_MENU_OFFSET);
                 return false;   // the hold never becomes a drag
             },
@@ -1038,7 +1073,9 @@ window.tmWireframeDesigner = {
     _bodyPress: function (inst, info) {
         const e = info.event;
         const target = e.target;
-        const wantPan = inst.spaceHeld || inst.toolMode === 'pan';
+        // On a phone the one-finger drag on the EMPTY canvas pans (there is no rubber band to draw): the same pan the pan tool starts.
+        const hitsSomething = target && target.closest && (target.closest('[data-el-id]') || target.closest('.tm-wd-connector__hit'));
+        const wantPan = inst.spaceHeld || inst.toolMode === 'pan' || (!!inst.lightEditing && !hitsSomething);
         // Read-only keeps navigation (pan tool / Space) but nothing else.
         if (inst.readOnly && !wantPan) return false;
         // Handles and waypoints belong to their own sessions.
@@ -1054,6 +1091,8 @@ window.tmWireframeDesigner = {
 
         if (wantPan) {
             body.kind = 'pan';
+            // Light editing: a TAP on the empty canvas still clears the selection (decided on release); a DRAG pans.
+            body.clearOnTap = !!inst.lightEditing && !hitsSomething && !inst.spaceHeld && inst.toolMode !== 'pan';
             body.viewBox = this._getViewBox(inst);
             body.attr = inst.svg.getAttribute('viewBox');
             body.start = { x: info.startX, y: info.startY };
@@ -1072,7 +1111,7 @@ window.tmWireframeDesigner = {
                     } else {
                         inst.selectedIds.add(connId);
                     }
-                } else if (inst.selectedIds.has(connId) && inst.toolMode === 'select') {
+                } else if (inst.selectedIds.has(connId) && inst.toolMode === 'select' && !inst.lightEditing) {
                     // Start dragging the connector (all waypoints) once the pointer moves
                     body.kind = 'connector';
                     body.connId = connId;
@@ -1111,6 +1150,10 @@ window.tmWireframeDesigner = {
                 return true;
             }
 
+            // Light editing: tapping an element that is ALREADY selected re-announces the selection on release, so the host can bring the
+            // properties sheet back after the user closed it (a changed selection announces itself below).
+            body.reselect = !!inst.lightEditing && inst.selectedIds.has(id);
+
             // If the pressed element is not already selected, replace the selection
             if (!inst.selectedIds.has(id)) {
                 inst.selectedIds = new Set([id]);
@@ -1129,7 +1172,7 @@ window.tmWireframeDesigner = {
 
             body.startSvg = this._svgPoint(inst, info.startX, info.startY);
             // Connector tool mode: the drag draws a connector
-            if (inst.toolMode === 'connector') {
+            if (inst.toolMode === 'connector' && !inst.lightEditing) {
                 body.kind = 'draw-connector';
                 body.fromId = id;
             } else {
@@ -1445,6 +1488,16 @@ window.tmWireframeDesigner = {
         this._updateGuides(inst, null);
         this._updateCursor(inst);
         this._flushRelayout(inst);
+
+        if (body && body.reselect && info.outcome === 'tap' && !inst.readOnly && inst.selectedIds.size > 0) {
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', [...inst.selectedIds]);
+        }
+
+        if (body && body.clearOnTap && info.outcome === 'tap' && !inst.readOnly && inst.selectedIds.size > 0) {
+            inst.selectedIds.clear();
+            this._updateHandles(inst);
+            inst.dotNetRef.invokeMethodAsync('OnSelectionChanged', []);
+        }
 
         if (!body || !inst.doubleTap) return;
         // A mouse has a real dblclick; a finger or a pen double-tap is turned into the same action.
@@ -1936,6 +1989,8 @@ window.tmWireframeDesigner = {
         // Remove all existing handle groups
         inst.svg.querySelectorAll('.tm-wd-selection').forEach(el => el.remove());
         if (inst.readOnly) return;
+        // Light editing keeps the dashed selection outline (what is selected) but none of the grips: resize / rotate are tablet+.
+        const showGrips = !inst.lightEditing;
 
         const ns = 'http://www.w3.org/2000/svg';
 
@@ -1962,7 +2017,7 @@ window.tmWireframeDesigner = {
             selG.appendChild(border);
 
             // 8 resize handles – only if single selection and not locked
-            if (inst.selectedIds.size === 1 && !r.locked) {
+            if (showGrips && inst.selectedIds.size === 1 && !r.locked) {
                 // Handle sizes: x1.5 on a coarse pointer, plus an invisible hit area of >= 24 screen px at this zoom
                 // (capped so the handles of a small element do not overlap each other).
                 const coarse = this._isCoarse(inst);
@@ -2393,14 +2448,61 @@ window.tmWireframeDesigner = {
         inst.userViewChanged = true;
     },
 
+    // ── Mobile sheet ───────────────────────────────────────────────────────────
+
+    /** The shell's sheet body is one scroller shared by every tab: a tab (or a peek) must start at its top, not at the previous tab's offset. */
+    resetMobileSheetScroll: function (root) {
+        if (!root || !root.querySelector) return false;
+        const body = root.querySelector('.tm-editor-shell__sheet .tm-drawer__body');
+        if (!body) return false;
+        body.scrollTop = 0;
+        return true;
+    },
+
+    // ── Mobile action bar focus (after the sheet unmounted) ────────────────────
+
+    /** Moves the focus to the first tile of the editor's mobile action bar - only when the focus was lost (on <body> or detached). */
+    focusFirstMobileAction: function (root) {
+        if (!root || !root.querySelector) return false;
+        const active = document.activeElement;
+        const lost = !active || active === document.body || !document.contains(active);
+        if (!lost) return false;
+        const tile = root.querySelector('.tm-mobile-action-bar__action:not([disabled]), .tm-mobile-action-bar__more');
+        if (!tile) return false;
+        tile.focus({ preventScroll: true });
+        return true;
+    },
+
     // ── File download helper (used by C# export) ──────────────────────────────
 
+    /**
+     * Saves a file through a temporary Blob URL on the hidden anchor. A very long `data:` URL (a PNG/PDF export is easily a few MB
+     * of base64) is silently dropped by iOS Safari and by some Chromium builds, while a Blob URL is not; the Blob path is the one
+     * used, with the base64 `data:` URL kept only as the fallback for a host without Blob / URL.createObjectURL (and for the node
+     * tests). iOS Safari has no real download: a link with the download attribute opens the file in a new tab (PNG/PDF/SVG/JSON are
+     * all viewable there; the user saves it from the share sheet) - documented in docs/wireframe-editor.md.
+     */
     downloadFile: function (anchorEl, fileName, mimeType, base64Data) {
-        const dataUrl = 'data:' + mimeType + ';base64,' + base64Data;
-        anchorEl.href     = dataUrl;
+        let url = null;
+        let revoke = false;
+        try {
+            if (typeof Blob === 'function' && typeof URL !== 'undefined' && URL.createObjectURL && typeof atob === 'function') {
+                const binary = atob(base64Data);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                url = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+                revoke = true;
+            }
+        } catch (err) { url = null; revoke = false; }
+        if (!url) url = 'data:' + mimeType + ';base64,' + base64Data;
+
+        anchorEl.href     = url;
         anchorEl.download = fileName;
         anchorEl.click();
-        // Clean up to avoid stale blob URLs
-        setTimeout(() => { anchorEl.href = ''; }, 1000);
+        // The browser has started the download by the time the click handler returned: release the Blob URL and the anchor.
+        setTimeout(() => {
+            anchorEl.href = '';
+            if (revoke) { try { URL.revokeObjectURL(url); } catch (err) { /* already gone */ } }
+        }, 1000);
     },
 };

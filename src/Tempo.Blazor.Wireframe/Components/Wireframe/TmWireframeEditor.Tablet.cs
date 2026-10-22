@@ -25,7 +25,9 @@ public partial class TmWireframeEditor
     {
         if (_resolvedLayout == mode) return;
         var wasTablet = IsTablet;
+        var wasMobile = IsMobile;
         _resolvedLayout = mode;
+        EnterOrLeaveMobile(wasMobile);
         // Leaving the tablet layout drops its sheets (desktop and mobile have their own panel state).
         if (wasTablet && !IsTablet && (_leftSheetOpen || _inspectorSheetOpen))
         {
@@ -111,6 +113,8 @@ public partial class TmWireframeEditor
             try { await _sheetCloseRef.FocusAsync(); }
             catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException) { /* the control is gone */ }
         }
+
+        await MobileAfterRenderAsync();
 
         if (_relayoutPending && _canvas is not null)
         {

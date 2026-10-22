@@ -3,6 +3,7 @@
 @using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Wireframe.Models
 @using Microsoft.AspNetCore.Components.Forms
+@using Tempo.Blazor.Components.Actions
 
 @* ── TmWireframeEditor ──────────────────────────────────────────────────────
    Top-level wireframe editor. Renders through the core TmEditorShell: an optional header (host slots + title), ONE
@@ -14,25 +15,34 @@
 
 <CascadingValue Value="_commandStack" IsFixed="false">
 
-<div class="tm-wd-editor @Class" data-editor-layout="@_resolvedLayout.ToString().ToLowerInvariant()" @onkeydown="OnKeyDown" tabindex="0">
+<div class="tm-wd-editor @Class" data-editor-layout="@_resolvedLayout.ToString().ToLowerInvariant()" @onkeydown="OnKeyDown" tabindex="0" @ref="_editorRoot">
 
     <TmEditorShell Class="tm-wd-editor__shell"
                    Header="@HeaderSlot"
                    Toolbar="@ToolbarSlot"
-                   Left="@(IsTablet ? null : LeftSlot)"
+                   Left="@ShellLeftSlot"
                    Canvas="@CanvasSlot"
-                   Right="@(IsTablet ? null : RightSlot)"
+                   Right="@ShellRightSlot"
+                   Extra="@MobileExtraSlot"
+                   ExtraTitle="@Loc["TmWireframe_MobilePagesTab"]"
+                   MobileActions="@EffectiveMobileActions"
+                   ShowMobilePanelsToggle="@(!HasMobileChrome)"
+                   ActiveMobilePanel="_mobilePanel"
+                   ActiveMobilePanelChanged="OnShellMobilePanelChanged"
+                   MobileSheetSnapIndex="_mobileSnap"
+                   MobileSheetSnapIndexChanged="OnShellMobileSnapChanged"
+                   MobileSheetSnapPoints="MobileSnapPoints"
                    LayoutMode="LayoutMode"
                    Breakpoints="@(LayoutBreakpoints ?? EditorBreakpoints)"
                    ResolvedLayoutChanged="OnShellResolvedLayoutChanged"
-                   LeftOpen="_leftOpen"
+                   LeftOpen="ShellLeftOpen"
                    LeftOpenChanged="OnShellLeftOpenChanged"
-                   RightOpen="_rightOpen"
+                   RightOpen="ShellRightOpen"
                    RightOpenChanged="OnShellRightOpenChanged"
                    CollapsedPanels="_collapsedPanels"
                    CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
-                   LeftTitle="@Loc["TmWireframe_PanelComponents"]"
-                   RightTitle="@Loc["TmWireframe_PanelProperties"]"
+                   LeftTitle="@(IsMobile ? Loc["TmWireframe_MobileAdd"] : Loc["TmWireframe_PanelComponents"])"
+                   RightTitle="@(IsMobile ? Loc["TmWireframe_SheetInspectorTitle"] : Loc["TmWireframe_PanelProperties"])"
                    LeftWidth="260px" MinLeftWidth="220" MaxLeftWidth="400"
                    RightWidth="300px" MinRightWidth="260" MaxRightWidth="480" />
 
@@ -42,6 +52,7 @@
 
 @* Export dialog *@
 <TmWireframeExportDialog Show="@_exportDialogOpen"
+                         MobilePresentation="@(IsMobile ? MobilePresentation.Sheet : MobilePresentation.Auto)"
                          InitialFormat="@_exportDialogFormat"
                          OnClose="CloseExportDialog"
                          OnExport="OnExportDialogExport"
@@ -64,7 +75,8 @@
                                                  disabled="@IsReadOnly"
                                                  title="@Loc["TmWireframe_DocumentTitleLabel"]" />;
 
-    private RenderFragment? HeaderSlot => !HasHeader ? null : @<div class="tm-wd-editor__header-bar" data-testid="wd-header">
+    private RenderFragment? HeaderSlot => !RendersHeader ? null : @<div class="tm-wd-editor__header-stack">
+    <div class="tm-wd-editor__header-bar" data-testid="wd-header">
         @if (HeaderStart is not null)
         {
             <div class="tm-wd-editor__header-start">@HeaderStart</div>
@@ -82,6 +94,12 @@
         {
             <div class="tm-wd-editor__header-actions">@HeaderActions</div>
         }
+    </div>
+    @* The shell drops its Toolbar slot on a phone while mobile actions exist, so the tool row (select / pan / undo / redo / More) sits under the title. *@
+    @if (HasMobileChrome)
+    {
+        @MobileToolRow
+    }
     </div>;
 
     // ── Command row: core TmToolbar(s) ────────────────────────────────────────
@@ -89,7 +107,7 @@
     // commands (tools, history, arrange, grouping, alignment, snapping, format painter), row 2 the view / file commands
     // (panel toggles, zoom, Export, Import) - each with its own "More". The group fragments below are shared by both.
 
-    private RenderFragment? ToolbarSlot => !ShowToolbar ? null : @<div class="tm-wd-editor__toolbar @(IsTablet ? "tm-wd-editor__toolbar--tablet" : null)" data-testid="wd-toolbar">
+    private RenderFragment? ToolbarSlot => !ShowToolbar ? null : IsMobile ? MobileToolRow : @<div class="tm-wd-editor__toolbar @(IsTablet ? "tm-wd-editor__toolbar--tablet" : null)" data-testid="wd-toolbar">
         @if (IsTablet)
         {
             <div class="tm-wd-editor__toolbar-row" data-testid="wd-toolbar-row-1">
@@ -341,7 +359,7 @@
     private RenderFragment CanvasSlot => @<div class="tm-wd-editor__canvas-region @(InspectorSheetOpen ? "tm-wd-editor__canvas-region--sheet-right" : null)">
 
         @* ── Page tabs (PageNavigation=Tabs) ───────────────────────────────── *@
-        @if (ShowsPageTabs)
+        @if (RendersPageTabs)
         {
             <div class="tm-wd-editor__page-tabs" role="tablist" aria-label="@Loc["TmWireframePages_ListLabel"]">
                 @foreach (var pg in _document!.Pages)
@@ -407,7 +425,7 @@
 
         @* ── Rulers + canvas ───────────────────────────────────────────────── *@
         <div class="tm-wd-editor__canvas-area">
-            @if (_showRulers)
+            @if (_showRulers && !IsMobile)
             {
                 <TmWireframeRuler Orientation="Horizontal"
                                   Size="20"
@@ -421,7 +439,7 @@
             }
 
             <div class="tm-wd-editor__canvas-inner">
-                @if (_showRulers)
+                @if (_showRulers && !IsMobile)
                 {
                     <TmWireframeRuler Orientation="Vertical"
                                       Size="20"
@@ -443,6 +461,8 @@
                                                GridSize="@_gridSize"
                                                SnapToObjects="@_snapToObjects"
                                                ReadOnly="@IsReadOnly"
+                                               LightEditing="@IsMobile"
+                                               ContentVersion="@_contentVersion"
                                                OnSelectionChanged="OnSelectionChanged"
                                                OnConnectorSelectionChanged="OnConnectorSelectionChanged"
                                                OnConnectorCreated="OnConnectorCreated"
@@ -463,8 +483,9 @@
                                                OnZoomChangedEvent="OnCanvasZoomChanged"
                                                Class="tm-wd-editor__canvas" />
 
-                    @* Context menu (right-click) *@
+                    @* Context menu (right-click / long-press): the anchored fixed menu on desktop and tablet, the shared action sheet on a phone. *@
                     <TmWireframeContextMenu @ref="_contextMenu"
+                                            Presentation="@(IsMobile ? WireframeContextMenuPresentation.Sheet : WireframeContextMenuPresentation.Anchored)"
                                             IsOpen="@_ctxMenuOpen"
                                             X="@_ctxMenuX"
                                             Y="@_ctxMenuY"
@@ -501,7 +522,7 @@
                                             OnEditConnectorLabel="OnEditConnectorLabelFromContextMenu"
                                             OnSetConnectorRouting="OnSetConnectorRoutingFromContextMenu" />
 
-                    @if (ShowMinimap && !IsTablet)
+                    @if (ShowMinimap && !IsTablet && !IsMobile)
                     {
                         <div class="tm-wd-editor__minimap-wrap">
                             <TmWireframeMinimap @ref="_minimap"
@@ -512,6 +533,10 @@
                                                 NavigateRequested="OnMinimapNavigate"
                                                 Class="tm-wd-editor__minimap" />
                         </div>
+                    }
+                    @if (HasMobileChrome)
+                    {
+                        @MobileZoomOverlay
                     }
                 </div> @* canvas-wrap *@
             </div> @* canvas-inner *@
@@ -546,6 +571,74 @@
     </TmFocusScope>;
 
     // ── Inspector ──────────────────────────────────────────────────────────────
+
+    /// <summary>The peek of the properties sheet: what is selected and Duplicate / Lock / Delete, finger-sized.</summary>
+    private RenderFragment MobileQuickActions => @<div class="tm-wd-quick-actions" role="group" aria-label="@Loc["TmWireframe_QuickActionsAriaLabel"]" data-testid="wd-quick-actions">
+        <span class="tm-wd-quick-actions__title">@MobileSelectionTitle</span>
+        <div class="tm-wd-quick-actions__buttons">
+            @if (_selectedIds.Length > 0)
+            {
+                <button type="button" class="tm-wd-quick-actions__btn" data-testid="wd-quick-duplicate"
+                        disabled="@IsReadOnly" @onclick="OnDuplicateFromContextMenu">
+                    <TmIcon Name="@IconNames.Copy" Size="IconSize.Sm" /><span>@Loc["TmWireframe_CtxDuplicate"]</span>
+                </button>
+                <button type="button" class="tm-wd-quick-actions__btn" data-testid="wd-quick-lock"
+                        disabled="@IsReadOnly" aria-pressed="@(SelectionLocked ? "true" : "false")" @onclick="OnToggleLock">
+                    <TmIcon Name="@(SelectionLocked ? IconNames.Unlock : IconNames.Lock)" Size="IconSize.Sm" /><span>@(SelectionLocked ? Loc["TmWireframe_Unlock"] : Loc["TmWireframe_Lock"])</span>
+                </button>
+            }
+            <button type="button" class="tm-wd-quick-actions__btn tm-wd-quick-actions__btn--danger" data-testid="wd-quick-delete"
+                    disabled="@IsReadOnly" @onclick="OnDeleteFromInspector">
+                <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" /><span>@Loc["TmWireframe_CtxDelete"]</span>
+            </button>
+        </div>
+    </div>;
+
+    // ── Mobile tool row (select / pan / undo / redo / More) ────────────────────
+
+    private RenderFragment MobileToolRow => @<div class="tm-wd-editor__mobile-tools" data-testid="wd-mobile-tools">
+        <TmToolbar Overflow="ToolbarOverflow.Menu"
+                   Labels="ToolbarLabels.Auto"
+                   AriaLabel="@Loc["TmWireframe_MobileToolsAriaLabel"]"
+                   Class="tm-wd-editor__commandbar">
+            <TmToolbarGroup Label="@Loc["TmWireframe_GroupTools"]" Class="tm-wd-editor__group" data-tm-group="tools">
+                <TmToolbarButton Icon="@IconNames.MousePointer" Text="@Loc["TmWireframe_ToolSelect"]" Tooltip="@Loc["TmWireframe_SelectTool"]"
+                                 LabelPosition="ToolbarLabelPosition.Below" Pressed="@(_toolMode == "select")" Disabled="@IsReadOnly"
+                                 OnClick='() => SetToolMode("select")' />
+                <TmToolbarButton Icon="@IconNames.Hand" Text="@Loc["TmWireframe_ToolPan"]" Tooltip="@Loc["TmWireframe_PanToolHint"]"
+                                 LabelPosition="ToolbarLabelPosition.Below" Pressed="@(_toolMode == "pan")"
+                                 OnClick='() => SetToolMode("pan")' />
+            </TmToolbarGroup>
+            @HistoryGroup
+            <TmToolbarGroup Label="@Loc["TmWireframe_GroupArrange"]" Class="tm-wd-editor__group" data-tm-group="arrange">
+                <TmToolbarButton Icon="@IconNames.SendToBack" Text="@Loc["TmWireframe_ArrangeBack"]" Tooltip="@Loc["TmWireframe_SendToBack"]"
+                                 Priority="ToolbarButtonPriority.OverflowOnly"
+                                 Disabled="@(_selectedIds.Length == 0 || IsReadOnly)" OnClick="OnSendToBack" />
+                <TmToolbarButton Icon="@IconNames.BringToFront" Text="@Loc["TmWireframe_ArrangeFront"]" Tooltip="@Loc["TmWireframe_BringToFront"]"
+                                 Priority="ToolbarButtonPriority.OverflowOnly"
+                                 Disabled="@(_selectedIds.Length == 0 || IsReadOnly)" OnClick="OnBringToFront" />
+            </TmToolbarGroup>
+        </TmToolbar>
+    </div>;
+
+    // ── Mobile floating zoom (outside the svg, over the canvas) ────────────────
+
+    private RenderFragment MobileZoomOverlay => @<div class="tm-wd-editor__zoom-overlay" role="group" aria-label="@Loc["TmWireframe_ZoomControls"]" data-testid="wd-zoom-overlay">
+        <button type="button" class="tm-wd-editor__zoom-overlay-btn" data-testid="wd-zoom-in"
+                aria-label="@Loc["TmWireframeEditor_ZoomIn"]" title="@Loc["TmWireframeEditor_ZoomIn"]" @onclick="ZoomIn">
+            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+        </button>
+        <span class="tm-wd-editor__zoom-overlay-label" role="status" aria-live="polite"
+              aria-label="@(string.Format(Loc["TmWireframeEditor_ZoomAria"], _zoomLabel))">@_zoomLabel</span>
+        <button type="button" class="tm-wd-editor__zoom-overlay-btn" data-testid="wd-zoom-out"
+                aria-label="@Loc["TmWireframe_ZoomOut"]" title="@Loc["TmWireframe_ZoomOut"]" @onclick="ZoomOut">
+            <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
+        </button>
+        <button type="button" class="tm-wd-editor__zoom-overlay-btn tm-wd-editor__zoom-overlay-btn--fit" data-testid="wd-zoom-fit"
+                aria-label="@Loc["TmWireframe_FitToView"]" title="@Loc["TmWireframe_FitToView"]" @onclick="FitToView">
+            <TmIcon Name="@IconNames.Scan" Size="IconSize.Sm" />
+        </button>
+    </div>;
 
     private RenderFragment? RightSlot => !ShowPropertiesPanel ? null : @<TmWireframePropertiesPanel Document="@_document"
                                                                                                      DocumentChanged="OnDocumentChanged"

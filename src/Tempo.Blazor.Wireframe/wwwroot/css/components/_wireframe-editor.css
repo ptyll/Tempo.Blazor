@@ -2557,3 +2557,272 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHASE 7 - MOBILE LAYOUT (editor container < 768 px, decision G2: viewing + light edits)
+   The layout is resolved in C# from the same container (data-editor-layout="mobile"); the shell renders the canvas plus ONE non-modal
+   bottom sheet and the TmMobileActionBar. These rules only style what that markup contains. The literal width is TmBreakpoints.Md.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Header stack: the document title row (title + host slots), then the select / pan / undo / redo / More tool row. */
+.tm-wd-editor__header-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tm-wd-editor__mobile-tools {
+  min-width: 0;
+  padding: 0 var(--tm-space-2);
+  border-block-start: 1px solid var(--tm-wd-border);
+}
+
+/* Floating zoom: + / % / - / fit over the canvas, outside the svg (the svg keeps every touch for the canvas gestures). */
+.tm-wd-editor__zoom-overlay {
+  position: absolute;
+  inset-block-start: var(--tm-space-2);
+  inset-inline-end: var(--tm-space-2);
+  z-index: var(--tm-z-inline-sheet, 10);
+  /* One ROW (- | % | + | fit): with the sheet peeked the canvas band above it is only ~150 px tall, a column of four finger-sized
+     targets would be clipped by the sheet (320 x 640 showed it). Four 44 px targets + the read-out fit a 288 px editor. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1);
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  border: 1px solid var(--tm-wd-border);
+  border-radius: var(--tm-wd-radius-lg);
+  box-shadow: var(--tm-shadow-md);
+}
+
+.tm-wd-editor__zoom-overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-touch-target);
+  block-size: var(--tm-touch-target);
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-wd-radius);
+  background: transparent;
+  color: var(--tm-wd-text);
+  cursor: pointer;
+}
+
+.tm-wd-editor__zoom-overlay-btn:hover {
+  background: var(--tm-wd-bg-muted);
+}
+
+.tm-wd-editor__zoom-overlay-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-editor__zoom-overlay-label {
+  display: block;
+  min-inline-size: calc(var(--tm-space-8) + var(--tm-space-4));
+  padding: 0 var(--tm-space-1);
+  text-align: center;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--tm-wd-text-muted);
+}
+
+.tm-wd-editor__zoom-overlay-btn--fit {
+  border-inline-start: 1px solid var(--tm-wd-border);
+  border-radius: 0 var(--tm-wd-radius) var(--tm-wd-radius) 0;
+}
+
+/* The Properties sheet: the quick actions of the selection sit above the full inspector (the peek snap shows them). */
+.tm-wd-mobile-inspector {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tm-wd-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border-block-end: 1px solid var(--tm-wd-border);
+  background: var(--tm-wd-bg-surface);
+}
+
+.tm-wd-quick-actions__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-quick-actions__buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--tm-space-2);
+}
+
+/* Icon over the label (like the action bar tiles): three finger-sized buttons share a 288 px sheet without truncating "Duplicate". */
+.tm-wd-quick-actions__btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-1);
+  min-inline-size: 0;
+  min-block-size: var(--tm-touch-target);
+  padding: var(--tm-space-1) var(--tm-space-1);
+  border: 1px solid var(--tm-wd-border);
+  border-radius: var(--tm-wd-radius);
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  font: inherit;
+  font-size: var(--tm-font-size-xs);
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.tm-wd-quick-actions__btn > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-wd-quick-actions__btn:hover:not(:disabled) {
+  background: var(--tm-wd-bg-muted);
+}
+
+.tm-wd-quick-actions__btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-quick-actions__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tm-wd-quick-actions__btn--danger {
+  color: var(--tm-wd-danger-text);
+  border-color: var(--tm-wd-danger);
+}
+
+.tm-wd-quick-actions__btn--danger:hover:not(:disabled) {
+  background: var(--tm-wd-danger-subtle);
+}
+
+@container tm-wd-editor (width < 768px) {
+  /* Nothing in the editor may be wider than its container: every flex / grid child of the shell can shrink. */
+  .tm-wd-editor,
+  .tm-wd-editor .tm-editor-shell,
+  .tm-wd-editor .tm-editor-shell__main,
+  .tm-wd-editor .tm-editor-shell__stage,
+  .tm-wd-editor .tm-editor-shell__canvas,
+  .tm-wd-editor__canvas-region,
+  .tm-wd-editor__canvas-area,
+  .tm-wd-editor__canvas-inner,
+  .tm-wd-editor__canvas-wrap {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* The canvas takes the whole width (no rulers, no minimap, no side panels): the page fits the svg by itself. */
+  .tm-wd-editor__canvas-inner,
+  .tm-wd-editor__canvas-wrap {
+    inline-size: 100%;
+  }
+
+  .tm-wd-editor .tm-editor-shell__header {
+    padding: 0;
+  }
+
+  .tm-wd-editor__header-bar {
+    padding: var(--tm-space-2) var(--tm-space-3);
+  }
+
+  .tm-wd-editor__header-bar .tm-wd-editor__title {
+    flex: 1 1 0;
+    min-width: 0;
+    inline-size: 100%;
+  }
+
+  .tm-wd-editor__header-bar .tm-wd-editor__toolbar-spacer {
+    display: none;
+  }
+
+  .tm-wd-editor__header-start,
+  .tm-wd-editor__header-actions {
+    flex-shrink: 0;
+    max-inline-size: 50%;
+  }
+
+  /* The action bar and the tool row are finger-sized, and the bar never overflows a 320 px container. */
+  .tm-wd-editor .tm-mobile-action-bar__bar {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* The inspector in the sheet is a finger form. */
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props input:not([type="checkbox"]):not([type="color"]),
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props select,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props button,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props .tm-wd-props__toggle,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props .tm-wd-props__color-swatch,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-toolbox__search-input,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-toolbox__item,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-pages__select,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-layers__row button {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet [data-region] {
+    min-inline-size: 0;
+    overflow: auto;
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props .tm-wd-props__row {
+    flex-wrap: wrap;
+  }
+
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props__input,
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-props__select {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  /* The Pages | Layers segment: the side panel's tab strip is the segment. */
+  .tm-wd-editor .tm-editor-shell__sheet .tm-wd-side__tabs {
+    flex-shrink: 0;
+  }
+}
+
+/* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end of
+   its canvas region, and the editor's own flat "padding: 0" above must not cancel that. The page is re-fitted into the remaining
+   room by the script (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. */
+.tm-wd-editor .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
+  padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
+}
+
+/* The export dialog is a bottom sheet on a phone (TmModal MobilePresentation=Sheet, footer inline and sticky). It is portaled out of the editor. */
+.tm-modal--sheet .tm-wd-export-dialog {
+  padding: 0;
+}
+
+.tm-modal--sheet .tm-wd-export-dialog__field .tm-input,
+.tm-modal--sheet .tm-wd-export-dialog__field select {
+  min-block-size: var(--tm-touch-target);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tm-wd-editor__zoom-overlay,
+  .tm-wd-quick-actions {
+    animation: tm-wd-sheet-in 0.18s ease-out;
+  }
+}

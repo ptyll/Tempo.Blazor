@@ -3,6 +3,16 @@ using Tempo.Blazor.Components.Wireframe.Models;
 
 namespace Tempo.Blazor.Components.Wireframe;
 
+/// <summary>How <see cref="TmWireframeContextMenu"/> presents itself.</summary>
+public enum WireframeContextMenuPresentation
+{
+    /// <summary>A <c>position:fixed</c> menu at the pointer (desktop and tablet).</summary>
+    Anchored,
+
+    /// <summary>The shared bottom action sheet of the core overlay panel (mobile, G2): finger-sized rows and a Done button; align, distribute and grouping are tablet+ and are not offered.</summary>
+    Sheet,
+}
+
 /// <summary>Types of context menu for the wireframe editor.</summary>
 public enum WireframeContextMenuType
 {
@@ -22,6 +32,9 @@ public partial class TmWireframeContextMenu : ComponentBase
     private ElementReference _menuRef;
 
     // ── Position / visibility ────────────────────────────────────────────────
+
+    /// <summary>Anchored fixed menu (default) or the mobile action sheet.</summary>
+    [Parameter] public WireframeContextMenuPresentation Presentation { get; set; } = WireframeContextMenuPresentation.Anchored;
 
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public double X { get; set; }
@@ -69,6 +82,9 @@ public partial class TmWireframeContextMenu : ComponentBase
     // Connector-specific actions
     [Parameter] public EventCallback OnEditConnectorLabel { get; set; }
     [Parameter] public EventCallback<string> OnSetConnectorRouting { get; set; }
+
+    /// <summary>The sheet was dismissed (Done, Escape, outside press or a swipe): the menu closes like it does for a press outside the anchored menu.</summary>
+    private Task OnSheetOpenChanged(bool open) => open ? Task.CompletedTask : OnClose.InvokeAsync();
 
     /// <summary>Reference to the underlying menu div (used by JS for positioning).</summary>
     public ElementReference GetMenuRef() => _menuRef;

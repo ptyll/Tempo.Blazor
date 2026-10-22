@@ -24,6 +24,8 @@ that is shown but not the one expanded reads as a rail. The mobile sheet is inli
 viewport, so it is not promoted to the top layer and the canvas outside the sheet panel stays
 usable (the inline drawer root is click-through).
 
+> **Mobile of `TmWireframeEditor`.** The wireframe editor uses the mobile Sheet presentation with `Extra` (Pages | Layers), `MobileActions` (Add, Pages & layers, Export, More), `ShowMobilePanelsToggle="false"` and snap points 35 / 70 / 100 %, and puts its select / pan / undo / redo tool row in the `Header` slot (the `Toolbar` slot is dropped while mobile actions exist) - see [wireframe-editor.md](wireframe-editor.md#mobile-layout-phase-7).
+
 > **Editors that do not dock on a tablet.** `TmDiagramEditor` uses the docked tablet panels above. `TmWireframeEditor` instead gives the shell no `Left` / `Right` content on a tablet and renders the left panel and the inspector itself as non-modal overlay sheets (hidden minimap), because its docked panels do not fit a 768–1199 canvas. The shell has no overlay / sheet presentation for tablet yet; adding one is a recorded follow-up (see [wireframe-editor.md](wireframe-editor.md#tablet-layout-phase-6)).
 
 ## Using it

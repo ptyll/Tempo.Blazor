@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Components.Rendering
 @using Tempo.Blazor.Components.Wireframe.Models
 
-<div class="tm-wd-canvas-wrap @Class" tabindex="0" @ref="_wrapRef">
+<div class="tm-wd-canvas-wrap @Class" tabindex="0" data-light-editing="@(LightEditing ? "true" : null)" @ref="_wrapRef">
     <svg @ref="_svgRef"
          id="@_svgId"
          class="tm-wd-canvas__svg"

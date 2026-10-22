@@ -161,13 +161,13 @@ async function boot({ coarse = false } = {}) {
     return engine;
 }
 
-async function canvas({ readOnly = false, gridSize = 8, coarse = false } = {}) {
+async function canvas({ readOnly = false, gridSize = 8, coarse = false, lightEditing = false } = {}) {
     await boot({ coarse });
     const svg = svgNode();
     const wrap = node('div', { class: 'tm-wd-canvas-wrap' });
     wrap.children.push(svg); svg.parent = wrap;
     const ref = dotnet();
-    const id = engine.init(svg, ref, { readOnly, gridSize, showGrid: true, canvasWidth: 800, canvasHeight: 600 });
+    const id = engine.init(svg, ref, { readOnly, gridSize, showGrid: true, canvasWidth: 800, canvasHeight: 600, lightEditing });
     await engine.instances.get(id).ready;
     return { svg, wrap, ref, id, inst: () => engine.instances.get(id) };
 }
@@ -1198,4 +1198,195 @@ test('the svg carries data-wd-gesture while a resize handle gesture runs too', a
     c.svg.dispatch('pointermove', touch(c.svg, { clientX: 200, clientY: 140 }));
     c.svg.dispatch('pointerup', touch(c.svg, { clientX: 200, clientY: 140 }));
     assert.equal(c.svg.hasAttribute('data-wd-gesture'), false, 'removed on release');
+});
+
+// ── mobile viewing + light edits (wireframe redesign plan ce19aa8c, phase 7, decision G2) ────────
+
+test('light editing: a selected element has its outline but NO resize / rotate grips, also on a coarse pointer', async () => {
+    const c = await canvas({ lightEditing: true, coarse: true });
+    element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+
+    engine.setSelection(c.svg, ['a']);
+
+    assert.equal(c.svg.querySelectorAll('.tm-wd-selection').length, 1, 'the dashed outline stays');
+    assert.equal(c.svg.querySelectorAll('[data-handle]').length, 0, 'no resize handle and no hit rect');
+    assert.equal(c.svg.querySelectorAll('[data-rotate-handle]').length, 0, 'no rotate handle');
+});
+
+test('light editing: a finger still selects and drags an element (one OnElementMoved at the end)', async () => {
+    const c = await canvas({ lightEditing: true });
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', touch(a.body, { clientX: 100, clientY: 90 }));
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 100, clientY: 90 }));
+
+    assert.deepEqual(c.ref.named('OnSelectionChanged'), [['OnSelectionChanged', ['a']]]);
+    assert.deepEqual(c.ref.named('OnElementMoved'), [['OnElementMoved', 'a', 80, 72]]);
+});
+
+test('light editing: a one-finger drag on the EMPTY canvas pans (no rubber band) and commits the viewBox once', async () => {
+    const c = await canvas({ lightEditing: true });
+    element(c.svg, 'a', { x: 400, y: 400, w: 40, h: 40 });
+
+    c.svg.dispatch('pointerdown', touch(c.svg, { clientX: 300, clientY: 300 }));
+    c.svg.dispatch('pointermove', touch(c.svg, { clientX: 250, clientY: 280 }));
+    assert.ok(!c.svg.children.some(n => n.classList.contains('tm-wd-rubber')), 'no rubber band is drawn');
+    c.svg.dispatch('pointerup', touch(c.svg, { clientX: 250, clientY: 280 }));
+
+    assert.deepEqual(c.ref.named('OnViewBoxChanged'), [['OnViewBoxChanged', 50, 20, 800, 600]]);
+    assert.equal(c.ref.named('OnMultiSelect').length, 0);
+});
+
+test('light editing: a TAP on the empty canvas still clears the selection', async () => {
+    const c = await canvas({ lightEditing: true });
+    element(c.svg, 'a', { x: 20, y: 20 });
+    engine.setSelection(c.svg, ['a']);
+
+    c.svg.dispatch('pointerdown', touch(c.svg, { clientX: 700, clientY: 500 }));
+    c.svg.dispatch('pointerup', touch(c.svg, { clientX: 700, clientY: 500 }));
+
+    assert.deepEqual(c.ref.named('OnSelectionChanged'), [['OnSelectionChanged', []]]);
+    assert.equal(c.ref.named('OnViewBoxChanged').length, 0, 'a tap is no pan');
+});
+
+test('light editing: a DRAG on the empty canvas keeps the selection (it only pans)', async () => {
+    const c = await canvas({ lightEditing: true });
+    element(c.svg, 'a', { x: 20, y: 20 });
+    engine.setSelection(c.svg, ['a']);
+
+    c.svg.dispatch('pointerdown', touch(c.svg, { clientX: 700, clientY: 500 }));
+    c.svg.dispatch('pointermove', touch(c.svg, { clientX: 650, clientY: 450 }));
+    c.svg.dispatch('pointerup', touch(c.svg, { clientX: 650, clientY: 450 }));
+
+    assert.equal(c.ref.named('OnSelectionChanged').length, 0, 'panning does not deselect');
+    assert.equal(c.ref.named('OnViewBoxChanged').length, 1);
+});
+
+test('light editing: the connector tool draws nothing (edge drawing is tablet+) and waypoints are not grabbed', async () => {
+    const c = await canvas({ lightEditing: true });
+    const a = element(c.svg, 'a', { x: 0, y: 0 });
+    const b = element(c.svg, 'b', { x: 300, y: 0 });
+    engine.setToolMode(c.svg, 'connector');
+    doc.elementFromPoint = () => b.body;
+
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 20, clientY: 20 }));
+    a.body.dispatch('pointermove', ev(a.body, { clientX: 320, clientY: 20 }));
+    assert.ok(!c.svg.children.some(n => n.classList.contains('tm-wd-connector-preview')), 'no preview line');
+    a.body.dispatch('pointerup', ev(a.body, { clientX: 320, clientY: 20 }));
+
+    assert.equal(c.ref.named('OnConnectorCreated').length, 0);
+
+    const conn = node('g', { 'data-connector-id': 'c1' }, c.svg);
+    const wp = node('circle', { class: 'tm-wd-connector__waypoint', cx: 100, cy: 100, 'data-waypoint-index': 2 }, conn);
+    wp.dispatch('pointerdown', touch(wp, { clientX: 100, clientY: 100 }));
+    wp.dispatch('pointermove', touch(wp, { clientX: 140, clientY: 130 }));
+    wp.dispatch('pointerup', touch(wp, { clientX: 140, clientY: 130 }));
+    assert.equal(c.ref.named('OnConnectorWaypointDragged').length, 0);
+});
+
+test('light editing: the pan tool and the long-press menu keep working', async () => {
+    const c = await canvas({ lightEditing: true });
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    mock.timers.tick(600);
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+
+    assert.equal(c.ref.named('OnElementContextMenu').length, 1, 'the hold opens the element menu');
+});
+
+test('setLightEditing(true) rolls a resize in flight back and removes the grips; (false) brings them back', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+    engine.setSelection(c.svg, ['a']);
+    const handle = c.svg.querySelector('[data-handle="se"]');
+    handle.dispatch('pointerdown', ev(handle, { clientX: 140, clientY: 100 }));
+    c.svg.dispatch('pointermove', ev(c.svg, { clientX: 200, clientY: 160 }));
+    assert.equal(a.g.getAttribute('data-w'), '160');
+
+    engine.setLightEditing(c.svg, true);
+    c.svg.dispatch('pointerup', ev(c.svg, { clientX: 200, clientY: 160 }));
+
+    assert.equal(a.g.getAttribute('data-w'), '100', 'the live resize is rolled back');
+    assert.equal(c.ref.named('OnElementResized').length, 0, 'and nothing is committed');
+    assert.equal(c.svg.querySelectorAll('[data-handle]').length, 0);
+
+    engine.setLightEditing(c.svg, false);
+    assert.equal(c.svg.querySelectorAll('[data-handle]').length, 8, 'the eight resize handles return');
+});
+
+test('setLightEditing(true) leaves the connector tool for the select tool', async () => {
+    const c = await canvas();
+    engine.setToolMode(c.svg, 'connector');
+
+    engine.setLightEditing(c.svg, true);
+
+    assert.equal(c.inst().toolMode, 'select');
+});
+
+test('light editing: a TAP on an already selected element re-announces the selection (the properties sheet comes back); a drag does not', async () => {
+    const c = await canvas({ lightEditing: true });
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    engine.setSelection(c.svg, ['a']);
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+    assert.deepEqual(c.ref.named('OnSelectionChanged'), [['OnSelectionChanged', ['a']]], 'the tap re-announces');
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', touch(a.body, { clientX: 100, clientY: 90 }));
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 100, clientY: 90 }));
+    assert.equal(c.ref.named('OnSelectionChanged').length, 1, 'a drag does not re-announce');
+    assert.equal(c.ref.named('OnElementMoved').length, 1);
+});
+
+test('without light editing a tap on an already selected element announces nothing (tablet / desktop unchanged)', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    engine.setSelection(c.svg, ['a']);
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+
+    assert.equal(c.ref.named('OnSelectionChanged').length, 0);
+});
+
+test('light editing: the compatibility click of the finger that opened the long-press sheet is swallowed once; a new press disarms the guard', async () => {
+    const c = await canvas({ lightEditing: true });
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    mock.timers.tick(600);
+    assert.equal(c.ref.named('OnElementContextMenu').length, 1);
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+
+    const click = () => doc.dispatch('click', { target: a.body, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
+    const first = click();
+    assert.ok(first.prevented && first.stopped, 'the lift click is swallowed');
+    const second = click();
+    assert.ok(!second.prevented && !second.stopped, 'only the first click is swallowed');
+
+    // A hold that opened a menu, then a NEW press: the next click is the user\'s own.
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    mock.timers.tick(600);
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+    doc.dispatch('pointerdown', { target: a.body });
+    const third = click();
+    assert.ok(!third.prevented, 'a new press disarms the guard');
+});
+
+test('without light editing the hold arms no release-click guard (the tablet menu is offset from the finger)', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    mock.timers.tick(600);
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+
+    const e = doc.dispatch('click', { target: a.body, preventDefault() { this.prevented = true; }, stopPropagation() {} });
+    assert.ok(!e.prevented);
 });

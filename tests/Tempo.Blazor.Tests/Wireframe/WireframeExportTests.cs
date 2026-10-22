@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Wireframe.Export;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Wireframe;
 using Tempo.Blazor.Tests.Localization;
 using Xunit;
@@ -220,6 +221,34 @@ public class WireframeExportTests : LocalizationTestBase
 
         cut.FindAll("button").First(b => b.TextContent.Contains("Export")).Click();
         captured!.FileName.Should().Be("second");
+    }
+
+    // ── Phase 7 (mobile, G2): the export dialog is a bottom sheet on a phone ───
+
+    [Fact]
+    public void ExportDialog_MobilePresentationSheet_FooterInline()
+    {
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true));
+
+        // Auto presentation + the core viewport scope: Dialog on desktop, Sheet on mobile. The dialog does not build a sheet of
+        // its own - it hands the choice to TmModal.
+        var modal = cut.FindComponent<TmModal>().Instance;
+        modal.MobilePresentation.Should().Be(MobilePresentation.Auto, "the dialog follows the viewport scope like every core dialog");
+        modal.FooterLayout.Should().Be(FooterLayout.Inline, "Cancel and Export sit side by side, in a sticky footer");
+        cut.Find(".tm-modal-footer").ClassList.Should().Contain("tm-modal-footer--inline");
+    }
+
+    [Fact]
+    public void ExportDialog_ForcedMobileViewport_RendersTheModalAsASheet_WithTheFormInside()
+    {
+        var cut = Render<TmWireframeExportDialog>(parameters => parameters
+            .Add(p => p.Show, true)
+            .Add(p => p.MobilePresentation, MobilePresentation.Sheet));
+
+        cut.Find(".tm-modal--sheet").Should().NotBeNull();
+        cut.Find(".tm-modal--sheet .tm-wd-export-dialog #wd-export-filename").Should().NotBeNull();
+        cut.Find(".tm-modal--sheet .tm-modal-footer--inline").Should().NotBeNull();
     }
 
     [Fact]

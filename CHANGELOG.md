@@ -74,7 +74,27 @@
 
 ### Added
 
-- **Wireframe editor tablet layout (redesign plan ce19aa8c, phase 6).** In an editor container of 768-1199 px (`data-editor-layout="tablet"`)
+- **Wireframe editor mobile layout: viewing + light edits (redesign plan ce19aa8c, phase 7, decision G2).** In an editor container below 768 px
+  (`data-editor-layout="mobile"`) `TmWireframeEditor` renders the core `TmEditorShell` mobile presentation: a compact header (document title plus
+  `HeaderStart` / `HeaderActions`) with a **select / pan / undo / redo / More** tool row, a canvas that takes the whole width (the canvas measured 0 px
+  wide on a phone before), a **floating zoom** (`- | % | + | fit`, a row over the canvas, outside the svg), a **`TmMobileActionBar`** (**Add** | **Pages & layers**
+  | **Export** | **More**) and non-modal bottom sheets (peek / half / full) for the component palette, the **Properties** inspector and a **Pages | Layers**
+  segment (the shell's one `Extra` tab). Selecting an element peeks the Properties sheet with its type and the quick actions **Duplicate / Lock / Delete**
+  (Name and every property are one swipe up); tap-insert, undo / redo, layer visibility and lock, page switch, device presets (More), read-only and the grid
+  toggle, JSON / SVG export and the PNG / PDF export dialog stay. Resize / rotate handles, the rubber band, the connector tool, align / distribute,
+  grouping, rulers, the minimap and JSON import are **tablet and up** (the canvas runs with `LightEditing`; a one-finger drag on the empty canvas pans, a tap
+  on it deselects). The long-press menu is the shared action sheet (`TmWireframeContextMenu.Presentation=Sheet`), and `TmWireframeExportDialog` is a bottom
+  sheet with an inline, sticky footer (`MobilePresentation`, default `Auto`). New: `TmWireframeEditor.MobileActions` (host actions of the bar; there is no
+  built-in Save or Open), `TmWireframeDesignerCanvas.LightEditing` / `ContentVersion`, `WireframeContextMenuPresentation`, `AddElementsCommand`. Opening, switching
+  and closing a sheet does not re-render the canvas (a parent-render gate keyed on `ContentVersion`; `MutationObserver` E2E). Localised en / cs / sk / fr
+  (`TmWireframe_Mobile*`, `TmWireframe_QuickActionsAriaLabel`, `TmWireframe_ZoomControls`, `TmWireframe_ActionsSheetTitle`). See
+  [docs/wireframe-editor.md](docs/wireframe-editor.md#mobile-layout-phase-7).
+- **Wireframe export download through a Blob URL.** `tmWireframeDesigner.downloadFile` saves through `URL.createObjectURL` on the hidden anchor (a multi-MB base64
+  `data:` URL is dropped by iOS Safari and some Chromium builds); the base64 `data:` URL stays as the fallback. iOS Safari has no real download: the file opens in a
+  new tab and is saved from the share sheet (documented).
+
+- **Wireframe editor tablet layout (redesign plan ce19aa8c, phase 6).**
+ In an editor container of 768-1199 px (`data-editor-layout="tablet"`)
   the command row is **two `TmToolbar`s** split by `data-tm-group` (row 1: tools, history, arrange, grouping, alignment, snapping and
   the format painter; row 2: the Components / Properties toggles, zoom, Export and Import, plus the document title), the left panel
   (Components / Pages / Layers) is an **overlay drawer** and the inspector a **non-modal side sheet with a close ×** - at most one of
@@ -1226,6 +1246,31 @@
   translations in an application (registered after `AddTempoBlazor()`).
 
 ### Breaking / Migration
+
+- **The wireframe editor is a different, lighter editor below 768 px, and its export dialog is a bottom sheet there (redesign plan ce19aa8c, phase 7).**
+  Impact: in an editor container narrower than 768 px (a phone, or a narrow column) `TmWireframeEditor` no longer shows the desktop chrome squeezed into the width
+  (the fixed-width toolbox and properties columns left the canvas 0 px wide). It shows the mobile layout described above: the command row is replaced by the tool row and
+  the `TmMobileActionBar`, the toolbox / inspector / pages / layers are bottom sheets, the document title is always shown in the header, the page tabs and the rulers /
+  minimap / import file picker are not rendered, and the canvas drops resize / rotate handles, the rubber band and the connector tool (`LightEditing`). The
+  `.tm-wd-editor__toolbar`, `[data-testid="wd-toggle-left"]` / `wd-toggle-inspector` (tablet) and the `Export` / `Import` toolbar items do not exist in that layout; the
+  long-press menu is `.tm-overlay-panel-sheet` instead of `.tm-wd-editor__context-menu`; `TmWireframeExportDialog` renders `TmModal` with the `Sheet` presentation
+  (`.tm-modal--sheet`) on a mobile viewport. Tablet (768-1199) and desktop (>= 1200) are unchanged.
+  Before / after: a host that needs the old behaviour on a narrow container pins the layout (`LayoutMode="TmLayoutMode.Tablet"`), a host that embeds the editor in a
+  < 768 px column and wants a "Save" supplies it through the new slot, and a host that pinned the export dialog's presentation sets it explicitly:
+  ```razor
+  @* before: the editor was squeezed on a phone, a "Save" had to live outside it *@
+  <TmWireframeEditor @bind-Document="doc" />
+
+  @* after: a mobile action for the host, and the layout can still be pinned *@
+  <TmWireframeEditor @bind-Document="doc" LayoutMode="TmLayoutMode.Auto">
+      <HeaderActions><button @onclick="Open">Open…</button></HeaderActions>
+  </TmWireframeEditor>
+  <TmWireframeEditor @bind-Document="doc" MobileActions="@(new[] { new TmActionItem { Id = "save", Label = "Save", Overflow = ActionOverflow.Never, OnClick = save } })" />
+
+  @* the export dialog: Auto (default) = sheet on a phone, dialog elsewhere; force one *@
+  <TmWireframeExportDialog Show="open" MobilePresentation="MobilePresentation.Dialog" OnExport="Export" />
+  ```
+  The duplicate of the context menu / the mobile quick action is now ONE undoable step (`AddElementsCommand`); before, `Duplicate` added the copies behind the command stack.
 
 - **The wireframe editor chooses its panels by the width of its own CONTAINER, and the fixed panel widths are gone (redesign plan ce19aa8c, phase 6).**
   Impact: `TmWireframeEditor` resolves `mobile < 768`, `tablet 768-1199`, `desktop >= 1200` from its own box (the pair `TmDiagramEditor` and `docs/editor-shell.md` use for editors; the plan's 1279 would make the demo, whose page is capped at `max-w-7xl`, tablet at every viewport) (it is a CSS size container,

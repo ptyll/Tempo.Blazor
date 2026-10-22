@@ -122,6 +122,33 @@
       ]
     },
     {
+      "itemName": "AddElementsCommand",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Wireframe.Commands",
+      "description": "Adds several elements to the document as ONE undoable step (duplicate selection). AddElementCommand covers the single-element case.",
+      "packageId": "Tempo.Blazor.Wireframe",
+      "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/Commands/AddElementsCommand.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Execute",
+          "kind": "Method",
+          "type": "void"
+        },
+        {
+          "name": "Undo",
+          "kind": "Method",
+          "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "itemName": "AddLayerCommand",
       "kind": "Class",
       "category": "Components",
@@ -2673,6 +2700,28 @@
       ]
     },
     {
+      "itemName": "WireframeContextMenuPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Wireframe",
+      "description": "How TmWireframeContextMenu presents itself.",
+      "packageId": "Tempo.Blazor.Wireframe",
+      "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeContextMenu.razor.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Anchored",
+          "value": "0",
+          "description": "A position:fixed menu at the pointer (desktop and tablet)."
+        },
+        {
+          "name": "Sheet",
+          "value": "1",
+          "description": "The shared bottom action sheet of the core overlay panel (mobile, G2): finger-sized rows and a Done button; align, distribute and grouping are tablet+ and are not offered."
+        }
+      ]
+    },
+    {
       "itemName": "WireframeContextMenuType",
       "kind": "Enum",
       "category": "Components",
@@ -3162,6 +3211,14 @@
           "isRequired": false
         },
         {
+          "name": "Presentation",
+          "type": "WireframeContextMenuPresentation",
+          "isRequired": false,
+          "default": "WireframeContextMenuPresentation.Anchored",
+          "description": "Anchored (default) renders the position:fixed menu at the pointer; Sheet renders the shared bottom action sheet of the core overlay panel (the mobile long-press menu: finger-sized rows and a Done button; align, distribute and grouping are tablet+ and not offered).",
+          "defaultValue": "Anchored"
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false
@@ -3219,6 +3276,13 @@
           "description": "Optional application scope used to resolve custom wireframe components."
         },
         {
+          "name": "ContentVersion",
+          "type": "int",
+          "isRequired": false,
+          "description": "Opaque token the host bumps whenever the document content may have changed behind the canvas' back. While LightEditing is true a parent re-render with unchanged parameters and token does not repaint the SVG scene, so opening or switching a sheet above the canvas costs it nothing.",
+          "defaultValue": "0"
+        },
+        {
           "name": "Document",
           "type": "WireframeDocument?",
           "isRequired": false,
@@ -3237,6 +3301,13 @@
           "default": "8",
           "description": "Snap-to-grid cell size in SVG units (pixels). 0 = disabled.",
           "defaultValue": "8"
+        },
+        {
+          "name": "LightEditing",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Mobile viewing + light edits (G2). While true the canvas keeps selecting, moving an element with a finger, the long-press menu and pinch / pan, but drops resize / rotate handles, the rubber band (a one-finger drag on the empty canvas pans), the connector tool and waypoint handles, and gates parent re-renders on ContentVersion. TmWireframeEditor sets it below 768 px.",
+          "defaultValue": "false"
         },
         {
           "name": "OnCanvasContextMenuRequested",
@@ -3419,7 +3490,7 @@
       "kind": "Component",
       "category": "Wireframe",
       "namespace": "Tempo.Blazor.Components.Wireframe",
-      "description": "Top-level wireframe editor component. Renders through the core TmEditorShell: an optional header (host slots HeaderStart / HeaderActions / Title), ONE command row (a core TmToolbar with named groups - tools, history, arrange, group, align, snap, zoom, file -, per-button Priority, Labels=Auto and Overflow=Menu; Export is the primary, never-collapsing action; the format painter, Read-only, rulers and the panel toggles live in its \"More\" menu), a docked left panel (Components / Pages / Layers tabs, Pages only with PageNavigation=Panel), the canvas with rulers, context menu and minimap, and an inspector (Canvas with device presets, Page and Grid sections on an empty selection; Element with a Name field and Delete element on a selection). Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is edited in the inspector (Canvas section). There is no built-in Save or Open: the host supplies them through the header slots. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px; 44px on a coarse pointer). Responsive behaviour follows the editor's own container width (see LayoutMode): desktop docks the panels, a tablet uses a two-row toolbar and one side sheet at a time.",
+      "description": "Top-level wireframe editor component. Renders through the core TmEditorShell: an optional header (host slots HeaderStart / HeaderActions / Title), ONE command row (a core TmToolbar with named groups - tools, history, arrange, group, align, snap, zoom, file -, per-button Priority, Labels=Auto and Overflow=Menu; Export is the primary, never-collapsing action; the format painter, Read-only, rulers and the panel toggles live in its \"More\" menu), a docked left panel (Components / Pages / Layers tabs, Pages only with PageNavigation=Panel), the canvas with rulers, context menu and minimap, and an inspector (Canvas with device presets, Page and Grid sections on an empty selection; Element with a Name field and Delete element on a selection). Creates and owns a WireframeCommandStack (undo/redo) and exposes it to all child components via CascadingValue. Supports JSON import/export, SVG export, zoom, grid, read-only mode and collapsible panels. Tool mode (Select/Pan) can be switched via toolbar buttons or keyboard shortcuts V/H. Canvas size is edited in the inspector (Canvas section). There is no built-in Save or Open: the host supplies them through the header slots. Presentation: every colour, radius and space reads a core --tm-* token through the --tm-wd-* aliases (no local palette, no dark-mode block), so dark mode and the indigo theme work without extra CSS; toolbar buttons are TmIcon (32px; 44px on a coarse pointer). Responsive behaviour follows the editor's own container width (see LayoutMode): desktop docks the panels, a tablet uses a two-row toolbar and one side sheet at a time, and a phone (container below 768 px, decision G2: viewing + light edits) shows a compact header (title + host slots) with a select / pan / undo / redo / More tool row, a full-width canvas with a floating zoom pill, a TmMobileActionBar (Components, Pages & layers, Export, More; host actions through MobileActions) and non-modal bottom sheets (peek / half / full) for the palette, the Properties inspector (type + Duplicate / Lock / Delete on peek, Name and every property on half) and the Pages | Layers segment. Selecting, moving an element with a finger, undo / redo, tap-insert, layers, device presets, export and the long-press action sheet stay; resize / rotate handles, rubber band, edge drawing, align / distribute, grouping, rulers, minimap and JSON import are tablet and up. The export dialog is a bottom sheet on a phone.",
       "packageId": "Tempo.Blazor.Wireframe",
       "sourcePath": "src/Tempo.Blazor.Wireframe/Components/Wireframe/TmWireframeEditor.razor",
       "documentationStatus": "merged",
@@ -3490,6 +3561,12 @@
           "default": "TmLayoutMode.Auto",
           "description": "How the editor resolves its layout: Auto (default) measures the editor's own container (not the viewport) against LayoutBreakpoints and sets data-editor-layout on the root; a forced mode pins the presentation (tests, host layouts). Desktop (container >= 1200) docks the left panel and the inspector in the shell, with one toolbar and the minimap card. Tablet (768-1199) renders a two-row toolbar split by group (editing commands, then panel toggles / zoom / Export / Import), the left panel (Components / Pages / Layers) as an overlay drawer and the inspector as a non-modal side sheet with a close button - at most ONE sheet open, selecting an element opens the inspector, inserting a component closes the drawer, Escape closes the sheet and returns the focus to the canvas -, no minimap, a single-column toolbox and 44px targets on a coarse pointer. Mobile (< 768) uses the shell sheet presentation.",
           "defaultValue": "TmLayoutMode.Auto"
+        },
+        {
+          "name": "MobileActions",
+          "type": "IReadOnlyList<TmActionItem>?",
+          "isRequired": false,
+          "description": "Host actions of the mobile action bar (editor container below 768 px, decision G2: viewing + light edits). The built-in tiles - Components, Pages & layers, Export - come first; a host action pinned ActionOverflow.Never (for example \"Save\") keeps a tile of its own, the others join the \"More\" menu by their rank. There is no built-in Save or Open: hosts supply them here and in HeaderStart / HeaderActions. Ignored on a tablet or desktop layout."
         },
         {
           "name": "PageNavigation",
@@ -3755,6 +3832,14 @@
           "type": "string?",
           "isRequired": false,
           "description": "Format preselected every time the dialog opens: \"png\" (default) or \"pdf\" (case-insensitive). Any other value falls back to PNG."
+        },
+        {
+          "name": "MobilePresentation",
+          "type": "MobilePresentation",
+          "isRequired": false,
+          "default": "MobilePresentation.Auto",
+          "description": "How the dialog presents on a narrow viewport. Auto follows the core viewport scope: a bottom sheet on a phone, the centred dialog otherwise; a forced value pins one presentation. The footer is always inline (Cancel and Export side by side, sticky in the sheet).",
+          "defaultValue": "Auto"
         },
         {
           "name": "OnClose",
@@ -4347,11 +4432,11 @@
     }
   ],
   "summary": {
-    "itemCount": 93,
-    "manualItemCount": 93,
-    "generatedItemCount": 81,
+    "itemCount": 95,
+    "manualItemCount": 95,
+    "generatedItemCount": 83,
     "generatedOnlyItemCount": 0,
     "componentCount": 10,
-    "publicApiTypeCount": 71
+    "publicApiTypeCount": 73
   }
 }

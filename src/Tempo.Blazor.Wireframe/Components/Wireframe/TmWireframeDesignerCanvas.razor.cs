@@ -53,6 +53,22 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     /// <summary>Additional CSS class applied to the canvas wrapper.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Mobile viewing + light edits (decision G2). While <c>true</c> the canvas keeps selecting, moving an element with a finger, the
+    /// long-press menu and pinch / pan, but drops the editing affordances that need a mouse or a tablet: no resize / rotate handles,
+    /// no rubber band (a one-finger drag on the empty canvas pans), no connector tool and no waypoint handles. It also enables the
+    /// parent-render gate described at <see cref="ContentVersion"/>. <c>TmWireframeEditor</c> sets it in its mobile layout (&lt; 768 px).
+    /// </summary>
+    [Parameter] public bool LightEditing { get; set; }
+
+    /// <summary>
+    /// An opaque token the host bumps whenever the document content may have changed behind the canvas' back (a command, an undo, a
+    /// page switch, an in-place edit by the host). While <see cref="LightEditing"/> is <c>true</c> a parent re-render whose parameters
+    /// and token are unchanged does NOT repaint the (large) SVG scene - opening or switching a bottom sheet above the canvas costs the
+    /// canvas nothing. Without <see cref="LightEditing"/> the canvas repaints on every parent render, as before.
+    /// </summary>
+    [Parameter] public int ContentVersion { get; set; }
+
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
 
@@ -127,6 +143,7 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     private DotNetObjectReference<TmWireframeDesignerCanvas>? _dotNetRef;
     private bool _jsInitialized;
     private bool _jsReadOnly;
+    private bool _jsLightEditing;
     private double _jsCanvasW;
     private double _jsCanvasH;
 
@@ -178,7 +195,38 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     /// <summary>How many times the canvas has rendered (a test seam: a left-tab switch or opening the "More" menu must not move it).</summary>
     internal int RenderCount { get; private set; }
 
-    protected override void OnAfterRender(bool firstRender) => RenderCount++;
+    // Parent-render gate (LightEditing only): a parameter pass that changes nothing the scene shows is skipped. Own renders
+    // (NotifyAndRender, the status line, a connector selection) never go through the gate: _parentPass is only true inside SetParametersAsync.
+    private bool _parentPass;
+    private (object? Doc, string? Page, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version)? _renderedSnapshot;
+
+    private (object? Doc, string? Page, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version) Snapshot()
+        => (Document, Document?.ActivePageId, ShowGrid, GridSize, ReadOnly, SnapToObjects, ComponentScope, Class, LightEditing, ContentVersion);
+
+    /// <inheritdoc />
+    public override Task SetParametersAsync(ParameterView parameters)
+    {
+        _parentPass = true;
+        return base.SetParametersAsync(parameters);
+    }
+
+    /// <inheritdoc />
+    protected override bool ShouldRender()
+    {
+        var parentPass = _parentPass;
+        _parentPass = false;
+        if (!parentPass || !LightEditing || _renderedSnapshot is null) return true;
+        return !_renderedSnapshot.Value.Equals(Snapshot());
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        RenderCount++;
+        // ShouldRender is not consulted for the very first render, so the pass flag is also cleared here (a stale flag would make the
+        // next OWN render look like a parent pass and be skipped).
+        _parentPass = false;
+        _renderedSnapshot = Snapshot();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -190,6 +238,7 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             var options = new
             {
                 readOnly       = ReadOnly,
+                lightEditing   = LightEditing,
                 gridSize       = GridSize,
                 showGrid       = ShowGrid,
                 snapToObjects  = SnapToObjects,
@@ -198,6 +247,7 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             };
 
             _jsReadOnly = ReadOnly;
+            _jsLightEditing = LightEditing;
             _jsCanvasW = options.canvasWidth;
             _jsCanvasH = options.canvasHeight;
             await JS.InvokeVoidAsync("tmWireframeDesigner.init", _svgRef, _dotNetRef, options);
@@ -214,6 +264,13 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             // server-side guards.
             _jsReadOnly = ReadOnly;
             await JS.InvokeVoidAsync("tmWireframeDesigner.setReadOnly", _svgRef, ReadOnly);
+        }
+
+        if (_jsInitialized && _jsLightEditing != LightEditing)
+        {
+            // The editor flipped to / from its mobile layout: the script drops / restores the handles, rubber band and connector tool.
+            _jsLightEditing = LightEditing;
+            await JS.InvokeVoidAsync("tmWireframeDesigner.setLightEditing", _svgRef, LightEditing);
         }
 
         if (_jsInitialized && Document is not null

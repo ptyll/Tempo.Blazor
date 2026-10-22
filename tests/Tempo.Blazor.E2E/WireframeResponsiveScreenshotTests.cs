@@ -81,11 +81,19 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             // canvas to ~0 px (that IS the baseline finding), so a visibility wait would fail the capture.
             await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-canvas__svg",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
-            await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-toolbox__item",
-                new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
             await SettleAsync(page);
 
             var editor = page.Locator(".tm-wd-editor").First;
+            // The layout resolves from the editor container (phase 7): docked toolbox on desktop, a drawer on a tablet, a bottom sheet
+            // behind the action bar on a phone (closed at load) - the capture opens whichever the layout has.
+            var layout = await editor.GetAttributeAsync("data-editor-layout") ?? "desktop";
+            TestContext.WriteLine($"[baseline] {prefix}-{theme}: layout = {layout}");
+            if (layout == "desktop")
+            {
+                await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-toolbox__item",
+                    new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
+            }
+
             await editor.ScrollIntoViewIfNeededAsync();
             Assert.IsTrue(await editor.IsVisibleAsync(), $"{tag}: the editor must be visible");
 
@@ -97,6 +105,7 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             // Add an element through the toolbox (click/tap insertion — phase-1 behaviour) so the
             // "selected element" state shows the properties panel with real content.
             var before = await editor.Locator("g[data-el-id]").CountAsync();
+            await OpenToolboxAsync(editor, layout);
             var item = editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First;
             await item.ScrollIntoViewIfNeededAsync();
             await item.DispatchEventAsync("click");
@@ -109,10 +118,18 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             // Export dialog (PDF, via the menu → proves the preselect in the baseline too).
             // DOM-level clicks: on a phone the toolbar overflows its container (baseline finding), so the
             // Export button can sit outside the clickable viewport region while still being rendered.
-            await editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First
-                .DispatchEventAsync("click");
-            await page.Locator("[data-testid='wd-export-pdf']").First
-                .DispatchEventAsync("click");
+            if (layout == "mobile")
+            {
+                // On a phone Export is an action-bar tile (the dialog is a bottom sheet).
+                await editor.Locator(".tm-mobile-action-bar__action[data-action-id='export']").First.DispatchEventAsync("click");
+            }
+            else
+            {
+                await editor.Locator("[data-testid='wd-export'] button.tm-dropdown-trigger").First
+                    .DispatchEventAsync("click");
+                await page.Locator("[data-testid='wd-export-pdf']").First
+                    .DispatchEventAsync("click");
+            }
             await page.WaitForSelectorAsync(".tm-wd-export-dialog",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 15_000 });
             await SettleAnimationsAsync(page);
@@ -122,8 +139,18 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
             await page.WaitForSelectorAsync(".tm-wd-export-dialog",
                 new PageWaitForSelectorOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
 
-            // Layers panel (a tab of the left panel since phase 4).
-            await editor.Locator("[data-region='left'] [role='tab']", new() { HasTextString = "Layers" }).First.DispatchEventAsync("click");
+            // Layers panel: a tab of the left panel (desktop, the tablet drawer) or the Pages | Layers segment of the phone sheet.
+            if (layout == "mobile")
+            {
+                await editor.Locator(".tm-mobile-action-bar__action[data-action-id='pages-layers']").First.DispatchEventAsync("click");
+                await editor.Locator("[data-region='extra'] [role='tab']", new() { HasTextString = "Layers" }).First.DispatchEventAsync("click");
+            }
+            else
+            {
+                if (layout == "tablet" && await editor.Locator("[data-testid='wd-left-drawer']").CountAsync() == 0)
+                    await editor.Locator("[data-testid='wd-toggle-left']").First.DispatchEventAsync("click");
+                await editor.Locator("[data-region='left'] [role='tab'], [data-testid='wd-left-drawer'] [role='tab']", new() { HasTextString = "Layers" }).First.DispatchEventAsync("click");
+            }
             await page.WaitForTimeoutAsync(400);
             var layers = editor.Locator(".tm-wd-layers").First;
             if (await layers.CountAsync() > 0)
@@ -154,6 +181,19 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>Makes the component palette reachable in the editor's current layout (desktop: already docked).</summary>
+    private static async Task OpenToolboxAsync(ILocator editor, string layout)
+    {
+        if (layout == "desktop") return;
+        var tile = editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First;
+        if (await tile.CountAsync() > 0 && await tile.IsVisibleAsync()) return;
+        var opener = layout == "mobile"
+            ? editor.Locator(".tm-mobile-action-bar__action[data-action-id='components']")
+            : editor.Locator("[data-testid='wd-toggle-left']");
+        await opener.First.DispatchEventAsync("click");
+        await tile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 15_000 });
+    }
 
     private async Task<IPage> OpenPageAsync(string path, int width, int height, bool touch, bool dark)
     {

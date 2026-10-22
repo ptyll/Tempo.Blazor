@@ -119,6 +119,20 @@
       "description": "Additional CSS class applied to the canvas wrapper div."
     },
     {
+      "name": "LightEditing",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "Mobile viewing + light edits (G2). While true the canvas keeps selecting, moving an element with a finger, the long-press menu and pinch / pan, but drops resize / rotate handles, the rubber band (a one-finger drag on the empty canvas pans), the connector tool and waypoint handles, and gates parent re-renders on ContentVersion. TmWireframeEditor sets it below 768 px."
+    },
+    {
+      "name": "ContentVersion",
+      "type": "int",
+      "isRequired": false,
+      "defaultValue": "0",
+      "description": "Opaque token the host bumps whenever the document content may have changed behind the canvas' back. While LightEditing is true a parent re-render with unchanged parameters and token does not repaint the SVG scene, so opening or switching a sheet above the canvas costs it nothing."
+    },
+    {
       "name": "OnZoomChangedEvent",
       "type": "EventCallback<double>",
       "isRequired": false,

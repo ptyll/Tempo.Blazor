@@ -1,7 +1,25 @@
 @namespace Tempo.Blazor.Components.Wireframe
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Components.Wireframe.Models
 
-@if (IsOpen)
+@if (IsOpen && Presentation == WireframeContextMenuPresentation.Sheet)
+{
+    @* Mobile (G2): the long-press menu is the shared F3 action sheet - a finger-sized list with a Done button, no position:fixed menu to
+       clamp or dismiss by script. The commands are the same fragment as the anchored menu minus the tablet+ ones (align, distribute, group). *@
+    <TmOverlayPanel IsOpen="true"
+                    IsOpenChanged="OnSheetOpenChanged"
+                    MobilePresentation="PanelPresentation.Sheet"
+                    LayoutMode="TmLayoutMode.Mobile"
+                    InitialMode="TmLayoutMode.Mobile"
+                    Role="menu"
+                    Title="@Loc["TmWireframe_ActionsSheetTitle"]"
+                    AriaLabel="@Loc["TmWireframe_ActionsSheetTitle"]"
+                    Class="tm-wd-editor__context-sheet">
+        @MenuItems
+    </TmOverlayPanel>
+}
+else if (IsOpen)
 {
     <div @ref="_menuRef"
          class="tm-wd-editor__context-menu"
@@ -10,8 +28,14 @@
          style="position:fixed;left:@($"{X}px");top:@($"{Y}px");"
          @onclick:stopPropagation
          @oncontextmenu:preventDefault>
+        @MenuItems
+    </div>
+}
 
-        @switch (MenuType)
+@code {
+    private bool Light => Presentation == WireframeContextMenuPresentation.Sheet;
+
+    private RenderFragment MenuItems => @<text>        @switch (MenuType)
         {
             case WireframeContextMenuType.Canvas:
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(!CanUndo || ReadOnly)" @onclick="CtxUndo">@Loc["TmWireframe_CtxUndo"]</button>
@@ -37,6 +61,8 @@
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick="CtxBringToFront">@Loc["TmWireframe_CtxBringToFront"]</button>
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick="CtxSendToBack">@Loc["TmWireframe_CtxSendToBack"]</button>
                 <div class="tm-wd-editor__context-sep" role="separator"></div>
+                @if (!Light)
+                {
                 <span class="tm-wd-editor__context-heading">@Loc["TmWireframe_CtxAlign"]</span>
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick='() => CtxAlign(WireframeAlignment.Left)'>@Loc["TmWireframe_AlignLeft"]</button>
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick='() => CtxAlign(WireframeAlignment.CenterH)'>@Loc["TmWireframe_AlignCenterH"]</button>
@@ -52,6 +78,7 @@
                 @if (HasGroupInSelection)
                 {
                     <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick="CtxUngroup">@Loc["TmWireframe_CtxUngroup"]</button>
+                }
                 }
                 @if (IsSelectionLocked)
                 {
@@ -77,6 +104,8 @@
                 break;
 
             case WireframeContextMenuType.MultiSelect:
+                @if (!Light)
+                {
                 @if (CanGroup)
                 {
                     <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick="CtxGroup">@Loc["TmWireframe_CtxGroup"]</button>
@@ -94,6 +123,7 @@
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick='() => CtxDistribute(WireframeDistribution.Horizontal)'>@Loc["TmWireframe_DistributeHorizontal"]</button>
                 <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick='() => CtxDistribute(WireframeDistribution.Vertical)'>@Loc["TmWireframe_DistributeVertical"]</button>
                 <div class="tm-wd-editor__context-sep" role="separator"></div>
+                }
                 @if (IsSelectionLocked)
                 {
                     <button class="tm-wd-editor__context-item" role="menuitem" disabled="@(ReadOnly)" @onclick="CtxUnlock">@Loc["TmWireframe_CtxUnlock"]</button>
@@ -109,5 +139,5 @@
                 <button class="tm-wd-editor__context-item tm-wd-editor__context-item--danger" role="menuitem" disabled="@(ReadOnly)" @onclick="CtxDelete">@Loc["TmWireframe_CtxDelete"]</button>
                 break;
         }
-    </div>
+</text>;
 }

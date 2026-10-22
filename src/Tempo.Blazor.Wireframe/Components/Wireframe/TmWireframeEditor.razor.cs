@@ -167,6 +167,14 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     /// <summary>Optional application scope used to resolve custom wireframe components.</summary>
     [Parameter] public WireframeComponentScope? ComponentScope { get; set; }
 
+    /// <summary>
+    /// Host actions of the mobile action bar (editor container below 768 px, decision G2). The built-in tiles - Components, Pages &amp;
+    /// layers, Export - come first; a host action pinned <see cref="ActionOverflow.Never"/> (for example "Save") keeps a tile of its own,
+    /// the others join the "More" menu by their rank. There is no built-in Save or Open: hosts supply them here (and in
+    /// <see cref="HeaderStart"/> / <see cref="HeaderActions"/>). Ignored on a tablet or desktop layout.
+    /// </summary>
+    [Parameter] public IReadOnlyList<TmActionItem>? MobileActions { get; set; }
+
     // ── Child component refs ──────────────────────────────────────────────────
 
     private TmWireframeDesignerCanvas? _canvas;
@@ -264,6 +272,9 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     protected override void OnParametersSet()
     {
+        // A parameter pass comes from the host: it may have changed the document in place, so the gated canvas repaints.
+        _contentVersion++;
+
         // A forced layout never raises ResolvedLayoutChanged for its first value: adopt it (and its flips) here.
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout) ApplyResolvedLayout(LayoutMode);
 
@@ -324,13 +335,18 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     // ── Stack change → re-render ──────────────────────────────────────────────
 
-    private void OnStackChanged() => InvokeAsync(StateHasChanged);
+    private void OnStackChanged()
+    {
+        _contentVersion++;   // a command / undo / redo changed the document: the (mobile, gated) canvas must repaint
+        InvokeAsync(StateHasChanged);
+    }
 
     // ── Document change propagation ───────────────────────────────────────────
 
     private async Task OnDocumentChanged(WireframeDocument doc)
     {
         _document = doc;
+        _contentVersion++;
         PruneCommandStacks();
         await DocumentChanged.InvokeAsync(doc);
     }
@@ -353,8 +369,8 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         var hadSelection = _selectedIds.Length > 0 || _selectedConnectorIds.Length > 0;
         _selectedIds = ids;
         _selectedConnectorIds = []; // clear connector selection
-        if (ids.Length > 0) RaiseInspectorOnTablet();
-        else if (hadSelection) CloseInspectorSheetOnTablet();
+        if (ids.Length > 0) { RaiseInspectorOnTablet(); RaiseMobileSheetForSelection(); }
+        else if (hadSelection) { CloseInspectorSheetOnTablet(); MobileSelectionCleared(); }
         StateHasChanged();
     }
 
@@ -363,8 +379,8 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         var hadSelection = _selectedIds.Length > 0 || _selectedConnectorIds.Length > 0;
         _selectedConnectorIds = ids;
         _selectedIds = []; // clear element selection
-        if (ids.Length > 0) RaiseInspectorOnTablet();
-        else if (hadSelection) CloseInspectorSheetOnTablet();
+        if (ids.Length > 0) { RaiseInspectorOnTablet(); RaiseMobileSheetForSelection(); }
+        else if (hadSelection) { CloseInspectorSheetOnTablet(); MobileSelectionCleared(); }
         StateHasChanged();
     }
 
@@ -670,7 +686,8 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         _ctxMenuOpen = true;
         StateHasChanged();
 
-        if (_canvas is not null)
+        // The mobile menu is the shared action sheet (TmOverlayPanel): it has no fixed element to clamp or dismiss by script.
+        if (_canvas is not null && !IsMobile)
         {
             await JS.InvokeVoidAsync("tmWireframeDesigner.openContextMenu", _canvas.GetSvgRef(), _contextMenu?.GetMenuRef());
         }
@@ -701,7 +718,8 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     {
         if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         var ids = _selectedIds.ToList();
-        var newIds = new List<string>();
+        var copies = new List<WireframeElement>();
+        var nextZ = _document.Elements.Count > 0 ? _document.Elements.Max(e => e.ZIndex) + 1 : 0;
         foreach (var id in ids)
         {
             var el = _document.Elements.FirstOrDefault(e => e.Id == id);
@@ -709,13 +727,15 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             var copy = el.DeepCopy();
             copy.X += 20;
             copy.Y += 20;
-            copy.ZIndex = _document.Elements.Count > 0
-                ? _document.Elements.Max(e => e.ZIndex) + 1 : 0;
-            _document.Elements.Add(copy);
-            newIds.Add(copy.Id);
+            copy.ZIndex = nextZ++;
+            copies.Add(copy);
         }
-        if (newIds.Count > 0)
+
+        var newIds = copies.Select(c => c.Id).ToList();
+        if (copies.Count > 0)
         {
+            // ONE undoable step (the context menu / the mobile quick action used to add the copies behind the command stack).
+            _commandStack.Push(new AddElementsCommand(_document, copies));
             _selectedIds = newIds.ToArray();
             if (_canvas is not null)
                 await _canvas.SelectElements(newIds.ToArray());
@@ -733,6 +753,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             _selectedIds = [];
             if (_canvas is not null)
                 await _canvas.ClearSelection();
+            MobileSelectionCleared();
         }
         else if (_selectedConnectorIds.Length > 0)
         {
@@ -811,9 +832,17 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         StateHasChanged();
     }
 
-    private void OnShellLeftOpenChanged(bool open) => _leftOpen = open;
+    private void OnShellLeftOpenChanged(bool open)
+    {
+        if (IsMobile) OnMobileShellOpenChanged(open);
+        else _leftOpen = open;
+    }
 
-    private void OnShellRightOpenChanged(bool open) => _rightOpen = open;
+    private void OnShellRightOpenChanged(bool open)
+    {
+        if (IsMobile) OnMobileShellOpenChanged(open);
+        else _rightOpen = open;
+    }
 
     private void OnShellCollapsedPanelsChanged(EditorShellPanel collapsed) => _collapsedPanels = collapsed;
 
@@ -944,97 +973,6 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     {
         if (_canvas is not null)
             _zoomLevel = await _canvas.FitToView();
-    }
-
-    // ── Toolbar: Export ───────────────────────────────────────────────────────
-
-    private async Task HandleExportSelect(string format)
-    {
-        switch (format)
-        {
-            case "json": await ExportJson(); break;
-            case "svg": await ExportSvg(); break;
-            case "png": ExportPng(); break;
-            case "pdf": ExportPdf(); break;
-        }
-    }
-
-    private async Task ExportJson()
-    {
-        if (_document is null) return;
-        var json     = WireframeSerializer.Serialize(_document);
-        var fileName = SanitizeFileName(_document.Title) + ".wireframe.json";
-        await DownloadFile(fileName, "application/json", System.Text.Encoding.UTF8.GetBytes(json));
-    }
-
-    private async Task ExportSvg()
-    {
-        if (_canvas is null) return;
-        var svg      = await _canvas.ExportSvg();
-        var fileName = SanitizeFileName(_document?.Title ?? Loc["TmWireframe_ExportFilename"]) + ".svg";
-        await DownloadFile(fileName, "image/svg+xml", System.Text.Encoding.UTF8.GetBytes(svg));
-    }
-
-    /// <summary>Returns the current canvas state as an SVG string for use by embedded callers.</summary>
-    public async Task<string> ExportSvgAsync()
-    {
-        if (_canvas is null) return string.Empty;
-        return await _canvas.ExportSvg();
-    }
-
-    private void ExportPng()
-    {
-        _exportDialogFormat = "png";
-        _exportDialogOpen = true;
-    }
-
-    private void ExportPdf()
-    {
-        _exportDialogFormat = "pdf";
-        _exportDialogOpen = true;
-    }
-
-    private void CloseExportDialog()
-    {
-        _exportDialogOpen = false;
-        _exportDialogFormat = null;
-    }
-
-    private async Task OnExportDialogExport(WireframeExportDialogResult result)
-    {
-        _exportDialogOpen = false;
-        if (_canvas is null) return;
-
-        var svg = await _canvas.ExportSvg();
-        if (string.IsNullOrWhiteSpace(svg)) return;
-
-        var request = new WireframeExportRequest
-        {
-            Svg = svg,
-            FileName = result.FileName,
-            Options = result.Options
-        };
-
-        var endpoint = result.Format == "pdf"
-            ? "api/wireframe/export/pdf"
-            : "api/wireframe/export/png";
-
-        try
-        {
-            var response = await Http.PostAsJsonAsync(endpoint, request);
-            response.EnsureSuccessStatusCode();
-
-            var bytes = await response.Content.ReadAsByteArrayAsync();
-            var contentType = result.Format == "pdf" ? "application/pdf" : "image/png";
-            var ext = result.Format == "pdf" ? ".pdf" : ".png";
-            var fileName = SanitizeFileName(result.FileName) + ext;
-
-            await DownloadFile(fileName, contentType, bytes);
-        }
-        catch (Exception ex)
-        {
-            _importError = string.Format(Loc["TmWireframe_ExportError"], ex.Message);
-        }
     }
 
     // ── Toolbar: Import ───────────────────────────────────────────────────────
@@ -1172,6 +1110,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private async Task RerenderCanvas()
     {
+        _contentVersion++;
         StateHasChanged();
         if (_document is not null)
             await DocumentChanged.InvokeAsync(_document);

@@ -214,6 +214,34 @@ The editor is a CSS size container (`container-name: tm-wd-editor`) and resolves
 
 **No fixed panel widths.** `--tm-wd-toolbox-w` / `--tm-wd-props-w` are gone: desktop widths come from `TmEditorShell` (260 / 300 px, resizable), the tablet sheets from `--tm-wd-sheet-w` (20rem, at most 60 % of the canvas).
 
+## Mobile layout (phase 7)
+
+In an editor container **below 768 px** (`data-editor-layout="mobile"`) the editor is **viewing + light edits** (plan decision G2). It renders the core
+`TmEditorShell` mobile presentation instead of squeezing the desktop chrome (on a phone the canvas used to measure 0 px wide):
+
+| | Mobile (< 768) |
+|---|---|
+| Header | the document title (always) plus `HeaderStart` / `HeaderActions`, then the **tool row** (`data-testid="wd-mobile-tools"`): Select, Pan, Undo, Redo and its own "More" (Forward / Backward for the selection). The shell drops its `Toolbar` slot on a phone while mobile actions exist, so the row lives in the header. |
+| Canvas | the whole width; no rulers, no minimap; a **floating zoom** (`data-testid="wd-zoom-overlay"`: `-`, `%`, `+`, fit - one row over the canvas, outside the svg). |
+| Action bar | `TmMobileActionBar` (`MaxVisible` 3 + More): **Add** (the palette, `data-action-id="components"`), **Pages & layers** (`pages-layers`), **Export** (`export`); host actions from `MobileActions` follow (a host action pinned `ActionOverflow.Never`, e.g. "Save", keeps a tile). **More** holds the device presets (undoable `ResizeCanvasCommand`), the grid and Read-only toggles and JSON / SVG export. There is no built-in Save or Open and no Import. |
+| Sheets | one non-modal bottom sheet (snap points 35 % / 70 % / 100 % of the stage = peek / half / full) with the shell tabs **Add** \| **Properties** \| **Pages** (the Pages \| Layers segment is the shell's `Extra` tab, the Layers tab is the side panel's). The sheet starts closed. Tapping the active action-bar tile closes it. Each tab starts at its top. |
+| Selection | selecting an element **peeks the Properties sheet**: its type / name and **Duplicate / Lock / Delete** (`wd-quick-actions`, 44 px, one undoable step each) above the full inspector (Name, size, props - one swipe up). A sheet the user already had open on the inspector keeps its tab and snap; the sheet a selection opened closes when the selection empties; a tap on an already selected element brings it back. |
+| Canvas gestures | tap selects, a finger drags the element (grid snap), two fingers pinch / pan, a one-finger drag on the empty canvas **pans** (no rubber band), a tap on it deselects, a 500 ms hold opens the **action sheet** (`TmWireframeContextMenu.Presentation=Sheet`: `TmOverlayPanel` bottom sheet with Done; align / distribute / group are not offered). The lift click of the hold is swallowed once (the sheet opens under the finger). |
+| Not on a phone | resize / rotate handles, rubber band, the connector tool and waypoint handles (`TmWireframeDesignerCanvas.LightEditing` -> `tmWireframeDesigner.setLightEditing`), align / distribute, grouping, rulers, the minimap and JSON import: **tablet and up**. |
+| Export dialog | `TmWireframeExportDialog.MobilePresentation=Auto` (default): a **bottom sheet** on a phone (`TmModal` `Sheet`, `FooterLayout=Inline`: Cancel and Export side by side, sticky), the centred dialog elsewhere. No local sheet is built. |
+
+**No re-render of the canvas.** Opening, switching a tab of and closing a sheet never repaints the SVG scene: `TmWireframeDesignerCanvas` gates a parent render
+(`LightEditing` only) on its parameters and `ContentVersion`, a token the editor bumps on every command, undo / redo, page switch, document change and host parameter
+pass. A document mutation therefore still repaints (`RenderCount` bUnit tests, a `MutationObserver` E2E on the svg). The script re-measures the canvas after a sheet moves
+(`relayout`), and the shell reserves the sheet's lowest snap as padding under the canvas, so a selected element stays visible above the peeked sheet.
+
+**Download on iOS Safari.** `tmWireframeDesigner.downloadFile` saves through a `Blob` URL on the hidden anchor (`URL.createObjectURL`, revoked after one second); the base64
+`data:` URL is only the fallback for a host without `Blob`. Large `data:` URLs (a PNG / PDF export is easily a few MB) are dropped by iOS Safari. iOS Safari has no real
+download: the link with the `download` attribute opens the file in a new tab (PNG / PDF / SVG / JSON are all viewable) and the user saves it from the share sheet - a platform
+limit, not something the component can change.
+
+**Layout anchors:** `wd-mobile-tools`, `wd-zoom-overlay`, `wd-zoom-in|out|fit`, `wd-quick-actions`, `wd-quick-duplicate|lock|delete`,
+`.tm-mobile-action-bar__action[data-action-id="components|pages-layers|export"]`, `.tm-wd-editor__zoom-overlay`, `.tm-wd-quick-actions`, `[data-light-editing]` on `.tm-wd-canvas-wrap`.
 ## Phase 5 carry-forward (phase 6)
 
 ### Context menu keyboard and focus
@@ -241,4 +269,4 @@ The mouse-only middle-button pan is the one gesture not built on `pointer-drag.j
 `wd-distribute`, `wd-import`, `wd-device-preset`, `wd-canvas-width|height|apply`, `wd-page-name`, `wd-grid-show|size`, `wd-element-name`,
 `wd-delete-element`, `wd-page-add`, `wd-page-<id>`, `wd-pages-panel`, `wd-section-canvas|page|grid|selection`,
 `.tm-wd-toolbox__item[data-component-type]`, `.tm-wd-canvas__svg`, `.tm-wd-canvas-wrap`, `.tm-wd-props`, `.tm-wd-layers`, `.tm-wd-pages`,
-`.tm-wd-export-dialog`, `#wd-export-format`, `#wd-export-filename`; tablet: `wd-toggle-left`, `wd-toggle-inspector`, `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toolbar-row-1|2`, `wd-canvas-status`.
+`.tm-wd-export-dialog`, `#wd-export-format`, `#wd-export-filename`; mobile: see "Layout anchors" above; tablet: `wd-toggle-left`, `wd-toggle-inspector`, `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toolbar-row-1|2`, `wd-canvas-status`.

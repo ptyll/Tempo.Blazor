@@ -40,6 +40,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Format preselected every time the dialog opens: \"png\" (default) or \"pdf\" (case-insensitive). Any other value falls back to PNG."
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "MobilePresentation",
+      "isRequired": false,
+      "defaultValue": "Auto",
+      "description": "How the dialog presents on a narrow viewport. Auto follows the core viewport scope: a bottom sheet on a phone, the centred dialog otherwise; a forced value pins one presentation. The footer is always inline (Cancel and Export side by side, sticky in the sheet)."
     }
   ]
 }
