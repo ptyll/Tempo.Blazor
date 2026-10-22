@@ -115,6 +115,19 @@ public partial class TmEmailTemplateEditor
     [Parameter] public EmailItemEditingMode ItemEditingMode { get; set; } = EmailItemEditingMode.Inline;
 
     /// <summary>
+    /// Whether the WYSIWYG canvas may request the document's remote images from the AUTHOR's browser
+    /// (Fáze 9A). The default is <see cref="Components.CanvasImageLoading.Load"/>: the canvas is a preview
+    /// and the sent email loads the same source anyway.
+    /// <para>
+    /// Set <see cref="Components.CanvasImageLoading.Placeholder"/> for privacy: an imported template can
+    /// carry a per-recipient tracking pixel, and the placeholder mode issues no request at all — it paints
+    /// a framed box with the image's alt text instead. Only allow-listed URLs are ever requested in
+    /// <see cref="Components.CanvasImageLoading.Load"/> mode (the pipeline's URL policy decides).
+    /// </para>
+    /// </summary>
+    [Parameter] public CanvasImageLoading CanvasImageLoading { get; set; } = CanvasImageLoading.Load;
+
+    /// <summary>
     /// Whether the blocks palette is collapsed. The editor mirrors the state it is given and reports every
     /// USER collapse/expand through <see cref="ToolboxCollapsedChanged"/>; F8 maps the same parameter onto
     /// <c>TmEditorShell.CollapsedPanels</c> (D10).

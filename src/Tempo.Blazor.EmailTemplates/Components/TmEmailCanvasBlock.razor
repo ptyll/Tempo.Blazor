@@ -1,0 +1,226 @@
+@namespace Tempo.Blazor.EmailTemplates.Components
+
+@* Fáze 9A — WYSIWYG renderer of ONE email block. It approximates the MJML output of the model values
+   (colours, alignment, images, columns), so the author sees the email instead of a structural list.
+   Security rules (see EmailCanvasMarkup): block content goes through IHtmlContentSanitizer and loses
+   every attribute, an mj-raw block is NEVER rendered as markup, and no link on the canvas is navigable.
+   The authoritative output stays the server preview (IEmailPreviewRenderer). *@
+<div class="@BlockClass"
+     @attributes="BodyAttributes"
+     style="@FrameStyle">
+    @switch (Block)
+    {
+        case EmailTextBlock text:
+            @if (IsEmptyText(text))
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                @((MarkupString)TextMarkup(text.Content))
+            }
+            break;
+
+        case EmailButtonBlock button:
+            var buttonBlocked = IsLinkBlocked(button.Href);
+            <span class="tm-email-block__button@(buttonBlocked ? " tm-email-block__button--link-blocked" : string.Empty)"
+                  style="@ButtonStyle(button)"
+                  data-tm-link-blocked="@(buttonBlocked ? "true" : null)"
+                  title="@(buttonBlocked ? Loc["EmailEditor_Canvas_LinkBlocked"] : null)">
+                @if (buttonBlocked)
+                {
+                    @BlockedLinkMarker()
+                }
+                @if (string.IsNullOrWhiteSpace(button.Text))
+                {
+                    @RenderEmpty()
+                }
+                else
+                {
+                    @button.Text
+                }
+            </span>
+            break;
+
+        case EmailImageBlock image:
+            @RenderImage(image.Src, image.Alt, image.Width, ImageStyle(image), "tm-email-block__image")
+            break;
+
+        case EmailDividerBlock divider:
+            <hr class="tm-email-block__divider" style="@DividerStyle(divider)" />
+            break;
+
+        case EmailSpacerBlock spacer:
+            <div class="tm-email-block__spacer" aria-hidden="true" style="@EmailCanvasValue.Style(("block-size", EmailCanvasValue.Length(spacer.Height)))"></div>
+            break;
+
+        case EmailRawBlock raw:
+            <span class="tm-email-block__raw" data-tm-raw-preview>
+                <TmIcon Name="code" Size="IconSize.Xs" />
+                <span class="tm-email-block__raw-label">@Loc["EmailEditor_Canvas_RawBlock"]</span>
+                <code class="tm-email-block__raw-text">@((MarkupString)EmailCanvasMarkup.RawPreview(raw.Content))</code>
+            </span>
+            break;
+
+        case EmailTableBlock table:
+            @if (table.Rows.Count == 0)
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                <table class="tm-email-block__table" style="@TableStyle(table)">
+                    @if (table.Rows.Any(r => r.IsHeader))
+                    {
+                        <thead>
+                            @foreach (var row in table.Rows.Where(r => r.IsHeader))
+                            {
+                                @RenderTableRow(row, header: true)
+                            }
+                        </thead>
+                    }
+                    <tbody>
+                        @foreach (var row in table.Rows.Where(r => !r.IsHeader))
+                        {
+                            @RenderTableRow(row, header: false)
+                        }
+                    </tbody>
+                </table>
+            }
+            break;
+
+        case EmailSocialBlock social:
+            @if (social.Elements.Count == 0)
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                <span class="tm-email-block__social@(social.Mode == "vertical" ? " tm-email-block__social--vertical" : string.Empty)">
+                    @foreach (var element in social.Elements)
+                    {
+                        <span class="tm-email-block__social-item" style="@EmailCanvasValue.Style(("background-color", EmailCanvasValue.Color(element.BackgroundColor)))">
+                            <span class="tm-email-block__social-icon" aria-hidden="true">@Initial(element)</span>
+                            @if (!string.IsNullOrWhiteSpace(element.Label))
+                            {
+                                <span class="tm-email-block__social-label">@element.Label</span>
+                            }
+                        </span>
+                    }
+                </span>
+            }
+            break;
+
+        case EmailNavbarBlock navbar:
+            @if (navbar.Links.Count == 0)
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                <span class="tm-email-block__navbar">
+                    @foreach (var link in navbar.Links)
+                    {
+                        var linkBlocked = IsLinkBlocked(link.Href);
+                        <span class="tm-email-block__nav-link@(linkBlocked ? " tm-email-block__nav-link--link-blocked" : string.Empty)"
+                              style="@NavLinkStyle(link)"
+                              data-tm-link-blocked="@(linkBlocked ? "true" : null)"
+                              title="@(linkBlocked ? Loc["EmailEditor_Canvas_LinkBlocked"] : null)">
+                            @if (linkBlocked)
+                            {
+                                @BlockedLinkMarker()
+                            }
+                            @link.Text
+                        </span>
+                    }
+                </span>
+            }
+            break;
+
+        case EmailHeroBlock hero:
+            @RenderImage(hero.BackgroundUrl, null, null, string.Empty, "tm-email-block__hero-bg",
+                " tm-email-block__image-placeholder--background")
+            @if (hero.Blocks.Count == 0)
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                <span class="tm-email-block__hero-content">
+                    @foreach (var child in hero.Blocks)
+                    {
+                        <TmEmailCanvasBlock Block="child" Nested="true" CanvasImageLoading="CanvasImageLoading" />
+                    }
+                </span>
+            }
+            break;
+
+        case EmailCarouselBlock carousel:
+            @if (carousel.Images.Count == 0)
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                var first = carousel.Images[0];
+                @RenderImage(first.Src, first.Alt, null, EmailCanvasValue.Style(("border-radius", EmailCanvasValue.Length(carousel.BorderRadius))), "tm-email-block__carousel-image")
+                <span class="tm-email-block__carousel-count">@CarouselCount(carousel)</span>
+            }
+            break;
+
+        case EmailAccordionBlock accordion:
+            @if (accordion.Items.Count == 0)
+            {
+                @RenderEmpty()
+            }
+            else
+            {
+                <span class="tm-email-block__accordion" style="@EmailCanvasValue.Style(("border", EmailCanvasValue.Border(accordion.Border)))">
+                    @foreach (var item in accordion.Items)
+                    {
+                        <span class="tm-email-block__accordion-item" style="@EmailCanvasValue.Style(("background-color", EmailCanvasValue.Color(item.BackgroundColor)))">
+                            <span class="tm-email-block__accordion-title" style="@EmailCanvasValue.Style(("color", EmailCanvasValue.Color(item.TitleColor)))">@item.Title</span>
+                            <span class="tm-email-block__accordion-icon" aria-hidden="true">+</span>
+                        </span>
+                    }
+                </span>
+            }
+            break;
+
+        case EmailWrapperBlock wrapper:
+            <span class="tm-email-block__frame tm-email-block__frame--wrapper">
+                @foreach (var nestedSection in wrapper.Sections)
+                {
+                    <span class="tm-email-block__nested-section" data-tm-nested-section="@nestedSection.Id"
+                          style="@SectionStyle(nestedSection)">
+                        @foreach (var column in nestedSection.Columns)
+                        {
+                            <span class="tm-email-block__nested-column" data-tm-nested-column="@column.Id"
+                                  style="@ColumnStyle(column)">
+                                @foreach (var child in column.Blocks)
+                                {
+                                    <TmEmailCanvasBlock Block="child" Nested="true" CanvasImageLoading="CanvasImageLoading" />
+                                }
+                            </span>
+                        }
+                    </span>
+                }
+            </span>
+            break;
+
+        case EmailGroupBlock group:
+            <span class="tm-email-block__frame tm-email-block__frame--group">
+                @foreach (var column in group.Columns)
+                {
+                    <span class="tm-email-block__nested-column" data-tm-nested-column="@column.Id"
+                          style="@ColumnStyle(column)">
+                        @foreach (var child in column.Blocks)
+                        {
+                            <TmEmailCanvasBlock Block="child" Nested="true" CanvasImageLoading="CanvasImageLoading" />
+                        }
+                    </span>
+                }
+            </span>
+            break;
+    }
+</div>

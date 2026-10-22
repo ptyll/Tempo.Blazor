@@ -120,7 +120,17 @@ public sealed class DemoEmailTemplateStore : IEmailTemplateStore
             UpdatedAt = DateTime.UtcNow,
         };
         var col = new EmailColumn();
-        col.Blocks.Add(new EmailTextBlock { Content = "<h1>Welcome, {{ first_name }}!</h1>" });
+        // Fáze 9A: the pipeline's sanitizer (HtmlSanitizerPolicy) keeps only inline formatting — a heading is
+        // a TEXT BLOCK with a heading TYPOGRAPHY, not an <h1>. The demo therefore shows what the export will
+        // really emit: an <h1> would reach the mj-text as escaped text in the WASM (conservative) pass, and
+        // the WYSIWYG canvas would honestly show exactly that.
+        col.Blocks.Add(new EmailTextBlock
+        {
+            Content = "<strong>Welcome, {{ first_name }}!</strong>",
+            FontSize = "24px",
+            FontWeight = "bold",
+            LineHeight = "1.25",
+        });
         col.Blocks.Add(new EmailTextBlock { Content = "We're glad to have you on board." });
         col.Blocks.Add(new EmailButtonBlock { Text = "Get started", Href = "https://example.com/start" });
         var section = new EmailSection { BackgroundColor = "#ffffff" };
@@ -141,10 +151,16 @@ public sealed class DemoEmailTemplateStore : IEmailTemplateStore
             UpdatedAt = DateTime.UtcNow,
         };
         var col = new EmailColumn { Width = "66.666%" };
-        col.Blocks.Add(new EmailTextBlock { Content = "<h2>{{ newsletter_title }}</h2>" });
         col.Blocks.Add(new EmailTextBlock
         {
-            Content = "{{ for article in articles }}<h3>{{ article.title }}</h3><p>{{ article.summary }}</p>{{ end }}",
+            Content = "<strong>{{ newsletter_title }}</strong>",
+            FontSize = "20px",
+            FontWeight = "bold",
+            LineHeight = "1.3",
+        });
+        col.Blocks.Add(new EmailTextBlock
+        {
+            Content = "{{ for article in articles }}<strong>{{ article.title }}</strong><p>{{ article.summary }}</p>{{ end }}",
         });
         col.Blocks.Add(new EmailImageBlock { Src = "https://example.com/banner.png", Alt = "Newsletter banner" });
         var emptyCol = new EmailColumn { Width = "33.333%" };

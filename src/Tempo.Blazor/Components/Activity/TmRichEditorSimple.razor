@@ -183,6 +183,15 @@
     private List<MentionUser> _mentionUsers = new();
     private DotNetObjectReference<TmRichEditorSimple>? _dotNetRef;
     private bool _isInitialized = false;
+
+    /// <summary>
+    /// The last HTML this editor READ OUT of the contenteditable and raised through
+    /// <see cref="ValueChanged"/> (review fix F9A/UX 9). The host echoes that value straight back into
+    /// <see cref="Value"/>, which re-renders this component; without this marker the sync below treated the
+    /// echo as an EXTERNAL change, read the DOM and called <c>setHtml</c> — which puts the caret at the start,
+    /// so the next typed character landed in front of the previous one (" EDIT" became "TIDE").
+    /// </summary>
+    private string? _lastEmitted;
     private bool _showTokenDropdown;
     private string _tokenQuery = string.Empty;
     private int _tokenHighlightedIndex;
@@ -231,6 +240,8 @@
                 {
                     await JS.InvokeVoidAsync("tmRichEditor.setHtml", _editorRef, Value);
                 }
+                // The editor now holds exactly Value, so a host echo of it is not an external change.
+                _lastEmitted = Value;
                 await JS.InvokeVoidAsync("tmRichEditor.initKeyboardShortcuts", _editorRef);
                 if (TokenProvider != null && (OnTokenHover.HasDelegate || OnTokenHoverEnd.HasDelegate))
                 {
@@ -267,7 +278,14 @@
         }
         else if (_isInitialized && !_isInsertingToken && !AnyDialogOpen)
         {
-            // Sync external Value changes to editor (only if different from current)
+            // Sync EXTERNAL Value changes to the editor. The echo of our own emission is not one: reading the
+            // DOM and re-setting the HTML on every keystroke moved the caret to the start and reordered the
+            // characters the author had just typed, so that case is skipped entirely (no interop at all).
+            if (string.Equals(Value, _lastEmitted, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             try
             {
                 var currentHtml = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
@@ -275,6 +293,9 @@
                 {
                     await JS.InvokeVoidAsync("tmRichEditor.setHtml", _editorRef, Value ?? "");
                 }
+
+                // Whatever happened, the editor now holds Value: the next echo of it must not be re-synced.
+                _lastEmitted = Value;
             }
             catch { }
         }
@@ -293,6 +314,9 @@
         {
             var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
             Value = html ?? string.Empty;
+            // Remember the emission BEFORE raising it: the host may echo the value back synchronously, and the
+            // resulting render must recognize it as ours (see _lastEmitted).
+            _lastEmitted = Value;
             UpdateEmptyState();
             await ValueChanged.InvokeAsync(Value);
             
@@ -720,6 +744,9 @@
             // Sync HTML value (HandleInput and OnAfterRenderAsync are blocked by _isInsertingToken)
             var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
             Value = html ?? string.Empty;
+            // Remember the emission BEFORE raising it: the host may echo the value back synchronously, and the
+            // resulting render must recognize it as ours (see _lastEmitted).
+            _lastEmitted = Value;
             UpdateEmptyState();
             await ValueChanged.InvokeAsync(Value);
         }
@@ -773,6 +800,9 @@
             // Sync Value so the cursor marker survives Blazor re-renders
             var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
             Value = html ?? string.Empty;
+            // Remember the emission BEFORE raising it: the host may echo the value back synchronously, and the
+            // resulting render must recognize it as ours (see _lastEmitted).
+            _lastEmitted = Value;
             UpdateEmptyState();
             await ValueChanged.InvokeAsync(Value);
         }
@@ -831,6 +861,9 @@
             await JS.InvokeVoidAsync("tmRichEditor.insertToken", _editorRef, key, displayName ?? key);
             var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
             Value = html ?? string.Empty;
+            // Remember the emission BEFORE raising it: the host may echo the value back synchronously, and the
+            // resulting render must recognize it as ours (see _lastEmitted).
+            _lastEmitted = Value;
             UpdateEmptyState();
             await ValueChanged.InvokeAsync(Value);
         }

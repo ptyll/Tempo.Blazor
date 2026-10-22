@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Components",
   "namespace": "Tempo.Blazor.EmailTemplates.Components",
-  "description": "Central editing canvas that renders an email document's sections, columns, and blocks. Supports selection, drag-and-drop, keyboard navigation, and per-section toolbars for adding columns and moving, duplicating, or deleting a section.",
+  "description": "Central editing canvas that renders an email document's sections, columns, and blocks as the email they will become (WYSIWYG, Fáze 9A) on a paper of the document's own ContentWidth, with the selection frame, the drag handle and the per-block action bar. Supports selection, drag-and-drop, keyboard navigation, and per-section toolbars for adding columns and moving, duplicating, or deleting a section. Untrusted content is sanitized and no link on the canvas is navigable.",
   "packageId": "Tempo.Blazor.EmailTemplates",
   "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateCanvas.razor",
   "documentationStatus": "merged",
@@ -17,6 +17,13 @@
       "isRequired": true,
       "description": "The document being displayed.",
       "editorRequired": true
+    },
+    {
+      "name": "CanvasImageLoading",
+      "type": "CanvasImageLoading",
+      "isRequired": false,
+      "description": "Whether the canvas may request the document's remote images from the author's browser. Defaults to Load; Placeholder paints a framed alt-text placeholder instead and issues no request at all (privacy / tracking protection).",
+      "defaultValue": "CanvasImageLoading.Load"
     },
     {
       "name": "DragActive",

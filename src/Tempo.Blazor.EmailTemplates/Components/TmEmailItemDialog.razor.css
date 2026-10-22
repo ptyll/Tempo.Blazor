@@ -26,7 +26,7 @@
     border: 1px solid var(--tm-color-danger);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-danger-subtle);
-    color: var(--tm-color-danger-strong);
+    color: var(--tm-color-danger-text);
     font-size: var(--tm-font-size-sm);
 }
 

@@ -297,10 +297,13 @@ public sealed class EmailWorkspaceF7AE2ETests : EmailTemplateE2ETestBase
             "() => document.querySelector('[data-tm-prop-group-body=\\'padding\\']')?.hasAttribute('hidden') === true",
             null, new() { Timeout = 10000 });
 
-        var blockLabels = await page.Locator("[data-tm-canvas] [data-tm-block-id]")
-            .EvaluateAllAsync<string[]>("nodes => nodes.map(n => n.getAttribute('aria-label'))");
-        var firstTitle = blockLabels[0];
-        var otherIndex = Array.FindIndex(blockLabels, label => label != firstTitle);
+        // The inspector remembers a folded group PER BLOCK TYPE, so the second block must be a DIFFERENT type.
+        // (The accessible name is unusable for this since the F9A UX review: it carries the brief content too,
+        // so two text blocks have different names while sharing one remembered fold state.)
+        var blockKinds = await page.Locator("[data-tm-canvas] [data-tm-block-id]")
+            .EvaluateAllAsync<string[]>("nodes => nodes.map(n => n.getAttribute('data-tm-block-kind'))");
+        var firstTitle = blockKinds[0];
+        var otherIndex = Array.FindIndex(blockKinds, kind => kind != firstTitle);
         if (otherIndex > 0)
         {
             await page.Locator("[data-tm-canvas] [data-tm-block-id]").Nth(otherIndex).ClickAsync();

@@ -57,7 +57,7 @@
 }
 
 .tm-email-item-list__action--danger:hover:not(:disabled) {
-    color: var(--tm-color-danger-strong);
+    color: var(--tm-color-danger-text);
 }
 
 .tm-email-item-list__preview {

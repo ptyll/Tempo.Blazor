@@ -1,17 +1,41 @@
+/* Fáze 9A — the WYSIWYG canvas.
+
+   The document is the EMAIL, so its "paper" is the theme-invariant paper token family (--tm-paper*):
+   the chrome and the workspace may go dark, but an e-mail body is white with dark ink in every client,
+   and a dark sheet would make the canvas disagree with the export and with the preview. Only the stage
+   around the paper follows the theme (the editor's own canvas region paints --tm-bg-workspace).
+
+   The block WRAPPER carries all the editor chrome (selection frame, grip, actions); the block BODY is
+   painted by TmEmailCanvasBlock. */
+
 .tm-email-canvas-doc {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-3);
-    inline-size: min(100%, 640px);
+    inline-size: 100%;
     margin-inline: auto;
+    background: var(--tm-paper);
+    color: var(--tm-paper-ink);
+    font-family: var(--tm-font-sans);
+    box-shadow: var(--tm-shadow-md);
     outline: none;
+    /* The chrome tokens follow the theme (a dark chrome around a white page), so the block's own fallbacks and
+       its chrome accents are re-pointed at their light-theme values HERE, scoped to the paper (review 12).
+       Without this a dark chrome painted the token chip, the placeholders and the selected-block accents with
+       dark-theme tokens ON the white paper (measured: the chip read 2.1:1). */
+    --tm-color-text: var(--tm-paper-ink);
+    --tm-color-text-muted: var(--tm-paper-ink-muted);
+    --tm-color-surface-secondary: var(--tm-paper-backdrop);
+    --tm-border-color-strong: var(--tm-paper-ink-muted);
+    --tm-color-primary: var(--tm-color-primary-600);
+    --tm-color-primary-subtle: var(--tm-color-primary-50);
+    --tm-color-primary-text: var(--tm-color-primary-800);
+    --tm-color-primary-soft-border: var(--tm-color-primary-200);
 }
 
 .tm-email-canvas-section {
-    border: 1px dashed transparent;
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-surface);
-    padding: var(--tm-space-2);
+    position: relative;
+    border: 1px solid transparent;
     cursor: pointer;
 }
 
@@ -24,20 +48,52 @@
     border-style: solid;
 }
 
+/* A section background image is painted as an IMAGE, never as a CSS url(): the model's URL is checked
+   against the pipeline's scheme allow-list and the canvas builds no url(…) expression from it. */
+.tm-email-canvas-section__bg {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* A section background the allow-list refused is MARKED, not silently missing (review 8/18): a refused
+   BackgroundUrl used to look exactly like "no background", so the author could not tell the import dropped it. */
+.tm-email-canvas-section__bg-blocked {
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-xs);
+    background: var(--tm-color-surface);
+    color: var(--tm-paper-danger-ink);
+    z-index: 2;
+}
+
 .tm-email-canvas-section__columns {
+    position: relative;
     display: flex;
     gap: var(--tm-space-2);
     align-items: stretch;
+    z-index: 1;
 }
 
 .tm-email-canvas-column {
+    position: relative;
     min-inline-size: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--tm-space-2);
     border: 1px solid transparent;
-    border-radius: var(--tm-radius-sm);
-    padding: var(--tm-space-1);
+}
+
+.tm-email-canvas-column:hover {
+    border-color: var(--tm-color-border);
 }
 
 .tm-email-canvas-column.is-selected {
@@ -73,48 +129,36 @@
     background: color-mix(in srgb, var(--tm-color-primary) 18%, transparent);
 }
 
+/* ── The block wrapper: editor chrome only ─────────────────────────────────────────────── */
+
 .tm-email-canvas-block {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
+    position: relative;
     cursor: pointer;
+    /* A hairline that only shows on hover keeps the email looking like an email; the selected state is
+       the indigo frame the reference shows. */
+    outline: 1px solid transparent;
+    outline-offset: -1px;
 }
 
 .tm-email-canvas-block:hover {
-    border-color: var(--tm-color-primary);
+    outline-color: var(--tm-color-border);
 }
 
 .tm-email-canvas-block.is-selected {
-    border-color: var(--tm-color-primary);
     box-shadow: var(--tm-shadow-focus);
-}
-
-.tm-email-canvas-block:focus-visible {
     outline: 2px solid var(--tm-color-primary);
-    outline-offset: 1px;
+    outline-offset: -2px;
 }
 
-.tm-email-canvas-block__kind {
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text-muted);
+/* Focus and selection are two different things (review 15): a block reached with Tab but NOT selected must
+   look reachable (a dashed ring), otherwise the only visible state on the canvas is the selection frame and a
+   keyboard user cannot tell where the next Enter/Space would land. */
+.tm-email-canvas-block:focus-visible:not(.is-selected) {
+    outline: 2px dashed var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
-.tm-email-canvas-block__detail {
-    font-size: var(--tm-font-size-sm);
-    color: var(--tm-color-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-email-canvas-section {
-    position: relative;
-}
+/* ── The floating action bar (grip, up, down, duplicate, delete) ────────────────────────── */
 
 .tm-email-canvas-section__toolbar,
 .tm-email-canvas-block__toolbar {
@@ -122,23 +166,39 @@
     inset-block-start: 2px;
     inset-inline-end: 2px;
     display: none;
+    align-items: center;
     gap: 2px;
     padding: 2px;
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
     box-shadow: var(--tm-shadow-sm);
-    z-index: 2;
+    z-index: 3;
+}
+
+/* The BLOCK's bar floats ABOVE the block (review 16): the previous inset put it over the block's first line,
+   which hid the text the author had just selected to edit. A negative offset of (bar height + gap) lifts it
+   clear of the content.
+   The FIRST block of a column keeps the in-box position: lifting it would put it exactly where the SECTION's
+   own bar sits (measured: the section bar intercepted the click on the block's delete button) and, for the
+   first section, would paint the bar outside the paper. The bar also outranks the section bar so a lifted
+   block bar can never be swallowed by it. */
+.tm-email-canvas-block:not(.is-first-in-column) > .tm-email-canvas-block__toolbar {
+    inset-block-start: calc(-1 * (1.5rem + var(--tm-space-2)));
+}
+
+.tm-email-canvas-block__toolbar {
+    z-index: 4;
 }
 
 .tm-email-canvas-section:hover > .tm-email-canvas-section__toolbar,
 .tm-email-canvas-section.is-selected > .tm-email-canvas-section__toolbar,
 .tm-email-canvas-block:hover > .tm-email-canvas-block__toolbar,
-.tm-email-canvas-block.is-selected > .tm-email-canvas-block__toolbar {
+.tm-email-canvas-block.is-selected > .tm-email-canvas-block__toolbar,
+/* A keyboard user tabs into the bar's own buttons: without focus-within the bar disappeared the moment the
+   focus left the wrapper, so its actions were unreachable without a mouse. */
+.tm-email-canvas-block:focus-within > .tm-email-canvas-block__toolbar,
+.tm-email-canvas-section:focus-within > .tm-email-canvas-section__toolbar {
     display: flex;
-}
-
-.tm-email-canvas-block {
-    position: relative;
 }
 
 .tm-email-canvas-section__toolbar button,
@@ -163,8 +223,16 @@
     color: var(--tm-color-text);
 }
 
-.tm-email-canvas-column {
-    position: relative;
+/* The grip is the visual affordance of the block's drag source (the whole wrapper stays draggable, so a
+   mouse and a keyboard can move it too). It is decorative: the arrow buttons are the accessible path. */
+.tm-email-canvas-block__grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.25rem;
+    block-size: 1.5rem;
+    color: var(--tm-color-text-muted);
+    cursor: grab;
 }
 
 .tm-email-canvas-column__remove {
@@ -172,11 +240,57 @@
     inset-block-start: 2px;
     inset-inline-end: 2px;
     opacity: 0;
+    z-index: 3;
 }
 
 .tm-email-canvas-column:hover > .tm-email-canvas-column__remove,
 .tm-email-canvas-column.is-selected > .tm-email-canvas-column__remove {
     opacity: 1;
+}
+
+/* A keyboard user can reach the remove button while it is transparent: show it when it has the focus. */
+.tm-email-canvas-column__remove:focus-visible {
+    opacity: 1;
+}
+
+/* A touch screen has no hover: the actions of the SELECTED block must stay reachable, and a 44 px target
+   is what a finger needs (the phase 7/8 touch contract).
+   The strip is IN FLOW here, not an absolutely positioned overlay: at 44 px the five targets of a small
+   block cover its whole top half, so a tap aimed at the block's centre landed on "move up" instead of
+   selecting it (measured: the F8 mobile specs stopped opening the inspector). In flow the strip pushes the
+   content down by one row and can never swallow a tap meant for the block. */
+@media (pointer: coarse) {
+    /* No hover on a touch screen: a HOVER-triggered strip must never appear, otherwise the first tap of a
+       selection shows 44 px actions over the block and the tap lands on one of them (measured: the F8
+       mobile specs stopped opening the inspector). A touch user selects first, then acts. */
+    .tm-email-canvas-block:hover > .tm-email-canvas-block__toolbar,
+    .tm-email-canvas-section:hover > .tm-email-canvas-section__toolbar {
+        display: none;
+    }
+
+    .tm-email-canvas-block.is-selected > .tm-email-canvas-block__toolbar,
+    .tm-email-canvas-section.is-selected > .tm-email-canvas-section__toolbar {
+        position: static;
+        display: flex;
+        inline-size: 100%;
+        justify-content: flex-end;
+        margin-block-end: 2px;
+        background: var(--tm-color-surface-secondary);
+        box-shadow: none;
+    }
+
+    .tm-email-canvas-section__toolbar button,
+    .tm-email-canvas-block__toolbar button,
+    .tm-email-canvas-column__remove {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    /* The grip is the visual affordance of an HTML5 drag source, and HTML5 drag-and-drop does not run on a
+       touch screen at all — a grip a finger can hold but not use is a lie (review 16). */
+    .tm-email-canvas-block__grip {
+        display: none;
+    }
 }
 
 /* Insert-between drop zone — tall enough to land on by hand (was 0.5rem, too thin to hit). */
@@ -195,7 +309,7 @@
     background: color-mix(in srgb, var(--tm-color-primary) 18%, transparent);
 }
 
-/* ── Reduced motion ──────────────────────────────────────────────────────────
+/* ── Reduced motion ──────────────────────────────────────────────────────────────────────────
    Explicit enumeration of every Tempo.Blazor.EmailTemplates animated subject (mirrors the core block in
    animations.css and the DiagramEditor package block, never a universal selector).
    Guarded by ReducedMotionSelectorTests.SplitPackage_UncoveredAnimatedSubjects_AreOnlyTheFrozenBaseline

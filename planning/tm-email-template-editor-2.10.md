@@ -212,7 +212,7 @@ nepoužívá** (staví string; `Generate` na `:15`), `Import/MjmlImporter.cs` je
 | `Templating/ScribanTemplateEngine`, `ObjectToScriptObjectConverter`, `SandboxedScriptOutput`, `TemplateVariableExtractor` → `ScribanTemplateVariableExtractor`, `ScribanTemplateValidator` | **Engine** | Scriban |
 | `Rendering/MjmlNetCompiler`, `AngleSharpHtmlContentSanitizer` | **Engine** | přímá závislost (Mjml.Net / AngleSharp) |
 | `Rendering/EmailTemplateRenderer`, `LocalEmailPreviewRenderer` | **Engine** | **kvůli výchozí kompozici, bez přímé externí závislosti** — skládají Scriban engine + `MjmlNetCompiler` + `MjmlGenerator` a v Abstractions by nemohly mít funkční výchozí pipeline |
-| `Rendering/HtmlSanitizerPolicy`, `ConservativeHtmlContentSanitizer`, `IHtmlContentSanitizer` | Abstractions | viz rozhodnutí D12 níže |
+| `Rendering/HtmlSanitizerPolicy`, `ConservativeHtmlContentSanitizer`, `IHtmlContentSanitizer` | Abstractions | viz rozhodnutí D12 níže; allow-list obsahuje i `h1`–`h6` bez atributů (D28) |
 | `Editing/EmailSaveRequest`, `EmailSaveResult`, `EmailSaveStatus`, `EmailSaveTrigger` | Abstractions | nové (D1) |
 | `Localization/JsonStringLocalizer<T>` (Fáze 5) | Abstractions | **`public sealed`**, jen BCL + `Microsoft.Extensions.Localization.Abstractions` (žádná nová `PackageReference`); registruje ho `AddTempoEmailTemplateModel` (po Fázi 6, vedle validátorů) a dnes `AddTempoEmailTemplates` jako CLOSED `IStringLocalizer<TMarker>` — viz D25 |
 | `Rendering/UrlSchemePolicy`, `Rendering/MarkupGuard`, `Rendering/MarkupGuardResult`, `Templating/HtmlTextEscaper`, `Templating/IEscapingTemplateEngine`, `Templating/TemplateEscapeMode`, `Rendering/RenderErrorSeverity`, `Rendering/RenderKeys`, `Rendering/TemplateRenderOptions` (Fáze 3) | Abstractions | čisté BCL (regex + string), žádná externí závislost; `IEscapingTemplateEngine`/`TemplateEscapeMode` jsou `internal` a Engine je uvidí přes `InternalsVisibleTo` |
@@ -1160,6 +1160,9 @@ Obsah akordeonu i textového bloku se sanitizuje **před** předáním rich edit
 | `LayoutSeverityRank` | `public static class LayoutSeverityRank { public static int Of(LayoutSeverity severity) }` — `Error` → 0, `Warning` → 1, `Info` → 2; jediné povolené řazení nálezů (číselné hodnoty enumu jsou serializační kontrakt) | ne (aditivní, nový typ) | 7A |
 | `DocumentValidationKeys.PreheaderTooLong` + `EmailDocumentValidator.MaxPreheaderLength` | `const string` = `validation.preheader.too_long` + `public const int MaxPreheaderLength = 100` — práh, který pravidlo měří v grafech zdrojového textu (včetně tokenů) a který zpráva jmenuje; formátuje se jedním místem (`ValidationMessageText.Of`), aby se `{0}` nikdy nevypsalo doslova | ne (aditivní konstanty) | 7A |
 
+| `TmEmailCanvasBlock` (Fáze 9A) | `public partial class TmEmailCanvasBlock : ComponentBase` — `Block` (`EmailBlockBase`, `EditorRequired`), `CanvasImageLoading` (`CanvasImageLoading`, default `Load`), `Nested` (`bool`, default `false`). Veřejná **proto, že ji Razor neotevře z markupu, je-li `internal`** (`RZ10012` je v tomto repu chyba, viz poučení „Razor cannot open an internal component from a markup tag“); `Nested` je jen pro vnoření (wrapper/hero/group) a nese `[data-tm-nested-block]` místo `[data-tm-block-body]` | ne (aditivní veřejná komponenta) | 9A |
+| `CanvasImageLoading` (Fáze 9A) | `public enum CanvasImageLoading { Load = 0, Placeholder = 1 }`, default `Load` — `Placeholder` nenačítá externí obrázky (soukromí / tracking pixel) a maluje rámeček s alt textem. Na `TmEmailTemplateEditor` i `TmEmailTemplateCanvas` | ne (aditivní, default = dnešní chování) | 9A |
+
 ### 3.11 Souhrn breaking changes (pro CHANGELOG „Breaking / Migration“ 2.10.0)
 
 | # | Breaking | Před → Po | Fáze |
@@ -1179,6 +1182,8 @@ Obsah akordeonu i textového bloku se sanitizuje **před** předáním rich edit
 | B13 | ne | Validace: nálezy jako `<button>`, souhrn počtů, titulek+popis, `LayoutSeverity.Info` + pravidlo preheaderu | 10 |
 | B14 | **ne** (explicitně) | `EmailImportOptions.MaxInputBytes` = **5 MB** (dnešní hodnota) — zpřísnění by bylo breaking, proto se nedělá | 4 |
 | B15 | ne (aditivní) | **Skutečné overloady, stávající signatury zůstávají:** `MjmlGenerator()` (bezparametrický ctor) + nový `MjmlGenerator(IHtmlContentSanitizer sanitizer)`; `EmailDocumentVariableExtractor.Extract(document)` + nový `Extract(document, ITemplateVariableExtractor extractor)`; `MjmlImporter.Import(mjml, IMjmlIncludeResolver? includeResolver = null)` + nový `Import(mjml, IMjmlIncludeResolver? includeResolver, EmailImportOptions? options)`; `EmailTemplateSerializer.Deserialize(json)` + nový `Deserialize(json, EmailImportOptions? options)` | 3/4/6 |
+| B16 | **ANO** (DOM plátna) | **WYSIWYG plátno (F9A):** `.tm-email-canvas-block__kind` / `.tm-email-canvas-block__detail` zrušeny (obsah bloku se maluje jako e-mail, ne jako „typ + text“); blok nese `[data-tm-block-body][data-tm-block-kind]` uvnitř wrapperu `[data-tm-block-id]`; `aria-selected` → `aria-current="true"` a **roving tabindex** (`0` = vybraný/první blok); `aria-label` bloku = lokalizovaný typ **+ stručný obsah** (`EmailEditor_Canvas_BlockLabel`, prázdný `EmailEditor_Canvas_BlockLabelEmpty`); akční lišta vybraného bloku je na `(pointer: coarse)` **v toku** (ne hover overlay) s `--tm-touch-target`, na desktopu plave NAD blokem; dokument maluje `Styles.BackgroundColor`/`FontFamily` na papír | 9A |
+
 
 **Pravidlo:** každá položka B1–B7 musí mít v `CHANGELOG.md` (sekce `## 2.10.0` → „Breaking / Migration“)
 popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking change = vadná implementace.
@@ -1241,7 +1246,7 @@ popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking ch
 | # | Rozhodnutí |
 |---|---|
 | D11 | **Nový balíček `Tempo.Blazor.EmailTemplates.Engine`** (Scriban, Mjml.Net, AngleSharp); Abstractions bez těchto závislostí; UI referencuje jen Abstractions. Rozdělení typů a registrací v [3.0](#30-balíčky-a-závislosti-nové-rozhodnutí-2026-10-20) — breaking B7, provedeno ve **Fázi 6**. |
-| D12 | **Sanitizace bez AngleSharpu v Abstractions:** `HtmlSanitizerPolicy` (jediný zdroj allow-listů) + `IHtmlContentSanitizer` v Abstractions; `AngleSharpHtmlContentSanitizer` v Engine (autoritativní); `ConservativeHtmlContentSanitizer` (BCL, **tokenizer s HTML-encode, NIKDY regex-based strip/replace**; emituje jen allow-list tagy bez atributů, výjimka `a[href]` po kontrole schémat z §3.7a; nikdy `style`/`on*`; neznámý/nevalidní vstup = escapovaný text, nikdy průchod; rozdíl proti AngleSharpu jen k přísnějšímu) jako výchozí pro editor bez Engine; obě musí projít stejnou XSS sadou včetně mutation-XSS vektorů a fuzz „výstup ⊆ policy“ — **plná omezení viz D22**. |
+| D12 | **Sanitizace bez AngleSharpu v Abstractions:** `HtmlSanitizerPolicy` (jediný zdroj allow-listů, včetně nadpisů `h1`–`h6` — D28) + `IHtmlContentSanitizer` v Abstractions; `AngleSharpHtmlContentSanitizer` v Engine (autoritativní); `ConservativeHtmlContentSanitizer` (BCL, **tokenizer s HTML-encode, NIKDY regex-based strip/replace**; emituje jen allow-list tagy bez atributů, výjimka `a[href]` po kontrole schémat z §3.7a; nikdy `style`/`on*`; neznámý/nevalidní vstup = escapovaný text, nikdy průchod; rozdíl proti AngleSharpu jen k přísnějšímu) jako výchozí pro editor bez Engine; obě musí projít stejnou XSS sadou včetně mutation-XSS vektorů a fuzz „výstup ⊆ policy“ — **plná omezení viz D22**. |
 | D13 | **Limity importu aditivně:** `MaxInputBytes` = **5 MB** (dnešní chování, ne breaking) + `ImportOptions` na editoru i import dialogu + overloady `Import`/`Deserialize` s `EmailImportOptions?`. |
 | D14 | **Escapování:** `TemplateEscapeMode` je `internal`; veřejný `TemplateRenderOptions` má jen `Culture`/`UseDocumentLanguageCulture`; jediný opt-out je `{{ value \| html.trusted }}` s výstupem vždy přes sanitizer. |
 | D15 | **URL bezpečnost:** allow-list `http`/`https`/`mailto`/`tel` + relativní + `#`; jiné schéma → `#` + `RenderError` + audit `BlockedUrlScheme`; hostitel allow-list nerozšiřuje; `EmailTableCell.BackgroundColor` validovat regexem barvy. |
@@ -1259,6 +1264,9 @@ popis dopadu **a ukázku před/po** (jak migrovat). Nedokumentovaná breaking ch
 | D26 | **`Conflict` pauza padá i po `Shortcut` uložení (rozhodnutí uživatele 2026-10-22):** po `Conflict` se autosave pozastaví do **úspěšného ne-autosave uložení** — `Manual`, `Shortcut` (Ctrl/⌘+S) i `Programmatic` (`SaveAsync()`), nebo do předání nové reference `Document`. Zdůvodnění: `Ctrl+S` je pro uživatele stejně explicitní zápis jako tlačítko Uložit; když hostitel potvrdí `Saved`, uživatel právě dokázal, že šablona lze znovu zapsat, a držet autosave dál pauznutý by znamenalo, že se další úpravy tiše neukládají. Implementace: `if (trigger is not EmailSaveTrigger.AutoSave) _autoSavePaused = false;` v `Record`, test „Conflict → Ctrl+S Saved → autosave běží". |
 | D25 | **`JsonStringLocalizer<T>` zůstává `public sealed` v `Tempo.Blazor.EmailTemplates.Abstractions.Localization`** (potvrzeno uživatelem 2026-10-20). Necpi ho jako `internal` s `InternalsVisibleTo` do UI balíčku: IVT je vázané na silné jméno **a přesnou verzi** sestavení, takže každý bump verze by tiše rozbil lokalizaci editoru (stejný důvod, proč F6 pinuje Engine na `[2.10.0]`). Veřejný typ je aditivní API (B6) a hostitel ho může použít i pro vlastní markery; registruje ho `AddTempoEmailTemplateModel` (po Fázi 6) vedle validátorů a `AddTempoEmailTemplates` pro editor. |
 | D27 | **Tabletový auto-rail je stav layoutu, ne preference sbalení (rozhodnutí uživatele, fáze 8 review):** když `TmEditorShell` na tabletu sám zrailuje panel (pravidlo „nejvýš jeden rozbalený“), editor tuto změnu **nepřevezme** do `ToolboxCollapsed` a **nevyvolá** `ToolboxCollapsedChanged`; událost vyvolá jen uživatelské sbalení/rozbalení (toggle panelu, rozbalení inspektoru z `RightRail`). Implementace: `TmEditorShell` posílá `ResolvedLayoutChanged` **před** `CollapsedPanelsChanged` (jádro 2.10.0), editor drží generaci layoutu (`_layoutGeneration++` v `OnResolvedLayoutChangedAsync`, v reportu `TmEmailMobileHeaderSlot` — sdílí tentýž handler — a při změně parametru `LayoutMode`) a raise ve stejné generaci jako změna layoutu vyhodnotí jako stav layoutu. Převzetí je synchronní v `OnShellCollapsedPanelsChangedAsync` (žádné odkládání do `OnAfterRender`). Důsledek pro hostitele: na tabletu může být paleta zrailená a `ToolboxCollapsed` přitom `false` — „je paleta vidět" se čte z layoutu (`data-layout` / `ResolvedLayoutChanged`), ne z tohoto parametru. |
+
+| D28 | **Nadpisy `h1`–`h6` jsou v allow-listu sanitizéru (rozhodnutí uživatele 2026-10-26, review F9A):** `HtmlSanitizerPolicy.AllowedTags` (jediný zdroj, D12) obsahuje `h1`, `h2`, `h3`, `h4`, `h5`, `h6`. Jsou to **formátovací** elementy stejně jako `b`/`i`: obě implementace (`AngleSharpHtmlContentSanitizer` i `ConservativeHtmlContentSanitizer`) je emitují **bez atributů** — `<h1 onclick=x style="…">Ahoj</h1>` → `<h1>Ahoj</h1>`, `<h2><img onerror></h2>` → `<h2>…</h2>` s escapovaným obsahem. Důvod: e-mailový autor píše typografii nadpisy a WYSIWYG plátno ji musí zobrazit; bez allow-listu se nadpis na plátně i v exportu zobrazil jako text s závorkami. Bezpečnostní důsledek žádný — atributy (`style`, `on*`, `class`) byly a zůstávají zakázané, takže nadpis nemůže přebarvit editor ani spustit skript. Paritní XSS sada obou sanitizérů (`SanitizerXssVectors.Payloads`) obsahuje vektory s nadpisy a zůstává zelená. |
+
 
 ### 5.3 Dříve otevřené volby (uzavřeno rozhodnutími D21/D22)
 
@@ -1329,3 +1337,47 @@ away" nepřipadá v úvahu; odstranění je dosaženo **nereferencováním balí
 referencuje `AngleSharp` 1.5.2 vlastní `PackageReference`. E-mailové balíčky ho nepřinášejí:
 `Tempo.Blazor.EmailTemplates.Abstractions` na něj nemá ani `PackageReference`, ani assembly referenci
 (hlídá `PackageBoundaryTests.AbstractionsAssembly_ReferencesNoEngineDependency`).
+
+### 6.2 Měření výkonu WYSIWYG plátna (Fáze 9A)
+
+Plátno od Fáze 9A kreslí CELÝ dokument (blok = vizuální aproximace MJML), takže každý stisk klávesy
+v inspektoru prochází renderem. Aby se nepřekreslovalo 200 bloků, má renderer bloku vlastní rozhodnutí
+(`TmEmailCanvasBlock.ShouldRender` → `EmailCanvasRenderGate` + `EmailBlockSignature`): podpis je
+serializace PŘESNĚ těch hodnot, které renderer maluje, takže změna jednoho bloku nechá ostatní
+renderery v klidu (a naopak ji nelze zmeškat — test `Every_painted_property_of_a_block_invalidates_its_own_renderer`
+projde každou malovanou vlastnost jednu po druhé).
+
+Měřeno na `net10.0`, Debug, xUnit/bUnit (`TmEmailCanvasPerformanceTests`), dokument = 200 textových bloků
+v 10 sekcích, `ContentWidth` 600 px, čistý start test hostu (JIT studený):
+
+| Operace | Naměřeno |
+|---|---|
+| První vykreslení 200 bloků (studený JIT) | **984 ms** |
+| Další plné vykreslení 200 bloků (teplý JIT) | **108,7 ms** |
+| Rozhodovací průchod 200 bloků (podpisy + gate) po jedné změně | **1,29 ms** |
+| Změna jedné vlastnosti + re-render (bUnit, který překresluje celý strom) | **50,3 ms** |
+| Bloků překreslených při změně jednoho bloku | **1 z 200** |
+
+**Závěr pro Server režim:** cena změny vlastnosti = rozhodovací průchod (~1,3 ms na 200 bloků) + re-render
+jednoho bloku; cíl „< 100 ms na změnu vlastnosti" je splněn s velkou rezervou i s tím, že bUnit měří
+i celý diff. Skutečný důkaz produkční cesty (že se nepřekresluje celý strom) podává prohlížeč:
+`EmailEditorCanvasWysiwygF9AE2ETests` nasadí `MutationObserver` na plátno, napíše do inspektoru a ověří,
+že mutace DOM vznikly pouze uvnitř editovaného bloku, plus změří čas od `input` eventu do dalšího frame.
+
+Měřeno v prohlížeči (`EmailEditorCanvasWysiwygF9AE2ETests`, WASM Debug, self-hosted demo, 4 stisky
+klávesy do rich-textu vybraného bloku, `MutationObserver` na plátně):
+
+| Scénář | Latence na stisk | Bloků překresleno |
+|---|---|---|
+| Seed „Welcome" (3 bloky) | ~259 ms | 1 |
+| 52 bloků (vloženo paletou) | ~562 ms | **1** (mutace DOM jen uvnitř editovaného bloku) |
+
+Růst mezi 3 a 52 bloky (~300 ms) není práce plátna: rozhodovací průchod 200 bloků stojí 1,3 ms a DOM se
+mění jen v editovaném bloku. Je to cena editorova commitu na každý stisk (hluboká kopie dokumentu pro
+undo + serializace pro dirty check), tedy předexistující vlastnost F7, která roste s dokumentem — kandidát
+na samostatnou optimalizaci (Release WASM je řádově rychlejší; čísla výše jsou Debug build).
+
+Poznámka k bUnit: `BunitContext.Render()` překreslí celý strom a `ShouldRender` podruhé nezavolá
+(ověřeno probe komponentou v této fázi), takže DOM ani čítač v bUnit produkční optimalizaci
+neprokazují — proto testy měří rozhodnutí (`ShouldRenderNow`/`EmailCanvasRenderGate`) přímo a chování
+v prohlížeči hlídá E2E.

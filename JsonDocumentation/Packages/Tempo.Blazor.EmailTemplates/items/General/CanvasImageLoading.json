@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "General",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "How the WYSIWYG canvas treats the images a template references (Fáze 9A). The editor canvas is the one place where a template's remote images become requests from the AUTHOR's browser: an imported template can carry a per-recipient tracking pixel, and a host editing a template it did not author may not want that request made from the editor at all. Load is the default — the canvas is a preview and the author is writing the email, so a missing picture would be the more surprising behaviour. Only URLs the pipeline's allow-list accepted are ever requested.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/CanvasImageLoading.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Load",
+      "kind": "Field",
+      "type": "CanvasImageLoading",
+      "description": "Load the image in an <img> after the pipeline's URL allow-list accepted it (the default). The rendered email loads the same source anyway, so this is the faithful preview."
+    },
+    {
+      "name": "Placeholder",
+      "kind": "Field",
+      "type": "CanvasImageLoading",
+      "description": "Never issue a request from the editor: paint a framed placeholder with the alt text instead. Use it for privacy (no tracking pixel from an author's browser) or on a metered connection."
+    }
+  ],
+  "itemName": "CanvasImageLoading"
+}

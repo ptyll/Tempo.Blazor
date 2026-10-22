@@ -160,8 +160,10 @@ public class TmEmailItemDialogF9ReviewTests : EmailEditorTestBase, IDisposable
         var cut = Panel(document, accordion.Id);
         cut.Find("[data-tm-item-edit]").Click();
 
-        var html = RichEditorHtml().LastOrDefault();
-        html.Should().BeEmpty("without IHtmlContentSanitizer the sink is emptied, never the raw markup");
+        // The sink is emptied: the editor may not be written at all (an empty value is the DOM's initial
+        // state), but nothing from the payload may ever reach innerHTML.
+        RichEditorHtml().Should().NotContain(html => !string.IsNullOrEmpty(html),
+            "without IHtmlContentSanitizer the sink is emptied, never the raw markup");
     }
 
     // ── Validation at the field ─────────────────────────────────────────────────────────────

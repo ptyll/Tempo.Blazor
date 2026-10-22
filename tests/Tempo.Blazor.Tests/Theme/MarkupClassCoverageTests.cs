@@ -121,6 +121,9 @@ public sealed class MarkupClassCoverageTests
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
+        // The filter summary's live region is visually carried by the shared .tm-sr-only (same precedent as
+        // tm-dashboard-live-region): the class exists to be a stable aria-live hook and stays rule-free.
+        "tm-data-table-filter-summary-live",
         // ("tm-data-table__export-scope" left the inventory: the disabled-state rules
         // (.tm-data-table__export-scope[aria-disabled=…] in _data-table.css) now style it.)
         "tm-date-today-btn",

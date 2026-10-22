@@ -73,10 +73,14 @@
                                     <header class="tm-email-properties__subheader">@Loc["EmailEditor_Field_Content"]</header>
                                     @* The rich editor hands its value to innerHTML in JS, so a block whose
                                        content came from an import or a JSON payload must be sanitized on
-                                       the way IN as well (stored XSS, review F9). *@
-                                    <TmRichEditorSimple Value="@SanitizeTemplateContent(textBlock.Content)"
+                                       the way IN as well (stored XSS, review F9) — but ONLY when the editor
+                                       (re)opens on a block or the value changed EXTERNALLY (undo, a host
+                                       write). Sanitizing on the echo of a keystroke handed the editor a
+                                       different string than it held, so it re-set its innerHTML and the caret
+                                       jumped to the start: " EDIT" came out as "TIDE" (review UX 9). *@
+                                    <TmRichEditorSimple Value="@RichContent(textBlock)"
                                                         IsDisabled="ReadOnly"
-                                                        ValueChanged="@(v => SetAsync(() => textBlock.Content = v))" />
+                                                        ValueChanged="@(v => OnRichContentChangedAsync(textBlock, v))" />
                                     @if (!ReadOnly)
                                     {
                                         <div class="tm-email-properties__variables" data-tm-variables="text"
@@ -374,6 +378,12 @@
     private string? _imageUploadError;
     private Guid? _lastSelected;
 
+    /// <summary>The block whose rich-text content this panel loaded into the editor, if any.</summary>
+    private Guid? _richBlockId;
+
+    /// <summary>The last value handed to (or emitted by) the rich editor — see <see cref="RichContent"/>.</summary>
+    private string? _richValue;
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
@@ -391,6 +401,36 @@
     /// FAIL-CLOSED: with no <see cref="IHtmlContentSanitizer"/> registered the value becomes empty — never
     /// the raw value, because the raw value is exactly what would reach <c>innerHTML</c>.
     /// </summary>
+    /// <summary>
+    /// The value the rich editor is opened with. It is sanitized when the panel shows a DIFFERENT block and when
+    /// the model value diverges from what this panel last handed the editor (an external change such as undo).
+    /// The echo of the editor's own emission is returned verbatim: re-sanitizing it would rewrite innerHTML and
+    /// move the caret (review UX 9).
+    /// </summary>
+    private string RichContent(EmailTextBlock block)
+    {
+        if (_richBlockId != block.Id
+            || !string.Equals(_richValue, block.Content, StringComparison.Ordinal))
+        {
+            _richBlockId = block.Id;
+            _richValue = SanitizeTemplateContent(block.Content);
+        }
+
+        return _richValue ?? string.Empty;
+    }
+
+    /// <summary>
+    /// The rich editor emitted a keystroke: remember it EXACTLY as emitted (so the next render is not mistaken
+    /// for an external change) and write it to the model. The value still reaches innerHTML only through
+    /// <see cref="RichContent"/>'s sanitizer, and the render pipeline sanitizes on the way out.
+    /// </summary>
+    private Task OnRichContentChangedAsync(EmailTextBlock block, string? value)
+    {
+        _richBlockId = block.Id;
+        _richValue = value;
+        return SetAsync(() => block.Content = value);
+    }
+
     private string SanitizeTemplateContent(string? content)
     {
         var sanitizer = Services.GetService(typeof(IHtmlContentSanitizer)) as IHtmlContentSanitizer;

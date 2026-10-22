@@ -36,6 +36,13 @@
       "description": "The two container widths that decide the layout. Null (default) uses new TmLayoutBreakpoints(768, 1200): below 768 the editor is a phone layout, from 1200 the full desktop chrome, in between the tablet layout."
     },
     {
+      "name": "CanvasImageLoading",
+      "type": "CanvasImageLoading",
+      "isRequired": false,
+      "description": "Whether the WYSIWYG canvas may request the document's remote images from the AUTHOR's browser. The default is Load (the canvas is a preview and the sent email loads the same source anyway). Set Placeholder for privacy: an imported template can carry a per-recipient tracking pixel and the placeholder mode issues no request at all — it paints a framed box with the image's alt text.",
+      "defaultValue": "CanvasImageLoading.Load"
+    },
+    {
       "name": "Document",
       "type": "EmailTemplateDocument?",
       "isRequired": false,

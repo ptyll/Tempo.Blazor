@@ -42,6 +42,10 @@ public class ConservativeSanitizerTests
     [InlineData("<div>x</div>", "&lt;div&gt;x&lt;/div&gt;")]
     [InlineData("<b style=\"color:red\">x</b>", "<b>x</b>")]
     [InlineData("<b class=\"x\" id=\"y\">x</b>", "<b>x</b>")]
+    // D28: a heading is allow-listed as a FORMATTING element and keeps text only — its attributes die.
+    [InlineData("<h1 onclick=x style=\"background:url(javascript:alert(1))\">Ahoj</h1>", "<h1>Ahoj</h1>")]
+    [InlineData("<h2><img src=x onerror=alert(1)></h2>", "<h2>&lt;img src=x onerror=alert(1)&gt;</h2>")]
+    [InlineData("<h3>t</h3><h4>u</h4><h5>v</h5><h6>w</h6>", "<h3>t</h3><h4>u</h4><h5>v</h5><h6>w</h6>")]
     [InlineData("<a href=\"https://x/y\">l</a>", "<a href=\"https://x/y\">l</a>")]
     [InlineData("<a href=\"javascript:alert(1)\">l</a>", "<a href=\"#\">l</a>")]
     [InlineData("<a href='javascript:alert(1)'>l</a>", "<a href=\"#\">l</a>")]
@@ -221,6 +225,8 @@ public class ConservativeSanitizerTests
     public void HtmlSanitizerPolicy_IsTheSingleSourceOfTheAllowLists()
     {
         HtmlSanitizerPolicy.AllowedTags.Should().Contain(["b", "i", "u", "strong", "em", "a", "br", "span", "p", "ul", "ol", "li"]);
+        HtmlSanitizerPolicy.AllowedTags.Should().Contain(["h1", "h2", "h3", "h4", "h5", "h6"],
+            "D28: headings are an allow-listed formatting element (typography on the WYSIWYG canvas)");
         HtmlSanitizerPolicy.AllowedTags.Should().NotContain(["script", "style", "iframe", "svg", "mj-text", "mj-raw"]);
         HtmlSanitizerPolicy.AllowedAttributes.Should().NotContain(["onclick", "onerror", "srcset"]);
         HtmlSanitizerPolicy.DroppedWithContent.Should().Contain(["script", "style", "iframe", "object", "embed", "link", "meta", "base", "title"]);

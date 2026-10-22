@@ -127,6 +127,43 @@ public class SanitizerParityTests
         Conservative.Sanitize(content).Should().Be(content);
     }
 
+    /// <summary>
+    /// D28: <c>h1</c>–<c>h6</c> are allow-listed as a formatting element (the WYSIWYG canvas needs the
+    /// author's typography) and behave exactly like <c>b</c>/<c>i</c>: the tag and its text survive, every
+    /// attribute — <c>onclick</c>, <c>style</c> — is dropped by BOTH implementations.
+    /// </summary>
+    [Fact]
+    public void BothImplementations_AllowHeadingsWithoutAnyAttribute()
+    {
+        const string heading = "<h1 onclick=x style=\"background:url(javascript:alert(1))\">Ahoj</h1>";
+
+        AngleSharp.Sanitize(heading).Should().Be("<h1>Ahoj</h1>");
+        Conservative.Sanitize(heading).Should().Be("<h1>Ahoj</h1>");
+    }
+
+    /// <summary>
+    /// D28: an allow-listed heading is not a hole — markup nested inside it is judged exactly as it would be
+    /// at the top level, so <c>&lt;h2&gt;&lt;img onerror&gt;&lt;/h2&gt;</c> keeps the heading and never keeps
+    /// the image.
+    /// </summary>
+    [Fact]
+    public void BothImplementations_DoNotLetAHeadingSmuggleMarkupThrough()
+    {
+        const string payload = "<h2><img src=x onerror=alert(1)></h2>";
+
+        var angle = AngleSharp.Sanitize(payload);
+        var conservative = Conservative.Sanitize(payload);
+
+        angle.Should().StartWith("<h2>").And.EndWith("</h2>");
+        conservative.Should().StartWith("<h2>").And.EndWith("</h2>");
+        foreach (var output in new[] { angle, conservative })
+        {
+            output.Should().NotContainEquivalentOf("<img", "a heading must not smuggle an element through");
+            SanitizerXssVectors.AssertNoExecutableMarkup(output, $"'{payload}' must stay inert");
+            SanitizerXssVectors.AssertOutputWithinPolicy(output, output == conservative);
+        }
+    }
+
     [Fact]
     public void BothImplementations_BlockTheSameUrlSchemes()
     {

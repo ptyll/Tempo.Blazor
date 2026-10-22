@@ -1,0 +1,36 @@
+{
+  "itemName": "TmEmailCanvasBlock",
+  "kind": "Component",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.EmailTemplates.Components",
+  "description": "WYSIWYG renderer of ONE email block on the editor canvas (Fáze 9A): an approximation of the MJML output built from the model values — text as sanitized inline HTML with token chips, a button as a pill with its background/radius/alignment, an image as an <img> with src/alt/width, divider, spacer, table with a header row and linked cells, social icons, navbar links, hero with a background image and nested content, carousel as its first image plus the count, accordion titles, and a wrapper/group as a frame holding its nested sections/columns. The authoritative output stays the server preview (IEmailPreviewRenderer). The renderer owns its own re-render decision (ShouldRender over the block's rendered-data signature), so a property change repaints one block instead of the document. Untrusted content: block text goes through IHtmlContentSanitizer and loses every attribute, an mj-raw block is NEVER rendered as markup, no link is navigable (a click selects the block), and every URL passes EmailUrlPolicy. Set CanvasImageLoading=Placeholder to issue no image request at all.",
+  "packageId": "Tempo.Blazor.EmailTemplates",
+  "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailCanvasBlock.razor",
+  "documentationStatus": "merged",
+  "requiredImports": [
+    "@using Tempo.Blazor.EmailTemplates.Components"
+  ],
+  "parameters": [
+    {
+      "name": "Block",
+      "type": "EmailBlockBase",
+      "isRequired": true,
+      "description": "The block to draw.",
+      "editorRequired": true
+    },
+    {
+      "name": "CanvasImageLoading",
+      "type": "CanvasImageLoading",
+      "isRequired": false,
+      "description": "Whether the remote images of the block may be requested by the author's browser. Defaults to Load; Placeholder paints a framed alt-text placeholder and issues no request (privacy / tracking protection).",
+      "defaultValue": "CanvasImageLoading.Load"
+    },
+    {
+      "name": "Nested",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the block is drawn INSIDE another block's frame (a wrapper, a hero, a group) instead of as a canvas item. Nested blocks are content: they carry no canvas selector and no drag/selection target.",
+      "defaultValue": "false"
+    }
+  ]
+}

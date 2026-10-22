@@ -46,6 +46,7 @@
                                    Variables="_variables"
                                    LayoutMode="_layoutMode"
                                    ItemEditingMode="_itemEditingMode"
+                                   CanvasImageLoading="_canvasImageLoading"
                                    MobilePanelPresentation="_presentation"
                                    ResolvedLayoutChanged="OnResolvedLayoutChanged" />
         </div>
@@ -78,6 +79,16 @@
             <select data-tm-demo-item-mode @onchange="OnItemModeChanged">
                 <option value="Inline">Inline</option>
                 <option value="Dialog">Dialog</option>
+            </select>
+        </label>
+        @* Fáze 9A demo: whether the WYSIWYG canvas may request the template's remote images from THIS
+           browser. Load (default) is the faithful preview; Placeholder issues no request at all, which is
+           what a host wants for an imported template that may carry a tracking pixel. *@
+        <label class="tm-demo-email-editor-page__simulate">
+            <span>Canvas images</span>
+            <select data-tm-demo-canvas-images @onchange="OnCanvasImageLoadingChanged">
+                <option value="Load">Load</option>
+                <option value="Placeholder">Placeholder</option>
             </select>
         </label>
         @* Fáze 8 demo: force the editor's layout instead of resizing the browser. Auto lets the shell
@@ -128,6 +139,7 @@
     private bool _preferencesLoaded;
     private TmLayoutMode _layoutMode = TmLayoutMode.Auto;
     private EmailItemEditingMode _itemEditingMode = EmailItemEditingMode.Inline;
+    private CanvasImageLoading _canvasImageLoading = CanvasImageLoading.Load;
     private MobilePanelPresentation _presentation = MobilePanelPresentation.Sheet;
     private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
     private readonly AutoSaveOptions _autoSave = new() { Enabled = true, Interval = TimeSpan.FromSeconds(3) };
@@ -275,6 +287,11 @@
             : MobilePanelPresentation.Sheet;
         await RememberAsync("tm-demo-editor-presentation", _presentation.ToString());
     }
+
+    private void OnCanvasImageLoadingChanged(ChangeEventArgs e)
+        => _canvasImageLoading = Enum.TryParse<CanvasImageLoading>(e.Value?.ToString(), out var mode)
+            ? mode
+            : CanvasImageLoading.Load;
 
     private void OnItemModeChanged(ChangeEventArgs e)
         => _itemEditingMode = Enum.TryParse<EmailItemEditingMode>(e.Value?.ToString(), out var mode)

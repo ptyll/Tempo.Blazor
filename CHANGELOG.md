@@ -479,6 +479,24 @@
 
 ### Changed
 
+- **Headings `h1`–`h6` are allow-listed by the inline-HTML sanitizer (Fáze 9A review, D28).**
+  `HtmlSanitizerPolicy.AllowedTags` — the ONE source both the AngleSharp and the BCL conservative sanitizer
+  read — now contains `h1`…`h6`. They are FORMATTING elements exactly like `b`/`i`: both implementations
+  emit the tag and its text and drop **every** attribute, so `onclick`, `style` and `class` still never
+  survive.
+
+  ```text
+  before                                     after
+  <h1>Ahoj</h1>   → escaped text (the heading  <h1>Ahoj</h1>   → the heading survives
+                    tag was not allow-listed)
+  <h1 onclick=x style="background:url(…)">Ahoj</h1> → <h1>Ahoj</h1> (both sanitizers)
+  <h2><img src=x onerror=alert(1)></h2>             → <h2>&lt;img …&gt;</h2> (inert, heading kept)
+  ```
+
+  Why: a mail author writes typography with headings, and the WYSIWYG canvas (and the export) showed the
+  tags as literal text. The XSS parity suite of both sanitizers carries the heading vectors, and
+  `HtmlSanitizerPolicy` stays the single source of the allow-lists (a host still cannot extend it).
+
 - **`TmEditorShell` raises `ResolvedLayoutChanged` BEFORE `CollapsedPanelsChanged` (jádro, behaviour).**
   Both callbacks describe the same layout transition (a desktop→tablet flip rails one panel through the
   tablet one-expanded-panel rule), but the collapse one used to arrive first — so a host that maps
@@ -518,8 +536,114 @@
   `[data-tm-table-add-row]` / `[data-tm-table-add-col]` / `[data-tm-table-remove-col]`. A host that
   styled the old bare `<table>` needs to target the new BEM classes (see Breaking / Migration).
 
+- **The editor canvas is WYSIWYG (Fáze 9A).** `TmEmailTemplateCanvas` paints each block the way it will
+  look in the inbox instead of printing "type + 80 characters of text": a text block renders its
+  sanitized inline HTML, a button its pill with background/border radius/alignment, an image a real
+  `<img>` with `src`/`alt`/`width`, a divider its rule, a spacer its height, a table a header row and its
+  cells (a cell link marked as a link), social its elements, a navbar its links, a hero its background and
+  nested content, a carousel its first image plus `1 / N`, an accordion its titles and a wrapper/group a
+  frame with its nested sections/columns. Sections paint `BackgroundColor`/`Padding`/border/alignment and
+  columns their width ratio, and the "paper" is as wide as `Document.Styles.ContentWidth` (600 px when
+  unset). The block renderer is its own component (`TmEmailCanvasBlock`) that decides on its own whether
+  to repaint (`ShouldRender` over the block's rendered-data signature), so a keystroke repaints one block
+  instead of the document. Security is unchanged in direction and stricter in effect: block text goes
+  through `IHtmlContentSanitizer` and loses every attribute, `mj-raw` is NEVER rendered as markup (an
+  escaped placeholder with the first characters), template tokens are chips rather than substituted
+  values, every `Src`/`Href`/`BackgroundUrl` passes the URL allow-list, and **no link on the canvas is
+  navigable** — a click selects the block.
+
+- **The canvas no longer renders a block's structural label (Fáze 9A, breaking DOM).** The
+  `.tm-email-canvas-block__kind` and `.tm-email-canvas-block__detail` spans are gone (the email itself is
+  the content now) and the block's floating action bar gained a drag grip
+  (`[data-tm-block-grip]`); the block wrapper keeps `[data-tm-block-id]`, `role="listitem"`, its
+  `aria-label` (the localized block type), `aria-selected`, `is-selected` and every
+  `[data-tm-block-action]`. On a coarse pointer the actions of the SELECTED block stay visible (no hover
+  to reveal them) and their targets are `--tm-touch-target` (44 px). See Breaking / Migration.
+
+- **`CanvasImageLoading` on `TmEmailTemplateEditor` / `TmEmailTemplateCanvas` (Fáze 9A, additive).** The
+  canvas is the one place where a template's remote images become requests from the AUTHOR's browser (an
+  imported template can carry a per-recipient tracking pixel). `CanvasImageLoading.Load` (default) keeps
+  the faithful preview; `CanvasImageLoading.Placeholder` issues no request at all and paints a framed
+  placeholder with the image's alt text.
+
+  ```csharp
+  <TmEmailTemplateEditor Document="_document" OnSave="SaveAsync"
+                        CanvasImageLoading="CanvasImageLoading.Placeholder" />
+  ```
+
+- **`TmEmailCanvasBlock` + `CanvasImageLoading` as the phase's public canvas surface (Fáze 9A, additive;
+  contract §3.10).** `TmEmailCanvasBlock` (`Block`, `CanvasImageLoading`, `Nested`) is the block renderer a
+  host may now mount directly — e.g. a print/PDF host that wants the canvas approximation of one block —
+  and it is `public` because Razor cannot open an `internal` component from markup (`RZ10012` is an error
+  in this repo). `Nested` is for CONTENT inside a wrapper/hero/group frame: a nested block carries
+  `[data-tm-nested-block]` instead of `[data-tm-block-body]`, so it is never a selection target. The enum
+  `CanvasImageLoading { Load = 0, Placeholder = 1 }` (default `Load`) is unchanged in meaning.
+
+  ```razor
+  <TmEmailCanvasBlock Block="@block" CanvasImageLoading="CanvasImageLoading.Placeholder" />
+  ```
+
+- **`--tm-paper-danger-ink` (Fáze 9A, additive token).** The paper family (`--tm-paper*`) is theme-invariant
+  by design, so it needs a danger ink that does NOT flip in dark mode: `--tm-color-danger-text` becomes
+  `#fca5a5` there (≈2.3:1 on the white paper). `--tm-paper-danger-ink: #991b1b` (8.3:1) is declared next to
+  `--tm-paper-ink` and, like the rest of the family, deliberately not re-declared in `tokens-dark.css`.
+  The canvas paints a refused link with it. A host that rebrands the paper palette should define it too.
+
 
 ### Fixed
+
+- **Fáze 9A review (code+arch): the canvas token mask, the image gate and the render gate.** Four defects
+  the WYSIWYG canvas shipped with:
+  * **A template token inside an attribute destroyed the tag around it.** Tokens are now masked
+    POSITIONALLY (`U+E000{index}U+E001`) BEFORE the markup is reduced to the allow-listed tag stream, and
+    restored to a chip in the same pass — so `<a href="{{ unsubscribe_url }}">Unsubscribe</a>` renders the
+    inert `span.tm-email-block__link` with "Unsubscribe" instead of leaking `&lt;a` into the text, and
+    `<span style="color:{{ c }}">x</span>` keeps its element (the attribute is dropped as a whole). A
+    forged private-use placeholder (a character reference the sanitizer decoded) becomes `U+FFFD` and can
+    never be mistaken for a mask. A token is also encoded exactly once (`HtmlEncode(HtmlDecode(token))`),
+    so `{{ a &gt; b }}` no longer reads `&amp;gt;`.
+  * **Any allow-listed URL could become an `<img src>`.** The canvas accepted `<c>mailto:</c>`, `tel:` and a
+    RELATIVE path from the model, so an imported/JSON value such as `/api/logout` became a GET against the
+    editor's own origin. The new `EmailCanvasValue.ImageUrl` is stricter than `Url`: an absolute
+    `http`/`https` URL without a template token, or nothing. A refused value paints a placeholder with its
+    reason — the new `EmailEditor_Canvas_ImageNotLoadable` ("This image can't be shown on the canvas (use a
+    full https:// address)") for "not loadable", the existing `EmailEditor_Canvas_ImageBlocked` for a
+    refused scheme — and a painted image is now `referrerpolicy="no-referrer" loading="lazy"`.
+  * **The render gate was empty until the first re-render**, so the first parent re-render rebuilt EVERY
+    block (measured: the first keystroke repainted all 52 blocks). The gate is primed in `OnInitialized`,
+    which also makes the internal `RenderCount` mean "paints including the initial one".
+  * **The block signature could be ambiguous:** values were joined with `U+001F` and no length, so a value
+    containing the separator let two different blocks produce the same signature (the gate then showed
+    stale content). Each value is now prefixed with its length (`-1` for null).
+  * Smaller ones: `EmailCanvasValue.FontFamily` requires BALANCED quotes (an unbalanced `"` escaped the
+    declaration it was interpolated into); `@key` on the section/column/block loops keeps a renderer instance
+    with its block when items are reordered or removed; a refused hero/section
+    background and a refused button/navbar/cell link are MARKED (`data-tm-image-blocked`,
+    `data-tm-link-blocked` / `data-tm-cell-link-blocked` plus an alert icon and a `sr-only` reason) instead
+    of silently missing; the "Empty block – add content in Properties" marker makes an empty text/button/
+    list block visible and selectable; the image placeholder is styled through `::deep` (a
+    `RenderTreeBuilder` fragment carries no scope attribute, so it painted as run-together text).
+
+- **Fáze 9A review (UX): typing into the inspector no longer reorders the characters.** `TmRichEditorSimple`
+  (core) re-synced the whole editor on EVERY parent re-render: it read the contenteditable and, when the
+  HTML differed from the parameter, wrote the parameter back with `setHtml` — which moves the caret to the
+  start, so the next character landed in front of the previous one (" EDIT" became "TIDE"). The component
+  now remembers the value it emitted (`_lastEmitted`) and treats the host's echo of it as "no external
+  change" (no DOM read, no write), while an external change (undo, a host write) still reaches the editor.
+  `TmEmailPropertyPanel` no longer re-sanitizes the rich-text value on every render either: it sanitizes
+  when the editor OPENS on a block and when the model changes externally (the F9 stored-XSS guard), and
+  hands the author's own emission back verbatim. No public API changed.
+
+- **Fáze 9A review (UX): canvas contrast, focus and the desktop action bar.** The canvas re-points the chrome
+  tokens it inherits (`--tm-color-text`, `--tm-color-text-muted`, `--tm-color-surface-secondary`,
+  `--tm-border-color-strong`, `--tm-color-primary*`) at their paper values on `.tm-email-canvas-doc`, so a
+  dark chrome no longer paints a dark-theme token chip or placeholder on the WHITE paper (measured 2.1:1 →
+  ≥4.5:1). A block reached with Tab but not selected shows a dashed primary ring (`:focus-visible:not(.is-selected)`);
+  a focused action bar stays visible (`:focus-within`); the remove-column button reveals itself on focus; the
+  desktop bar floats ABOVE the block instead of covering its first line; the coarse-pointer grip is hidden
+  (HTML5 drag does not run on touch); the token chip is `0.85em` so it does not tower over body text; the
+  document's `BackgroundColor`/`FontFamily` are painted on the paper; and the empty-column/raw-block texts
+  now say what to do (`EmailEditor_Canvas_EmptyColumn`, `EmailEditor_Canvas_RawBlock`).
 
 - **Inspector (Fáze 7A review): an optional colour can be unset; the required one is never cleared.** A
   nullable colour property (a section's `BackgroundColor`, say) now renders the picker for an EMPTY value
@@ -682,8 +806,77 @@
   mobile tab without binding `ActiveMobilePanelChanged` could not move the sheet again. It now adopts the
   parameter whenever it differs from the last value seen (the shell's own `_activeParamSeen` pattern).
 
-
 ### Breaking / Migration
+
+- **Fáze 9A — the canvas renders the E-MAIL, not a structural list (breaking DOM + behaviour).** The
+  canvas used to draw every block as a card with a type label and up to 80 characters of stripped text
+  (`.tm-email-canvas-block__kind` / `.tm-email-canvas-block__detail`), with a button that looked like a
+  chip and an image that looked like a caption. It now paints the block's real approximation of the MJML
+  output, inside a "paper" that is as wide as the document says.
+
+  ```text
+  before                                    after
+  ┌────────────────────────────┐           ┌──────────────────────────────────────┐
+  │ TEXT                       │           │  Hello world                         │
+  │ Hello world                │           │  [ Get started ]   ← pill, its own   │
+  │ BUTTON                     │           │                       colour/radius  │
+  │ Get started                │           │  ─────────────────────────────       │
+  │ IMAGE                      │           │  ▣ Company logo (img src/alt/width)  │
+  │ Company logo               │           │  {{ user.first_name }} ← token chip  │
+  └────────────────────────────┘           └──────────────────────────────────────┘
+  ```
+
+  What a host has to migrate:
+  * **CSS: `__kind` / `__detail` are gone — target the block BODY.** The structural label spans no longer
+    exist; the block's content is a `[data-tm-block-body]` element inside the `[data-tm-block-id]` wrapper,
+    and the body declares what it painted in `[data-tm-block-kind]`.
+    ```css
+    /* before */ .tm-email-canvas-block__kind { … }  .tm-email-canvas-block__detail { … }
+    /* after  */ [data-tm-block-body][data-tm-block-kind="text"] { … }
+                 [data-tm-block-body][data-tm-block-kind="button"] .tm-email-block__button { … }
+    ```
+    The content itself is the `tm-email-block*` BEM family (styles live in the package's scoped
+    `TmEmailCanvasBlock.razor.css`).
+  * **Tests: replace the removed selector with `[data-tm-block-body]`.** A spec that asserted the old
+    preview line (`.tm-email-canvas-block__detail`) now asserts the rendered body:
+    ```csharp
+    // before
+    page.Locator(".tm-email-canvas-block__detail").First
+    // after
+    page.Locator("[data-tm-block-body]").First
+    ```
+  * **The block's `aria-label` now carries CONTENT, not just the type.** It is the localized block type
+    plus a ≤60-character plain-text preview (`EmailEditor_Canvas_BlockLabel`, `{0}: {1}`; an empty block
+    uses `EmailEditor_Canvas_BlockLabelEmpty`, `{0} (empty)`), e.g. `Text: Welcome, {{ first_name }}`. A
+    selector that matched the exact type name (`aria-label='Table'`) must move to
+    `[data-tm-block-kind='table']` or to a `starts-with` match. Tokens stay as written, tags are stripped.
+  * **`aria-selected` → `aria-current="true"`, and the tab order is roving.** The items are
+    `role="list"`/`listitem`, where `aria-selected` is not a supported state (a screen reader ignored it).
+    Exactly ONE item carries `tabindex="0"` (the selected block, or the first block when nothing is
+    selected); every other item is `tabindex="-1"` and Arrow keys move selection AND focus. A spec that
+    asserted `[data-tm-block-id][aria-selected='true']` must use `[aria-current='true']`.
+  * **New `[data-tm-block-empty]` marker and `--tm-paper-danger-ink`.** An empty text/button/navbar/
+    social/table/carousel/accordion block no longer renders nothing (an invisible, unselectable hole): it
+    paints a dashed "Empty block – add content in Properties" line. A refused link is marked with
+    `data-tm-link-blocked` / `data-tm-cell-link-blocked` plus an alert icon and a wavy underline, and a
+    refused hero/section background with `data-tm-image-blocked`. The paper-family token
+    `--tm-paper-danger-ink` (`#991b1b`, theme-invariant like the other `--tm-paper*` values) is what the
+    refused link paints — a host that redefines the paper palette should define it too.
+  * The floating action bar keeps `[data-tm-block-action]` (`up` / `down` / `duplicate` / `delete`) and
+    gained a decorative grip (`[data-tm-block-grip]`); the block wrapper itself stays `draggable`, so a
+    drag started anywhere on the block still works (`EmailEditorDragDropE2ETests` unchanged). On a desktop
+    the bar floats ABOVE the block instead of over its first line.
+  * Text blocks NO LONGER show their source. An author who needs the HTML uses the inspector's rich-text
+    editor; the canvas shows the result. `mj-raw` blocks show an escaped placeholder, never their markup
+    (this was already true of the export and the preview, and can never change).
+  * `Document.Styles.ContentWidth` decides the paper width, so a wide template (700 px) no longer renders
+    at the old fixed 640 px; `Document.Styles.BackgroundColor`/`FontFamily` are painted on the paper.
+  * **On a coarse pointer (a phone, a tablet) the block's action strip is IN FLOW and appears only on the
+    SELECTED block** — never on hover, and never as an overlay. At the finger-sized 44 px targets the old
+    overlay covered the middle of a small block, so the first tap of a selection landed on "move up"
+    instead of selecting (measured: the editor's own F8 mobile specs could no longer open the inspector).
+    A touch user taps to select, then acts; the strip pushes the block content down by one row. The drag
+    grip is hidden there on purpose: HTML5 drag-and-drop does not run on a touch screen.
 
 - **`TmEditorShell.ResolvedLayoutChanged` now fires before `CollapsedPanelsChanged` (event ORDER, not the
   signatures).** Both callbacks keep their types and both still fire in the same pass; only the order

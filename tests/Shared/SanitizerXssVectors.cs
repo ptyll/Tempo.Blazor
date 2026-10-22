@@ -70,6 +70,13 @@ internal static class SanitizerXssVectors
         "<!-",
         "<svg/onload=alert(1)>",
         "<a href=\"https://ok.example/x\" target=\"_blank\" rel=\"noopener\">x</a>",
+        // Headings are allow-listed (D28) and carry NO attribute: a heading is a formatting element, not a
+        // container for an event handler or a style that could paint over the editor.
+        "<h1 onclick=alert(1) style=\"background:url(javascript:alert(1))\">Ahoj</h1>",
+        "<h2><img src=x onerror=alert(1)></h2>",
+        "<h3 style=\"position:fixed;inset:0\">x</h3>",
+        "<h4 onmouseover=alert(1)>x</h4>",
+        "<h5>x</h5><h6>y</h6>",
     ];
 
     /// <summary>

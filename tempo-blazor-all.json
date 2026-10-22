@@ -108390,7 +108390,7 @@
               "name": "AllowedTags",
               "kind": "Property",
               "type": "static IReadOnlySet<string>",
-              "description": "Tags that may appear in sanitized inline HTML."
+              "description": "Tags that may appear in sanitized inline HTML. Headings (h1–h6) are part of the set (D28): a mail author writes typography with them, and the WYSIWYG canvas has to show it. They are formatting elements exactly like b/i — the tag and its text survive, every attribute (style, on*, class) is dropped by both implementations."
             },
             {
               "name": "ConservativeAttributes",
@@ -109478,6 +109478,30 @@
       },
       "items": [
         {
+          "itemName": "CanvasImageLoading",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.EmailTemplates.Components",
+          "description": "How the WYSIWYG canvas treats the images a template references (Fáze 9A). The editor canvas is the one place where a template's remote images become requests from the AUTHOR's browser: an imported template can carry a per-recipient tracking pixel, and a host editing a template it did not author may not want that request made from the editor at all. Load is the default — the canvas is a preview and the author is writing the email, so a missing picture would be the more surprising behaviour. Only URLs the pipeline's allow-list accepted are ever requested.",
+          "packageId": "Tempo.Blazor.EmailTemplates",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/CanvasImageLoading.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Load",
+              "kind": "Field",
+              "type": "CanvasImageLoading",
+              "description": "Load the image in an <img> after the pipeline's URL allow-list accepted it (the default). The rendered email loads the same source anyway, so this is the faithful preview."
+            },
+            {
+              "name": "Placeholder",
+              "kind": "Field",
+              "type": "CanvasImageLoading",
+              "description": "Never issue a request from the editor: paint a framed placeholder with the alt text instead. Use it for privacy (no tracking pixel from an author's browser) or on a metered connection."
+            }
+          ]
+        },
+        {
           "itemName": "EmailAccordionItemValidator",
           "kind": "Class",
           "category": "Components",
@@ -109899,6 +109923,43 @@
           "packageId": "Tempo.Blazor.EmailTemplates",
           "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/PropertyReflection.cs",
           "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TmEmailCanvasBlock",
+          "kind": "Component",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.EmailTemplates.Components",
+          "description": "WYSIWYG renderer of ONE email block on the editor canvas (Fáze 9A): an approximation of the MJML output built from the model values — text as sanitized inline HTML with token chips, a button as a pill with its background/radius/alignment, an image as an <img> with src/alt/width, divider, spacer, table with a header row and linked cells, social icons, navbar links, hero with a background image and nested content, carousel as its first image plus the count, accordion titles, and a wrapper/group as a frame holding its nested sections/columns. The authoritative output stays the server preview (IEmailPreviewRenderer). The renderer owns its own re-render decision (ShouldRender over the block's rendered-data signature), so a property change repaints one block instead of the document. Untrusted content: block text goes through IHtmlContentSanitizer and loses every attribute, an mj-raw block is NEVER rendered as markup, no link is navigable (a click selects the block), and every URL passes EmailUrlPolicy. Set CanvasImageLoading=Placeholder to issue no image request at all.",
+          "packageId": "Tempo.Blazor.EmailTemplates",
+          "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailCanvasBlock.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.EmailTemplates.Components"
+          ],
+          "parameters": [
+            {
+              "name": "Block",
+              "type": "EmailBlockBase",
+              "isRequired": true,
+              "description": "The block to draw.",
+              "editorRequired": true
+            },
+            {
+              "name": "CanvasImageLoading",
+              "type": "CanvasImageLoading",
+              "isRequired": false,
+              "default": "CanvasImageLoading.Load",
+              "description": "Whether the remote images of the block may be requested by the author's browser. Defaults to Load; Placeholder paints a framed alt-text placeholder and issues no request (privacy / tracking protection).",
+              "defaultValue": "CanvasImageLoading.Load"
+            },
+            {
+              "name": "Nested",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the block is drawn INSIDE another block's frame (a wrapper, a hero, a group) instead of as a canvas item. Nested blocks are content: they carry no canvas selector and no drag/selection target.",
+              "defaultValue": "false"
+            }
+          ]
         },
         {
           "itemName": "TmEmailClassesEditor",
@@ -110487,7 +110548,7 @@
           "kind": "Component",
           "category": "Components",
           "namespace": "Tempo.Blazor.EmailTemplates.Components",
-          "description": "Central editing canvas that renders an email document's sections, columns, and blocks. Supports selection, drag-and-drop, keyboard navigation, and per-section toolbars for adding columns and moving, duplicating, or deleting a section.",
+          "description": "Central editing canvas that renders an email document's sections, columns, and blocks as the email they will become (WYSIWYG, Fáze 9A) on a paper of the document's own ContentWidth, with the selection frame, the drag handle and the per-block action bar. Supports selection, drag-and-drop, keyboard navigation, and per-section toolbars for adding columns and moving, duplicating, or deleting a section. Untrusted content is sanitized and no link on the canvas is navigable.",
           "packageId": "Tempo.Blazor.EmailTemplates",
           "sourcePath": "src/Tempo.Blazor.EmailTemplates/Components/TmEmailTemplateCanvas.razor",
           "documentationStatus": "merged",
@@ -110495,6 +110556,14 @@
             "@using Tempo.Blazor.EmailTemplates.Components"
           ],
           "parameters": [
+            {
+              "name": "CanvasImageLoading",
+              "type": "CanvasImageLoading",
+              "isRequired": false,
+              "default": "CanvasImageLoading.Load",
+              "description": "Whether the canvas may request the document's remote images from the author's browser. Defaults to Load; Placeholder paints a framed alt-text placeholder instead and issues no request at all (privacy / tracking protection).",
+              "defaultValue": "CanvasImageLoading.Load"
+            },
             {
               "name": "Document",
               "type": "EmailTemplateDocument",
@@ -110583,6 +110652,14 @@
               "type": "TmLayoutBreakpoints?",
               "isRequired": false,
               "description": "The two container widths that decide the layout. Null (default) uses new TmLayoutBreakpoints(768, 1200): below 768 the editor is a phone layout, from 1200 the full desktop chrome, in between the tablet layout."
+            },
+            {
+              "name": "CanvasImageLoading",
+              "type": "CanvasImageLoading",
+              "isRequired": false,
+              "default": "CanvasImageLoading.Load",
+              "description": "Whether the WYSIWYG canvas may request the document's remote images from the AUTHOR's browser. The default is Load (the canvas is a preview and the sent email loads the same source anyway). Set Placeholder for privacy: an imported template can carry a per-recipient tracking pixel and the placeholder mode issues no request at all — it paints a framed box with the image's alt text.",
+              "defaultValue": "CanvasImageLoading.Load"
             },
             {
               "name": "Document",
@@ -111190,12 +111267,12 @@
         }
       ],
       "summary": {
-        "itemCount": 43,
-        "manualItemCount": 43,
-        "generatedItemCount": 43,
+        "itemCount": 45,
+        "manualItemCount": 45,
+        "generatedItemCount": 45,
         "generatedOnlyItemCount": 0,
-        "componentCount": 18,
-        "publicApiTypeCount": 25
+        "componentCount": 19,
+        "publicApiTypeCount": 26
       }
     },
     {
@@ -118779,10 +118856,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3282,
-    "manualItemCount": 3282,
+    "itemCount": 3284,
+    "manualItemCount": 3284,
     "generatedOnlyItemCount": 0,
-    "componentCount": 478,
-    "publicApiTypeCount": 2751
+    "componentCount": 479,
+    "publicApiTypeCount": 2752
   }
 }

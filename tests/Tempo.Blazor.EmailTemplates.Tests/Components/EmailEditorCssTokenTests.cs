@@ -69,6 +69,66 @@ public class EmailEditorCssTokenTests
     }
 
     [Fact]
+    public void The_canvas_paper_is_the_theme_invariant_page()
+    {
+        // Fáze 9A: the canvas paints the E-MAIL, so its paper must stay white/dark-ink in every theme — a
+        // --tm-color-surface paper would go dark with the chrome and disagree with the export.
+        var canvas = Stylesheets.Value.Single(s => s.Name == "TmEmailTemplateCanvas.razor.css").Text;
+
+        var paper = Rule(canvas, ".tm-email-canvas-doc");
+        paper.Should().Contain("--tm-paper", "the page is the theme-invariant paper token");
+        paper.Should().Contain("--tm-paper-ink");
+        // The BACKGROUND must not follow the chrome surface. (The rule deliberately re-points the chrome
+        // ALIASES --tm-color-text/--tm-color-surface-secondary/… at their paper values for the paper's
+        // descendants, F9A review 12, so the bare token NAME appearing here is not the failure mode.)
+        paper.Should().NotContain("background: var(--tm-color-surface");
+
+        Rule(canvas, ".tm-email-canvas-block.is-selected").Should().Contain("--tm-color-primary",
+            "the selected block frame is the primary colour (the reference's indigo frame)");
+    }
+
+    [Fact]
+    public void The_canvas_actions_are_finger_sized_under_a_coarse_pointer()
+    {
+        var canvas = Stylesheets.Value.Single(s => s.Name == "TmEmailTemplateCanvas.razor.css").Text;
+
+        canvas.Should().Contain("@media (pointer: coarse)",
+            "a touch screen has no hover: the selected block's actions must be reachable");
+        canvas.Should().Contain("--tm-touch-target", "a finger needs 44 px, not a 24 px icon button");
+    }
+
+    [Fact]
+    public void A_touch_toolbar_is_in_flow_and_never_hover_triggered()
+    {
+        // Measured regression (F9A): on a coarse pointer the 44 px action strip appeared on HOVER, covered
+        // the middle of an 80 px block and swallowed the first tap of a selection, so the F8 mobile specs
+        // could no longer open the inspector. A touch user selects first and then acts, and the strip is in
+        // flow so it can never cover the content it belongs to.
+        var canvas = Stylesheets.Value.Single(s => s.Name == "TmEmailTemplateCanvas.razor.css").Text;
+        var start = canvas.IndexOf("@media (pointer: coarse)", StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0);
+        var coarse = canvas[start..];
+
+        // The selectors are a multi-line list, so the rule body is read from the selector's first mention to
+        // the closing brace of that rule.
+        RuleBody(coarse, ".tm-email-canvas-block:hover > .tm-email-canvas-block__toolbar")
+            .Should().Contain("display: none", "there is no hover on a touch screen");
+        RuleBody(coarse, ".tm-email-canvas-block.is-selected > .tm-email-canvas-block__toolbar")
+            .Should().Contain("position: static", "the strip is in flow, not an overlay over the content");
+    }
+
+    [Fact]
+    public void The_block_renderer_styles_only_through_deep_for_injected_markup()
+    {
+        // The sanitized content and the token chips are injected as MarkupString, so they carry no scope
+        // attribute: a bare `.tm-email-block__token` rule would silently match nothing.
+        var block = Stylesheets.Value.Single(s => s.Name == "TmEmailCanvasBlock.razor.css").Text;
+
+        block.Should().Contain(".tm-email-block ::deep .tm-email-block__token");
+        block.Should().Contain(".tm-email-block ::deep .tm-email-block__cell-link");
+    }
+
+    [Fact]
     public void The_toolbox_never_crops_a_tile_label()
     {
         var toolbox = Stylesheets.Value.Single(s => s.Name == "TmEmailTemplateToolbox.razor.css").Text;
@@ -150,6 +210,16 @@ public class EmailEditorCssTokenTests
 
         Rule(toolbox, ".tm-email-toolbox__header").Replace(" ", "").Should().Contain("justify-content:space-between",
             "the title sits left, the collapse arrow right");
+    }
+
+    /// <summary>The declarations of the rule whose selector LIST contains <paramref name="selector"/>.</summary>
+    private static string RuleBody(string css, string selector)
+    {
+        var index = css.IndexOf(selector, StringComparison.Ordinal);
+        index.Should().BeGreaterThanOrEqualTo(0, $"{selector} must exist");
+        var open = css.IndexOf('{', index);
+        var close = css.IndexOf('}', open);
+        return css[open..close];
     }
 
     private static string Rule(string css, string selector)

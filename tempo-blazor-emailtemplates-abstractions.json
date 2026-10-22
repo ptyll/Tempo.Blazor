@@ -3986,7 +3986,7 @@
           "name": "AllowedTags",
           "kind": "Property",
           "type": "static IReadOnlySet<string>",
-          "description": "Tags that may appear in sanitized inline HTML."
+          "description": "Tags that may appear in sanitized inline HTML. Headings (h1–h6) are part of the set (D28): a mail author writes typography with them, and the WYSIWYG canvas has to show it. They are formatting elements exactly like b/i — the tag and its text survive, every attribute (style, on*, class) is dropped by both implementations."
         },
         {
           "name": "ConservativeAttributes",

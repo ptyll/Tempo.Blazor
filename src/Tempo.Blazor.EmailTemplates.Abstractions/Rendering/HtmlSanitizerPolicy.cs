@@ -14,9 +14,14 @@ namespace Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 /// </remarks>
 public static class HtmlSanitizerPolicy
 {
-    /// <summary>Tags that may appear in sanitized inline HTML.</summary>
+    /// <summary>
+    /// Tags that may appear in sanitized inline HTML. Headings (<c>h1</c>–<c>h6</c>) are part of the set
+    /// (D28): a mail author writes typography with them, and the WYSIWYG canvas has to show it. They are
+    /// formatting elements exactly like <c>b</c>/<c>i</c> — the tag and its text survive, every attribute
+    /// (<c>style</c>, <c>on*</c>, <c>class</c>) is dropped by both implementations.
+    /// </summary>
     public static IReadOnlySet<string> AllowedTags { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { "b", "i", "u", "strong", "em", "a", "br", "span", "p", "ul", "ol", "li" };
+        { "b", "i", "u", "strong", "em", "a", "br", "span", "p", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6" };
 
     /// <summary>
     /// Attributes the authoritative (AngleSharp) implementation may keep. The conservative

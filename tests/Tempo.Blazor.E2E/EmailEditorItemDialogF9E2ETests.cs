@@ -78,14 +78,18 @@ public sealed class EmailEditorItemDialogF9E2ETests : EmailTemplateE2ETestBase
     }
 
     /// <summary>
-    /// Selects a block by its localized type name. The click is DISPATCHED instead of a real pointer click:
+    /// Selects a block by its localized TYPE. The click is DISPATCHED instead of a real pointer click:
     /// on a phone the editor's bottom sheet covers the lower half of the canvas, so Playwright's hit test
     /// refuses the click on a block that sits under it (the sheet is the user's own surface, not an overlay
     /// bug). The dispatched event still travels the normal Blazor handler path.
+    /// <para>
+    /// The selector is the block KIND, not the accessible name: since the F9A UX review the name carries the
+    /// block's brief content too ("Table: r0c0"), so an exact <c>aria-label='Table'</c> match no longer hits.
+    /// </para>
     /// </summary>
-    private static async Task SelectBlockAsync(IPage page, string ariaLabel)
+    private static async Task SelectBlockAsync(IPage page, string kind)
     {
-        await page.Locator($".tm-email-canvas-block[aria-label='{ariaLabel}']").First
+        await page.Locator($".tm-email-canvas-block[data-tm-block-kind='{kind.ToLowerInvariant()}']").First
             .DispatchEventAsync("click");
         await page.WaitForTimeoutAsync(400);
     }

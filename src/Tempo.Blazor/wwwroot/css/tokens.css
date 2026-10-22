@@ -435,6 +435,10 @@
   --tm-paper-ink-muted:        #4b5563;  /* gray-600, 7.6:1 on white (today's diagram ink) */
   --tm-paper-border:           #d1d5db;  /* gray-300, page edge */
   --tm-paper-backdrop:         #f3f4f6;  /* gray-100, area outside the page */
+  /* Danger INK on the paper (Fáze 9A review). A paper surface is white in every theme, so the chrome's
+     --tm-color-danger-text — which flips to #fca5a5 in dark mode, 2.3:1 on white — cannot be used on it.
+     Literal light value, deliberately NOT re-declared in tokens-dark.css (same rule as --tm-paper*). */
+  --tm-paper-danger-ink:       #991b1b;  /* 8.3:1 on white */
   /* Equal to the radii components use today, so consuming them changes nothing
      until a theme overrides them. Cards take the lg step, controls the md step. */
   --tm-radius-card:            var(--tm-radius-lg);

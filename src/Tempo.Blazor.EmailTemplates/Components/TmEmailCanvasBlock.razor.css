@@ -1,0 +1,367 @@
+/* Fáze 9A — the visual renderer of one block. Everything here is the AUTHOR's e-mail, so it must look
+   like an e-mail in every theme: the block paints its own colours from the model (validated by
+   EmailCanvasValue) on the theme-invariant paper, and the neutral fallbacks below use the paper tokens
+   rather than the chrome tokens.
+
+   Two kinds of elements need `::deep`:
+     - markup injected with MarkupString (the sanitized text content, the token chips, the inert links):
+       it carries no scope attribute, so a bare class rule would never match it;
+     - the elements of a NESTED renderer (a wrapper/hero/group child) which carries the child's scope. */
+
+.tm-email-block {
+    position: relative;
+    color: var(--tm-paper-ink);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+    overflow-wrap: anywhere;
+}
+
+.tm-email-block--nested {
+    /* A nested block is content inside a frame; it must not look like a separate card. */
+    overflow: visible;
+}
+
+/* ── Text ──────────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block--text ::deep .tm-email-block__link,
+.tm-email-block--text ::deep a {
+    color: var(--tm-color-primary);
+    text-decoration: underline;
+}
+
+/* D28: headings are allow-listed in the sanitizer because an e-mail author writes typography with them, so
+   the canvas shows the author's hierarchy instead of six identical paragraphs. Sizes come from the token
+   scale and never from the block's own font-size, exactly like a mail client's UA sheet. */
+.tm-email-block ::deep h1,
+.tm-email-block ::deep h2,
+.tm-email-block ::deep h3,
+.tm-email-block ::deep h4,
+.tm-email-block ::deep h5,
+.tm-email-block ::deep h6 {
+    margin-block: 0 var(--tm-space-2);
+    font-weight: var(--tm-font-weight-bold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-email-block ::deep h1 { font-size: var(--tm-font-size-2xl); }
+.tm-email-block ::deep h2 { font-size: var(--tm-font-size-xl); }
+.tm-email-block ::deep h3 { font-size: var(--tm-font-size-lg); }
+.tm-email-block ::deep h4 { font-size: var(--tm-font-size-md); }
+.tm-email-block ::deep h5 { font-size: var(--tm-font-size-sm); }
+.tm-email-block ::deep h6 { font-size: var(--tm-font-size-xs); }
+
+/* The template token chip. A token is NOT substituted on the canvas: the author sees the token they
+   wrote (reference parity: "tokeny jako čipy"). */
+.tm-email-block ::deep .tm-email-block__token {
+    display: inline-block;
+    padding: 0 var(--tm-space-1);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-family: var(--tm-font-mono);
+    font-size: 0.85em;
+    line-height: var(--tm-line-height-tight);
+    white-space: nowrap;
+}
+
+/* The "still empty" marker of a text/button/list block. It is emitted from RenderTreeBuilder, so it carries
+   no scope attribute — the rule has to go through ::deep from the block root. */
+.tm-email-block ::deep .tm-email-block__empty {
+    display: block;
+    min-block-size: 2.5rem;
+    padding: var(--tm-space-2);
+    border: 1px dashed var(--tm-paper-border);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-paper-ink-muted);
+    font-size: var(--tm-font-size-xs);
+    font-style: italic;
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Button ────────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__button {
+    display: inline-block;
+    max-inline-size: 100%;
+    text-align: center;
+    text-decoration: none;
+    cursor: inherit;
+}
+
+/* ── Image, and the placeholder that replaces a refused or unloaded one ────────────────── */
+
+/* The image and its placeholder are rendered with RenderTreeBuilder, so they carry no scope attribute: a
+   bare class rule never matched them and the framed placeholder painted as run-together text (review
+   finding 11, caught by an E2E asserting borderStyle/display). */
+.tm-email-block ::deep .tm-email-block__image,
+.tm-email-block ::deep .tm-email-block__carousel-image {
+    display: inline-block;
+    block-size: auto;
+    object-fit: cover;
+}
+
+.tm-email-block ::deep .tm-email-block__image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-block-size: 5rem;
+    padding: var(--tm-space-3);
+    border: 1px dashed var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface-secondary);
+    color: var(--tm-color-text-muted);
+    text-align: center;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-email-block ::deep .tm-email-block__image-placeholder-alt {
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-email-block ::deep .tm-email-block__image-placeholder-reason {
+    color: var(--tm-color-text-muted);
+}
+
+/* A background image (hero/section) that could not be painted must not take the block's whole height. */
+.tm-email-block ::deep .tm-email-block__image-placeholder--background {
+    min-block-size: 2.5rem;
+    padding: var(--tm-space-1);
+}
+
+/* ── Divider, spacer ──────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__divider {
+    display: block;
+    inline-size: 100%;
+    margin: 0;
+}
+
+.tm-email-block__spacer {
+    inline-size: 100%;
+}
+
+/* ── Raw HTML: a placeholder, never the markup ────────────────────────────────────────── */
+
+.tm-email-block__raw {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px dashed var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface-secondary);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-email-block__raw-label {
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+.tm-email-block__raw-text {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+    font-family: var(--tm-font-mono);
+    color: var(--tm-color-text-muted);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-block__table ::deep th,
+.tm-email-block__table ::deep td {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-email-block__table ::deep th {
+    font-weight: var(--tm-font-weight-semibold);
+    border-block-end: 1px solid var(--tm-paper-border);
+}
+
+.tm-email-block ::deep .tm-email-block__cell-link {
+    color: var(--tm-color-primary);
+    text-decoration: underline;
+}
+
+/* A refused link stays readable but obviously wrong: a wavy underline plus the alert icon in front of it.
+   `--tm-paper-danger-ink` is the paper-family danger ink — `--tm-color-danger-text` inverts in dark mode (it
+   becomes a LIGHT red, ~2.3:1 on white), and the paper is white in every theme, so it cannot be used here. */
+.tm-email-block ::deep .tm-email-block__cell-link--blocked,
+.tm-email-block ::deep .tm-email-block__button--link-blocked,
+.tm-email-block ::deep .tm-email-block__nav-link--link-blocked {
+    color: var(--tm-paper-danger-ink);
+    text-decoration: underline wavy;
+    cursor: help;
+}
+
+/* The marker itself is emitted from RenderTreeBuilder (table cells) and from the razor (button/navbar), so
+   the rule has to be scope-tolerant either way. */
+.tm-email-block ::deep .tm-email-block__link-blocked-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-end: var(--tm-space-1);
+    color: var(--tm-paper-danger-ink);
+    vertical-align: middle;
+}
+
+/* ── Social ───────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__social {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    align-items: center;
+    justify-content: inherit;
+}
+
+.tm-email-block__social--vertical {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.tm-email-block__social-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-block__social-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-surface-secondary);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* ── Navbar ───────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__navbar {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-3);
+    align-items: center;
+}
+
+.tm-email-block__nav-link {
+    display: inline-block;
+    color: var(--tm-color-text);
+    white-space: nowrap;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block--hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.tm-email-block__hero-bg {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.tm-email-block__hero-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+}
+
+/* ── Carousel ─────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__carousel-count {
+    display: inline-block;
+    margin-inline-start: var(--tm-space-2);
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-surface-secondary);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+    vertical-align: middle;
+}
+
+/* ── Accordion ────────────────────────────────────────────────────────────────────────── */
+
+.tm-email-block__accordion {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-email-block__accordion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-block-end: 1px solid var(--tm-paper-border);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-email-block__accordion-item:last-child {
+    border-block-end: 0;
+}
+
+.tm-email-block__accordion-title {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-email-block__accordion-icon {
+    color: var(--tm-color-text-muted);
+}
+
+/* ── Wrapper, group: the frame around nested content ──────────────────────────────────── */
+
+.tm-email-block__frame {
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+}
+
+.tm-email-block__frame--group {
+    flex-direction: row;
+    gap: var(--tm-space-2);
+    align-items: stretch;
+}
+
+.tm-email-block__nested-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-email-block__nested-column {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+}
