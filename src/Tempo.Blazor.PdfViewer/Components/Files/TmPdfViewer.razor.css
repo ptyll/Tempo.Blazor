@@ -6,6 +6,10 @@
        inventing global names. */
     --tm-pdf-page-shadow: var(--tm-shadow-card);
     --tm-pdf-panel-width: 140px;
+    /* M4: the docked comments panel's width (the TmPdfAnnotationThreadPanel root's own
+       knob is 280px) — the floating search card offsets by it while the panel is docked,
+       so the card and the panel never overlap. Keep the two values in sync. */
+    --tm-pdf-comments-panel-width: 280px;
 
     display: flex;
     flex-direction: column;
@@ -377,6 +381,13 @@
     border-bottom-left-radius: 0;
 }
 
+/* M4: while the comments panel is DOCKED (the markup sets the modifier class from the
+   same condition that renders the panel), the card clears the panel's right-edge strip
+   instead of painting over the open threads. */
+.tm-pdf-viewer__search-card--docked-panel {
+    right: calc(var(--tm-pdf-comments-panel-width) + var(--tm-space-3));
+}
+
 @keyframes tm-pdf-search-card-in {
     from {
         opacity: 0;
@@ -393,20 +404,6 @@
     .tm-pdf-viewer__search-card {
         animation: none;
     }
-}
-
-/* ── PD1: annotations single-page hint (continuous mode) ─────────────────── */
-
-.tm-pdf-viewer__annotations-hint {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
-    padding: var(--tm-space-2) var(--tm-space-4);
-    font-size: var(--tm-font-size-xs);
-    color: var(--tm-color-info-text);
-    background: var(--tm-color-info-subtle);
-    border-bottom: 1px solid var(--tm-border-color);
-    flex-shrink: 0;
 }
 
 /* ── Body layout ─────────────────────────────────────────────────────────── */
@@ -497,8 +494,10 @@
    fully opaque so the native selection highlight — and its touch handles — render at full
    strength (an `opacity` on the span would fade the highlight too). Positioning, font size
    and the width-correcting transform are the TextLayer's own inline styles; these rules
-   supply the presentation half of the official .textLayer :is(span, br) contract. */
-.tm-pdf-viewer__text-layer ::deep :is(span, br) {
+   supply the presentation half of the official .textLayer span/br contract. Separate
+   selectors, no :is(). */
+.tm-pdf-viewer__text-layer ::deep span,
+.tm-pdf-viewer__text-layer ::deep br {
     position: absolute;
     margin: 0;
     white-space: pre;
@@ -508,7 +507,8 @@
     user-select: text;
 }
 
-.tm-pdf-viewer__text-layer ::deep :is(span, div)::selection {
+.tm-pdf-viewer__text-layer ::deep span::selection,
+.tm-pdf-viewer__text-layer ::deep div::selection {
     background: color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
@@ -546,6 +546,7 @@
 /* ── Continuous scroll wrap ──────────────────────────────────────────────── */
 
 .tm-pdf-viewer__continuous-wrap {
+    position: relative; /* the Blazor overlay slots position against the scroll content */
     scrollbar-gutter: stable;
     flex: 1;
     overflow: auto;
@@ -556,6 +557,19 @@
        single-page canvas wrap, so both modes read as one workspace. */
     background: var(--tm-bg-workspace);
     padding: var(--tm-space-4);
+}
+
+/* FZE-13 (PDF-VIEWER-CONTINUOUS-ANNOTATIONS): the scroll wrap hosts the JS-owned
+   pages container and — when annotations or the templated PageOverlayContent are
+   on — the Blazor-owned slot container (the TmPdfContinuousOverlays child component,
+   whose own stylesheet positions it). The slots are absolutely positioned from the
+   JS geometry report, so they ride the scroll content and stay over their page
+   through zoom, rotation and resize. */
+
+/* The templated per-page overlay in single-page mode (FZE-13): sized to the canvas
+   by syncOverlay like the annotation overlay; the layer inside fills it. */
+.tm-pdf-viewer__canvas-wrap .tm-pdf-viewer__page-overlay {
+    z-index: 2;
 }
 
 /* The continuous pages and the thumbnails are DOM built by pdf-viewer.js — they never
@@ -633,6 +647,32 @@
 
 .tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__text-layer[data-main-rotation="270"] {
     transform: rotate(270deg) translateX(-100%);
+}
+
+/* The TextLayer span presentation (FZE-9) for the JS-built per-page layers. The scoped
+   `.tm-pdf-viewer__text-layer` rule above cannot reach them — those layers never carry
+   the Blazor scope attribute — so the continuous wrap (which the viewer DOES render)
+   re-supplies it: the spans paint nothing (no doubled glyphs under the canvas) but stay
+   selectable. Separate selectors, no :is(). */
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__text-layer span {
+    position: absolute;
+    margin: 0;
+    white-space: pre;
+    color: transparent;
+    transform-origin: 0 0;
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__text-layer br {
+    position: absolute;
+    margin: 0;
+    white-space: pre;
+    color: transparent;
+    transform-origin: 0 0;
+}
+
+.tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__text-layer span::selection {
+    background: color-mix(in srgb, var(--tm-color-primary) 30%, transparent);
 }
 
 .tm-pdf-viewer__continuous-wrap ::deep .tm-pdf-viewer__page .tm-pdf-viewer__search-layer {

@@ -281,6 +281,14 @@ public partial class TmPdfViewer
                 if (_lastContinuousRender is { } last && last.Url == Url && last.Rotation == Rotation
                     && _totalPages > 0)
                 {
+                    // B4: the in-place zoom relayouts the pages BEFORE the fresh geometry
+                    // report arrives — hide the slots meanwhile so the stale boxes never
+                    // paint over the moved pages (the JS side forces a fresh report).
+                    if (EnableAnnotations || PageOverlayContent is not null)
+                    {
+                        _continuousOverlaysRef?.MarkStale();
+                    }
+
                     // Scale-only change: the per-page DOM, its layers and the
                     // observer/scroll bindings are still valid — update the
                     // placeholders in place instead of rebuilding the wrap.
@@ -374,18 +382,28 @@ public partial class TmPdfViewer
             _fitPending = true;
         }
 
+        // The selection handler binds the mode's text layer element (the single-page
+        // layer vs the JS-built per-page layers) — re-arm it for the fresh DOM.
+        _selectionEnabled = false;
+
         if (_viewMode == PdfViewMode.Continuous)
         {
+            // M2: the single-page boxes are meaningless in the continuous column — the
+            // fresh geometry report re-mounts the band's slots (the child is fresh, but
+            // the root list feeds the single-page context only).
+            _overlayPages = [];
+            _overlayRotation = 0;
             _singlePagePending = false;
             await RenderContinuousPagesAsync();
         }
         else
         {
-            // PD1: the annotation overlay and the text-selection setup live in the
-            // canvas-wrap layout only. The canvas/text-layer refs still point at the
-            // torn-down continuous DOM until the swap has been rendered — defer the
-            // render + selection/overlay setup to OnAfterRenderAsync
-            // (_singlePagePending), exactly like the deferred fit recompute.
+            // The annotation slots and per-page geometry die with the continuous DOM;
+            // the canvas/text-layer/overlay refs still point at the torn-down wrap
+            // until the swap has been rendered — defer the render + selection/overlay
+            // setup to OnAfterRenderAsync (_singlePagePending), exactly like the
+            // deferred fit recompute.
+            _overlayPages = [];
             _singlePagePending = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -394,14 +412,14 @@ public partial class TmPdfViewer
     /// <summary>
     /// Rebuilds the continuous pages at the current scale/rotation. The JS side keeps
     /// placeholders for every page and paints lazily; the flags decide which per-page
-    /// layers the wraps carry. PD1: annotations never render in continuous mode, so
-    /// the text layer follows only the viewer's own <see cref="ShowTextLayer"/> and the
-    /// search layer follows <see cref="ShowSearch"/> — annotation-driven selection
-    /// (EnableAnnotations / EnableTextSelectionEvents) stays single-page.
+    /// layers the wraps carry. Annotations render per page (FZE-13), so the text layer
+    /// — the selection surface — follows the viewer's own <see cref="ShowTextLayer"/>
+    /// OR any annotation-driven selection need; the search layer follows
+    /// <see cref="ShowSearch"/>.
     /// </summary>
     private async Task RenderContinuousPagesAsync()
     {
-        var textLayer = ShowTextLayer;
+        var textLayer = ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents;
         var searchLayer = ShowSearch;
         try
         {

@@ -237,14 +237,61 @@ public partial class TmPdfViewer
         await InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>
+    /// Receives the per-page overlay geometry from JavaScript (FZE-13). In continuous mode
+    /// the payload carries ONLY the pages inside the ±50% mount band — exactly the pages
+    /// that get a Blazor overlay slot, so the lazy-render contract and the painted-page
+    /// limit keep holding; in single-page mode it carries the current canvas box. The
+    /// arrays are position-parallel; entries for pages outside the loaded document are
+    /// ignored (annotations on a nonexistent page never render).
+    /// </summary>
+    /// <param name="pages">One-based page numbers of the mounted pages, ascending.</param>
+    /// <param name="tops">Page box tops in scroll-content coordinates.</param>
+    /// <param name="lefts">Page box lefts in scroll-content coordinates.</param>
+    /// <param name="widths">Page box widths in CSS pixels.</param>
+    /// <param name="heights">Page box heights in CSS pixels.</param>
+    /// <param name="rotation">Document rotation the geometry was measured at.</param>
+    [JSInvokable]
+    public void OnContinuousPageGeometry(
+        int[]? pages, double[]? tops, double[]? lefts, double[]? widths, double[]? heights, int rotation)
+    {
+        var count = Math.Min(pages?.Length ?? 0,
+            Math.Min(tops?.Length ?? 0, Math.Min(lefts?.Length ?? 0,
+                Math.Min(widths?.Length ?? 0, heights?.Length ?? 0))));
+        var boxes = new List<PdfPageOverlayBox>(count);
+        for (var i = 0; i < count; i++)
+        {
+            var page = pages![i];
+            if (page < 1 || (_totalPages > 0 && page > _totalPages))
+            {
+                continue; // a page outside the document is not a mountable slot
+            }
+            boxes.Add(new PdfPageOverlayBox(page, tops![i], lefts![i], widths![i], heights![i]));
+        }
+
+        _overlayPages = boxes;
+        _overlayRotation = rotation;
+        if (_viewMode == PdfViewMode.Continuous)
+        {
+            // M2: the slots live in their own child — it re-renders ITSELF, so a
+            // geometry report never costs a root-viewer diff.
+            _continuousOverlaysRef?.SetGeometry(boxes, rotation);
+        }
+        else
+        {
+            // Single-page: the report is the canvas box behind PageOverlayContent —
+            // the root re-render refreshes the templated context.
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
     /// <summary>Receives a text selection captured from the JavaScript text layer.</summary>
     /// <param name="text">Selected text.</param>
     /// <param name="page">One-based page the selection belongs to.</param>
     /// <param name="rects">Flat list of normalized rectangles: x, y, width, height per rectangle.</param>
     [JSInvokable]
     public async Task OnTextSelectionChanged(string? text, int page, double[]? rects)
-    {
-        var normalized = BuildRects(rects);
+    {        var normalized = BuildRects(rects);
         if (string.IsNullOrWhiteSpace(text) || normalized.Count == 0)
         {
             _pendingSelection = null;

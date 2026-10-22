@@ -4,6 +4,25 @@
 
 ### Added
 
+- **TmPdfViewer: annotations in Continuous mode — PD1 superseded (FZE-13).** The viewer now renders
+  annotation markers and selection-driven threads on every page of the continuous column, not just in
+  single-page mode. The continuous scroll wrap hosts the JS-owned pages container (unchanged lazy
+  render: IntersectionObserver + serial queue, canvas release, the 12-painted-page limit) plus a
+  Blazor-owned overlay-slot container; `pdf-viewer.js` reports the page boxes of the pages inside the
+  ±50% viewport band through the new `OnContinuousPageGeometry` interop callback (deduped, after every
+  build, in-place zoom, rotation, resize and band change), and Blazor mounts one absolutely positioned
+  slot per reported page — a 120-page document with a thread on every page keeps the Blazor diff
+  bounded to the mounted band. Text selection in Continuous resolves the page from the wrap containing
+  the anchor (`enableSelection` grew a continuous branch), normalizes the rects against that page's box
+  and clamps a cross-page selection to the anchor page, so `OnTextSelected` and the sticky CTA create
+  the thread on the correct page. Selecting a thread in Continuous no longer switches to SinglePage —
+  it scrolls (`tmPdfViewer.scrollToPage` + new `tmPdfViewer.scrollToAnchor`, centering the anchor's Y)
+  and highlights the marker once the slot mounts. New templated parameter `PageOverlayContent`
+  (`RenderFragment<PdfPageOverlayContext>` — `PageNumber`, `IsCurrentPage`, `Width`, `Height`,
+  `Rotation`) renders a host overlay per page in BOTH view modes (single-page: the current page only,
+  riding the canvas wrap under the new `pdf-page-overlay` test id). The removed
+  `TmPdfViewer_AnnotationsSinglePageOnly` hint is gone; see Breaking / Migration.
+
 - **TmPdfViewer & TmPdfAnnotator: the "All (N) | Unresolved (M)" thread filter (FZE-12).** A new
   shared `TmPdfThreadFilter` card (PD4, next to `TmPdfThreadList`) renders as the segmented
   control in BOTH panels' headers — the docked desktop/tablet chrome and the sheet presentations
@@ -411,6 +430,34 @@
   needs per docs/localization-plurals.md).
 
 ### Breaking / Migration
+
+- **TmPdfViewer: annotations are no longer single-page only (PD1 superseded, FZE-13).** The
+  `pdf-annotations-single-page-hint` note (localized `TmPdfViewer_AnnotationsSinglePageOnly`) is
+  gone — continuous mode now renders the per-page markers, and selecting a thread from the panel
+  scrolls to its anchor instead of raising `ViewModeChanged(SinglePage)`. Hosts that detected the
+  mode switch (or keyed CSS/E2E off the hint's `.tm-pdf-viewer__annotations-hint` row) should drop
+  that path; the `.tm-pdf-viewer__continuous-wrap` DOM gained a JS-owned
+  `.tm-pdf-viewer__continuous-pages` child (the wraps moved inside it) and a Blazor-owned
+  `.tm-pdf-viewer__continuous-overlays` sibling, so `:scope > .tm-pdf-viewer__page` selectors must
+  become `.tm-pdf-viewer__page` descendant lookups. `OverlayContent` keeps its single-page-only
+  contract (it is aligned to THE canvas and never renders in Continuous) — hosts needing per-page
+  content in either mode move to the new templated `PageOverlayContent`.
+
+```razor
+@* BEFORE (2.9.0) — annotations forced the viewer back to SinglePage *@
+<TmPdfViewer Url="@url" EnableAnnotations="true" ViewMode="PdfViewMode.Continuous"
+             OnViewModeChanged="mode => wasSwitched = mode == PdfViewMode.SinglePage" />
+
+@* AFTER (2.9.1) — the thread select scrolls and stays Continuous; per-page host overlays
+   go through the templated slot (context: PageNumber, IsCurrentPage, Width, Height, Rotation) *@
+<TmPdfViewer Url="@url" EnableAnnotations="true" ViewMode="PdfViewMode.Continuous">
+    <PageOverlayContent Context="page">
+        <div style="position:absolute; inset:0; pointer-events:auto;">
+            My page @page.PageNumber overlay (@page.Width×@page.Height, current: @page.IsCurrentPage)
+        </div>
+    </PageOverlayContent>
+</TmPdfViewer>
+```
 
 - **TmPdfViewer + TmPdfAnnotator: the "Show resolved" checkbox became the segmented
   "All | Unresolved" filter (FZE-12).** The `pdf-annotation-show-resolved` /

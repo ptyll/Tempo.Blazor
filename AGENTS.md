@@ -466,7 +466,7 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `ThumbnailsCollapsed` / `ThumbnailsCollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | Two-way collapsed thumbnails (toolbar "Pages" toggle + sidebar button drive it) |
 | `Height` | `string?` | `"600px"` | Viewer height (CSS value; `100%`/`100dvh` resolve through the flex chain) |
 | `Class` | `string?` | `null` | Additional CSS classes |
-| `EnableAnnotations` | `bool` | `false` | Enable the annotation layer and comments panel (single-page only, PD1) |
+| `EnableAnnotations` | `bool` | `false` | Enable the annotation layer and comments panel (markers render per page in both view modes; FZE-13) |
 | `AnnotationProvider` | `IPdfAnnotationProvider?` | `null` | Persistence; in-memory provider when omitted |
 | `DocumentId` | `string?` | `null` | Provider document id (falls back to `Url`) |
 | `CurrentUser` | `DocumentCommentUser?` | `null` | Author of annotations created in this viewer |
@@ -474,7 +474,8 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `Annotations` / `AnnotationsChanged` | `IReadOnlyList<DocumentCommentThread>?` / `EventCallback<...>` | `null` | Seed threads when no provider is supplied |
 | `OnTextSelected` | `EventCallback<PdfTextSelection>` | — | Text selection in the text layer (`EnableTextSelectionEvents` without annotations) |
 | `EnableTextSelectionEvents` | `bool` | `false` | Raise `OnTextSelected` without enabling the annotation layer |
-| `OverlayContent` | `RenderFragment?` | `null` | Overlay aligned with the current page canvas (single-page only, PD1) |
+| `OverlayContent` | `RenderFragment?` | `null` | Overlay aligned with the current page canvas (single-page only) |
+| `PageOverlayContent` | `RenderFragment<PdfPageOverlayContext>?` | `null` | Templated per-page overlay (context: `PageNumber`, `IsCurrentPage`, `Width`, `Height`, `Rotation`); every mounted page in Continuous, the current page in SinglePage (FZE-13) |
 | `OnDocumentLoaded` | `EventCallback<int>` | — | Total page count once loaded |
 | `ToolbarStart` / `ToolbarEnd` | `RenderFragment?` | `null` | Host groups composed into the toolbar (the annotator injects its tools) |
 | `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Header slots (used only with `ShowHeader`) |
@@ -512,9 +513,13 @@ Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
   (a 100+ page document never blocks the UI), canvases released outside the ±50 % viewport band
   (limit 12 painted), `OnVisiblePageChanged` updating `Page`/`PageChanged` + the active
   thumbnail, per-page text layer and search, and the scroll position preserved across zoom /
-  rotation / view-mode switches. **PD1: annotations, `OverlayContent` and selection-driven
-  annotation creation are single-page only** — the thread panel stays readable in Continuous
-  (localized hint) and selecting a thread switches back to `SinglePage` on its page.
+  rotation / view-mode switches. **Annotations in Continuous (FZE-13, PD1 superseded by
+  PDF-VIEWER-CONTINUOUS-ANNOTATIONS)**: pages inside the ±50 % viewport band get a Blazor-owned
+  overlay slot next to the JS-owned pages DOM (geometry reported via `OnContinuousPageGeometry`,
+  so the lazy render and the 12-painted-page limit keep holding), markers render per mounted
+  page, text selection resolves the anchor page and clamps cross-page selections, and selecting
+  a thread scrolls to its anchor instead of switching the mode. `OverlayContent` stays
+  single-page only; the templated `PageOverlayContent` works in both modes.
 
 ### TmPdfAnnotator
 
@@ -526,7 +531,7 @@ merge into the embedded viewer's toolbar through `ToolbarStart`/`ToolbarEnd`; th
 `PrintAsync()`) lives in the header row when `ShowHeader` is true. Pass-through parameters:
 `ShowThumbnails`, `ShowSearch`, `SearchPresentation`, `AllowRotation`,
 `ThumbnailsCollapsed` (two-way), `ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
-`SinglePage` (PD1) and never offers the continuous toggle. `ShowViewerToolbar` (default `true`)
+`SinglePage` and never offers the continuous toggle (the annotator gains per-page continuous tools in FZE-14). `ShowViewerToolbar` (default `true`)
 is kept for compatibility: when `false`, the viewer chrome is hidden and the annotator renders a
 compact tools row of its own. **Runtime color picker (FZE-12)**: `AllowColorPicker` (default
 `true`) turns the color label into a trigger for a `TmColorPalette` popover (a bottom sheet on a

@@ -85,6 +85,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "PdfPageOverlayContext",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "The context handed to TmPdfViewer.PageOverlayContent for every rendered page overlay slot: the one-based page, whether the viewer currently shows it, the page box in CSS pixels at the current zoom (0 until the JS geometry report arrives) and the document rotation in degrees.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "PdfSearchPresentation",
       "kind": "Enum",
       "category": "Components",
@@ -224,11 +234,32 @@
           "description": "Callback invoked when a thread marker or highlight is selected."
         },
         {
+          "name": "OverlayHeight",
+          "type": "double",
+          "isRequired": false,
+          "description": "The overlay box's height in CSS pixels — the ROTATED page box. 0 until reported.",
+          "default": "0"
+        },
+        {
+          "name": "OverlayWidth",
+          "type": "double",
+          "isRequired": false,
+          "description": "The overlay box's width in CSS pixels — the ROTATED page box the layer fills (the canvas box, or the geometry report's slot box). 0 until reported.",
+          "default": "0"
+        },
+        {
           "name": "PageNumber",
           "type": "int",
           "isRequired": false,
           "default": "1",
           "description": "One-based current page number."
+        },
+        {
+          "name": "Rotation",
+          "type": "int",
+          "isRequired": false,
+          "description": "Document rotation in degrees (0/90/180/270). The anchor geometry is normalized to the unrotated page, so a non-zero rotation wraps the content in the unrotated plane.",
+          "default": "0"
         },
         {
           "name": "SelectedThreadId",
@@ -1005,6 +1036,77 @@
       ]
     },
     {
+      "itemName": "TmPdfContinuousOverlays",
+      "kind": "Component",
+      "category": "Files",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "Internal child of TmPdfViewer that renders the continuous mode's Blazor-owned annotation overlay slots for the pages the JS geometry report mounts. The [JSInvokable] geometry report forwards to SetGeometry, which re-renders this component only — the root viewer never re-renders for a geometry report. MarkStale hides the slots until the next report arrives (an in-place zoom must not paint stale boxes).",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfContinuousOverlays.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Files"
+      ],
+      "parameters": [
+        {
+          "name": "CurrentPage",
+          "type": "int",
+          "isRequired": false,
+          "default": "1",
+          "description": "The viewer's current page (drives PdfPageOverlayContext.IsCurrentPage)."
+        },
+        {
+          "name": "CurrentUserId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Current user id used for mention styling."
+        },
+        {
+          "name": "DraftAnchorProvider",
+          "type": "Func<int, DocumentCommentAnchor?>?",
+          "isRequired": false,
+          "description": "Resolves the draft anchor for one page (the pending selection only paints in the slot of the page it was made on)."
+        },
+        {
+          "name": "EnableAnnotations",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the per-page annotation layers render (else host overlays only)."
+        },
+        {
+          "name": "OnThreadSelected",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Callback invoked when a thread marker or highlight is selected."
+        },
+        {
+          "name": "PageOverlayContent",
+          "type": "RenderFragment<PdfPageOverlayContext>?",
+          "isRequired": false,
+          "description": "The templated per-page overlay rendered in every mounted slot."
+        },
+        {
+          "name": "SelectedThreadId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Selected thread id."
+        },
+        {
+          "name": "ShowResolved",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether resolved threads should be rendered."
+        },
+        {
+          "name": "Threads",
+          "type": "IReadOnlyList<DocumentCommentThread>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Annotation threads available to render."
+        }
+      ]
+    },
+    {
       "itemName": "TmPdfThreadCard",
       "kind": "Component",
       "category": "Files",
@@ -1362,7 +1464,7 @@
           "name": "EnableAnnotations",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether the annotation layer and comments panel are enabled. Default is false."
+          "description": "Whether the annotation layer and comments panel are enabled. Default is false. The markers render per page in both view modes — in Continuous every page inside the ±50% viewport band gets an overlay slot (the same band the lazy renderer uses), and text selection creates threads on the selection's page."
         },
         {
           "name": "EnableTextSelectionEvents",
@@ -1417,7 +1519,7 @@
           "name": "OverlayContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer)."
+          "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer). Single-page only: the overlay is aligned to THE canvas, so in Continuous view mode it is not rendered — use PageOverlayContent for per-page overlays."
         },
         {
           "name": "Page",
@@ -1431,6 +1533,12 @@
           "type": "EventCallback<int>",
           "isRequired": false,
           "description": "Callback when the page changes."
+        },
+        {
+          "name": "PageOverlayContent",
+          "type": "RenderFragment<PdfPageOverlayContext>?",
+          "isRequired": false,
+          "description": "Templated per-page overlay (FZE-13). In Continuous it renders for every mounted page — the pages inside the ±50% viewport band the JS renderer reports — as an absolutely positioned slot over the page box, next to the annotation markers. In SinglePage it renders once, aligned to the current page canvas. The slot itself is not interactive (pointer-events: none); hosts opt their content back in. The context carries PageNumber, IsCurrentPage, Width, Height and Rotation."
         },
         {
           "name": "Scale",
@@ -1576,7 +1684,7 @@
           "type": "PdfViewMode",
           "isRequired": false,
           "default": "PdfViewMode.SinglePage",
-          "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) — selecting a thread returns the viewer to SinglePage on the thread's page."
+          "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. Annotations render on every mounted page (PDF-VIEWER-CONTINUOUS-ANNOTATIONS); selecting a thread scrolls to its anchor instead of switching the mode."
         },
         {
           "name": "ViewModeChanged",
@@ -1779,11 +1887,11 @@
     }
   ],
   "summary": {
-    "itemCount": 19,
-    "manualItemCount": 19,
-    "generatedItemCount": 19,
+    "itemCount": 21,
+    "manualItemCount": 21,
+    "generatedItemCount": 21,
     "generatedOnlyItemCount": 0,
-    "componentCount": 12,
-    "publicApiTypeCount": 7
+    "componentCount": 13,
+    "publicApiTypeCount": 8
   }
 }

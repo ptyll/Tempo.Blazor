@@ -26,13 +26,20 @@ export function isRenderingCancelled(err) { return err?.name === 'RenderingCance
 function fakeElement(tag) {
     return {
         tagName: tag,
+        nodeType: 1,
         style: {},
         dataset: {},
+        attrs: {},
         children: [],
         innerHTML: '',
         isConnected: true,
         appendChild(child) { this.children.push(child); },
-        addEventListener() { },
+        insertBefore(child) { this.children.unshift(child); return child; },
+        replaceChildren() { this.children.length = 0; },
+        setAttribute(name, value) { this.attrs[name] = String(value); },
+        getAttribute(name) { return this.attrs[name] ?? null; },
+        removeAttribute(name) { delete this.attrs[name]; },
+        addEventListener(type, handler) { (this.listeners ??= []).push({ type, handler }); },
         removeEventListener() { },
         querySelector() { return null; },
         querySelectorAll() { return []; },
@@ -88,6 +95,8 @@ async function loadViewer(testContext) {
         listeners: { added: [], removed: [] },
         loadedPages: [],
         reported: [],
+        geometryReports: [],
+        resizeObservers: [],
         selectionCleared: 0,
         loadErrors: [],
     };
@@ -99,7 +108,17 @@ async function loadViewer(testContext) {
         window: globalThis.window,
         getSelection: globalThis.getSelection,
     };
-    globalThis.ResizeObserver = class { observe() { } unobserve() { } disconnect() { } };
+    globalThis.ResizeObserver = class {
+        constructor(callback) {
+            this.callback = callback;
+            this.observations = [];
+            this.disconnected = false;
+            registry.resizeObservers.push(this);
+        }
+        observe(target) { this.observations.push(target); }
+        unobserve() { }
+        disconnect() { this.disconnected = true; }
+    };
     globalThis.window = globalThis;
     globalThis.document = {
         currentScript: { src: '' },
@@ -115,6 +134,10 @@ async function loadViewer(testContext) {
     await writeFile(path.join(dir, 'pdf.min.mjs'), PDF_STUB, 'utf8');
     await writeFile(path.join(dir, 'pdf-viewer-size.mjs'), SIZE_STUB, 'utf8');
     await writeFile(path.join(dir, 'pdf-viewer-render.mjs'), RENDER_STUB, 'utf8');
+    // The package ships pdf-viewer-continuous.mjs as a sibling of pdf-viewer.js —
+    // copy it so _ensureContinuousModule() resolves like it does in the browser.
+    await copyFile(new URL('../pdf-viewer-continuous.mjs', import.meta.url),
+        path.join(dir, 'pdf-viewer-continuous.mjs'));
     const viewerPath = path.join(dir, 'pdf-viewer.js');
     await copyFile(VIEWER_JS, viewerPath);
 
@@ -130,6 +153,7 @@ async function loadViewer(testContext) {
             if (name === 'OnPdfLoaded') registry.loadedPages.push(args[0]);
             if (name === 'OnTextSelectionChanged') registry.reported.push(args);
             if (name === 'OnPdfLoadError') registry.loadErrors.push(args[0]);
+            if (name === 'OnContinuousPageGeometry') registry.geometryReports.push(args);
             return Promise.resolve();
         },
     };
@@ -285,4 +309,276 @@ test('destroy removes both selection listeners and the pending debounce timer', 
     const removed = env.registry.listeners.removed.map(l => l.handler);
     assert.ok(removed.includes(env.registry.listeners.added[0].handler), 'destroy removes the selectionchange handler');
     assert.ok(removed.includes(env.registry.listeners.added[1].handler), 'destroy removes the pointerup handler');
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// FZE-13 — continuous annotations: per-page geometry report, per-page
+// selection resolution and the destroy teardown of the geometry plumbing.
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Continuous scroll wrap fake mirroring the production DOM contract: the
+ * renderer owns a `.tm-pdf-viewer__continuous-pages` child and builds one page
+ * wrap per page inside it; the Blazor overlay slots live in a sibling container.
+ */
+function fakeContinuousWrap() {
+    const pagesEl = fakeElement('div');
+    pagesEl.className = 'tm-pdf-viewer__continuous-pages';
+    const container = fakeElement('container');
+    container.className = 'tm-pdf-viewer__continuous-wrap';
+    container.appendChild(pagesEl);
+    container.clientHeight = 600;
+    container.contains = () => true; // the selection anchor check passes for per-page layers
+    container.querySelectorAll = (selector) => (
+        typeof selector === 'string' && selector.includes('.tm-pdf-viewer__page')
+            ? pagesEl.children.filter(c => String(c.className).includes('tm-pdf-viewer__page'))
+            : []);
+    container.querySelector = (selector) => {
+        if (typeof selector === 'string' && selector.includes('.tm-pdf-viewer__continuous-pages')) return pagesEl;
+        const match = typeof selector === 'string' ? selector.match(/data-page="(\d+)"/) : null;
+        return match ? pagesEl.children.find(c => c.dataset?.page === match[1]) ?? null : null;
+    };
+    return { container, pagesEl };
+}
+
+/** Overrides document.createElement with the richer fake for the page wraps. */
+function fakeCreateElement(t) {
+    const originalCreate = globalThis.document.createElement;
+    globalThis.document.createElement = () => fakeElement('div');
+    t.after(() => {
+        if (globalThis.document) globalThis.document.createElement = originalCreate;
+    });
+}
+
+async function loadedContinuousEnv(t) {
+    const env = await loadViewer(t);
+    fakeCreateElement(t);
+    const rootEl = fakeElement('root');
+    env.docRequest.resolve(fakePdfDoc(10));
+    await env.viewer.init(rootEl, 'https://example.com/continuous.pdf', env.dotNet);
+    const { container, pagesEl } = fakeContinuousWrap();
+    await env.viewer.renderAllPages(rootEl, container, 1, 0, { textLayer: true });
+    await settle();
+    return { env, rootEl, container, pagesEl };
+}
+
+test('renderAllPages reports the mounted band geometry to Blazor', async (t) => {
+    const { env, container } = await loadedContinuousEnv(t);
+
+    assert.equal(env.registry.geometryReports.length, 1,
+        'the build sends one geometry report (deduped: identical repeats send nothing)');
+    const [pages, tops, lefts, widths, heights, rotation] = env.registry.geometryReports[0];
+    assert.deepEqual(pages, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        'every page wrap sits inside the initial band (fake boxes all at the top)');
+    assert.equal(tops.length, pages.length);
+    assert.equal(lefts.length, pages.length);
+    assert.equal(widths.length, pages.length);
+    assert.equal(heights.length, pages.length);
+    assert.equal(rotation, 0);
+    assert.ok(container.querySelector('.tm-pdf-viewer__continuous-pages'),
+        'the renderer owns its pages container inside the scroll wrap');
+});
+
+test('pageGeometry_AfterInPlaceZoom_ScalesSlots via a fresh report', async (t) => {
+    const { env, rootEl, container, pagesEl } = await loadedContinuousEnv(t);
+
+    // Simulate the in-place resize: every page box doubles (zoom 1 → 2).
+    for (const [index, wrap] of pagesEl.children.entries()) {
+        wrap.getBoundingClientRect = () => ({
+            left: 0, top: index * 160, width: 200, height: 100,
+        });
+    }
+    await env.viewer.updateContinuousScale(rootEl, container, 2);
+    await settle();
+
+    assert.ok(env.registry.geometryReports.length >= 2,
+        'the in-place zoom sends a fresh geometry report (the boxes changed)');
+    const last = env.registry.geometryReports.at(-1);
+    // The doubled boxes are taller: the ±50% band (600px viewport) now covers
+    // pages 1..6 only — the mount band keeps shrinking the slot set.
+    assert.deepEqual(last[0], [1, 2, 3, 4, 5, 6]);
+    assert.equal(last[3][0], 200, 'the report carries the SCALED slot width');
+    assert.equal(last[4][0], 100, 'the report carries the SCALED slot height');
+    assert.equal(last[5], 0);
+});
+
+test('continuous selection reports the anchor page with per-page normalized rects', async (t) => {
+    const { env, rootEl, container, pagesEl } = await loadedContinuousEnv(t);
+    env.viewer.enableSelection(rootEl, container, env.dotNet);
+    await settle();
+
+    // A selection anchored inside the page-7 wrap: one rect inside the fake page
+    // box (100×50 at 0,0), one straddling its bottom edge, one on the next page.
+    const wrap7 = pagesEl.children[6];
+    wrap7.dataset.page = '7';
+    globalThis.__tmPdfViewerTestSelection = {
+        rangeCount: 1,
+        isCollapsed: false,
+        anchorNode: { nodeType: 3, parentElement: wrap7 },
+        toString: () => 'page seven words',
+        getRangeAt: () => ({
+            getClientRects: () => [
+                { left: 10, top: 10, width: 50, height: 10 },
+                { left: 10, top: 45, width: 50, height: 10 },
+                { left: 10, top: 80, width: 50, height: 10 },
+            ],
+        }),
+        removeAllRanges() { },
+    };
+
+    handlerOf(env, 'pointerup')();
+    await settle();
+
+    assert.equal(env.registry.reported.length, 1, 'the gesture flush reports once');
+    const [text, page, flat] = env.registry.reported[0];
+    assert.equal(text, 'page seven words');
+    assert.equal(page, 7, 'the page comes from the wrap containing the anchor node');
+    assert.deepEqual(flat, [0.1, 0.2, 0.5, 0.2, 0.1, 0.9, 0.5, 0.1],
+        'rects normalize against the anchor page; the cross-page rect is clamped');
+});
+
+test('continuous selection with an anchor outside any page reports nothing', async (t) => {
+    const { env, rootEl, container } = await loadedContinuousEnv(t);
+    env.viewer.enableSelection(rootEl, container, env.dotNet);
+    await settle();
+
+    globalThis.__tmPdfViewerTestSelection = {
+        rangeCount: 1,
+        isCollapsed: false,
+        anchorNode: { nodeType: 3, parentElement: null },
+        toString: () => 'stray words',
+        getRangeAt: () => ({ getClientRects: () => [{ left: 0, top: 0, width: 10, height: 5 }] }),
+        removeAllRanges() { },
+    };
+    handlerOf(env, 'pointerup')();
+    await settle();
+
+    assert.equal(env.registry.reported.length, 0,
+        'a selection whose anchor resolves to no page is dropped');
+});
+
+test('a selection anchored inside an overlay slot reports nothing', async (t) => {
+    const { env, rootEl, container } = await loadedContinuousEnv(t);
+    env.viewer.enableSelection(rootEl, container, env.dotNet);
+    await settle();
+
+    // The Blazor overlay slots carry data-page too — but they live OUTSIDE the
+    // renderer-owned .tm-pdf-viewer__continuous-pages, so a selection inside one
+    // (a marker's number, a host overlay's text) must not report the slot's page.
+    const slot = fakeElement('slot');
+    slot.className = 'tm-pdf-viewer__page-overlay-slot';
+    slot.dataset.page = '3';
+    slot.closest = () => null; // not inside .tm-pdf-viewer__continuous-pages
+
+    globalThis.__tmPdfViewerTestSelection = {
+        rangeCount: 1,
+        isCollapsed: false,
+        anchorNode: { nodeType: 3, parentElement: slot },
+        toString: () => 'marker number text',
+        getRangeAt: () => ({ getClientRects: () => [{ left: 0, top: 0, width: 10, height: 5 }] }),
+        removeAllRanges() { },
+    };
+    handlerOf(env, 'pointerup')();
+    await settle();
+
+    assert.equal(env.registry.reported.length, 0,
+        'an overlay-slot anchor is not a page anchor');
+});
+
+test('destroy_UnregistersGeometryObservers', async (t) => {
+    // Single-page: syncOverlay registers a ResizeObserver per overlay so the
+    // geometry report follows canvas resizes; destroy must disconnect it.
+    const env = await loadViewer(t);
+    const rootEl = fakeRootEl(fakeCanvas());
+    const overlay = fakeElement('overlay');
+    env.docRequest.resolve(fakePdfDoc(3));
+    await env.viewer.init(rootEl, 'https://example.com/doc.pdf', env.dotNet);
+    await settle();
+    env.viewer.syncOverlay(rootEl, overlay);
+    await settle();
+    const observers = env.registry.resizeObservers ?? [];
+    assert.ok(observers.length >= 1, 'syncOverlay registers a geometry ResizeObserver');
+
+    env.viewer.destroy(rootEl);
+    for (const observer of observers) {
+        assert.equal(observer.disconnected, true, 'destroy disconnects every geometry observer');
+    }
+
+    // Continuous (M1): renderAllPages observes the scroll CONTAINER itself, so a wrap
+    // resize without a scroll (a flex sibling growing, a sheet settling) still
+    // re-reports. destroy must disconnect it with the rest.
+    const continuous = await loadViewer(t);
+    fakeCreateElement(t);
+    const contRoot = fakeElement('root');
+    continuous.docRequest.resolve(fakePdfDoc(3));
+    await continuous.viewer.init(contRoot, 'https://example.com/continuous.pdf', continuous.dotNet);
+    const { container } = fakeContinuousWrap();
+    await continuous.viewer.renderAllPages(contRoot, container, 1, 0, {});
+    await settle();
+    const containerObservers = continuous.registry.resizeObservers.slice();
+    assert.ok(containerObservers.length >= 1,
+        'renderAllPages registers the container geometry observer');
+    assert.ok(containerObservers.some(o => o.observations.includes(container)),
+        'the container geometry observer watches the scroll container');
+
+    continuous.viewer.destroy(contRoot);
+    for (const observer of containerObservers) {
+        assert.equal(observer.disconnected, true,
+            'destroy disconnects the container geometry observer too');
+    }
+});
+
+test('pageGeometry reports the centered page-inner box, not the full-width wrap', async (t) => {
+    const { env, rootEl, container, pagesEl } = await loadedContinuousEnv(t);
+
+    // Production DOM (B1): each wrap is a full-width centered flex row whose inner
+    // shrink-wraps the canvas — a page narrower than its container, centered. The
+    // overlay slots must size to the INNER, never to the wrap's column width.
+    for (const [index, wrap] of pagesEl.children.entries()) {
+        const inner = fakeElement('inner');
+        inner.className = 'tm-pdf-viewer__page-inner';
+        wrap.querySelector = (selector) =>
+            selector === ':scope > .tm-pdf-viewer__page-inner' ? inner : null;
+        wrap.getBoundingClientRect = () => ({ left: 0, top: index * 60, width: 600, height: 50 });
+        inner.getBoundingClientRect = () => ({ left: 200, top: index * 60, width: 200, height: 50 });
+    }
+
+    // A scale-only update ends in a fresh geometry report re-read from the DOM.
+    await env.viewer.updateContinuousScale(rootEl, container, 1.5);
+    await settle();
+
+    const last = env.registry.geometryReports.at(-1);
+    assert.equal(last[2][0], 200, 'the slot left is the INNER (centered) left, not the wrap left');
+    assert.equal(last[3][0], 200, 'the slot width is the INNER width, not the full-width wrap');
+    assert.equal(last[4][0], 50, 'the inner fills the wrap vertically, so the height is unchanged');
+});
+
+test('a container resize re-reports the geometry on the next frame', async (t) => {
+    const { env, rootEl, container, pagesEl } = await loadedContinuousEnv(t);
+
+    // Node has no rAF: run the frame callback synchronously for the test.
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (fn) => { fn(); return 1; };
+    t.after(() => {
+        if (originalRaf === undefined) delete globalThis.requestAnimationFrame;
+        else globalThis.requestAnimationFrame = originalRaf;
+    });
+
+    const observer = env.registry.resizeObservers.at(-1);
+    assert.ok(observer, 'renderAllPages registered the container geometry observer');
+    const reportsBefore = env.registry.geometryReports.length;
+
+    // The container narrows: the centered page-inners shift and shrink (B1 geometry).
+    for (const wrap of pagesEl.children) {
+        const inner = { getBoundingClientRect: () => ({ left: 150, top: 0, width: 100, height: 50 }) };
+        wrap.querySelector = (selector) =>
+            selector === ':scope > .tm-pdf-viewer__page-inner' ? inner : null;
+    }
+    observer.callback();
+    await settle();
+
+    assert.ok(env.registry.geometryReports.length > reportsBefore,
+        'the resize callback re-reports the geometry');
+    const last = env.registry.geometryReports.at(-1);
+    assert.equal(last[2][0], 150, 'the re-report follows the resized inner boxes');
 });

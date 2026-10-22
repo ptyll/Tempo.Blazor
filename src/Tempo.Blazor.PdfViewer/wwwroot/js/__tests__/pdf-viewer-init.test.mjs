@@ -362,20 +362,26 @@ function fakeDomEl(tag) {
     return el;
 }
 
-/** The continuous wrap: a scrollable container the renderer fills with page wraps. */
+/** The continuous wrap: a scrollable container the renderer fills with page wraps.
+ * Mirrors the production DOM: the renderer owns a `.tm-pdf-viewer__continuous-pages`
+ * child and builds the page wraps inside it. */
 function fakeContinuousContainer() {
     const container = fakeDomEl('container');
     container.scrollTop = 0;
     container.clientHeight = 600;
     container.addEventListener = () => { };
+    const pagesEl = fakeDomEl('div');
+    pagesEl.className = 'tm-pdf-viewer__continuous-pages';
+    container.children.push(pagesEl);
     container.querySelectorAll = (selector) => (
         typeof selector === 'string' && selector.includes('.tm-pdf-viewer__page')
-            ? container.children.filter(c => c.className === 'tm-pdf-viewer__page')
+            ? pagesEl.children.filter(c => c.className === 'tm-pdf-viewer__page')
             : []
     );
     container.querySelector = (selector) => {
-        const match = typeof selector === 'string' ? selector.match(/\[data-page="(\d+)"\]/) : null;
-        return match ? container.children.find(c => c.dataset?.page === match[1]) ?? null : null;
+        if (typeof selector === 'string' && selector.includes('.tm-pdf-viewer__continuous-pages')) return pagesEl;
+        const match = typeof selector === 'string' ? selector.match(/data-page="(\d+)"/) : null;
+        return match ? pagesEl.children.find(c => c.dataset?.page === match[1]) ?? null : null;
     };
     return container;
 }

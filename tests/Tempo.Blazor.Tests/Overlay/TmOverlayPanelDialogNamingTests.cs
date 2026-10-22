@@ -12,6 +12,7 @@ using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
+using Tempo.Blazor.Components.Files;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.Components.Overlay;
@@ -309,6 +310,14 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                         new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
                     }));
                 cut.Find(".tm-filter-builder-add").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // FZE-12: the annotator's runtime color palette rides the shared overlay panel
+            // (Role="dialog", named through AriaLabel) — the toolbar trigger opens it.
+            ["TmPdfAnnotator"] = () =>
+            {
+                var cut = Render<TmPdfAnnotator>(p => p.Add(c => c.Url, "https://example.com/naming-sweep.pdf"));
+                cut.Find(".tm-pdf-annotator__color-trigger").Click();
                 return cut.Find("[role='dialog']");
             },
         };

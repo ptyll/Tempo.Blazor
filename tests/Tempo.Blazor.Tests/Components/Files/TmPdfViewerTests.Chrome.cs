@@ -119,26 +119,19 @@ public partial class TmPdfViewerTests
     {
         // The header formats through CurrentCulture (the request culture in production);
         // pin it so the expected digits are stable on any machine locale.
-        var originalCulture = CultureInfo.CurrentCulture;
-        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        try
-        {
-            var cut = Render<TmPdfViewer>(p => p
-                .Add(c => c.Url, DemoUrl)
-                .Add(c => c.ShowHeader, true));
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
 
-            await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
-            await cut.InvokeAsync(() => cut.Instance.OnDocumentLengthKnown(1_500_000));
-            cut.Render();
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(c => c.Url, DemoUrl)
+            .Add(c => c.ShowHeader, true));
 
-            var subtitle = cut.Find(".tm-pdf-viewer__header-subtitle").TextContent;
-            subtitle.Should().Contain("Pages: 10");
-            subtitle.Should().Contain("1.4 MB");
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-        }
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        await cut.InvokeAsync(() => cut.Instance.OnDocumentLengthKnown(1_500_000));
+        cut.Render();
+
+        var subtitle = cut.Find(".tm-pdf-viewer__header-subtitle").TextContent;
+        subtitle.Should().Contain("Pages: 10");
+        subtitle.Should().Contain("1.4 MB");
     }
 
     // ── FZE-11: an explicit host FileSize wins over the JS-reported length ────
@@ -146,28 +139,21 @@ public partial class TmPdfViewerTests
     [Fact]
     public async Task Header_ExplicitFileSize_WinsOverJsReportedLength()
     {
-        var originalCulture = CultureInfo.CurrentCulture;
-        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        try
-        {
-            var cut = Render<TmPdfViewer>(p => p
-                .Add(c => c.Url, DemoUrl)
-                .Add(c => c.ShowHeader, true)
-                .Add(c => c.FileSize, 2048L));
+        using var _ = CultureScope.Use(CultureInfo.InvariantCulture);
 
-            await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
-            // The JS report arrives too — the host value must still win.
-            await cut.InvokeAsync(() => cut.Instance.OnDocumentLengthKnown(1_500_000));
-            cut.Render();
+        var cut = Render<TmPdfViewer>(p => p
+            .Add(c => c.Url, DemoUrl)
+            .Add(c => c.ShowHeader, true)
+            .Add(c => c.FileSize, 2048L));
 
-            var subtitle = cut.Find(".tm-pdf-viewer__header-subtitle").TextContent;
-            subtitle.Should().Contain("2.0 KB");
-            subtitle.Should().NotContain("1.4 MB");
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-        }
+        await cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        // The JS report arrives too — the host value must still win.
+        await cut.InvokeAsync(() => cut.Instance.OnDocumentLengthKnown(1_500_000));
+        cut.Render();
+
+        var subtitle = cut.Find(".tm-pdf-viewer__header-subtitle").TextContent;
+        subtitle.Should().Contain("2.0 KB");
+        subtitle.Should().NotContain("1.4 MB");
     }
 
     // ── FZE-11: an unknown length keeps the pages-only subtitle ──────────────

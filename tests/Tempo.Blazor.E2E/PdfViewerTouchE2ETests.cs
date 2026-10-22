@@ -164,6 +164,15 @@ public class PdfViewerTouchE2ETests : WasmTestBase
         TestContext.AddResultFile(path);
     }
 
+    /// <summary>Element screenshot of a viewer locator — the review artifacts frame the
+    /// viewer itself, never the whole host page (M5).</summary>
+    private async Task SaveViewerScreenshotAsync(ILocator viewer, string directory, string name)
+    {
+        var path = Path.Combine(directory, name + ".png");
+        await viewer.ScreenshotAsync(new LocatorScreenshotOptions { Path = path, Timeout = 60_000 });
+        TestContext.AddResultFile(path);
+    }
+
     // ── Tablet: touch selection → sticky comment CTA → the comments sheet ─────
 
     [TestMethod]
@@ -216,6 +225,12 @@ public class PdfViewerTouchE2ETests : WasmTestBase
         await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await section.ScrollIntoViewIfNeededAsync();
         await WaitForLoadedViewerAsync(section);
+
+        // The selection setup renders the text layer asynchronously after the load —
+        // wait for it instead of racing the first render pass.
+        await page.WaitForFunctionAsync(
+            @"() => document.querySelectorAll(""section .tm-pdf-viewer__text-layer span"").length >= 2",
+            null, new PageWaitForFunctionOptions { Timeout = 30000 });
 
         var spans = await section.Locator(".tm-pdf-viewer__text-layer span").CountAsync();
         Assert.IsTrue(spans >= 2, $"the text layer must be populated with spans (found {spans})");
@@ -388,6 +403,67 @@ public class PdfViewerTouchE2ETests : WasmTestBase
         var canvasAfter = await section.Locator(".tm-pdf-viewer__canvas").First.EvaluateAsync<int>("el => el.clientWidth");
         Assert.IsTrue(canvasAfter > canvasBefore,
             $"the page re-renders at the committed scale (canvas {canvasBefore}px → {canvasAfter}px)");
+    }
+
+    // ── Mobile: touch selection in the continuous column → CTA → per-page thread ──
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_Continuous_MobileTouchSelection_Cta()
+    {
+        var page = await OpenTouchAsync(PdfPage, MobileWidth, MobileHeight);
+
+        var section = Section(page, "All Features Combined");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedViewerAsync(section);
+
+        // On the phone the view-mode toggle lives in the "More" menu (OverflowOnly) — a
+        // pressed toggle renders as a menuitemcheckbox, so the lookup keys off the item
+        // class, not the role.
+        await section.Locator("button.tm-toolbar-more").First.ClickAsync();
+        await page.Locator(".tm-toolbar-more__item:has-text('Continuous')").First.ClickAsync();
+        var viewerRoot = section.Locator(".tm-pdf-viewer").First;
+        await page.WaitForFunctionAsync(@"
+() => {
+    const v = [...document.querySelectorAll('.tm-pdf-viewer')].find(x =>
+        x.closest('section')?.querySelector('h2')?.textContent.includes('All Features'));
+    return !!v?.querySelector('.tm-pdf-viewer__continuous-wrap canvas[data-rendered]');
+}", null, new PageWaitForFunctionOptions { Timeout = 60000 });
+
+        // Touch-select the page text (the per-page text layers are the JS-built ones —
+        // the programmatic range mirrors the native handles' effect on selectionchange).
+        Assert.IsTrue(await SelectBodyTextAsync(section), "the continuous text layers are selectable");
+
+        var cta = section.Locator("[data-testid='pdf-viewer-selection-cta']");
+        await cta.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        Assert.IsTrue(await cta.IsVisibleAsync(), "a continuous selection pins the sticky comment CTA on the phone");
+
+        // M5: the review screenshot is the VIEWER locator with the CTA scrolled into
+        // view — the phone page around it (header, other sections) is noise.
+        await cta.ScrollIntoViewIfNeededAsync();
+        await SaveViewerScreenshotAsync(viewerRoot, ShotDir("pdf-viewer"), "mobile-continuous-annotations");
+
+        // The CTA opens the bottom sheet; creating the thread lands its marker in the
+        // visible page's overlay slot — no mode switch on a phone.
+        await section.Locator("[data-testid='pdf-viewer-selection-cta-comment']").TapAsync();
+        var sheet = page.Locator(".tm-drawer--bottom, .tm-drawer--right").First;
+        await sheet.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var composer = sheet.Locator("[data-testid='pdf-annotation-new']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await sheet.Locator("[data-testid='pdf-annotation-new-input']").FillAsync("continuous phone note");
+        await sheet.Locator("[data-testid='pdf-annotation-new-submit']").TapAsync();
+
+        await page.WaitForFunctionAsync(@"
+() => {
+    const v = [...document.querySelectorAll('.tm-pdf-viewer')].find(x =>
+        x.closest('section')?.querySelector('h2')?.textContent.includes('All Features'));
+    const slots = v?.querySelectorAll('.tm-pdf-viewer__page-overlay-slot') ?? [];
+    return [...slots].some(s => s.querySelector('[data-testid=""pdf-annotation-marker""]'));
+}", null, new PageWaitForFunctionOptions { Timeout = 30000 });
+
+        var stillContinuous = await viewerRoot.EvaluateAsync<bool>(
+            "el => !el.querySelector('.tm-pdf-viewer__canvas-wrap') && !!el.querySelector('.tm-pdf-viewer__continuous-wrap')");
+        Assert.IsTrue(stillContinuous, "the phone stays in continuous mode after the touch selection");
     }
 
     /// <summary>The zoom dropdown trigger's text (the percentage / fit label).</summary>

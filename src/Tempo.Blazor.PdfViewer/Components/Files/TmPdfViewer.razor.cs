@@ -61,6 +61,23 @@ public enum PdfSearchPresentation
 }
 
 /// <summary>
+/// The context handed to <see cref="TmPdfViewer.PageOverlayContent"/> for every rendered
+/// page overlay slot: the one-based page, whether the viewer currently shows it, the page
+/// box in CSS pixels (0 until the JS geometry report arrives) and the document rotation.
+/// </summary>
+/// <param name="PageNumber">One-based page number the slot overlays.</param>
+/// <param name="IsCurrentPage">Whether the viewer's current page is this page.</param>
+/// <param name="Width">Page box width in CSS pixels at the current zoom.</param>
+/// <param name="Height">Page box height in CSS pixels at the current zoom.</param>
+/// <param name="Rotation">Document rotation in degrees (0, 90, 180, 270).</param>
+public sealed record PdfPageOverlayContext(
+    int PageNumber,
+    bool IsCurrentPage,
+    double Width,
+    double Height,
+    int Rotation);
+
+/// <summary>
 /// A reusable PDF viewer component powered by PDF.js v5.
 /// Supports page navigation, zoom, rotation, text layer, thumbnails, search, and continuous scroll.
 /// </summary>
@@ -280,7 +297,22 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// Optional content rendered in an overlay that is kept aligned with the current page
     /// canvas (used by TmPdfAnnotator to draw its own annotation layer).
     /// </summary>
+    /// <remarks>
+    /// Single-page only (PDF-VIEWER-CONTINUOUS-ANNOTATIONS): the overlay is aligned to THE
+    /// canvas, so in <see cref="PdfViewMode.Continuous"/> it is not rendered. Hosts that
+    /// need per-page content in either mode use <see cref="PageOverlayContent"/>.
+    /// </remarks>
     [Parameter] public RenderFragment? OverlayContent { get; set; }
+
+    /// <summary>
+    /// Templated per-page overlay (FZE-13). In <see cref="PdfViewMode.Continuous"/> it renders
+    /// for every mounted page — the pages inside the ±50% viewport band that the JS renderer
+    /// reports — as an absolutely positioned slot over the page box, next to the annotation
+    /// markers. In <see cref="PdfViewMode.SinglePage"/> it renders once, aligned to the current
+    /// page canvas. The slot itself is not interactive (<c>pointer-events: none</c>); hosts
+    /// opt their content back in.
+    /// </summary>
+    [Parameter] public RenderFragment<PdfPageOverlayContext>? PageOverlayContent { get; set; }
 
     /// <summary>Callback invoked with the total page count once the document is loaded.</summary>
     [Parameter] public EventCallback<int> OnDocumentLoaded { get; set; }
@@ -301,8 +333,10 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private ElementReference _searchLayerRef;
     private ElementReference _annotationOverlayRef;
     private ElementReference _customOverlayRef;
+    private ElementReference _pageOverlayRef;
     private ElementReference _canvasWrapRef;
     private bool _customOverlaySynced;
+    private bool _pageOverlaySynced;
     private DotNetObjectReference<TmPdfViewer>? _dotNetRef;
     private bool _pdfInitialized;
     private bool _useFallback;
@@ -389,6 +423,19 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private PdfTextSelection? _pendingSelection;
     private List<DocumentCommentThread> _threads = [];
     private InMemoryPdfAnnotationProvider? _fallbackProvider;
+
+    // FZE-13: the per-page overlay geometry JS reports for the mounted band
+    // (continuous) or the current canvas (single-page). Empty until the first report.
+    // In continuous mode the SLOTS render in the TmPdfContinuousOverlays child (the
+    // report forwards to it); the root list only feeds the single-page overlay context.
+    /// <summary>The mounted pages' overlay boxes from the last geometry report.</summary>
+    private List<PdfPageOverlayBox> _overlayPages = [];
+    /// <summary>The document rotation the last geometry report carried.</summary>
+    private int _overlayRotation;
+    /// <summary>The continuous overlays child (the slot renderer) — the [JSInvokable]
+    /// geometry report forwards to it, so the root viewer does not re-render on every
+    /// geometry report and the slots hide while a fresh report is in flight.</summary>
+    private TmPdfContinuousOverlays? _continuousOverlaysRef;
 
     // Responsive state (FZE-7)
     /// <summary>
@@ -498,6 +545,9 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _annotationsLoaded = false;
             _selectionEnabled = false;
             _pinchWiredRefId = null;
+            _overlayPages = [];
+            _overlayRotation = 0;
+            _pageOverlaySynced = false;
             _showResolvedAnnotations = ShowResolvedAnnotations;
             _selectedThreadId = null;
             _pendingSelection = null;
@@ -724,6 +774,18 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             await RenderContinuousPagesAsync();
         }
 
+        // FZE-13: a view-mode switch re-arms the selection handler for the fresh DOM —
+        // the mode decides which element the JS handler binds (the single-page text
+        // layer vs the continuous wrap). The continuous direction runs here, after the
+        // rebuild put the fresh pages into the wrap; the single-page direction runs in
+        // the deferred _singlePagePending block below.
+        if (_pdfInitialized && !_useFallback && (EnableAnnotations || EnableTextSelectionEvents)
+            && !_selectionEnabled && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null
+            && _totalPages > 0)
+        {
+            await SetupSelectionAsync();
+        }
+
         // A fit recompute deferred by a view-mode switch runs here: the swapped
         // container exists only after the switch was rendered, so the render above has
         // already put the fresh pages into it before the fit math observes it.
@@ -792,6 +854,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
         if (OverlayContent is not null && !_useFallback && !_customOverlaySynced && _customOverlayRef.Context is not null)
         {
             _customOverlaySynced = true;
+            await RefreshAnnotationOverlayAsync();
+        }
+
+        // The templated per-page overlay (FZE-13) needs its single-page sync too — the
+        // geometry report rides the same ResizeObserver-driven syncOverlay apply.
+        if (PageOverlayContent is not null && !_useFallback && !_pageOverlaySynced && _pageOverlayRef.Context is not null)
+        {
+            _pageOverlaySynced = true;
             await RefreshAnnotationOverlayAsync();
         }
 

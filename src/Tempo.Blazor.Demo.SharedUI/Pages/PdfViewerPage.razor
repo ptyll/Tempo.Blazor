@@ -301,31 +301,30 @@
     private readonly InMemoryPdfAnnotationProvider _annotationProvider = new(
         new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
         {
-            // Seed for the Continuous→SinglePage handoff (PD1): a thread on page 3 lets
-            // the E2E lane select it while the "All Features Combined" viewer is in
-            // continuous mode and assert the switch back to the thread's page.
+            // Seed for the continuous annotation lanes (FZE-13): one thread per page of
+            // the 120-page fixture, so the continuous column has markers everywhere and
+            // the E2E edge can prove the Blazor diff stays bounded to the mounted band.
             ["demo-full-pdf"] =
-            [
-                new DocumentCommentThread
+                Enumerable.Range(1, 120).Select(page => new DocumentCommentThread
                 {
-                    Id = "full-seed-thread",
-                    Anchor = DocumentCommentAnchor.TextRange(3,
+                    Id = $"full-band-thread-{page}",
+                    Anchor = DocumentCommentAnchor.TextRange(page,
                         [DocumentCommentRect.Create(0.20, 0.35, 0.25, 0.015)],
-                        "content point"),
+                        $"content point {page}"),
                     Comments =
                     [
                         new DocumentComment
                         {
-                            Id = "full-seed-comment",
+                            Id = $"full-band-comment-{page}",
                             AuthorId = "reviewer",
                             AuthorName = "Reviewer",
-                            Body = "Selecting this thread returns the viewer to single-page mode on page 3.",
+                            Body = $"Page {page} note — the continuous column keeps the markers aligned.",
                             CanEdit = false,
                             CanDelete = false
                         }
                     ]
-                }
-            ],
+                }).ToList(),
+            // A named thread on page 3 the lanes can select by id (thread-select scroll).
             ["demo-annotated-pdf"] =
             [
                 new DocumentCommentThread

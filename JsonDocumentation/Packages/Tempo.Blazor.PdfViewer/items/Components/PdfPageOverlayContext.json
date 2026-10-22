@@ -1,0 +1,10 @@
+{
+ "itemName": "PdfPageOverlayContext",
+ "kind": "Record",
+ "category": "Components",
+ "namespace": "Tempo.Blazor.Components.Files",
+ "description": "The context handed to TmPdfViewer.PageOverlayContent for every rendered page overlay slot: the one-based page, whether the viewer currently shows it, the page box in CSS pixels at the current zoom (0 until the JS geometry report arrives) and the document rotation in degrees.",
+ "packageId": "Tempo.Blazor.PdfViewer",
+ "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+ "documentationStatus": "generated"
+}

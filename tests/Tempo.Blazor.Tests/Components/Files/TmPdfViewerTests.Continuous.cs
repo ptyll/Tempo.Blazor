@@ -41,26 +41,6 @@ public partial class TmPdfViewerTests
         wrap.GetAttribute("aria-label").Should().Be("Pages");
     }
 
-    // ── A11y: the PD1 hint note hides its decorative icon from AT ───────────
-
-    [Fact]
-    public void Render_Continuous_AnnotationsHint_IconIsAriaHidden()
-    {
-        var cut = Render<TmPdfViewer>(parameters =>
-            parameters.Add(p => p.Url, "https://example.com/test.pdf")
-                      .Add(p => p.ViewMode, PdfViewMode.Continuous)
-                      .Add(p => p.EnableAnnotations, true));
-
-        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
-        cut.Render();
-
-        var hint = cut.Find("[data-testid='pdf-annotations-single-page-hint']");
-        hint.Should().NotBeNull();
-        hint.QuerySelector("svg").Should().NotBeNull();
-        hint.QuerySelector("svg").GetAttribute("aria-hidden").Should().Be("true",
-            "the decorative icon must not be announced next to the note's text");
-    }
-
     // ── PDF-50: ViewMode=SinglePage zobrazí canvas wrap ─────────────────────
 
     [Fact]
@@ -267,25 +247,283 @@ public partial class TmPdfViewerTests
             "the match's page is painted by the lazy continuous renderer, not the single-page canvas");
     }
 
-    // ── PD1: annotations and OverlayContent stay out of continuous ──────────
+    // ── FZE-13: annotations render on every mounted page of the continuous column ──
 
     [Fact]
-    public void Continuous_EnableAnnotations_DoesNotRenderOverlay_AndShowsSinglePageHint()
+    public void Continuous_EnableAnnotations_RendersLayerPerMountedPage()
     {
         var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true)
-                                         .Add(p => p.Annotations, new List<DocumentCommentThread> { TextRangeThread("t1", 3) })
-                                         .Add(p => p.OverlayContent, builder =>
-                                             builder.AddMarkupContent(0, "<div data-testid='custom-overlay-content'></div>")));
+                                         .Add(p => p.Annotations, new List<DocumentCommentThread>
+                                         {
+                                             TextRangeThread("t3", 3),
+                                             TextRangeThread("t7", 7),
+                                         }));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        // JS reports the mounted band: pages 3 and 7 (geometry in content coordinates).
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [3, 7], [1600.0, 4800.0], [0.0, 0.0], [612.0, 612.0], [792.0, 792.0], 0));
+        cut.Render();
+
+        var slots = cut.FindAll(".tm-pdf-viewer__continuous-overlays .tm-pdf-viewer__page-overlay-slot");
+        slots.Should().HaveCount(2, "one overlay slot per mounted page");
+        var slot3 = slots.First(s => s.GetAttribute("data-page") == "3");
+        var slot7 = slots.First(s => s.GetAttribute("data-page") == "7");
+        slot3.QuerySelectorAll("[data-testid='pdf-annotation-marker']")
+            .Should().ContainSingle("the page-3 thread renders its marker in its page's slot");
+        slot7.QuerySelectorAll("[data-testid='pdf-annotation-marker']")
+            .Should().ContainSingle("the page-7 thread renders its marker in its page's slot");
+        // Same cards contract as the single-page layer: named groups per page.
+        slot3.GetAttribute("aria-label").Should().Be("Annotations on page 3");
+    }
+
+    [Fact]
+    public void Continuous_UnmountedPages_RenderNoMarkers()
+    {
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true)
+                                         .Add(p => p.Annotations, new List<DocumentCommentThread> { TextRangeThread("t7", 7) }));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        // Only pages 1 and 2 sit inside the reported band.
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [1, 2], [0.0, 800.0], [0.0, 0.0], [612.0, 612.0], [792.0, 792.0], 0));
+        cut.Render();
+
+        cut.FindAll("[data-testid='pdf-annotation-marker']").Should().BeEmpty(
+            "a thread on an unmounted (far from the viewport) page renders nothing");
+        cut.FindAll(".tm-pdf-viewer__page-overlay-slot").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Continuous_IgnoresAnnotationsOnPagesOutsideTheDocument()
+    {
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true)
+                                         .Add(p => p.Annotations, new List<DocumentCommentThread> { TextRangeThread("t99", 99) }));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [99], [0.0], [0.0], [612.0], [792.0], 0));
+        cut.Render();
+
+        cut.FindAll(".tm-pdf-viewer__page-overlay-slot").Should().BeEmpty(
+            "a geometry page beyond the loaded document is ignored");
+    }
+
+    // ── FZE-13: the PD1 hint is gone — continuous is a first-class annotation mode ──
+
+    [Fact]
+    public void Continuous_HintNoLongerRendered()
+    {
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true));
 
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
         cut.Render();
 
-        cut.FindAll(".tm-pdf-viewer__annotation-overlay").Should().BeEmpty(
-            "PD1: the annotation overlay is not rendered in continuous mode");
+        cut.FindAll("[data-testid='pdf-annotations-single-page-hint']").Should().BeEmpty(
+            "PD1 is superseded: continuous annotations need no explanatory hint");
+        cut.FindAll(".tm-pdf-viewer__annotations-hint").Should().BeEmpty();
+    }
+
+    // ── FZE-13: selecting a thread scrolls, it does not switch the mode ─────
+
+    [Fact]
+    public async Task Continuous_SelectThread_ScrollsToAnchor_StaysContinuous()
+    {
+        PdfViewMode? capturedMode = null;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true)
+                                         .Add(p => p.Annotations, new List<DocumentCommentThread> { TextRangeThread("t1", 3) })
+                                         .Add(p => p.ViewModeChanged, EventCallback.Factory.Create<PdfViewMode>(this, m => capturedMode = m)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        await cut.InvokeAsync(() => cut.Instance.OnThumbnailClicked(6));
+
+        cut.FindAll("[data-testid='pdf-annotation-thread']")
+           .First(b => b.GetAttribute("data-thread-id") == "t1")
+           .Click();
+
+        capturedMode.Should().BeNull("selecting a thread must stay in Continuous mode (PD1 superseded)");
+        // The thumbnail pre-navigation scrolled to page 6 first; the thread select
+        // scrolls again, to the thread's page.
+        var scroll = JSInterop.VerifyInvoke("tmPdfViewer.scrollToPage", 2).Last();
+        scroll.Arguments[1].Should().Be(3, "the wrap scrolls to the thread's page");
+        var anchor = JSInterop.VerifyInvoke("tmPdfViewer.scrollToAnchor", 1).Single();
+        anchor.Arguments[1].Should().Be(3);
+        anchor.Arguments[2].Should().Be(0.2, "the anchor point (the thread's Y) centers in the viewport");
+        InvocationsOf(this, "tmPdfViewer.renderPage").Should().BeEmpty(
+            "the thread's page is painted by the lazy renderer, not the single-page canvas");
+    }
+
+    // ── FZE-13: a text selection on a mounted page drafts on that page ──────
+
+    [Fact]
+    public async Task Continuous_TextSelection_RaisesDraftOnCorrectPage()
+    {
+        PdfTextSelection? captured = null;
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true)
+                                         .Add(p => p.OnTextSelected, EventCallback.Factory.Create<PdfTextSelection>(this, s => captured = s)));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [3, 7], [1600.0, 4800.0], [0.0, 0.0], [612.0, 612.0], [792.0, 792.0], 0));
+        cut.Render();
+
+        await cut.InvokeAsync(() => cut.Instance.OnTextSelectionChanged(
+            "quoted words", 7, new[] { 0.1, 0.2, 0.3, 0.02 }));
+
+        captured.Should().NotBeNull();
+        captured!.Page.Should().Be(7, "the JS selection report carries the anchor page");
+        cut.FindAll(".tm-pdf-viewer__page-overlay-slot [data-testid='pdf-annotation-draft']")
+            .Should().ContainSingle("the draft renders in the selection's page slot");
+        cut.Find(".tm-pdf-viewer__page-overlay-slot[data-page='7'] [data-testid='pdf-annotation-draft']")
+            .Should().NotBeNull();
+        cut.FindAll(".tm-pdf-viewer__page-overlay-slot[data-page='3'] [data-testid='pdf-annotation-draft']")
+            .Should().BeEmpty("the draft never leaks into another page's slot");
+    }
+
+    // ── FZE-13: the sticky CTA flow creates the thread on the selected page ──
+
+    [Fact]
+    public async Task Continuous_SelectionCta_CreatesThreadOnSelectedPage()
+    {
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [3, 7], [1600.0, 4800.0], [0.0, 0.0], [612.0, 612.0], [792.0, 792.0], 0));
+        await cut.InvokeAsync(() => cut.Instance.OnTextSelectionChanged(
+            "quoted words", 7, new[] { 0.1, 0.2, 0.3, 0.02 }));
+        cut.Render();
+
+        // The docked desktop panel hosts the selection prompt + composer; typing and
+        // submitting creates the thread anchored on page 7 — its marker lands in the
+        // page-7 slot without any mode switch.
+        var input = cut.Find("[data-testid='pdf-annotation-new-input']");
+        input.Input("A note on page 7");
+        cut.Find("[data-testid='pdf-annotation-new-submit']").Click();
+        cut.Render();
+
+        var slot7 = cut.Find(".tm-pdf-viewer__page-overlay-slot[data-page='7']");
+        slot7.QuerySelectorAll("[data-testid='pdf-annotation-marker']")
+            .Should().ContainSingle("the new page-7 thread renders in its page's slot");
+    }
+
+    // ── FZE-13: the templated per-page overlay slot ─────────────────────────
+
+    [Fact]
+    public void PageOverlayContent_RendersPerPage_WithContext()
+    {
+        var contexts = new List<PdfPageOverlayContext>();
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p)
+            .Add(p => p.PageOverlayContent, (RenderFragment<PdfPageOverlayContext>)(context => builder =>
+            {
+                contexts.Add(context);
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "data-testid", $"page-overlay-{context.PageNumber}");
+                builder.CloseElement();
+            })));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [3, 7], [1600.0, 4800.0], [0.0, 0.0], [612.0, 612.0], [792.0, 792.0], 90));
+        cut.Render();
+
+        cut.Find("[data-testid='page-overlay-3']").Should().NotBeNull();
+        cut.Find("[data-testid='page-overlay-7']").Should().NotBeNull();
+        // The fragment runs once per slot per render (the geometry report renders once,
+        // the explicit Render() again) — dedupe before asserting the context set.
+        var distinct = contexts.Distinct().ToList();
+        distinct.Should().HaveCount(2);
+        distinct.Should().Contain(c => c.PageNumber == 3 && c.Width == 612 && c.Height == 792);
+        distinct.Should().Contain(c => c.PageNumber == 7 && c.Rotation == 90);
+        distinct.Should().OnlyContain(c => !c.IsCurrentPage, "no page is current before the scroll tracker reports one");
+
+        // The scroll tracker flips the current page — the slots re-render with the
+        // fresh context (the fragment may run again per render, hence the clear).
+        contexts.Clear();
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(7));
+        cut.Render();
+        contexts.Should().NotBeEmpty();
+        contexts.Should().Contain(c => c.PageNumber == 7 && c.IsCurrentPage,
+            "the context flags the page the viewer currently shows");
+    }
+
+    [Fact]
+    public void PageOverlayContent_SinglePage_RendersForCurrentPageOnly()
+    {
+        var contexts = new List<PdfPageOverlayContext>();
+        var cut = Render<TmPdfViewer>(parameters => parameters
+            .Add(p => p.Url, "https://example.com/test.pdf")
+            .Add(p => p.PageOverlayContent, (RenderFragment<PdfPageOverlayContext>)(context => builder =>
+            {
+                contexts.Add(context);
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "data-testid", "page-overlay-single");
+                builder.CloseElement();
+            })));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.Find(".tm-pdf-viewer__canvas-wrap [data-testid='page-overlay-single']").Should().NotBeNull(
+            "the templated overlay rides the canvas wrap in single-page mode");
+        contexts.Should().NotBeEmpty();
+        contexts.Should().OnlyContain(c => c.PageNumber == 1,
+            "single-page renders exactly one slot: the current page");
+        contexts.Should().OnlyContain(c => c.IsCurrentPage, "single-page always shows the current page");
+
+        contexts.Clear();
+        cut.InvokeAsync(() => cut.Instance.OnVisiblePageChanged(4));
+        cut.Render(parameters => parameters.Add(p => p.Page, 4));
+        contexts.Should().NotBeEmpty();
+        contexts.Should().OnlyContain(c => c.PageNumber == 4, "the context follows the current page");
+    }
+
+    // ── FZE-13: the non-templated OverlayContent stays single-page (user decision) ──
+
+    [Fact]
+    public void OverlayContent_StaysSinglePageOnly_Documented()
+    {
+        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p)
+            .Add(p => p.OverlayContent, builder =>
+                builder.AddMarkupContent(0, "<div data-testid='custom-overlay-content'></div>")));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+        cut.InvokeAsync(() => cut.Instance.OnContinuousPageGeometry(
+            [3, 7], [1600.0, 4800.0], [0.0, 0.0], [612.0, 612.0], [792.0, 792.0], 0));
+        cut.Render();
+
         cut.FindAll("[data-testid='custom-overlay-content']").Should().BeEmpty(
-            "PD1: OverlayContent is not rendered in continuous mode");
-        cut.Find("[data-testid='pdf-annotations-single-page-hint']").Should().NotBeNull(
-            "the panel stays readable and explains the single-page limitation");
+            "OverlayContent stays aligned to THE canvas — it is a single-page-only slot (PDF-VIEWER-CONTINUOUS-ANNOTATIONS)");
+    }
+
+    // ── FZE-13: single-page markup is unchanged when the new slots are unused ──
+
+    [Fact]
+    public void SinglePage_MarkupUnchanged()
+    {
+        var cut = Render<TmPdfViewer>(parameters => parameters
+            .Add(p => p.Url, "https://example.com/test.pdf")
+            .Add(p => p.EnableAnnotations, true)
+            .Add(p => p.Annotations, new List<DocumentCommentThread> { TextRangeThread("t1", 1) }));
+
+        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
+        cut.Render();
+
+        cut.Find(".tm-pdf-viewer__canvas-wrap .tm-pdf-annotation-layer").Should().NotBeNull(
+            "the annotation layer keeps its single-page home inside the canvas wrap");
+        cut.FindAll(".tm-pdf-viewer__continuous-overlays").Should().BeEmpty();
+        cut.FindAll(".tm-pdf-viewer__page-overlay-slot").Should().BeEmpty();
+        cut.FindAll("[data-testid='pdf-page-overlay']").Should().BeEmpty(
+            "no templated overlay slot renders when PageOverlayContent is not supplied");
     }
 
     // ── Zoom in continuous re-renders lazily and keeps the current page ─────
@@ -338,31 +576,6 @@ public partial class TmPdfViewerTests
         };
         options.GetProperty("currentPage").GetInt32().Should().Be(3,
             "the JS side restores the scroll to page N when the fresh build has no anchor");
-    }
-
-    // ── Selecting a thread from the panel returns to SinglePage (PD1) ───────
-
-    [Fact]
-    public async Task Continuous_SelectThread_SwitchesToSinglePageOnThreadPage()
-    {
-        PdfViewMode? capturedMode = null;
-        var cut = Render<TmPdfViewer>(p => ContinuousDefaults(p).Add(p => p.EnableAnnotations, true)
-                                         .Add(p => p.Annotations, new List<DocumentCommentThread> { TextRangeThread("t1", 3) })
-                                         .Add(p => p.ViewModeChanged, EventCallback.Factory.Create<PdfViewMode>(this, m => capturedMode = m)));
-
-        cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(10));
-        cut.Render();
-
-        await cut.InvokeAsync(() => cut.Instance.OnThumbnailClicked(6));
-
-        cut.FindAll("[data-testid='pdf-annotation-thread']")
-           .First(b => b.GetAttribute("data-thread-id") == "t1")
-           .Click();
-
-        capturedMode.Should().Be(PdfViewMode.SinglePage,
-            "the overlay only exists in single-page mode, so the thread pulls the viewer back");
-        JSInterop.VerifyInvoke("tmPdfViewer.renderPage", 1).Last()
-            .Arguments[1].Should().Be(3, "the viewer lands on the thread's page in single-page mode");
     }
 
     private static DocumentCommentThread ResolvedThread(string id, int page)

@@ -45,7 +45,7 @@ to an `<embed>` fallback without `pdf-viewer.js`):
 | `TmPdfThreadCard` | Card header: color badge, kind, preview, author · time, page ref, reply count, Resolved chip, chevron |
 | `TmPdfCommentItem` | Comment body: `TmAvatar`, "(Edited)" marker, ⋯ menu (Edit / Delete), relative time |
 | `TmPdfComposer` | Textarea + 32px-minimum action row; sticky at the expanded thread's bottom; Ctrl+Enter submits |
-| `TmPdfAnnotationLayer` / `TmPdfAnnotatorLayer` | Page-overlay marker layers (single-page only, PD1) |
+| `TmPdfAnnotationLayer` / `TmPdfAnnotatorLayer` | Page-overlay marker layers (per page in both view modes since FZE-13; the annotator layer stays on the pinned SinglePage viewer) |
 | `TmRedactionLayer` | Redaction stage on its own viewer; pinned to `SinglePage` |
 
 ## TmPdfViewer
@@ -148,23 +148,56 @@ A fit scale MAY fall outside the 50–200 % presets (the exact container ratio w
 clamped to the absolute 0.1–5 bounds. Every zoom button, preset and pinch **demotes the mode to
 `Custom`** — user intent beats the fit contract. `SetScaleAsync(double)` is the programmatic path.
 
-### View modes and PD1
+### View modes and annotations (PD1 superseded by PDF-VIEWER-CONTINUOUS-ANNOTATIONS)
 
 - **SinglePage** (default): one `<canvas>` plus the text layer, the search layer, the annotation
-  overlay and `OverlayContent`, all aligned to the canvas wrap.
-- **Continuous**: a lazy scroll column — one placeholder wrap per page with the real aspect
-  ratio, painted through an IntersectionObserver + serial render queue (a 100+ page document
-  never blocks the UI), canvases **released** outside the ±50 % viewport band (limit 12 painted
-  pages, text/search layers cleared with them), `OnVisiblePageChanged` updating the two-way
-  `Page`, the toolbar input and the active thumbnail, and the scroll position preserved across
-  zoom (in-place placeholder resize), rotation and view-mode switches. Each page wrap is a
-  labelled `role="group"` with `aria-current="page"` tracking the visible page; unpainted pages
-  show a reduced-motion-aware shimmer.
-- **PD1 — annotations are single-page only**: in Continuous the annotation overlay and
-  `OverlayContent` do not render, and selection-driven annotation creation is off. The thread
-  panel stays readable with a localized hint (`TmPdfViewer_AnnotationsSinglePageOnly`), and
-  selecting a thread switches the viewer back to `SinglePage` on the thread's page.
-  `TmPdfAnnotator` and `TmRedactionLayer` pin SinglePage permanently.
+  overlay, `OverlayContent` and (since FZE-13) the templated `PageOverlayContent` for the current
+  page, all aligned to the canvas wrap.
+- **Continuous**: a lazy scroll column — one placeholder wrap per page inside the JS-owned
+  `.tm-pdf-viewer__continuous-pages` container, painted through an IntersectionObserver + serial
+  render queue (a 100+ page document never blocks the UI), canvases **released** outside the
+  ±50 % viewport band (limit 12 painted pages, text/search layers cleared with them),
+  `OnVisiblePageChanged` updating the two-way `Page`, the toolbar input and the active thumbnail,
+  and the scroll position preserved across zoom (in-place placeholder resize), rotation and
+  view-mode switches. Each page wrap is a labelled `role="group"` with `aria-current="page"`
+  tracking the visible page; unpainted pages show a reduced-motion-aware shimmer.
+- **Annotations in Continuous (FZE-13)**: the scroll wrap hosts a second, Blazor-owned
+  `.tm-pdf-viewer__continuous-overlays` container next to the JS-owned pages DOM. `pdf-viewer.js`
+  reports the page boxes of the pages inside the mount band (the same ±50 % band the paint/release
+  logic uses) through the `[JSInvokable] OnContinuousPageGeometry(pages, tops, lefts, widths,
+  heights, rotation)` callback — deduped by a rounded signature, fired after every build, size
+  resolve chunk, in-place zoom, rotation and band change — and Blazor renders one absolutely
+  positioned `.tm-pdf-viewer__page-overlay-slot` per reported page carrying the annotation layer
+  (same `pdf-annotation-*` test ids, `data-page` on the slot) and the templated
+  `PageOverlayContent`. Only the mounted pages ever reach Blazor's diff, so a 120-page document
+  with a thread on every page keeps the lazy render and the painted-page limit intact. Z-order:
+  page canvas < per-page text/search layer (z-index 1) < overlay slots (z-index 2) — markers stay
+  clickable while the rest passes pointer events through to the text selection beneath.
+- **Slot geometry is the page-INNER box**: the JS geometry report measures
+  `.tm-pdf-viewer__page-inner` (the actual canvas box) — the outer wrap is a full-width
+  centered flex row, so only its vertical extent feeds the mount band. The slots render in the
+  internal `TmPdfContinuousOverlays` child with its own `SetGeometry` (the `[JSInvokable]`
+  forwards to it, so the root viewer never re-renders for a geometry report); an in-place
+  zoom hides the slots until the fresh report arrives, and a `ResizeObserver` on the scroll
+  container re-reports when the column resizes without a scroll. The annotation layer wraps
+  its content in the unrotated page plane (the same `[data-main-rotation]` transforms the
+  per-page text layers use), so markers and highlights stay over their text at any rotation.
+- **Selection → thread per page**: `enableSelection` gained a continuous branch — the page comes
+  from the wrap containing the selection's anchor node (limited to the renderer-owned
+  `.tm-pdf-viewer__continuous-pages`, so an anchor inside an overlay slot never reports the
+  slot's page), the rects are normalized against that
+  page's box and a selection crossing into the next page is clamped to the anchor page, so
+  `OnTextSelected` (and the sticky CTA flow) create the thread on the selection's page.
+- **Thread selection scrolls**: selecting a thread in Continuous no longer switches to SinglePage —
+  it scrolls to the page (`scrollToPage`) and centers the anchor point (new `scrollToAnchor`
+  interop, the anchor's normalized Y on the viewport's middle line); the active thumbnail and the
+  two-way `Page` update through the scroll tracker's report, and the marker highlights as soon as
+  the geometry report mounts its slot.
+- **Single-page still pins**: `TmPdfAnnotator` and `TmRedactionLayer` keep their viewers on
+  SinglePage (the annotator's per-page continuous tools land in FZE-14). The non-templated
+  `OverlayContent` stays single-page only — it is aligned to THE canvas; the templated
+  `PageOverlayContent` (`PdfPageOverlayContext`: `PageNumber`, `IsCurrentPage`, `Width`, `Height`,
+  `Rotation`) is the page-aware API and works in both modes.
 
 ### Text layer, search and touch
 
@@ -231,7 +264,8 @@ recolored, the selection survives tool switches, and a new `Url` drops it. The e
 ("Export PDF | Export flattened | Print", `data-tm-group="export"`) lives in the header row when
 `ShowHeader` is true (`Title`, `Subtitle`, `HeaderStart`, `HeaderActions`); `AllowExport` /
 `ExportFileName` / `ExportAsync(flatten)` / `PrintAsync()` drive it. The annotator pins the
-viewer to `SinglePage` (PD1) and never offers the continuous toggle; `ShowViewerToolbar=false`
+viewer to `SinglePage` and never offers the continuous toggle (per-page continuous tools land in
+FZE-14); `ShowViewerToolbar=false`
 (compatibility) hides the viewer chrome and renders a compact tools row instead.
 
 Pass-through parameters: `ShowThumbnails`, `ShowSearch`, `AllowRotation`,
@@ -285,7 +319,8 @@ All keys live in en/cs/sk/fr and the `MockTmLocalizer`. The families hosts most 
 family — "{0} reply"/"{0} replies" / cs "{0} odpověď"/"{0} odpovědi"/"{0} odpovědí"),
 `TmPdfThread_FilterAll` / `TmPdfThread_FilterUnresolved` (the phase-12 filter's `Loc.Plural`
 families, "All ({0})"/"Unresolved ({0})" — English ships `_One`/`_Other`, cs/sk all four forms),
-`TmPdfViewer_AnnotationsSinglePageOnly`, `TmPdfAnnotator_ColorLabel`,
+`TmPdfViewer_PageAnnotations` (the per-page overlay slot's group label, "Annotations on page {0}"),
+`TmPdfAnnotator_ColorLabel`,
 `TmPdfAnnotator_ColorName_*` (the default palette's localized swatch names),
 `TmPdfAnnotator_ChooseColor` / `TmPdfAnnotator_ResetColor`, `TmPdfAnnotator_TogglePanel`,
 `TmPdfAnnotator_EditOnLargerScreen`, `TmPdfViewer_SelectionPrompt` / `TmPdfViewer_DismissSelection`,
@@ -293,7 +328,8 @@ families, "All ({0})"/"Unresolved ({0})" — English ships `_One`/`_Other`, cs/s
 grammar needs — [localization-plurals.md](localization-plurals.md). Timestamps render RELATIVE
 through the shared `ITmRelativeTimeFormatter` with the absolute instant in `<time datetime>` and
 `title`. The 2.9.0 `TmPdfViewer_ShowResolved` / `TmPdfAnnotator_ShowResolved` keys were removed
-with the phase-12 filter (see the CHANGELOG migration).
+with the phase-12 filter (see the CHANGELOG migration); the 2.9.0
+`TmPdfViewer_AnnotationsSinglePageOnly` hint key followed when FZE-13 superseded PD1.
 
 ## Theming
 
@@ -343,8 +379,9 @@ summary:
    instant in `<time datetime>`/`title`; counted texts are `Loc.Plural` families
    (`TmPdfThread_ReplyCount`, `TmPdfViewer_CommentsCount`, `TmPdfAnnotator_DraftStrokes`).
    Hosts overriding those keys must ship the plural forms.
-9. **Continuous** — annotations and `OverlayContent` are single-page only (PD1); text-selection
-   annotation creation is disabled in Continuous.
+9. **Continuous** — annotations render per mounted page (FZE-13, PD1 superseded); the
+   non-templated `OverlayContent` stays single-page only, and the selection report resolves the
+   anchor page so threads land on the page the text was selected on.
 10. **Search presentation** — `SearchPresentation` defaults to **`Floating`**: on desktop/tablet
    the search UI is a card anchored over the page body (focus lands in its input; Escape
    restores the toolbar focus; a zero-match search renders `TmPdfViewer_SearchNoMatches`).

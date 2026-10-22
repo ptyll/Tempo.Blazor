@@ -60,6 +60,27 @@
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Callback invoked when a thread marker or highlight is selected."
+    },
+    {
+      "name": "Rotation",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Document rotation in degrees (0/90/180/270). The anchor geometry is normalized to the unrotated page, so a non-zero rotation wraps the content in the unrotated plane."
+    },
+    {
+      "name": "OverlayWidth",
+      "type": "double",
+      "isRequired": false,
+      "default": "0",
+      "description": "The overlay box's width in CSS pixels — the ROTATED page box the layer fills (the canvas box, or the geometry report's slot box). 0 until reported."
+    },
+    {
+      "name": "OverlayHeight",
+      "type": "double",
+      "isRequired": false,
+      "default": "0",
+      "description": "The overlay box's height in CSS pixels — the ROTATED page box. 0 until reported."
     }
   ]
 }
