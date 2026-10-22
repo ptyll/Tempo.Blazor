@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Files",
   "namespace": "Tempo.Blazor.Components.Files",
-  "description": "Side panel of TmPdfAnnotator listing annotation threads with kind badges and author colors. Hosts the draft composer and supports reply, resolve, reopen, delete, and a resolved-threads filter. Used internally by TmPdfAnnotator.",
+  "description": "Side panel of TmPdfAnnotator listing annotation threads with kind badges and author colors, filtered through the shared TmPdfThreadFilter (phase 12: the All | Unresolved segmented control). Hosts the draft composer and supports reply, resolve, reopen, and delete. Used internally by TmPdfAnnotator.",
   "packageId": "Tempo.Blazor.PdfViewer",
   "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotatorPanel.razor",
   "documentationStatus": "generated",

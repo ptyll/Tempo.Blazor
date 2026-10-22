@@ -528,7 +528,14 @@ merge into the embedded viewer's toolbar through `ToolbarStart`/`ToolbarEnd`; th
 `ThumbnailsCollapsed` (two-way), `ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
 `SinglePage` (PD1) and never offers the continuous toggle. `ShowViewerToolbar` (default `true`)
 is kept for compatibility: when `false`, the viewer chrome is hidden and the annotator renders a
-compact tools row of its own. Responsive (`LayoutMode`, default `Auto`): **desktop** keeps the
+compact tools row of its own. **Runtime color picker (FZE-12)**: `AllowColorPicker` (default
+`true`) turns the color label into a trigger for a `TmColorPalette` popover (a bottom sheet on a
+mobile layout); `ColorPalette` overrides the offered colors and `ColorNames` names the swatches.
+The chip/palette display color is the picked color or the per-author/role fallback — selecting
+the already-checked fallback swatch raises nothing, and the reset action is disabled while the
+author color is shown. `AnnotationColorChanged` is two-way: a pick raises the color, the reset
+raises `null`, and a new document resets the pick back to the parameter baseline.
+Responsive (`LayoutMode`, default `Auto`): **desktop** keeps the
 merged toolbar and the docked thread panel; **tablet** renders the tools as a full-width labelled
 row and the panel as a docked aside; **mobile is G2 — viewing + light edits only**: the tool
 palette offers exactly Browse and Add comment (highlight/stamp/draw are hidden, an active edit

@@ -1,0 +1,77 @@
+/* TmPdfThreadFilter — the "All (N) | Unresolved (M)" segmented control both annotation panels
+   render in their header (PdfViewer redesign phase 12). Mirrors the TmRadioGroup
+   Appearance=Segmented presentation: one row of two native-radio segments. */
+
+.tm-pdf-thread-filter {
+    display: inline-flex;
+    align-items: stretch;
+    flex-shrink: 0;
+    padding: 2px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+}
+
+.tm-pdf-thread-filter__segment {
+    position: relative; /* the visually-hidden radio resolves against its own segment */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* The native radio is the keyboard activation surface (the browser owns the arrows and the
+   single activation per key press) — visually hidden like the segmented control's own input. */
+.tm-pdf-thread-filter__segment input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tm-pdf-thread-filter__segment--checked {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* Keyboard focus ring on the segment label through the hidden input's focus-within. */
+.tm-pdf-thread-filter__segment:focus-within {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-pdf-thread-filter--disabled {
+    opacity: 0.6;
+}
+
+.tm-pdf-thread-filter--disabled .tm-pdf-thread-filter__segment {
+    cursor: default;
+}
+
+/* A finger needs the shared touch target on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-pdf-thread-filter__segment {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* Reduced motion: the segment's own transition is the only animated subject here. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-pdf-thread-filter__segment {
+        transition: none;
+    }
+}

@@ -2,6 +2,40 @@
 
 ## 2.9.1 (unreleased)
 
+### Added
+
+- **TmPdfViewer & TmPdfAnnotator: the "All (N) | Unresolved (M)" thread filter (FZE-12).** A new
+  shared `TmPdfThreadFilter` card (PD4, next to `TmPdfThreadList`) renders as the segmented
+  control in BOTH panels' headers — the docked desktop/tablet chrome and the sheet presentations
+  alike. The segments are native radios sharing one group name (the
+  `TmRadioGroup Appearance=Segmented` model: the browser owns the arrow keys, one activation per
+  key press, no emulation), carry live counts from the `Threads` set — `Loc.Plural` families
+  `TmPdfThread_FilterAll` / `TmPdfThread_FilterUnresolved` — and map onto the panels' unchanged
+  `ShowResolved`/`ShowResolvedChanged` contract (All ↔ `true`; the viewer's
+  `ShowResolvedAnnotations` keeps working). The Unresolved filter has its own localized empty
+  state (`TmPdfThread_EmptyUnresolved`, "No unresolved threads") when it hides every thread.
+  New test ids: `pdf-annotation-filter` / `pdf-annotator-filter` with `-all` / `-unresolved`
+  segments (see Breaking / Migration for the checkbox they replaced). The counts recompute on
+  every render, so a resolve/reopen mutation updates them immediately.
+
+- **TmPdfAnnotator: runtime color picker for new annotations (FZE-12).** The toolbar's color
+  chip became a `pdf-annotator-color-trigger` BUTTON (`aria-haspopup="dialog"`,
+  `aria-expanded`, accessible name = localized `TmPdfAnnotator_ColorLabel` + the current
+  color's name) that opens the core `TmColorPalette` in an overlay panel — an anchored popover
+  on desktop/tablet (44px targets on a coarse pointer) and the F3 bottom sheet on a mobile
+  layout, where a color tile rides the Browse/Add-comment palette row. New parameters:
+  `AnnotationColorChanged` (two-way to the existing `AnnotationColor`), `ColorPalette`
+  (default `PdfAnnotationColorHelper.DefaultPalette` — the helper stays the palette's owner),
+  `ColorNames` (default the localized `TmPdfAnnotator_ColorName_*` names of the default
+  palette) and `AllowColorPicker` (default `true`; `false` restores the pre-2.9.1 static
+  chip + label indicator). The picked color applies ONLY to annotations created afterwards
+  (`CreateStampAsync`, `CreateFromDraftAsync`, the draft/ink `DraftColor`) — existing threads
+  are never recolored (`IPdfAnnotationProvider` has no color update and Abstractions is
+  unchanged). A "Reset to author color" action (`TmPdfAnnotator_ResetColor`) inside the
+  palette returns new annotations to the per-author/role resolution; the selection survives
+  tool switches and is dropped when a new `Url` loads. Swatch colors render as inline
+  `style` from the data palette (allow-list) — never CSS hard-coding.
+
 ### Fixed
 
 - **French filter result preview claimed whole millions wrong.** The `TmFilterBuilder_ResultPreview_Many`
@@ -377,6 +411,54 @@
   needs per docs/localization-plurals.md).
 
 ### Breaking / Migration
+
+- **TmPdfViewer + TmPdfAnnotator: the "Show resolved" checkbox became the segmented
+  "All | Unresolved" filter (FZE-12).** The `pdf-annotation-show-resolved` /
+  `pdf-annotator-show-resolved` checkbox (`label.tm-pdf-*-panel__filter` wrapping an
+  `<input type="checkbox">`) is gone. Both panels now render the shared `TmPdfThreadFilter`:
+  a `role="radiogroup"` with the test id `pdf-annotation-filter` / `pdf-annotator-filter` and
+  two native-radio segments `…-filter-all` / `…-filter-unresolved` (`.tm-pdf-thread-filter`
+  BEM block), whose labels carry the live counts ("All (4)" / "Unresolved (3)"). The panel
+  API is unchanged — `ShowResolved`/`ShowResolvedChanged` map All ↔ `true`,
+  Unresolved ↔ `false`, and the viewer's `ShowResolvedAnnotations` still seeds the state — so
+  only host CSS/E2E keyed off the old DOM needs migrating. The removed localization keys are
+  `TmPdfViewer_ShowResolved` and `TmPdfAnnotator_ShowResolved` (replaced by the plural
+  families `TmPdfThread_FilterAll` / `TmPdfThread_FilterUnresolved`, the group label
+  `TmPdfThread_FilterLabel` and the `TmPdfThread_EmptyUnresolved` empty state — all four
+  languages ship them); hosts that overrode the old keys should move the overrides to the
+  new families.
+
+```razor
+@* BEFORE (2.9.0) — a checkbox in the panel header *@
+<label class="tm-pdf-annotation-panel__filter">
+    <input type="checkbox" data-testid="pdf-annotation-show-resolved" checked="@ShowResolved"
+           @onchange="ToggleResolvedAsync" />
+    @Loc["TmPdfViewer_ShowResolved"]
+</label>
+
+@* AFTER (2.9.1) — the shared segmented filter; the panel renders it for you *@
+<TmPdfThreadFilter Threads="@Threads"
+                   ShowResolved="@ShowResolved"
+                   ShowResolvedChanged="@ShowResolvedChanged"
+                   TestIdBase="pdf-annotation" />
+@* DOM: [data-testid='pdf-annotation-filter'] role=radiogroup
+        [data-testid='pdf-annotation-filter-all']        (checked when ShowResolved)
+        [data-testid='pdf-annotation-filter-unresolved']  (checked when !ShowResolved) *@
+```
+
+- **TmPdfAnnotator: the toolbar color chip became a color-picker trigger button (FZE-12).**
+  The static `<span class="tm-pdf-annotator__color-chip"> + <span
+  class="tm-pdf-annotator__color-label">` pair is now wrapped by a
+  `<button class="tm-pdf-annotator__color-trigger" aria-haspopup="dialog" aria-expanded=…>`
+  that opens the palette (pressing it again / Escape closes; the reset action inside is
+  `pdf-annotator-color-reset`). The chip keeps its class and its `aria-hidden`, the label
+  keeps its class and test id, and `AllowColorPicker="false"` restores the exact pre-2.9.1
+  static pair (no button) for hosts that embed their own picker. A host styling the chip or
+  the label now has to survive the extra `button` ancestor (e.g. scope with
+  `.tm-pdf-annotator__color-trigger .tm-pdf-annotator__color-chip`); a host that positioned
+  elements against the old inline pair should target the trigger button instead. On a mobile
+  layout the new `pdf-annotator-color-tile` rides the G2 palette row (a third tile) and opens
+  the palette as the F3 bottom sheet.
 
 - **TmPdfViewer: the search UI defaults to the Floating card (FZE-11).** The new
   `SearchPresentation` parameter defaults to `PdfSearchPresentation.Floating`: on desktop and

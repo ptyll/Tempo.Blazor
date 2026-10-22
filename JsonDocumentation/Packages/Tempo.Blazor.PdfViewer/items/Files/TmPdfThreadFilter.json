@@ -1,0 +1,48 @@
+{
+  "itemName": "TmPdfThreadFilter",
+  "kind": "Component",
+  "category": "Files",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "Shared thread filter of the PDF annotation panels (TmPdfViewer and TmPdfAnnotator, phase 12): the 'All (N) | Unresolved (M)' segmented control rendered in both panels' headers. It replaced the phase-4 'Show resolved' checkbox — the All segment maps onto ShowResolved=true and Unresolved onto false, so the public panel contract is unchanged. The segments are native radios sharing one group name (the TmRadioGroup Appearance=Segmented model): the browser owns the arrow keys and there is no keyboard emulation. Counts recompute from Threads on every render, so resolve/reopen mutations update them live.",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadFilter.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Annotation threads whose All/Unresolved counts are shown."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether resolved threads are shown — All (true) or Unresolved only (false)."
+    },
+    {
+      "name": "ShowResolvedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback invoked when the filter changes: All raises true, Unresolved raises false."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether panel interaction is disabled."
+    },
+    {
+      "name": "TestIdBase",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Base of the owning panel's testid contract (e.g. pdf-annotation or pdf-annotator); the group renders {base}-filter with the segments {base}-filter-all and {base}-filter-unresolved."
+    }
+  ]
+}

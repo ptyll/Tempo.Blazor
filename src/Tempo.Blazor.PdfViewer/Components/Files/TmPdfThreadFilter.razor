@@ -1,0 +1,74 @@
+@namespace Tempo.Blazor.Components.Files
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Models
+
+@* Shared thread filter (PdfViewer redesign phase 12, PD4): the "All (N) | Unresolved (M)"
+   segmented control both annotation panels render in their header. It replaces the phase-4
+   "Show resolved" checkbox — the public panel contract is unchanged, the All segment maps onto
+   ShowResolved=true and Unresolved onto false. The two segments are NATIVE radios sharing one
+   group name (the TmRadioGroup Appearance=Segmented model): the browser owns the arrow keys and
+   the single activation per key press — this component adds no emulation. The counts recompute
+   from the Threads parameter on every render, so resolve/reopen mutations update them live. *@
+
+<div class="tm-pdf-thread-filter @(Disabled ? "tm-pdf-thread-filter--disabled" : null)"
+     role="radiogroup"
+     aria-label="@Loc["TmPdfThread_FilterLabel"]"
+     data-testid="@TestIdFor("filter")">
+    <label class="tm-pdf-thread-filter__segment @(IsAll ? "tm-pdf-thread-filter__segment--checked" : null)">
+        <input type="radio"
+               name="@_groupName"
+               value="all"
+               checked="@(IsAll)"
+               disabled="@Disabled"
+               data-testid="@TestIdFor("filter-all")"
+               @onchange="SelectAllAsync" />
+        <span>@Loc.Plural("TmPdfThread_FilterAll", Threads.Count)</span>
+    </label>
+    <label class="tm-pdf-thread-filter__segment @(!IsAll ? "tm-pdf-thread-filter__segment--checked" : null)">
+        <input type="radio"
+               name="@_groupName"
+               value="unresolved"
+               checked="@(!IsAll)"
+               disabled="@Disabled"
+               data-testid="@TestIdFor("filter-unresolved")"
+               @onchange="SelectUnresolvedAsync" />
+        <span>@Loc.Plural("TmPdfThread_FilterUnresolved", UnresolvedCount)</span>
+    </label>
+</div>
+
+@code {
+    // Per-instance radio group name: two panels on one page must never share a group.
+    private readonly string _groupName = "tm-pdf-filter-" + Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>Annotation threads whose All/Unresolved counts are shown.</summary>
+    [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
+
+    /// <summary>Whether resolved threads are shown — All (true) or Unresolved only (false).</summary>
+    [Parameter] public bool ShowResolved { get; set; }
+
+    /// <summary>Callback invoked when the filter changes: All raises true, Unresolved raises false.</summary>
+    [Parameter] public EventCallback<bool> ShowResolvedChanged { get; set; }
+
+    /// <summary>Whether panel interaction is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Base of the owning panel's testid contract (e.g. <c>pdf-annotation</c> or
+    /// <c>pdf-annotator</c>); the group renders <c>{base}-filter</c> with the segments
+    /// <c>{base}-filter-all</c> and <c>{base}-filter-unresolved</c>.
+    /// </summary>
+    [Parameter] public string? TestIdBase { get; set; }
+
+    /// <summary>Count of open threads (the Unresolved segment's count).</summary>
+    private int UnresolvedCount => Threads.Count(thread => thread.Status == DocumentCommentThreadStatus.Open);
+
+    /// <summary>Whether the All segment is the current selection.</summary>
+    private bool IsAll => ShowResolved;
+
+    private string? TestIdFor(string suffix)
+        => string.IsNullOrWhiteSpace(TestIdBase) ? null : $"{TestIdBase}-{suffix}";
+
+    private Task SelectAllAsync() => ShowResolvedChanged.InvokeAsync(true);
+
+    private Task SelectUnresolvedAsync() => ShowResolvedChanged.InvokeAsync(false);
+}

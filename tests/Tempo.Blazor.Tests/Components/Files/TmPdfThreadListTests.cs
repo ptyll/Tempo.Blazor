@@ -115,4 +115,75 @@ public class TmPdfThreadListTests : LocalizationTestBase
 
         cut.Find(".tm-pdf-thread-card__badge").GetAttribute("style").Should().Contain("#ff0066");
     }
+
+    // ── FZE-12: the shared thread filter ("All | Unresolved" segmented radio) ──
+
+    [Fact]
+    public void ThreadFilter_RendersAllAndUnresolvedSegments_WithCounts()
+    {
+        var threads = new[] { Thread("t1"), Thread("t2"), Resolved("t3") };
+
+        var cut = Render<TmPdfThreadFilter>(p => p
+            .Add(x => x.Threads, threads)
+            .Add(x => x.TestIdBase, Base)
+            .Add(x => x.ShowResolved, true));
+
+        cut.Find("[data-testid='pdf-annotation-filter']").GetAttribute("role").Should().Be("radiogroup");
+        cut.Find("[data-testid='pdf-annotation-filter-all']").GetAttribute("type").Should().Be("radio");
+        cut.Find("[data-testid='pdf-annotation-filter-unresolved']").GetAttribute("type").Should().Be("radio");
+
+        var filterText = cut.Find("[data-testid='pdf-annotation-filter']").TextContent;
+        filterText.Should().Contain("All (3)", "the All segment counts every thread");
+        filterText.Should().Contain("Unresolved (2)", "the Unresolved segment counts the open threads");
+        cut.Find("[data-testid='pdf-annotation-filter-all']").HasAttribute("checked").Should().BeTrue(
+            "ShowResolved=true is the All segment (the pre-FZE-12 checkbox's checked state)");
+    }
+
+    [Fact]
+    public void ThreadFilter_IsRadioGroup_ArrowKeysMoveSelection()
+    {
+        // Keyboard convention: the two segments are NATIVE radios sharing one group name, so the
+        // browser owns the arrow keys and moves the selection itself — the component adds no
+        // emulation (exactly the TmRadioGroup Appearance=Segmented model the filter mirrors).
+        var cut = Render<TmPdfThreadFilter>(p => p
+            .Add(x => x.Threads, new[] { Thread("t1") })
+            .Add(x => x.TestIdBase, Base));
+
+        var all = cut.Find("[data-testid='pdf-annotation-filter-all']");
+        var unresolved = cut.Find("[data-testid='pdf-annotation-filter-unresolved']");
+
+        all.GetAttribute("name").Should().NotBeNullOrEmpty();
+        unresolved.GetAttribute("name").Should().Be(all.GetAttribute("name"),
+            "native radios sharing a name give the arrow keys to the browser (no emulation)");
+        cut.Find("[data-testid='pdf-annotation-filter']").GetAttribute("aria-label")
+            .Should().NotBeEmpty("the group is named for assistive tech");
+    }
+
+    [Fact]
+    public void ThreadFilter_CountsFollowThreadMutations()
+    {
+        var threads = new List<DocumentCommentThread> { Thread("t1"), Thread("t2") };
+        var cut = Render<TmPdfThreadFilter>(p => p
+            .Add(x => x.Threads, threads)
+            .Add(x => x.TestIdBase, Base));
+
+        cut.Find("[data-testid='pdf-annotation-filter']").TextContent.Should().Contain("Unresolved (2)");
+
+        // A resolve/reopen mutation hands a new thread set back: the counts recompute live.
+        threads[1].Status = DocumentCommentThreadStatus.Resolved;
+        cut.InvokeAsync(() => cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+            new Dictionary<string, object> { [nameof(TmPdfThreadFilter.Threads)] = threads })
+        )).GetAwaiter().GetResult();
+
+        var filterText = cut.Find("[data-testid='pdf-annotation-filter']").TextContent;
+        filterText.Should().Contain("All (2)");
+        filterText.Should().Contain("Unresolved (1)");
+    }
+
+    private static DocumentCommentThread Resolved(string id)
+    {
+        var thread = Thread(id);
+        thread.Status = DocumentCommentThreadStatus.Resolved;
+        return thread;
+    }
 }

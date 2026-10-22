@@ -140,7 +140,10 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         var composer = alice.Locator("[data-testid='pdf-annotator-new-input']");
         await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
         await composer.FillAsync("Prosím zkontrolovat tento odstavec.");
-        await SaveScreenshotAsync(page, "two-users-draft");
+        // Phase 12 flake fix: pane-clipped captures — a full-page screenshot resizes the
+        // viewport, which re-resolves the Auto layout to mobile and closes the open panel.
+        await SavePaneScreenshotAsync(page, "two-users-draft", alice);
+        await EnsurePanelVisibleAsync(alice);
         await alice.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
 
         // The thread appears in BOTH panes (shared provider).
@@ -148,7 +151,9 @@ public class PdfAnnotatorE2ETests : WasmTestBase
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
         await bob.Locator("[data-testid='pdf-annotator-thread']").First
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
-        await SaveScreenshotAsync(page, "two-users-thread-shared");
+        await SavePaneScreenshotAsync(page, "two-users-thread-shared", alice, bob);
+        await EnsurePanelVisibleAsync(alice);
+        await EnsurePanelVisibleAsync(bob);
 
         // Bob opens the thread and replies.
         await bob.Locator("[data-testid='pdf-annotator-thread']").First.ClickAsync();
@@ -166,7 +171,9 @@ public class PdfAnnotatorE2ETests : WasmTestBase
 
         await alice.Locator("[data-testid='pdf-annotator-comment']").Nth(1)
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
-        await SaveScreenshotAsync(page, "two-users-reply");
+        await SavePaneScreenshotAsync(page, "two-users-reply", alice);
+        await EnsurePanelVisibleAsync(alice);
+        await EnsurePanelVisibleAsync(bob);
 
         // Bob resolves — the thread disappears from the default (open) filter in both panes.
         await bob.Locator("[data-testid='pdf-annotator-resolve']").ClickAsync();
@@ -175,11 +182,13 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         await Assertions.Expect(bob.Locator("[data-testid='pdf-annotator-thread']"))
             .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
 
-        // The resolved filter shows it again, marked as resolved.
-        await alice.Locator("[data-testid='pdf-annotator-show-resolved']").CheckAsync();
+        // The All filter shows it again, marked as resolved (phase 12: the segmented
+        // "All | Unresolved" filter replaced the "Show resolved" checkbox).
+        await alice.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotator-filter-all'])").ClickAsync();
         await alice.Locator("[data-testid='pdf-annotator-thread']").First
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
-        await SaveScreenshotAsync(page, "two-users-resolved");
+        await SavePaneScreenshotAsync(page, "two-users-resolved", alice);
+        await EnsurePanelVisibleAsync(alice);
         AssertNoBlazorErrors(handle);
     }
 
@@ -469,6 +478,275 @@ public class PdfAnnotatorE2ETests : WasmTestBase
         AssertNoBlazorErrors(handle);
     }
 
+    // ── Phase 12: the "All | Unresolved" filter and the runtime color picker ──
+
+    /// <summary>
+    /// Phase 12: the panels' header carries the segmented "All (N) | Unresolved (M)" filter
+    /// and its counts follow resolve/reopen mutations live. The docked desktop panel starts
+    /// with the Unresolved view; resolving one of the four seeded threads updates the counts
+    /// and hides the thread. Ends with the <c>thread-filter-desktop</c> screenshot.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ThreadFilter_CountsUpdateOnResolve()
+    {
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        var showcase = page.Locator("[data-testid='pdf-annotator-showcase']");
+        await showcase.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(showcase);
+
+        var filter = showcase.Locator("[data-testid='pdf-annotator-filter']").First;
+        await filter.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        Assert.AreEqual(0, await showcase.Locator("[data-testid='pdf-annotator-show-resolved']").CountAsync(),
+            "the checkbox was replaced by the segmented filter");
+
+        // Four seeded threads, all open: both segments count 4.
+        var text = await filter.InnerTextAsync();
+        StringAssert.Contains(text, "All (4)");
+        StringAssert.Contains(text, "Unresolved (4)");
+        await SaveScreenshotAsync(page, "thread-filter-desktop");
+
+        // Resolve one thread through its expanded card.
+        await showcase.Locator("[data-testid='pdf-annotator-thread']").First.ClickAsync();
+        await showcase.Locator("[data-testid='pdf-annotator-resolve']").First.ClickAsync();
+
+        // The counts follow the mutation and the resolved thread leaves the Unresolved view.
+        await Assertions.Expect(showcase.Locator("[data-testid='pdf-annotator-thread']"))
+            .ToHaveCountAsync(3, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        var updated = await filter.InnerTextAsync();
+        StringAssert.Contains(updated, "All (4)");
+        StringAssert.Contains(updated, "Unresolved (3)");
+
+        // The All segment brings the resolved thread back.
+        await showcase.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotator-filter-all'])").ClickAsync();
+        await Assertions.Expect(showcase.Locator("[data-testid='pdf-annotator-thread']"))
+            .ToHaveCountAsync(4, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        AssertNoBlazorErrors(handle);
+    }
+
+    /// <summary>Phase 12 edge: an empty document under the Unresolved filter shows the
+    /// localized "no unresolved" empty state (never the plain "no annotations" text).</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ThreadFilter_EmptyUnresolved_Edge()
+    {
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
+        await alice.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(alice);
+
+        var empty = alice.Locator("[data-testid='pdf-annotator-empty']");
+        await empty.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        StringAssert.Contains(await empty.InnerTextAsync(), "No unresolved",
+            "the Unresolved filter is the default, so an empty panel shows its empty state");
+
+        // The All segment keeps the panel's own "no annotations" text.
+        await alice.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotator-filter-all'])").ClickAsync();
+        await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-empty']"))
+            .ToContainTextAsync("No annotations", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+        // …and back to the unresolved filter's own localized empty state.
+        await alice.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotator-filter-unresolved'])").ClickAsync();
+        await Assertions.Expect(alice.Locator("[data-testid='pdf-annotator-empty']"))
+            .ToContainTextAsync("No unresolved", new LocatorAssertionsToContainTextOptions { Timeout = 15000 });
+
+        await SaveScreenshotAsync(page, "thread-filter-empty");
+        AssertNoBlazorErrors(handle);
+    }
+
+    /// <summary>
+    /// Phase 12: the toolbar color trigger opens the palette; the picked color applies to NEW
+    /// annotations — here a text highlight created after the pick. The
+    /// <c>color-picker-open</c> screenshot is a clipped toolbar+popover shot (reduced motion,
+    /// popover asserted below the chip); <c>highlight-custom-color</c> ends the flow.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ColorPicker_NewHighlightUsesPickedColor()
+    {
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        // The popover animation must not race the screenshot below: emulate reduced motion and
+        // wait for the visible panel explicitly.
+        await page.EmulateMediaAsync(new PageEmulateMediaOptions { ReducedMotion = ReducedMotion.Reduce });
+
+        var showcase = page.Locator("[data-testid='pdf-annotator-showcase']");
+        await showcase.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(showcase);
+
+        var trigger = showcase.Locator("[data-testid='pdf-annotator-color-trigger']").First;
+        await trigger.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        // Pick the red swatch of the demo's custom palette first (the palette closes on a pick).
+        await trigger.ClickAsync();
+        var palette = showcase.Locator(".tm-color-palette").First;
+        await palette.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await showcase.Locator(".tm-color-palette-swatch[style*='#b91c1c']").First.ClickAsync();
+        await Assertions.Expect(palette).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        StringAssert.Contains((await showcase.Locator(".tm-pdf-annotator__color-chip").First
+            .GetAttributeAsync("style")) ?? "", "#b91c1c", "the trigger chip shows the picked color");
+
+        // Reopen with the picked color checked: the screenshot shows the toolbar plus the
+        // popover anchored BELOW the chip (never covering the toolbar).
+        await trigger.ClickAsync();
+        var panel = showcase.Locator(".tm-pdf-annotator__color-panel").First;
+        await panel.WaitForAsync(new LocatorWaitForOptions
+        {
+            Timeout = 15000,
+            State = WaitForSelectorState.Visible
+        });
+        Assert.AreEqual("true", await trigger.GetAttributeAsync("aria-expanded"));
+        await page.WaitForTimeoutAsync(300);
+
+        var chipBox = await showcase.Locator(".tm-pdf-annotator__color-chip").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The color chip has no bounding box.");
+        var panelBox = await panel.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The color panel has no bounding box.");
+        Assert.IsTrue(panelBox.Y >= chipBox.Y + chipBox.Height,
+            $"The popover top ({panelBox.Y}) must be below the chip bottom ({chipBox.Y + chipBox.Height}).");
+
+        var toolbarBox = await showcase.Locator("[data-testid='pdf-viewer-toolbar']").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The toolbar has no bounding box.");
+        var left = Math.Min(toolbarBox.X, panelBox.X) - 8;
+        var top = Math.Min(toolbarBox.Y, panelBox.Y) - 8;
+        var right = Math.Max(toolbarBox.X + toolbarBox.Width, panelBox.X + panelBox.Width) + 8;
+        var bottom = Math.Max(toolbarBox.Y + toolbarBox.Height, panelBox.Y + panelBox.Height) + 8;
+        await SaveScreenshotAsync(page, "color-picker-open", new Clip
+        {
+            X = left,
+            Y = top,
+            Width = right - left,
+            Height = bottom - top
+        });
+
+        // Close the popover and create the highlight with the picked color.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(palette).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+
+        // Highlight mode + a real text-layer selection → the draft carries the picked color.
+        await ClickToolAsync(showcase, "pdf-annotator-mode-highlight", "Highlight text");
+        Assert.IsTrue(await SelectTextAsync(showcase), "the annotator's text layer is selectable");
+        var composer = showcase.Locator("[data-testid='pdf-annotator-new-input']").First;
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await composer.FillAsync("Picked-color highlight");
+        await showcase.Locator("[data-testid='pdf-annotator-new-submit']").First.ClickAsync();
+
+        // The NEW highlight is the fifth thread of the seeded document (its layer rect is the
+        // last one rendered) — the seeded amber highlight keeps its own color.
+        var highlightCount = await showcase.Locator("[data-testid='pdf-annotator-highlight']").CountAsync();
+        Assert.IsTrue(highlightCount >= 2, "the new highlight joined the seeded one");
+        var highlight = showcase.Locator("[data-testid='pdf-annotator-highlight']").Last;
+        await highlight.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        StringAssert.Contains((await highlight.GetAttributeAsync("style")) ?? "", "#b91c1c",
+            "a NEW highlight carries the picked color (existing threads are never recolored)");
+
+        await SaveScreenshotAsync(page, "highlight-custom-color");
+        AssertNoBlazorErrors(handle);
+    }
+
+    /// <summary>Phase 12: "Reset to author color" returns new annotations to the
+    /// per-author/role resolution — the picked color stops applying.</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ColorPicker_ResetToAuthorColor()
+    {
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
+        await alice.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(alice);
+
+        // Pick green (the 5th swatch of the default palette).
+        await alice.Locator("[data-testid='pdf-annotator-color-trigger']").First.ClickAsync();
+        var palette = alice.Locator(".tm-color-palette").First;
+        await palette.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await alice.Locator(".tm-color-palette-swatch[style*='#15803d']").First.ClickAsync();
+        await Assertions.Expect(palette).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        StringAssert.Contains((await alice.Locator(".tm-pdf-annotator__color-chip").First
+            .GetAttributeAsync("style")) ?? "", "#15803d");
+
+        // A stamp created now carries the picked color.
+        await ClickToolAsync(alice, "pdf-annotator-mode-stamp", "Place stamp");
+        var point = await VisibleSurfacePointAsync(alice, 0.5, 0.35);
+        await page.Mouse.ClickAsync((float)point.X, (float)point.Y);
+        var stamp = alice.Locator("[data-testid='pdf-annotator-stamp']").First;
+        await stamp.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000, State = WaitForSelectorState.Attached });
+        StringAssert.Contains((await stamp.GetAttributeAsync("style")) ?? "", "#15803d",
+            "the stamp created after the pick carries the picked color");
+
+        // Reopen the palette and reset: new annotations fall back to the role color again.
+        await alice.Locator("[data-testid='pdf-annotator-color-trigger']").First.ClickAsync();
+        await alice.Locator("[data-testid='pdf-annotator-color-reset']").First.ClickAsync();
+        await Assertions.Expect(palette).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        StringAssert.Contains((await alice.Locator(".tm-pdf-annotator__color-chip").First
+            .GetAttributeAsync("style")) ?? "", "#b45309", "the reset returns to the per-role color");
+
+        await ClickToolAsync(alice, "pdf-annotator-mode-stamp", "Place stamp");
+        var point2 = await VisibleSurfacePointAsync(alice, 0.7, 0.35);
+        await page.Mouse.ClickAsync((float)point2.X, (float)point2.Y);
+        var stamp2 = alice.Locator("[data-testid='pdf-annotator-stamp']").Last;
+        await stamp2.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000, State = WaitForSelectorState.Attached });
+        StringAssert.Contains((await stamp2.GetAttributeAsync("style")) ?? "", "#b45309",
+            "the stamp created after the reset resolves per role again");
+        AssertNoBlazorErrors(handle);
+    }
+
+    /// <summary>Phase 12: the palette is keyboard-operable without any pointer — Enter opens
+    /// it from the trigger, Tab reaches the swatches, the arrows move the roving focus, Enter
+    /// picks and closes, and Escape closes without picking.</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ColorPicker_KeyboardOnly()
+    {
+        var handle = await OpenAnnotatorPageAsync();
+        var page = handle.Page;
+
+        var alice = page.Locator("[data-testid='pdf-annotator-pane-alice']");
+        await alice.ScrollIntoViewIfNeededAsync();
+        await WaitForSurfaceReadyAsync(alice);
+
+        var trigger = alice.Locator("[data-testid='pdf-annotator-color-trigger']").First;
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        var palette = alice.Locator(".tm-color-palette").First;
+        await palette.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        Assert.AreEqual("true", await trigger.GetAttributeAsync("aria-expanded"));
+
+        // Escape closes without picking.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(palette).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        Assert.AreEqual("false", await trigger.GetAttributeAsync("aria-expanded"));
+
+        // Reopen, focus the first swatch, arrow twice (the palette's roving tabindex moves the
+        // real focus), Enter picks (and closes).
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await palette.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await palette.Locator(".tm-color-palette-swatch").First.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await page.Keyboard.PressAsync("ArrowRight");
+        await page.Keyboard.PressAsync("Enter");
+
+        await Assertions.Expect(palette).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        StringAssert.Contains((await alice.Locator(".tm-pdf-annotator__color-chip").First
+            .GetAttributeAsync("style")) ?? "", "#0e7490",
+            "the keyboard walk picked the third default-palette swatch (cyan 700)");
+        AssertNoBlazorErrors(handle);
+    }
+
     // ── Two-user panes at tablet width (phase 8 review 6) ─────────────────────
 
     /// <summary>
@@ -531,6 +809,24 @@ public class PdfAnnotatorE2ETests : WasmTestBase
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Selects a run of text-layer spans through the DOM range API — the same path the touch
+    /// selection uses, so the annotator's <c>OnTextSelected</c> draft flow (and thus the picked
+    /// color of a highlight) is exercised without synthetic mouse gestures.
+    /// </summary>
+    private static async Task<bool> SelectTextAsync(ILocator pane)
+        => await pane.EvaluateAsync<bool>(@"(pane) => {
+            const spans = [...pane.querySelectorAll('.tm-pdf-viewer__text-layer span')];
+            if (spans.length < 2) return false;
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            const range = document.createRange();
+            range.setStartBefore(spans[0]);
+            range.setEndAfter(spans[Math.min(spans.length - 1, 4)]);
+            sel.addRange(range);
+            return (sel.toString() || '').length > 0;
+        }");
+
+    /// <summary>
     /// A point inside the visible intersection of the annotator surface and the scrollable
     /// canvas wrap, at relative coordinates (<paramref name="fx"/>, <paramref name="fy"/>).
     /// The page canvas may overflow the wrap (and be clipped), so raw coordinates from the
@@ -556,11 +852,60 @@ public class PdfAnnotatorE2ETests : WasmTestBase
 
     private static async Task SaveScreenshotAsync(IPage page, string fileName)
     {
+        await SaveScreenshotAsync(page, fileName, clip: null);
+    }
+
+    /// <summary>Saves an annotator screenshot, optionally clipped (a clip replaces the
+    /// full-page capture — its resize is what re-resolves the Auto layout mid-test).</summary>
+    private static async Task SaveScreenshotAsync(IPage page, string fileName, Clip? clip)
+    {
         var dir = Path.Combine(FindRepoRoot().FullName,
             "tests", "Tempo.Blazor.E2E", "__screenshots__", "pdf-annotator");
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"{fileName}.png");
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = true });
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = clip is null, Clip = clip });
+    }
+
+    /// <summary>Saves a screenshot clipped to the union of the given pane boxes (plus a small
+    /// margin) — a full-page capture resizes the viewport, which can re-resolve the Auto
+    /// layout (the phase 12 two-users flake), so the pane evidence is captured by clip.</summary>
+    private static async Task SavePaneScreenshotAsync(IPage page, string fileName, params ILocator[] panes)
+    {
+        const float margin = 8;
+        float? left = null, top = null, right = null, bottom = null;
+        foreach (var pane in panes)
+        {
+            var box = await pane.BoundingBoxAsync()
+                ?? throw new InvalidOperationException("A captured annotator pane has no bounding box.");
+            left = Math.Min(left ?? box.X, box.X);
+            top = Math.Min(top ?? box.Y, box.Y);
+            right = Math.Max(right ?? box.X + box.Width, box.X + box.Width);
+            bottom = Math.Max(bottom ?? box.Y + box.Height, box.Y + box.Height);
+        }
+
+        var clip = new Clip
+        {
+            X = left!.Value - margin,
+            Y = top!.Value - margin,
+            Width = right!.Value - left.Value + margin * 2,
+            Height = bottom!.Value - top.Value + margin * 2
+        };
+        await SaveScreenshotAsync(page, fileName, clip);
+    }
+
+    /// <summary>Phase 12 two-users flake guard: after a capture, the pane's thread panel must
+    /// be visible again — a transient Auto re-resolve to mobile closes it, and the panel
+    /// toggle reopens it.</summary>
+    private static async Task EnsurePanelVisibleAsync(ILocator pane)
+    {
+        var panel = pane.Locator("[data-testid='pdf-annotator-panel']").First;
+        if (await panel.IsVisibleAsync())
+        {
+            return;
+        }
+
+        await pane.Locator("[data-testid='pdf-annotator-panel-toggle']").First.ClickAsync();
+        await panel.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
     }
 
     private static DirectoryInfo FindRepoRoot()

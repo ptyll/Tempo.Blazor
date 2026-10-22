@@ -372,6 +372,37 @@ public class TmPdfAnnotationTests : LocalizationTestBase
         cut.FindAll("[data-testid='pdf-annotation-panel']").Should().BeEmpty();
     }
 
+    // ── FZE-12: the segmented thread filter replaces the "Show resolved" checkbox ──
+
+    [Fact]
+    public void ThreadFilter_All_RaisesShowResolvedChangedTrue()
+    {
+        bool? raised = null;
+        var cut = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { TextRangeThread("t1") })
+            .Add(x => x.ShowResolvedChanged, EventCallback.Factory.Create<bool>(this, v => raised = v)));
+
+        cut.Find("[data-testid='pdf-annotation-filter-all']").Change(true);
+
+        raised.Should().BeTrue("the All segment maps onto ShowResolved=true");
+        cut.FindAll("[data-testid='pdf-annotation-show-resolved']").Should().BeEmpty(
+            "the FZE-12 checkbox is gone — the segmented filter replaced it");
+    }
+
+    [Fact]
+    public void ThreadFilter_Unresolved_RaisesShowResolvedChangedFalse()
+    {
+        bool? raised = null;
+        var cut = Render<TmPdfAnnotationThreadPanel>(p => p
+            .Add(x => x.Threads, new List<DocumentCommentThread> { TextRangeThread("t1") })
+            .Add(x => x.ShowResolved, true)
+            .Add(x => x.ShowResolvedChanged, EventCallback.Factory.Create<bool>(this, v => raised = v)));
+
+        cut.Find("[data-testid='pdf-annotation-filter-unresolved']").Change(false);
+
+        raised.Should().BeFalse("the Unresolved segment maps onto ShowResolved=false");
+    }
+
     // ── Search UX ─────────────────────────────────────────────────────────────
 
     [Fact]

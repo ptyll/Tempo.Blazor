@@ -90,9 +90,36 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
 
     /// <summary>
     /// Explicit color (CSS value) stored with annotations created in this annotator.
-    /// When null (default) colors resolve per author/role at display time.
+    /// When null (default) colors resolve per author/role at display time. Supports two-way
+    /// binding: the runtime color picker (FZE-12) raises <see cref="AnnotationColorChanged"/>,
+    /// and a host-supplied value seeds the picker's selection.
     /// </summary>
     [Parameter] public string? AnnotationColor { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the runtime color picker changes the color for NEW annotations
+    /// (a pick raises the color, the reset raises <c>null</c> — the per-author/role fallback).
+    /// </summary>
+    [Parameter] public EventCallback<string?> AnnotationColorChanged { get; set; }
+
+    /// <summary>
+    /// Colors offered by the runtime color picker. Defaults to
+    /// <see cref="PdfAnnotationColorHelper.DefaultPalette"/> (the helper owns the palette data).
+    /// </summary>
+    [Parameter] public IReadOnlyList<string>? ColorPalette { get; set; }
+
+    /// <summary>
+    /// Accessible names for the <see cref="ColorPalette"/> colors, keyed by the color string
+    /// (matched case-insensitively, like the core <see cref="TmColorPalette"/>). Defaults to
+    /// the localized <c>TmPdfAnnotator_ColorName_*</c> names of the default palette.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? ColorNames { get; set; }
+
+    /// <summary>
+    /// Whether the runtime color picker is offered. Default true; when false the toolbar keeps
+    /// the pre-phase-12 static chip + label indicator and no palette tile renders on mobile.
+    /// </summary>
+    [Parameter] public bool AllowColorPicker { get; set; } = true;
 
     /// <summary>Active tool. Supports two-way binding. Default is <see cref="PdfAnnotatorMode.Browse"/>.</summary>
     [Parameter] public PdfAnnotatorMode Mode { get; set; } = PdfAnnotatorMode.Browse;
@@ -258,6 +285,36 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     /// <summary>The <see cref="ZoomMode"/> value seen by the previous parameter pass.</summary>
     private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Auto;
 
+    // ── FZE-12: runtime color picker state ───────────────────────────────────
+
+    /// <summary>The color for NEW annotations: a pick sets it, a reset (or a new document)
+    /// drops it back to the <see cref="AnnotationColor"/> parameter (null = per-author/role).</summary>
+    private string? _annotationColor;
+
+    /// <summary>The <see cref="AnnotationColor"/> value seen by the previous parameter pass —
+    /// a host echo of a pick must not fight the picker, an unrelated re-render must not
+    /// override the host's own change either.</summary>
+    private string? _lastAnnotationColorParam;
+
+    /// <summary>Whether the host explicitly supplied <see cref="AnnotationColor"/> in the current
+    /// parameter set (detected in <see cref="SetParametersAsync"/>). When it did not, the
+    /// picker's runtime selection must survive the pass — an unbound host never echoes the
+    /// two-way value back, so syncing from the absent parameter would wipe every pick.</summary>
+    private bool _annotationColorSupplied;
+
+    /// <summary>Whether the color palette is open.</summary>
+    private bool _colorPickerOpen;
+
+    /// <summary>The element the palette popover is anchored to — the toolbar trigger button or
+    /// the mobile palette tile, whichever opened it.</summary>
+    private ElementReference _colorAnchor;
+
+    /// <summary>The desktop/tablet toolbar trigger button (the palette's anchor there).</summary>
+    private ElementReference _colorTriggerRef;
+
+    /// <summary>The mobile palette tile (the palette sheet's anchor on a phone).</summary>
+    private ElementReference _colorTileRef;
+
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
@@ -267,6 +324,9 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         // (start closed) must not fight a host that binds the panel state itself (phase 8
         // review 3).
         _showPanelSupplied = parameters.TryGetValue<bool>(nameof(ShowPanel), out _);
+        // FZE-12: same detection for the color — a pass without the parameter keeps the picker's
+        // runtime selection (the unbound-host echo problem).
+        _annotationColorSupplied = parameters.TryGetValue<string?>(nameof(AnnotationColor), out _);
         await base.SetParametersAsync(parameters);
     }
 
@@ -307,6 +367,18 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
             _showResolved = ShowResolved;
         }
 
+        // FZE-12: the color parameter is the baseline — a host change wins, the picker's own
+        // two-way echo arrives as the same value (no fight), and the reset raises null. A pass
+        // WITHOUT the parameter (an unbound host) keeps the picked value.
+        if (_annotationColorSupplied
+            && !EqualityComparer<string?>.Default.Equals(AnnotationColor, _lastAnnotationColorParam))
+        {
+            _lastAnnotationColorParam = AnnotationColor;
+            _annotationColor = AnnotationColor;
+        }
+
+        SyncColorPickerData();
+
         // Recomputed once per parameter set; ResolveThreadColor runs per thread per render.
         _knownUsers = Users is null
             ? (CurrentUser is null ? [] : [CurrentUser])
@@ -340,6 +412,10 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
             _currentPage = 1;
             _totalPages = 0;
             _surfaceSize = null;
+            // FZE-12: the picked color belongs to the document — a new Url resets the
+            // selection back to the parameter baseline (the per-author/role fallback).
+            _annotationColor = AnnotationColor;
+            _lastAnnotationColorParam = AnnotationColor;
             await LoadThreadsAsync();
         }
     }
@@ -475,7 +551,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
                 stampHeight),
             Body = stampText,
             Kind = DocumentAnnotationKind.Stamp,
-            Color = AnnotationColor,
+            Color = _annotationColor,
             StampText = stampText
         };
 
@@ -494,7 +570,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
             Anchor = _draft.Anchor,
             Body = body ?? string.Empty,
             Kind = _draft.Kind,
-            Color = AnnotationColor,
+            Color = _annotationColor,
             InkStrokes = [.. _draft.Strokes]
         };
 
@@ -689,9 +765,130 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     private string ResolveThreadColor(DocumentCommentThread thread)
         => PdfAnnotationColorHelper.ResolveColor(thread, AuthorColors, RoleColors, KnownUsers);
 
+    /// <summary>The chip/draft color: the picked color, the explicit parameter, or the
+    /// per-author/role resolution when neither is set.</summary>
     private string CurrentAuthorColor
-        => AnnotationColor ?? PdfAnnotationColorHelper.ResolveForAuthor(
+        => _annotationColor ?? PdfAnnotationColorHelper.ResolveForAuthor(
             CurrentUser?.UserId ?? "anonymous", AuthorColors, RoleColors, KnownUsers);
+
+    // ── FZE-12: runtime color picker ─────────────────────────────────────────
+
+    /// <summary>The palette handed to the picker: the host's colors or the helper default.</summary>
+    private IReadOnlyList<string> EffectiveColorPalette
+        => ColorPalette is { Count: > 0 } ? ColorPalette : PdfAnnotationColorHelper.DefaultPalette;
+
+    /// <summary>Names for the palette swatches: the host's map or the localized
+    /// <c>TmPdfAnnotator_ColorName_*</c> names of the default palette.</summary>
+    private IReadOnlyDictionary<string, string>? _effectiveColorNames;
+
+    /// <summary>Rebuilds the picker's palette data once per parameter set.</summary>
+    private void SyncColorPickerData()
+    {
+        if (ColorNames is not null)
+        {
+            _effectiveColorNames = ColorNames;
+            return;
+        }
+
+        var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var color in EffectiveColorPalette)
+        {
+            var name = color switch
+            {
+                "#2563eb" => Loc["TmPdfAnnotator_ColorName_Blue"],
+                "#b45309" => Loc["TmPdfAnnotator_ColorName_Amber"],
+                "#0e7490" => Loc["TmPdfAnnotator_ColorName_Cyan"],
+                "#be185d" => Loc["TmPdfAnnotator_ColorName_Pink"],
+                "#15803d" => Loc["TmPdfAnnotator_ColorName_Green"],
+                "#7c3aed" => Loc["TmPdfAnnotator_ColorName_Violet"],
+                "#b91c1c" => Loc["TmPdfAnnotator_ColorName_Red"],
+                "#475569" => Loc["TmPdfAnnotator_ColorName_Slate"],
+                _ => null
+            };
+            if (!string.IsNullOrWhiteSpace(name) && name != color)
+            {
+                names[color] = name;
+            }
+        }
+
+        _effectiveColorNames = names.Count > 0 ? names : null;
+    }
+
+    /// <summary>The trigger's accessible name: the localized color label plus the current
+    /// color's name (or its raw value when unnamed).</summary>
+    private string ColorTriggerAriaLabel
+    {
+        get
+        {
+            var color = CurrentAuthorColor;
+            var name = _effectiveColorNames is not null
+                       && _effectiveColorNames.TryGetValue(color, out var named)
+                ? named
+                : color;
+            return $"{Loc["TmPdfAnnotator_ColorLabel"]}: {name}";
+        }
+    }
+
+    /// <summary>Opens the palette anchored to the toolbar trigger (desktop and tablet).</summary>
+    private Task OpenColorPickerAsync()
+    {
+        _colorAnchor = _colorTriggerRef;
+        _colorPickerOpen = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Opens the palette anchored to the mobile tile — the F3 bottom sheet there.</summary>
+    private Task OpenMobileColorPickerAsync()
+    {
+        _colorAnchor = _colorTileRef;
+        _colorPickerOpen = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Overlay two-way bridge: internal state first, no callback (the open state is
+    /// the annotator's own UI state, never bound by hosts).</summary>
+    private Task HandleColorPickerOpenChangedAsync(bool open)
+    {
+        _colorPickerOpen = open;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Applies a picked color to NEW annotations: internal state first (an unbound
+    /// host never echoes the callback), then the two-way <see cref="AnnotationColorChanged"/>.
+    /// Selecting the already-checked swatch — the per-author/role fallback shown while no
+    /// explicit color is picked — is a no-op: it keeps the implicit resolution and must not
+    /// raise the callback.</summary>
+    private async Task HandleColorPickedAsync(string color)
+    {
+        if (_annotationColor is null
+            && string.Equals(color, CurrentAuthorColor, StringComparison.OrdinalIgnoreCase))
+        {
+            await CloseColorPickerAsync();
+            return;
+        }
+
+        _annotationColor = color;
+        _lastAnnotationColorParam = color;
+        await AnnotationColorChanged.InvokeAsync(color);
+        await CloseColorPickerAsync();
+    }
+
+    /// <summary>Reset: the explicit pick is dropped — new annotations fall back to the
+    /// per-author/role resolution again (a bound host sees <c>null</c>), existing threads are
+    /// never recolored.</summary>
+    private async Task ResetColorAsync()
+    {
+        _annotationColor = null;
+        _lastAnnotationColorParam = null;
+        await AnnotationColorChanged.InvokeAsync(null);
+        await CloseColorPickerAsync();
+    }
+
+    private Task CloseColorPickerAsync()
+    {
+        _colorPickerOpen = false;
+        return InvokeAsync(StateHasChanged);
+    }
 
     // ── Viewer callbacks ─────────────────────────────────────────────────────
 
@@ -796,6 +993,8 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     {
         // FZE-9 review (M2): drop the pinch subscription before the viewer instance dies.
         UnsubscribeFromViewerPinch();
+        // Phase 12: a pending mobile-sheet close debounce must not fire into a dead component.
+        CancelMobileSheetClose();
         await ValueTask.CompletedTask;
     }
 }

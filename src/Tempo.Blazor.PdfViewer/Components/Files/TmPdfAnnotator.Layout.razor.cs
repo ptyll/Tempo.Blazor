@@ -132,7 +132,11 @@ public partial class TmPdfAnnotator
     /// not exist on a phone, so an active edit mode falls back to Browse, and the mobile
     /// sheet STARTS CLOSED on the first resolution to mobile and on every switch from
     /// desktop/tablet to mobile, unless the host explicitly supplied <see cref="ShowPanel"/>
-    /// (phase 8 review 3).
+    /// (phase 8 review 3). Under <see cref="TmLayoutMode.Auto"/> the close is DEBOUNCED: the
+    /// container measurement can flap while the page settles (a full-page screenshot, a
+    /// transient reflow), and hiding a panel the user opened because of an intermediate blip
+    /// is worse than a 150 ms late close — a forced mode is the stable resolution and closes
+    /// synchronously (phase 12 review).
     /// </summary>
     private async Task ApplyResolvedLayoutAsync(TmLayoutMode mode)
     {
@@ -150,8 +154,81 @@ public partial class TmPdfAnnotator
             && !_showPanelSupplied
             && _panelVisible)
         {
-            _panelVisible = false;
-            await ShowPanelChanged.InvokeAsync(false);
+            if (LayoutMode != TmLayoutMode.Auto)
+            {
+                _panelVisible = false;
+                await ShowPanelChanged.InvokeAsync(false);
+            }
+            else
+            {
+                ScheduleMobileSheetClose();
+            }
+        }
+        else
+        {
+            CancelMobileSheetClose();
+        }
+    }
+
+    /// <summary>Debounce for the mobile sheet auto-close under Auto (~150 ms); cancelled when
+    /// the mode resolves away from mobile before it fires.</summary>
+    private static readonly TimeSpan MobileSheetCloseDebounce = TimeSpan.FromMilliseconds(150);
+
+    private CancellationTokenSource? _mobileSheetCloseCts;
+
+    /// <summary>Schedules the mobile sheet auto-close after the debounce window; a resolution
+    /// away from mobile in between cancels it (see <see cref="ApplyResolvedLayoutAsync"/>).</summary>
+    private void ScheduleMobileSheetClose()
+    {
+        CancelMobileSheetClose();
+        var cts = new CancellationTokenSource();
+        _mobileSheetCloseCts = cts;
+        _ = CloseMobileSheetAfterDebounceAsync(cts.Token);
+    }
+
+    private void CancelMobileSheetClose()
+    {
+        _mobileSheetCloseCts?.Cancel();
+        _mobileSheetCloseCts?.Dispose();
+        _mobileSheetCloseCts = null;
+    }
+
+    private async Task CloseMobileSheetAfterDebounceAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(MobileSheetCloseDebounce, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (token.IsCancellationRequested
+                    || !IsMobileLayout
+                    || _showPanelSupplied
+                    || !_panelVisible)
+                {
+                    return;
+                }
+
+                _panelVisible = false;
+                await ShowPanelChanged.InvokeAsync(false);
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // The annotator died while the debounce was pending — nothing to close anymore.
         }
     }
 

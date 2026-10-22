@@ -35,12 +35,16 @@
                    MobileSheetSnapIndex="_mobileSnapIndex"
                    MobileSheetSnapIndexChanged="SilentSnapChangedAsync"
                    MobileSheetSnapPoints="MobileSheetSnapPoints" />
+
+    @* FZE-12: the shared color palette popover/sheet — anchored to whichever control opened
+       it (the toolbar trigger or the mobile palette tile); renders nothing while closed. *@
+    @ColorPickerPanel
 </div>
 
 @code {
     /// <summary>
-    /// The annotator's tool group (mode pills, stamp picker, color indicator) shared by the
-    /// merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
+    /// The annotator's tool group (mode pills, stamp picker, color picker trigger) shared by
+    /// the merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
     /// The tools are core <see cref="TmToolbarButton"/>s (Primary priorities), so the merged
     /// toolbar can move them into its "More" menu when the row runs out of room; the group
     /// carries the stable <c>data-tm-group</c> contract value. On a tablet layout with labels
@@ -118,13 +122,40 @@
         }
 
         <div class="tm-pdf-annotator__color">
-            @* The chip is decorative: the visible label span next to it is the
-               color indicator's accessible name, so the chip is aria-hidden. *@
-            <span class="tm-pdf-annotator__color-chip"
-                  style="background:@CurrentAuthorColor"
-                  aria-hidden="true"></span>
-            <span class="tm-pdf-annotator__color-label"
-                  data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+            @if (AllowColorPicker)
+            {
+                @* FZE-12: the runtime color picker. The chip rides the trigger button; the
+                   visible label span keeps the pre-phase-12 accessible name plus the current
+                   color's name in the aria-label. The palette opens in the shared overlay
+                   (bottom sheet on a mobile layout — see the TmOverlayPanel below). *@
+                <button type="button"
+                        class="tm-pdf-annotator__color-trigger"
+                        aria-haspopup="dialog"
+                        aria-expanded="@(_colorPickerOpen ? "true" : "false")"
+                        aria-label="@ColorTriggerAriaLabel"
+                        title="@ColorTriggerAriaLabel"
+                        data-testid="@TestId("pdf-annotator-color-trigger")"
+                        @ref="_colorTriggerRef"
+                        @onclick="OpenColorPickerAsync">
+                    <span class="tm-pdf-annotator__color-chip"
+                          style="background:@CurrentAuthorColor"
+                          aria-hidden="true"></span>
+                    <span class="tm-pdf-annotator__color-label"
+                          data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+                    @* TmIcon renders aria-hidden="true" on the svg itself — the chevron is decorative. *@
+                    <TmIcon Name="chevron-down" Size="IconSize.Xs" Class="tm-pdf-annotator__color-chevron" />
+                </button>
+            }
+            else
+            {
+                @* The static pre-phase-12 indicator: the chip is decorative, the visible label
+                   span is the color indicator's accessible name. *@
+                <span class="tm-pdf-annotator__color-chip"
+                      style="background:@CurrentAuthorColor"
+                      aria-hidden="true"></span>
+                <span class="tm-pdf-annotator__color-label"
+                      data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+            }
         </div>
     </div>;
 
@@ -346,8 +377,10 @@
 
     /// <summary>
     /// The G2 mobile tool palette: a horizontally scrollable track of 44px tiles (the two
-    /// light-edit tools) followed by the localized hint that the editing tools need a larger
-    /// screen. The hint rides at the end of the palette so it never pushes the tiles away.
+    /// light-edit tools plus the color picker tile — FZE-12: the color decides how a new
+    /// comment marker renders too) followed by the localized hint that the editing tools
+    /// need a larger screen. The hint rides at the end of the palette so it never pushes the
+    /// tiles away.
     /// </summary>
     private RenderFragment MobilePalette => @<div class="tm-pdf-annotator__palette"
                                                   role="group"
@@ -370,7 +403,60 @@
                 <TmIcon Name="message-square" Size="IconSize.Sm" />
                 <span class="tm-pdf-annotator__tile-text">@Loc["TmPdfAnnotator_ModeComment"]</span>
             </button>
+            @if (AllowColorPicker)
+            {
+                @* FZE-12: the color makes sense for comments too (it decides how the new
+                   marker renders), so the picker tile rides the Browse/Add-comment row. *@
+                <button type="button"
+                        class="tm-pdf-annotator__tile"
+                        aria-haspopup="dialog"
+                        aria-expanded="@(_colorPickerOpen ? "true" : "false")"
+                        aria-label="@ColorTriggerAriaLabel"
+                        data-testid="@TestId("pdf-annotator-color-tile")"
+                        @ref="_colorTileRef"
+                        @onclick="OpenMobileColorPickerAsync">
+                    <span class="tm-pdf-annotator__tile-swatch"
+                          style="background:@CurrentAuthorColor"
+                          aria-hidden="true"></span>
+                    <span class="tm-pdf-annotator__tile-text">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+                </button>
+            }
         </div>
         <span class="tm-pdf-annotator__palette-hint">@Loc["TmPdfAnnotator_EditOnLargerScreen"]</span>
     </div>;
+
+    /// <summary>
+    /// The shared color palette (FZE-12): the core <see cref="TmColorPalette"/> plus the reset
+    /// action, presented through the overlay panel — an anchored popover on desktop and tablet,
+    /// the F3 bottom sheet on a mobile layout. Rendered once at the annotator root; the anchor
+    /// is whichever control opened it (the toolbar trigger button or the mobile palette tile).
+    /// </summary>
+    private RenderFragment ColorPickerPanel => @<TmOverlayPanel Anchor="@_colorAnchor"
+                                 IsOpen="_colorPickerOpen"
+                                 IsOpenChanged="HandleColorPickerOpenChangedAsync"
+                                 Placement="OverlayPlacement.Bottom"
+                                 Align="OverlayAlign.Start"
+                                 Offset="4"
+                                 Role="dialog"
+                                 AriaLabel="@Loc["TmPdfAnnotator_ChooseColor"]"
+                                 LayoutMode="@_resolved"
+                                 MobilePresentation="PanelPresentation.Auto"
+                                 Class="tm-pdf-annotator__color-panel">
+        @* FZE-12: the display Value is the chip color (the picked color or the per-author/role
+           fallback) — the active swatch is checked even while no explicit color is picked.
+           Selecting that checked swatch is a no-op (HandleColorPickedAsync keeps the implicit
+           resolution); the reset action is disabled while the author color is already shown. *@
+        <TmColorPalette Value="@CurrentAuthorColor"
+                        ValueChanged="HandleColorPickedAsync"
+                        Colors="@EffectiveColorPalette"
+                        ColorNames="@_effectiveColorNames"
+                        ShowClearButton="false" />
+        <button type="button"
+                class="tm-pdf-annotator__color-reset"
+                data-testid="@TestId("pdf-annotator-color-reset")"
+                disabled="@(_annotationColor is null)"
+                @onclick="ResetColorAsync">
+            @Loc["TmPdfAnnotator_ResetColor"]
+        </button>
+    </TmOverlayPanel>;
 }

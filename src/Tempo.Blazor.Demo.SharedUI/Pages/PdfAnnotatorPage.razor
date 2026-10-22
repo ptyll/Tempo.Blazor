@@ -32,7 +32,9 @@
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Alena (role <em>reviewer</em>, amber) and Bedřich (role <em>author</em>, cyan) annotate the same document.
             Both panes share one <code>LocalStoragePdfAnnotationProvider</code>, so annotations appear in the other
-            pane immediately and survive a page reload. Try: pick the comment tool, click into the page, write a note —
+            pane immediately and survive a page reload. The panels' header carries the "All | Unresolved" filter —
+            resolve a thread and it leaves the default Unresolved view — and each pane's toolbar has a color
+            trigger for new annotations. Try: pick the comment tool, click into the page, write a note —
             then resolve it from the other pane.
         </p>
         <div class="grid grid-cols-1 min-[1700px]:grid-cols-2 gap-4">
@@ -77,8 +79,11 @@
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             A document seeded with all four annotation kinds — a text highlight, a comment pin, an APPROVED stamp,
             and a freehand drawing — from two different authors with explicit <code>AuthorColors</code>.
-            Use the toolbar to export the annotated PDF (real PDF annotations), export a flattened copy
-            (annotations drawn into the page content plus a comment summary page), or print with annotations.
+            The toolbar's color trigger opens a runtime palette: the picked color applies to NEW annotations only
+            (this instance ships a custom <code>ColorPalette</code>; "Reset to author color" returns to the
+            per-author/role resolution). Use the toolbar to export the annotated PDF (real PDF annotations), export
+            a flattened copy (annotations drawn into the page content plus a comment summary page), or print with
+            annotations.
         </p>
         <div data-testid="pdf-annotator-showcase">
             <TmPdfAnnotator Url="@_demoPdfUrl"
@@ -87,6 +92,7 @@
                             CurrentUser="_alice"
                             Users="_users"
                             AuthorColors="_authorColors"
+                            ColorPalette="_customPalette"
                             ExportFileName="tempo-annotated.pdf"
                             ShowHeader="true"
                             Title="Annotation showcase — seeded document"
@@ -200,6 +206,13 @@
     {
         ["alice"] = "#b45309",
         ["bob"] = "#7c3aed"
+    };
+
+    /// <summary>Custom runtime picker palette for the showcase annotator (phase 12): the host
+    /// owns the color data — the default palette lives in PdfAnnotationColorHelper.</summary>
+    private IReadOnlyList<string> _customPalette = new[]
+    {
+        "#2563eb", "#0e7490", "#15803d", "#b45309", "#b91c1c", "#7c3aed", "#be185d", "#475569"
     };
 
     protected override void OnInitialized()

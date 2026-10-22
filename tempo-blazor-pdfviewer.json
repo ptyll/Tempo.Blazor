@@ -256,7 +256,7 @@
       "kind": "Component",
       "category": "Files",
       "namespace": "Tempo.Blazor.Components.Files",
-      "description": "Side panel listing PDF annotation threads with per-thread comment detail, reply, resolve/reopen, delete, a resolved filter, and a composer for commenting on the current text selection. Used internally by TmPdfViewer when annotations are enabled.",
+      "description": "Side panel listing PDF annotation threads with per-thread comment detail, reply, resolve/reopen, delete, a thread filter (TmPdfThreadFilter, phase 12: the All | Unresolved segmented control), and a composer for commenting on the current text selection. Used internally by TmPdfViewer when annotations are enabled.",
       "packageId": "Tempo.Blazor.PdfViewer",
       "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotationThreadPanel.razor",
       "documentationStatus": "merged",
@@ -375,7 +375,7 @@
       "kind": "Component",
       "category": "Files",
       "namespace": "Tempo.Blazor.Components.Files",
-      "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen, per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
+      "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen and an All | Unresolved filter, a runtime color picker for NEW annotations (ColorPalette/ColorNames/AllowColorPicker, two-way AnnotationColor), per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
       "packageId": "Tempo.Blazor.PdfViewer",
       "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotator.razor",
       "documentationStatus": "merged",
@@ -383,6 +383,13 @@
         "@using Tempo.Blazor.Components.Files"
       ],
       "parameters": [
+        {
+          "name": "AllowColorPicker",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the runtime color picker is offered. Default true; when false the toolbar keeps the pre-phase-12 static chip + label indicator and no palette tile renders on mobile."
+        },
         {
           "name": "AllowExport",
           "type": "bool",
@@ -400,7 +407,13 @@
           "name": "AnnotationColor",
           "type": "string?",
           "isRequired": false,
-          "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time."
+          "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time. Supports two-way binding: the runtime color picker (phase 12) raises AnnotationColorChanged, and a host-supplied value seeds the picker's selection."
+        },
+        {
+          "name": "AnnotationColorChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Callback invoked when the runtime color picker changes the color for NEW annotations (a pick raises the color, the reset raises null — the per-author/role fallback)."
         },
         {
           "name": "AnnotationProvider",
@@ -425,6 +438,19 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS classes for the root element."
+        },
+        {
+          "name": "ColorNames",
+          "type": "IReadOnlyDictionary<string, string>?",
+          "isRequired": false,
+          "description": "Accessible names for the ColorPalette colors, keyed by the color string (matched case-insensitively, like the core TmColorPalette). Defaults to the localized TmPdfAnnotator_ColorName_* names of the default palette."
+        },
+        {
+          "name": "ColorPalette",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Colors offered by the runtime color picker. Defaults to PdfAnnotationColorHelper.DefaultPalette (the helper owns the palette data).",
+          "default": "PdfAnnotationColorHelper.DefaultPalette"
         },
         {
           "name": "CurrentUser",
@@ -699,7 +725,7 @@
       "kind": "Component",
       "category": "Files",
       "namespace": "Tempo.Blazor.Components.Files",
-      "description": "Side panel of TmPdfAnnotator listing annotation threads with kind badges and author colors. Hosts the draft composer and supports reply, resolve, reopen, delete, and a resolved-threads filter. Used internally by TmPdfAnnotator.",
+      "description": "Side panel of TmPdfAnnotator listing annotation threads with kind badges and author colors, filtered through the shared TmPdfThreadFilter (phase 12: the All | Unresolved segmented control). Hosts the draft composer and supports reply, resolve, reopen, and delete. Used internally by TmPdfAnnotator.",
       "packageId": "Tempo.Blazor.PdfViewer",
       "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotatorPanel.razor",
       "documentationStatus": "merged",
@@ -1089,6 +1115,54 @@
           "isRequired": false,
           "default": "\"\"",
           "description": "Stable thread identifier, exposed as data-thread-id."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfThreadFilter",
+      "kind": "Component",
+      "category": "Files",
+      "namespace": "Tempo.Blazor.Components.Files",
+      "description": "Shared thread filter of the PDF annotation panels (TmPdfViewer and TmPdfAnnotator, phase 12): the 'All (N) | Unresolved (M)' segmented control rendered in both panels' headers. It replaced the phase-4 'Show resolved' checkbox — the All segment maps onto ShowResolved=true and Unresolved onto false, so the public panel contract is unchanged. The segments are native radios sharing one group name (the TmRadioGroup Appearance=Segmented model): the browser owns the arrow keys and there is no keyboard emulation. Counts recompute from Threads on every render, so resolve/reopen mutations update them live.",
+      "packageId": "Tempo.Blazor.PdfViewer",
+      "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadFilter.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Files"
+      ],
+      "parameters": [
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether panel interaction is disabled.",
+          "default": "false"
+        },
+        {
+          "name": "ShowResolved",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether resolved threads are shown — All (true) or Unresolved only (false).",
+          "default": "false"
+        },
+        {
+          "name": "ShowResolvedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Callback invoked when the filter changes: All raises true, Unresolved raises false."
+        },
+        {
+          "name": "TestIdBase",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Base of the owning panel's testid contract (e.g. pdf-annotation or pdf-annotator); the group renders {base}-filter with the segments {base}-filter-all and {base}-filter-unresolved."
+        },
+        {
+          "name": "Threads",
+          "type": "IReadOnlyList<DocumentCommentThread>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Annotation threads whose All/Unresolved counts are shown."
         }
       ]
     },
@@ -1705,11 +1779,11 @@
     }
   ],
   "summary": {
-    "itemCount": 18,
-    "manualItemCount": 18,
-    "generatedItemCount": 18,
+    "itemCount": 19,
+    "manualItemCount": 19,
+    "generatedItemCount": 19,
     "generatedOnlyItemCount": 0,
-    "componentCount": 11,
+    "componentCount": 12,
     "publicApiTypeCount": 7
   }
 }

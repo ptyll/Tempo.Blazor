@@ -54,6 +54,60 @@ public class PdfViewerAnnotationsE2ETests : WasmTestBase
         await SaveScreenshotAsync(page, "annotations-detail");
     }
 
+    // ── Phase 12: the segmented "All | Unresolved" thread filter ──────────────
+
+    /// <summary>
+    /// Phase 12: the viewer's comments panel filters through the "All (N) | Unresolved (M)"
+    /// segmented control. Resolving the seeded thread hides it from the default Unresolved
+    /// view; the All segment brings it back (the pre-phase-12 "Show resolved" checkbox is
+    /// gone). Ends with the <c>thread-filter-viewer</c> screenshot for the UX review.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfViewer_ThreadFilter_UnresolvedHidesResolved()
+    {
+        var page = await OpenPdfPageAsync();
+
+        var section = page.Locator("section:has(h2:has-text('Annotations'))");
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await section.ScrollIntoViewIfNeededAsync();
+
+        var panel = section.Locator("[data-testid='pdf-annotation-panel']").First;
+        await panel.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        var filter = section.Locator("[data-testid='pdf-annotation-filter']").First;
+        await filter.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        Assert.AreEqual(0, await section.Locator("[data-testid='pdf-annotation-show-resolved']").CountAsync(),
+            "the checkbox was replaced by the segmented filter");
+
+        await SaveScreenshotAsync(page, "thread-filter-viewer");
+
+        // Default view: the seeded thread is unresolved, so both segments count 1.
+        var thread = section.Locator("[data-testid='pdf-annotation-thread']").First;
+        await thread.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        StringAssert.Contains((await filter.InnerTextAsync()) ?? "", "All (1)");
+        StringAssert.Contains((await filter.InnerTextAsync()) ?? "", "Unresolved (1)");
+
+        // Resolve it through its expanded detail's Resolve secondary.
+        await thread.ClickAsync();
+        await section.Locator("[data-testid='pdf-annotation-resolve']").First.ClickAsync();
+
+        // The Unresolved filter hides the resolved thread…
+        await Assertions.Expect(section.Locator("[data-testid='pdf-annotation-thread']"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        var empty = section.Locator("[data-testid='pdf-annotation-empty']").First;
+        await empty.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        StringAssert.Contains(await empty.InnerTextAsync(), "No unresolved",
+            "the unresolved filter shows its own localized empty state");
+        StringAssert.Contains((await filter.InnerTextAsync()) ?? "", "Unresolved (0)",
+            "the live count follows the resolve mutation");
+
+        // …and the All segment shows it again.
+        await section.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotation-filter-all'])").First.ClickAsync();
+        await section.Locator("[data-testid='pdf-annotation-thread']").First
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+    }
+
     // ── Continuous mode (wave 0) ─────────────────────────────────────────────
 
     /// <summary>

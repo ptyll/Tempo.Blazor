@@ -201,24 +201,38 @@ load and persist `DocumentCommentThread`s. The panel (`TmPdfAnnotationThreadPane
 comments panel; `OnEditRequested` / `OnCloseRequested` drive comment editing
 (`IPdfAnnotationProvider.EditAsync`) and the panel ✕ (the viewer hides the panel). `Annotations`
 seeds threads without a provider; `ShowResolvedAnnotations` filters resolved ones. The panel
-width flows through `--tm-pdf-panel-width` (viewer 280px). Selection-driven creation: select
-text → sticky CTA → draft. The shared cards (`TmPdfThreadCard`, `TmPdfCommentItem`,
-`TmPdfComposer`, `TmPdfThreadList`) are the same components the annotator's panel uses (PD4) and
-keep the `pdf-annotation-*` test ids.
+header carries the shared `TmPdfThreadFilter` (phase 12): the "All (N) | Unresolved (M)"
+segmented radio — All ↔ `ShowResolved=true`, Unresolved ↔ `false`, live counts, native radios
+(the browser owns the arrows), test ids `pdf-annotation-filter` / `…-filter-all` /
+`…-filter-unresolved` — which replaced the 2.9.0 "Show resolved" checkbox in both panels and
+both presentations (chrome + sheet). The Unresolved filter shows the localized
+`TmPdfThread_EmptyUnresolved` state when it hides every thread. The panel width flows through
+`--tm-pdf-panel-width` (viewer 280px). Selection-driven creation: select text → sticky CTA →
+draft. The shared cards (`TmPdfThreadCard`, `TmPdfCommentItem`, `TmPdfComposer`,
+`TmPdfThreadList`) are the same components the annotator's panel uses (PD4) and keep the
+`pdf-annotation-*` test ids.
 
 ## TmPdfAnnotator
 
 `TmPdfAnnotator` embeds a `TmPdfViewer` and renders through `TmEditorShell`. ONE toolbar: the
 tool pills — Browse / Highlight / Comment / Stamp / Draw (`PdfAnnotatorMode`, two-way `Mode`;
-the active tool is a tonal pill, `data-tm-group="tools"`), the color indicator with a visible
-localized label (`TmPdfAnnotator_ColorLabel`; `AnnotationColor` explicit, else per-author/role
-via `AuthorColors` / `RoleColors`), and the panel toggle merge into the embedded viewer's toolbar
-through the viewer's `ToolbarStart`/`ToolbarEnd` slots. The export group ("Export PDF | Export
-flattened | Print", `data-tm-group="export"`) lives in the header row when `ShowHeader` is true
-(`Title`, `Subtitle`, `HeaderStart`, `HeaderActions`); `AllowExport` / `ExportFileName` /
-`ExportAsync(flatten)` / `PrintAsync()` drive it. The annotator pins the viewer to `SinglePage`
-(PD1) and never offers the continuous toggle; `ShowViewerToolbar=false` (compatibility) hides
-the viewer chrome and renders a compact tools row instead.
+the active tool is a tonal pill, `data-tm-group="tools"`), the color trigger (`AllowColorPicker`,
+default true — FZE-12) with a visible localized label (`TmPdfAnnotator_ColorLabel`) and the
+panel toggle merge into the embedded viewer's toolbar through the viewer's
+`ToolbarStart`/`ToolbarEnd` slots. The color trigger (`pdf-annotator-color-trigger`) opens the
+core `TmColorPalette` (`Colors` = `ColorPalette`, default `PdfAnnotationColorHelper.DefaultPalette`;
+`ColorNames`, default the localized `TmPdfAnnotator_ColorName_*` names) in an overlay popover —
+the F3 bottom sheet on a mobile layout, where a `pdf-annotator-color-tile` rides the G2 palette
+row — plus a "Reset to author color" action (`TmPdfAnnotator_ResetColor`). The picked color is
+two-way through `AnnotationColor`/`AnnotationColorChanged` and applies ONLY to NEW annotations
+(stamp `CreateStampAsync`, `CreateFromDraftAsync`, the draft/ink `DraftColor`); with no pick the
+color resolves per author/role via `AuthorColors` / `RoleColors`. Existing threads are never
+recolored, the selection survives tool switches, and a new `Url` drops it. The export group
+("Export PDF | Export flattened | Print", `data-tm-group="export"`) lives in the header row when
+`ShowHeader` is true (`Title`, `Subtitle`, `HeaderStart`, `HeaderActions`); `AllowExport` /
+`ExportFileName` / `ExportAsync(flatten)` / `PrintAsync()` drive it. The annotator pins the
+viewer to `SinglePage` (PD1) and never offers the continuous toggle; `ShowViewerToolbar=false`
+(compatibility) hides the viewer chrome and renders a compact tools row instead.
 
 Pass-through parameters: `ShowThumbnails`, `ShowSearch`, `AllowRotation`,
 `ThumbnailsCollapsed` (two-way, unbound-host safe), `ZoomMode` (two-way), `ShowOpenLink` and
@@ -269,12 +283,17 @@ All keys live in en/cs/sk/fr and the `MockTmLocalizer`. The families hosts most 
 `TmPdfViewer_PageOfTotal` (the "N of M" template, also the continuous page-wrap label),
 `TmPdfViewer_CommentsCount` (a `Loc.Plural` family), `TmPdfThread_ReplyCount` (a `Loc.Plural`
 family — "{0} reply"/"{0} replies" / cs "{0} odpověď"/"{0} odpovědi"/"{0} odpovědí"),
-`TmPdfViewer_AnnotationsSinglePageOnly`, `TmPdfAnnotator_ColorLabel`, `TmPdfAnnotator_TogglePanel`,
+`TmPdfThread_FilterAll` / `TmPdfThread_FilterUnresolved` (the phase-12 filter's `Loc.Plural`
+families, "All ({0})"/"Unresolved ({0})" — English ships `_One`/`_Other`, cs/sk all four forms),
+`TmPdfViewer_AnnotationsSinglePageOnly`, `TmPdfAnnotator_ColorLabel`,
+`TmPdfAnnotator_ColorName_*` (the default palette's localized swatch names),
+`TmPdfAnnotator_ChooseColor` / `TmPdfAnnotator_ResetColor`, `TmPdfAnnotator_TogglePanel`,
 `TmPdfAnnotator_EditOnLargerScreen`, `TmPdfViewer_SelectionPrompt` / `TmPdfViewer_DismissSelection`,
 `TmPdfAnnotator_HighlightSelection`. Counted texts must provide the plural forms each language's
 grammar needs — [localization-plurals.md](localization-plurals.md). Timestamps render RELATIVE
 through the shared `ITmRelativeTimeFormatter` with the absolute instant in `<time datetime>` and
-`title`.
+`title`. The 2.9.0 `TmPdfViewer_ShowResolved` / `TmPdfAnnotator_ShowResolved` keys were removed
+with the phase-12 filter (see the CHANGELOG migration).
 
 ## Theming
 
@@ -334,6 +353,12 @@ summary:
    `TmPdfViewer_RotateCounterClockwise` + `TmPdfViewer_RotateClockwise`. Hosts overriding
    resource keys must ship both (the desktop/tablet rotate group is icon-only — the full text
    rides the tooltip and aria-label).
+12. **Thread filter & color picker (phase 12)** — the panels' "Show resolved" checkbox is the
+    shared `TmPdfThreadFilter` (`pdf-annotation-filter`/`pdf-annotator-filter` with
+    `-all`/`-unresolved` segments; `TmPdfViewer_ShowResolved`/`TmPdfAnnotator_ShowResolved` keys
+    removed), and the annotator's color chip is the `pdf-annotator-color-trigger` button opening
+    the palette (mobile: the `pdf-annotator-color-tile` sheet). `AllowColorPicker="false"`
+    restores the static chip + label pair.
 
 ## Testing
 

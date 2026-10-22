@@ -4,12 +4,13 @@
 @using Tempo.Blazor.Components.Icons
 
 @* Thread panel of TmPdfViewer (PdfViewer redesign phase 4): keeps only its own header (title,
-   resolved filter, ✕ close) and the new-thread prompt for the pending selection; the thread
+   thread filter, ✕ close) and the new-thread prompt for the pending selection; the thread
    cards themselves render through the shared TmPdfThreadList (PD4), which composes
    TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer. Comment edits flow through
    OnEditRequested to the provider. ShowChrome=false drops the panel's own title and close
    button for the responsive sheet presentations (the TmSidePanel sheet owns them there); the
-   resolved filter stays in both presentations. *@
+   thread filter stays in both presentations (phase 12: the shared TmPdfThreadFilter replaced
+   the "Show resolved" checkbox). *@
 
 <aside class="@PanelClass" data-testid="@TestId("pdf-annotation-panel")" aria-label="@Loc["TmPdfViewer_AnnotationsPanelLabel"]">
 
@@ -17,14 +18,11 @@
     {
         <header class="tm-pdf-annotation-panel__header">
             <span class="tm-pdf-annotation-panel__title">@Loc["TmPdfViewer_Annotations"]</span>
-            <label class="tm-pdf-annotation-panel__filter">
-                <input type="checkbox"
-                       checked="@ShowResolved"
-                       disabled="@Disabled"
-                       data-testid="@TestId("pdf-annotation-show-resolved")"
-                       @onchange="ToggleResolvedAsync" />
-                @Loc["TmPdfViewer_ShowResolved"]
-            </label>
+            <TmPdfThreadFilter Threads="Threads"
+                               ShowResolved="ShowResolved"
+                               ShowResolvedChanged="ShowResolvedChanged"
+                               Disabled="Disabled"
+                               TestIdBase="@TestId("pdf-annotation")" />
             <button type="button"
                     class="tm-pdf-annotation-panel__close"
                     data-testid="@TestId("pdf-annotation-close")"
@@ -38,14 +36,11 @@
     else
     {
         <div class="tm-pdf-annotation-panel__header tm-pdf-annotation-panel__header--sheet">
-            <label class="tm-pdf-annotation-panel__filter">
-                <input type="checkbox"
-                       checked="@ShowResolved"
-                       disabled="@Disabled"
-                       data-testid="@TestId("pdf-annotation-show-resolved")"
-                       @onchange="ToggleResolvedAsync" />
-                @Loc["TmPdfViewer_ShowResolved"]
-            </label>
+            <TmPdfThreadFilter Threads="Threads"
+                               ShowResolved="ShowResolved"
+                               ShowResolvedChanged="ShowResolvedChanged"
+                               Disabled="Disabled"
+                               TestIdBase="@TestId("pdf-annotation")" />
         </div>
     }
 
@@ -76,7 +71,7 @@
                      Disabled="Disabled"
                      TestIdBase="@TestId("pdf-annotation")"
                      HideCommentKind="true"
-                     EmptyText="@Loc["TmPdfViewer_NoAnnotations"]"
+                     EmptyText="@EmptyText"
                      ReplyPlaceholder="@Loc["TmPdfViewer_ReplyPlaceholder"]"
                      ReplySubmitLabel="@Loc["TmPdfViewer_Reply"]"
                      ResolveLabel="@Loc["TmPdfViewer_Resolve"]"
@@ -156,9 +151,11 @@
 
     private Task CancelSelectionAsync() => OnSelectionDismissed.InvokeAsync();
 
-    private Task ToggleResolvedAsync(ChangeEventArgs e)
-    {
-        var value = e.Value is bool b ? b : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
-        return ShowResolvedChanged.InvokeAsync(value);
-    }
+    /// <summary>
+    /// The list's empty-state text: the panel's own "no annotations" text under the All filter,
+    /// the localized "no unresolved" text when the Unresolved filter hides every thread.
+    /// </summary>
+    private string EmptyText => ShowResolved
+        ? Loc["TmPdfViewer_NoAnnotations"]
+        : Loc["TmPdfThread_EmptyUnresolved"];
 }

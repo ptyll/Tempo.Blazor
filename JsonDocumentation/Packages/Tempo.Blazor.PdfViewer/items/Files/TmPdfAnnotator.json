@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Files",
   "namespace": "Tempo.Blazor.Components.Files",
-  "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen, per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
+  "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen and an All | Unresolved filter, a runtime color picker for NEW annotations (ColorPalette/ColorNames/AllowColorPicker, two-way AnnotationColor), per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
   "packageId": "Tempo.Blazor.PdfViewer",
   "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotator.razor",
   "documentationStatus": "generated",
@@ -69,7 +69,7 @@
       "name": "AnnotationColor",
       "type": "string?",
       "isRequired": false,
-      "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time."
+      "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time. Supports two-way binding: the runtime color picker (phase 12) raises AnnotationColorChanged, and a host-supplied value seeds the picker's selection."
     },
     {
       "name": "Mode",
@@ -239,6 +239,32 @@
       "type": "ToolbarLabels",
       "isRequired": false,
       "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only tools of the earlier phases); Auto and IconsWithText show the labels — on a tablet layout under the icons (the ribbon style of the tablet reference). The value is passed through to the embedded viewer's toolbar as well."
+    },
+    {
+      "name": "AnnotationColorChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback invoked when the runtime color picker changes the color for NEW annotations (a pick raises the color, the reset raises null — the per-author/role fallback)."
+    },
+    {
+      "name": "ColorPalette",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "default": "PdfAnnotationColorHelper.DefaultPalette",
+      "description": "Colors offered by the runtime color picker. Defaults to PdfAnnotationColorHelper.DefaultPalette (the helper owns the palette data)."
+    },
+    {
+      "name": "ColorNames",
+      "type": "IReadOnlyDictionary<string, string>?",
+      "isRequired": false,
+      "description": "Accessible names for the ColorPalette colors, keyed by the color string (matched case-insensitively, like the core TmColorPalette). Defaults to the localized TmPdfAnnotator_ColorName_* names of the default palette."
+    },
+    {
+      "name": "AllowColorPicker",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the runtime color picker is offered. Default true; when false the toolbar keeps the pre-phase-12 static chip + label indicator and no palette tile renders on mobile."
     }
   ]
 }

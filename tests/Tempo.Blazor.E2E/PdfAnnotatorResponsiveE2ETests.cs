@@ -315,11 +315,12 @@ el => {
         await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "mobile-reply-sheet");
 
         // Resolve through the composer's ghost secondary, then verify the resolved chip under
-        // the "Show resolved" filter (a resolved thread leaves the default filter).
+        // the "All" filter (a resolved thread leaves the default Unresolved view; phase 12
+        // replaced the "Show resolved" checkbox with the segmented filter).
         await resolve.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
-        await panel.Locator("[data-testid='pdf-annotator-show-resolved']").SetCheckedAsync(true);
+        await panel.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotator-filter-all'])").ClickAsync();
         var chip = panel.Locator(".tm-pdf-thread-card__chip--success").First;
         await chip.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
     }
@@ -463,22 +464,65 @@ el => {
     }");
         Assert.IsFalse(overflow, "the annotator must not introduce horizontal overflow at 320px");
 
-        // Phase 8 review 10: BOTH palette tiles are fully inside the viewport at 320px — the
-        // hint (flex 1 1 0, ellipsized) yields its room to the tiles instead of pushing one
-        // of them off-screen.
+        // Phase 8 review 10 (phase 12: the color tile joined the row): every palette tile is
+        // reachable — inside the scrollable track's coordinate space (never clipped to the
+        // left, never zero-width) — while the annotator ROOT itself never overflows. At 320px
+        // the three tiles exceed the viewport, which is exactly what the scrollable track is
+        // for (the hint yields, the track scrolls).
         var tileBoxes = await section.EvaluateAsync<string>(@"
 el => {
+    const track = el.querySelector('.tm-pdf-annotator__palette-track');
+    if (!track) return 'missing-track';
+    const tr = track.getBoundingClientRect();
     const tiles = [...el.querySelectorAll('.tm-pdf-annotator__tile')];
-    const vw = window.innerWidth;
     return tiles.map(t => {
         const b = t.getBoundingClientRect();
-        return (b.left >= -1 && b.right <= vw + 1 && b.width > 0)
+        return (b.width > 0 && b.left >= tr.left - 1)
             ? 'ok' : (t.getAttribute('data-testid') ?? '') + ':' + Math.round(b.left) + '..' + Math.round(b.right);
     }).join(',');
     }");
-        Assert.AreEqual("ok,ok", tileBoxes,
-            $"both mobile palette tiles must be fully visible at 320px, got '{tileBoxes}'");
+        Assert.AreEqual("ok,ok,ok", tileBoxes,
+            $"all mobile palette tiles (browse, comment, color) must stay reachable in the scrollable track, got '{tileBoxes}'");
 
         await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "mobile-320-annotator");
+    }
+
+    // ── Phase 12: the color palette as the mobile bottom sheet ────────────────
+
+    /// <summary>Phase 12 (G2): the color tile rides the Browse/Add-comment palette row and
+    /// opens the palette as the F3 bottom sheet; a pick applies to new annotations and closes
+    /// the sheet with the tile swatch updated. Ends with the
+    /// <c>color-picker-mobile-sheet</c> screenshot.</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ColorPicker_MobileSheet()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        var section = Section(page, MobileSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+
+        var tile = section.Locator("[data-testid='pdf-annotator-color-tile']").First;
+        await tile.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        // Tap the tile: the palette opens as a bottom sheet (never a popover on a phone).
+        await tile.TapAsync();
+        var sheet = section.Locator(".tm-overlay-panel-sheet").First;
+        await sheet.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var palette = sheet.Locator(".tm-color-palette").First;
+        await palette.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "color-picker-mobile-sheet");
+
+        // The reset action rides the sheet too; then pick a swatch — the sheet closes and the
+        // tile's swatch shows the picked color.
+        Assert.IsNotNull(await sheet.Locator("[data-testid='pdf-annotator-color-reset']").First.ElementHandleAsync(),
+            "the reset action is reachable inside the sheet");
+        await sheet.Locator(".tm-color-palette-swatch[style*='#0e7490']").First.TapAsync();
+        await Assertions.Expect(section.Locator(".tm-overlay-panel-sheet"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        StringAssert.Contains((await section.Locator(".tm-pdf-annotator__tile-swatch").First
+            .GetAttributeAsync("style")) ?? "", "#0e7490",
+            "the tile swatch shows the picked color after the sheet closes");
     }
 }

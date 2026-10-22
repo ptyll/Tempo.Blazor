@@ -4742,7 +4742,7 @@ PDF prohlížeč postavený na PDF.js v5 (balíček `Tempo.Blazor.PdfViewer`). P
 
 ### TmPdfAnnotator
 
-Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky nástrojů (Browse / Highlight / Comment / Stamp / Draw) se barva a přepínač panelu slučují do toolbaru vloženého prohlížeče přes `ToolbarStart`/`ToolbarEnd`; skupina exportu žije v hlavičce. Pass-through parametry prohází do prohlížeče; prohlížeč je trvale pinnutý na SinglePage (PD1). Na mobilu G2: prohlížení + lehké úpravy (pouze Browse a Přidat komentář, panel jako bottom sheet). Detail: [docs/pdf-viewer.md](docs/pdf-viewer.md).
+Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky nástrojů (Browse / Highlight / Comment / Stamp / Draw) se barva a přepínač panelu slučují do toolbaru vloženého prohlížeče přes `ToolbarStart`/`ToolbarEnd`; skupina exportu žije v hlavičce. Pass-through parametry prohází do prohlížeče; prohlížeč je trvale pinnutý na SinglePage (PD1). Runtime výběr barvy (FZE-12): `AllowColorPicker` mění barevný štítek ve spouštěč `TmColorPalette` popoveru (na mobilu bottom sheet), `ColorPalette` přepíná nabízené barvy a `ColorNames` pojmenovávají vzorníky; zobrazovaná barva je vybraná barva nebo per-author/role fallback (klik na už zaškrtnutý fallback nic nevyvolá, reset je na barvu autora disabled). `AnnotationColor` je two-way: výběr vyvolá barvu, reset vyvolá `null`. Na mobilu G2: prohlížení + lehké úpravy (pouze Browse a Přidat komentář, panel jako bottom sheet). Detail: [docs/pdf-viewer.md](docs/pdf-viewer.md).
 
 #### Parametry
 
@@ -4756,7 +4756,10 @@ Anotátor postavený na `TmPdfViewer` + `TmEditorShell`. Jeden toolbar: pilulky 
 | `CurrentUser` | `DocumentCommentUser?` | `null` | Autor anotací |
 | `Users` | `IReadOnlyList<DocumentCommentUser>?` | `null` | Uživatelé pro role-based barvy |
 | `AuthorColors` / `RoleColors` | `IReadOnlyDictionary<string, string>?` | `null` | Barvy anotací podle autora / role |
-| `AnnotationColor` | `string?` | `null` | Explicitní barva nových anotací |
+| `AnnotationColor` / `AnnotationColorChanged` | `string?` / `EventCallback<string?>` | `null` | Explicitní barva nových anotací (two-way: výběr vyvolá barvu, reset `null`) |
+| `AllowColorPicker` | `bool` | `true` | Runtime výběr barvy (FZE-12); `false` ponechá statický štítek |
+| `ColorPalette` | `IReadOnlyList<string>?` | `null` | Barvy výběru (default paleta helperu) |
+| `ColorNames` | `IReadOnlyDictionary<string, string>?` | `null` | Názvy barev pro vzorníky (default lokalizované) |
 | `Mode` / `ModeChanged` | `PdfAnnotatorMode` / `EventCallback<PdfAnnotatorMode>` | `Browse` | Aktivní nástroj (two-way) |
 | `StampOptions` | `IReadOnlyList<string>?` | `null` | Texty razítek (default lokalizované) |
 | `ShowResolved` / `ShowResolvedChanged` | `bool` / `EventCallback<bool>` | `false` | Filtr vyřešených (two-way) |
