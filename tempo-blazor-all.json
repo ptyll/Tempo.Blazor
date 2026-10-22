@@ -28540,6 +28540,13 @@
               "description": "Kept for backward compatibility. When true (default) the annotator has no toolbar of its own: its tool groups merge into the embedded viewer's single toolbar through the viewer's ToolbarStart/ToolbarEnd slots, and the export group lives in the header row when ShowHeader is true. When false the viewer's chrome (navigation, zoom, rotation) is hidden and the annotator renders a compact tools row of its own instead."
             },
             {
+              "name": "ShowViewModeToggle",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the embedded viewer renders its single/continuous segmented control. Default false (the pre-FZE-14 toolbar); when true the segment rides the merged toolbar and flips ViewMode through ViewModeChanged.",
+              "default": "False"
+            },
+            {
               "name": "StampOptions",
               "type": "IReadOnlyList<string>?",
               "isRequired": false,
@@ -28587,6 +28594,19 @@
               "type": "IReadOnlyList<DocumentCommentUser>?",
               "isRequired": false,
               "description": "Known users, used to resolve author roles for role-based colors."
+            },
+            {
+              "name": "ViewMode",
+              "type": "PdfViewMode",
+              "isRequired": false,
+              "default": "PdfViewMode.SinglePage",
+              "description": "How the embedded viewer presents the document (FZE-14 — the PD1 pin is lifted). Default SinglePage keeps the pre-FZE-14 behavior; Continuous renders the annotator's layer and interaction surface per page of the scroll column through the viewer's PageOverlayContent slots (FZE-13) — every tool anchors on the slot's page. Supports two-way binding."
+            },
+            {
+              "name": "ViewModeChanged",
+              "type": "EventCallback<PdfViewMode>",
+              "isRequired": false,
+              "description": "Callback invoked when the view mode changes (the embedded viewer's toggle or a host-driven binding)."
             },
             {
               "name": "ZoomMode",

@@ -728,16 +728,19 @@ public partial class TmPdfAnnotatorTests : LocalizationTestBase
         cut.Find("[data-testid='pdf-annotator-panel-toggle']").Should().NotBeNull();
     }
 
-    // ── PD1: the annotator is a single-page annotator and never offers the continuous toggle ──
+    // ── FZE-14: SinglePage stays the default — the additive contract of the PD1 lift ──
 
     [Fact]
-    public void ViewMode_IsAlwaysSinglePage()
+    public void SinglePage_DefaultUnchanged()
     {
         var cut = Render();
 
+        // The PD1 pin is lifted (ViewMode passes through), but the DEFAULT is additive:
+        // hosts that never set ViewMode keep the pre-FZE-14 single-page annotator, and
+        // ShowViewModeToggle stays opt-in.
         var viewer = cut.FindComponent<TmPdfViewer>().Instance;
         viewer.ViewMode.Should().Be(PdfViewMode.SinglePage);
-        viewer.ShowViewModeToggle.Should().BeFalse("the annotator never passes ShowViewModeToggle (PD1)");
+        viewer.ShowViewModeToggle.Should().BeFalse("the toggle is opt-in");
         cut.Find(".tm-pdf-viewer__toolbar").QuerySelector(".tm-pdf-viewer__view-mode").Should().BeNull();
     }
 

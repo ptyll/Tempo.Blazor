@@ -27,7 +27,7 @@
                 }
             }
 
-            @if (Draft is not null)
+            @if (Draft is not null && DraftBelongsToPage)
             {
                 @foreach (var stroke in Draft.Strokes)
                 {
@@ -95,7 +95,7 @@
         }
     }
 
-    @if (Draft?.Anchor is not null)
+    @if (Draft?.Anchor is not null && DraftBelongsToPage)
     {
         @if (Draft.Anchor.Kind == DocumentCommentAnchorKind.TextRange)
         {
@@ -152,8 +152,17 @@
         .Where(thread => thread.Anchor.PageNumber == PageNumber)
         .Where(thread => ShowResolved || thread.Status == DocumentCommentThreadStatus.Open);
 
+    /// <summary>
+    /// FZE-14: a draft paints only in the page slot it belongs to — the layer renders per
+    /// page in Continuous, and a draft created on page 3 must never leak into page 5's slot.
+    /// A draft without an anchor yet (an in-progress stroke) renders on every layer the
+    /// annotator feeds it to (the annotator already pages the active stroke).
+    /// </summary>
+    private bool DraftBelongsToPage
+        => Draft?.Anchor is null || Draft.Anchor.PageNumber == PageNumber;
+
     private bool DraftHasInk
-        => Draft is { Strokes.Count: > 0 } || ActiveStroke is { Count: > 1 };
+        => (Draft is { Strokes.Count: > 0 } && DraftBelongsToPage) || ActiveStroke is { Count: > 1 };
 
     private Task SelectAsync(string threadId)
         => Disabled ? Task.CompletedTask : OnThreadSelected.InvokeAsync(threadId);

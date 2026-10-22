@@ -193,11 +193,27 @@ clamped to the absolute 0.1–5 bounds. Every zoom button, preset and pinch **de
   interop, the anchor's normalized Y on the viewport's middle line); the active thumbnail and the
   two-way `Page` update through the scroll tracker's report, and the marker highlights as soon as
   the geometry report mounts its slot.
-- **Single-page still pins**: `TmPdfAnnotator` and `TmRedactionLayer` keep their viewers on
-  SinglePage (the annotator's per-page continuous tools land in FZE-14). The non-templated
+- **Single-page is the default everywhere, never a pin (FZE-14)**: the annotator's `ViewMode`
+  now passes through (default `SinglePage`, additive) and `TmRedactionLayer` pins its own
+  viewer explicitly (`ViewMode="SinglePage"`, no toggle — redaction measures against THE
+  canvas). The non-templated
   `OverlayContent` stays single-page only — it is aligned to THE canvas; the templated
   `PageOverlayContent` (`PdfPageOverlayContext`: `PageNumber`, `IsCurrentPage`, `Width`, `Height`,
   `Rotation`) is the page-aware API and works in both modes.
+- **Annotator tools per page (FZE-14)**: with `ViewMode="PdfViewMode.Continuous"` the annotator
+  renders its marker layer and interaction surface per mounted page slot — ONE geometry
+  pipeline (the FZE-13 slot boxes; no second page-inner measurement, no second pinch/drag —
+  the shared `pointer-gesture.js` keeps owning two fingers), no per-page scroll code. The
+  pointer handlers normalize against the slot box carried by `PdfPageOverlayContext`
+  (`Width`/`Height`), so a stamp, comment or ink stroke always anchors on the page whose slot
+  received the event; the annotator's current page is navigation state only. An ink stroke is
+  confined to the page where it started (moves reported by another page's slot are ignored; a
+  stroke dragged across the boundary is clipped there — `touch-action: none` stays on the Draw
+  surface only, the other tools keep native pan/pinch), drafts and composers stay bound to
+  their draft page across scrolling, and thread selection in the panel scrolls to the anchor
+  through the shared `TmPdfViewer.ScrollToAnchorAsync(page, y)` path (mode stays Continuous).
+  `ShowViewModeToggle` (default false) offers the viewer's segmented control in the merged
+  toolbar; export/print are view-mode independent and cover every page.
 
 ### Text layer, search and touch
 
@@ -263,14 +279,18 @@ color resolves per author/role via `AuthorColors` / `RoleColors`. Existing threa
 recolored, the selection survives tool switches, and a new `Url` drops it. The export group
 ("Export PDF | Export flattened | Print", `data-tm-group="export"`) lives in the header row when
 `ShowHeader` is true (`Title`, `Subtitle`, `HeaderStart`, `HeaderActions`); `AllowExport` /
-`ExportFileName` / `ExportAsync(flatten)` / `PrintAsync()` drive it. The annotator pins the
-viewer to `SinglePage` and never offers the continuous toggle (per-page continuous tools land in
-FZE-14); `ShowViewerToolbar=false`
+`ExportFileName` / `ExportAsync(flatten)` / `PrintAsync()` drive it. The PD1 pin is lifted
+(FZE-14): `ViewMode` (default `PdfViewMode.SinglePage`, additive — unbound hosts keep the
+pre-FZE-14 presentation) and `ViewModeChanged` pass through two-way, `ShowViewModeToggle`
+(default false) offers the viewer's segmented control in the merged toolbar, and Continuous
+renders the layer + surface per page slot (see the viewer's
+"Annotator tools per page" above); `ShowViewerToolbar=false`
 (compatibility) hides the viewer chrome and renders a compact tools row instead.
 
 Pass-through parameters: `ShowThumbnails`, `ShowSearch`, `AllowRotation`,
-`ThumbnailsCollapsed` (two-way, unbound-host safe), `ZoomMode` (two-way), `ShowOpenLink` and
-`ToolbarLabels`. `ShowPanel` / `ShowPanelChanged` two-way drive the thread panel
+`ThumbnailsCollapsed` (two-way, unbound-host safe), `ZoomMode` (two-way), `ShowOpenLink`,
+`ToolbarLabels`, `ViewMode`/`ViewModeChanged` (two-way, FZE-14) and `ShowViewModeToggle`
+(FZE-14). `ShowPanel` / `ShowPanelChanged` two-way drive the thread panel
 (`TmPdfAnnotatorPanel`): the ✕ raises `ShowPanelChanged` even without a binding, and the toolbar
 toggle reopens it. `Height` (default "600px") is owned by the annotator root; the viewer flexes
 inside it.
@@ -307,7 +327,9 @@ when the panel is closed or out of reach.
 The `TmPdfViewer` stencil (role `pdf-viewer`) mirrors the redesigned chrome with the props
 `showThumbnails`, `viewMode` (`single` | `continuous`), `showHeader`, `title` and `zoomMode`
 (`auto` default | `custom` | `fit-width` | `fit-page`); the `TmPdfAnnotator` stencil (role
-`pdf-annotator`) carries `showThumbnails`, `showSearch`, `showHeader` and `title` on top of
+`pdf-annotator`) carries `showThumbnails`, `showSearch`, `showHeader`, `viewMode`
+(`single` default | `continuous` — the continuous variant draws a scroll column of per-page
+annotator surfaces, FZE-14) and `title` on top of
 `mode` / `showPanel` / `allowExport`. The static stencils keep the roles; hosts key off the
 props, not the stencil internals.
 

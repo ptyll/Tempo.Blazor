@@ -535,7 +535,22 @@
 
 /* ── Interaction surface ─────────────────────────────────────────────────── */
 
-.tm-pdf-annotator__surface {
+/* The surface rules are `::deep` DESCENDANT selectors: the single-page surface is
+   annotated markup (its own scope attribute would match either way), while the FZE-14
+   per-page surface is emitted from RenderTreeBuilder code inside the FZE-13 slot and
+   carries no scope attribute — it matches through the annotator root's scope only. */
+
+/* FZE-14: the per-page continuous host — one layer + surface pair per mounted page slot
+   (inside `.tm-pdf-viewer__page-overlay-slot`, whose box IS the reported page geometry).
+   The host fills the slot and never captures pointers; the surface opts back in while a
+   tool is active, exactly like the single-page surface. */
+::deep .tm-pdf-annotator__page-surface-host {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+::deep .tm-pdf-annotator__surface {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -545,14 +560,14 @@
    stamp surface used to claim the whole gesture space, which blocked one-finger scrolling
    and the pinch on a phone — a tap is not a drag, so Comment/Stamp keep the native
    pan/pinch behaviour of the viewer wrap beneath them. */
-.tm-pdf-annotator__surface--active {
+::deep .tm-pdf-annotator__surface--active {
     pointer-events: auto;
     cursor: crosshair;
 }
 
 /* Draw owns the gesture: one finger (or the pen) draws through the pointer events, two
    fingers hand over to the viewer's core pinch, and the browser must not pan mid-stroke. */
-.tm-pdf-annotator__surface--draw {
+::deep .tm-pdf-annotator__surface--draw {
     cursor: crosshair;
     touch-action: none;
 }

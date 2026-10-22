@@ -77,6 +77,25 @@ public class RedactionE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    public async Task Redaction_ContinuousNotOffered()
+    {
+        // FZE-14 lifted the annotator's PD1 pin, but redaction keeps its stage single-page:
+        // no view-mode segment renders and the embedded viewer stays on SinglePage.
+        var handle = await OpenPageAsync();
+        var page = handle.Page;
+
+        await page.Locator("[data-testid='redaction-demo-pdf'] .tm-pdf-viewer__page-input")
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+
+        Assert.AreEqual(0, await page.Locator("[data-testid='redaction-demo-pdf'] .tm-pdf-viewer__view-mode").CountAsync(),
+            "the redaction stage never offers the single/continuous toggle");
+        Assert.AreEqual(0, await page.Locator("[data-testid='redaction-demo-pdf'] .tm-pdf-viewer__continuous-wrap").CountAsync(),
+            "the redaction viewer stays a single-page canvas stage");
+        AssertNoBlazorErrors(handle);
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     public async Task Redaction_ExportedPdf_DoesNotContainTheRedactedValue()
     {
         var handle = await OpenPageAsync();

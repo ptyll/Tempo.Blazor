@@ -205,6 +205,79 @@ public class TmPdfAnnotatorTouchTests : LocalizationTestBase
         threads.Should().BeEmpty("a cancelled stroke is never committed");
     }
 
+    // ── FZE-14: continuous mode — the stroke stays on its start page ─────────
+
+    /// <summary>Reports the mounted band (pages 1, 3, 5 at 612×792) on the embedded viewer,
+    /// the bUnit equivalent of the JS geometry report.</summary>
+    private void MountContinuousPages(IRenderedComponent<TmPdfAnnotator> cut)
+    {
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        cut.InvokeAsync(() => viewer.OnPdfLoaded(10));
+        cut.Render();
+        cut.InvokeAsync(() => viewer.OnContinuousPageGeometry(
+            new[] { 1, 3, 5 }, new[] { 0.0, 1600.0, 3200.0 }, new[] { 0.0, 0.0, 0.0 },
+            new[] { 612.0, 612.0, 612.0 }, new[] { 792.0, 792.0, 792.0 }, 0));
+        cut.Render();
+    }
+
+    private static string ContinuousSurface(int page)
+        => $".tm-pdf-viewer__page-overlay-slot[data-page='{page}'] [data-testid='pdf-annotator-surface']";
+
+    [Fact]
+    public async Task Continuous_InkStroke_ConfinedToStartPage()
+    {
+        var provider = new InMemoryPdfAnnotationProvider();
+        var cut = Render(provider, p => p.Add(x => x.ViewMode, PdfViewMode.Continuous));
+        MountContinuousPages(cut);
+        cut.Find("[data-testid='pdf-annotator-mode-draw']").Click();
+
+        // The stroke starts on page 3 and crosses into page 5's surface: the points of the
+        // other page never join the stroke and the anchor stays on the start page (the
+        // stroke is clipped at the boundary — pointerleave commits it there in a real DOM).
+        var start = cut.Find(ContinuousSurface(3));
+        await start.TriggerEventAsync("onpointerdown", new PointerEventArgs { OffsetX = 80, OffsetY = 100, PointerId = 1, PointerType = "touch", IsPrimary = true });
+        await start.TriggerEventAsync("onpointermove", new PointerEventArgs { OffsetX = 160, OffsetY = 200, PointerId = 1, PointerType = "touch", IsPrimary = true });
+        await cut.Find(ContinuousSurface(5))
+            .TriggerEventAsync("onpointermove", new PointerEventArgs { OffsetX = 100, OffsetY = 100, PointerId = 1, PointerType = "touch", IsPrimary = true });
+        await start.TriggerEventAsync("onpointerup", new PointerEventArgs { OffsetX = 160, OffsetY = 200, PointerId = 1, PointerType = "touch", IsPrimary = true });
+
+        cut.WaitForElement("[data-testid='pdf-annotator-new']");
+        cut.Find("[data-testid='pdf-annotator-new-submit']").Click();
+
+        cut.WaitForAssertion(async () =>
+        {
+            var threads = await provider.GetThreadsAsync(DocId);
+            threads.Should().HaveCount(1);
+            threads[0].Anchor.PageNumber.Should().Be(3, "the stroke is anchored to the page it started on");
+            threads[0].InkStrokes.Should().HaveCount(1);
+            threads[0].InkStrokes[0].Points.Should().HaveCount(2)
+                .And.OnlyContain(p => p.Y <= 1.0, "no coordinate from the other page's surface joins the stroke");
+            threads[0].InkStrokes[0].Points[0].X.Should().BeApproximately(0.1307, 0.001, "points normalize against the start page's slot box");
+        });
+    }
+
+    [Fact]
+    public async Task Continuous_TwoFingerPinchCancelsStroke()
+    {
+        var provider = new InMemoryPdfAnnotationProvider();
+        var cut = Render(provider, p => p.Add(x => x.ViewMode, PdfViewMode.Continuous));
+        MountContinuousPages(cut);
+        cut.Find("[data-testid='pdf-annotator-mode-draw']").Click();
+
+        // One finger draws on the page-3 surface; the second finger is the pinch hand-over
+        // (pen priority unchanged) — the stroke is discarded, never committed.
+        var surface = cut.Find(ContinuousSurface(3));
+        await surface.TriggerEventAsync("onpointerdown", new PointerEventArgs { OffsetX = 80, OffsetY = 100, PointerId = 1, PointerType = "touch", IsPrimary = true });
+        await surface.TriggerEventAsync("onpointerdown", new PointerEventArgs { OffsetX = 200, OffsetY = 300, PointerId = 2, PointerType = "touch", IsPrimary = false });
+        await surface.TriggerEventAsync("onpointerup", new PointerEventArgs { OffsetX = 200, OffsetY = 300, PointerId = 1, PointerType = "touch", IsPrimary = true });
+
+        cut.FindAll("[data-testid='pdf-annotator-new']").Should().BeEmpty(
+            "the pinch hand-over cancels the stroke on the per-page surface too");
+
+        var threads = await provider.GetThreadsAsync(DocId);
+        threads.Should().BeEmpty("a cancelled stroke is never committed");
+    }
+
     // ── FZE-9: the tablet highlight CTA surfaces the touch selection draft ───
 
     [Fact]

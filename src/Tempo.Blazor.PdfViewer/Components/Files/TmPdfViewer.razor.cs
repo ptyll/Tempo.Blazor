@@ -878,6 +878,32 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     public Task GoToPageAsync(int page) => NavigateToPageAsync(page);
 
     /// <summary>
+    /// Scrolls to a thread anchor (PDF-VIEWER-CONTINUOUS-ANNOTATIONS). In
+    /// <see cref="PdfViewMode.Continuous"/> the page scrolls into view and the anchor's
+    /// normalized <paramref name="y"/> lands on the viewport's middle line — the exact path
+    /// the viewer's own thread selection uses (the lazy renderer paints the page when it
+    /// scrolls in, the two-way <see cref="Page"/> updates through the scroll tracker's
+    /// report, and the marker highlights as soon as the geometry report mounts its slot).
+    /// In <see cref="PdfViewMode.SinglePage"/> the page is navigated to. Hosts share this
+    /// path — the annotator's panel (FZE-14) selects threads through it. A no-op for a
+    /// page outside the loaded document.
+    /// </summary>
+    public async Task ScrollToAnchorAsync(int page, double y)
+    {
+        if (page < 1 || page > _totalPages) return;
+        if (_viewMode == PdfViewMode.Continuous)
+        {
+            await SetPageAsync(page);
+            await ScrollToPageInContinuousAsync(page);
+            try { await JS.InvokeVoidAsync("tmPdfViewer.scrollToAnchor", _rootRef, page, y); }
+            catch { }
+            return;
+        }
+
+        await NavigateToPageAsync(page);
+    }
+
+    /// <summary>
     /// Opens the mobile thumbnails sheet. Public API for hosts that fold the viewer's
     /// Pages entry into their own mobile action bar (<see cref="ShowMobileActionBar"/> false);
     /// a no-op on desktop/tablet layouts and without <see cref="ShowThumbnails"/>.

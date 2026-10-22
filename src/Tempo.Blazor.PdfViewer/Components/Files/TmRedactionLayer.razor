@@ -50,11 +50,16 @@
         <div class="tm-redaction__stage">
             @if (IsPdfMode)
             {
+                @* FZE-14: redaction stays a single-page stage — the areas are measured
+                   against THE canvas and the continuous toggle is never offered, even
+                   after the annotator's PD1 pin was lifted. *@
                 <TmPdfViewer Url="@Url"
                              DocumentId="@DocumentId"
                              Height="@(string.IsNullOrEmpty(Height) ? "600px" : Height)"
                              ShowToolbar="true"
                              AllowDownload="false"
+                             ViewMode="PdfViewMode.SinglePage"
+                             ShowViewModeToggle="false"
                              Page="_currentPage"
                              PageChanged="HandlePageChanged">
                     <OverlayContent>

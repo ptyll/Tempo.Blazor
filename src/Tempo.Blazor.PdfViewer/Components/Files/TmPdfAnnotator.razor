@@ -255,11 +255,13 @@
             </div>
         }
 
-        @* PD1: the annotator always renders single pages and never offers the continuous
-           toggle, so ViewMode is pinned and ShowViewModeToggle is not passed. On a mobile
-           layout the annotator injects nothing into the viewer's compact row: paging and zoom
-           are the viewer's own F7 chrome and the annotator's commands live in the palette and
-           the action bar. *@
+        @* FZE-14: the PD1 pin is lifted — ViewMode passes through (default SinglePage keeps
+           the pre-FZE-14 behavior) and the host may offer the viewer's toggle. In Continuous
+           the annotator renders its layer and surface per page through the viewer's
+           PageOverlayContent slots (FZE-13); the single-page OverlayContent below stays the
+           one-surface presentation. On a mobile layout the annotator injects nothing into
+           the viewer's compact row: paging and zoom are the viewer's own F7 chrome and the
+           annotator's commands live in the palette and the action bar. *@
         <TmPdfViewer @ref="_viewer"
                      Url="@Url"
                      DocumentId="@DocumentId"
@@ -280,14 +282,17 @@
                      AllowRotation="AllowRotation"
                      ZoomMode="_zoomMode"
                      ZoomModeChanged="HandleZoomModeChangedAsync"
-                     ViewMode="PdfViewMode.SinglePage"
+                     ViewMode="@_viewMode"
+                     ViewModeChanged="HandleViewModeChangedAsync"
+                     ShowViewModeToggle="ShowViewModeToggle"
                      ShowTextLayer="true"
                      EnableTextSelectionEvents="true"
                      AllowDownload="false"
                      Page="_currentPage"
                      PageChanged="HandlePageChangedAsync"
                      OnDocumentLoaded="HandleDocumentLoaded"
-                     OnTextSelected="HandleTextSelectedAsync">
+                     OnTextSelected="HandleTextSelectedAsync"
+                     PageOverlayContent="@ContinuousPageOverlay">
             <ToolbarStart>@(InjectToolbarGroups ? ToolsGroup : null)</ToolbarStart>
             <ToolbarEnd>@(InjectToolbarGroups ? ToolbarEndFragment : null)</ToolbarEnd>
             @* Row 1 (rendered only when the viewer header is on): the viewer header hosts
@@ -313,13 +318,13 @@
                 <div @ref="_surfaceRef"
                      class="tm-pdf-annotator__surface @(SurfaceActive ? "tm-pdf-annotator__surface--active" : "") @(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")"
                      data-testid="@TestId("pdf-annotator-surface")"
-                     @onclick="HandleSurfaceClickAsync"
-                     @onpointerdown="HandlePointerDownAsync"
+                     @onclick="e => HandleSurfaceClickAsync(e)"
+                     @onpointerdown="(PointerEventArgs e) => HandlePointerDownAsync(e)"
                      @onpointerdown:preventDefault="true"
-                     @onpointermove="HandlePointerMoveAsync"
-                     @onpointerup="HandlePointerUpAsync"
+                     @onpointermove="(PointerEventArgs e) => HandlePointerMoveAsync(e)"
+                     @onpointerup="(PointerEventArgs e) => HandlePointerUpAsync(e)"
                      @onpointercancel="HandlePointerCancel"
-                     @onpointerleave="HandlePointerLeaveAsync"></div>
+                     @onpointerleave="(PointerEventArgs e) => HandlePointerLeaveAsync(e)"></div>
             </OverlayContent>
             @* FZE-9 review (M4/UX3): the sticky Highlight CTA (tablet only — G2 keeps the edit
                tools off a phone) rides the viewer's in-flow SelectionCtaContent row, OUTSIDE
@@ -350,6 +355,73 @@
         }
         @PanelToggleButton
     </div>;
+
+    /// <summary>
+    /// FZE-14: the annotator's per-page overlay for <see cref="PdfViewMode.Continuous"/> —
+    /// one marker layer plus one interaction surface per mounted page slot (FZE-13). The slot
+    /// context carries the page number and the page's geometry box, so the pointer handlers
+    /// normalize against THE page and every tool anchors on the slot's page — the annotator's
+    /// current page is navigation state only. Null in SinglePage: the single-surface
+    /// <c>OverlayContent</c> above owns that presentation unchanged.
+    /// </summary>
+    private RenderFragment<PdfPageOverlayContext>? ContinuousPageOverlay
+        => _viewMode == PdfViewMode.Continuous ? ContinuousPageSurface : null;
+
+    /// <summary>The per-page fragment: the layer paints only this page's threads, the active
+    /// stroke and draft render in the page they belong to, and the surface normalizes its
+    /// pointer offsets against the slot's geometry box. Builder code on purpose — a razor
+    /// template cannot be written here (the compiler mis-binds the template's context), and
+    /// the element styling is restored through the `::deep` scoped-CSS descendants (the
+    /// slot renders inside the annotator root, which carries the scope attribute).</summary>
+    private RenderFragment<PdfPageOverlayContext> ContinuousPageSurface => context => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "tm-pdf-annotator__page-surface-host");
+
+        builder.OpenComponent<TmPdfAnnotatorLayer>(2);
+        builder.AddAttribute(3, nameof(TmPdfAnnotatorLayer.Threads), _threads);
+        builder.AddAttribute(4, nameof(TmPdfAnnotatorLayer.PageNumber), context.PageNumber);
+        builder.AddAttribute(5, nameof(TmPdfAnnotatorLayer.SelectedThreadId), _selectedThreadId);
+        builder.AddAttribute(6, nameof(TmPdfAnnotatorLayer.ShowResolved), _showResolved);
+        builder.AddAttribute(7, nameof(TmPdfAnnotatorLayer.ColorResolver), _colorResolver);
+        builder.AddAttribute(8, nameof(TmPdfAnnotatorLayer.Draft), _draft);
+        builder.AddAttribute(9, nameof(TmPdfAnnotatorLayer.ActiveStroke),
+            _activeStrokePage == context.PageNumber ? _activeStroke : null);
+        builder.AddAttribute(10, nameof(TmPdfAnnotatorLayer.DraftColor), CurrentAuthorColor);
+        builder.AddAttribute(11, nameof(TmPdfAnnotatorLayer.OnThreadSelected),
+            EventCallback.Factory.Create<string>(this, SelectThreadAsync));
+        builder.CloseComponent();
+
+        builder.OpenElement(12, "div");
+        builder.AddMultipleAttributes(13, PageSurfaceAttributes(context));
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    /// <summary>The per-page surface's attributes: the stable test id plus the page number,
+    /// and the pointer handlers carrying the slot context (FZE-14). The Draw-only
+    /// <c>touch-action: none</c> rides the class, so the other tools keep the native pan
+    /// and pinch of the wrap beneath.</summary>
+    private Dictionary<string, object> PageSurfaceAttributes(PdfPageOverlayContext page) => new()
+    {
+        ["class"] = PageSurfaceClass,
+        ["data-testid"] = TestId("pdf-annotator-surface"),
+        ["data-page"] = page.PageNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["onclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, e => HandleSurfaceClickAsync(page, e)),
+        ["onpointerdown"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerDownAsync(page, e)),
+        ["onpointerdown:preventDefault"] = true,
+        ["onpointermove"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerMoveAsync(page, e)),
+        ["onpointerup"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerUpAsync(page, e)),
+        ["onpointercancel"] = EventCallback.Factory.Create<PointerEventArgs>(this, HandlePointerCancel),
+        ["onpointerleave"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerLeaveAsync(page, e)),
+    };
+
+    /// <summary>The interaction surface classes — the same rule as the single-page surface:
+    /// active for the click/draw tools, <c>touch-action: none</c> in Draw only (the other
+    /// tools keep the native pan and pinch of the wrap beneath).</summary>
+    private string PageSurfaceClass
+        => $"tm-pdf-annotator__surface {(SurfaceActive ? "tm-pdf-annotator__surface--active" : "")} {(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")}";
 
     /// <summary>
     /// The annotator's thread panel: the shell's docked Right region on desktop and tablet, the

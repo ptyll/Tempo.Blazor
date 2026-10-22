@@ -220,6 +220,24 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>
+    /// How the embedded viewer presents the document (FZE-14 — the PD1 pin is lifted). Default
+    /// <see cref="PdfViewMode.SinglePage"/> keeps the pre-FZE-14 behavior; <see cref="PdfViewMode.Continuous"/>
+    /// renders the annotator's layer and interaction surface per page of the scroll column
+    /// through the viewer's <c>PageOverlayContent</c> slots (FZE-13) — every tool anchors on the
+    /// slot's page. Supports two-way binding.
+    /// </summary>
+    [Parameter] public PdfViewMode ViewMode { get; set; } = PdfViewMode.SinglePage;
+
+    /// <summary>Callback invoked when the view mode changes (the embedded viewer's toggle or a
+    /// host-driven binding).</summary>
+    [Parameter] public EventCallback<PdfViewMode> ViewModeChanged { get; set; }
+
+    /// <summary>Whether the embedded viewer renders its single/continuous segmented control.
+    /// Default false (the pre-FZE-14 toolbar); when true the segment rides the merged toolbar
+    /// and flips <see cref="ViewMode"/> through <see cref="ViewModeChanged"/>.</summary>
+    [Parameter] public bool ShowViewModeToggle { get; set; }
+
+    /// <summary>
     /// Whether the toolbar's icon buttons show their text labels. Default
     /// <see cref="ToolbarLabels.Icons"/> (the icon-only tools of the earlier phases);
     /// <see cref="ToolbarLabels.Auto"/> and <see cref="ToolbarLabels.IconsWithText"/> show the
@@ -284,6 +302,14 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
 
     /// <summary>The <see cref="ZoomMode"/> value seen by the previous parameter pass.</summary>
     private PdfZoomMode _lastZoomModeParam = PdfZoomMode.Auto;
+
+    /// <summary>The view mode handed to the viewer; synced from <see cref="ViewMode"/> only when
+    /// it actually changes, so an unbound host keeps the mode the viewer's toggle reported back
+    /// (the same keep-user-choice pattern as <see cref="_zoomMode"/>).</summary>
+    private PdfViewMode _viewMode = PdfViewMode.SinglePage;
+
+    /// <summary>The <see cref="ViewMode"/> value seen by the previous parameter pass.</summary>
+    private PdfViewMode _lastViewModeParam = PdfViewMode.SinglePage;
 
     // ── FZE-12: runtime color picker state ───────────────────────────────────
 
@@ -359,6 +385,12 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         {
             _lastZoomModeParam = ZoomMode;
             _zoomMode = ZoomMode;
+        }
+
+        if (ViewMode != _lastViewModeParam)
+        {
+            _lastViewModeParam = ViewMode;
+            _viewMode = ViewMode;
         }
 
         if (!_showResolvedInitialized)
@@ -493,6 +525,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         _activeStroke = null;
         _strokePointerId = null;
         _strokePointerType = null;
+        _activeStrokePage = 0;
         await ModeChanged.InvokeAsync(mode);
         await InvokeAsync(StateHasChanged);
     }
@@ -536,7 +569,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CreateStampAsync(double x, double y)
+    private async Task CreateStampAsync(int page, double x, double y)
     {
         var stampText = EffectiveStampOptions[Math.Min(_selectedStampIndex, EffectiveStampOptions.Count - 1)];
         const double stampWidth = 0.18;
@@ -544,7 +577,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         var request = new DocumentCommentThreadCreateRequest
         {
             Anchor = DocumentCommentAnchor.Area(
-                _currentPage,
+                page,
                 Math.Clamp(x - stampWidth / 2, 0, 1 - stampWidth),
                 Math.Clamp(y - stampHeight / 2, 0, 1 - stampHeight),
                 stampWidth,
@@ -721,16 +754,40 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>Forwards the viewer's view-mode change: internal state first (an unbound host
+    /// never echoes the parameter), then the two-way callback. An in-flight stroke belongs to a
+    /// page of the old presentation — a mode switch discards it (never commits it).</summary>
+    private async Task HandleViewModeChangedAsync(PdfViewMode value)
+    {
+        _viewMode = value;
+        DiscardActiveStroke();
+        await ViewModeChanged.InvokeAsync(value);
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task SelectThreadAsync(string? threadId)
     {
         _selectedThreadId = threadId;
-        // Selecting a thread anchored on another page navigates there: the current page
-        // is handed to the embedded viewer through its Page parameter.
-        var page = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal))?.Anchor.PageNumber ?? 0;
-        if (page >= 1 && page != _currentPage)
+        // Selecting a thread anchored on another page navigates there: in SinglePage the
+        // current page is handed to the embedded viewer through its Page parameter; in
+        // Continuous the shared FZE-13 viewer path scrolls the wrap to the page and centers
+        // the anchor's Y — the mode stays Continuous.
+        var thread = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal));
+        var page = thread?.Anchor.PageNumber ?? 0;
+        if (page >= 1)
         {
-            _currentPage = page;
-            ResetPageState();
+            if (_viewMode == PdfViewMode.Continuous)
+            {
+                if (_viewer is not null)
+                {
+                    await _viewer.ScrollToAnchorAsync(page, thread!.Anchor.Y);
+                }
+            }
+            else if (page != _currentPage)
+            {
+                _currentPage = page;
+                ResetPageState();
+            }
         }
 
         // G2: on a phone the panel is the bottom sheet — a tapped thread marker opens it on
@@ -895,7 +952,14 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
     private async Task HandlePageChangedAsync(int page)
     {
         _currentPage = page;
-        ResetPageState();
+        // Single-page navigation re-renders THE canvas — the stroke would land on the
+        // wrong page, so it is dropped. In Continuous the page tracker reports while the
+        // user scrolls; an active stroke stays confined to its own page (FZE-14) and must
+        // survive those reports.
+        if (_viewMode != PdfViewMode.Continuous)
+        {
+            ResetPageState();
+        }
         await InvokeAsync(StateHasChanged);
     }
 
@@ -910,6 +974,7 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
         _activeStroke = null;
         _strokePointerId = null;
         _strokePointerType = null;
+        _activeStrokePage = 0;
         _surfaceSize = null;
     }
 

@@ -4,6 +4,25 @@
 
 ### Added
 
+- **TmPdfAnnotator: annotation tools on every page of Continuous mode (FZE-14).** The PD1 pin is
+  lifted: `ViewMode` (two-way, default `PdfViewMode.SinglePage` — additive) and
+  `ShowViewModeToggle` (default `false`) now pass through to the embedded viewer, so hosts can
+  run the annotator in `PdfViewMode.Continuous` and offer the single/continuous segmented control
+  in the merged toolbar. In Continuous the annotator renders its marker layer and interaction
+  surface PER PAGE through the viewer's FZE-13 `PageOverlayContent` slots (one geometry pipeline,
+  no second pinch/drag — the shared `pointer-gesture.js` keeps owning two fingers): a stamp, a
+  comment, a highlight and every ink point normalize against the slot's page box and anchor on
+  THE page whose surface received the event (the annotator's current page is navigation state
+  only), an ink stroke stays confined to the page where it started — a stroke dragged across the
+  boundary is clipped there, and `touch-action: none` stays on the Draw surface only so the other
+  tools keep the native pan/pinch — drafts and composers stay bound to the draft page while its
+  slot is scrolled away and back, and selecting a thread in the panel scrolls to its anchor
+  through the shared `TmPdfViewer.ScrollToAnchorAsync(page, y)` path (new public API) instead of
+  leaving Continuous. Export/print are view-mode independent and cover every page, and the G2
+  mobile rules (Browse + Add comment only) hold in Continuous. `TmRedactionLayer` explicitly
+  pins its own viewer to `SinglePage` with no toggle (redaction measures against THE canvas).
+  The per-page surface carries `pdf-annotator-surface` + `data-page` (see Breaking / Migration).
+
 - **TmPdfViewer: annotations in Continuous mode — PD1 superseded (FZE-13).** The viewer now renders
   annotation markers and selection-driven threads on every page of the continuous column, not just in
   single-page mode. The continuous scroll wrap hosts the JS-owned pages container (unchanged lazy
@@ -457,6 +476,30 @@
         </div>
     </PageOverlayContent>
 </TmPdfViewer>
+```
+
+- **TmPdfAnnotator: the interaction surface is per page in Continuous (FZE-14).** In
+  `PdfViewMode.SinglePage` nothing changes — one `pdf-annotator-surface` over the canvas, one
+  `tm-pdf-annotator-layer`, exactly as before. With `ViewMode="PdfViewMode.Continuous"` the
+  annotator renders a layer + surface pair PER MOUNTED PAGE SLOT instead of a single
+  viewport-aligned pair: each surface keeps the `pdf-annotator-surface` test id and gains a
+  `data-page` attribute, and each pair rides the viewer's
+  `.tm-pdf-viewer__page-overlay-slot[data-page="N"]` (FZE-13) inside a new
+  `.tm-pdf-annotator__page-surface-host` wrapper (fills the slot, `pointer-events: none`).
+  Hosts that located THE annotator surface as `.tm-pdf-annotator__surface` in Continuous must
+  scope the lookup to the page slot (`.tm-pdf-viewer__page-overlay-slot[data-page='4']
+  [data-testid='pdf-annotator-surface']`); E2E selectors keyed on a single surface break the
+  same way. Single-page CSS/hosts are untouched — the default `ViewMode` is additive.
+
+```razor
+@* BEFORE (2.9.0) — the annotator pinned the viewer to SinglePage: ONE surface *@
+<TmPdfAnnotator Url="@url" />
+@* DOM: .tm-pdf-annotator .tm-pdf-annotator__surface  (one, page-agnostic) *@
+
+@* AFTER (2.9.1) — Continuous is opt-in via ViewMode; the tools work per page *@
+<TmPdfAnnotator Url="@url" ViewMode="PdfViewMode.Continuous" ShowViewModeToggle="true" />
+@* DOM: .tm-pdf-viewer__page-overlay-slot[data-page] >
+        .tm-pdf-annotator__page-surface-host > .tm-pdf-annotator-layer + .tm-pdf-annotator__surface[data-page] *@
 ```
 
 - **TmPdfViewer + TmPdfAnnotator: the "Show resolved" checkbox became the segmented

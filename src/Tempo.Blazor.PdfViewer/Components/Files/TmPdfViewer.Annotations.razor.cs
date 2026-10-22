@@ -253,26 +253,9 @@ public partial class TmPdfViewer
         // Selecting a thread anchored on another page navigates to that page.
         var thread = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal));
         var page = thread?.Anchor.PageNumber ?? 0;
-        if (page >= 1)
+        if (page >= 1 && (page != _currentPage || _viewMode == PdfViewMode.Continuous))
         {
-            // PDF-VIEWER-CONTINUOUS-ANNOTATIONS (PD1 superseded): in Continuous the
-            // thread's markers live in the per-page overlay slots — selecting a thread
-            // scrolls to its page and centers the anchor point instead of switching
-            // the mode. The slot mounts from the JS geometry report (the scroll fires
-            // the band report) with the marker already highlighted; the lazy renderer
-            // paints the page when it enters the viewport, and the active thumbnail +
-            // the two-way Page update through the scroll tracker's report.
-            if (_viewMode == PdfViewMode.Continuous)
-            {
-                await SetPageAsync(page);
-                await ScrollToPageInContinuousAsync(page);
-                try { await JS.InvokeVoidAsync("tmPdfViewer.scrollToAnchor", _rootRef, page, thread!.Anchor.Y); }
-                catch { }
-            }
-            else if (page != _currentPage)
-            {
-                await GoToPageAsync(page);
-            }
+            await ScrollToAnchorAsync(page, thread!.Anchor.Y);
         }
         await InvokeAsync(StateHasChanged);
     }

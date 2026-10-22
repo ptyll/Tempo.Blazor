@@ -40,6 +40,26 @@ public class TmRedactionLayerTests : LocalizationTestBase
         await surface.TriggerEventAsync("onpointerup", new PointerEventArgs { OffsetX = x2, OffsetY = y2 });
     }
 
+    // ── FZE-14: the PD1 lift must not reach redaction ────────────────────────
+
+    [Fact]
+    public void Redaction_StaysSinglePage_AfterPd1Lift()
+    {
+        // The annotator gained per-page continuous tools (FZE-14), but redaction keeps its
+        // viewer pinned: the areas are measured against THE canvas and the stage offers no
+        // view-mode toggle.
+        var cut = Render<TmRedactionLayer>(p =>
+        {
+            p.Add(x => x.Url, "/sample.pdf");
+            p.Add(x => x.DocumentId, "doc-1");
+        });
+
+        var viewer = cut.FindComponent<TmPdfViewer>().Instance;
+        viewer.ViewMode.Should().Be(PdfViewMode.SinglePage, "redaction stays a single-page stage");
+        viewer.ShowViewModeToggle.Should().BeFalse("the redaction stage never offers the continuous toggle");
+        cut.FindAll(".tm-pdf-viewer__view-mode").Should().BeEmpty();
+    }
+
     // ── Drawing ──────────────────────────────────────────────────────────────
 
     [Fact]

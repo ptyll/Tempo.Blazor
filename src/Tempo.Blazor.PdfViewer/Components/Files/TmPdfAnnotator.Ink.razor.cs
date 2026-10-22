@@ -27,6 +27,11 @@ public partial class TmPdfAnnotator
     /// finger stroke when the stylus lands.</summary>
     private string? _strokePointerType;
 
+    /// <summary>The page the active stroke belongs to (FZE-14): the stroke is confined to
+    /// the page where it started — points normalized against another page's slot never
+    /// join it, and the committed anchor lands on the start page. 0 while no stroke lives.</summary>
+    private int _activeStrokePage;
+
     private double[]? _surfaceSize;
 
     /// <summary>The viewer instance the <see cref="TmPdfViewer.PinchStarted"/> subscription
@@ -34,7 +39,7 @@ public partial class TmPdfAnnotator
     /// subscribed exactly once).</summary>
     private TmPdfViewer? _pinchSubscribedViewer;
 
-    // ── Surface interaction ──────────────────────────────────────────────────
+    // ── Surface interaction (single-page overlay: one surface, JS-measured) ──
 
     private async Task HandleSurfaceClickAsync(MouseEventArgs e)
     {
@@ -49,12 +54,142 @@ public partial class TmPdfAnnotator
             return;
         }
 
+        await DropPointAsync(_currentPage, point.Value.X, point.Value.Y);
+    }
+
+    private async Task HandlePointerDownAsync(PointerEventArgs e)
+    {
+        if (_mode != PdfAnnotatorMode.Draw)
+        {
+            return;
+        }
+
+        var point = await NormalizePointAsync(e.OffsetX, e.OffsetY, refreshSize: true);
+        if (point is null)
+        {
+            return;
+        }
+
+        StartStrokeAt(_currentPage, point.Value, e);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Single-page move: the one surface IS the current page, so the stroke keeps
+    /// normalizing against the JS-measured surface size (FZE-9 — no JS round-trip per move
+    /// event, the size from pointer-down is reused) and only the owning pointer extends it.</summary>
+    private async Task HandlePointerMoveAsync(PointerEventArgs e)
+    {
+        if (_activeStroke is null || e.PointerId != _strokePointerId)
+        {
+            return;
+        }
+
+        var point = await NormalizePointAsync(e.OffsetX, e.OffsetY, refreshSize: false);
+        if (point is null)
+        {
+            return;
+        }
+
+        _activeStroke.Add(DocumentInkPoint.Create(point.Value.X, point.Value.Y));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandlePointerUpAsync(PointerEventArgs e) => FinishStrokeAsync(e.PointerId);
+
+    private Task HandlePointerLeaveAsync(PointerEventArgs e) => FinishStrokeAsync(e.PointerId);
+
+    // ── Surface interaction (continuous: per-page slots, slot-box normalized) ──
+
+    /// <summary>
+    /// FZE-14: a click on one page's slot. The slot context carries the page number and the
+    /// page box (the geometry report's CSS-pixel size — the slot IS that box, so the offset
+    /// normalizes against it without a JS measure), so the tool anchors on THE page clicked,
+    /// never on the annotator's current page.
+    /// </summary>
+    private async Task HandleSurfaceClickAsync(PdfPageOverlayContext page, MouseEventArgs e)
+    {
+        if (_mode is not (PdfAnnotatorMode.Comment or PdfAnnotatorMode.Stamp))
+        {
+            return;
+        }
+
+        var point = NormalizeOnPage(page, e.OffsetX, e.OffsetY);
+        if (point is null)
+        {
+            return;
+        }
+
+        await DropPointAsync(page.PageNumber, point.Value.X, point.Value.Y);
+    }
+
+    private async Task HandlePointerDownAsync(PdfPageOverlayContext page, PointerEventArgs e)
+    {
+        if (_mode != PdfAnnotatorMode.Draw)
+        {
+            return;
+        }
+
+        var point = NormalizeOnPage(page, e.OffsetX, e.OffsetY);
+        if (point is null)
+        {
+            return;
+        }
+
+        // A second contact is resolved by StartStrokeAt: the pen's priority drops a live
+        // touch stroke, another touch contact is the pinch hand-over (cancel), and any
+        // further contact draws nothing.
+        if (!StartStrokeAt(page.PageNumber, point.Value, e))
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandlePointerMoveAsync(PdfPageOverlayContext page, PointerEventArgs e)
+    {
+        if (_activeStroke is null)
+        {
+            return;
+        }
+
+        // Only the pointer that started the stroke may extend it (the pinch's retargeted
+        // fingers must not keep drawing), and only on the page the stroke started on —
+        // a move reported by another page's slot is ignored (the stroke is confined).
+        if (e.PointerId != _strokePointerId || page.PageNumber != _activeStrokePage)
+        {
+            return;
+        }
+
+        var point = NormalizeOnPage(page, e.OffsetX, e.OffsetY);
+        if (point is null)
+        {
+            return;
+        }
+
+        _activeStroke.Add(DocumentInkPoint.Create(point.Value.X, point.Value.Y));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandlePointerUpAsync(PdfPageOverlayContext page, PointerEventArgs e)
+        => FinishStrokeAsync(e.PointerId);
+
+    private Task HandlePointerLeaveAsync(PdfPageOverlayContext page, PointerEventArgs e)
+        => FinishStrokeAsync(e.PointerId);
+
+    // ── Shared tool drop (comment draft / stamp) ─────────────────────────────
+
+    /// <summary>Applies a click point to the active tool: a comment draft anchored on
+    /// <paramref name="page"/> (with the G2 mobile sheet flow) or an immediate stamp.</summary>
+    private async Task DropPointAsync(int page, double x, double y)
+    {
         if (_mode == PdfAnnotatorMode.Comment)
         {
             _draft = new PdfAnnotatorDraft
             {
                 Kind = DocumentAnnotationKind.Comment,
-                Anchor = DocumentCommentAnchor.Point(_currentPage, point.Value.X, point.Value.Y)
+                Anchor = DocumentCommentAnchor.Point(page, x, y)
             };
 
             // G2: the draft composer lives in the bottom sheet on a phone — opening the sheet
@@ -77,15 +212,28 @@ public partial class TmPdfAnnotator
         }
         else
         {
-            await CreateStampAsync(point.Value.X, point.Value.Y);
+            await CreateStampAsync(page, x, y);
         }
     }
 
-    private async Task HandlePointerDownAsync(PointerEventArgs e)
+    // ── Ink stroke bookkeeping ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Starts a stroke on <paramref name="page"/>. Returns false when the contact must not
+    /// draw (a second finger is the pinch hand-over, a second pen/mouse contact is ignored,
+    /// or the page holds a drawing draft anchored on a different page); the pen's priority
+    /// (FZE-9) is unchanged — a stylus landing replaces a live finger stroke, which is
+    /// cancelled (never committed).
+    /// </summary>
+    private bool StartStrokeAt(int page, (double X, double Y) point, PointerEventArgs e)
     {
-        if (_mode != PdfAnnotatorMode.Draw)
+        // A completed stroke joins the open drawing draft — but only on the draft's own
+        // page: a contact on another page must not extend a draft anchored elsewhere
+        // (FZE-14), so it draws nothing and the draft stays confined to its page.
+        if (_draft is { Kind: DocumentAnnotationKind.Drawing, Anchor: { } draftAnchor }
+            && draftAnchor.PageNumber != page)
         {
-            return;
+            return false;
         }
 
         if (_activeStroke is not null)
@@ -107,64 +255,25 @@ public partial class TmPdfAnnotator
                 _activeStroke = null;
                 _strokePointerId = null;
                 _strokePointerType = null;
-                await InvokeAsync(StateHasChanged);
-                return;
+                _activeStrokePage = 0;
+                return false;
             }
             else
             {
                 // A stroke is already live for a pointer that keeps priority (a second pen,
                 // a mouse while a pen draws, a palm touch during a pen stroke): the new
                 // contact draws nothing.
-                return;
+                return false;
             }
         }
 
-        var point = await NormalizePointAsync(e.OffsetX, e.OffsetY, refreshSize: true);
-        if (point is null)
-        {
-            return;
-        }
-
-        _activeStroke = [DocumentInkPoint.Create(point.Value.X, point.Value.Y)];
+        _activeStroke = [DocumentInkPoint.Create(point.X, point.Y)];
         _strokePointerId = e.PointerId;
         _strokePointerType = e.PointerType;
-        await InvokeAsync(StateHasChanged);
+        _activeStrokePage = page;
+        return true;
     }
 
-    private async Task HandlePointerMoveAsync(PointerEventArgs e)
-    {
-        if (_activeStroke is null)
-        {
-            return;
-        }
-
-        // Only the pointer that started the stroke may extend it: after a pinch captures
-        // both fingers, their moves are retargeted and must not keep drawing.
-        if (e.PointerId != _strokePointerId)
-        {
-            return;
-        }
-
-        // Reuse the size measured on pointer-down: no JS round-trip per move event.
-        var point = await NormalizePointAsync(e.OffsetX, e.OffsetY, refreshSize: false);
-        if (point is null)
-        {
-            return;
-        }
-
-        _activeStroke.Add(DocumentInkPoint.Create(point.Value.X, point.Value.Y));
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private Task HandlePointerUpAsync(PointerEventArgs e) => FinishStrokeAsync(e.PointerId);
-
-    private Task HandlePointerLeaveAsync(PointerEventArgs e) => FinishStrokeAsync(e.PointerId);
-
-    /// <summary>
-    /// FZE-9 review (M2): the platform cancelled the pointer (a pinch hand-over, a palm
-    /// rejection, an incoming call). The live stroke is discarded — never committed —
-    /// exactly like the pinch's own start notification does.
-    /// </summary>
     private void HandlePointerCancel(PointerEventArgs e) => DiscardActiveStroke();
 
     /// <summary>
@@ -183,6 +292,7 @@ public partial class TmPdfAnnotator
         _activeStroke = null;
         _strokePointerId = null;
         _strokePointerType = null;
+        _activeStrokePage = 0;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -233,21 +343,33 @@ public partial class TmPdfAnnotator
         }
 
         var stroke = _activeStroke;
+        var strokePage = _activeStrokePage;
         _activeStroke = null;
         _strokePointerId = null;
         _strokePointerType = null;
+        _activeStrokePage = 0;
         if (stroke.Count >= 2)
         {
             _draft ??= new PdfAnnotatorDraft
             {
                 Kind = DocumentAnnotationKind.Drawing,
-                Anchor = DocumentCommentAnchor.Point(_currentPage, stroke[0].X, stroke[0].Y)
+                Anchor = DocumentCommentAnchor.Point(strokePage, stroke[0].X, stroke[0].Y)
             };
             _draft.Strokes.Add(new DocumentInkStroke { Points = stroke });
         }
 
         await InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>
+    /// Normalizes a pointer offset against a continuous page slot: the slot's box IS the
+    /// reported page geometry (FZE-13), so no JS measure is needed. Returns null when the
+    /// geometry is not (yet) known — the slot does not exist before the report anyway.
+    /// </summary>
+    private static (double X, double Y)? NormalizeOnPage(PdfPageOverlayContext page, double offsetX, double offsetY)
+        => page.Width > 0 && page.Height > 0
+            ? (offsetX / page.Width, offsetY / page.Height)
+            : null;
 
     private async Task<(double X, double Y)?> NormalizePointAsync(double offsetX, double offsetY, bool refreshSize)
     {

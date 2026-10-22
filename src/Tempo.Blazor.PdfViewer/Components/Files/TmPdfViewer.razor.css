@@ -136,8 +136,23 @@
 
 /* ── View mode segment: inherit the core segmented radio, tightened for the toolbar ── */
 
-.tm-pdf-viewer__view-mode {
+/* The segment root is a child-component root and carries no scope attribute, so a
+   `.tm-pdf-viewer__view-mode`-anchored selector would never match — anchor on the
+   viewer root (the one element that owns the scope id) and go deep instead. */
+.tm-pdf-viewer ::deep .tm-pdf-viewer__view-mode {
     gap: var(--tm-space-0-5);
+    /* One row, always: the toggle neither shrinks (a squeezed segment label would wrap
+       to a second line) nor lets the radio group wrap — a narrow toolbar overflows the
+       whole group into the More menu instead. */
+    flex-shrink: 0;
+}
+
+.tm-pdf-viewer ::deep .tm-pdf-viewer__view-mode .tm-radio-group-options {
+    flex-wrap: nowrap;
+}
+
+.tm-pdf-viewer ::deep .tm-pdf-viewer__view-mode .tm-radio-segment {
+    white-space: nowrap;
 }
 
 /* ── Comments toggle ─────────────────────────────────────────────────────── */

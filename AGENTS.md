@@ -530,8 +530,16 @@ merge into the embedded viewer's toolbar through `ToolbarStart`/`ToolbarEnd`; th
 ("Export PDF | Export flattened | Print" — `AllowExport`, `ExportFileName`, `ExportAsync(flatten)`,
 `PrintAsync()`) lives in the header row when `ShowHeader` is true. Pass-through parameters:
 `ShowThumbnails`, `ShowSearch`, `SearchPresentation`, `AllowRotation`,
-`ThumbnailsCollapsed` (two-way), `ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
-`SinglePage` and never offers the continuous toggle (the annotator gains per-page continuous tools in FZE-14). `ShowViewerToolbar` (default `true`)
+`ThumbnailsCollapsed` (two-way), `ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`,
+`ViewMode`/`ViewModeChanged` (two-way, default `SinglePage` — additive, FZE-14) and
+`ShowViewModeToggle` (default `false`, FZE-14). With
+`ViewMode.Continuous` the annotator's layer and interaction surface render per page of the
+scroll column through the viewer's `PageOverlayContent` slots — every tool anchors on the
+slot's page, an ink stroke stays confined to its start page (clipped at the boundary), drafts
+and composers stay bound to the draft page, and panel thread selection scrolls to the anchor
+(the shared `TmPdfViewer.ScrollToAnchorAsync` path) without leaving Continuous; export/print
+are view-mode independent. `TmRedactionLayer` keeps its viewer explicitly pinned to
+`SinglePage` with no toggle. `ShowViewerToolbar` (default `true`)
 is kept for compatibility: when `false`, the viewer chrome is hidden and the annotator renders a
 compact tools row of its own. **Runtime color picker (FZE-12)**: `AllowColorPicker` (default
 `true`) turns the color label into a trigger for a `TmColorPalette` popover (a bottom sheet on a
