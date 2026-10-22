@@ -74,6 +74,20 @@
 
 ### Added
 
+- **`TmDocumentOpenDialog` redesign: opt-in "Recent" node and a testable `LayoutMode` (wireframe redesign plan ce19aa8c, phase 8, WF4).** Two new
+  opt-in parameters, no `ITempoDocumentLibraryProvider` / `DocumentOpenResult` change. `ShowRecent` (default `false`) adds a virtual **Recent** node above the
+  folder tree; selecting it issues `BrowseAsync` with `FolderPath = null`, `SortField = Modified`, `Descending = true`, `Take = PageSize` (the sort buttons are
+  disabled on that node, the previous sort returns when you leave it). **Which documents a `null` folder returns is the provider's decision** - the
+  `DocumentLibraryQuery.FolderPath` contract says "null or `/` lists the root", so a provider that wants a library-wide recent list must treat `null` as "everywhere"
+  (the demo `DocumentLibraryStore` follows the contract and returns the root documents only; it was left unchanged). `LayoutMode` (`TmLayoutMode`, default `Auto`)
+  measures the dialog body (a `TmLayoutObserver` with its own 640 / 768 thresholds) and, below 768 px of body width or when forced to `Tablet` / `Mobile`, renders
+  the narrow tree and the footer buttons on their own row; `Desktop` forces the wide layout. A forced mode never imports the observer script, so a test renders
+  either layout without a DOM. The tree, the list rows and the grid cards are now keyboard-operable as roving tab stops (see Breaking / Migration), the sorted column
+  header shows a direction indicator (`.tm-dod-sort-indicator`, `data-direction`), the breadcrumb moved into the right pane with a home icon and `›` separators, and
+  the grid listbox has its own label key `TmDocumentOpenDialog_DocumentsLabel` instead of reusing the dialog title. New localization keys (en / cs / sk / fr):
+  `_Recent`, `_Home`, `_Expand`, `_Collapse`, `_SortAscending`, `_SortDescending`, `_FoldersLabel`, `_DocumentsLabel`, `_ModeLabel`. The colocated module gained
+  `focusRoving` / `getGridColumns` (node tests in `tm-dod-space-guard.test.mjs`). Demo `/document-open-dialog` has "Show Recent" and layout switches.
+
 - **Wireframe editor mobile layout: viewing + light edits (redesign plan ce19aa8c, phase 7, decision G2).** In an editor container below 768 px
   (`data-editor-layout="mobile"`) `TmWireframeEditor` renders the core `TmEditorShell` mobile presentation: a compact header (document title plus
   `HeaderStart` / `HeaderActions`) with a **select / pan / undo / redo / More** tool row, a canvas that takes the whole width (the canvas measured 0 px
@@ -1246,6 +1260,41 @@
   translations in an application (registered after `AddTempoBlazor()`).
 
 ### Breaking / Migration
+
+- **`TmDocumentOpenDialog` is a wider modal with a collapsible tree, always-visible actions and radio-card modes (redesign plan ce19aa8c, phase 8).**
+  Impact: the public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, ...), `DocumentOpenResult` and every `.tm-dod-*` selector the
+  Notion / Diagram / Spreadsheet blocks and the E2E suites use stay, but the DOM and look changed:
+  (1) the modal is `ModalSize.XLarge` (900 px, was `Large` 680 px); (2) **Rename and Delete are always rendered** (when the provider advertises the capability)
+  and are `disabled` until a document is selected - before they appeared only with a selection, so a host stylesheet or test that expected them to be *absent*
+  must now check `disabled`; (3) the **folder tree is collapsible**: rows are `div[role=treeitem]` (not `<button>`), carry `aria-expanded` on folders with children,
+  a mouse-only `.tm-dod-tree-toggle` chevron (a fenced, `aria-hidden` non-focusable `<span>`; a click returns focus to the row) and are ONE tab stop named by their label (`aria-labelledby`, plus `aria-setsize` / `aria-posinset`) with the WAI-ARIA arrow keys (Left/Right collapse / expand / parent / first child, Up/Down, Home/End,
+  Enter and Space navigate); the inline `padding-left` is now `padding-inline-start: calc(...)`; (4) list rows, grid cards and tree rows use a **roving
+  `tabindex`** (`0` on one, `-1` on the rest, the arrow keys move focus) instead of `tabindex="0"` on every row - a test that asserted `tabindex="0"` on a
+  specific row must assert "exactly one `0`" or focus the row; (5) the **link / copy choice is a `role="radiogroup"` of radio cards** (`.tm-dod-mode-card`,
+  title + its own hint) instead of two inline native radios sharing one hint - `.tm-dod-mode-link` / `.tm-dod-mode-copy` are still the native `input[type=radio]`
+  (so `.Change(true)` / `Check()` keep working) and the hint class `.tm-dod-mode-hint` now exists once per card; the radio `name` is per-instance; (6) the breadcrumb is
+  inside the new `.tm-dod-main` right pane, its first crumb is a home **icon** button (`aria-label` "Home", no longer the text "All documents") and the separator is
+  `›` (was `/`); the last crumb is `aria-current="page"` and not a button; (7) the list header is sentence case (no `text-transform: uppercase`), list rows carry `aria-selected` and `role="gridcell"` cells, and the footer
+  buttons live in `.tm-dod-footer-actions` (the `.tm-dod-footer-spacer` element is gone); (8) the dialog root has a new `.tm-dod` class and `data-layout`
+  (the footer carries it too), toolbar buttons render icon + label, and **until the mobile phase the `Mobile` layout (and a phone viewport, where `TmModal` becomes a
+  sheet) uses the same compact rules as `Tablet`**; the arrow keys / Home / End on a tree item, row or card no longer scroll the container (the colocated scroll guard
+  cancels them, Alt / Ctrl / Meta / Shift combinations excluded); New folder is disabled on the Recent node, a search replaces the Recent node, and the Open result carries the
+  document name after a rename.
+  Before / after:
+  ```csharp
+  // before: Rename / Delete absent until a row is selected, tabindex="0" on every row
+  cut.FindAll(".tm-dod-rename").Should().BeEmpty();
+  cut.FindAll(".tm-dod-row").Should().OnlyContain(r => r.GetAttribute("tabindex") == "0");
+
+  // after: always rendered but disabled, exactly one row in the tab order
+  cut.Find(".tm-dod-rename").HasAttribute("disabled").Should().BeTrue();
+  cut.FindAll(".tm-dod-row").Count(r => r.GetAttribute("tabindex") == "0").Should().Be(1);
+  ```
+  ```razor
+  @* new, opt-in: the Recent node and a pinned layout *@
+  <TmDocumentOpenDialog Provider="library" Kind="TempoDocumentKind.Wireframe" @bind-Open="open"
+                        ShowRecent="true" LayoutMode="TmLayoutMode.Auto" OnSelected="Picked" />
+  ```
 
 - **The wireframe editor is a different, lighter editor below 768 px, and its export dialog is a bottom sheet there (redesign plan ce19aa8c, phase 7).**
   Impact: in an editor container narrower than 768 px (a phone, or a narrow column) `TmWireframeEditor` no longer shows the desktop chrome squeezed into the width

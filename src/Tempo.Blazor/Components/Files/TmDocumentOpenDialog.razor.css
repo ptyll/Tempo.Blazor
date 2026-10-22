@@ -1,6 +1,10 @@
 /* TmDocumentOpenDialog — every colour, radius and space reads a canonical core token (no hex, no
    fallbacks, no invented aliases: docs/css-token-aliases.md). The accent therefore follows
-   --tm-color-primary in the default blue theme, the opt-in indigo theme and dark mode alike. */
+   --tm-color-primary in the default blue theme, the opt-in indigo theme and dark mode alike.
+
+   Layout (WF4): an XLarge modal; the dialog body is a size container (the TmLayoutObserver root, .tm-layout, measures it and
+   Blazor writes data-layout / the --narrow / --own-row modifiers, so a forced LayoutMode renders without a DOM).
+   Below the Md step the tree narrows and the footer buttons take their own row. */
 
 .tm-document-open-dialog {
     display: flex;
@@ -9,10 +13,20 @@
     min-height: 420px;
 }
 
+/* The dialog root. It is NOT a second size container: the TmLayoutObserver around it (.tm-layout, container-name
+   tm-layout) already is one, and the @container rule below queries that — nesting two inline-size containers around the
+   same box added nothing but containment cost. */
+.tm-dod {
+    min-width: 0;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────────────────── */
+
 .tm-dod-toolbar {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
+    flex-wrap: wrap;
 }
 
 .tm-dod-toolbar-spacer {
@@ -20,8 +34,10 @@
 }
 
 .tm-dod-search {
-    flex: 0 1 280px;
-    padding: var(--tm-space-1-5) var(--tm-space-2-5);
+    flex: 0 1 320px;
+    min-width: 0;
+    min-height: var(--tm-space-10);
+    padding: var(--tm-space-1-5) var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-control);
     background: var(--tm-bg-surface);
@@ -29,25 +45,61 @@
     font-size: var(--tm-font-size-sm);
 }
 
+.tm-dod-search:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -1px;
+}
+
+.tm-dod-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+/* Outline buttons with an icon and a label. They are ALWAYS rendered (a stable toolbar, no layout jump when a row is
+   selected); Rename and Delete are disabled until there is a selection. */
 .tm-dod-new-folder,
 .tm-dod-rename,
 .tm-dod-delete {
     display: inline-flex;
     align-items: center;
     gap: var(--tm-space-1-5);
-    padding: var(--tm-space-1-5) var(--tm-space-2-5);
-    background: transparent;
+    min-height: var(--tm-space-10);
+    padding: var(--tm-space-1-5) var(--tm-space-3);
+    background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-control);
     font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
     cursor: pointer;
     color: var(--tm-text-primary);
 }
 
-.tm-dod-new-folder:hover,
-.tm-dod-rename:hover,
-.tm-dod-delete:hover {
+.tm-dod-new-folder:hover:not(:disabled),
+.tm-dod-rename:hover:not(:disabled),
+.tm-dod-delete:hover:not(:disabled) {
     background: var(--tm-color-surface-hover);
+}
+
+.tm-dod-new-folder:disabled,
+.tm-dod-rename:disabled,
+.tm-dod-delete:disabled {
+    opacity: var(--tm-opacity-disabled);
+    cursor: not-allowed;
+}
+
+.tm-dod-new-folder:focus-visible,
+.tm-dod-rename:focus-visible,
+.tm-dod-delete:focus-visible,
+.tm-dod-view-list:focus-visible,
+.tm-dod-view-grid:focus-visible,
+.tm-dod-crumb:focus-visible,
+.tm-dod-col-name:focus-visible,
+.tm-dod-col-modified:focus-visible,
+.tm-dod-load-more:focus-visible,
+.tm-dod-retry:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
 }
 
 .tm-dod-view-toggle {
@@ -59,6 +111,11 @@
 
 .tm-dod-view-list,
 .tm-dod-view-grid {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-10);
+    min-height: calc(var(--tm-space-10) - 2px);
     padding: var(--tm-space-1-5) var(--tm-space-2);
     background: transparent;
     border: 0;
@@ -98,57 +155,42 @@
     font-size: var(--tm-font-size-xs);
 }
 
-.tm-dod-breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    flex-wrap: wrap;
-    font-size: var(--tm-font-size-sm);
-}
-
-.tm-dod-crumb {
-    background: transparent;
-    border: 0;
-    padding: var(--tm-space-0-5) var(--tm-space-1);
-    color: var(--tm-color-primary);
-    cursor: pointer;
-    border-radius: var(--tm-radius-sm);
-}
-
-.tm-dod-crumb:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-.tm-dod-crumb-sep {
-    color: var(--tm-text-tertiary);
-}
+/* ── Body: tree + right pane ─────────────────────────────────────────────────────────── */
 
 .tm-dod-body {
     display: flex;
-    gap: var(--tm-space-3);
+    gap: var(--tm-space-4);
     flex: 1;
     min-height: 320px;
 }
 
 .tm-dod-tree {
-    flex: 0 0 200px;
+    flex: 0 0 240px;
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-0-5);
-    border-right: 1px solid var(--tm-border-color);
-    padding-right: var(--tm-space-2);
+    border-inline-end: 1px solid var(--tm-border-color);
+    padding-inline-end: var(--tm-space-3);
     overflow: auto;
 }
 
+/* The narrow tree: tablet / narrow container. Same content, less width; labels ellipsise. */
+.tm-dod-tree--narrow {
+    flex-basis: 176px;
+    padding-inline-end: var(--tm-space-2);
+}
+
+/* A tree row is a div[role=treeitem] (the chevron is a native button inside it), one roving tab stop. */
 .tm-dod-tree-node {
     display: flex;
     align-items: center;
     gap: var(--tm-space-1-5);
-    padding: var(--tm-space-1-5) var(--tm-space-2);
+    min-height: var(--tm-space-10);
+    padding-block: var(--tm-space-1);
+    padding-inline-end: var(--tm-space-2);
     background: transparent;
-    border: 0;
     border-radius: var(--tm-radius-control);
-    text-align: left;
+    text-align: start;
     cursor: pointer;
     font-size: var(--tm-font-size-sm);
     color: var(--tm-text-primary);
@@ -158,10 +200,106 @@
     background: var(--tm-color-surface-hover);
 }
 
-.tm-dod-tree-node--active {
+.tm-dod-tree-node--active,
+.tm-dod-tree-node--active:hover {
     background: var(--tm-color-primary-subtle);
     color: var(--tm-color-primary);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The virtual "Recent" node sits above the tree and is separated from it. */
+.tm-dod-tree-node--recent {
+    margin-bottom: var(--tm-space-1);
+}
+
+.tm-dod-tree-label {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-dod-tree-toggle,
+.tm-dod-tree-spacer {
+    flex: 0 0 var(--tm-space-5);
+    width: var(--tm-space-5);
+    height: var(--tm-space-5);
+}
+
+.tm-dod-tree-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-dod-tree-toggle:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+.tm-dod-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+/* ── Breadcrumb (right pane): home icon, then the path, "›" separated ───────────────────── */
+
+.tm-dod-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex-wrap: wrap;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-dod-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    background: transparent;
+    border: 0;
+    padding: var(--tm-space-0-5) var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-dod-crumb:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+.tm-dod-crumb-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The last crumb is the place you are in: not a link, in the primary text colour. */
+.tm-dod-crumb--current {
+    cursor: default;
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-dod-crumb--current:hover {
+    background: transparent;
+}
+
+.tm-dod-crumb-sep {
+    color: var(--tm-text-tertiary);
 }
 
 .tm-dod-content {
@@ -193,21 +331,23 @@
     cursor: pointer;
 }
 
+/* ── List ────────────────────────────────────────────────────────────────────────────── */
+
 .tm-dod-list {
     display: flex;
     flex-direction: column;
 }
 
+/* Sentence-case header (no uppercase) with the sort indicator next to the sorted column. */
 .tm-dod-list-head {
     display: grid;
     grid-template-columns: 1fr 120px 120px;
     gap: var(--tm-space-2);
     padding: var(--tm-space-1-5) var(--tm-space-2-5);
     border-bottom: 1px solid var(--tm-border-color);
-    font-size: var(--tm-font-size-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
 }
 
 /* The column header IS the grid item (role=columnheader + aria-sort live on it), so the accessibility
@@ -219,25 +359,42 @@
 
 .tm-dod-col-name,
 .tm-dod-col-modified {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
     background: transparent;
     border: 0;
-    text-align: left;
+    text-align: start;
     cursor: pointer;
     font: inherit;
     color: inherit;
-    text-transform: inherit;
-    letter-spacing: inherit;
     padding: 0;
 }
 
+/* The Recent node fixes the order (modified, newest first): the header is a label there, not a control. */
+.tm-dod-col-name:disabled,
+.tm-dod-col-modified:disabled {
+    cursor: default;
+    opacity: 1;
+    color: inherit;
+}
+
+.tm-dod-sort-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-color-primary);
+}
+
+/* 40 px rows, a hairline between them; the selected row is the primary tint with an inset bar. */
 .tm-dod-row {
     display: grid;
     grid-template-columns: 1fr 120px 120px;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-2) var(--tm-space-2-5);
+    min-height: var(--tm-space-10);
+    padding: var(--tm-space-1) var(--tm-space-2-5);
     align-items: center;
     cursor: pointer;
-    border-radius: var(--tm-radius-control);
+    border-bottom: 1px solid var(--tm-border-color);
     font-size: var(--tm-font-size-sm);
     color: var(--tm-text-primary);
 }
@@ -257,13 +414,19 @@
     display: inline-flex;
     align-items: center;
     gap: var(--tm-space-2);
+    min-width: 0;
 }
 
 .tm-dod-cell-modified,
 .tm-dod-cell-author {
     font-size: var(--tm-font-size-sm);
     color: var(--tm-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
+/* ── Grid ────────────────────────────────────────────────────────────────────────────── */
 
 .tm-dod-grid {
     display: grid;
@@ -304,7 +467,7 @@
     overflow: hidden;
 }
 
-.tm-dod-card-preview svg {
+.tm-dod-card-preview ::deep svg {
     max-width: 100%;
     max-height: 100%;
 }
@@ -323,10 +486,12 @@
     padding: var(--tm-space-1-5) var(--tm-space-4);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-control);
-    background: transparent;
+    background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     cursor: pointer;
 }
+
+/* ── Footer: mode radio cards + Cancel / Open ─────────────────────────────────────────── */
 
 .tm-dod-footer {
     display: flex;
@@ -335,33 +500,100 @@
     width: 100%;
 }
 
-.tm-dod-footer-spacer {
-    flex: 1;
-}
-
+/* The two cards share the free width equally; each wraps its own title + hint. */
 .tm-dod-mode {
     display: flex;
-    align-items: center;
+    flex: 1;
+    min-width: 0;
     gap: var(--tm-space-3);
-    font-size: var(--tm-font-size-sm);
 }
 
-.tm-dod-mode-option {
+.tm-dod-mode-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2-5);
+    flex: 1 1 0;
+    min-width: 0;
+    padding: var(--tm-space-2-5) var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    cursor: pointer;
+}
+
+.tm-dod-mode-card:hover {
+    border-color: var(--tm-color-primary);
+}
+
+/* The selected card carries the primary border AND the tint, so the choice never relies on the radio dot alone. */
+.tm-dod-mode-card--selected,
+.tm-dod-mode-card--selected:hover {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-dod-mode-card:has(input:focus-visible) {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* The native radio is the control (arrow keys, single tab stop); it takes the theme primary. */
+.tm-dod-mode-card input[type="radio"] {
+    flex: 0 0 auto;
+    margin: var(--tm-space-0-5) 0 0;
+    accent-color: var(--tm-color-primary);
+}
+
+.tm-dod-mode-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-width: 0;
+}
+
+.tm-dod-mode-title {
     display: inline-flex;
     align-items: center;
-    gap: var(--tm-space-1);
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-/* The native radio takes the theme primary (blue / indigo / dark) instead of the browser default. */
-.tm-dod-mode input[type="radio"] {
-    accent-color: var(--tm-color-primary);
+    gap: var(--tm-space-1-5);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
 }
 
 .tm-dod-mode-hint {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-dod-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-inline-start: auto;
+}
+
+/* Tablet / narrow container: the cards keep their row, Cancel / Open drop to their own row, right-aligned, never
+   clipped (the buttons keep their natural width and the row wraps instead of squeezing them into a column). */
+.tm-dod-footer--own-row {
+    flex-wrap: wrap;
+}
+
+.tm-dod-footer--own-row .tm-dod-mode {
+    flex: 1 1 100%;
+}
+
+.tm-dod-footer--own-row .tm-dod-footer-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+/* A very narrow container (phone width, until the mobile phase) gives the tree even less. */
+@container tm-layout (width < 640px) {
+    .tm-dod-tree {
+        flex-basis: 152px;
+    }
 }
 
 .tm-dod-delete-confirm {
@@ -398,9 +630,36 @@
     background: transparent;
 }
 
-/* Keyboard focus ring for the non-native focusables (rows and grid cards are div[tabindex=0]). */
+/* Keyboard focus ring for the non-native focusables (tree rows, list rows and grid cards are div[tabindex]). */
 .tm-dod-row:focus-visible,
-.tm-dod-card:focus-visible {
+.tm-dod-card:focus-visible,
+.tm-dod-tree-node:focus-visible {
     outline: 2px solid var(--tm-border-color-focus);
     outline-offset: -2px;
+}
+
+/* Touch: every control reaches the 44 px target. */
+@media (pointer: coarse) {
+    .tm-dod-new-folder,
+    .tm-dod-rename,
+    .tm-dod-delete,
+    .tm-dod-search,
+    .tm-dod-tree-node,
+    .tm-dod-row,
+    .tm-dod-view-list,
+    .tm-dod-view-grid {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-dod-view-list,
+    .tm-dod-view-grid {
+        min-width: var(--tm-touch-target);
+    }
+
+    .tm-dod-tree-toggle,
+    .tm-dod-tree-spacer {
+        flex-basis: var(--tm-space-8);
+        width: var(--tm-space-8);
+        height: var(--tm-space-8);
+    }
 }

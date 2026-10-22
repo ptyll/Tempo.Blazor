@@ -100,3 +100,54 @@ public sealed class ThrowingLibraryProvider : ITempoDocumentLibraryProvider
         CancellationToken cancellationToken = default)
         => Task.FromException(new InvalidOperationException("boom"));
 }
+
+/// <summary>
+/// Wraps another provider and records every browse query, so a test can assert exactly what the
+/// dialog asked for (the virtual "Recent" node issues a very specific query).
+/// </summary>
+public sealed class RecordingLibraryProvider(ITempoDocumentLibraryProvider inner) : ITempoDocumentLibraryProvider
+{
+    /// <summary>A snapshot of one browse query (the dialog reuses nothing, but a snapshot is immune to later mutation).</summary>
+    public sealed record BrowseCall(
+        string? FolderPath, string? Search, DocumentLibrarySortField SortField, bool Descending, int Skip, int Take);
+
+    /// <summary>Every browse call in order.</summary>
+    public List<BrowseCall> Calls { get; } = [];
+
+    public DocumentLibraryCapabilities Capabilities => inner.Capabilities;
+
+    public Task<DocumentLibraryFolder> GetFolderTreeAsync(
+        TempoDocumentKind kind, CancellationToken cancellationToken = default)
+        => inner.GetFolderTreeAsync(kind, cancellationToken);
+
+    public Task<DocumentLibraryPage> BrowseAsync(
+        DocumentLibraryQuery query, CancellationToken cancellationToken = default)
+    {
+        Calls.Add(new BrowseCall(query.FolderPath, query.Search, query.SortField, query.Descending, query.Skip, query.Take));
+        return inner.BrowseAsync(query, cancellationToken);
+    }
+
+    public Task<DocumentLibraryEntry?> GetEntryAsync(
+        TempoDocumentKind kind, Guid documentId, CancellationToken cancellationToken = default)
+        => inner.GetEntryAsync(kind, documentId, cancellationToken);
+
+    public Task<DocumentLibraryFolder> CreateFolderAsync(
+        TempoDocumentKind kind, string parentPath, string name, CancellationToken cancellationToken = default)
+        => inner.CreateFolderAsync(kind, parentPath, name, cancellationToken);
+
+    public Task RenameDocumentAsync(
+        TempoDocumentKind kind, Guid documentId, string newName, CancellationToken cancellationToken = default)
+        => inner.RenameDocumentAsync(kind, documentId, newName, cancellationToken);
+
+    public Task RenameFolderAsync(
+        TempoDocumentKind kind, string folderPath, string newName, CancellationToken cancellationToken = default)
+        => inner.RenameFolderAsync(kind, folderPath, newName, cancellationToken);
+
+    public Task DeleteDocumentsAsync(
+        TempoDocumentKind kind, IReadOnlyList<Guid> documentIds, CancellationToken cancellationToken = default)
+        => inner.DeleteDocumentsAsync(kind, documentIds, cancellationToken);
+
+    public Task DeleteFolderAsync(
+        TempoDocumentKind kind, string folderPath, CancellationToken cancellationToken = default)
+        => inner.DeleteFolderAsync(kind, folderPath, cancellationToken);
+}

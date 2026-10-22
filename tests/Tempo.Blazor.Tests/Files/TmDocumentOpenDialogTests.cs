@@ -423,8 +423,10 @@ public class TmDocumentOpenDialogTests : LocalizationTestBase
         cut.FindAll(".tm-dod-tree-node").First(n => n.TextContent.Contains("Designs")).Click();
         cut.WaitForState(() => cut.FindAll(".tm-dod-row").Count == 2);
 
+        // Roving tabindex (phase 8): every row is focusable, exactly one is in the tab order (the first, with no selection).
         var row = cut.FindAll(".tm-dod-row").First(r => r.GetAttribute("data-name") == "Home page");
-        row.GetAttribute("tabindex").Should().Be("0");
+        row.HasAttribute("tabindex").Should().BeTrue();
+        cut.FindAll(".tm-dod-row").Count(r => r.GetAttribute("tabindex") == "0").Should().Be(1);
 
         row.KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
@@ -451,7 +453,9 @@ public class TmDocumentOpenDialogTests : LocalizationTestBase
         var cut = RenderGrid(p => p.Add(c => c.OnSelected, (DocumentOpenResult r) => result = r));
 
         AngleSharp.Dom.IElement Card() => cut.FindAll(".tm-dod-card").First(c => c.GetAttribute("data-name") == "Home page");
-        Card().GetAttribute("tabindex").Should().Be("0");
+        // Roving tabindex (phase 8): every card is focusable, exactly one is in the tab order.
+        Card().HasAttribute("tabindex").Should().BeTrue();
+        cut.FindAll(".tm-dod-card").Count(c => c.GetAttribute("tabindex") == "0").Should().Be(1);
         Card().GetAttribute("role").Should().NotBeNullOrEmpty();
 
         // Space selects (on keyup, like a native button) without opening.

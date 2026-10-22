@@ -95,6 +95,30 @@ public sealed class DocumentLibraryStoreTests
         page.Items.Select(i => i.Name).Should().ContainInOrder("A", "B");
     }
 
+    // WF4 (phase 8): the dialog's opt-in "Recent" node browses with FolderPath = null + Modified descending. The store follows
+    // the DocumentLibraryQuery.FolderPath contract ("null or / lists the root"), so without a search only the ROOT is listed -
+    // a provider that wants a library-wide recent list must treat null as "everywhere". Pinned so the decision
+    // WF4-DOD-RECENT-NULL-FOLDER stays true.
+    [Fact]
+    public void Browse_NullFolderWithoutSearch_ListsOnlyTheRoot_NewestFirstWhenSortedByModified()
+    {
+        var store = NewStore(out _);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Root old", "/", "{}", null);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Nested", "/Designs", "{}", null);
+        store.CreateDocument(TempoDocumentKind.Wireframe, "Root new", "/", "{}", null);
+
+        var page = store.Browse(new DocumentLibraryQuery
+        {
+            Kind = TempoDocumentKind.Wireframe,
+            FolderPath = null,
+            SortField = DocumentLibrarySortField.Modified,
+            Descending = true,
+            Take = 25
+        });
+
+        page.Items.Select(i => i.Name).Should().Equal("Root new", "Root old");
+        page.TotalCount.Should().Be(2, "a document in a sub-folder is not part of a null-folder browse");
+    }
     [Fact]
     public void Browse_Search_MatchesAcrossFolders()
     {
