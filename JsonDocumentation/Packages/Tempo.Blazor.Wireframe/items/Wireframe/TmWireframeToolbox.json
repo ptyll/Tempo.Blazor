@@ -27,6 +27,13 @@
       "description": "Shows the palette inert: items are aria-disabled, muted (tm-wd-toolbox__item--disabled), not draggable and never raise OnComponentActivated. TmWireframeEditor passes its effective read-only state (host ReadOnly or the user Read-only toggle)."
     },
     {
+      "name": "SingleColumn",
+      "type": "bool",
+      "isRequired": false,
+      "defaultValue": "false",
+      "description": "Presents the palette as a single column of named rows (icon + name, a finger-sized target) instead of the 3-column tile grid. TmWireframeEditor sets it for its tablet overlay drawer; adds the tm-wd-toolbox--single-column modifier."
+    },
+    {
       "name": "ComponentScope",
       "type": "WireframeComponentScope?",
       "isRequired": false,
@@ -38,6 +45,7 @@
     "tm-wd-toolbox__search",
     "tm-wd-toolbox__item",
     "tm-wd-toolbox__item--disabled",
+    "tm-wd-toolbox--single-column",
     "tm-wd-toolbox__item-preview-paper",
     "tm-wd-toolbox__category"
   ],

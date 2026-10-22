@@ -169,6 +169,13 @@ public sealed class WireframeResponsiveScreenshotTests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
+        if (path == WireframeEditorUrl && width >= 1200)
+        {
+            // Desktop container for the editor (layout resolves from the container; see the phase 6 notes).
+            await page.AddInitScriptAsync(
+                "document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }'; document.head.appendChild(s); });");
+        }
+
         await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,

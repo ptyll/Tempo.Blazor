@@ -289,14 +289,24 @@ public sealed class WireframePhase4DesktopE2ETests : WasmTestBase
 
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
-        await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
+        // The editor resolves its layout from its CONTAINER (desktop from 1200 px): the demo's sidebar margin would leave it a tablet
+        // container, so the sidebar and the page margin are removed BEFORE the app boots (not after) - the desktop layout these specs test.
+        await page.AddInitScriptAsync(
+            """
+            document.addEventListener('DOMContentLoaded', () => {
+                const style = document.createElement('style');
+                style.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }';
+                document.head.appendChild(style);
+            });
+            """);        await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
         await WaitForAppReadyAsync(page);
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-toolbox__item",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
 
         if (dark)
         {
-            await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
+            // The test hides the demo sidebar (it holds the toggle) so the editor gets a desktop container: dispatch the click on the hidden toggle.
+            await page.Locator("[data-testid='theme-toggle']").First.DispatchEventAsync("click");
             await page.WaitForFunctionAsync("() => document.querySelector('[data-theme=\"dark\"]') !== null",
                 null, new PageWaitForFunctionOptions { Timeout = 10_000 });
         }

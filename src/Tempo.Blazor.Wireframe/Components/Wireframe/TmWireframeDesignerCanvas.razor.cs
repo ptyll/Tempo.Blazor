@@ -146,6 +146,10 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     private Dictionary<string, (double X, double Y)>? _dragStartPositions;
 
     // Current JS selection – kept in sync so we can re-apply handles after Blazor re-renders
+    // Text of the polite live region (gesture rollback announcements)
+    private string _statusMessage = "";
+    private bool _statusToggle;
+
     private string[] _currentSelectionIds = [];
 
     // Current connector selection IDs (drives .tm-wd-connector--selected CSS class)
@@ -256,6 +260,19 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
             if (el is not null)
                 _dragStartPositions[id] = (el.X, el.Y);
         }
+    }
+
+    /// <summary>
+    /// A move / resize / rotate / waypoint gesture was rolled back by the user (Escape, pointercancel, a second finger):
+    /// the live region announces <c>TmWireframeCanvas_GestureCancelled</c> politely. A normal gesture end, a destroy and the
+    /// read-only flip never call this. The same text is announced again on a repeat (a trailing no-break space alternates).
+    /// </summary>
+    [JSInvokable("OnGestureCancelled")]
+    public async Task JsOnGestureCancelled()
+    {
+        _statusToggle = !_statusToggle;
+        _statusMessage = Loc["TmWireframeCanvas_GestureCancelled"] + (_statusToggle ? "\u00A0" : "");
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>Single element moved by dragging.</summary>
@@ -693,6 +710,20 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
         return await JS.InvokeAsync<double>("tmWireframeDesigner.fitToView", _svgRef, 40);
     }
 
+    /// <summary>
+    /// Tells the canvas that its container changed size (a side panel opened or closed, the window resized) without
+    /// a Blazor re-render: the script re-measures the svg, re-fits a view the user has not moved yet or keeps the centre
+    /// and zoom of one they have, and reports the new view box and zoom through <see cref="OnViewBoxChangedEvent"/> and
+    /// <see cref="OnZoomChangedEvent"/>. A <c>ResizeObserver</c> in the script does the same on its own; this is the explicit,
+    /// deterministic trigger for hosts that change the layout themselves.
+    /// </summary>
+    public async Task NotifyViewportChangedAsync()
+    {
+        if (!_jsInitialized) return;
+        try { await JS.InvokeVoidAsync("tmWireframeDesigner.relayout", _svgRef); }
+        catch (JSDisconnectedException) { /* the circuit is gone */ }
+        catch (ObjectDisposedException) { /* disposed while the call was in flight */ }
+    }
     /// <summary>Add an element via command stack (undoable) and trigger a re-render.</summary>
     public async Task AddElement(WireframeElement el)
     {
@@ -797,6 +828,9 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
 
     /// <summary>Returns the underlying SVG element reference (needed by TmWireframeEditor for JS calls).</summary>
     public ElementReference GetSvgRef() => _svgRef;
+
+    /// <summary>The focusable canvas wrapper (<c>.tm-wd-canvas-wrap</c>): where a host returns the focus after a side sheet closes.</summary>
+    public ElementReference WrapElement => _wrapRef;
 
     /// <summary>Export the canvas as a clean SVG string (selection handles stripped).</summary>
     public async Task<string> ExportSvg()

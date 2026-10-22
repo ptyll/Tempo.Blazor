@@ -88,14 +88,15 @@
   --tm-wd-toolbar-h:     calc(var(--tm-space-8) + var(--tm-space-4));
   --tm-wd-toolbar-bg:    var(--tm-bg-surface);
   --tm-wd-btn-size:      var(--tm-space-8);
-  --tm-wd-toolbox-w:     calc(var(--tm-space-16) * 3.5);
-  --tm-wd-props-w:       calc(var(--tm-space-16) * 4.5);
+  --tm-wd-sheet-w:       calc(var(--tm-space-16) * 5);
 }
 /* ════════════════════════════════════════════════════════════════
    1. EDITOR SHELL
    ════════════════════════════════════════════════════════════════ */
 
 .tm-wd-editor {
+  container-type: inline-size;
+  container-name: tm-wd-editor;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -256,11 +257,12 @@
 }
 
 /* A group whose controls all left the bar keeps no box of its own, but it must NOT be display:none: its collapsed items stay
-   in the DOM so their widths remain measurable (a display:none ancestor measures 0 and the fit would oscillate). It only
-   drops its padding and divider. */
+   in the DOM so their widths remain measurable (a display:none ancestor measures 0 and the fit would oscillate). It only hides
+   its divider: tm-toolbar.js counts a group wrapper's padding and border as FIXED width, so dropping them when the group empties
+   would free 9 px, let one more item fit, re-expand the group and flip the fit forever (the More menu then never holds still:
+   Playwright 'element is not stable'). The geometry stays constant, the hairline turns transparent. */
 .tm-wd-editor__group:not(:has(> :is(.tm-toolbar-btn, .tm-toolbar-item):not(.tm-toolbar-item--collapsed))) {
-  padding-inline-end: 0;
-  border-inline-end: none;
+  border-inline-end-color: transparent;
 }
 
 /* The editor's command buttons keep the editor's 32px target (--tm-wd-btn-size), icon-only ones too. */
@@ -1903,7 +1905,7 @@
     display: none;
   }
 
-  @container tm-wd-layers-list (max-width: 22rem) {
+  @container tm-wd-layers-list (width <= 22rem) {
     .tm-wd-layers__delete {
       display: none;
     }
@@ -2303,4 +2305,255 @@
 .tm-wd-props .tm-wd-editor__btn--text[data-testid="wd-canvas-apply"]:hover:not(:disabled) {
   border-color: var(--tm-wd-accent);
   color: var(--tm-wd-accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHASE 6 CARRY-FORWARD (appended; independent of the sections above)
+   Long-press cue: while the touch hold timer is pending the svg carries
+   .tm-wd-canvas__svg--holding and wireframe-designer.js draws a ring
+   (.tm-wd-hold-cue) at the finger. It fills over the 500 ms the hold takes
+   (LONG_PRESS_MS in wireframe-gestures.mjs) and is removed on release,
+   cancel, drift beyond the tolerance and when the menu opens.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tm-wd-hold-cue {
+  fill: color-mix(in srgb, var(--tm-wd-accent) 12%, transparent);
+  stroke: var(--tm-wd-accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+
+.tm-wd-canvas__svg--holding .tm-wd-hold-cue {
+  animation: tm-wd-hold-cue 500ms ease-out forwards;
+}
+
+@keyframes tm-wd-hold-cue {
+  from { opacity: 0.2; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No growing ring: a static, subtle ring appears at once and the hold still reads as "pressed". */
+  .tm-wd-canvas__svg--holding .tm-wd-hold-cue {
+    animation: none;
+    opacity: 0.7;
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHASE 6 - TABLET LAYOUT (editor container 768-1199 px)
+   The editor root is a size container (container-name: tm-wd-editor); the literal widths are the TmBreakpoints steps
+   (768 = Md, 1024 = Lg). The layout is also resolved in C# from the same container (768 / 1200, data-editor-layout="tablet"), which
+   swaps the docked panels for ONE non-modal side sheet at a time and drops the minimap, so the rules below only style
+   what that markup contains. There are no fixed panel widths any more: desktop panels are the shell's columns.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Two toolbars, one per row: editing commands on the first, view / zoom / file commands on the second. */
+.tm-wd-editor__toolbar--tablet {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.tm-wd-editor__toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-width: 0;
+  min-height: var(--tm-wd-toolbar-h);
+  padding: 0 var(--tm-space-2);
+}
+
+.tm-wd-editor__toolbar-row + .tm-wd-editor__toolbar-row {
+  border-block-start: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-editor__toolbar-row .tm-wd-editor__title {
+  flex: 0 1 auto;
+  max-width: calc(var(--tm-space-16) * 3);
+}
+
+/* The sheets live in the canvas region: it is their positioning box and clips them to the canvas column. */
+.tm-wd-editor__canvas-region {
+  position: relative;
+}
+
+/* An open inspector sheet takes its width from the canvas, so the page never ends up under it. The left drawer is an
+   overlay on purpose (a transient picker) and reserves nothing. */
+/* ... but not while a pointer gesture is running on the canvas (wireframe-designer.js marks the svg with data-wd-gesture): a press that
+   selects opens the sheet, and resizing the canvas under the finger would shift a drag that has just begun. It narrows on release. */
+.tm-wd-editor__canvas-region--sheet-right:not(:has([data-wd-gesture])) {
+  padding-inline-end: min(var(--tm-wd-sheet-w), 60%);
+}
+
+.tm-wd-sheet {
+  position: absolute;
+  inset-block: 0;
+  z-index: var(--tm-z-inline-sheet, 10);
+  display: flex;
+  flex-direction: column;
+  inline-size: min(var(--tm-wd-sheet-w), 60%);
+  min-height: 0;
+  background: var(--tm-wd-bg-surface);
+  color: var(--tm-wd-text);
+  box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-wd-sheet--left {
+  inset-inline-start: 0;
+  border-inline-end: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-sheet--right {
+  inset-inline-end: 0;
+  border-inline-start: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tm-space-2);
+  flex-shrink: 0;
+  padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-1) var(--tm-space-3);
+  border-block-end: 1px solid var(--tm-wd-border);
+}
+
+.tm-wd-sheet__title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--tm-wd-btn-size);
+  height: var(--tm-wd-btn-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-wd-radius);
+  background: transparent;
+  color: var(--tm-wd-text-muted);
+  cursor: pointer;
+}
+
+.tm-wd-sheet__close:hover {
+  background: var(--tm-wd-bg-muted);
+  color: var(--tm-wd-text);
+}
+
+.tm-wd-sheet__close:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-wd-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tm-wd-sheet__body > .tm-wd-side,
+.tm-wd-sheet__body > .tm-wd-props {
+  height: 100%;
+}
+
+/* The toolbox in the drawer: a single column of named rows instead of the 3-column tile grid. */
+.tm-wd-toolbox--single-column .tm-wd-toolbox__category-items {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tm-space-1);
+}
+
+.tm-wd-toolbox--single-column .tm-wd-toolbox__item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--tm-space-3);
+  min-height: var(--tm-wd-btn-size);
+  padding: var(--tm-space-1-5) var(--tm-space-3);
+}
+
+.tm-wd-toolbox--single-column .tm-wd-toolbox__item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--tm-font-size-sm);
+  text-align: start;
+  color: var(--tm-wd-text);
+}
+
+/* A narrow tablet container: the row-2 document title shares the row with the pinned Export / Import, so it stays compact. */
+@container tm-wd-editor (width < 1024px) {
+  .tm-wd-editor__toolbar-row .tm-wd-editor__title {
+    max-width: calc(var(--tm-space-16) * 2);
+  }
+}
+
+/* Coarse pointer (a finger): every control of the editor chrome reaches --tm-touch-target (44 px). The layers and pages rows
+   have their own coarse rules above; this block covers the toolbar, the page tabs, the toolbox rows, the sheet close and the
+   document title. */
+@media (pointer: coarse) {
+  .tm-wd-editor .tm-toolbar-btn,
+  .tm-wd-editor .tm-toolbar-more,
+  .tm-wd-editor__export .tm-dropdown-trigger,
+  .tm-wd-editor__import,
+  .tm-wd-editor__title,
+  .tm-wd-toolbox__search-input,
+  .tm-wd-toolbox__filter-btn,
+  .tm-wd-toolbox__item,
+  .tm-wd-editor__page-tab,
+  .tm-wd-editor__page-tab-add,
+  .tm-wd-editor__page-tab-dup {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor .tm-toolbar-btn--icon-only,
+  .tm-wd-editor .tm-toolbar-more,
+  .tm-wd-editor__page-tab-add {
+    min-inline-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor__page-tab-close,
+  .tm-wd-sheet__close,
+  .tm-wd-toolbox__search-clear {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+  }
+
+  .tm-wd-editor__page-tab-close {
+    margin-inline-end: calc(var(--tm-space-2) * -1);
+  }
+
+  /* The inspector in the tablet sheet is a finger form: fields, selects, buttons and the toggle / checkbox rows reach the touch target. */
+  .tm-wd-sheet .tm-wd-props input:not([type="checkbox"]):not([type="color"]),
+  .tm-wd-sheet .tm-wd-props select,
+  .tm-wd-sheet .tm-wd-props button,
+  .tm-wd-sheet .tm-wd-props .tm-wd-props__toggle,
+  .tm-wd-sheet .tm-wd-props .tm-wd-props__color-swatch {
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tm-wd-sheet {
+    animation: tm-wd-sheet-in 0.18s ease-out;
+  }
+}
+
+@keyframes tm-wd-sheet-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

@@ -9,8 +9,23 @@
 
 <PageTitle>Wireframe Editor – Tempo.Blazor</PageTitle>
 
+@* Demo only: the wireframe editor resolves its layout from its own container width (desktop from 1200). With the 296px demo
+   sidebar a 1440 viewport leaves it ~1080px, so from 1400px up this page collapses the sidebar and gives the editor the full
+   width (a link back to the demo index stays in the header). The library breakpoints are untouched. *@
+<style>
+    @@media (min-width: 1400px) {
+        .demo-shell:has(.wd-demo-page) aside.fixed.inset-y-0.left-0.z-30 { display: none !important; }
+        .demo-shell:has(.wd-demo-page) main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }
+    }
+    .wd-demo-page__index-link { display: none; }
+    @@media (min-width: 1400px) { .wd-demo-page__index-link { display: inline-block; } }
+</style>
+
+<div class="wd-demo-page">
+
 <!-- Page Header -->
 <div class="mb-8">
+    <a href="./" class="wd-demo-page__index-link text-sm text-primary-600 hover:underline mb-2" data-testid="wf-demo-index-link">← All demos</a>
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Wireframe Editor</h1>
     <p class="text-slate-600 dark:text-slate-400">
         SVG-based wireframe design tool for quickly sketching UI layouts with Tempo.Blazor components.
@@ -160,6 +175,8 @@
         <pre class="mt-3 p-4 text-xs font-mono bg-slate-900 text-green-300 rounded-lg overflow-x-auto leading-relaxed whitespace-pre-wrap">@_providerCode</pre>
     </details>
 </section>
+
+</div>
 
 <TmDocumentOpenDialog Provider="LibraryProvider"
                       Kind="Tempo.Blazor.DocumentLibrary.TempoDocumentKind.Wireframe"

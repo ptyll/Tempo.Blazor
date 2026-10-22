@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Components.Rendering
 @using Tempo.Blazor.Components.Wireframe.Models
 
-<div class="tm-wd-toolbox @Class" @ref="_containerRef">
+<div class="tm-wd-toolbox @(SingleColumn ? "tm-wd-toolbox--single-column" : null) @Class" @ref="_containerRef">
 
     @* ── Search ──────────────────────────────────────────────────────────── *@
     <div class="tm-wd-toolbox__search">

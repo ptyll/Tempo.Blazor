@@ -394,6 +394,13 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');"
             + (indigo ? " localStorage.setItem('tm-demo-color-theme', 'indigo');" : " localStorage.removeItem('tm-demo-color-theme');"));
+        if (path == EditorUrl)
+        {
+            // Desktop container for the editor (layout resolves from the container; see the phase 6 notes).
+            await page.AddInitScriptAsync(
+                "document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = 'aside.fixed.inset-y-0.left-0.z-30 { display: none !important; } main { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; }'; document.head.appendChild(s); });");
+        }
+
         await page.GotoAsync($"{BaseUrl}{path}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
         await WaitForAppReadyAsync(page);
 
@@ -405,7 +412,8 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
         if (dark)
         {
             // The demo theme toggle drives ThemeService (data-theme on the layout wrapper), the real dark path.
-            await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
+            // The test hides the demo sidebar (it holds the toggle) so the editor gets a desktop container: dispatch the click on the hidden toggle.
+            await page.Locator("[data-testid='theme-toggle']").First.DispatchEventAsync("click");
             await page.WaitForFunctionAsync(
                 "() => document.querySelector('[data-theme=\"dark\"]') !== null",
                 null, new PageWaitForFunctionOptions { Timeout = 10_000 });

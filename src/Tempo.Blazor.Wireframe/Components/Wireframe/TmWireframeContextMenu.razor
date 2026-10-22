@@ -6,6 +6,7 @@
     <div @ref="_menuRef"
          class="tm-wd-editor__context-menu"
          role="menu"
+         tabindex="-1"
          style="position:fixed;left:@($"{X}px");top:@($"{Y}px");"
          @onclick:stopPropagation
          @oncontextmenu:preventDefault>

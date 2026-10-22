@@ -71,6 +71,9 @@ internal sealed class TmWireframeSidePanel : ComponentBase
     /// <summary>Raised with the id of the page that became active in the Pages tab.</summary>
     [Parameter] public EventCallback<string> ActivePageChanged { get; set; }
 
+    /// <summary>Tablet / sheet presentation: the Components tab is a single column of named rows (a finger-sized list) instead of the 3-column tile grid.</summary>
+    [Parameter] public bool SingleColumn { get; set; }
+
     /// <summary>Number of tabs that are available.</summary>
     internal int TabCount => (ShowComponents ? 1 : 0) + (ShowPages ? 1 : 0) + (ShowLayers ? 1 : 0);
 
@@ -131,6 +134,7 @@ internal sealed class TmWireframeSidePanel : ComponentBase
                 panel.AddComponentParameter(2, nameof(TmWireframeToolbox.ComponentScope), ComponentScope);
                 panel.AddComponentParameter(3, nameof(TmWireframeToolbox.ReadOnly), ReadOnly);
                 panel.AddComponentParameter(4, nameof(TmWireframeToolbox.Class), "tm-wd-editor__toolbox");
+                panel.AddComponentParameter(5, nameof(TmWireframeToolbox.SingleColumn), SingleColumn);
                 panel.CloseComponent();
             });
         }

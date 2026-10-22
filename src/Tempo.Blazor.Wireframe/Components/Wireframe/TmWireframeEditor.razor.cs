@@ -133,8 +133,8 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>
-    /// Per-instance layout thresholds for the editor container. <c>null</c> uses the editor default: mobile below 640,
-    /// desktop from 860 (the docked left panel, the canvas and the inspector need about that much room).
+    /// Per-instance layout thresholds for the editor container. <c>null</c> uses the editor default: mobile below 768 (<c>TmBreakpoints.Md</c>),
+    /// desktop from 1200 (below it the left panel and the inspector are sheets, one at a time).
     /// </summary>
     [Parameter] public TmLayoutBreakpoints? LayoutBreakpoints { get; set; }
 
@@ -210,7 +210,12 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     private double? _rulerCursorY;
 
     // Shell state: the user's collapse of the left / right panel, the tablet "one expanded" rails and the resolved layout.
-    private static readonly TmLayoutBreakpoints EditorBreakpoints = new(640, 860);
+    // The editor's own thresholds - the pair TmDiagramEditor and docs/editor-shell.md use for editors: mobile < 768 (TmBreakpoints.Md),
+    // tablet 768-1199, desktop >= 1200. The shell measures ITS root, which sits inside the editor's 1px border, so a 1280 px wide
+    // editor (the demo at a 1440 viewport) measures 1278 and must still be desktop; below 1200 the docked left panel, canvas and
+    // inspector no longer fit and a tablet gets sheets instead (one at a time). Only this C# branch uses 1200; the stylesheet keeps
+    // the TmBreakpoints literals.
+    private static readonly TmLayoutBreakpoints EditorBreakpoints = new(TmBreakpoints.Md, 1200);
     private bool _leftOpen = true;
     private bool _rightOpen = true;
     private EditorShellPanel _collapsedPanels;
@@ -248,6 +253,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
     protected override void OnInitialized()
     {
         _commandStack.OnStackChanged += OnStackChanged;
+        if (LayoutMode != TmLayoutMode.Auto) _resolvedLayout = LayoutMode;
         _document = Document ?? CreateEmptyDocument();
         _document.EnsureActivePage();
         _activePage = _document.ActivePage;
@@ -258,6 +264,9 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     protected override void OnParametersSet()
     {
+        // A forced layout never raises ResolvedLayoutChanged for its first value: adopt it (and its flips) here.
+        if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout) ApplyResolvedLayout(LayoutMode);
+
         // A host-side change of ReadOnly / ShowRulers wins over the local user state (it is the
         // source of truth once bound); an unchanged parameter keeps the user's toggle.
         if (_lastHostReadOnly != ReadOnly)
@@ -341,15 +350,21 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private void OnSelectionChanged(string[] ids)
     {
+        var hadSelection = _selectedIds.Length > 0 || _selectedConnectorIds.Length > 0;
         _selectedIds = ids;
         _selectedConnectorIds = []; // clear connector selection
+        if (ids.Length > 0) RaiseInspectorOnTablet();
+        else if (hadSelection) CloseInspectorSheetOnTablet();
         StateHasChanged();
     }
 
     private void OnConnectorSelectionChanged(string[] ids)
     {
+        var hadSelection = _selectedIds.Length > 0 || _selectedConnectorIds.Length > 0;
         _selectedConnectorIds = ids;
         _selectedIds = []; // clear element selection
+        if (ids.Length > 0) RaiseInspectorOnTablet();
+        else if (hadSelection) CloseInspectorSheetOnTablet();
         StateHasChanged();
     }
 
@@ -792,7 +807,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
 
     private void OnShellResolvedLayoutChanged(TmLayoutMode mode)
     {
-        _resolvedLayout = mode;
+        ApplyResolvedLayout(mode);
         StateHasChanged();
     }
 
@@ -1097,6 +1112,13 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         el.ZIndex = _document.Elements.Count > 0
             ? _document.Elements.Max(e => e.ZIndex) + 1 : 0;
         el.LayerId = _document.ActiveLayerId;
+
+        // A tablet drawer is closed by the insertion: the element lands on a visible canvas and the inspector takes over.
+        if (IsTablet && _leftSheetOpen)
+        {
+            _leftSheetOpen = false;
+            _relayoutPending = true;
+        }
 
         await _canvas.AddElement(el);
         await _canvas.SelectElements(el.Id);

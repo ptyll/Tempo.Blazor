@@ -90,6 +90,11 @@ window.tmWireframeDesigner = {
             // scale tracker
             scale: 1.0,
 
+            // true once the user (or fit-to-elements) moved / zoomed the view; relayout() re-fits a pristine view
+            userViewChanged: false,
+            layoutRect: null,           // the svg size the viewBox was last laid out for
+            resizeObserver: null,
+
             // global configuration (merged with options)
             config: {
                 gridSize: opts.gridSize || 8,
@@ -136,7 +141,7 @@ window.tmWireframeDesigner = {
         this._detachEvents(inst);
 
         // Remove JS-injected overlay elements (selection handles, rubber-band rect, context menu)
-        inst.svg.querySelectorAll('.tm-wd-selection, .tm-wd-rubber, .tm-wd-ctx-menu').forEach(el => el.remove());
+        inst.svg.querySelectorAll('.tm-wd-selection, .tm-wd-rubber, .tm-wd-ctx-menu, .tm-wd-hold-cue').forEach(el => el.remove());
 
         // Cancel any pending drag / resize animation frames
         if (inst._rafId) cancelAnimationFrame(inst._rafId);
@@ -182,7 +187,9 @@ window.tmWireframeDesigner = {
         if (!inst) return;
         inst.canvasW = w;
         inst.canvasH = h;
-        // Blazor re-renders the background rect — just update stored size for fitToView
+        // Blazor re-renders the background rect and resets the svg viewBox to the new page size: the view is fitted again.
+        inst.userViewChanged = false;
+        inst.layoutRect = this._measure(inst);
     },
 
     setGridSize: function (svgElement, size) {
@@ -255,6 +262,16 @@ window.tmWireframeDesigner = {
         inst.svg.addEventListener('pointerdown', inst._onMiddleDown);
         document.addEventListener('keydown',     inst._onKeyDown);
         document.addEventListener('keyup',       inst._onKeyUp);
+        // Shift+F10 / the ContextMenu key also make the browser fire a native contextmenu on the focused wrapper (not the svg):
+        // keep it from opening a second, native menu over ours.
+        inst._onDocContextMenu = (e) => {
+            if (Date.now() - (inst.lastKeyMenuAt || 0) < 1000 && inst.svg && inst.svg.closest && e.target && e.target.closest
+                && e.target.closest('.tm-wd-canvas-wrap') === inst.svg.closest('.tm-wd-canvas-wrap')) e.preventDefault();
+        };
+        document.addEventListener('contextmenu', inst._onDocContextMenu);
+
+        inst.layoutRect = this._measure(inst);
+        this._observeResize(inst);
 
         // The sessions of the shared helpers: attached once the modules are in.
         const generation = ++inst.generation;
@@ -286,6 +303,10 @@ window.tmWireframeDesigner = {
         inst.svg.removeEventListener('pointercancel', inst._onMiddleUp);
         document.removeEventListener('keydown',     inst._onKeyDown);
         document.removeEventListener('keyup',       inst._onKeyUp);
+        document.removeEventListener('contextmenu', inst._onDocContextMenu);
+
+        this._cancelMiddlePan(inst);
+        this._unobserveResize(inst);
 
         (inst.sessions || []).forEach(function (session) { session.detach(); });
         inst.sessions = [];
@@ -361,6 +382,7 @@ window.tmWireframeDesigner = {
                     id: id, handle: handle.getAttribute('data-handle'), rect: rect,
                     startSvg: self._svgPoint(inst, info.startX, info.startY), snapshot: self._snapshotElement(inst, id)
                 };
+                self._beginGesture(inst);
                 return true;
             },
             onStart: function () { inst.isResizing = true; },
@@ -370,11 +392,12 @@ window.tmWireframeDesigner = {
                 const rect = self._elRect(inst, id);
                 if (rect) inst.dotNetRef.invokeMethodAsync('OnElementResized', id, rect.x, rect.y, rect.w, rect.h);
             },
-            onCancel: function () {
+            onCancel: function (info) {
                 self._restoreElement(inst.resize && inst.resize.snapshot);
                 self._updateHandles(inst);
+                self._announceCancelled(inst, info);
             },
-            onRelease: function () { inst.isResizing = false; inst.resize = null; }
+            onRelease: function () { inst.isResizing = false; inst.resize = null; self._endGesture(inst); }
         }));
         inst.sessions.push(inst.resizeSession);
 
@@ -397,6 +420,7 @@ window.tmWireframeDesigner = {
                     id: id, center: center, startAngle: r.rotation || 0, snapshot: self._snapshotElement(inst, id),
                     startMouseAngle: Math.atan2(startSvg.y - center.y, startSvg.x - center.x) * 180 / Math.PI
                 };
+                self._beginGesture(inst);
                 return true;
             },
             onStart: function () { inst.isRotating = true; },
@@ -406,11 +430,12 @@ window.tmWireframeDesigner = {
                 const rect = self._elRect(inst, id);
                 if (rect) inst.dotNetRef.invokeMethodAsync('OnElementRotated', id, rect.rotation);
             },
-            onCancel: function () {
+            onCancel: function (info) {
                 self._restoreElement(inst.rotate && inst.rotate.snapshot);
                 self._updateHandles(inst);
+                self._announceCancelled(inst, info);
             },
-            onRelease: function () { inst.isRotating = false; inst.rotate = null; }
+            onRelease: function () { inst.isRotating = false; inst.rotate = null; self._endGesture(inst); }
         }));
         inst.sessions.push(inst.rotateSession);
 
@@ -436,6 +461,7 @@ window.tmWireframeDesigner = {
                         return { cx: c.getAttribute('cx'), cy: c.getAttribute('cy') };
                     })
                 };
+                self._beginGesture(inst);
                 return true;
             },
             onStart: function () { inst.isDraggingWaypoint = true; },
@@ -453,15 +479,16 @@ window.tmWireframeDesigner = {
                 const finalY = parseFloat(wp.circles[0].getAttribute('cy') || '0');
                 inst.dotNetRef.invokeMethodAsync('OnConnectorWaypointDragged', wp.connId, wp.index, finalX, finalY);
             },
-            onCancel: function () {
+            onCancel: function (info) {
                 const wp = inst.waypoint;
                 if (!wp) return;
                 wp.circles.forEach(function (c, i) {
                     c.setAttribute('cx', wp.starts[i].cx);
                     c.setAttribute('cy', wp.starts[i].cy);
                 });
+                self._announceCancelled(inst, info);
             },
-            onRelease: function () { inst.isDraggingWaypoint = false; inst.waypoint = null; }
+            onRelease: function () { inst.isDraggingWaypoint = false; inst.waypoint = null; self._endGesture(inst); }
         }));
         inst.sessions.push(inst.waypointSession);
 
@@ -474,7 +501,7 @@ window.tmWireframeDesigner = {
             onStart: function (info) { return self._bodyStart(inst, info); },
             onMove: function (info) { self._bodyMove(inst, info); },
             onEnd: function (info) { self._bodyEnd(inst, info); },
-            onCancel: function () { self._bodyCancel(inst); },
+            onCancel: function (info) { self._bodyCancel(inst, info); },
             onRelease: function (info) { self._bodyRelease(inst, info); }
         }));
         inst.sessions.push(inst.bodyDrag);
@@ -489,9 +516,11 @@ window.tmWireframeDesigner = {
             onPress: function (info) {
                 if (self._isChromeTarget(info.event.target)) return false;
                 inst.holdHit = self._hitDescriptor(inst, info.event.target, info.event);
+                self._showHoldCue(inst, info.startX, info.startY);
                 return true;
             },
             onStart: function (info) {
+                self._hideHoldCue(inst);   // the 500 ms hold completed: the menu (or nothing) replaces the cue
                 // A drag that really moved owns the finger; a hold whose body gesture has not started yet rolls it
                 // back (the menu replaces it) so the lift commits nothing.
                 if (inst.isDragging || inst.isPanning || inst.isRubberBand || inst.isDraggingConnector
@@ -503,7 +532,8 @@ window.tmWireframeDesigner = {
                 self._openContextMenuAt(inst, inst.holdHit, info.x, info.y, gestures.TOUCH_MENU_OFFSET);
                 return false;   // the hold never becomes a drag
             },
-            onRelease: function () { inst.holdHit = null; }
+            // Every exit (lift, drift beyond the tolerance, cancel, destroy) ends the cue.
+            onRelease: function () { inst.holdHit = null; self._hideHoldCue(inst); }
         }));
         inst.sessions.push(inst.holdSession);
 
@@ -529,21 +559,54 @@ window.tmWireframeDesigner = {
             onEnd: function (info) {
                 self._pinchApply(inst, info);
                 inst.pinchStart = null;
+                inst.userViewChanged = true;
                 const vb = self._getViewBox(inst);
                 if (self._isCoarse(inst)) self._updateHandles(inst);   // the hit areas follow the zoom
                 inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
                 inst.dotNetRef.invokeMethodAsync('OnZoomChanged', inst.scale);
+                self._flushRelayout(inst);   // a resize that arrived mid-pinch was deferred
             },
             onCancel: function () {
                 const start = inst.pinchStart;
                 inst.pinchStart = null;
                 if (start && start.attr !== null) inst.svg.setAttribute('viewBox', start.attr);
+                self._flushRelayout(inst);
             }
         });
         inst.sessions.push(inst.pinch);
 
         // The handles drawn before the helpers arrived used the fine-pointer sizes.
         if (inst.selectedIds.size > 0) this._updateHandles(inst);
+    },
+
+    // ── Long-press cue ────────────────────────────────────────────────────────
+
+    /**
+     * While the touch hold timer is pending (press -> 500 ms) the svg carries tm-wd-canvas__svg--holding and a ring
+     * (tm-wd-hold-cue) grows at the finger; CSS owns the ~500 ms animation and its reduced-motion variant. It goes away on
+     * release, cancel, drift beyond the tolerance and when the menu opens.
+     */
+    _showHoldCue: function (inst, clientX, clientY) {
+        this._hideHoldCue(inst);
+        if (!inst.svg) return;
+        inst.svg.classList.add('tm-wd-canvas__svg--holding');
+        try {
+            const pt = this._svgPoint(inst, clientX, clientY);
+            const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const zoom = this._zoomNow(inst) || 1;
+            ring.setAttribute('cx', pt.x);
+            ring.setAttribute('cy', pt.y);
+            ring.setAttribute('r', 24 / zoom);   // 24 screen px at any zoom
+            ring.setAttribute('pointer-events', 'none');
+            ring.classList.add('tm-wd-hold-cue');
+            inst.svg.appendChild(ring);
+            inst.holdCue = ring;
+        } catch (err) { /* the class alone is the cue */ }
+    },
+
+    _hideHoldCue: function (inst) {
+        if (inst.svg) inst.svg.classList.remove('tm-wd-canvas__svg--holding');
+        if (inst.holdCue) { inst.holdCue.remove(); inst.holdCue = null; }
     },
 
     /** Cancels every session (except `skip`): the hand-over to the pinch and the read-only flip. */
@@ -574,6 +637,11 @@ window.tmWireframeDesigner = {
 
     // ── Middle mouse button pan (mouse only) ──────────────────────────────────
 
+    // EXCEPTION to "every single-pointer gesture is a pointer-drag.js session" (docs/touch-interaction.md): the shared
+    // helper only starts a drag from the PRIMARY button (button 0), so the mouse-only middle-button pan cannot be a
+    // session and keeps this minimal press / move / release. It is mouse-only (touch and pen have no middle button),
+    // so it needs no long-press, threshold or pinch hand-over; its cancel paths (Escape, destroy, pointercancel) all
+    // run through _cancelMiddlePan / _onMiddleUp below.
     _onMiddleDown: function (e, inst) {
         if (e.button !== 1 || e.pointerType === 'touch') return;
         e.preventDefault();
@@ -586,6 +654,26 @@ window.tmWireframeDesigner = {
         inst.svg.addEventListener('pointerup', inst._onMiddleUp);
         inst.svg.addEventListener('pointercancel', inst._onMiddleUp);
         inst.svg.style.cursor = 'grabbing';
+    },
+
+    /**
+     * Abandons a middle-button pan in progress (Escape, destroy): the viewBox goes back to where the pan started, the
+     * capture and the move / up / cancel listeners are released and the cursor is reset. Nothing is sent to .NET.
+     */
+    _cancelMiddlePan: function (inst) {
+        const pan = inst.middlePan;
+        if (!pan) return false;
+        inst.middlePan = null;
+        if (inst.svg) {
+            if (pan.attr !== null && pan.attr !== undefined) inst.svg.setAttribute('viewBox', pan.attr);
+            if (inst.svg.releasePointerCapture) { try { inst.svg.releasePointerCapture(pan.pointerId); } catch (err) { /* already released */ } }
+            inst.svg.removeEventListener('pointermove', inst._onMiddleMove);
+            inst.svg.removeEventListener('pointerup', inst._onMiddleUp);
+            inst.svg.removeEventListener('pointercancel', inst._onMiddleUp);
+            this._updateCursor(inst);
+        }
+        this._flushRelayout(inst);   // no-op while destroying (inst.destroyed)
+        return true;
     },
 
     _onMiddleMove: function (e, inst) {
@@ -605,10 +693,24 @@ window.tmWireframeDesigner = {
         this._updateCursor(inst);
         if (e.type === 'pointercancel') {
             if (pan.attr !== null) inst.svg.setAttribute('viewBox', pan.attr);
+            this._flushRelayout(inst);
             return;
         }
+        inst.userViewChanged = true;
         const vb = this._getViewBox(inst);
         inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
+        this._flushRelayout(inst);
+    },
+
+    /** Marks a handle gesture (resize / rotate / waypoint) for CSS: see _bodyPress for why the sheet waits for the lift. */
+    _beginGesture: function (inst) {
+        if (inst.svg) inst.svg.setAttribute('data-wd-gesture', '');
+    },
+
+    /** Ends a handle gesture: clears the CSS marker and runs a relayout the gesture postponed. */
+    _endGesture: function (inst) {
+        if (inst.svg && !inst.body) inst.svg.removeAttribute('data-wd-gesture');
+        this._flushRelayout(inst);
     },
 
     /** Moves the viewBox by the pointer travel since `start` (client px -> svg units through the start viewBox). */
@@ -946,6 +1048,9 @@ window.tmWireframeDesigner = {
         const body = inst.body = {
             kind: 'none', hit: this._hitDescriptor(inst, target, e), pointerType: info.pointerType, shift: !!e.shiftKey
         };
+        // CSS reads this: a side sheet that a press-selection opens reserves its room beside the canvas only AFTER the finger
+        // is lifted, so the svg never resizes (and the finger's svg coordinates never shift) under a drag that has just begun.
+        inst.svg.setAttribute('data-wd-gesture', '');
 
         if (wantPan) {
             body.kind = 'pan';
@@ -1194,6 +1299,7 @@ window.tmWireframeDesigner = {
         if (!body) return;
 
         if (body.kind === 'pan') {
+            inst.userViewChanged = true;
             const vb = this._getViewBox(inst);
             inst.dotNetRef.invokeMethodAsync('OnViewBoxChanged', vb.x, vb.y, vb.w, vb.h);
             return;
@@ -1270,7 +1376,7 @@ window.tmWireframeDesigner = {
         }
     },
 
-    _bodyCancel: function (inst) {
+    _bodyCancel: function (inst, info) {
         const body = inst.body;
         if (!body) return;
 
@@ -1282,21 +1388,46 @@ window.tmWireframeDesigner = {
                 if (g) this._restoreAttr(g, 'transform', body.snapshots[id]);
             });
             this._updateHandles(inst);
+            this._announceCancelled(inst, info);
             // .NET snapshotted the start positions at OnDragStarted: a cancelled drag must not leave them behind
             // for a later keyboard nudge (an empty snapshot makes the next move read the document).
-            inst.dotNetRef.invokeMethodAsync('OnDragStarted', []);
+            // (Not after destroy: the .NET reference is gone and the call would reject.)
+            this._invokeQuiet(inst, 'OnDragStarted', []);
         } else if (body.kind === 'connector' && body.circles) {
             body.circles.forEach((circle, i) => {
                 circle.setAttribute('cx', body.circleStarts[i].cx);
                 circle.setAttribute('cy', body.circleStarts[i].cy);
             });
+            this._announceCancelled(inst, info);
         }
+    },
+
+    /**
+     * Tells .NET (a polite live region) that a move / resize / rotate / waypoint gesture was rolled back by the user
+     * (Escape, pointercancel, the second finger / pinch). NOT for a normal end, and not for the programmatic roll-backs
+     * (destroy, the read-only flip, the long-press hand-over): nothing the user did wrong happened there.
+     */
+    _announceCancelled: function (inst, info) {
+        if (inst.destroyed) return;
+        const reason = info && info.reason;
+        if (reason === 'detached' || reason === 'read-only' || reason === 'long-press-menu') return;
+        this._invokeQuiet(inst, 'OnGestureCancelled');
+    },
+
+    /** A fire-and-forget call into .NET that is skipped after destroy and never surfaces a rejection. */
+    _invokeQuiet: function (inst, method) {
+        if (inst.destroyed || !inst.dotNetRef) return;
+        try {
+            const result = inst.dotNetRef.invokeMethodAsync.apply(inst.dotNetRef, [method].concat(Array.prototype.slice.call(arguments, 2)));
+            if (result && typeof result.catch === 'function') result.catch(function () { /* the component is gone */ });
+        } catch (err) { /* disposed reference */ }
     },
 
     /** Runs on EVERY exit path (tap, end, cancel, veto): the live overlays and the flags never outlive the gesture. */
     _bodyRelease: function (inst, info) {
         const body = inst.body;
         inst.body = null;
+        if (inst.svg) inst.svg.removeAttribute('data-wd-gesture');
 
         inst.isDragging = false;
         inst.dragElIds = [];
@@ -1313,6 +1444,7 @@ window.tmWireframeDesigner = {
         inst.isPanning = false;
         this._updateGuides(inst, null);
         this._updateCursor(inst);
+        this._flushRelayout(inst);
 
         if (!body || !inst.doubleTap) return;
         // A mouse has a real dblclick; a finger or a pen double-tap is turned into the same action.
@@ -1420,6 +1552,7 @@ window.tmWireframeDesigner = {
 
         this._setViewBox(inst, newX, newY, newW, newH);
         inst.scale = newScale;
+        inst.userViewChanged = true;
         this._refreshHandlesIfCoarse(inst);
         inst.dotNetRef.invokeMethodAsync('OnZoomChanged', newScale);
     },
@@ -1434,6 +1567,8 @@ window.tmWireframeDesigner = {
         // Pointer capture retargets that contextmenu to the svg itself (the body gesture captured the finger), so by the time it
         // arrives it can no longer tell an element from the canvas: while a touch is pressed (holdHit) or just opened a menu,
         // the hold session is the ONLY opener. A mouse has no holdHit and keeps the right-click.
+        // The holdHit / lastHoldMenuAt fallback is the GUARANTEE; e.pointerType alone is not reliable (it can be empty or
+        // retargeted on a capture-redirected contextmenu), so it is only an extra early-out.
         if (inst.holdSession && (e.pointerType === 'touch' || inst.holdHit || Date.now() - (inst.lastHoldMenuAt || 0) < 1000)) return;
         this._openContextMenuAt(inst, this._hitDescriptor(inst, e.target), e.clientX, e.clientY, 0);
     },
@@ -1456,18 +1591,85 @@ window.tmWireframeDesigner = {
         }
     },
 
+    /** The items arrow keys can reach: a disabled button is skipped (it cannot take focus anyway). */
+    _menuItems: function (menuEl) {
+        return Array.from(menuEl.querySelectorAll('[role="menuitem"]')).filter(function (item) {
+            return !item.disabled && item.getAttribute('aria-disabled') !== 'true';
+        });
+    },
+
+    /** Roving focus inside the open menu: Arrow Up / Down (wrapping), Home / End; Tab closes it like Escape. */
+    _onMenuKeyDown: function (e, inst, menuEl) {
+        const items = this._menuItems(menuEl);
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            this._requestMenuClose(inst, true);
+            return;
+        }
+        if (items.length === 0) return;
+        const current = items.indexOf(document.activeElement);
+        let next = -1;
+        if (e.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % items.length;
+        else if (e.key === 'ArrowUp') next = current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = items.length - 1;
+        if (next < 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        items[next].focus();
+    },
+
+    /**
+     * Asks .NET to close the menu (the editor then calls closeContextMenu). `restoreFocus` false (a pointer press elsewhere)
+     * keeps the focus where that press puts it; Escape, Tab and choosing an item return it to the canvas.
+     */
+    _requestMenuClose: function (inst, restoreFocus) {
+        inst._menuRestoreFocus = restoreFocus;
+        if (inst.dotNetRef) this._invokeQuiet(inst, 'CloseContextMenu');
+        this._teardownMenu(inst);
+    },
+
+    _teardownMenu: function (inst) {
+        if (inst._menuDismissHandler) document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
+        if (inst._menuKeyHandler) document.removeEventListener('keydown', inst._menuKeyHandler);
+        if (inst._menuEl && inst._menuNav) inst._menuEl.removeEventListener('keydown', inst._menuNav);
+        inst._menuDismissHandler = null;
+        inst._menuKeyHandler = null;
+        inst._menuNav = null;
+    },
+
+    /**
+     * Opens the context menu for the keyboard: at the first selected element (or connector) - the centre of its on-screen
+     * box - or, with nothing selected, at the middle of the canvas as the canvas menu. Goes through the same
+     * _openContextMenuAt as the right-click and the long-press.
+     */
+    _openContextMenuFromKeyboard: function (inst) {
+        const first = [...inst.selectedIds][0];
+        let hit = { kind: 'canvas' };
+        let box = null;
+        if (first) {
+            const elG = this._elGroup(inst, first);
+            const connG = elG ? null : inst.svg.querySelector('[data-connector-id="' + first + '"]');
+            if (elG) { hit = { kind: 'element', id: first }; box = elG.getBoundingClientRect(); }
+            else if (connG) { hit = { kind: 'connector', id: first }; box = connG.getBoundingClientRect(); }
+        }
+        if (!box) box = inst.svg.getBoundingClientRect();
+        inst.lastKeyMenuAt = Date.now();
+        const x = box.left + box.width / 2;
+        const y = box.top + box.height / 2;
+        this._openContextMenuAt(inst, hit, x, y, 0);
+    },
+
     openContextMenu: function (container, menuEl) {
         if (!container || !menuEl) return;
         const inst = this.instances.get(container.id);
         if (!inst) return;
-        if (inst._menuDismissHandler) {
-            document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
-            document.removeEventListener('keydown', inst._menuKeyHandler);
-            inst._menuDismissHandler = null;
-            inst._menuKeyHandler = null;
-        }
+        const self = this;
+        this._teardownMenu(inst);
+        inst._menuEl = menuEl;
+        inst._menuRestoreFocus = undefined;
         setTimeout(function () {
-            if (!menuEl) return;
+            if (!menuEl || inst.destroyed || !inst.svg) return;
             const rect = menuEl.getBoundingClientRect();
             const vw = window.innerWidth;
             const vh = window.innerHeight;
@@ -1486,23 +1688,20 @@ window.tmWireframeDesigner = {
             inst._menuDismissHandler = function (e) {
                 if (e.button !== 0) return;
                 if (e.target.closest('.tm-wd-editor__context-menu')) return;
-                if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
-                document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
-                document.removeEventListener('keydown', inst._menuKeyHandler);
-                inst._menuDismissHandler = null;
-                inst._menuKeyHandler = null;
+                self._requestMenuClose(inst, false);
             };
             inst._menuKeyHandler = function (e) {
-                if (e.key === 'Escape') {
-                    if (inst.dotNetRef) inst.dotNetRef.invokeMethodAsync('CloseContextMenu');
-                    document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
-                    document.removeEventListener('keydown', inst._menuKeyHandler);
-                    inst._menuDismissHandler = null;
-                    inst._menuKeyHandler = null;
-                }
+                if (e.key === 'Escape') self._requestMenuClose(inst, true);
             };
+            inst._menuNav = function (e) { self._onMenuKeyDown(e, inst, menuEl); };
             document.addEventListener('pointerdown', inst._menuDismissHandler, true);
             document.addEventListener('keydown', inst._menuKeyHandler);
+            menuEl.addEventListener('keydown', inst._menuNav);
+
+            // Keyboard / screen-reader users land on the first enabled item (WAI-ARIA menu pattern).
+            const items = self._menuItems(menuEl);
+            if (items.length > 0) items[0].focus();
+            else if (menuEl.focus) menuEl.focus();
         }, 0);
     },
 
@@ -1510,14 +1709,17 @@ window.tmWireframeDesigner = {
         if (!container) return;
         const inst = this.instances.get(container.id);
         if (!inst) return;
-        if (inst._menuDismissHandler) {
-            document.removeEventListener('pointerdown', inst._menuDismissHandler, true);
-            document.removeEventListener('keydown', inst._menuKeyHandler);
-            inst._menuDismissHandler = null;
-            inst._menuKeyHandler = null;
-        }
+        const menuEl = inst._menuEl;
+        // Focus is only given back when it was inside the menu (Escape, Tab, a chosen item), never after a press elsewhere.
+        // (Safari does not focus a clicked button: the focus then sits on the body, which counts as the menu's too.)
+        const active = document.activeElement;
+        const hadFocus = !!(menuEl && menuEl.contains && (!active || active === document.body || menuEl.contains(active)));
+        this._teardownMenu(inst);
+        inst._menuEl = null;
+        const restore = hadFocus && inst._menuRestoreFocus !== false;
+        inst._menuRestoreFocus = undefined;
+        if (restore && !inst.destroyed && inst.svg) this._focusWrap(inst);
     },
-
     // ── Toolbox drop ─────────────────────────────────────────────────────────
 
     _onDragOver: function (e, inst) {
@@ -1546,9 +1748,18 @@ window.tmWireframeDesigner = {
         if (!inst.svg.closest(':focus-within') && document.activeElement !== document.body) return;
         // The layers and pages panels own every key typed inside them (radio roaming, Alt+Arrow reorder, F2,
         // Delete/Escape on a control): none of them may also act on the canvas selection (nudge, delete, clear).
-        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages')) return;
+        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-wd-sheet')) return;
 
         const ids = [...inst.selectedIds];
+
+        // Shift+F10 and the ContextMenu key open the menu for the selection (the keyboard twin of the right-click / the
+        // touch long-press); typing in an input keeps its own native menu key.
+        if ((e.key === 'F10' && e.shiftKey) || e.key === 'ContextMenu') {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            e.preventDefault();
+            this._openContextMenuFromKeyboard(inst);
+            return;
+        }
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
             // Don't intercept if user is typing in an input
@@ -1571,6 +1782,8 @@ window.tmWireframeDesigner = {
         }
 
         if (e.key === 'Escape') {
+            // Escape first abandons a middle-button pan in progress (the pointer-drag sessions cancel themselves).
+            this._cancelMiddlePan(inst);
             e.preventDefault();
             inst.selectedIds.clear();
             this._updateHandles(inst);
@@ -1939,6 +2152,7 @@ window.tmWireframeDesigner = {
         const newH = svgRect.height / scale;
         this._setViewBox(inst, cx - newW / 2, cy - newH / 2, newW, newH);
         inst.scale = scale;
+        inst.userViewChanged = true;
         this._refreshHandlesIfCoarse(inst);
     },
 
@@ -1953,6 +2167,7 @@ window.tmWireframeDesigner = {
             const svgRect = inst.svg.getBoundingClientRect();
             this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH);
             inst.scale = Math.min(svgRect.width / inst.canvasW, svgRect.height / inst.canvasH);
+            inst.userViewChanged = false;   // the whole page fitted: a later container resize re-fits it
             return inst.scale;
         }
 
@@ -1977,6 +2192,7 @@ window.tmWireframeDesigner = {
         const newH = svgRect.height / fitScale;
         this._setViewBox(inst, minX - padding, minY - padding, newW, newH);
         inst.scale = fitScale;
+        inst.userViewChanged = true;
         return fitScale;
     },
 
@@ -1988,6 +2204,92 @@ window.tmWireframeDesigner = {
         const svgRect = inst.svg.getBoundingClientRect();
         this._setViewBox(inst, 0, 0, svgRect.width, svgRect.height);
         inst.scale = 1.0;
+        inst.userViewChanged = true;
+    },
+
+    // ── Container resize (panel open / close, window resize, device rotation) ─────
+
+    /** The svg's pixel size, or null while it has none (a hidden tab). */
+    _measure: function (inst) {
+        if (!inst.svg || !inst.svg.getBoundingClientRect) return null;
+        const rect = inst.svg.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 ? { width: rect.width, height: rect.height } : null;
+    },
+
+    /**
+     * Re-measures the svg after its container changed size WITHOUT a Blazor re-render. A pristine view (the user has not
+     * zoomed / panned yet) is re-fitted to the page; a view the user moved keeps its centre and its zoom (screen px per
+     * svg unit), so the content does not jump when a side panel opens. .NET gets OnViewBoxChanged + OnZoomChanged and
+     * the coarse handle hit areas follow the zoom. Returns the new scale (0 when the svg has no size or nothing changed).
+     */
+    relayout: function (svgElement) {
+        const inst = this.instances.get(svgElement ? svgElement.id : null);
+        if (!inst || inst.destroyed || !inst.svg) return 0;
+        const next = this._measure(inst);
+        if (!next) return 0;
+        const prev = inst.layoutRect;
+        if (prev && Math.abs(prev.width - next.width) < 0.5 && Math.abs(prev.height - next.height) < 0.5) return 0;
+        // A gesture owns the viewBox (and the finger's coordinates) right now - selecting on press opens the tablet inspector sheet, which
+        // narrows the canvas under a drag that has just started: leave the baseline alone and re-lay out when the gesture is released.
+        if (this._gestureActive(inst)) { inst.relayoutDeferred = true; return 0; }
+        inst.layoutRect = next;
+
+        let scale;
+        if (!inst.userViewChanged) {
+            this._setViewBox(inst, 0, 0, inst.canvasW, inst.canvasH);
+            scale = Math.min(next.width / inst.canvasW, next.height / inst.canvasH);
+        } else {
+            const vb = this._getViewBox(inst);
+            const base = prev || next;
+            const zoom = vb.w > 0 && vb.h > 0 ? Math.min(base.width / vb.w, base.height / vb.h) : (inst.scale || 1);
+            const cx = vb.x + vb.w / 2;
+            const cy = vb.y + vb.h / 2;
+            const w = next.width / zoom;
+            const h = next.height / zoom;
+            this._setViewBox(inst, cx - w / 2, cy - h / 2, w, h);
+            scale = zoom;
+        }
+        inst.scale = scale;
+        this._refreshHandlesIfCoarse(inst);
+        const after = this._getViewBox(inst);
+        this._invokeQuiet(inst, 'OnViewBoxChanged', after.x, after.y, after.w, after.h);
+        this._invokeQuiet(inst, 'OnZoomChanged', scale);
+        return scale;
+    },
+
+    _gestureActive: function (inst) {
+        return !!(inst.body || inst.isDragging || inst.isResizing || inst.isRotating || inst.isDraggingWaypoint
+            || inst.isPanning || inst.isRubberBand || inst.pinchStart || inst.middlePan);
+    },
+
+    /** Runs the relayout a gesture postponed (called on every gesture exit). */
+    _flushRelayout: function (inst) {
+        if (!inst.relayoutDeferred || inst.destroyed || !inst.svg) return;
+        inst.relayoutDeferred = false;
+        this.relayout(inst.svg);
+    },
+
+    /** A ResizeObserver on the svg and its wrapper (guarded: a unit-test host or an old browser has none), one relayout per frame. */
+    _observeResize: function (inst) {
+        if (typeof ResizeObserver !== 'function') return;
+        const self = this;
+        inst.resizeObserver = new ResizeObserver(function () {
+            if (inst.resizeFrame || inst.destroyed) return;
+            const run = function () {
+                inst.resizeFrame = 0;
+                if (!inst.destroyed && inst.svg) self.relayout(inst.svg);
+            };
+            inst.resizeFrame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(run) : (run(), 0);
+        });
+        inst.resizeObserver.observe(inst.svg);
+        const wrap = inst.svg.closest ? inst.svg.closest('.tm-wd-canvas-wrap') : null;
+        if (wrap) inst.resizeObserver.observe(wrap);
+    },
+
+    _unobserveResize: function (inst) {
+        if (inst.resizeObserver) { inst.resizeObserver.disconnect(); inst.resizeObserver = null; }
+        if (inst.resizeFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(inst.resizeFrame);
+        inst.resizeFrame = 0;
     },
 
     // ── Toolbox drag init ─────────────────────────────────────────────────────
@@ -2074,7 +2376,7 @@ window.tmWireframeDesigner = {
         this._bakePaints(inst.svg, clone);
         // Strip all interactive / UI-only layers
         clone.querySelectorAll(
-            '.tm-wd-selection, .tm-wd-rubber, .tm-wd-grid-overlay, .tm-wd-ruler, .tm-wd-waypoint-handle, .tm-wd-rotate-handle, .tm-wd-resize-handle, .tm-wd-connector__waypoint, .tm-wd-connector__waypoint-hit, .tm-wd-guide, .tm-wd-connector-preview'
+            '.tm-wd-selection, .tm-wd-rubber, .tm-wd-grid-overlay, .tm-wd-ruler, .tm-wd-waypoint-handle, .tm-wd-rotate-handle, .tm-wd-resize-handle, .tm-wd-connector__waypoint, .tm-wd-connector__waypoint-hit, .tm-wd-guide, .tm-wd-connector-preview, .tm-wd-hold-cue'
         ).forEach(el => el.remove());
         return clone.outerHTML;
     },
@@ -2088,6 +2390,7 @@ window.tmWireframeDesigner = {
         const newX = centreX - vb.w / 2;
         const newY = centreY - vb.h / 2;
         this._setViewBox(inst, newX, newY, vb.w, vb.h);
+        inst.userViewChanged = true;
     },
 
     // ── File download helper (used by C# export) ──────────────────────────────

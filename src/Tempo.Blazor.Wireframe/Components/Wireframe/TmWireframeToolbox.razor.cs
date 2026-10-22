@@ -38,6 +38,12 @@ public partial class TmWireframeToolbox : ComponentBase
     /// </summary>
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Presents the palette as a single column of rows (icon + name) instead of the 3-column tile grid. The tablet editor
+    /// sets it for its overlay drawer, where each row is a finger-sized target.
+    /// </summary>
+    [Parameter] public bool SingleColumn { get; set; }
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     private ElementReference _containerRef;
@@ -63,6 +69,7 @@ public partial class TmWireframeToolbox : ComponentBase
     private bool _paramsChanged;
     private bool _firstRender = true;
     private bool _readOnlySeen;
+    private bool _singleColumnSeen;
     private string? _classSeen;
     private WireframeComponentScope? _scopeSeen;
     private EventCallback<string> _callbackSeen;
@@ -91,10 +98,12 @@ public partial class TmWireframeToolbox : ComponentBase
 
         var changed = registryChanged
                       || ReadOnly != _readOnlySeen
+                      || SingleColumn != _singleColumnSeen
                       || !ReferenceEquals(ComponentScope, _scopeSeen)
                       || !string.Equals(Class, _classSeen, StringComparison.Ordinal)
                       || !OnComponentActivated.Equals(_callbackSeen);
         _readOnlySeen = ReadOnly;
+        _singleColumnSeen = SingleColumn;
         _scopeSeen    = ComponentScope;
         _classSeen    = Class;
         _callbackSeen = OnComponentActivated;

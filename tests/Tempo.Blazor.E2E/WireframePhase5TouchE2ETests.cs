@@ -152,6 +152,7 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
         var (x, y) = await EmptyCanvasPointAsync(page, editor);
         var session = await page.Context.NewCDPSessionAsync(page);
         var before = await ViewBoxAsync(editor);
+        var zoomBefore = await CanvasScaleAsync(editor);
 
         await CdpTouchAsync(session, "touchStart", (1, x - 30, y), (2, x + 30, y));
         for (var i = 1; i <= 8; i++)
@@ -161,7 +162,9 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
         await page.WaitForFunctionAsync("x => { const s = document.querySelectorAll('.tm-wd-editor')[0].querySelector('.tm-wd-canvas__svg'); return Math.abs(s.viewBox.baseVal.x - x) > 1; }",
             before.X, new PageWaitForFunctionOptions { Timeout = 10_000 });
         var after = await ViewBoxAsync(editor);
-        Assert.AreEqual(before.W, after.W, 1, "a pan keeps the zoom");
+        // The zoom, not the raw view box width: the pinch first makes the view box match the svg's aspect (preserveAspectRatio=meet letterboxes it),
+        // which widens W without changing what the user sees - and the wider tablet canvas has another aspect than the old docked one.
+        Assert.AreEqual(zoomBefore, await CanvasScaleAsync(editor), 0.01, "a pan keeps the zoom");
         Assert.IsTrue(after.X < before.X, "fingers moved right, so the content followed and the viewBox origin moved left");
         Assert.IsTrue(after.Y < before.Y, "fingers moved down, so the viewBox origin moved up");
     }
@@ -207,6 +210,7 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
     {
         var (page, editor) = await OpenAsync(width, height, touch: true);
         var before = await editor.Locator("g[data-el-id]").CountAsync();
+        await EnsureToolboxAsync(editor);
         var tile = editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First;
         await tile.ScrollIntoViewIfNeededAsync();
 
@@ -456,7 +460,8 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
             await WaitForAppReadyAsync(page);
         }
 
-        await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-toolbox__item",
+        // The toolbox is docked on a desktop container but lives in an overlay drawer on a tablet one: wait for the canvas instead.
+        await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-canvas__svg",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
         var editor = page.Locator(".tm-wd-editor").First;
         await editor.ScrollIntoViewIfNeededAsync();
@@ -471,16 +476,38 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
         var existing = await editor.Locator("g[data-el-id]").CountAsync();
         if (existing == 0)
         {
+            await EnsureToolboxAsync(editor);
             await editor.Locator(".tm-wd-toolbox__item[data-component-type='TmButton']").First.ClickAsync();
             await page.WaitForFunctionAsync("() => document.querySelectorAll('.tm-wd-editor')[0].querySelectorAll('g[data-el-id]').length >= 1",
                 null, new PageWaitForFunctionOptions { Timeout = 10_000 });
         }
 
-        // Deselect and scroll the canvas into view so the first gesture starts from a known state.
+        // Deselect and scroll the canvas into view so the first gesture starts from a known state. On a tablet container the selection
+        // made by the insertion opened the inspector sheet: close it so the canvas has its full width, like the desktop layout.
+        var sheetClose = editor.Locator("[data-testid='wd-sheet-close']");
+        if (await sheetClose.CountAsync() > 0)
+        {
+            await sheetClose.First.ClickAsync();
+            await editor.Locator(".tm-wd-sheet").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+            await page.WaitForTimeoutAsync(800);   // the canvas re-measures (relayout) once the sheet is gone; read the view box only after that
+        }
+
         await page.Keyboard.PressAsync("Escape");
         await page.WaitForTimeoutAsync(300);
         await editor.Locator(".tm-wd-canvas__svg").ScrollIntoViewIfNeededAsync();
         return (page, editor);
+    }
+
+    /// <summary>
+    /// On a tablet editor container (768-1199 px, phase 6) the toolbox lives in an overlay drawer opened from the toolbar: open it when no
+    /// toolbox tile is visible. On the desktop layout the docked toolbox is already there and nothing happens.
+    /// </summary>
+    private static async Task EnsureToolboxAsync(ILocator editor)
+    {
+        var tile = editor.Locator(".tm-wd-toolbox__item").First;
+        if (await tile.CountAsync() > 0 && await tile.IsVisibleAsync()) return;
+        await editor.Locator("[data-testid='wd-toggle-left']").TapAsync();
+        await tile.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
     }
 
     private static async Task<(double X, double Y)> ElementCentreAsync(IPage page, ILocator editor)

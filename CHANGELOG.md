@@ -4,6 +4,11 @@
 
 ### Fixed
 
+- **Wireframe middle-button pan survived Escape and destroy.** Escape or tearing the editor down in the middle of a middle-button pan left the viewBox moved, the pointer captured and the move/up listeners attached; `_cancelMiddlePan` now rolls it back (the one gesture outside `pointer-drag.js`, documented in `docs/touch-interaction.md`).
+- **A cancelled wireframe drag called .NET after the editor was destroyed.** `_bodyCancel` skips (and swallows a rejected) `OnDragStarted([])` once the instance is destroyed.
+- **Keys typed in a wireframe side sheet reached the canvas.** The canvas shortcut guard ignores events from `.tm-wd-sheet` like it does for the layers and pages panels (arrow nudge, Delete and Escape no longer act on the selection).
+- **Test guard:** every `invokeMethodAsync` name in `wireframe-designer.js` must exist as a `[JSInvokable]` on `TmWireframeDesignerCanvas` (`WireframeJsInvokableContractTests`).
+
 - **Wireframe toolbox insertion could land outside the page.** The insert-at-centre origin was clamped only to
   non-negative coordinates, so after panning away from the page a click inserted an element far outside it. The
   origin is now clamped into the page (`0 ≤ x ≤ pageWidth − w`, `0 ≤ y ≤ pageHeight − h`) and snapped to the grid only
@@ -68,6 +73,22 @@
   `ResultCountKey` token (below) so the preview recounts with the table.
 
 ### Added
+
+- **Wireframe editor tablet layout (redesign plan ce19aa8c, phase 6).** In an editor container of 768-1199 px (`data-editor-layout="tablet"`)
+  the command row is **two `TmToolbar`s** split by `data-tm-group` (row 1: tools, history, arrange, grouping, alignment, snapping and
+  the format painter; row 2: the Components / Properties toggles, zoom, Export and Import, plus the document title), the left panel
+  (Components / Pages / Layers) is an **overlay drawer** and the inspector a **non-modal side sheet with a close ×** - at most one of
+  them open. Selecting an element opens the inspector, inserting a component closes the drawer, and Escape closes the sheet that holds
+  the focus and returns it to the canvas (`TmFocusScope.RestoreFocusTarget`). The minimap is hidden on a tablet, the toolbox is a single
+  column of named rows (`TmWireframeToolbox.SingleColumn`, `tm-wd-toolbox--single-column`), and on `(pointer: coarse)` the toolbar
+  buttons, page tabs, toolbox rows, sheet close and title reach `--tm-touch-target` (44 px). Opening or closing a sheet re-measures the
+  canvas through `tmWireframeDesigner.relayout` without re-rendering it. New stable hooks: `data-testid` `wd-toggle-left`,
+  `wd-toggle-inspector`, `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toolbar-row-1|2`. New keys
+  `TmWireframe_ToolbarViewAriaLabel`, `TmWireframe_SheetLeftTitle`, `TmWireframe_SheetInspectorTitle`, `TmWireframe_SheetClose` (en/cs/sk/fr).
+- **Wireframe context menu from the keyboard.** Shift+F10 / the ContextMenu key open the menu at the selected element (or the canvas menu when nothing is selected); the menu focuses its first enabled item, Arrow Up/Down/Home/End move between items, and Escape / choosing an item returns the focus to the canvas.
+- **Wireframe gesture-rollback announcement.** A move, resize, rotate or waypoint drag cancelled by Escape, `pointercancel` or a second finger is announced in a polite live region (`TmWireframeCanvas_GestureCancelled`, en/cs/sk/fr).
+- **Wireframe long-press cue.** A ring grows at the finger during the 500 ms touch hold that opens the context menu (static under `prefers-reduced-motion`).
+- **`TmWireframeDesignerCanvas.NotifyViewportChangedAsync()` and `WrapElement`**, plus the script's `relayout`: the canvas re-fits (pristine view) or keeps centre and zoom (moved view) when its container resizes, and follows size changes through a `ResizeObserver`.
 
 - **Wireframe canvas: touch and pen (redesign plan ce19aa8c, phase 5).** The canvas now works with a finger and a pen on a tablet (full
   editing from the tablet up; the mobile layout stays viewing plus light edits). One finger or pen selects, drags (single, multi, groups),
@@ -1205,6 +1226,19 @@
   translations in an application (registered after `AddTempoBlazor()`).
 
 ### Breaking / Migration
+
+- **The wireframe editor chooses its panels by the width of its own CONTAINER, and the fixed panel widths are gone (redesign plan ce19aa8c, phase 6).**
+  Impact: `TmWireframeEditor` resolves `mobile < 768`, `tablet 768-1199`, `desktop >= 1200` from its own box (the pair `TmDiagramEditor` and `docs/editor-shell.md` use for editors; the plan's 1279 would make the demo, whose page is capped at `max-w-7xl`, tablet at every viewport) (it is a CSS size container,
+  `container-name: tm-wd-editor`), not from the viewport and no longer with the phase-4 pair 640 / 860. Between 768 and 1199 px the docked left
+  panel and inspector are replaced by an overlay drawer and a side sheet (one at a time), the command row becomes two toolbars, the minimap is
+  hidden and the toolbox is a single column; the `--tm-wd-toolbox-w` (14rem) and `--tm-wd-props-w` (18rem) custom properties are removed -
+  panel widths come from `TmEditorShell` (`LeftWidth` 260px / `RightWidth` 300px, resizable) and the tablet sheets from `--tm-wd-sheet-w`
+  (20rem, capped at 60% of the canvas). The editor needs about 1200 px of container to dock both panels: the demo at a 1440 viewport has its sidebar (about 1080 px editor), so it shows the tablet layout there unless the sidebar is hidden.
+  Before: `.my-editor .tm-wd-editor { --tm-wd-props-w: 22rem; }` and a layout that docked both panels from 860 px.
+  After: the width of a docked panel is the shell's (resizable by the user, 260 / 300 px by default) - there is no CSS variable to override;
+  to keep the phase-4 behaviour for a host layout pin it with `<TmWireframeEditor LayoutBreakpoints="new TmLayoutBreakpoints(640, 860)" />`
+  (or force `LayoutMode="TmLayoutMode.Desktop"`). Selectors: tests that clicked the docked toolbox tabs on a 768-1279 px editor must open the drawer first
+  (`[data-testid='wd-toggle-left']`, then `[data-testid='wd-left-drawer'] ...`); every `.tm-wd-editor__*` selector is unchanged.
 
 - **The wireframe canvas listens to Pointer Events instead of mouse events (redesign plan ce19aa8c, phase 5).**
   Impact: `wireframe-designer.js` no longer registers `mousedown` / `mousemove` / `mouseup` on the canvas `<svg>` or the document; the

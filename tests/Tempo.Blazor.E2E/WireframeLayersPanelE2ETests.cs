@@ -452,9 +452,14 @@ public sealed class WireframeLayersPanelE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
         await WaitForAppReadyAsync(page);
         // The Layers tab is not the default tab of the left panel (Components is): open it, the tab mounts lazily.
-        await page.WaitForSelectorAsync(".tm-wd-editor [data-region='left'] [role='tab']",
+        // A tablet editor container (phase 6) keeps the left panel in an overlay drawer: open it from the toolbar first.
+        await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-canvas__svg", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
+        await page.WaitForTimeoutAsync(1200);
+        var drawerToggle = page.Locator(".tm-wd-editor [data-testid='wd-toggle-left']").First;
+        if (await drawerToggle.CountAsync() > 0) await drawerToggle.ClickAsync();
+        await page.WaitForSelectorAsync(".tm-wd-editor [role='tab']",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
-        await page.Locator(".tm-wd-editor [data-region='left'] [role='tab']", new() { HasTextString = "Layers" }).First.ClickAsync();
+        await page.Locator(".tm-wd-editor [data-region='left'] [role='tab'], .tm-wd-editor [data-testid='wd-left-drawer'] [role='tab']", new() { HasTextString = "Layers" }).First.ClickAsync();
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-layers__item",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
 

@@ -109,7 +109,7 @@ function svgNode() {
             return inv;
         } };
     };
-    svg.closest = (selector) => (matches(svg, selector) ? svg : null);
+    svg.closest = (selector) => (matches(svg, selector) ? svg : (svg.parent ? svg.parent.closest(selector) : null));
     return svg;
 }
 
@@ -800,4 +800,402 @@ test('wheel zoom still works for the mouse and stops at the 5x limit', async () 
     assert.ok(Math.abs(c.svg.viewBox.baseVal.width - 720) < 1e-6);
     for (let i = 0; i < 40; i++) wheel(-100);
     assert.ok(c.svg.viewBox.baseVal.width >= 160 - 1e-6, 'never beyond 5x');
+});
+
+// ── phase 6 carry-forward ──────────────────────────────────────────────────────────────────────
+
+const target = { tagName: 'DIV', closest: () => null, matches: () => false };
+// The canvas only handles keys while focus is inside it (:focus-within): the test svg answers that query.
+const press = (c, name, over = {}) => {
+    const closest = c.svg.closest;
+    c.svg.closest = (selector) => (selector === ':focus-within' ? c.svg : closest(selector));
+    doc.dispatch('keydown', { key: name, code: name, target, preventDefault() {}, stopPropagation() {}, ...over });
+    c.svg.closest = closest;
+};
+
+test('Escape in the middle of a middle-button pan restores the viewBox and detaches the move/up listeners', async () => {
+    const c = await canvas();
+    c.svg.dispatch('pointerdown', ev(c.svg, { button: 1, buttons: 4, clientX: 300, clientY: 300 }));
+    c.svg.dispatch('pointermove', ev(c.svg, { button: -1, buttons: 4, clientX: 240, clientY: 300 }));
+    assert.equal(c.svg.viewBox.baseVal.x, 60, 'the pan moved the view');
+    assert.equal(c.svg.count('pointermove') > 0, true);
+
+    press(c, 'Escape');
+
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600', 'restored verbatim');
+    assert.equal(c.svg.captured.has(1), false, 'pointer capture released');
+    assert.deepEqual(c.svg.released, [1]);
+    assert.equal(c.inst().middlePan, null);
+    assert.equal(c.svg.style.cursor, '');
+    // the late pointerup of the abandoned pan commits nothing
+    c.svg.dispatch('pointerup', ev(c.svg, { button: 1, buttons: 0, clientX: 240, clientY: 300 }));
+    assert.equal(c.ref.named('OnViewBoxChanged').length, 0);
+    c.svg.dispatch('pointermove', ev(c.svg, { button: -1, buttons: 4, clientX: 100, clientY: 300 }));
+    assert.equal(c.svg.viewBox.baseVal.x, 0, 'a move after Escape no longer pans');
+});
+
+test('destroy in the middle of a middle-button pan restores the viewBox and leaves no listener behind', async () => {
+    const c = await canvas();
+    c.svg.dispatch('pointerdown', ev(c.svg, { button: 1, buttons: 4, clientX: 300, clientY: 300 }));
+    c.svg.dispatch('pointermove', ev(c.svg, { button: -1, buttons: 4, clientX: 240, clientY: 300 }));
+    engine.destroy(c.svg);
+
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600');
+    assert.equal(c.svg.total(), 0);
+    assert.equal(doc.total(), 0);
+    assert.deepEqual(c.svg.released, [1]);
+});
+
+test('cancelling a move after destroy does not call .NET (OnDragStarted([]) is skipped) and a rejected call is swallowed', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    c.svg.captured.clear();
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', ev(a.body, { clientX: 160, clientY: 60 }));
+    const inst = c.inst();
+
+    // A live cancel resets the .NET start snapshot, and a rejecting promise is not an unhandled rejection.
+    inst.dotNetRef = { invokeMethodAsync: (...args) => { c.ref.calls.push(args); return args[0] === 'OnDragStarted' ? Promise.reject(new Error('disposed')) : Promise.resolve(); } };
+    press(c, 'Escape');
+    assert.deepEqual(c.ref.named('OnDragStarted').at(-1), ['OnDragStarted', []]);
+
+    // After destroy: nothing is sent (the reference is gone).
+    const before = c.ref.calls.length;
+    inst.destroyed = true;
+    inst.body = { kind: 'element', snapshots: { a: translateOf(a.g) } };
+    engine._bodyCancel(inst, { reason: 'detached' });
+    assert.equal(c.ref.calls.length, before);
+    inst.destroyed = false;
+});
+
+test('Shift+F10 opens the element menu at the selected element, with no selection the canvas menu at the svg centre; the ContextMenu key too', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+    a.g.getBoundingClientRect = () => ({ left: 40, top: 40, width: 100, height: 60 });
+    engine.setSelection(c.svg, ['a']);
+
+    let prevented = false;
+    press(c, 'F10', { shiftKey: true, preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.deepEqual(c.ref.named('OnElementContextMenu'), [['OnElementContextMenu', 'a', 90, 70]]);
+
+    engine.setSelection(c.svg, []);
+    press(c, 'ContextMenu');
+    const canvasMenu = c.ref.named('OnCanvasContextMenu');
+    assert.equal(canvasMenu.length, 1);
+    assert.deepEqual(canvasMenu[0].slice(3), [400, 300], 'screen position = the svg centre');
+});
+
+test('Shift+F10 inside an input keeps the native behaviour', async () => {
+    const c = await canvas();
+    press(c, 'F10', { shiftKey: true, target: { tagName: 'INPUT', closest: () => null, matches: () => true } });
+    assert.equal(c.ref.calls.length, 0);
+});
+
+test('the menu focuses its first enabled item, Arrow Up/Down rove, Escape closes and returns the focus to the canvas wrap', async () => {
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const c = await canvas();
+    const wrap = c.wrap;
+    c.svg.closest = (selector) => (selector === '.tm-wd-canvas-wrap' ? wrap : matches(c.svg, selector) ? c.svg : null);
+    const menu = node('div', { class: 'tm-wd-editor__context-menu', role: 'menu' });
+    const disabled = node('button', { role: 'menuitem' }, menu); disabled.disabled = true;
+    const first = node('button', { role: 'menuitem' }, menu);
+    const second = node('button', { role: 'menuitem' }, menu);
+    for (const item of [disabled, first, second]) item.focus = () => { doc.activeElement = item; };
+    menu.style = { left: '10px', top: '10px' };
+    globalThis.window.innerWidth = 1000; globalThis.window.innerHeight = 800;
+    menu.getBoundingClientRect = () => ({ width: 100, height: 100 });
+    const arrow = (name) => { const e = { key: name, preventDefault() {}, stopPropagation() {} }; menu.dispatch('keydown', e); return e; };
+
+    engine.openContextMenu(c.svg, menu);
+    mock.timers.tick(0);
+    assert.equal(doc.activeElement, first, 'the first NON-disabled item takes the focus');
+
+    arrow('ArrowDown');
+    assert.equal(doc.activeElement, second);
+    arrow('ArrowDown');
+    assert.equal(doc.activeElement, first, 'wraps (the disabled item is skipped)');
+    arrow('ArrowUp');
+    assert.equal(doc.activeElement, second);
+
+    doc.dispatch('keydown', { key: 'Escape' });
+    assert.equal(c.ref.named('CloseContextMenu').length, 1, 'Escape asks .NET to close');
+    // .NET closes the menu and calls closeContextMenu; the focus goes back to the wrap
+    engine.closeContextMenu(c.svg);
+    assert.equal(wrap.focused, true);
+});
+
+test('a press outside the menu closes it without stealing the focus back', async () => {
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const c = await canvas();
+    const wrap = c.wrap;
+    c.svg.closest = (selector) => (selector === '.tm-wd-canvas-wrap' ? wrap : matches(c.svg, selector) ? c.svg : null);
+    const menu = node('div', { class: 'tm-wd-editor__context-menu' });
+    const item = node('button', { role: 'menuitem' }, menu);
+    item.focus = () => { doc.activeElement = item; };
+    menu.style = { left: '0px', top: '0px' };
+    globalThis.window.innerWidth = 1000; globalThis.window.innerHeight = 800;
+    menu.getBoundingClientRect = () => ({ width: 10, height: 10 });
+    engine.openContextMenu(c.svg, menu);
+    mock.timers.tick(0);
+
+    doc.dispatch('pointerdown', { button: 0, target: { closest: () => null } });
+    assert.equal(c.ref.named('CloseContextMenu').length, 1);
+    engine.closeContextMenu(c.svg);
+    assert.notEqual(wrap.focused, true);
+});
+
+test('a move cancelled by Escape, pointercancel or a second finger announces OnGestureCancelled; a normal end and a destroy do not', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+
+    // normal end: silent
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', ev(a.body, { clientX: 100, clientY: 60 }));
+    a.body.dispatch('pointerup', ev(a.body, { clientX: 100, clientY: 60 }));
+    assert.equal(c.ref.named('OnGestureCancelled').length, 0, 'a normal end is not a rollback');
+
+    // Escape
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', ev(a.body, { clientX: 140, clientY: 60 }));
+    press(c, 'Escape');
+    assert.equal(c.ref.named('OnGestureCancelled').length, 1);
+
+    // pointercancel
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', ev(a.body, { clientX: 140, clientY: 60 }));
+    c.svg.dispatch('pointercancel', ev(c.svg, { clientX: 140, clientY: 60 }));
+    assert.equal(c.ref.named('OnGestureCancelled').length, 2);
+
+    // destroy mid-drag: the roll-back is silent
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 60, clientY: 60 }));
+    a.body.dispatch('pointermove', ev(a.body, { clientX: 140, clientY: 60 }));
+    engine.destroy(c.svg);
+    assert.equal(c.ref.named('OnGestureCancelled').length, 2, 'destroy does not announce');
+});
+
+test('a resize rolled back by pointercancel announces it, the read-only flip does not', async () => {
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+    engine.setSelection(c.svg, ['a']);
+    const handle = c.svg.querySelector('[data-handle="se"]');
+
+    handle.dispatch('pointerdown', ev(handle, { clientX: 140, clientY: 100 }));
+    c.svg.dispatch('pointermove', ev(c.svg, { clientX: 200, clientY: 160 }));
+    c.svg.dispatch('pointercancel', ev(c.svg, { clientX: 200, clientY: 160 }));
+    assert.equal(c.ref.named('OnGestureCancelled').length, 1);
+
+    const handle2 = c.svg.querySelector('[data-handle="se"]');
+    handle2.dispatch('pointerdown', ev(handle2, { clientX: 140, clientY: 100 }));
+    c.svg.dispatch('pointermove', ev(c.svg, { clientX: 200, clientY: 160 }));
+    engine.setReadOnly(c.svg, true);
+    assert.equal(c.ref.named('OnGestureCancelled').length, 1, 'read-only flip is not a user cancel');
+});
+
+test('the long-press cue class and ring live exactly while the hold timer is pending', async () => {
+    mock.timers.enable({ apis: ['setTimeout'] });
+    const c = await canvas();
+    const a = element(c.svg, 'a', { x: 40, y: 40 });
+    const cue = () => c.svg.classList.contains('tm-wd-canvas__svg--holding');
+    const ring = () => c.svg.querySelectorAll('.tm-wd-hold-cue').length;
+
+    // pending -> cue, lifted before 500 ms -> gone
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    assert.equal(cue(), true);
+    assert.equal(ring(), 1);
+    mock.timers.tick(300);
+    assert.equal(cue(), true, 'still pending at 300 ms');
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+    assert.equal(cue(), false);
+    assert.equal(ring(), 0);
+
+    // pending -> the hold fires, the menu replaces the cue
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    assert.equal(cue(), true);
+    mock.timers.tick(500);
+    assert.equal(c.ref.named('OnElementContextMenu').length, 1);
+    assert.equal(cue(), false, 'removed when the menu opens');
+    assert.equal(ring(), 0);
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 60, clientY: 60 }));
+
+    // pending -> the finger drifts beyond the tolerance (a scroll / drag) -> gone
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    assert.equal(cue(), true);
+    a.body.dispatch('pointermove', touch(a.body, { clientX: 120, clientY: 60 }));
+    assert.equal(cue(), false, 'removed once the finger moves beyond the threshold');
+    a.body.dispatch('pointerup', touch(a.body, { clientX: 120, clientY: 60 }));
+
+    // pending -> pointercancel -> gone ; a mouse never shows the cue
+    a.body.dispatch('pointerdown', touch(a.body, { clientX: 60, clientY: 60 }));
+    c.svg.dispatch('pointercancel', touch(c.svg, { clientX: 60, clientY: 60 }));
+    assert.equal(cue(), false);
+    a.body.dispatch('pointerdown', ev(a.body, { clientX: 60, clientY: 60 }));
+    assert.equal(cue(), false, 'a mouse has no hold');
+});
+
+// ── relayout (container resize without a Blazor render) ───────────────────────────────────────
+
+function resizeSvg(svg, width, height) { svg.getBoundingClientRect = () => ({ left: 0, top: 0, width, height }); }
+
+test('relayout re-fits a view the user has not touched and reports viewBox + zoom to .NET', async () => {
+    const c = await canvas();
+    resizeSvg(c.svg, 400, 300);
+    const scale = engine.relayout(c.svg);
+
+    assert.equal(scale, 0.5);
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600');
+    assert.deepEqual(c.ref.named('OnZoomChanged'), [['OnZoomChanged', 0.5]]);
+    assert.equal(c.ref.named('OnViewBoxChanged').length, 1);
+    assert.equal(engine.relayout(c.svg), 0, 'an unchanged size is a no-op');
+    assert.equal(c.ref.named('OnZoomChanged').length, 1);
+});
+
+test('relayout keeps the centre and the zoom of a view the user moved', async () => {
+    const c = await canvas();
+    engine.zoomTo(c.svg, 2);                 // 400x300 around the centre (400, 300)
+    assert.equal(c.inst().userViewChanged, true);
+    resizeSvg(c.svg, 400, 300);              // the panel opened: the svg is half as wide
+
+    const scale = engine.relayout(c.svg);
+
+    assert.equal(scale, 2, 'zoom is unchanged');
+    const vb = c.svg.viewBox.baseVal;
+    assert.equal(vb.width, 200);
+    assert.equal(vb.height, 150);
+    assert.equal(vb.x + vb.width / 2, 400, 'the centre stays');
+    assert.equal(vb.y + vb.height / 2, 300);
+});
+
+test('relayout is a no-op while the svg has no size (hidden) and after destroy', async () => {
+    const c = await canvas();
+    resizeSvg(c.svg, 0, 0);
+    assert.equal(engine.relayout(c.svg), 0);
+    assert.equal(c.ref.named('OnZoomChanged').length, 0);
+    engine.destroy(c.svg);
+    assert.equal(engine.relayout(c.svg), 0);
+});
+
+test('a ResizeObserver triggers one relayout per frame and is disconnected on destroy; no ResizeObserver is fine', async () => {
+    const observers = [];
+    globalThis.ResizeObserver = class {
+        constructor(fn) { this.fn = fn; this.observed = []; this.disconnected = false; observers.push(this); }
+        observe(el) { this.observed.push(el); }
+        disconnect() { this.disconnected = true; }
+    };
+    try {
+        const c = await canvas();
+        assert.equal(observers.length, 1);
+        assert.ok(observers[0].observed.includes(c.svg));
+        assert.ok(observers[0].observed.includes(c.wrap));
+
+        resizeSvg(c.svg, 400, 300);
+        observers[0].fn([]); observers[0].fn([]);
+        assert.equal(c.ref.named('OnZoomChanged').length, 1, 'rAF-debounced + unchanged size dedupes');
+
+        engine.destroy(c.svg);
+        assert.equal(observers[0].disconnected, true);
+    } finally {
+        delete globalThis.ResizeObserver;
+    }
+    const c2 = await canvas();     // no ResizeObserver in this environment
+    assert.equal(c2.inst().resizeObserver, null);
+});
+
+test('keys typed inside a side sheet (the tablet drawer / inspector) never act on the canvas selection', async () => {
+    const c = await canvas({ gridSize: 8 });
+    element(c.svg, 'a', { x: 40, y: 40 });
+    engine.setSelection(c.svg, ['a']);
+    const inSheet = { tagName: 'BUTTON', closest: (selector) => (selector.includes('.tm-wd-sheet') ? {} : null), matches: () => false };
+
+    key(c, 'ArrowRight', { target: inSheet });
+    key(c, 'Delete', { target: inSheet });
+    key(c, 'Escape', { target: inSheet });
+
+    assert.equal(c.ref.named('OnElementMoved').length, 0, 'no nudge');
+    assert.equal(c.ref.named('OnDeleteSelected').length, 0, 'no delete');
+    assert.equal(c.ref.named('OnClearSelection').length, 0, 'the sheet owns Escape (it closes itself)');
+});
+
+test('relayout waits while a gesture is active (the sheet opens under a press) and runs when it is released', async () => {
+    const c = await canvas();
+    c.inst().isDragging = true;               // a press selected the element and the inspector sheet narrowed the canvas under the finger
+    resizeSvg(c.svg, 400, 300);
+
+    assert.equal(engine.relayout(c.svg), 0, 'no re-fit mid-gesture');
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600', 'the viewBox is untouched while the finger is down');
+
+    c.inst().isDragging = false;
+    engine._flushRelayout(c.inst());
+
+    assert.equal(c.svg.getAttribute('viewBox'), '0 0 800 600');
+    assert.deepEqual(c.ref.named('OnZoomChanged'), [['OnZoomChanged', 0.5]], 'the postponed relayout ran once');
+});
+
+test('the svg carries data-wd-gesture exactly while a body gesture runs (CSS defers the sheet reservation until the finger is lifted)', async () => {
+    const c = await canvas();
+    element(c.svg, 'a', { x: 40, y: 40 });
+    const g = c.svg.querySelector('[data-el-id="a"]');
+
+    c.svg.dispatch('pointerdown', { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 50, clientY: 50, target: g, preventDefault() {} });
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), true, 'set from the press');
+
+    c.svg.dispatch('pointerup', { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 50, clientY: 50, target: g, preventDefault() {} });
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), false, 'removed on every exit');
+});
+
+
+test('a relayout deferred by a pinch runs when the pinch ends, cancels, or a middle-button pan ends/cancels', async () => {
+    // pinch end
+    let c = await canvas();
+    let { f1, f2 } = twoFingers(c);
+    resizeSvg(c.svg, 400, 300);
+    assert.equal(engine.relayout(c.svg), 0, 'deferred while the pinch owns the viewBox');
+    assert.equal(c.inst().relayoutDeferred, true);
+    c.svg.dispatch('pointerup', f2({ clientX: 400, clientY: 300 }));
+    assert.equal(c.inst().relayoutDeferred, false, 'flushed at the end of the pinch');
+    assert.deepEqual(c.inst().layoutRect, { width: 400, height: 300 });
+    const vb = c.svg.viewBox.baseVal;
+    assert.ok(Math.abs(vb.width - 400) < 1e-6 && Math.abs(vb.height - 300) < 1e-6, 'the zoom is kept (1), so the half-size svg shows half the units');
+
+    // pinch cancel (Escape)
+    c = await canvas();
+    ({ f1, f2 } = twoFingers(c));
+    resizeSvg(c.svg, 400, 300);
+    engine.relayout(c.svg);
+    assert.equal(c.inst().relayoutDeferred, true);
+    c.svg.dispatch('pointercancel', f2({ clientX: 400, clientY: 300 }));
+    assert.equal(c.inst().relayoutDeferred, false, 'flushed after the pinch rolled back');
+    assert.deepEqual(c.inst().layoutRect, { width: 400, height: 300 });
+
+    // middle pan end
+    c = await canvas();
+    c.svg.dispatch('pointerdown', ev(c.svg, { button: 1, buttons: 4, clientX: 300, clientY: 300 }));
+    resizeSvg(c.svg, 400, 300);
+    engine.relayout(c.svg);
+    assert.equal(c.inst().relayoutDeferred, true);
+    c.svg.dispatch('pointerup', ev(c.svg, { button: 1, buttons: 0, clientX: 300, clientY: 300 }));
+    assert.equal(c.inst().relayoutDeferred, false, 'flushed after the middle pan');
+    assert.deepEqual(c.inst().layoutRect, { width: 400, height: 300 });
+
+    // middle pan cancel
+    c = await canvas();
+    c.svg.dispatch('pointerdown', ev(c.svg, { button: 1, buttons: 4, clientX: 300, clientY: 300 }));
+    resizeSvg(c.svg, 400, 300);
+    engine.relayout(c.svg);
+    c.svg.dispatch('pointercancel', ev(c.svg, { button: 1, buttons: 0, clientX: 300, clientY: 300 }));
+    assert.equal(c.inst().relayoutDeferred, false, 'flushed after a cancelled middle pan');
+    assert.deepEqual(c.inst().layoutRect, { width: 400, height: 300 });
+});
+
+test('the svg carries data-wd-gesture while a resize handle gesture runs too', async () => {
+    const c = await canvas();
+    element(c.svg, 'a', { x: 40, y: 40, w: 100, h: 60 });
+    engine.setSelection(c.svg, ['a']);
+    const handle = c.svg.querySelector('[data-handle="se"]');
+
+    handle.dispatch('pointerdown', touch(handle, { clientX: 140, clientY: 100 }));
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), true, 'set from the handle press');
+    c.svg.dispatch('pointermove', touch(c.svg, { clientX: 200, clientY: 140 }));
+    c.svg.dispatch('pointerup', touch(c.svg, { clientX: 200, clientY: 140 }));
+    assert.equal(c.svg.hasAttribute('data-wd-gesture'), false, 'removed on release');
 });

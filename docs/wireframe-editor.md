@@ -116,7 +116,7 @@ preventDefault. Keys inside an open row menu do not reach the row shortcuts. Mov
 
 `TmWireframeEditor` renders through the core `TmEditorShell` ([editor-shell.md](editor-shell.md)) and its command row is one core
 `TmToolbar` ([toolbar.md](toolbar.md)). The editor resolves its layout from its **own container** (`LayoutMode="Auto"`,
-`LayoutBreakpoints` default mobile < 640 / desktop ≥ 860, `data-editor-layout` on the root); `LayoutMode` can pin a mode for tests and hosts.
+`LayoutBreakpoints` default mobile < 768 / desktop ≥ 1200 since phase 6, `data-editor-layout` on the root); `LayoutMode` can pin a mode for tests and hosts.
 
 | Region | Content |
 |---|---|
@@ -193,6 +193,47 @@ pinch alternative, and a toolbox tap / Enter / Space inserts. The toolbox keeps 
 **Zoom read-out.** `OnZoomChangedEvent` (wheel, trackpad pinch, two-finger pinch, and once after the first render with the real fitted
 scale) keeps the toolbar percentage and the rulers in step with the canvas.
 
+## Tablet layout (phase 6)
+
+The editor is a CSS size container (`container-name: tm-wd-editor`) and resolves its layout from its OWN box, never from the viewport: **mobile < 768, tablet 768–1199, desktop ≥ 1200** (the pair `TmDiagramEditor` and the shell docs use for editors; the shell's root sits inside the editor's 1 px border, so a 1280 px editor still measures desktop). A host that embeds the editor in a narrower column therefore gets the tablet layout at any viewport width, and a layout a first measurement railed stays as it was - remove a page sidebar/margin before the app boots when a test needs the desktop layout.
+
+| | Desktop (≥ 1200) | Tablet (768–1199) |
+|---|---|---|
+| Toolbar | ONE `TmToolbar` (Overflow=Menu) | TWO toolbars: row 1 `tools`, `history`, `arrange`, `group`, `align`, `snap`, `format` (editing); row 2 `view` (Components / Properties toggles, Read-only), `zoom`, `file` (Export, Import) and the document title. Each has its own "More". |
+| Left panel (Components / Pages / Layers) | docked shell column (resizable, collapsible) | overlay drawer (`data-testid="wd-left-drawer"`), non-modal, opened by `wd-toggle-left` |
+| Inspector | docked shell column | non-modal side sheet (`wd-inspector-sheet`) with a close × (`wd-sheet-close`), opened by `wd-toggle-inspector` or by selecting something; it takes its width from the canvas (the page is re-fitted by script), the drawer overlays |
+| Minimap | card on the canvas | hidden |
+| Toolbox | 3-column tiles | single column of named rows (`TmWireframeToolbox.SingleColumn`) |
+| Targets | 32 px | 44 px (`--tm-touch-target`) on `(pointer: coarse)` |
+
+**At most one sheet.** Opening one closes the other; selecting an element opens the inspector and closes the drawer; inserting a component from the drawer closes it (the new element is selected, which opens the inspector). Escape closes the sheet that holds the focus (`TmFocusScope`, non-modal, `CloseOnEscape`) and `RestoreFocusTarget` returns the focus to the canvas wrapper, not to the toolbar toggle. The canvas shortcut guard ignores keys typed inside `.tm-wd-sheet`. Leaving the tablet layout drops the sheets; the desktop panels are the shell's again.
+
+**No re-render of the canvas.** Opening or closing a sheet calls `TmWireframeDesignerCanvas.NotifyViewportChangedAsync()` (script `relayout`): a pristine view is re-fitted, a moved view keeps centre and zoom, and the call is postponed while a pointer gesture is running (the sheet that a press-selection opens must not shift a drag that has just begun - the svg carries `data-wd-gesture` and the CSS reserves the sheet's room on release).
+
+**Not the DiagramEditor tablet model.** `TmDiagramEditor` keeps the shell's docked panels on a tablet (at most one expanded, the other a rail) and a floating minimap overlay. The wireframe editor deliberately does NOT use that: in the tablet layout it passes no `Left` / `Right` slot to `TmEditorShell` and renders the left panel and the inspector itself as overlay sheets (`.tm-wd-sheet`, `TmFocusScope`, non-modal) inside its canvas region, with the minimap hidden. Sheet behaviours that follow from this: a selection that becomes empty closes the inspector sheet; a press on the canvas background closes the left drawer; the sheet is named by `aria-labelledby` its (non-heading) title; and on a coarse pointer the inspector fields, selects, buttons and toggles reach `--tm-touch-target`. Follow-up (recorded in the redesign plan): add an overlay / sheet presentation for tablet to `TmEditorShell` so editors share one implementation.
+
+**No fixed panel widths.** `--tm-wd-toolbox-w` / `--tm-wd-props-w` are gone: desktop widths come from `TmEditorShell` (260 / 300 px, resizable), the tablet sheets from `--tm-wd-sheet-w` (20rem, at most 60 % of the canvas).
+
+## Phase 5 carry-forward (phase 6)
+
+### Context menu keyboard and focus
+Shift+F10 and the ContextMenu key (while the canvas wrapper or the svg has focus and the target is not an input) open the context menu through the same `_openContextMenuAt` as the right-click and the touch long-press: at the centre of the first selected element (or connector), or - with nothing selected - at the middle of the canvas as the canvas menu. When the menu opens, focus moves to its first enabled `menuitem` (disabled items are skipped); Arrow Up / Down rove with wrap-around, Home / End jump, Tab and Escape close it. Escape, Tab and choosing an item return the focus to the canvas wrapper (`.tm-wd-canvas-wrap`); a press outside the menu closes it without stealing the focus back. The menu root has `tabindex="-1"` as the focus fallback when every item is disabled. The `.tm-wd-editor__context-*` selectors are unchanged.
+
+### Gesture rollback announcement
+When a move, resize, rotate or waypoint gesture is rolled back by the user (Escape, `pointercancel`, a second finger starting a pinch) the canvas announces "Move cancelled" (`TmWireframeCanvas_GestureCancelled`, localised en/cs/sk/fr) in a visually hidden `role="status" aria-live="polite"` region (`.tm-sr-only`, `data-testid="wd-canvas-status"`). A normal gesture end, `destroy`, the read-only flip and the long-press hand-over stay silent. The script calls `[JSInvokable("OnGestureCancelled")]`; the component alternates a trailing no-break space so an identical message is announced again on a repeat.
+
+### Long-press cue
+While a touch hold is pending (press -> 500 ms) the svg carries `tm-wd-canvas__svg--holding` and a ring (`.tm-wd-hold-cue`, 24 screen px radius) grows at the finger over 500 ms. It disappears on lift, cancel, drift beyond the tolerance and when the menu opens. `prefers-reduced-motion: reduce` shows a static ring instead of the animation. Styles are the last section of `_wireframe-editor.css`; colours are `--tm-wd-accent` only.
+
+### Middle-button pan exception
+The mouse-only middle-button pan is the one gesture not built on `pointer-drag.js` (the helper starts only from the primary button). `_cancelMiddlePan` gives it the helper's cancel contract: Escape and `destroy` restore the viewBox, release the capture, remove the move/up/cancel listeners and reset the cursor. Recorded in docs/touch-interaction.md.
+
+### Serving the pointer helpers
+`wireframe-designer.js` is a classic script that dynamic-imports `pointer-drag.js` and `pointer-gesture.js` from `_content/Tempo.Blazor/js/` (resolved from its own URL: `../../Tempo.Blazor/js/`) and `wireframe-gestures.mjs` from its own folder. A host that does not serve the core package's static web assets under `_content/Tempo.Blazor/js/` gets NO pointer gestures (a console error "the pointer helpers ... could not be loaded"; keyboard, wheel and toolbar keep working). The failed import is not cached, so the next editor retries.
+
+### Relayout on container resize
+`tmWireframeDesigner.relayout(svg)` re-measures the svg when its container changes size (a side panel opening / closing, a window resize, a device rotation) WITHOUT a Blazor render. A view the user has not moved / zoomed yet (`inst.userViewChanged === false`) is re-fitted to the page; a moved or zoomed view keeps its centre and its zoom. It reports `OnViewBoxChanged` + `OnZoomChanged` back to .NET and refreshes the coarse handle hit areas. A `ResizeObserver` on the svg and the wrapper triggers it (one run per animation frame, guarded for hosts without `ResizeObserver`; disconnected in `destroy`). `TmWireframeDesignerCanvas.NotifyViewportChangedAsync()` is the explicit trigger for hosts that change the layout themselves (the editor calls it after a panel opens / closes). The first-render fit needs no code: the page starts with `viewBox = page size` and the svg `preserveAspectRatio` meet, and `getScale` already reports the fitted zoom to the toolbar.
+
 ## E2E anchors (stable selectors)
 
 `.tm-wd-editor`, `.tm-wd-editor__toolbar`, `[data-region="left|canvas|right|toolbar|header"]`, the core `.tm-toolbar` /
@@ -200,4 +241,4 @@ scale) keeps the toolbar percentage and the rulers in step with the canvas.
 `wd-distribute`, `wd-import`, `wd-device-preset`, `wd-canvas-width|height|apply`, `wd-page-name`, `wd-grid-show|size`, `wd-element-name`,
 `wd-delete-element`, `wd-page-add`, `wd-page-<id>`, `wd-pages-panel`, `wd-section-canvas|page|grid|selection`,
 `.tm-wd-toolbox__item[data-component-type]`, `.tm-wd-canvas__svg`, `.tm-wd-canvas-wrap`, `.tm-wd-props`, `.tm-wd-layers`, `.tm-wd-pages`,
-`.tm-wd-export-dialog`, `#wd-export-format`, `#wd-export-filename`.
+`.tm-wd-export-dialog`, `#wd-export-format`, `#wd-export-filename`; tablet: `wd-toggle-left`, `wd-toggle-inspector`, `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toolbar-row-1|2`, `wd-canvas-status`.
