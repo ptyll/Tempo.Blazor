@@ -728,6 +728,28 @@
 
 ### Added
 
+- **`TmToolbarFileButton`: a toolbar button that opens a file chooser and can leave the bar into "More".**
+  Import JSON (and any "attach a file" command) used to be a `<label class="tm-toolbar-btn">` around an `InputFile`
+  inside a `TmToolbarItem`; such an item has no menu entry that can open the chooser, so it had to stay `Pinned` and
+  an earlier attempt to make it `Secondary` left the toolbar unstable. The new core component
+  (`Tempo.Blazor.Components.Toolbar`, decision `TOOLBAR-FILE-BUTTON`) takes `Icon`, `Text`, `Tooltip`, `Accept`,
+  `Multiple`, `OnChange` (`EventCallback<InputFileChangeEventArgs>`), `Priority`, `Disabled`, `Class`, splatted
+  attributes and the `TmComponentBase` test ids. On the bar it IS a `TmToolbarButton` (same classes, labels, priority,
+  rank, roving tab stop); in "More" it is an ordinary entry that opens the SAME hidden `InputFile`. The input is a
+  sibling of the button, outside the collapse wrapper, so a collapse or expand never remounts it; a native
+  capture-phase `click` listener (one per page) calls `input.click()` inside the browser's own click, so WebKit keeps
+  the user activation; the button is a native `<button>` with no key emulation. A cancelled chooser raises no
+  `OnChange`; the input is cleared before every open so the same file can be chosen twice. It is a wireframe component
+  (role `toolbar-button`, stencil in `tempo.stencil.json`) with a JSON overlay and a `/toolbar-forms` demo card.
+  Documented in [docs/toolbar.md](docs/toolbar.md) ("File buttons"), including the stability analysis.
+
+  ```razor
+  <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Editor tools">
+      <TmToolbarButton Icon="@IconNames.Save" Text="Save" />
+      <TmToolbarFileButton Icon="@IconNames.Upload" Text="Import JSON" Accept=".json"
+                           Priority="ToolbarButtonPriority.Secondary" OnChange="@ImportAsync" />
+  </TmToolbar>
+  ```
 - **Explicit query scope for the document library (`DocumentLibraryScope`, `DocumentLibraryQuery.Scope`).**
   `DocumentLibraryQuery.FolderPath = null` was ambiguous: the contract says "the root", yet the open
   dialog's Recent node and its search also sent `null` to mean "the whole library". The new
@@ -1135,6 +1157,25 @@
 
 ### Breaking / Migration
 
+- **`TmWireframeEditor`: Import JSON is a `Secondary` file button and moves into "More" first.** The *Import JSON* control used to be
+  a `Pinned` `TmToolbarItem` holding `<label class="tm-toolbar-btn tm-wd-editor__import">` + `<input class="tm-wd-editor__file-input">`;
+  it is now a `TmToolbarFileButton Priority="Secondary"`. Impact: (1) on a toolbar without room the command leaves the bar
+  BEFORE the arrange actions (it is the last Secondary item) and is then reachable only through the "More" menu;
+  (2) `[data-testid='wd-import']` is now the visible `<button>` (it was the `<label>`) and the file input is
+  `[data-testid='wd-import-input']` (it was a descendant of `wd-import`); (3) the classes `.tm-wd-editor__import` and
+  `.tm-wd-editor__file-input` no longer exist. The `data-testid`, `data-tm-group="file"` and the Export button are unchanged.
+  ```csharp
+  // before: the input was inside the labelled test id
+  await editor.Locator("[data-testid='wd-import'] input[type=file]").SetInputFilesAsync(path);
+
+  // after: the input has its own test id (works whether the command is on the bar or in More - the input is always rendered)
+  await editor.Locator("[data-testid='wd-import-input']").SetInputFilesAsync(path);
+  // or drive the real UI: open More, click "Import JSON" and answer the file chooser
+  ```
+  ```css
+  /* before */ .my-host .tm-wd-editor__import { min-width: 9rem; }
+  /* after  */ .my-host .tm-wd-editor [data-testid="wd-import"] { min-width: 9rem; }
+  ```
 - **`TmDocumentOpenDialog` footer cards are a grid and the accent ink moved to `--tm-color-primary-text`.** DOM / CSS impact only:
   `.tm-dod-mode-body` is `display: contents` and `.tm-dod-mode-card` is a two-column grid (the `.tm-dod-*` class names, the radio
   group and the `data-testid`s are unchanged). A host stylesheet that targeted `.tm-dod-mode-body` as a flex column, or that read

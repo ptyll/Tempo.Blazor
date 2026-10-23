@@ -314,7 +314,7 @@
                          LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="FitToView" />
     </TmToolbarGroup>;
 
-    // File: Export (primary, never leaves the bar) and Import
+    // File: Export (primary, never leaves the bar) and Import JSON (Secondary: leaves into "More" first)
     private RenderFragment FileGroup => @<TmToolbarGroup Label="@Loc["TmWireframe_GroupFile"]" Class="tm-wd-editor__group" data-tm-group="file">
         <TmToolbarItem Priority="ToolbarButtonPriority.Pinned" Class="tm-wd-editor__export-item">
             <TmDropdown Text="@Loc["TmWireframe_Export"]" Icon="@IconNames.Download" OnSelect="HandleExportSelect"
@@ -325,13 +325,11 @@
                 <TmDropdownItem Value="pdf" Icon="@IconNames.File" data-testid="@TestId("wd-export-pdf")">@Loc["TmWireframe_ExportPdf"]</TmDropdownItem>
             </TmDropdown>
         </TmToolbarItem>
-        <TmToolbarItem Priority="ToolbarButtonPriority.Pinned">
-            <label class="tm-toolbar-btn tm-wd-editor__import" title="@Loc["TmWireframe_ImportJson"]" data-testid="@TestId("wd-import")">
-                <TmIcon Name="@IconNames.Upload" Size="IconSize.Sm" />
-                <span class="tm-toolbar-btn-text">@Loc["TmWireframe_ImportJson"]</span>
-                <InputFile class="tm-wd-editor__file-input" OnChange="OnImportFile" accept=".json,.wireframe.json" aria-label="@Loc["TmWireframe_ImportJson"]" />
-            </label>
-        </TmToolbarItem>
+        @* Import JSON: a Secondary file button - it leaves the bar into "More" (before the arrange actions: it is the LAST
+           Secondary item) and its More entry opens the same chooser (decision TOOLBAR-FILE-BUTTON). *@
+        <TmToolbarFileButton Icon="@IconNames.Upload" Text="@Loc["TmWireframe_ImportJson"]" Tooltip="@Loc["TmWireframe_ImportJson"]"
+                             Accept=".json,.wireframe.json" Priority="ToolbarButtonPriority.Secondary"
+                             OnChange="OnImportFile" DataTestId="@TestId("wd-import")" />
     </TmToolbarGroup>;
 
     // ── Left panel: Components / Pages / Layers ───────────────────────────────

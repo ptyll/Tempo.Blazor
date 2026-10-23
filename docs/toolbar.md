@@ -1,6 +1,6 @@
 # Toolbar: priorities, overflow and labels
 
-`TmToolbar` holds `TmToolbarButton`s, `TmToolbarItem`s, `TmToolbarDivider`s, `TmToolbarGroup`s and any custom content. Since F4 it can
+`TmToolbar` holds `TmToolbarButton`s, `TmToolbarFileButton`s, `TmToolbarItem`s, `TmToolbarDivider`s, `TmToolbarGroup`s and any custom content. Since F4 it can
 move the buttons that do not fit into a **More** menu instead of overflowing or scrolling, and
 buttons can show their text next to or under the icon.
 
@@ -30,7 +30,11 @@ buttons can show their text next to or under the icon.
 | `TmToolbarButton` | `Pressed` | `bool?` — `null` = plain button, `true`/`false` = toggle | `null` |
 | `TmToolbarButton` | `PressedMixed` | renders a `false` toggle as `aria-pressed="mixed"` | `false` |
 | `TmToolbarButton` | `PreserveFocus` | a pointer press does not move focus to the button (an editor selection survives) | `false` |
-| `TmToolbarItem` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` | `Primary` |
+| `TmToolbarFileButton` | `Text` / `Icon` / `Tooltip` / `Class` | the visible button (a `TmToolbarButton` underneath) | — |
+| `TmToolbarFileButton` | `Accept` / `Multiple` | the `accept` / `multiple` of the hidden file input | `null` / `false` |
+| `TmToolbarFileButton` | `OnChange` | `EventCallback<InputFileChangeEventArgs>`; raised only when at least one file was chosen | — |
+| `TmToolbarFileButton` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` — exactly the button's | `Primary` |
+| `TmToolbarFileButton` | `Disabled` | disables the button, its "More" entry and the file input | `false` || `TmToolbarItem` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` | `Primary` |
 | `TmToolbarItem` | `MenuLabel` / `MenuIcon` / `OnMenuInvoke` / `MenuKeepOpen` | the single "More" entry | — |
 | `TmToolbarItem` | `MenuItems` | a labelled group of checkable/plain entries instead of one entry | `null` |
 | `TmToolbarItem` | `Disabled` | disables the "More" entry/entries (the bar control stays the host's) | `false` |
@@ -165,6 +169,64 @@ Since F14 a toolbar can hold **controls that are not buttons** — a `TmSelect`,
 * **OverflowOnly / Pinned** mean exactly what they mean for a button: `OverflowOnly` renders only the
   hidden zero-width position marker and lives only in "More"; `Pinned` never leaves the bar.
 
+## File buttons (`TmToolbarFileButton`)
+
+A button that opens the browser's file chooser — *Import JSON*, *Attach file*. It exists because the obvious markup
+(a `<label class="tm-toolbar-btn">` wrapping an `InputFile`, inside a `TmToolbarItem`) cannot leave the bar: a label
+has no menu representation, so the toolbar had to keep it `Pinned`.
+
+```razor
+<TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Editor tools">
+    <TmToolbarButton Icon="@IconNames.Save" Text="Save" />
+    <TmToolbarFileButton Icon="@IconNames.Upload" Text="Import JSON" Accept=".json"
+                         Priority="ToolbarButtonPriority.Secondary" OnChange="@ImportAsync" />
+</TmToolbar>
+```
+
+* **On the bar it is a `TmToolbarButton`** — the same `tm-toolbar-btn` classes, `Labels`, `Priority`, rank, collapse
+  and roving tab stop (the component renders a real `TmToolbarButton`; nothing is re-implemented). `Class` and any
+  splatted attribute (`data-testid`, `aria-*`) land on that button; `DataTestId` / `TestIdPrefix` come from
+  `TmComponentBase`, the hidden input gets the button's id with an `-input` suffix.
+* **In "More" it is an ordinary entry** (`Text` + `Icon`, a `menuitem`), and activating it opens the SAME hidden
+  `InputFile`. A `Disabled` button offers a disabled entry and a disabled input.
+* **The input is a sibling, outside the collapse wrapper.** The button collapses (out of flow, invisible, `inert`)
+  when it does not fit; the `<input type="file">` next to it is never inside `.tm-toolbar-item--collapsed`, so a collapse
+  or expand never remounts it (bUnit and E2E pin the node identity).
+* **The chooser opens from a native listener.** `TmToolbarFileButton.razor.js` installs ONE capture-phase `click` listener
+  on the document (shared by every file button, removed with the last one) and calls `input.click()` synchronously inside
+  the browser's own click — a Blazor round-trip in between would sever the user activation WebKit requires. The bar
+  button carries the input's id as `data-tm-file-trigger`; the "More" entry is matched by its `data-action-id`.
+* **No key emulation.** Both the bar control and the menu entry are native `<button>`s — Enter and Space are the browser's
+  (`docs/keyboard-activation-convention.md`). There is no `@onclick` and no `@onkeydown`.
+* **Cancel and repeat.** A cancelled chooser raises no `OnChange`; the input is cleared before every open, so choosing the
+  *same* file twice raises a change twice (re-importing a fixed JSON). Read the file inside the handler — the selection
+  is dropped the next time the chooser opens. `Accept` only filters the chooser: validate what you read (size, JSON) and
+  report an invalid file in the UI, as `TmWireframeEditor` does with its import banner.
+* **Wireframe.** The component is a placeable wireframe element (`tempo.stencil.json`, role `toolbar-button`).
+  `TmWireframeEditor` uses `Priority="Secondary"` for *Import JSON* (`data-testid="wd-import"` is kept on the button; the
+  input is `wd-import-input`), so it is the first command to move into "More" — ahead of the arrange actions.
+
+### Stability analysis (the earlier "element is not stable")
+
+The earlier attempt made the label+`InputFile` item `Secondary` and Playwright failed 7 toolbar specs with
+`element is not stable` on `button.tm-toolbar-more`. What was measured when this component was built (the More trigger's
+position and the collapsed count sampled every 50 ms for 2.5 s after each width change, in the real editor):
+
+* **The known mechanism of this kind in the code base is the group-box feedback loop.** `tm-toolbar.js` counts a group wrapper's
+  padding and border as FIXED width; when every control of a group collapsed, dropping that padding freed a few pixels, one
+  more item fit, the group re-expanded and the fit flipped forever (see the comment above `.tm-wd-editor__group` in
+  `_wireframe-editor.css`, fixed in the tablet phase). It needs a group whose controls ALL collapse: the `file` group always
+  keeps Export, which is `Pinned`, so Import JSON cannot trigger it.
+* **The old label pattern, made `Secondary` with a menu entry, did NOT reproduce an oscillation** in the current editor (at
+  most one layout change per width, nine widths from 1262 to 560 px); the new component measures the same. The previous
+  attempt's exact markup is not in the history, so its failure is not reproduced; no further root cause is claimed.
+* **What the design guarantees instead.** The measured item is a plain `TmToolbarButton`, whose box is identical collapsed
+  and expanded, and the file input is never inside the collapse wrapper, so nothing about the input can change a measured
+  width. A `TmToolbarItem` around a label has no way to name "the input to open" for its More entry, which is why the old
+  Import JSON stayed `Pinned`; `TmToolbarFileButton` gives the menu entry exactly that link (`acquire(inputId, entryId)`).
+* **Regression net.** `ToolbarFileButtonE2ETests.Wireframe_MoreTrigger_SettlesAtEveryWidth` asserts at most one layout
+  change per width and a still trigger for the last second; the Playwright click on the trigger uses a 5 s budget in the
+  import specs.
 ## PreserveFocus: buttons that do not steal the editor's focus
 
 A formatting toolbar button normally takes focus on a pointer press, collapsing the editor's text

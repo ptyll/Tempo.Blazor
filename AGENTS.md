@@ -179,7 +179,7 @@ managed hosts instead, start the four apps above and set
 | Scheduler | `TmScheduler` with multiple views (Month, Week, Day, Timeline, Agenda) |
 | Tags | `TmTagPicker` |
 | Timeline | `TmTimeline` |
-| Toolbar | `TmToolbar`, `TmToolbarButton`, `TmToolbarDivider` |
+| Toolbar | `TmToolbar`, `TmToolbarButton`, `TmToolbarFileButton`, `TmToolbarDivider` |
 | TreeView | `TmTreeView` |
 | Workflow | `TmStepper`, `TmWorkflowDesignerCanvas`, `TmWorkflowToolbox`, `TmWorkflowPropertiesPanel`, `TmWorkflowMinimap` |
 

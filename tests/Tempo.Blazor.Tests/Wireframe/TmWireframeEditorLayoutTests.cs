@@ -447,7 +447,7 @@ public class TmWireframeEditorLayoutTests : LocalizationTestBase
 
         // Dropdown menus (Align, Distribute, Export, Import). Align / Distribute need a multi selection.
         cut.FindAll("[data-testid='wd-export'] button.tm-dropdown-trigger").Should().HaveCount(1);
-        cut.Find("[data-testid='wd-import'] input[type='file']").Should().NotBeNull();
+        cut.Find("[data-testid='wd-import-input'][type='file']").Should().NotBeNull();
         var doc = cut.FindComponent<TmWireframeDesignerCanvas>().Instance.Document!;
         for (var i = 0; i < 3; i++) doc.Elements.Add(WireframeDocumentExtensions.NewElement("TmButton", i * 200, 0));
         var ids = doc.Elements.Select(e => e.Id).ToArray();

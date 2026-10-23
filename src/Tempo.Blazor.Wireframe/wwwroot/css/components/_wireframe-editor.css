@@ -310,15 +310,6 @@
   overflow-y: auto;
 }
 
-/* Import: a label around the hidden file input, styled like a quiet toolbar button. */
-.tm-wd-editor__import {
-  position: relative;
-  min-height: var(--tm-wd-btn-size);
-}
-
-.tm-wd-editor__import:focus-within {
-  box-shadow: var(--tm-focus-ring);
-}
 
 .tm-wd-editor__title {
   height: var(--tm-wd-btn-size);
@@ -512,17 +503,6 @@
   background: var(--tm-wd-border);
 }
 
-/* ── Import file input (hidden, triggered via label) ── */
-
-.tm-wd-editor__file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  pointer-events: none;
-}
 
 /* ── Import error banner ── */
 
@@ -2512,7 +2492,6 @@
   .tm-wd-editor .tm-toolbar-btn,
   .tm-wd-editor .tm-toolbar-more,
   .tm-wd-editor__export .tm-dropdown-trigger,
-  .tm-wd-editor__import,
   .tm-wd-editor__title,
   .tm-wd-toolbox__search-input,
   .tm-wd-toolbox__filter-btn,

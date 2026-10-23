@@ -156,6 +156,23 @@
   visibility: hidden;
 }
 
+/* TmToolbarFileButton: the hidden <input type="file"> beside the button. It is visually hidden but stays rendered and
+   focus-less (not display:none: input.click() must open the chooser in every engine, WebKit included) and it is taken
+   out of flow, so it adds no flex gap and tm-toolbar.js skips it as an absolutely positioned child. It is a sibling of
+   the button, OUTSIDE the .tm-toolbar-item--collapsed wrapper: a collapse/expand never remounts it. */
+.tm-toolbar-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 /* The More trigger shares the button look. */
 .tm-toolbar-more {
   display: inline-flex; align-items: center; justify-content: center;

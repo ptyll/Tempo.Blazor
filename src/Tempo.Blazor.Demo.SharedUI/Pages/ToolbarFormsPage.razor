@@ -345,6 +345,49 @@
             </div>
         </div>
 
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-file-button-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_FileButtonTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_FileButtonDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                @* TmToolbarFileButton (decision TOOLBAR-FILE-BUTTON): a Secondary button that leaves the bar into More like any other,
+                   and whose More entry opens the SAME hidden file input - so the bar can be narrowed without losing the import. *@
+                @foreach (var width in _fileButtonWidths)
+                {
+                    <div style="width: @(width)px; max-width: 100%;" data-testid="@($"toolbar-file-button-host-{width}")">
+                        <TmToolbar Overflow="ToolbarOverflow.Menu"
+                                   Labels="ToolbarLabels.IconsWithText"
+                                   AriaLabel="@Loc["TmToolbarDemo_FileButtonTitle"]"
+                                   data-testid="@($"toolbar-file-button-{width}")">
+                            <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                            <TmToolbarFileButton Icon="@IconNames.Upload" Text="@Loc["TmToolbarDemo_ImportJson"]" Tooltip="@Loc["TmToolbarDemo_ImportJson"]"
+                                                 Accept=".json" Priority="ToolbarButtonPriority.Secondary"
+                                                 OnChange="OnDemoFileChosen" DataTestId="@($"toolbar-file-button-import-{width}")" />
+                            <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                            <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                        </TmToolbar>
+                    </div>
+                }
+                <div style="width: 300px; max-width: 100%;" data-testid="toolbar-file-button-disabled-host">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_FileButtonDisabled"]"
+                               data-testid="toolbar-file-button-disabled">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                        <TmToolbarFileButton Icon="@IconNames.Upload" Text="@Loc["TmToolbarDemo_ImportJson"]" Accept=".json"
+                                             Priority="ToolbarButtonPriority.OverflowOnly" Disabled="true"
+                                             OnChange="OnDemoFileChosen" DataTestId="toolbar-file-button-import-disabled" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.OverflowOnly" />
+                    </TmToolbar>
+                </div>
+                @if (_fileButtonResult is not null)
+                {
+                    <p class="text-sm text-slate-600 dark:text-slate-400" role="status" data-testid="toolbar-file-button-result">@_fileButtonResult</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="toolbar-file-button-count">@string.Format(Loc["TmToolbarDemo_FileButtonChanges"], _fileButtonChanges)</p>
+                }
+            </div>
+        </div>
         <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-shrink-card">
             <div class="p-4 border-b border-slate-200 dark:border-slate-700">
                 <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ShrinkTitle"]</h3>
@@ -543,6 +586,9 @@
     private string? _preserveFocusLog;
     private string _preserveFocusSelection = "–";
     private static readonly int[] _toolbarWidths = [1100, 380, 300];
+    private static readonly int[] _fileButtonWidths = [520, 300];
+    private string? _fileButtonResult;
+    private int _fileButtonChanges;
 
     // F14/C1: the MenuItems lists are compared STRUCTURALLY by the item's change snapshot — rebuild
     // them only when the selection actually changes, never per render.
@@ -560,6 +606,28 @@
         new SelectOption<string>("36", "36"),
     };
 
+    // TmToolbarFileButton demo: read the chosen JSON (5 MB cap) and report what arrived, or why it was refused - the
+    // edge cases (invalid JSON, an oversized file) are shown to the user instead of throwing.
+    private async Task OnDemoFileChosen(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        _fileButtonChanges++;
+        try
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            using var document = System.Text.Json.JsonDocument.Parse(await reader.ReadToEndAsync());
+            _fileButtonResult = string.Format(Loc["TmToolbarDemo_FileButtonLoaded"], file.Name, document.RootElement.ValueKind);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            _fileButtonResult = string.Format(Loc["TmToolbarDemo_FileButtonInvalidJson"], file.Name);
+        }
+        catch (IOException ex)
+        {
+            _fileButtonResult = string.Format(Loc["TmToolbarDemo_FileButtonTooLarge"], file.Name, ex.Message);
+        }
+    }
     protected override void OnInitialized()
     {
         _preserveText = Loc["TmToolbarDemo_PreserveFocusSample"];

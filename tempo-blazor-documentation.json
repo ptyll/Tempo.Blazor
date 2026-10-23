@@ -26368,6 +26368,97 @@
       ]
     },
     {
+      "itemName": "TmToolbarFileButton",
+      "kind": "Component",
+      "category": "Toolbar",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "A toolbar button that opens a file chooser (Import JSON, Attach file...). On the bar it is a TmToolbarButton - the same classes, labels, Priority and overflow rank; in the TmToolbar \"More\" menu it is an ordinary entry whose activation opens the SAME hidden file input. The input is a sibling of the button, outside the collapse wrapper, so collapsing or expanding the button never remounts it (the remount of an InputFile inside a collapsing wrapper is what made the toolbar unstable). The chooser is opened by a native document-level click listener, so input.click() runs inside the browser's own click event (WebKit refuses a chooser opened after a Blazor round-trip). It is a native button: Enter and Space are the browser's, nothing is emulated. A cancelled chooser raises no OnChange; choosing the same file again does (the input is cleared before every open).",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmToolbarFileButton.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Microsoft.AspNetCore.Components.Forms",
+        "@using Tempo.Blazor.Components.Toolbar"
+      ],
+      "parameters": [
+        {
+          "name": "Accept",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accept attribute of the file chooser: a comma-separated list of extensions and / or MIME types. It filters the chooser only - the host still validates what it reads.",
+          "example": "Accept=\".json,.wireframe.json\""
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class for the button element."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, the button, its \"More\" entry and the file input are disabled.",
+          "default": "false"
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Icon name from IconNames. Displayed before the text."
+        },
+        {
+          "name": "Multiple",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Lets the user choose more than one file in one go.",
+          "default": "false"
+        },
+        {
+          "name": "OnChange",
+          "type": "EventCallback<InputFileChangeEventArgs>",
+          "isRequired": false,
+          "description": "Raised when the user has chosen at least one file. A cancelled chooser raises nothing. Read the file inside the handler: the selection is dropped the next time the chooser opens.",
+          "example": "OnChange=\"@ImportAsync\""
+        },
+        {
+          "name": "Priority",
+          "type": "ToolbarButtonPriority",
+          "isRequired": true,
+          "description": "How important the button is when its TmToolbar runs out of room (Menu). Secondary leaves the bar before Primary; OverflowOnly lives only in the \"More\" menu; Pinned never leaves the bar.",
+          "default": "Primary"
+        },
+        {
+          "name": "Text",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Button label. Omit for an icon-only button (then Tooltip is the accessible name)."
+        },
+        {
+          "name": "Tooltip",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Tooltip text shown as the native title attribute; the accessible name of an icon button."
+        }
+      ],
+      "cssClasses": [
+        "tm-toolbar-btn",
+        "tm-toolbar-btn-text",
+        "tm-toolbar-btn--icon-only",
+        "tm-toolbar-file-input"
+      ],
+      "examples": [
+        {
+          "title": "Import JSON that moves into More first",
+          "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\">\n    <TmToolbarButton Icon=\"@IconNames.Save\" Text=\"Save\" />\n    <TmToolbarFileButton Icon=\"@IconNames.Upload\" Text=\"Import JSON\" Accept=\".json\"\n                         Priority=\"ToolbarButtonPriority.Secondary\" OnChange=\"@ImportAsync\" />\n</TmToolbar>\n\n@code {\n    private async Task ImportAsync(InputFileChangeEventArgs e)\n    {\n        await using var stream = e.File.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);\n        using var reader = new StreamReader(stream);\n        var json = await reader.ReadToEndAsync();\n    }\n}"
+        },
+        {
+          "title": "Icon-only file button that exists only in More",
+          "code": "<TmToolbarFileButton Icon=\"@IconNames.Paperclip\" Tooltip=\"Attach files\" Multiple=\"true\"\n                     Priority=\"ToolbarButtonPriority.OverflowOnly\" OnChange=\"@AttachAsync\" />"
+        }
+      ]
+    },
+    {
       "itemName": "TmToolbarGroup",
       "kind": "Component",
       "category": "Toolbar",
@@ -28024,6 +28115,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toolbar-file-button.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toolbar.test.mjs",
       "kind": "JavaScript"
     },
@@ -28037,11 +28132,11 @@
     }
   ],
   "summary": {
-    "itemCount": 385,
-    "manualItemCount": 385,
-    "generatedItemCount": 377,
+    "itemCount": 386,
+    "manualItemCount": 386,
+    "generatedItemCount": 378,
     "generatedOnlyItemCount": 0,
-    "componentCount": 203,
+    "componentCount": 204,
     "publicApiTypeCount": 174
   }
 }

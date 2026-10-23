@@ -137,7 +137,7 @@ preventDefault. Keys inside an open row menu do not reach the row shortcuts. Mov
 | Region | Content |
 |---|---|
 | `header` (opt-in) | `HeaderStart` · built-in title (or the `Title` slot) · `HeaderActions`. Rendered when `ShowHeader` is set or any slot is supplied. The editor has **no built-in Save or Open** — the host supplies them (the demo puts "Open…" in `HeaderActions`). Without a header the title sits at the start of the toolbar row (today's look). |
-| `toolbar` | One `TmToolbar` (`Overflow=Menu`, `Labels=Auto`). Groups carry `role="group"` + `aria-label` and `data-tm-group`: `tools` (select / pan / connector), `history`, `arrange` (backward / forward / lock), `group`, `align` (Align and Distribute dropdowns), `snap`, `format` and `view` ("More" only), `zoom`, `file` (**Export** — pinned, primary — and Import). |
+| `toolbar` | One `TmToolbar` (`Overflow=Menu`, `Labels=Auto`). Groups carry `role="group"` + `aria-label` and `data-tm-group`: `tools` (select / pan / connector), `history`, `arrange` (backward / forward / lock), `group`, `align` (Align and Distribute dropdowns), `snap`, `format` and `view` ("More" only), `zoom`, `file` (**Export** — pinned, primary — and **Import JSON**, a `Secondary` `TmToolbarFileButton`). |
 | `left` | `TmWireframeSidePanel` (internal): tabs **Components** (the toolbox) / **Pages** (only with `PageNavigation=Panel`) / **Layers**. `ShowToolbox` and `ShowPropertiesPanel` keep their names: they gate the Components tab and the inspector + Layers tab. |
 | `canvas` | page tabs (`PageNavigation=Tabs`), import banner, rulers, the canvas, the context menu and the minimap card. |
 | `right` | `TmWireframePropertiesPanel` (the inspector). |
@@ -146,13 +146,12 @@ preventDefault. Keys inside an open row menu do not reach the row shortcuts. Mov
 hosts and tests key off the attribute, never off where a group sits (a group moves between the bar and the "More" menu as the width
 changes), and the set only ever grows by an additive, documented entry. If presets are ever added they reuse the DiagramEditor names
 (`ToolbarPreset` / `ToolbarGroups`) rather than more `Show*` booleans. The toolbar wrapper carries no `role` / `aria-label` of its own:
-the `TmToolbar` inside carries the accessible name. **Export** and **Import** stay `Pinned` (the toolbar only measures a
-collapsible item once it has a menu representation; a file picker has none, so Import never leaves the bar).
+the `TmToolbar` inside carries the accessible name. **Export** stays `Pinned`; **Import JSON** is a `Secondary` `TmToolbarFileButton` (decision TOOLBAR-FILE-BUTTON): it is the LAST Secondary item, so it is the first command to leave the bar into "More" - before the arrange actions - and its "More" entry opens the same file chooser (`data-testid="wd-import"` stays on the button, the input is `wd-import-input`).
 
 **"More" menu.** The format painter (Copy style / Paste style / Paste size — also in the inspector's *Format painter* section), the
 Read-only toggle (absent while the host pins `ReadOnly="true"`), Show rulers and the Components / Properties panel toggles are
 checkable or plain entries of the toolbar's "More" menu (`OverflowOnly`); the bar commands collapse into it by `Priority`
-(Secondary first, the later one first; Export, Import and the zoom value are `Pinned`). The editor caps the menu to the viewport and scrolls it.
+(Secondary first, the later one first; Export and the zoom value are `Pinned`; Import JSON is Secondary). The editor caps the menu to the viewport and scrolls it.
 Every former command is still reachable: toolbar, "More", inspector or context menu (guarded by `AllCommands_Reachable`).
 
 **Pages.** `PageNavigation="Tabs"` (default) keeps the horizontal page tabs. `PageNavigation="Panel"` adds the **Pages** tab:

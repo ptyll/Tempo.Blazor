@@ -45,6 +45,20 @@ public class ToolbarDocumentationTests
     }
 
     [Fact]
+    public void ToolbarDoc_DocumentsTheFileButtonContract()
+    {
+        var doc = Read("docs", "toolbar.md");
+
+        // Decision TOOLBAR-FILE-BUTTON.
+        doc.Should().Contain("`TmToolbarFileButton`").And.Contain("File buttons");
+        doc.Should().Contain("data-tm-file-trigger").And.Contain("native").And.Contain("capture-phase");
+        doc.Should().Contain("outside the collapse wrapper").And.Contain("never remounts");
+        doc.Should().Contain("No key emulation").And.Contain("raises no `OnChange`");
+        doc.Should().Contain("Stability analysis");
+        doc.Should().Contain("Wireframe_MoreTrigger_SettlesAtEveryWidth");
+    }
+
+    [Fact]
     public void ToolbarDoc_DocumentsTheItemTabStopContract()
     {
         var doc = Read("docs", "toolbar.md");

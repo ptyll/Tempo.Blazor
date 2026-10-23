@@ -89,6 +89,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("command-palette", "Command palette", "Searches and runs commands.", "quick command", "paleta prikazu", "TmCommandPalette"),
         R("keyboard-shortcuts", "Keyboard shortcuts", "Displays available keyboard commands.", "shortcuts help", "klavesove zkratky", "TmKeyboardShortcutsHelp"),
         R("toolbar", "Toolbar", "Groups compact command buttons.", "tool bar", "lista nastroju", "TmToolbar", "TmToolbarButton", "TmToolbarDivider", "TmToolbarGroup", "TmFormActionBar"),
+        R("toolbar-button", "Toolbar button", "A command button inside a toolbar that can move into the toolbar overflow menu; the file-choosing variant opens a file chooser.", "toolbar file button", "import button", "tlacitko nastroju", "TmToolbarFileButton"),
         R("form-section", "Form section", "Groups related form fields.", "field group", "sekce formulare", "TmFormSection", "TmFormRow"),
         R("form-field", "Form field", "Wraps a labeled input and help or validation state.", "field wrapper", "pole formulare", "TmFormField", "TmValidatedField"),
         R("inline-edit", "Inline edit", "Edits a value directly in its display position.", "editable text", "uprava na miste", "TmInlineEdit"),

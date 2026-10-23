@@ -1,0 +1,127 @@
+@namespace Tempo.Blazor.Components.Toolbar
+@inherits Tempo.Blazor.Components.TmComponentBase
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* Decision TOOLBAR-FILE-BUTTON: a toolbar button that opens a file chooser. The visible control is a plain
+   TmToolbarButton (the same classes, labels, priority, rank, collapse and "More" entry as any other button - nothing is
+   re-implemented here); the hidden <input type="file"> is its SIBLING, OUTSIDE the collapse wrapper, so a collapse /
+   expand of the button never remounts the input (the remount of an InputFile inside a collapsing wrapper is what made
+   the toolbar unstable in the earlier label-based attempt).
+
+   The chooser is opened by a NATIVE document-level click listener (TmToolbarFileButton.razor.js), keyed by the input id
+   (the bar button carries it as data-tm-file-trigger) and by the button's "More" entry id (data-action-id). input.click()
+   therefore runs synchronously inside the browser's own click event - with no Blazor round-trip in the gesture chain,
+   which WebKit would otherwise refuse. There is deliberately NO @onclick here and NO key emulation: the button is a
+   native <button>, the browser turns Enter / Space into the click, and the menu entry is a native button too. *@
+<TmToolbarButton @ref="_button"
+                 Text="@Text"
+                 Icon="@Icon"
+                 Tooltip="@Tooltip"
+                 Priority="@Priority"
+                 Disabled="@Disabled"
+                 Class="@Class"
+                 data-testid="@ButtonTestId"
+                 data-tm-file-trigger="@_inputId"
+                 @attributes="AdditionalAttributes" />
+<InputFile id="@_inputId"
+           class="tm-toolbar-file-input"
+           OnChange="HandleChangeAsync"
+           accept="@Accept"
+           multiple="@Multiple"
+           disabled="@Disabled"
+           tabindex="-1"
+           aria-hidden="true"
+           data-testid="@InputTestId" />
+
+@code {
+    private const string ModulePath = "./_content/Tempo.Blazor/Components/Toolbar/TmToolbarFileButton.razor.js";
+
+    private readonly string _inputId = $"tm-tfb-{Guid.NewGuid():N}";
+    private TmToolbarButton? _button;
+    private Helpers.LazyJsModule? _module;
+    private string? _acquiredEntryId;
+    private bool _disposed;
+
+    /// <summary>Button label. Omit for an icon-only button (then <see cref="Tooltip"/> is the accessible name).</summary>
+    [Parameter] public string? Text { get; set; }
+
+    /// <summary>Icon name from IconNames. Displayed before the text.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Tooltip text shown as the native title attribute; the accessible name of an icon button.</summary>
+    [Parameter] public string? Tooltip { get; set; }
+
+    /// <summary>
+    /// The <c>accept</c> attribute of the file chooser: a comma-separated list of extensions and / or MIME types
+    /// (<c>.json,.wireframe.json</c>, <c>image/*</c>). It filters the chooser only - the host still validates what it reads.
+    /// </summary>
+    [Parameter] public string? Accept { get; set; }
+
+    /// <summary>Lets the user choose more than one file in one go. Default <see langword="false"/>.</summary>
+    [Parameter] public bool Multiple { get; set; }
+
+    /// <summary>
+    /// Raised when the user has chosen at least one file. A cancelled chooser is NOT a change and raises nothing; choosing
+    /// the same file again does (the input is cleared before every open). Read the file inside the handler: the selection
+    /// is dropped the next time the chooser opens.
+    /// </summary>
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnChange { get; set; }
+
+    /// <summary>
+    /// How important the button is when its <see cref="TmToolbar"/> runs out of room
+    /// (<see cref="ToolbarOverflow.Menu"/>); see <see cref="ToolbarButtonPriority"/>. In the "More" menu the button is an
+    /// ordinary entry that opens the same chooser.
+    /// </summary>
+    [Parameter] public ToolbarButtonPriority Priority { get; set; }
+
+    /// <summary>When true, the button, its "More" entry and the file input are disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional CSS class for the button element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the button element (the visible control).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The button's <c>data-testid</c>: <see cref="TmComponentBase.DataTestId"/>, else the prefixed default.</summary>
+    private string? ButtonTestId => RootTestId("toolbar-file-button");
+
+    /// <summary>The hidden input's <c>data-testid</c>: the button's with an <c>-input</c> suffix.</summary>
+    private string? InputTestId => $"{ButtonTestId}-input";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed || _button is null) return;
+
+        // The More entry id is the nested button's MenuId, known once it has rendered. Re-acquire only when it changed.
+        var entryId = _button.MenuId;
+        if (string.Equals(entryId, _acquiredEntryId, StringComparison.Ordinal)) return;
+        _acquiredEntryId = entryId;
+        _module ??= new Helpers.LazyJsModule(JS, ModulePath);
+        await _module.TryInvokeVoidAsync("acquire", _inputId, entryId);
+    }
+
+    private async Task HandleChangeAsync(InputFileChangeEventArgs e)
+    {
+        // A cancelled chooser (or a cleared input) is not an import.
+        if (e.FileCount == 0) return;
+        await OnChange.InvokeAsync(e);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (_module is not null)
+        {
+            if (_acquiredEntryId is not null)
+            {
+                await _module.TryInvokeVoidAsync("release", _inputId);
+            }
+
+            await _module.DisposeAsync();
+        }
+    }
+}

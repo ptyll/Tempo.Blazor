@@ -363,9 +363,15 @@ public sealed class WireframePhase2ThemeE2ETests : WasmTestBase
             ? (dark ? "rgb(129, 140, 248)" : "rgb(79, 70, 229)")
             : (dark ? "rgb(96, 165, 250)" : "rgb(37, 99, 235)");
 
-        // The active tree node ("All documents" is not active after navigating; "Designs" is) takes the primary.
-        var color = await page.Locator(".tm-dod-tree-node--active").First.EvaluateAsync<string>("el => getComputedStyle(el).color");
-        Assert.AreEqual(expectedPrimary, color, "the active folder is --tm-color-primary (no hard-coded indigo)");
+        // The active tree node ("All documents" is not active after navigating; "Designs" is) paints its ink with --tm-color-primary-text
+        // (phase 3 of plan 643bba06: --tm-color-primary measured 4.19:1 on the subtle wash in indigo dark) - resolved from the live theme,
+        // so a hard-coded colour still fails.
+        // The token is resolved INSIDE the dialog (the theme scope may sit below <body>) with a probe next to the active node.
+        var inkProbe = await page.Locator(".tm-dod-tree-node--active").First.EvaluateAsync<string[]>(
+            "el => { const p = document.createElement('i'); p.style.color = 'var(--tm-color-primary-text)'; el.parentElement.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return [c, getComputedStyle(el).color]; }");
+        var expectedInk = inkProbe[0];
+        var color = inkProbe[1];
+        Assert.AreEqual(expectedInk, color, "the active folder reads --tm-color-primary-text (no hard-coded colour)");
 
         var rowBar = await page.Locator(".tm-dod-row--selected").First.EvaluateAsync<string>("el => getComputedStyle(el).boxShadow");
         StringAssert.Contains(rowBar, expectedPrimary, "the selected row carries the primary marker");

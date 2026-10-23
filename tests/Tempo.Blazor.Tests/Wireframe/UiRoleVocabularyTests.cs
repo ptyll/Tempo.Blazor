@@ -84,7 +84,8 @@ public sealed class UiRoleVocabularyTests
         var vocabulary = new UiRoleVocabulary([new BuiltInUiRoleVocabularySource()]);
 
         vocabulary.GetAll().Should().HaveCountGreaterThanOrEqualTo(60);
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(120);
+        // A sanity bound against runaway growth, not a contract: raised 120 -> 130 for `toolbar-button` (decision TOOLBAR-FILE-BUTTON).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(130);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");
@@ -102,6 +103,7 @@ public sealed class UiRoleVocabularyTests
         vocabulary.Find("TmSegmentedControl")!.Slug.Should().Be("segmented-control");
         vocabulary.Find("TmFileUpload")!.Slug.Should().Be("file-drop");
         vocabulary.Find("TmSwitch")!.Slug.Should().Be("toggle");
+        vocabulary.Find("TmToolbarFileButton")!.Slug.Should().Be("toolbar-button");
     }
 
     private sealed class TestVocabularySource(

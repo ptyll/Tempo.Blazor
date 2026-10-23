@@ -344,14 +344,17 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Tablet_Export_StaysPinned_AndImportIsOnTheBar()
+    public void Tablet_Export_StaysPinned_AndImportIsASecondaryFileButton()
     {
         var cut = RenderEditor();
 
         cut.Find("[data-testid='wd-export']").ParentElement!.GetAttribute("data-pin").Should().Be("never");
-        cut.Find("[data-testid='wd-import'] input[type='file']").Should().NotBeNull();
+        // Decision TOOLBAR-FILE-BUTTON: Import JSON is a Secondary TmToolbarFileButton - it may leave the bar into "More".
+        var import = cut.Find("button[data-testid='wd-import']");
+        import.GetAttribute("data-pin").Should().Be("auto");
+        import.GetAttribute("data-rank").Should().Be("1");
+        cut.Find("input[type='file'][data-testid='wd-import-input']").GetAttribute("accept").Should().Be(".json,.wireframe.json");
     }
-
     [Fact]
     public void Tablet_AllCommands_StayReachable()
     {

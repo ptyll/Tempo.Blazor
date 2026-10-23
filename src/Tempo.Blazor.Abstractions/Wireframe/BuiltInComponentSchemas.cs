@@ -179,6 +179,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmDockManager"] = ["dashboard", "section"],
             ["TmToolbar"] = ["toolbar"],
             ["TmToolbarButton"] = ["toolbar", "button"],
+            ["TmToolbarFileButton"] = ["toolbar-button"],
             ["TmToolbarDivider"] = ["toolbar"],
             ["TmToolbarGroup"] = ["toolbar"],
             ["TmToolbarItem"] = ["toolbar"],
@@ -1693,6 +1694,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ]
         };
 
+        // Decision TOOLBAR-FILE-BUTTON: a toolbar button that opens a file chooser (Import JSON...). On the bar it is drawn like a
+        // toolbar button with an upload glyph; in the More menu it is an ordinary entry that opens the same chooser.
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmToolbarFileButton", Category = "Toolbar", DisplayName = "Toolbar File Button",
+            DefaultWidth = 110, DefaultHeight = 32,
+            Props =
+            [
+                P("label",    "Label",    PropType.String, "Import", cat: "Content"),
+                P("icon",     "Icon",     PropType.Icon,   "upload", cat: "Content"),
+                P("accept",   "Accepted files", PropType.String, ".json", cat: "Behavior"),
+                P("multiple", "Multiple files", PropType.Bool, false, cat: "Behavior"),
+                P("disabled", "Disabled", PropType.Bool,   false,    cat: "Behavior"),
+            ]
+        };
         yield return new WireframeComponentSchema
         {
             Type = "TmToolbarGroup", Category = "Toolbar", DisplayName = "Toolbar Group",

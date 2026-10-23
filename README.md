@@ -435,6 +435,7 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 |-----------|-------------|
 | `TmToolbar` | Action toolbar container |
 | `TmToolbarButton` | Button for use inside `TmToolbar` |
+| `TmToolbarFileButton` | `TmToolbar` button that opens a file chooser; can move into the "More" menu |
 | `TmToolbarDivider` | Visual separator inside `TmToolbar` |
 
 ### Dropdowns
