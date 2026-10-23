@@ -8,8 +8,12 @@
 #
 # Output (under -ReportDir, default TestResults/e2e-full-<timestamp>):
 #   shard-<n>.trx       one TRX per shard
-#   summary.json        totals, per-shard results, every failure (+ the serial-rerun verdict), host restarts
-#   summary.md          the same as a table
+#   summary.json        totals, per-shard results, aborted shards, every failure (+ the serial-rerun verdict), host restarts
+#   summary.md          the same as a table (incl. an Aborted column)
+#
+# The run is RED (exit 1) for: a failed test that is not proven a contention flake, a shard that produced no TRX,
+# and an ABORTED shard (crashed / killed test process: non-zero exit with no failed test, or TRX outcome
+# Aborted/Error). A shard whose filter matched nothing (0 tests) is an empty shard, not an abort.
 #
 # Use scripts/run-e2e-smoke.ps1 as the fast PR gate. See docs/e2e-test-lanes.md.
 param(
@@ -81,13 +85,28 @@ foreach ($shard in $plan) {
     $reaped = Clear-E2EOrphanedHosts -Reason "after shard $($shard.Index)"
 
     $summary = Read-E2ETrx -Path (Join-Path $ReportDir $trxName)
+
+    # Empty shard: the filter selected no test (TRX with 0 results, or no TRX and the MTP "zero tests ran" exit code 8).
+    # Not a crash, so neither aborted nor "without results".
+    $empty = ($summary -and $summary.Total -eq 0) -or (-not $summary -and $exit -eq 8)
+    # Aborted: non-zero exit although no test failed (the process died / was killed / MTP errored), or the TRX itself
+    # says Aborted/Error. A normal red shard (Failed > 0) is NOT aborted - its failures are reported individually.
+    $aborted = (-not $empty) -and $summary -and (
+        (($exit -ne 0) -and ($summary.Failed -eq 0)) -or ($summary.Outcome -in @('Aborted', 'Error')))
+    if ($empty) { Write-Host "[e2e] shard $($shard.Index) is empty (the filter matched no tests)." }
+    if ($aborted) { Write-Host "[e2e] shard $($shard.Index) ABORTED (exit $exit, outcome '$($summary.Outcome)') - the run will fail." }
+
     $shardResults.Add([pscustomobject]@{
             Shard       = $shard.Index
             Classes     = $shard.Classes.Count
             ExitCode    = $exit
             Seconds     = [int]$shardWatch.Elapsed.TotalSeconds
             ReapedHosts = $reaped
-            NoTrx       = ($null -eq $summary)   # the process died before it wrote results: the whole shard is unclassified
+            Empty       = [bool]$empty
+            Aborted     = [bool]$aborted
+            Outcome     = if ($summary) { $summary.Outcome } else { '' }
+            NotExecuted = if ($summary) { $summary.NotExecuted } else { 0 }
+            NoTrx       = ($null -eq $summary) -and (-not $empty)   # the process died before it wrote results: the whole shard is unclassified
             Total       = if ($summary) { $summary.Total } else { 0 }
             Passed      = if ($summary) { $summary.Passed } else { 0 }
             Failed      = if ($summary) { $summary.Failed } else { 0 }
@@ -101,12 +120,32 @@ $verdicts = @{}
 $allFailures = @($shardResults | ForEach-Object { $_.Failures } | Where-Object { $_ })
 if ($RerunFailed -and $allFailures.Count -gt 0) {
     Write-Host "[e2e] re-running $($allFailures.Count) failed test(s) serially..."
+    # One rerun per EXACT test (class + method from the TRX, FullyQualifiedName=<class>.<method>); data-row failures of the
+    # same method share it. A failure whose identity could not be resolved is left unclassified (never a fuzzy match).
+    $byFqn = @{}
     foreach ($f in $allFailures) {
-        [void](Clear-E2EOrphanedHosts -Reason 'before a serial re-run')
-        $short = ($f.Test -split '\(')[0]
-        & dotnet test $project --no-build --filter "FullyQualifiedName~.$short" `
-            --results-directory $ReportDir --logger "trx;LogFileName=rerun-$($short -replace '[^\w]', '_').trx" --logger 'console;verbosity=minimal'
-        $verdicts[$f.Test] = if ($LASTEXITCODE -eq 0) { 'contention-flake (passed serially)' } else { 'deterministic (red serially)' }
+        if (-not $f.Fqn) { $verdicts[$f.Test] = 'unclassified (test identity not found in the TRX)'; continue }
+        if (-not $byFqn.ContainsKey($f.Fqn)) {
+            $rerunTrx = "rerun-$($f.Fqn -replace '[^\w]', '_').trx"
+            [void](Clear-E2EOrphanedHosts -Reason 'before a serial re-run')
+            & dotnet test $project --no-build --filter "FullyQualifiedName=$($f.Fqn)" `
+                --results-directory $ReportDir --logger "trx;LogFileName=$rerunTrx" --logger 'console;verbosity=minimal'
+            $rerun = Read-E2ETrx -Path (Join-Path $ReportDir $rerunTrx)
+            # Flake only when the rerun actually ran the test (Total >= 1) and nothing failed.
+            $byFqn[$f.Fqn] = if (-not $rerun -or $rerun.Total -lt 1) {
+                'unclassified (rerun matched 0 tests)'
+            }
+            elseif ($rerun.Failed -ge 1) {
+                'deterministic (red serially)'
+            }
+            elseif ($rerun.Outcome -in @('Aborted', 'Error')) {
+                'deterministic (rerun aborted)'
+            }
+            else {
+                'contention-flake (passed serially)'
+            }
+        }
+        $verdicts[$f.Test] = $byFqn[$f.Fqn]
     }
     [void](Clear-E2EOrphanedHosts -Reason 'after the re-runs')
 }
@@ -118,6 +157,8 @@ $totals = [pscustomobject]@{
     Failed       = ($shardResults | Measure-Object Failed -Sum).Sum
     Skipped      = ($shardResults | Measure-Object Skipped -Sum).Sum
     ShardsWithoutResults = @($shardResults | Where-Object NoTrx).Count
+    ShardsAborted = @($shardResults | Where-Object Aborted).Count
+    ShardsEmpty  = @($shardResults | Where-Object Empty).Count
     HostRestarts = (Get-E2EHostRestartCount -RepoRoot $repoRoot) - $restartsBefore
     Minutes      = [Math]::Round(((Get-Date) - $started).TotalMinutes, 1)
 }
@@ -128,6 +169,7 @@ $report = [pscustomobject]@{
     ShardCount  = $plan.Count
     Totals      = $totals
     Shards      = $shardResults
+    AbortedShards = @($shardResults | Where-Object Aborted | ForEach-Object { $_.Shard })
     Failures    = @($allFailures | ForEach-Object {
             [pscustomobject]@{ Test = $_.Test; Message = $_.Message; Verdict = $verdicts[$_.Test] }
         })
@@ -137,12 +179,17 @@ $report | ConvertTo-Json -Depth 8 | Set-Content -Path (Join-Path $ReportDir 'sum
 $md = [System.Text.StringBuilder]::new()
 [void]$md.AppendLine('# E2E full lane')
 [void]$md.AppendLine('')
-[void]$md.AppendLine(("Total {0} - passed {1} - failed {2} - skipped {3} - host restarts {4} - {5} min" -f $totals.Total, $totals.Passed, $totals.Failed, $totals.Skipped, $totals.HostRestarts, $totals.Minutes))
+[void]$md.AppendLine(("Total {0} - passed {1} - failed {2} - skipped {3} - aborted shards {4} - shards without results {5} - host restarts {6} - {7} min" -f $totals.Total, $totals.Passed, $totals.Failed, $totals.Skipped, $totals.ShardsAborted, $totals.ShardsWithoutResults, $totals.HostRestarts, $totals.Minutes))
 [void]$md.AppendLine('')
-[void]$md.AppendLine('| Shard | Classes | Tests | Passed | Failed | Exit | Seconds | Reaped hosts |')
-[void]$md.AppendLine('|---|---|---|---|---|---|---|---|')
+[void]$md.AppendLine('| Shard | Classes | Tests | Passed | Failed | Aborted | Exit | Seconds | Reaped hosts |')
+[void]$md.AppendLine('|---|---|---|---|---|---|---|---|---|')
 foreach ($s in $shardResults) {
-    [void]$md.AppendLine(("| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} |" -f $s.Shard, $s.Classes, $s.Total, $s.Passed, $s.Failed, $s.ExitCode, $s.Seconds, $s.ReapedHosts))
+    $abortedCell = if ($s.Aborted) { 'ABORTED' } elseif ($s.Empty) { 'empty' } elseif ($s.NoTrx) { 'no TRX' } else { '' }
+    [void]$md.AppendLine(("| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7} | {8} |" -f $s.Shard, $s.Classes, $s.Total, $s.Passed, $s.Failed, $abortedCell, $s.ExitCode, $s.Seconds, $s.ReapedHosts))
+}
+if ($report.AbortedShards.Count -gt 0) {
+    [void]$md.AppendLine('')
+    [void]$md.AppendLine(('Aborted shards (crashed or killed test process): {0}' -f ($report.AbortedShards -join ', ')))
 }
 if ($report.Failures.Count -gt 0) {
     [void]$md.AppendLine('')
@@ -157,7 +204,7 @@ Write-Host ''
 Write-Host $md.ToString()
 Write-Host "[e2e] report: $ReportDir"
 
-# Red = a failed test that is not proven a contention flake, or a shard that produced no results at all.
+# Red = a failed test that is not proven a contention flake, a shard that produced no results at all, or an aborted shard.
 $blocking = @($report.Failures | Where-Object { $_.Verdict -notlike 'contention-flake*' }).Count
-if ($blocking -gt 0 -or $totals.ShardsWithoutResults -gt 0) { exit 1 }
+if ($blocking -gt 0 -or $totals.ShardsWithoutResults -gt 0 -or $totals.ShardsAborted -gt 0) { exit 1 }
 exit 0

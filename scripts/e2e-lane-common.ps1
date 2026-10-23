@@ -18,10 +18,24 @@ function Clear-E2EOrphanedHosts {
       next shard would adopt a half-dead host (or fail with "address already in use"); a clean slate between
       shards is what makes one shard's crash unable to cascade into the next.
       Skipped when TM_E2E_SELF_HOST=false: then the operator owns the hosts and they must not be touched.
+
+      WINDOWS ONLY (Get-NetTCPConnection, Win32_Process, taskkill); on another OS it warns and does nothing.
+      It matches by the demo ports and by the command line of `dotnet`/`Tempo.Blazor.Demo*` processes, so it ALSO kills
+      a demo you started by hand for development (`dotnet run` / `dotnet watch` of Tempo.Blazor.Demo*, or anything
+      else listening on 5100/7106/5010/7107/7108) - do not run the lane scripts next to a dev session you want to keep.
+      -NoReap makes it a dry run: it only lists (and counts) what would be killed and kills nothing.
+      Returns the number of processes reaped (or, with -NoReap, found).
     #>
-    param([string]$Reason = 'between shards')
+    param(
+        [string]$Reason = 'between shards',
+        [switch]$NoReap
+    )
 
     if ($env:TM_E2E_SELF_HOST -eq 'false') { return 0 }
+    if ($env:OS -ne 'Windows_NT') {
+        Write-Warning 'Clear-E2EOrphanedHosts is Windows-only; skipping.'
+        return 0
+    }
 
     $victims = [System.Collections.Generic.HashSet[int]]::new()
 
@@ -35,6 +49,13 @@ function Clear-E2EOrphanedHosts {
     Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe' OR Name LIKE 'Tempo.Blazor.Demo%'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -match $demoProject -and $_.ProcessId -ne $PID } |
         ForEach-Object { [void]$victims.Add([int]$_.ProcessId) }
+
+    if ($NoReap) {
+        if ($victims.Count -gt 0) {
+            Write-Host "[e2e] -NoReap: $($victims.Count) demo host process(es) would be reaped ($Reason): $(@($victims) -join ', ')"
+        }
+        return $victims.Count
+    }
 
     foreach ($id in $victims) {
         if ($id -gt 4 -and $id -ne $PID) { Stop-E2EProcessTree -ProcessId $id }
@@ -134,24 +155,53 @@ function New-E2EClassFilter {
 }
 
 function Read-E2ETrx {
-    <# Summarises a TRX file into counts and the list of non-passing tests. #>
+    <#
+      Summarises a TRX file into counts, the run outcome and the list of failed tests.
+      Outcome     = ResultSummary/@outcome ('Completed', 'Failed', 'Aborted', 'Error', ...): a crashed/killed run is
+                    'Aborted'/'Error' even when no test result is red.
+      NotExecuted = ResultSummary/Counters/@notExecuted (tests that never ran).
+      Each failure carries the EXACT identity (ClassName + MethodName -> Fqn) joined from
+      UnitTestResult/@testId to UnitTest/@id -> TestMethod/@className + @name, so a rerun can address it with
+      FullyQualifiedName=<class>.<method> instead of a fuzzy name match.
+    #>
     param([Parameter(Mandatory)][string]$Path)
 
     if (-not (Test-Path $Path)) { return $null }
     [xml]$trx = Get-Content -Raw -Path $Path
     $ns = New-Object System.Xml.XmlNamespaceManager($trx.NameTable)
     $ns.AddNamespace('t', 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010')
+
+    $methodOf = @{}
+    foreach ($u in @($trx.SelectNodes('//t:TestDefinitions/t:UnitTest', $ns))) {
+        $tm = $u.SelectSingleNode('t:TestMethod', $ns)
+        if ($tm) { $methodOf[[string]$u.id] = $tm }
+    }
+
     $results = @($trx.SelectNodes('//t:UnitTestResult', $ns))
     $failed = @($results | Where-Object { $_.outcome -eq 'Failed' })
+
+    $summaryNode = $trx.SelectSingleNode('//t:ResultSummary', $ns)
+    $outcome = if ($summaryNode -and $summaryNode.outcome) { [string]$summaryNode.outcome } else { '' }
+    $notExecutedAttr = $trx.SelectSingleNode('//t:ResultSummary/t:Counters/@notExecuted', $ns)
+    $notExecuted = if ($notExecutedAttr) { [int]$notExecutedAttr.Value } else { 0 }
+
     [pscustomobject]@{
-        Total    = $results.Count
-        Passed   = @($results | Where-Object { $_.outcome -eq 'Passed' }).Count
-        Failed   = $failed.Count
-        Skipped  = @($results | Where-Object { $_.outcome -in @('NotExecuted', 'Inconclusive') }).Count
-        Failures = @($failed | ForEach-Object {
+        Outcome     = $outcome
+        Total       = $results.Count
+        Passed      = @($results | Where-Object { $_.outcome -eq 'Passed' }).Count
+        Failed      = $failed.Count
+        Skipped     = @($results | Where-Object { $_.outcome -in @('NotExecuted', 'Inconclusive') }).Count
+        NotExecuted = $notExecuted
+        Failures    = @($failed | ForEach-Object {
+                $tm = $methodOf[[string]$_.testId]
+                $className = if ($tm) { [string]$tm.className } else { '' }
+                $methodName = if ($tm) { [string]$tm.name } else { '' }
                 [pscustomobject]@{
-                    Test    = $_.testName
-                    Message = ($_.Output.ErrorInfo.Message | Out-String).Trim()
+                    Test       = $_.testName
+                    ClassName  = $className
+                    MethodName = $methodName
+                    Fqn        = if ($className -and $methodName) { "$className.$methodName" } else { '' }
+                    Message    = ($_.Output.ErrorInfo.Message | Out-String).Trim()
                 }
             })
     }

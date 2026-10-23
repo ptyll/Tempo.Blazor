@@ -5059,7 +5059,6 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [TestCategory("Performance")]
     public async Task BenchmarkPage_RunsCanvasBenchmark()
     {
         var page = await CreatePageAsync();
@@ -5080,7 +5079,6 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [TestCategory("Performance")]
     public async Task BenchmarkPage_ExposesPasteLatencyForCanvasAndCanvasJsEngine()
     {
         var page = await CreatePageAsync();

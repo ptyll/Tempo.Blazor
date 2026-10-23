@@ -135,11 +135,16 @@ public class ReadinessInfrastructureTests
 
     // ── recovery lives in the base, not in the specs ────────────────────────────────────────
 
-    // Matches the hand-rolled "WaitForAppReadyAsync … catch (TimeoutException) … ReloadAsync" recovery that used to
-    // be copy-pasted into individual specs (Email F8/F9/F10, Wireframe, Audit log, charts …). The retry belongs to
-    // PlaywrightTestBase.GotoAppReadyAsync.
+    // Matches the hand-rolled cold-boot recoveries that used to be copy-pasted into individual specs (Email F8/F9/F10,
+    // Wireframe, Audit log, charts …). The retry belongs to PlaywrightTestBase.GotoAppReadyAsync. Two shapes, checked
+    // only in files that call WaitForAppReadyAsync:
+    //   1. catch (TimeoutException | PlaywrightException | Exception …) { … ReloadAsync }   (reload-in-catch)
+    //   2. catch (TimeoutException | PlaywrightException | Exception …) when (… attempt …)  (attempt-loop retry)
+    private const string CaughtType = @"(?:System\.|Microsoft\.Playwright\.)?(?:Timeout|Playwright)?Exception";
+
     private static readonly Regex LocalRecovery = new(
-        @"catch\s*\((?:System\.|Microsoft\.Playwright\.)?(?:Timeout|Playwright)Exception[^)]*\)[^{]*\{[^}]*?ReloadAsync",
+        @"catch\s*\(\s*" + CaughtType + @"\b[^)]*\)[^{]*\{[^}]*?ReloadAsync"
+        + @"|catch\s*\(\s*" + CaughtType + @"\b[^)]*\)\s*when\s*\([^)]*\battempt\b",
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     [TestMethod]

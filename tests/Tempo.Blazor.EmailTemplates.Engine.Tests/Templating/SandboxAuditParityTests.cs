@@ -526,19 +526,25 @@ public class SandboxAuditParityTests
             LoopLimit = int.MaxValue,
         });
 
+        // The render runs on the thread pool and is awaited with a hard 30 s limit: a render that never stops
+        // (the very regression under test) would otherwise hang the test host for hours instead of failing, and
+        // an upper-bound assertion placed AFTER Render() could never be reached.
         var stopwatch = Stopwatch.StartNew();
-        var result = engine.Render(
+        var renderTask = Task.Run(() => engine.Render(
             "{{ for i in 1..2000000000 }}{{ x = i }}{{ end }}done",
-            new { });
+            new { }));
+        var completed = renderTask.Wait(TimeSpan.FromSeconds(30));
         stopwatch.Stop();
+
+        completed.Should().BeTrue("the render must be stopped by its time budget, not run for hours");
+        var result = renderTask.Result;
 
         result.IsSuccess.Should().BeFalse("render musí být zastaven časovým rozpočtem");
 
         // Lower bound: the render can only end through the token, so it cannot end much before the budget
-        // (half of it absorbs timer granularity). Upper bound: deliberately generous — a render that never
-        // stopped would run for hours, so 30 s separates "stopped" from "not stopped" on any loaded host.
+        // (half of it absorbs timer granularity). Upper bound: the 30 s completion wait above separates
+        // "stopped" from "not stopped" on any loaded host.
         stopwatch.Elapsed.Should().BeGreaterThan(budget / 2);
-        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(30));
         sink.Events.Should().ContainSingle();
         sink.Events[0].Kind.Should().Be(TemplateSecurityEventKind.Timeout);
         sink.Events[0].Detail.Should().Be("render time budget");

@@ -244,10 +244,24 @@ public abstract class PlaywrightTestBase
     protected async Task GotoAppReadyAsync(IPage page, string url, WaitUntilState waitUntil = WaitUntilState.Load)
     {
         var timeouts = ReadinessTimeouts.FromEnvironment();
-        await page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
+        var navigated = false;
+        // The first attempt INCLUDES the navigation: a GotoAsync that times out on a slow cold boot is recovered
+        // by the same single controlled reload as a readiness timeout. When the navigation never committed (the page
+        // is still about:blank) there is nothing to reload, so the recovery navigates again.
         await ColdBootRecovery.RunAsync(
-            () => WaitForAppReadyAsync(page),
-            () => page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs }));
+            async () =>
+            {
+                if (!navigated)
+                {
+                    navigated = true;
+                    await page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
+                }
+
+                await WaitForAppReadyAsync(page);
+            },
+            () => string.Equals(page.Url, "about:blank", StringComparison.OrdinalIgnoreCase)
+                ? page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs })
+                : page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs }));
     }
 
     /// <summary>
@@ -315,17 +329,23 @@ public abstract class PlaywrightTestBase
         // longer cap only extends the wait of a slow boot, it never sleeps. Boots past 15 s are logged so a
         // creeping regression is visible in the test output instead of only in the duration. A cold-boot TIMEOUT is
         // recovered by GotoAppReadyAsync (one controlled reload), never by a per-spec copy.
+        // ONE deadline per attempt (ReadyMs): each sub-wait gets only the time that is left, so the pre-gates can
+        // never add up to more than the authoritative cap.
         var timeouts = ReadinessTimeouts.FromEnvironment();
+        var attemptWatch = System.Diagnostics.Stopwatch.StartNew();
+        float Remaining(int capMs) =>
+            Math.Max(1f, Math.Min(capMs, timeouts.ReadyMs - (float)attemptWatch.Elapsed.TotalMilliseconds));
+
         await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded, new PageWaitForLoadStateOptions
         {
-            Timeout = timeouts.DomContentLoadedMs
+            Timeout = Remaining(timeouts.DomContentLoadedMs)
         });
 
         try
         {
             await page.WaitForSelectorAsync(".tm-app-loaded, main, [data-testid='app-ready']", new PageWaitForSelectorOptions
             {
-                Timeout = timeouts.SelectorMs
+                Timeout = Remaining(timeouts.SelectorMs)
             });
         }
         catch (TimeoutException)
@@ -344,7 +364,7 @@ public abstract class PlaywrightTestBase
                 }
                 """,
                 null,
-                new PageWaitForFunctionOptions { Timeout = timeouts.FallbackMs });
+                new PageWaitForFunctionOptions { Timeout = Remaining(timeouts.FallbackMs) });
         }
 
         // Stateful readiness instead of the former fixed 1000 ms sleep (N193): the shared demo
@@ -356,7 +376,7 @@ public abstract class PlaywrightTestBase
         await page.WaitForFunctionAsync(
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null,
-            new PageWaitForFunctionOptions { Timeout = timeouts.ReadyMs });
+            new PageWaitForFunctionOptions { Timeout = Remaining(timeouts.ReadyMs) });
         bootWatch.Stop();
         if (bootWatch.Elapsed > TimeSpan.FromSeconds(15))
         {

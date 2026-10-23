@@ -40,7 +40,7 @@ nightly — today no scheduled workflow exists, so it runs manually via
   | `-Shards <n>` (default 8) | number of class shards, balanced by test count (LPT split, deterministic - the same sources give the same shards) |
   | `-OnlyShard 3,5` | run only these shards (repeat a red one without paying for the rest) |
   | `-Filter "<vstest>"` | extra filter ANDed with the shard's class selection (`TestCategory=WASM`, ...) |
-  | `-RerunFailed` | re-run every failed test once, serially in a fresh process, and classify it (`contention-flake` vs `deterministic`) |
+  | `-RerunFailed` | re-run every failed test once, serially in a fresh process, by its EXACT name (`FullyQualifiedName=<class>.<method>`, resolved from the TRX `UnitTest`/`TestMethod`), and classify it: `contention-flake` only if the rerun ran >= 1 test and none failed; `deterministic (red serially)` otherwise; `unclassified (rerun matched 0 tests)` when nothing ran |
   | `-IncludePerformance` | also run the `Performance` category (normally `run-e2e-perf.ps1` only) |
   | `-NoBuild` / `-ReportDir` | skip the up-front build / choose the report folder |
 
@@ -55,13 +55,24 @@ nightly — today no scheduled workflow exists, so it runs manually via
   **Report** (`TestResults/e2e-full-<timestamp>/`): `shard-<n>.trx` per shard, `summary.json` (totals, per-shard
   results, every failure with its message and serial-rerun verdict, `hostRestarts`) and `summary.md`. The exit
   code is non-zero for any failure that is not proven a contention flake, and for a shard that produced no results at
-  all. `hostRestarts` must be 0 for evidence runs (see *Host resurrections* below).
+  all, and for an **aborted shard**. `hostRestarts` must be 0 for evidence runs (see *Host resurrections* below).
+
+  **Aborted shards.** A shard is *aborted* when its `dotnet test` exited non-zero although no test failed (the test
+  process crashed or was killed, so tests simply never ran) or when the TRX `ResultSummary` outcome is
+  `Aborted`/`Error`. `Read-E2ETrx` returns the `ResultSummary` outcome and the `NotExecuted` count; `summary.md` has an
+  **Aborted** column, `summary.json` lists `AbortedShards` and `Totals.ShardsAborted`, and `ShardsAborted > 0` fails the
+  run. A shard with 0 tests (its filter matched nothing, e.g. `-Filter` excludes all its classes) is an *empty* shard -
+  neither aborted nor "without results".
+
+  **`Clear-E2EOrphanedHosts`** is Windows-only (`Get-NetTCPConnection`, `Win32_Process`, `taskkill`) and it **kills dev
+  demo processes too**: it matches the demo ports and `dotnet`/`Tempo.Blazor.Demo*` command lines, so a `dotnet watch`
+  you started by hand is reaped as well. `-NoReap` is a dry run (it only reports what would be killed).
 
 ## Performance lane
 
 `scripts/run-e2e-perf.ps1` runs `TestCategory=Performance` serially in ONE process: the Modeling M26 budgets
 (LCP, large model load/generate, tree filter, scroll jank, notation switch - `ModelingPerformanceM26E2ETests`), the
-Spreadsheet `BenchmarkPage_*` readiness/latency specs and the Email editor's 50+ block keystroke bound
+Spreadsheet budget specs (`BenchmarkPage_Phase11ReadinessMetricsPass` and the other `BenchmarkPage_*` budget specs) and the Email editor's 50+ block keystroke bound
 (`EmailEditorCanvasWysiwygF9AE2ETests.Typing_in_the_inspector_repaints_only_the_edited_block`).
 
 These are wall-clock budgets (Web Vitals, frame time, per-keystroke latency) and they only hold on an **idle machine** -
@@ -69,7 +80,12 @@ under the full lane the same build measured 6.4 s LCP where an idle run measures
 the full lane (`TestCategory!=Performance`) instead of being loosened: a budget that is relaxed until it passes under
 load stops guarding anything. Run the perf lane on its own (no build, no other lane in parallel); the report lands in
 `TestResults/e2e-perf-<timestamp>/` (`perf.trx` + `summary.json`). To put a spec on this lane add
-`[TestCategory("Performance")]`; do that only for assertions on elapsed time or throughput.
+`[TestCategory("Performance")]`; do that only for assertions on elapsed time or throughput. Functional specs that merely *open* a benchmark page
+(`BenchmarkPage_RunsCanvasBenchmark`, `BenchmarkPage_ExposesPasteLatency*`) assert that the page runs and exposes a
+metric, not a budget, so they stay in the full lane without the `Performance` category.
+
+## Regression screenshots
+
 **Regression-screenshot convention:** a `before`/`after` PNG pair may enter the
 repository ONLY as the output of a named test calling `TakeScreenshotAsync`
 (see `PlaywrightTestBase.TakeScreenshotAsync`), never copied in by hand. The
@@ -204,8 +220,18 @@ configurable:
   **only** place that recovery lives: specs and per-feature harnesses (`EmailTemplateE2ETestBase.OpenAsync`, the
   Email F8/F9/F10 helpers, Wireframe, Audit log, charts, ...) call it instead of keeping a local `try/catch
   (TimeoutException) { ReloadAsync }` copy; `ReadinessInfrastructureTests.NoSpecKeepsALocalColdBootRecoveryCopy`
-  fails the build of any new copy. The logic itself (`ReadinessTimeouts` / `ColdBootRecovery`) is browser-free and
-  unit tested in `ReadinessInfrastructureTests`.
+  fails a test (it does not break the build) as soon as a spec reintroduces a copy. The guard flags a file that calls
+  `WaitForAppReadyAsync` and has `catch (TimeoutException|PlaywrightException|Exception ...) { ... ReloadAsync }` or a
+  `catch (<those types> ...) when (... attempt ...)` retry loop. The logic itself (`ReadinessTimeouts` in
+  `ReadinessTimeouts.cs`, `ColdBootRecovery` in `ColdBootRecovery.cs`) is browser-free and unit tested in
+  `ReadinessInfrastructureTests`.
+- **First attempt includes the navigation.** `GotoAppReadyAsync` runs `GotoAsync` *inside* the first attempt, so a
+  navigation that itself times out on a slow cold boot gets the same single recovery (a reload, or a fresh navigation
+  when the page never left `about:blank`).
+- **One deadline per attempt.** `WaitForAppReadyAsync` measures one `ReadyMs` deadline per attempt; each sub-wait
+  (DOMContentLoaded, shell selector, text fallback, `data-blazor-ready`) gets only the time that is left (at least 1 ms),
+  so the pre-gates can never add up to more than `TM_E2E_READY_TIMEOUT_MS`.
+
 ## Practical notes for running locally
 
 - All four hosts are auto-started by `PlaywrightTestBase.EnsureDemoHostsAsync`

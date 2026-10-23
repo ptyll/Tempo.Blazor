@@ -20,24 +20,9 @@ public class DiagramLayoutE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
 
         await page.AddInitScriptAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                await page.GotoAsync($"{BaseUrl}{DiagramEditorUrl}", new PageGotoOptions
-                {
-                    WaitUntil = WaitUntilState.DOMContentLoaded,
-                    Timeout = 60_000
-                });
-                await WaitForAppReadyAsync(page);
-                await WaitForDiagramEditorReadyAsync(page);
-                break;
-            }
-            catch (TimeoutException) when (attempt == 0)
-            {
-                await TryResetDiagramNavigationAsync(page);
-            }
-        }
+        // The cold-boot recovery (one controlled reload) lives in PlaywrightTestBase.GotoAppReadyAsync.
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DiagramEditorUrl}", WaitUntilState.DOMContentLoaded);
+        await WaitForDiagramEditorReadyAsync(page);
 
         await page.WaitForTimeoutAsync(2000);
 
@@ -78,21 +63,6 @@ public class DiagramLayoutE2ETests : WasmTestBase
         """, null, new PageWaitForFunctionOptions { Timeout = 30_000 });
     }
 
-    private static async Task TryResetDiagramNavigationAsync(IPage page)
-    {
-        try
-        {
-            await page.GotoAsync("about:blank", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.DOMContentLoaded,
-                Timeout = 10_000
-            });
-        }
-        catch (TimeoutException)
-        {
-            // A fresh diagram route attempt below is the authoritative readiness check.
-        }
-    }
 
     private async Task SelectAllNodesAsync(IPage page)
     {

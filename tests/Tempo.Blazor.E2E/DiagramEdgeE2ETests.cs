@@ -42,36 +42,8 @@ public class DiagramEdgeE2ETests : WasmTestBase
 
     private async Task OpenDiagramEditorAsync(IPage page)
     {
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                await page.GotoAsync(BaseUrl + DiagramEditorUrl, new PageGotoOptions
-                {
-                    WaitUntil = WaitUntilState.DOMContentLoaded,
-                    Timeout = 30_000
-                });
-            }
-            catch (TimeoutException) when (attempt == 0)
-            {
-                // In the full E2E suite the WASM document can occasionally miss the navigation load boundary even
-                // though the route is committed. The explicit app/canvas readiness checks below are authoritative.
-            }
-
-            try
-            {
-                await WaitForAppReadyAsync(page);
-                await WaitForCanvasAsync(page);
-                return;
-            }
-            catch (TimeoutException) when (attempt == 0)
-            {
-                // Retry the whole route bootstrap once; a stale/half-booted WASM page can otherwise keep the app
-                // readiness fallback waiting even though a fresh navigation succeeds immediately.
-            }
-        }
-
-        await WaitForAppReadyAsync(page);
+        // The cold-boot recovery (one controlled reload) lives in PlaywrightTestBase.GotoAppReadyAsync.
+        await GotoAppReadyAsync(page, BaseUrl + DiagramEditorUrl, WaitUntilState.DOMContentLoaded);
         await WaitForCanvasAsync(page);
     }
 
