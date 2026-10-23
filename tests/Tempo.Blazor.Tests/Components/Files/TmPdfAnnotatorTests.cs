@@ -1011,6 +1011,11 @@ public partial class TmPdfAnnotatorTests : LocalizationTestBase
         // Phase 12 review: under Auto the shell's container measurement can flap while the page
         // settles (a full-page screenshot, a transient reflow). The mobile sheet auto-close is
         // debounced, so an intermediate blip must NOT hide the open panel.
+        // The debounce runs on a FakeTimeProvider: "the window has passed" means Advance crossed
+        // it, so a loaded machine can never let the 150 ms timer fire between the two re-resolves.
+        var clock = new Microsoft.Extensions.Time.Testing.FakeTimeProvider();
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions
+            .AddSingleton<TimeProvider>(Services, clock);
         var cut = Render(Seeded(Highlight("h1")));
         var observer = cut.FindComponent<TmEditorShell>().FindComponent<TmLayoutObserver>();
 
@@ -1018,16 +1023,19 @@ public partial class TmPdfAnnotatorTests : LocalizationTestBase
         await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged("mobile"));
         cut.Find("[data-testid='pdf-annotator-panel']").Should().NotBeNull("a blip must not close the panel");
 
-        // … and resolving back cancels the pending close for good.
+        // … and resolving back cancels the pending close for good, even past the window.
         await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged("desktop"));
-        await Task.Delay(250);
+        clock.Advance(TimeSpan.FromMilliseconds(500));
         cut.Find("[data-testid='pdf-annotator-panel']")
             .Should().NotBeNull("the cancelled auto-close must stay cancelled");
 
         // A STABLE resolution to mobile still starts the sheet closed (after the debounce).
         await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged("mobile"));
+        cut.Find("[data-testid='pdf-annotator-panel']")
+            .Should().NotBeNull("the close waits for the debounce window");
+        clock.Advance(TimeSpan.FromMilliseconds(200));
         cut.WaitForState(() => cut.FindAll(".tm-editor-shell__sheet").Count == 0,
-            TimeSpan.FromSeconds(2));
+            TimeSpan.FromSeconds(5));
     }
 
     [Fact]

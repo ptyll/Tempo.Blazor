@@ -55,6 +55,19 @@ public partial class TmPdfAnnotator : TmComponentBase, IAsyncDisposable
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
+    /// <summary>
+    /// Resolves the clock of the mobile-sheet auto-close debounce lazily: a consumer that never
+    /// registers a <see cref="TimeProvider"/> still gets <see cref="TimeProvider.System"/> (a bare
+    /// <c>[Inject] TimeProvider</c> would throw for exactly those consumers). Tests register a
+    /// <c>FakeTimeProvider</c> so the debounce is driven by <c>Advance</c>, not by wall-clock sleeps.
+    /// </summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+
+    private TimeProvider? _clock;
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     /// <summary>URL of the PDF document to annotate.</summary>

@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
     <!-- Fáze 17 (C3): SQL-Server-backed IDistributedCache for the scale-out (Distributed) token store. -->
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.9" />
   </ItemGroup>

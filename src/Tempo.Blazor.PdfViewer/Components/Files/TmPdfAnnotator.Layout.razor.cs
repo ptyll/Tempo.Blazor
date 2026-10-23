@@ -205,7 +205,7 @@ public partial class TmPdfAnnotator
     {
         try
         {
-            await Task.Delay(MobileSheetCloseDebounce, token);
+            await Task.Delay(MobileSheetCloseDebounce, Clock, token);
         }
         catch (OperationCanceledException)
         {

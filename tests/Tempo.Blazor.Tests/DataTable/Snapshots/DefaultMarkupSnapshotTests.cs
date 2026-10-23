@@ -25,7 +25,7 @@ public class DefaultMarkupSnapshotTests : LocalizationTestBase
     public void DefaultMarkup_MatchesGoldenSnapshot(string scenario)
     {
         var actual = MarkupSnapshot.Normalize(DefaultMarkupScenarios.Render(this, scenario));
-        var expected = File.ReadAllText(ExpectedPath(scenario));
+        var expected = MarkupSnapshot.NormalizeVoidElements(File.ReadAllText(ExpectedPath(scenario)));
 
         if (actual == expected)
         {

@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor.Demo.InteractiveAuto.Client\Tempo.Blazor.Demo.InteractiveAuto.Client.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
   </ItemGroup>
 

@@ -5,7 +5,8 @@ namespace Tempo.Blazor.Tests.DataTable.Snapshots;
 
 /// <summary>
 /// Normalizes rendered markup so golden snapshots stay stable across renders.
-/// Only three transforms are applied: <c>blazor:*</c> attributes are removed,
+/// Only four transforms are applied: <c>blazor:*</c> attributes are removed, void elements
+/// are written in one canonical form (<see cref="NormalizeVoidElements"/>),
 /// instance-specific ids (GUIDs and <c>tm-*-{hex}</c>) are replaced in first-seen
 /// order, and whitespace between tags and inside <c>class</c> attributes is collapsed.
 /// </summary>
@@ -24,9 +25,23 @@ public static partial class MarkupSnapshot
             .Replace('\r', '\n')
             .Replace('\u202F', ' ')
             .Replace('\u00A0', ' '), string.Empty);
-        var withStableIds = ReplaceInstanceIds(withoutBlazor);
+        var withStableIds = ReplaceInstanceIds(NormalizeVoidElements(withoutBlazor));
         var collapsed = CollapseInterTagWhitespace(withStableIds);
         return ClassAttribute().Replace(collapsed, NormalizeClassAttribute);
+    }
+
+    /// <summary>
+    /// Writes every HTML void element (<c>input</c>, <c>br</c>, <c>img</c>, ...) as <c>&lt;tag attrs /&gt;</c>.
+    /// The goldens were captured with a serializer that self-closes void elements; bUnit 2.x
+    /// (AngleSharp) emits <c>&lt;input ...&gt;&lt;/input&gt;</c> for the same render tree. The two spellings
+    /// describe the identical DOM, so the comparison must not depend on the serializer version.
+    /// </summary>
+    public static string NormalizeVoidElements(string markup)
+    {
+        ArgumentNullException.ThrowIfNull(markup);
+
+        var selfClosed = VoidElementWithEndTag().Replace(markup, "$1 />");
+        return VoidElementOpenTag().Replace(selfClosed, "$1 />");
     }
 
     private static string ReplaceInstanceIds(string markup)
@@ -66,6 +81,14 @@ public static partial class MarkupSnapshot
     // A GUID, or a library-generated id such as view-manager-toggle-a1b2c3 / tm-overlay-panel-a1b2c3.
     [GeneratedRegex(@"\b(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|(?:[A-Za-z]+-)+[0-9a-fA-F]{6,})\b", RegexOptions.CultureInvariant)]
     private static partial Regex InstanceId();
+
+    // <input ...></input> (bUnit 2.x / AngleSharp) -> <input ... />
+    [GeneratedRegex(@"(<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*?)\s*/?>\s*</(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)>", RegexOptions.CultureInvariant)]
+    private static partial Regex VoidElementWithEndTag();
+
+    // <input ...> or <input ... /> -> <input ... /> (no end tag follows any more)
+    [GeneratedRegex(@"(<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*?)\s*/?>", RegexOptions.CultureInvariant)]
+    private static partial Regex VoidElementOpenTag();
 
     [GeneratedRegex(@">\s+<", RegexOptions.CultureInvariant)]
     private static partial Regex InterTagWhitespace();
