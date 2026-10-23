@@ -21,7 +21,7 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// <para>All mutations are routed through the cascaded <see cref="WireframeCommandStack"/>
 /// when available.</para>
 /// </summary>
-public partial class TmWireframePropertiesPanel : ComponentBase, IDisposable
+public partial class TmWireframePropertiesPanel : TmComponentBase, IDisposable
 {
     // ── DI ────────────────────────────────────────────────────────────────────
 

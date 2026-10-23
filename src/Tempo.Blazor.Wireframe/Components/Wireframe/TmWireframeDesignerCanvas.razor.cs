@@ -15,7 +15,7 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// so that Undo/Redo works automatically. The stack is optional: when null (e.g. used
 /// standalone without <c>TmWireframeEditor</c>), mutations are applied directly.
 /// </summary>
-public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
+public partial class TmWireframeDesignerCanvas : TmComponentBase, IAsyncDisposable
 {
     // ── DI ───────────────────────────────────────────────────────────────────
 
@@ -198,10 +198,13 @@ public partial class TmWireframeDesignerCanvas : ComponentBase, IAsyncDisposable
     // Parent-render gate (LightEditing only): a parameter pass that changes nothing the scene shows is skipped. Own renders
     // (NotifyAndRender, the status line, a connector selection) never go through the gate: _parentPass is only true inside SetParametersAsync.
     private bool _parentPass;
-    private (object? Doc, string? Page, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version)? _renderedSnapshot;
+    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version)? _renderedSnapshot;
 
-    private (object? Doc, string? Page, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version) Snapshot()
-        => (Document, Document?.ActivePageId, ShowGrid, GridSize, ReadOnly, SnapToObjects, ComponentScope, Class, LightEditing, ContentVersion);
+    // Every [Parameter] that changes what the scene draws MUST be part of this tuple: a parent pass whose snapshot is unchanged is
+    // skipped. Document identity does not see in-place edits - that is what ContentVersion is for (the host bumps it). The page's
+    // Width/Height are listed explicitly because ResizeCanvasCommand mutates them in place on the same document instance.
+    private (object? Doc, string? Page, double W, double H, bool Grid, int GridSize, bool ReadOnly, bool Snap, object? Scope, string? Class, bool Light, int Version) Snapshot()
+        => (Document, Document?.ActivePageId, Document?.Width ?? 0, Document?.Height ?? 0, ShowGrid, GridSize, ReadOnly, SnapToObjects, ComponentScope, Class, LightEditing, ContentVersion);
 
     /// <inheritdoc />
     public override Task SetParametersAsync(ParameterView parameters)

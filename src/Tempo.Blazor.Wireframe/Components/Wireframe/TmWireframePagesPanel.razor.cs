@@ -15,7 +15,7 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// tabs) and reports through <see cref="ActivePageChanged"/> / <see cref="DocumentChanged"/>. The <c>Delete</c> key
 /// never deletes a page.
 /// </summary>
-public partial class TmWireframePagesPanel : ComponentBase
+public partial class TmWireframePagesPanel : TmComponentBase
 {
     // ── Parameters ────────────────────────────────────────────────────────────
 

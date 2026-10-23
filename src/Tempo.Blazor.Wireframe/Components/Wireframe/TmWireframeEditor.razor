@@ -1,3 +1,4 @@
+@inherits Tempo.Blazor.Components.TmComponentBase
 @namespace Tempo.Blazor.Components.Wireframe
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Layout
@@ -70,13 +71,13 @@
                                                  value="@_document?.Title"
                                                  placeholder="@Loc["TmWireframe_UntitledPlaceholder"]"
                                                  aria-label="@Loc["TmWireframe_DocumentTitleLabel"]"
-                                                 data-testid="wd-title"
+                                                 data-testid="@TestId("wd-title")"
                                                  @onchange="OnTitleChanged"
                                                  disabled="@IsReadOnly"
                                                  title="@Loc["TmWireframe_DocumentTitleLabel"]" />;
 
     private RenderFragment? HeaderSlot => !RendersHeader ? null : @<div class="tm-wd-editor__header-stack">
-    <div class="tm-wd-editor__header-bar" data-testid="wd-header">
+    <div class="tm-wd-editor__header-bar" data-testid="@TestId("wd-header")">
         @if (HeaderStart is not null)
         {
             <div class="tm-wd-editor__header-start">@HeaderStart</div>
@@ -107,10 +108,10 @@
     // commands (tools, history, arrange, grouping, alignment, snapping, format painter), row 2 the view / file commands
     // (panel toggles, zoom, Export, Import) - each with its own "More". The group fragments below are shared by both.
 
-    private RenderFragment? ToolbarSlot => !ShowToolbar ? null : IsMobile ? MobileToolRow : @<div class="tm-wd-editor__toolbar @(IsTablet ? "tm-wd-editor__toolbar--tablet" : null)" data-testid="wd-toolbar">
+    private RenderFragment? ToolbarSlot => !ShowToolbar ? null : IsMobile ? MobileToolRow : @<div class="tm-wd-editor__toolbar @(IsTablet ? "tm-wd-editor__toolbar--tablet" : null)" data-testid="@TestId("wd-toolbar")">
         @if (IsTablet)
         {
-            <div class="tm-wd-editor__toolbar-row" data-testid="wd-toolbar-row-1">
+            <div class="tm-wd-editor__toolbar-row" data-testid="@TestId("wd-toolbar-row-1")">
                 <TmToolbar Overflow="ToolbarOverflow.Menu"
                            Labels="ToolbarLabels.Auto"
                            AriaLabel="@Loc["TmWireframe_ToolbarAriaLabel"]"
@@ -124,7 +125,7 @@
                     @FormatGroup
                 </TmToolbar>
             </div>
-            <div class="tm-wd-editor__toolbar-row" data-testid="wd-toolbar-row-2">
+            <div class="tm-wd-editor__toolbar-row" data-testid="@TestId("wd-toolbar-row-2")">
                 @if (!HasHeader)
                 {
                     @TitleInput
@@ -219,23 +220,23 @@
                        Disabled="@(_selectedIds.Length < 2 || IsReadOnly)">
             <TmDropdown Text="@Loc["TmWireframe_Align"]" Icon="@IconNames.AlignLeft"
                         Disabled="@(_selectedIds.Length < 2 || IsReadOnly)" OnSelect="HandleAlignSelect"
-                        data-testid="wd-align">
-                <TmDropdownItem Value="left" Icon="@IconNames.AlignLeft" data-testid="wd-align-left">@Loc["TmWireframe_AlignLeft"]</TmDropdownItem>
-                <TmDropdownItem Value="centerh" Icon="@IconNames.AlignCenter" data-testid="wd-align-centerh">@Loc["TmWireframe_AlignCenterH"]</TmDropdownItem>
-                <TmDropdownItem Value="right" Icon="@IconNames.AlignRight" data-testid="wd-align-right">@Loc["TmWireframe_AlignRight"]</TmDropdownItem>
+                        data-testid="@TestId("wd-align")">
+                <TmDropdownItem Value="left" Icon="@IconNames.AlignLeft" data-testid="@TestId("wd-align-left")">@Loc["TmWireframe_AlignLeft"]</TmDropdownItem>
+                <TmDropdownItem Value="centerh" Icon="@IconNames.AlignCenter" data-testid="@TestId("wd-align-centerh")">@Loc["TmWireframe_AlignCenterH"]</TmDropdownItem>
+                <TmDropdownItem Value="right" Icon="@IconNames.AlignRight" data-testid="@TestId("wd-align-right")">@Loc["TmWireframe_AlignRight"]</TmDropdownItem>
                 <div class="tm-dropdown-sep" role="separator"></div>
-                <TmDropdownItem Value="top" Icon="@IconNames.ArrowUpFromLine" data-testid="wd-align-top">@Loc["TmWireframe_AlignTop"]</TmDropdownItem>
-                <TmDropdownItem Value="centerv" Icon="@IconNames.AlignVerticalDistributeCenter" data-testid="wd-align-centerv">@Loc["TmWireframe_AlignCenterV"]</TmDropdownItem>
-                <TmDropdownItem Value="bottom" Icon="@IconNames.ArrowDownToLine" data-testid="wd-align-bottom">@Loc["TmWireframe_AlignBottom"]</TmDropdownItem>
+                <TmDropdownItem Value="top" Icon="@IconNames.ArrowUpFromLine" data-testid="@TestId("wd-align-top")">@Loc["TmWireframe_AlignTop"]</TmDropdownItem>
+                <TmDropdownItem Value="centerv" Icon="@IconNames.AlignVerticalDistributeCenter" data-testid="@TestId("wd-align-centerv")">@Loc["TmWireframe_AlignCenterV"]</TmDropdownItem>
+                <TmDropdownItem Value="bottom" Icon="@IconNames.ArrowDownToLine" data-testid="@TestId("wd-align-bottom")">@Loc["TmWireframe_AlignBottom"]</TmDropdownItem>
             </TmDropdown>
         </TmToolbarItem>
         <TmToolbarItem MenuLabel="@Loc["TmWireframe_Distribute"]" Priority="ToolbarButtonPriority.Secondary" MenuItems="@DistributeMenuItems"
                        Disabled="@(_selectedIds.Length < 3 || IsReadOnly)">
             <TmDropdown Text="@Loc["TmWireframe_Distribute"]" Icon="@IconNames.AlignHorizontalDistributeCenter"
                         Disabled="@(_selectedIds.Length < 3 || IsReadOnly)" OnSelect="HandleDistributeSelect"
-                        data-testid="wd-distribute">
-                <TmDropdownItem Value="horizontal" data-testid="wd-distribute-horizontal">@Loc["TmWireframe_DistributeHorizontal"]</TmDropdownItem>
-                <TmDropdownItem Value="vertical" data-testid="wd-distribute-vertical">@Loc["TmWireframe_DistributeVertical"]</TmDropdownItem>
+                        data-testid="@TestId("wd-distribute")">
+                <TmDropdownItem Value="horizontal" data-testid="@TestId("wd-distribute-horizontal")">@Loc["TmWireframe_DistributeHorizontal"]</TmDropdownItem>
+                <TmDropdownItem Value="vertical" data-testid="@TestId("wd-distribute-vertical")">@Loc["TmWireframe_DistributeVertical"]</TmDropdownItem>
             </TmDropdown>
         </TmToolbarItem>
     </TmToolbarGroup>;
@@ -270,13 +271,13 @@
             {
                 <TmToolbarButton Icon="@IconNames.PanelLeft" Text="@Loc["TmWireframe_SheetLeftTitle"]" Tooltip="@Loc["TmWireframe_ToggleToolbox"]"
                                  LabelPosition="ToolbarLabelPosition.Below" Pressed="@LeftSheetOpen"
-                                 OnClick="ToggleLeftSheet" data-testid="wd-toggle-left" />
+                                 OnClick="ToggleLeftSheet" data-testid="@TestId("wd-toggle-left")" />
             }
             @if (ShowPropertiesPanel)
             {
                 <TmToolbarButton Icon="@IconNames.PanelRight" Text="@Loc["TmWireframe_SheetInspectorTitle"]" Tooltip="@Loc["TmWireframe_ToggleProperties"]"
                                  LabelPosition="ToolbarLabelPosition.Below" Pressed="@InspectorSheetOpen"
-                                 OnClick="ToggleInspectorSheet" data-testid="wd-toggle-inspector" />
+                                 OnClick="ToggleInspectorSheet" data-testid="@TestId("wd-toggle-inspector")" />
             }
         }
         @if (ShowReadOnlyToggle)
@@ -317,15 +318,15 @@
     private RenderFragment FileGroup => @<TmToolbarGroup Label="@Loc["TmWireframe_GroupFile"]" Class="tm-wd-editor__group" data-tm-group="file">
         <TmToolbarItem Priority="ToolbarButtonPriority.Pinned" Class="tm-wd-editor__export-item">
             <TmDropdown Text="@Loc["TmWireframe_Export"]" Icon="@IconNames.Download" OnSelect="HandleExportSelect"
-                        Class="tm-wd-editor__export" data-testid="wd-export">
-                <TmDropdownItem Value="json" Icon="@IconNames.FileText" data-testid="wd-export-json">@Loc["TmWireframe_ExportJson"]</TmDropdownItem>
-                <TmDropdownItem Value="svg" Icon="@IconNames.Image" data-testid="wd-export-svg">@Loc["TmWireframe_ExportSvg"]</TmDropdownItem>
-                <TmDropdownItem Value="png" Icon="@IconNames.Image" data-testid="wd-export-png">@Loc["TmWireframe_ExportPng"]</TmDropdownItem>
-                <TmDropdownItem Value="pdf" Icon="@IconNames.File" data-testid="wd-export-pdf">@Loc["TmWireframe_ExportPdf"]</TmDropdownItem>
+                        Class="tm-wd-editor__export" data-testid="@TestId("wd-export")">
+                <TmDropdownItem Value="json" Icon="@IconNames.FileText" data-testid="@TestId("wd-export-json")">@Loc["TmWireframe_ExportJson"]</TmDropdownItem>
+                <TmDropdownItem Value="svg" Icon="@IconNames.Image" data-testid="@TestId("wd-export-svg")">@Loc["TmWireframe_ExportSvg"]</TmDropdownItem>
+                <TmDropdownItem Value="png" Icon="@IconNames.Image" data-testid="@TestId("wd-export-png")">@Loc["TmWireframe_ExportPng"]</TmDropdownItem>
+                <TmDropdownItem Value="pdf" Icon="@IconNames.File" data-testid="@TestId("wd-export-pdf")">@Loc["TmWireframe_ExportPdf"]</TmDropdownItem>
             </TmDropdown>
         </TmToolbarItem>
         <TmToolbarItem Priority="ToolbarButtonPriority.Pinned">
-            <label class="tm-toolbar-btn tm-wd-editor__import" title="@Loc["TmWireframe_ImportJson"]" data-testid="wd-import">
+            <label class="tm-toolbar-btn tm-wd-editor__import" title="@Loc["TmWireframe_ImportJson"]" data-testid="@TestId("wd-import")">
                 <TmIcon Name="@IconNames.Upload" Size="IconSize.Sm" />
                 <span class="tm-toolbar-btn-text">@Loc["TmWireframe_ImportJson"]</span>
                 <InputFile class="tm-wd-editor__file-input" OnChange="OnImportFile" accept=".json,.wireframe.json" aria-label="@Loc["TmWireframe_ImportJson"]" />
@@ -351,6 +352,7 @@
         builder.AddComponentParameter(11, nameof(TmWireframeSidePanel.ActiveLayerIdChanged), EventCallback.Factory.Create<string?>(this, OnActiveLayerChanged));
         builder.AddComponentParameter(12, nameof(TmWireframeSidePanel.ActivePageChanged), EventCallback.Factory.Create<string>(this, OnPagesPanelActivePageChanged));
         builder.AddComponentParameter(13, nameof(TmWireframeSidePanel.SingleColumn), IsTablet);
+        builder.AddComponentParameter(14, nameof(TmWireframeSidePanel.TestIdPrefix), TestIdPrefix);
         builder.CloseComponent();
     };
 
@@ -368,7 +370,7 @@
                     <div class="tm-wd-editor__page-tab @(isActive ? "tm-wd-editor__page-tab--active" : "")"
                          role="tab"
                          aria-selected="@isActive"
-                         data-testid="wd-page-tab-@pg.Id"
+                         data-testid="@TestId($"wd-page-tab-{pg.Id}")"
                          draggable="true"
                          @ondragstart="() => OnPageDragStart(pg.Id)"
                          @ondrop="() => OnPageDrop(pg.Id)"
@@ -481,6 +483,7 @@
                                                OnViewBoxChangedEvent="OnCanvasViewBoxChanged"
                                                OnCanvasMouseMoved="OnCanvasMouseMoved"
                                                OnZoomChangedEvent="OnCanvasZoomChanged"
+                                               TestIdPrefix="@TestIdPrefix"
                                                Class="tm-wd-editor__canvas" />
 
                     @* Context menu (right-click / long-press): the anchored fixed menu on desktop and tablet, the shared action sheet on a phone. *@
@@ -545,11 +548,11 @@
         @* ── Tablet: ONE side sheet at a time (left overlay drawer OR inspector), both non-modal ── *@
         @if (LeftSheetOpen)
         {
-            @Sheet("wd-left-drawer", "tm-wd-sheet--left", Loc["TmWireframe_SheetLeftTitle"], LeftSlot)
+            @Sheet(TestId("wd-left-drawer"), "tm-wd-sheet--left", Loc["TmWireframe_SheetLeftTitle"], LeftSlot)
         }
         else if (InspectorSheetOpen)
         {
-            @Sheet("wd-inspector-sheet", "tm-wd-sheet--right", Loc["TmWireframe_SheetInspectorTitle"], RightSlot)
+            @Sheet(TestId("wd-inspector-sheet"), "tm-wd-sheet--right", Loc["TmWireframe_SheetInspectorTitle"], RightSlot)
         }
     </div>;
 
@@ -563,7 +566,7 @@
                                                                                                                   Class="@($"tm-wd-sheet {modifier}")">
         <div class="tm-wd-sheet__header">
             <span class="tm-wd-sheet__title" id="@_sheetTitleId">@title</span>
-            <button type="button" class="tm-wd-sheet__close" aria-label="@Loc["TmWireframe_SheetClose"]" title="@Loc["TmWireframe_SheetClose"]" data-testid="wd-sheet-close" @ref="_sheetCloseRef" @onclick="CloseSheet">
+            <button type="button" class="tm-wd-sheet__close" aria-label="@Loc["TmWireframe_SheetClose"]" title="@Loc["TmWireframe_SheetClose"]" data-testid="@TestId("wd-sheet-close")" @ref="_sheetCloseRef" @onclick="CloseSheet">
                 <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
             </button>
         </div>
@@ -573,21 +576,21 @@
     // ── Inspector ──────────────────────────────────────────────────────────────
 
     /// <summary>The peek of the properties sheet: what is selected and Duplicate / Lock / Delete, finger-sized.</summary>
-    private RenderFragment MobileQuickActions => @<div class="tm-wd-quick-actions" role="group" aria-label="@Loc["TmWireframe_QuickActionsAriaLabel"]" data-testid="wd-quick-actions">
+    private RenderFragment MobileQuickActions => @<div class="tm-wd-quick-actions" role="group" aria-label="@Loc["TmWireframe_QuickActionsAriaLabel"]" data-testid="@TestId("wd-quick-actions")">
         <span class="tm-wd-quick-actions__title">@MobileSelectionTitle</span>
         <div class="tm-wd-quick-actions__buttons">
             @if (_selectedIds.Length > 0)
             {
-                <button type="button" class="tm-wd-quick-actions__btn" data-testid="wd-quick-duplicate"
+                <button type="button" class="tm-wd-quick-actions__btn" data-testid="@TestId("wd-quick-duplicate")"
                         disabled="@IsReadOnly" @onclick="OnDuplicateFromContextMenu">
                     <TmIcon Name="@IconNames.Copy" Size="IconSize.Sm" /><span>@Loc["TmWireframe_CtxDuplicate"]</span>
                 </button>
-                <button type="button" class="tm-wd-quick-actions__btn" data-testid="wd-quick-lock"
-                        disabled="@IsReadOnly" aria-pressed="@(SelectionLocked ? "true" : "false")" @onclick="OnToggleLock">
+                <button type="button" class="tm-wd-quick-actions__btn" data-testid="@TestId("wd-quick-lock")"
+                        disabled="@IsReadOnly" @onclick="OnToggleLock">
                     <TmIcon Name="@(SelectionLocked ? IconNames.Unlock : IconNames.Lock)" Size="IconSize.Sm" /><span>@(SelectionLocked ? Loc["TmWireframe_Unlock"] : Loc["TmWireframe_Lock"])</span>
                 </button>
             }
-            <button type="button" class="tm-wd-quick-actions__btn tm-wd-quick-actions__btn--danger" data-testid="wd-quick-delete"
+            <button type="button" class="tm-wd-quick-actions__btn tm-wd-quick-actions__btn--danger" data-testid="@TestId("wd-quick-delete")"
                     disabled="@IsReadOnly" @onclick="OnDeleteFromInspector">
                 <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" /><span>@Loc["TmWireframe_CtxDelete"]</span>
             </button>
@@ -596,7 +599,7 @@
 
     // ── Mobile tool row (select / pan / undo / redo / More) ────────────────────
 
-    private RenderFragment MobileToolRow => @<div class="tm-wd-editor__mobile-tools" data-testid="wd-mobile-tools">
+    private RenderFragment MobileToolRow => @<div class="tm-wd-editor__mobile-tools" data-testid="@TestId("wd-mobile-tools")">
         <TmToolbar Overflow="ToolbarOverflow.Menu"
                    Labels="ToolbarLabels.Auto"
                    AriaLabel="@Loc["TmWireframe_MobileToolsAriaLabel"]"
@@ -623,18 +626,18 @@
 
     // ── Mobile floating zoom (outside the svg, over the canvas) ────────────────
 
-    private RenderFragment MobileZoomOverlay => @<div class="tm-wd-editor__zoom-overlay" role="group" aria-label="@Loc["TmWireframe_ZoomControls"]" data-testid="wd-zoom-overlay">
-        <button type="button" class="tm-wd-editor__zoom-overlay-btn" data-testid="wd-zoom-in"
+    private RenderFragment MobileZoomOverlay => @<div class="tm-wd-editor__zoom-overlay" role="group" aria-label="@Loc["TmWireframe_ZoomControls"]" data-testid="@TestId("wd-zoom-overlay")">
+        <button type="button" class="tm-wd-editor__zoom-overlay-btn" data-testid="@TestId("wd-zoom-in")"
                 aria-label="@Loc["TmWireframeEditor_ZoomIn"]" title="@Loc["TmWireframeEditor_ZoomIn"]" @onclick="ZoomIn">
             <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
         </button>
         <span class="tm-wd-editor__zoom-overlay-label" role="status" aria-live="polite"
               aria-label="@(string.Format(Loc["TmWireframeEditor_ZoomAria"], _zoomLabel))">@_zoomLabel</span>
-        <button type="button" class="tm-wd-editor__zoom-overlay-btn" data-testid="wd-zoom-out"
+        <button type="button" class="tm-wd-editor__zoom-overlay-btn" data-testid="@TestId("wd-zoom-out")"
                 aria-label="@Loc["TmWireframe_ZoomOut"]" title="@Loc["TmWireframe_ZoomOut"]" @onclick="ZoomOut">
             <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
         </button>
-        <button type="button" class="tm-wd-editor__zoom-overlay-btn tm-wd-editor__zoom-overlay-btn--fit" data-testid="wd-zoom-fit"
+        <button type="button" class="tm-wd-editor__zoom-overlay-btn tm-wd-editor__zoom-overlay-btn--fit" data-testid="@TestId("wd-zoom-fit")"
                 aria-label="@Loc["TmWireframe_FitToView"]" title="@Loc["TmWireframe_FitToView"]" @onclick="FitToView">
             <TmIcon Name="@IconNames.Scan" Size="IconSize.Sm" />
         </button>
@@ -655,5 +658,6 @@
                                                                                                      GridSizeChanged="OnInspectorGridSizeChanged"
                                                                                                      OnCanvasResized="OnInspectorCanvasResized"
                                                                                                      OnDelete="OnDeleteFromInspector"
+                                                                                                     TestIdPrefix="@TestIdPrefix"
                                                                                                      Class="tm-wd-editor__props" />;
 }

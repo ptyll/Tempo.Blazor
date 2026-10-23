@@ -106,6 +106,7 @@ npm run test:document-editor
 npm run test:reporting-modules
 npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
+npm run test:wireframe         # Wireframe: wireframe-designer.js pointer/export tests + wireframe-gestures.mjs
 ```
 
 ### Package Creation
@@ -469,6 +470,36 @@ The `TmPdfViewer` component is a standalone PDF viewer powered by **PDF.js v5** 
 
 ---
 
+## TmWireframeEditor Chrome & TmDocumentOpenDialog
+
+### Wireframe editor chrome (redesign plan ce19aa8c)
+
+`TmWireframeEditor` renders through the core `TmEditorShell` and, like the DiagramEditor, resolves its presentation from its **own container** (`data-editor-layout` on the root, `LayoutMode="Auto"`, default breakpoints 768 / 1200; a CSS size container `tm-wd-editor`, never the viewport). Full contract: [docs/wireframe-editor.md](docs/wireframe-editor.md).
+
+- **Desktop (≥1200):** header (document title, `HeaderStart` / `HeaderActions` host slots - there is no built-in Open or Save), ONE labelled `TmToolbar` command row (`Overflow=Menu`, "More" for the rest), a docked left panel with **Components | Pages | Layers** tabs (the Pages tab only with `PageNavigation=Panel`; the default `Tabs` keeps the horizontal page tabs), a docked inspector (empty selection = Canvas with device presets / Page / Grid; selection = Element with **Name**), and the minimap card.
+- **Tablet (768–1199):** two toolbar rows, the left panel is an overlay drawer and the inspector a non-modal side sheet (at most one open), the minimap is hidden, 44 px targets on `(pointer: coarse)`; full editing with Pointer Events (drag, handles with `--tm-wd-handle-hit`, two-finger pinch / pan, 500 ms long-press context menu).
+- **Mobile (<768) - viewing + light edits (decision G2):** compact header, a tool row, a `TmMobileActionBar` (Add | Pages & layers | Export | More) and ONE non-modal bottom sheet (peek / half / full, starts closed). Selecting an element peeks the Properties sheet with Duplicate / Lock / Delete; the context menu is the shared action sheet; export is a bottom sheet. Resize / rotate handles, rubber band, connectors, align / distribute, grouping, rulers, the minimap and JSON import stay tablet+ (`TmWireframeDesignerCanvas.LightEditing`).
+
+**Stable toolbar contract (frozen):** groups carry `data-tm-group` from the frozen set `tools | history | arrange | group | align | snap | format | view | zoom | file` (additive growth only). Where a group renders (bar / "More" menu / second row) is a layout detail - hosts and tests key off `data-tm-group` and `data-testid`s (`wd-export`, `wd-toggle-left`, `wd-toggle-inspector`, `wd-left-drawer`, `wd-inspector-sheet`, …), never positional selectors on the toolbar DOM.
+
+**`ReadOnly` contract:** `ReadOnly`, `ShowRulers`, `ShowGrid` and `GridSize` are plain `[Parameter]`s and are **never assigned inside the component**. The built-in Read-only / rulers / grid controls drive internal state and raise `ReadOnlyChanged` / `ShowRulersChanged` / `ShowGridChanged` / `GridSizeChanged` (`@bind-…`); the effective state is `IsReadOnly`. A host-pinned `ReadOnly="true"` without `ReadOnlyChanged` hides the toggle and blocks every editing path (canvas, inspector, layers, pages, context menu, toolbox, quick actions).
+
+**Non-drag alternatives (WCAG 2.5.7):** every drag control has a tap / keyboard path - toolbox click / Enter / Space, arrow-key nudge and the inspector X / Y / W / H, layers and pages row menu + F2 + Alt+↑/↓, zoom buttons. A new drag control needs the same.
+
+**Pointer events:** the canvas uses the shared `pointer-drag.js` / `pointer-gesture.js` (served from `_content/Tempo.Blazor/js/`) - never write a second drag or pinch implementation; the middle-button pan is the one documented exception. A gesture cancelled by Escape, `pointercancel` or a second finger rolls back and is announced. Node tests: `npm run test:wireframe`.
+
+**Canvas render gate:** with `LightEditing` the canvas skips a parent render whose snapshot (document identity, page, page size, grid, snapping, read-only, scope, class) and `ContentVersion` are unchanged; the editor bumps `ContentVersion` on every command / undo / page switch. A standalone host must bump it after in-place edits. A new render-affecting `[Parameter]` belongs in `Snapshot()`.
+
+### TmDocumentOpenDialog (core, shared)
+
+`TmDocumentOpenDialog` (`src/Tempo.Blazor/Components/Files/`) is the shared "open a document" dialog of the Wireframe, Diagram and Spreadsheet Notion blocks (`ShowModeToggle=true` keeps the Link / Copy choice) and the demo `/document-open-dialog` page. The public API (`Provider`, `Kind`, `Open`, `OnSelected`, `ShowModeToggle`, `DefaultMode`, …), `DocumentOpenResult` and `ITempoDocumentLibraryProvider` are stable; new parameters are opt-in (`ShowRecent` adds a "Recent" node through `BrowseAsync`, `LayoutMode` pins desktop / tablet / mobile for tests).
+
+- **Desktop / tablet (dialog body ≥ 640 px):** XLarge modal, collapsible WAI-ARIA tree (`.tm-dod-tree-node`, roving tabindex), breadcrumb, sortable list / grid, always-visible disabled Rename / Delete, radio-card Link / Copy footer.
+- **Mobile (< 640 px of dialog body):** a FULLSCREEN drill-down panel: no tree - `button.tm-dod-folder-row[data-path]` rows plus `.tm-dod-back`, two-line document rows with the `PreviewSvg` thumbnail and a per-row "⋯" menu, a `TmMobileActionBar` (`[data-action-id=new-folder|rename|delete]`) + Open in a sticky footer, compact Link / Copy cards, no `.tm-dod-cancel` (the header close cancels); double tap only selects. The layout is measured from the dialog's own container with a 112 px hysteresis while the panel is up (so it cannot flap); E2E that must work in both layouts uses `'.tm-dod-tree-node, .tm-dod-folder-row'`.
+- Rules: scoped CSS reaches the `TmModal` body only through `.tm-dod-host ::deep …`; no new animated subject in core stylesheets (`ReducedMotionSelectorTests`); `.tm-dod-*` classes and all `--tm-*` tokens in `TmDocumentOpenDialog.razor.css` must exist (`TmDocumentOpenDialogCssTests`).
+
+---
+
 ## TmDiagramEditor Advanced Features
 
 The diagram editor (`TmDiagramEditor`, `TmDiagramCanvas`) supports several advanced productivity features beyond basic drawing:
@@ -597,7 +628,7 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 Split package assets live under their own static-web-asset base paths:
 - `Tempo.Blazor.PdfViewer`: `_content/Tempo.Blazor.PdfViewer/js/pdf-viewer.js`
 - `Tempo.Blazor.DiagramEditor`: `_content/Tempo.Blazor.DiagramEditor/js/diagram-editor.js` (classic script; it dynamically imports `diagram-editor-touch.js`; `dagre.min.js`, the d3 bundles and `diagram-arrow-select.js` are separate `<script>` tags), plus `_content/Tempo.Blazor.DiagramEditor/css/tempo-blazor-diagram-editor.css`
-- `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js`
+- `Tempo.Blazor.Wireframe`: `_content/Tempo.Blazor.Wireframe/js/wireframe-designer.js` (classic script; it dynamic-imports its own `wireframe-gestures.mjs` and, from the core package, the shared `pointer-drag.js` / `pointer-gesture.js` - so **`_content/Tempo.Blazor/js/` must be served** too: without it the canvas has no pointer gestures and logs "the pointer helpers ... could not be loaded"; its middle-button pan is the one documented hand-written gesture outside `pointer-drag.js`, see [docs/touch-interaction.md](docs/touch-interaction.md)), plus `_content/Tempo.Blazor.Wireframe/css/tempo-blazor-wireframe.css`
 - `Tempo.Blazor.Spreadsheet`: `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet.js` and `_content/Tempo.Blazor.Spreadsheet/js/spreadsheet-canvas.js`
 - `Tempo.Blazor.NotionEditor`: `_content/Tempo.Blazor.NotionEditor/js/notion-editor.js`
 - `Tempo.Blazor.Signing`: `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js` (loaded by `TmPdfTemplateDesigner` as an ES module)
@@ -622,7 +653,7 @@ Split package assets live under their own static-web-asset base paths:
   - Manual (with suffix): `1.0.0-beta1`
   - CI builds: `1.0.0-ci-{timestamp}`
 
-`.github/workflows/js-node-tests.yml` runs the four Node lanes on every push/PR.
+`.github/workflows/js-node-tests.yml` runs the Node lanes (document editor, reporting modules, overlay/core, diagram editor, wireframe) on every push/PR.
 
 ## Useful Commands Reference
 

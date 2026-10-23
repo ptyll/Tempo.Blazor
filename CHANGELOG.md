@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- **Wireframe redesign phase 10 clean-up (plan ce19aa8c).** The Blob URL of a wireframe download is revoked after 60 s instead of 1 s (iOS Safari opens the blob in a new tab asynchronously); `TmWireframeDesignerCanvas`' parent-render snapshot now includes the page width / height (a `ResizeCanvasCommand` mutates them in place) and documents that every render-affecting parameter belongs in it; deleting a selected connector closes the sheet that its selection opened on a phone (`MobileSelectionCleared`); `AddElementsCommand.Undo` removes only the elements its own `Execute` inserted; duplicating a grouped selection re-points the copied members to the copied container; the mobile Lock quick action drops `aria-pressed` (its label already flips Lock / Unlock); the phone sheet-open canvas padding lives inside the `< 768px` container query and the floating zoom pill never exceeds its canvas (`max-inline-size`, `nowrap`).
 - **Wireframe middle-button pan survived Escape and destroy.** Escape or tearing the editor down in the middle of a middle-button pan left the viewBox moved, the pointer captured and the move/up listeners attached; `_cancelMiddlePan` now rolls it back (the one gesture outside `pointer-drag.js`, documented in `docs/touch-interaction.md`).
 - **A cancelled wireframe drag called .NET after the editor was destroyed.** `_bodyCancel` skips (and swallows a rejected) `OnDragStarted([])` once the instance is destroyed.
 - **Keys typed in a wireframe side sheet reached the canvas.** The canvas shortcut guard ignores events from `.tm-wd-sheet` like it does for the layers and pages panels (arrow nudge, Delete and Escape no longer act on the selection).
@@ -74,6 +75,7 @@
 
 ### Added
 
+- **Wireframe editor + document-open dialog redesign: plan summary (ce19aa8c, phases 1-10).** `TmWireframeEditor` now renders through the core `TmEditorShell` and resolves desktop / tablet / mobile from its own container (`data-editor-layout`, 768 / 1200): a labelled `TmToolbar` with the frozen `data-tm-group` set, a left panel with Components / Pages / Layers tabs (`PageNavigation=Panel` is opt-in), device presets and a Name field in the inspector (`WireframeElement.Name`, additive in Abstractions, schema and MCP), Pointer Events on the shared `pointer-drag.js` / `pointer-gesture.js` helpers (finger, pen, pinch, long-press menu, gesture rollback), tablet sheets and a phone "viewing + light edits" mode (action bar, bottom sheets, action-sheet context menu, export sheet), `ReadOnly` / `ShowRulers` / `ShowGrid` never assigned by the component. The shared core `TmDocumentOpenDialog` became an XLarge modal with a WAI-ARIA tree, breadcrumb, radio-card Link / Copy choice, opt-in `ShowRecent` / `LayoutMode`, and a fullscreen drill-down panel below 640 px; its public API, `DocumentOpenResult` and `ITempoDocumentLibraryProvider` are unchanged. Every breaking change of the plan is listed under Breaking / Migration with a before / after; the contracts are in [docs/wireframe-editor.md](docs/wireframe-editor.md) ("Reference at a glance"), [docs/touch-interaction.md](docs/touch-interaction.md) and the AGENTS.md "Wireframe editor chrome" section.
 - **`TmDocumentOpenDialog` mobile layout: a fullscreen panel with drill-down folders (wireframe redesign plan ce19aa8c, phase 9, WF4).** In a dialog body narrower than
   640 px - or with `LayoutMode="TmLayoutMode.Mobile"` - the dialog renders `TmModal` with `MobilePresentation=Fullscreen` and an inline footer that never leaves the screen:
   a sticky head (search at full width; a back button, the breadcrumb and the list / grid switch; the inline new-folder, rename and delete-confirm bars, usable at 320 px),
@@ -119,8 +121,7 @@
   `data:` URL is dropped by iOS Safari and some Chromium builds); the base64 `data:` URL stays as the fallback. iOS Safari has no real download: the file opens in a
   new tab and is saved from the share sheet (documented).
 
-- **Wireframe editor tablet layout (redesign plan ce19aa8c, phase 6).**
- In an editor container of 768-1199 px (`data-editor-layout="tablet"`)
+- **Wireframe editor tablet layout (redesign plan ce19aa8c, phase 6).** In an editor container of 768-1199 px (`data-editor-layout="tablet"`)
   the command row is **two `TmToolbar`s** split by `data-tm-group` (row 1: tools, history, arrange, grouping, alignment, snapping and
   the format painter; row 2: the Components / Properties toggles, zoom, Export and Import, plus the document title), the left panel
   (Components / Pages / Layers) is an **overlay drawer** and the inspector a **non-modal side sheet with a close ×** - at most one of
@@ -1410,6 +1411,8 @@
 - **The `data-tm-group` set of the wireframe toolbar is frozen (phase 4 review).** Hosts and tests key off the attribute, never off the
   position of a group: `tools`, `history`, `arrange`, `group`, `align`, `snap`, `format`, `view`, `zoom`, `file`. A group may
   move between the bar and the "More" menu as the width changes; the name set only ever grows by an additive, documented entry.
+  Before: `.tm-wd-editor__toolbar > div:nth-child(3)` (a positional selector on the toolbar's internal DOM).
+  After: `.tm-wd-editor [data-tm-group='arrange']` (the group may sit in the bar or in the "More" menu - open it first when the width is narrow).
 - **`TmWireframeEditor` renders through the core `TmEditorShell`: new DOM, one `TmToolbar` command row, named groups and visible labels (redesign plan ce19aa8c, phase 4).**
   Impact: a test, script or stylesheet that targeted the old structure must move. The editor was a flat column of
   `.tm-wd-editor__toolbar` (≈35 hand-written `.tm-wd-editor__btn` buttons and four hand-rolled dropdowns), the page tabs, and a
@@ -1465,10 +1468,14 @@
   Same contract as `ReadOnly` / `ShowRulers`: the inspector's *Grid* section keeps an internal state and raises the new
   `ShowGridChanged` / `GridSizeChanged` (`@bind-ShowGrid`, `@bind-GridSize`); a changed parameter is adopted again. The context menu's
   *Hide/Show grid* goes through the same path (before it assigned the parameter). Hosts that only set the initial value are unaffected.
+  Before: `<TmWireframeEditor ShowGrid="true" />` and the user's grid toggle overwrote the host's parameter value (the host never saw it).
+  After: `<TmWireframeEditor @bind-ShowGrid="grid" @bind-GridSize="gridSize" />` to track the user's choice; without a binding the host value is only the initial state.
 - **Wireframe editor: the left toolbox is a 3-column grid of icon tiles.** `WireframeComponentDef.Icon` is rendered as a `TmIcon`
   (`.tm-wd-toolbox__item-icon`); the mini stencil SVG (`.tm-wd-toolbox__item-preview-paper`) remains only as the fallback when the
   icon is missing or not drawable. Search and filters are unchanged. A selector on `.tm-wd-toolbox__item-preview-paper` must accept
   tiles without it.
+  Before: `page.Locator('.tm-wd-toolbox__item-preview-paper').First` (every row had a preview).
+  After: `page.Locator('.tm-wd-toolbox__item[data-component-type="TmButton"]')` (key off the item, not its preview; the icon is `.tm-wd-toolbox__item-icon`).
 - **Wireframe inspector with an empty selection shows Canvas / Page / Grid instead of a hint (additive).**
   Device presets (Desktop 1440×900, Laptop 1280×800, Tablet 1024×768, iPhone 14 390×844, Android 360×800, Custom) push the undoable
   `ResizeCanvasCommand`; the Page section renames the active page; with a selection, *Element* has a **Name** field and a **Delete element**
@@ -1479,6 +1486,7 @@
   returned by the MCP wireframe tools (`name` on `addElement` / `updateElement` / the author payload, in `wireframe_get_document`, the
   implementation brief and the authoring guide) and described in `wireframe-document.schema.json`. A strict consumer of the
   JSON schema that rejected unknown element properties must accept `name`.
+  Before: `{ "id": "a1", "type": "TmButton", "x": 10 }`. After: `{ "id": "a1", "type": "TmButton", "name": "Submit", "x": 10 }` (`name` is optional; existing documents need no migration).
 - **`TmWireframeLayersPanel` DOM: the active layer is a `role="radio"` button inside a `radiogroup`, and the
   visibility/lock buttons are toggles.** Impact: a test, script or stylesheet that relied on the old structure
   must move. The list was `role="list"` of `role="listitem"` rows whose "active" control was a plain `<button>`

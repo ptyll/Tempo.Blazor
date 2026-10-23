@@ -1,7 +1,8 @@
+@inherits Tempo.Blazor.Components.TmComponentBase
 @namespace Tempo.Blazor.Components.Wireframe
 @using Tempo.Blazor.Components.Wireframe.Models
 
-<div class="tm-wd-pages @Class" data-testid="wd-pages-panel">
+<div class="tm-wd-pages @Class" data-testid="@TestId("wd-pages-panel")">
     @if (ShowTitle)
     {
         <div class="tm-wd-pages__header">
@@ -53,7 +54,7 @@
                     @* A native button: Enter / Space produce the click themselves, so no keyboard emulation here. *@
                     <button type="button"
                             class="tm-wd-pages__select"
-                            data-testid="wd-page-@pg.Id"
+                            data-testid="@TestId($"wd-page-{pg.Id}")"
                             aria-current="@(isActive ? "page" : null)"
                             title="@pg.Name"
                             @ref="_selectRefs[pg.Id]"
@@ -66,7 +67,7 @@
                 {
                     var rowMenuHolder = GetRowMenuHolder(pg.Id);
                     <TmContextMenu @ref="rowMenuHolder.Menu" Class="tm-wd-pages__row-menu" SheetTitle="@pg.Name"
-                                   data-testid="@("wd-page-menu-" + pg.Id)">
+                                   data-testid="@TestId("wd-page-menu-" + pg.Id)">
                         <Trigger>
                             <span class="tm-wd-pages__row-menu-trigger" title="@Loc["TmWireframePages_More"]">
                                 <TmIcon Name="@IconNames.MoreHorizontal" />
@@ -109,7 +110,7 @@
 
     @if (!ReadOnly)
     {
-        <button type="button" class="tm-wd-pages__add" data-testid="wd-page-add" @onclick="AddPageAsync">
+        <button type="button" class="tm-wd-pages__add" data-testid="@TestId("wd-page-add")" @onclick="AddPageAsync">
             <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
             <span>@Loc["TmWireframe_AddPage"]</span>
         </button>

@@ -2211,6 +2211,7 @@
   .tm-wd-editor__page-tab-close,
   .tm-wd-editor__page-tab-dup,
   .tm-wd-editor__title,
+  .tm-wd-editor__zoom-overlay,
   .tm-wd-layers__item,
   .tm-wd-minimap,
   .tm-wd-pages__item,
@@ -2221,6 +2222,8 @@
   .tm-wd-props__select,
   .tm-wd-props__toggle-track,
   .tm-wd-props__toggle-track::after,
+  .tm-wd-quick-actions,
+  .tm-wd-sheet,
   .tm-wd-toolbox__category-header,
   .tm-wd-toolbox__category-header::before,
   .tm-wd-toolbox__filter-btn,
@@ -2590,6 +2593,10 @@
   align-items: center;
   gap: var(--tm-space-1);
   padding: var(--tm-space-1);
+  /* Never wider than the canvas it floats on: one row, never wrapped. Nothing is clipped (a clipped button would be a focusable target
+     cut in half): at the narrowest container the % read-out steps aside instead, see the container query below. */
+  max-inline-size: calc(100% - 2 * var(--tm-space-2));
+  white-space: nowrap;
   background: var(--tm-wd-bg-surface);
   color: var(--tm-wd-text);
   border: 1px solid var(--tm-wd-border);
@@ -2634,6 +2641,22 @@
 .tm-wd-editor__zoom-overlay-btn--fit {
   border-inline-start: 1px solid var(--tm-wd-border);
   border-radius: 0 var(--tm-wd-radius) var(--tm-wd-radius) 0;
+}
+
+/* Narrowest container (an editor under ~270 px): four finger-sized buttons already fill the pill, so the % label is visually hidden (it stays in the
+   accessibility tree as the live zoom status) rather than letting the pill clip a focusable button. */
+@container tm-wd-editor (width < 17rem) {
+  .tm-wd-editor__zoom-overlay-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    min-inline-size: 0;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 /* The Properties sheet: the quick actions of the selection sit above the full inspector (the peek snap shows them). */
@@ -2801,13 +2824,13 @@
   .tm-wd-editor .tm-editor-shell__sheet .tm-wd-side__tabs {
     flex-shrink: 0;
   }
-}
 
-/* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end of
-   its canvas region, and the editor's own flat "padding: 0" above must not cancel that. The page is re-fitted into the remaining
-   room by the script (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. */
-.tm-wd-editor .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
-  padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
+  /* While the mobile sheet is open the canvas gives its lower part to it: the shell reserves the sheet's lowest snap as padding-block-end
+     of its canvas region, and the editor's own flat "padding: 0" above must not cancel that. The page is re-fitted into the remaining
+     room by the script (ResizeObserver relayout), so a selected element stays visible above the peeked sheet. Phone band only. */
+  .tm-wd-editor .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
+    padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
+  }
 }
 
 /* The export dialog is a bottom sheet on a phone (TmModal MobilePresentation=Sheet, footer inline and sticky). It is portaled out of the editor. */

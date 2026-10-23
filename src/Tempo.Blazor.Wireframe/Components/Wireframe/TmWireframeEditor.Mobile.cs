@@ -117,6 +117,7 @@ public partial class TmWireframeEditor
         builder.AddComponentParameter(11, nameof(TmWireframeSidePanel.ActiveLayerIdChanged), EventCallback.Factory.Create<string?>(this, OnActiveLayerChanged));
         builder.AddComponentParameter(12, nameof(TmWireframeSidePanel.ActivePageChanged), EventCallback.Factory.Create<string>(this, OnPagesPanelActivePageChanged));
         builder.AddComponentParameter(13, nameof(TmWireframeSidePanel.SingleColumn), singleColumn);
+        builder.AddComponentParameter(14, nameof(TmWireframeSidePanel.TestIdPrefix), TestIdPrefix);
         builder.CloseComponent();
     };
 

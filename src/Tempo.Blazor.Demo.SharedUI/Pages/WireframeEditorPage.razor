@@ -178,6 +178,33 @@
     </details>
 </section>
 
+<!-- ═══ Section 5: Narrow container ════════════════════════════════════════ -->
+<section class="demo-section mb-10" data-testid="wf-demo-narrow">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">Narrow Container</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        The editor picks its layout from the width of its <em>own container</em>, not from the viewport: in a 390 px box it is the
+        phone layout (viewing and light edits, action bar, bottom sheets) even on a desktop screen.
+    </p>
+    <div class="mb-3">
+        <button class="px-3 py-1.5 text-sm rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                data-testid="wf-demo-narrow-toggle"
+                aria-pressed="@(_showNarrow ? "true" : "false")"
+                @onclick="ToggleNarrow">
+            @(_showNarrow ? "Hide narrow editor" : "Show narrow editor")
+        </button>
+    </div>
+    @if (_showNarrow && _narrowDocument is not null)
+    {
+        @* Its own document (a clone of the main one when it was opened) and its own test id namespace: the main editor keeps the plain wd- ids. *@
+        <div style="width: 390px; max-width: 100%; height: 640px;" data-testid="wf-demo-narrow-host">
+            <TmWireframeEditor Document="@_narrowDocument"
+                               DocumentChanged="@(doc => _narrowDocument = doc)"
+                               TestIdPrefix="narrow"
+                               Class="h-full" />
+        </div>
+    }
+</section>
+
 </div>
 
 <TmDocumentOpenDialog Provider="LibraryProvider"
@@ -191,6 +218,8 @@
 
     private WireframeDocument _document = CreateDefault();
     private WireframeDocument _customDocument = CreateDefault();
+    private WireframeDocument? _narrowDocument;
+    private bool _showNarrow;
     private bool _openDialog;
 
     private string _jsonPreview  = "";
@@ -212,6 +241,14 @@
             _jsonPreview = WireframeSerializer.Serialize(doc);
             StateHasChanged();
         }
+    }
+
+    // The narrow demo editor is rendered on demand only, on its own copy of the main document (never shared state or test ids).
+    private void ToggleNarrow()
+    {
+        _showNarrow = !_showNarrow;
+        _narrowDocument = _showNarrow && WireframeSerializer.TryDeserialize(WireframeSerializer.Serialize(_document), out var clone) ? clone : null;
+        if (_narrowDocument is null) _showNarrow = false;
     }
 
     // ── Sample loading ─────────────────────────────────────────────────────────

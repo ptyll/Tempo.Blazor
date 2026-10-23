@@ -7817,6 +7817,8 @@ a volba **odkaz vs. kopie**. Po potvrzení vyvolá `DocumentOpenResult`.
 | `OnCancelled` | `EventCallback` | — | Vyvoláno při zrušení. |
 | `PageSize` | `int` | `50` | Velikost stránky při procházení. |
 | `SearchDebounceMs` | `int` | `300` | Debounce vyhledávání v ms (0 v testech). |
+| `ShowRecent` | `bool` | `false` | Opt-in uzel „Nedávné“ ve stromu (řazení podle `ModifiedAt` přes `BrowseAsync`, bez změny provideru). |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | `Auto` měří šířku těla dialogu (< 640 px = celoobrazovkový panel s drill-down složkami); `Desktop`/`Tablet`/`Mobile` rozložení vynutí (testy). |
 
 `DocumentOpenResult`: `DocumentId` (Guid), `Kind` (`TempoDocumentKind`), `Mode`
 (`DocumentOpenMode`), `Name` (string?).
@@ -7826,6 +7828,11 @@ a volba **odkaz vs. kopie**. Po potvrzení vyvolá `DocumentOpenResult`.
 - **`Link`** — odkaz na původní dokument; konzument zůstává v synchronizaci s pozdějšími úpravami.
 - **`Copy`** — vloží nezávislou kopii; konzument není pozdějšími úpravami originálu dotčen.
 
+**Rozložení (wireframe plán ce19aa8c, fáze 8–9).** Desktop/tablet: modální okno XLarge, sbalitelný WAI-ARIA strom (`.tm-dod-tree-node`, roving tabindex), drobečková navigace, řazení, vždy viditelné (případně zakázané) Rename/Delete a volba Link/Copy jako radio karty. Pod 640 px těla dialogu je z dialogu **celoobrazovkový panel**: bez stromu, složky jsou řádky `button.tm-dod-folder-row` s tlačítkem zpět, dokumenty dvouřádkové s náhledem `PreviewSvg` a menu „⋯“, akce New folder/Rename/Delete jsou `TmMobileActionBar` v patičce vedle Open, dvojklik/dvojtap jen vybírá, tlačítko `.tm-dod-cancel` zde není (zavírá hlavička). Veřejné API, `DocumentOpenResult` i `ITempoDocumentLibraryProvider` jsou beze změny.
+
+### TmWireframePagesPanel
+
+Seznam stránek wireframu (číslovaný, klik přepíná, menu „⋯“ na řádku: Rename, Duplicate, Move up/down, Delete; F2 přejmenuje, Alt+↑/↓ změní pořadí, tažení je jen bonus). Používá ho `TmWireframeEditor` v záložce **Pages** při `PageNavigation="WireframePageNavigation.Panel"` (výchozí `Tabs` ponechá horizontální záložky). Parametry: `Document`, `DocumentChanged`, `ActivePageChanged`, `ReadOnly`, `ShowTitle`, `Class`. Kontrakt editoru (rozvržení desktop/tablet/mobil, stabilní skupiny `data-tm-group`, `WireframeElement.Name`, předvolby zařízení, dotyk a ne-drag alternativy): [docs/wireframe-editor.md](docs/wireframe-editor.md).
 #### Použití
 
 ```razor

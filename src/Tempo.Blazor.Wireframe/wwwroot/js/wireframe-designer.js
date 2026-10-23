@@ -2499,10 +2499,12 @@ window.tmWireframeDesigner = {
         anchorEl.href     = url;
         anchorEl.download = fileName;
         anchorEl.click();
-        // The browser has started the download by the time the click handler returned: release the Blob URL and the anchor.
+        // Release the Blob URL and the anchor late: iOS Safari hands the blob to a new tab / the download manager asynchronously, so a
+        // revoke a second after the click (the old delay) could kill the download before it started. 60 s is cheap (the bytes are
+        // already in memory) and safe.
         setTimeout(() => {
             anchorEl.href = '';
             if (revoke) { try { URL.revokeObjectURL(url); } catch (err) { /* already gone */ } }
-        }, 1000);
+        }, 60000);
     },
 };

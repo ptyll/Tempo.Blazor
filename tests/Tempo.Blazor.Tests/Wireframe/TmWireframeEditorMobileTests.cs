@@ -319,6 +319,26 @@ public class TmWireframeEditorMobileTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Mobile_QuickDuplicate_OfAGroupedSelection_RemapsTheCopiesToTheCopiedContainer()
+    {
+        var cut = RenderEditor();
+        var doc = Canvas(cut).Document!;
+        var container = WireframeDocumentExtensions.NewElement("TmButton", 100, 100);
+        var member = WireframeDocumentExtensions.NewElement("TmButton", 120, 120);
+        member.GroupId = container.Id;
+        doc.Elements.Add(container);
+        doc.Elements.Add(member);
+        cut.InvokeAsync(() => Canvas(cut).JsOnSelectionChanged([container.Id, member.Id])).GetAwaiter().GetResult();
+
+        cut.Find("[data-testid='wd-quick-duplicate']").Click();
+
+        doc.Elements.Should().HaveCount(4);
+        var copies = doc.Elements.Where(e => e.Id != container.Id && e.Id != member.Id).ToList();
+        var copiedContainer = copies.Single(e => e.GroupId is null);
+        copies.Single(e => e.GroupId is not null).GroupId.Should().Be(copiedContainer.Id, "the copied member joins the copied container, not the original group");
+    }
+
+    [Fact]
     public void Mobile_ReadOnly_QuickActionsAreDisabled()
     {
         var cut = RenderEditor(configure: p => p.Add(c => c.ReadOnly, true));

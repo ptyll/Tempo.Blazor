@@ -74,6 +74,11 @@ internal sealed class TmWireframeSidePanel : ComponentBase
     /// <summary>Tablet / sheet presentation: the Components tab is a single column of named rows (a finger-sized list) instead of the 3-column tile grid.</summary>
     [Parameter] public bool SingleColumn { get; set; }
 
+    /// <summary>Namespaces every internal <c>data-testid</c> (forwarded from the editor's <c>TestIdPrefix</c>).</summary>
+    [Parameter] public string? TestIdPrefix { get; set; }
+
+    private string Prefix(string name) => string.IsNullOrEmpty(TestIdPrefix) ? name : $"{TestIdPrefix}-{name}";
+
     /// <summary>Number of tabs that are available.</summary>
     internal int TabCount => (ShowComponents ? 1 : 0) + (ShowPages ? 1 : 0) + (ShowLayers ? 1 : 0);
 
@@ -107,7 +112,7 @@ internal sealed class TmWireframeSidePanel : ComponentBase
         var tabbed = TabCount > 1;
         b.OpenElement(0, "div");
         b.AddAttribute(1, "class", "tm-wd-side");
-        b.AddAttribute(2, "data-testid", "wd-side-panel");
+        b.AddAttribute(2, "data-testid", Prefix("wd-side-panel"));
 
         if (tabbed)
         {
@@ -149,6 +154,7 @@ internal sealed class TmWireframeSidePanel : ComponentBase
                 panel.AddComponentParameter(3, nameof(TmWireframePagesPanel.ActivePageChanged), ActivePageChanged);
                 panel.AddComponentParameter(4, nameof(TmWireframePagesPanel.ReadOnly), ReadOnly);
                 panel.AddComponentParameter(5, nameof(TmWireframePagesPanel.Class), "tm-wd-editor__pages");
+                panel.AddComponentParameter(7, nameof(TmWireframePagesPanel.TestIdPrefix), TestIdPrefix);
                 panel.AddComponentParameter(6, nameof(TmWireframePagesPanel.ShowTitle), false);   // the tab already says "Pages"
                 panel.CloseComponent();
             });

@@ -1,3 +1,4 @@
+@inherits Tempo.Blazor.Components.TmComponentBase
 @namespace Tempo.Blazor.Components.Wireframe
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Rendering
@@ -194,5 +195,5 @@
     </svg>
 
     @* Polite live region: a gesture rolled back by Escape / pointercancel / a second finger says so (the message repeats: see OnGestureCancelled). *@
-    <div class="tm-sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="wd-canvas-status">@_statusMessage</div>
+    <div class="tm-sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="@TestId("wd-canvas-status")">@_statusMessage</div>
 </div>

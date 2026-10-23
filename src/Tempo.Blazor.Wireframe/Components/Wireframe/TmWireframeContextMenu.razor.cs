@@ -9,7 +9,12 @@ public enum WireframeContextMenuPresentation
     /// <summary>A <c>position:fixed</c> menu at the pointer (desktop and tablet).</summary>
     Anchored,
 
-    /// <summary>The shared bottom action sheet of the core overlay panel (mobile, G2): finger-sized rows and a Done button; align, distribute and grouping are tablet+ and are not offered.</summary>
+    /// <summary>
+    /// The shared bottom action sheet of the core overlay panel (mobile, G2): finger-sized rows and a Done button; align, distribute and
+    /// grouping are tablet+ and are not offered. It is the wireframe counterpart of the DiagramEditor's mobile long-press action sheet
+    /// (same core panel, same entry gesture). The <c>menu</c> role sits on the sheet's items container only - the title and the Done
+    /// button stay outside it.
+    /// </summary>
     Sheet,
 }
 

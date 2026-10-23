@@ -11,6 +11,10 @@ public sealed class AddElementsCommand : IWireframeCommand
     private readonly WireframeDocument _doc;
     private readonly IReadOnlyList<WireframeElement> _elements;
 
+    // Ids this command actually inserted in Execute(): an element that was already in the document (same id) is not ours, so Undo must
+    // not remove it.
+    private readonly HashSet<string> _added = [];
+
     /// <param name="doc">Target document.</param>
     /// <param name="elements">The elements to add (already carrying their final ids, z-index and layer).</param>
     public AddElementsCommand(WireframeDocument doc, IEnumerable<WireframeElement> elements)
@@ -25,17 +29,18 @@ public sealed class AddElementsCommand : IWireframeCommand
     /// <inheritdoc />
     public void Execute()
     {
+        _added.Clear();
         foreach (var element in _elements)
         {
-            if (!_doc.Elements.Any(e => e.Id == element.Id))
-                _doc.Elements.Add(element);
+            if (_doc.Elements.Any(e => e.Id == element.Id)) continue;
+            _doc.Elements.Add(element);
+            _added.Add(element.Id);
         }
     }
 
     /// <inheritdoc />
     public void Undo()
     {
-        var ids = _elements.Select(e => e.Id).ToHashSet();
-        _doc.Elements.RemoveAll(e => ids.Contains(e.Id));
+        _doc.Elements.RemoveAll(e => _added.Contains(e.Id));
     }
 }

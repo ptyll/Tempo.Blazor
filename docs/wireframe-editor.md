@@ -4,6 +4,22 @@
 `TmWireframeToolbox`, `TmWireframePropertiesPanel`, `TmWireframeLayersPanel`, `TmWireframePagesPanel`, `TmWireframeExportDialog`) and the
 stencil renderers behind it. This page records the contracts the redesign plan (`ce19aa8c`) froze phase by phase.
 
+## Reference at a glance (phase 10)
+
+| Topic | Contract |
+|-------|----------|
+| `PageNavigation` | `Tabs` (default, horizontal page tabs on the canvas) or `Panel` (adds the **Pages** tab to the left panel, `TmWireframePagesPanel`). Opt-in: the default presentation is unchanged. |
+| `LayoutMode` / `LayoutBreakpoints` | `Auto` (default) resolves the layout from the editor's **own container** (`data-editor-layout`): desktop ≥ 1200, tablet 768-1199, mobile < 768. `Desktop` / `Tablet` / `Mobile` pin it (tests, forced presentations). Container queries, not viewport media queries, so a narrow editor inside a wide page behaves as a narrow editor. |
+| Header slots | `ShowHeader`, `Title`, `HeaderStart`, `HeaderActions` (host actions such as **Open…** / **Save** - the editor has no built-in Open/Save), and on a phone `MobileActions` (action-bar tiles; `ActionOverflow.Never` keeps a tile). |
+| Device presets | `WireframeDevicePresets` (Desktop 1440×900, Laptop 1280×800, Tablet 1024×768, iPhone 14 390×844, Android 360×800, Custom) in the inspector's **Canvas** section and the phone "More" menu; every change is the undoable `ResizeCanvasCommand`. |
+| `WireframeElement.Name` | Optional human-readable element name (serialised as `name`, omitted when empty; schema and MCP carry it). Edited in the inspector (`RenameElementCommand`, undoable) and shown by the Layers panel and the canvas. |
+| Touch and pen | Pointer Events on the shared `pointer-drag.js` / `pointer-gesture.js` helpers: tap selects, drag moves, handles have coarse hit areas (`--tm-wd-handle-hit`), two fingers pinch / pan, a 500 ms hold opens the context menu. A cancelled gesture (Escape, `pointercancel`, a second finger) rolls back and is announced. |
+| Non-drag alternatives (WCAG 2.5.7) | toolbox tile: click / tap / Enter / Space; element move / resize: arrow keys and the inspector X / Y / W / H; layers and pages: row menu, F2, Alt+↑ / Alt+↓; zoom: toolbar and the floating zoom buttons. |
+| Mobile scope (decision G2) | viewing + light edits (select, move, duplicate, lock, delete, inspector, pages and layers, device presets, PNG / PDF / SVG / JSON export). Resize / rotate handles, rubber band, connectors, align / distribute, grouping, rulers, the minimap and JSON import are **tablet and up**. |
+| Stable `data-tm-group` set | `tools | history | arrange | group | align | snap | format | view | zoom | file` (see "Editor shell" - frozen, only additive growth); hosts and tests key off the attribute, never off the toolbar's internal DOM. |
+| Standalone canvas hosts | A host that renders `TmWireframeDesignerCanvas` itself with `LightEditing="true"` must bump `ContentVersion` after every **in-place** edit of the document (the canvas skips a parent pass whose snapshot - document identity, page, page size, grid, snapping, read-only, scope, class - is unchanged). `TmWireframeEditor` does this for you. |
+| Duplicate of a grouped selection | The copies of group members whose container is copied too join the **copied** container; a member duplicated without its container keeps pointing at the original one. |
+| Core assets | `wireframe-designer.js` imports `pointer-drag.js` / `pointer-gesture.js` from `_content/Tempo.Blazor/js/` - the host must serve the core package's static web assets (see "Serving the pointer helpers"). Node tests: `npm run test:wireframe`. |
 ## Read-only and rulers (phase 1)
 
 `ReadOnly` and `ShowRulers` are plain `[Parameter]`s and are **never assigned inside the component** — bind them with
@@ -231,11 +247,11 @@ In an editor container **below 768 px** (`data-editor-layout="mobile"`) the edit
 | Export dialog | `TmWireframeExportDialog.MobilePresentation=Auto` (default): a **bottom sheet** on a phone (`TmModal` `Sheet`, `FooterLayout=Inline`: Cancel and Export side by side, sticky), the centred dialog elsewhere. No local sheet is built. |
 
 **No re-render of the canvas.** Opening, switching a tab of and closing a sheet never repaints the SVG scene: `TmWireframeDesignerCanvas` gates a parent render
-(`LightEditing` only) on its parameters and `ContentVersion`, a token the editor bumps on every command, undo / redo, page switch, document change and host parameter
+(`LightEditing` only) on a snapshot of its parameters (document identity, active page, the page width / height, grid, read-only, snapping, component scope, class, `LightEditing`) and `ContentVersion`, a token the editor bumps on every command, undo / redo, page switch, document change and host parameter
 pass. A document mutation therefore still repaints (`RenderCount` bUnit tests, a `MutationObserver` E2E on the svg). The script re-measures the canvas after a sheet moves
 (`relayout`), and the shell reserves the sheet's lowest snap as padding under the canvas, so a selected element stays visible above the peeked sheet.
 
-**Download on iOS Safari.** `tmWireframeDesigner.downloadFile` saves through a `Blob` URL on the hidden anchor (`URL.createObjectURL`, revoked after one second); the base64
+**Download on iOS Safari.** `tmWireframeDesigner.downloadFile` saves through a `Blob` URL on the hidden anchor (`URL.createObjectURL`, revoked after 60 s - iOS Safari hands the blob to a new tab asynchronously, so a one-second revoke could kill the download); the base64
 `data:` URL is only the fallback for a host without `Blob`. Large `data:` URLs (a PNG / PDF export is easily a few MB) are dropped by iOS Safari. iOS Safari has no real
 download: the link with the `download` attribute opens the file in a new tab (PNG / PDF / SVG / JSON are all viewable) and the user saves it from the share sheet - a platform
 limit, not something the component can change.

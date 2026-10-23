@@ -30,7 +30,7 @@ namespace Tempo.Blazor.Components.Wireframe;
 /// and isolated undo/redo stack. Pages can be added, duplicated, renamed, reordered (drag &amp; drop),
 /// and deleted (with confirmation when the page has elements).</para>
 /// </summary>
-public partial class TmWireframeEditor : ComponentBase, IDisposable
+public partial class TmWireframeEditor : TmComponentBase, IDisposable
 {
     // ── DI ────────────────────────────────────────────────────────────────────
 
@@ -405,6 +405,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         if (_document is null || IsReadOnly) return;
         _commandStack.Push(new RemoveConnectorsCommand(_document, ids));
         _selectedConnectorIds = [];
+        if (_selectedIds.Length == 0) MobileSelectionCleared();
         await DocumentChanged.InvokeAsync(_document);
         await InvokeAsync(StateHasChanged);
     }
@@ -719,6 +720,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
         if (_document is null || _selectedIds.Length == 0 || IsReadOnly) return;
         var ids = _selectedIds.ToList();
         var copies = new List<WireframeElement>();
+        var idMap = new Dictionary<string, string>();
         var nextZ = _document.Elements.Count > 0 ? _document.Elements.Max(e => e.ZIndex) + 1 : 0;
         foreach (var id in ids)
         {
@@ -728,7 +730,16 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             copy.X += 20;
             copy.Y += 20;
             copy.ZIndex = nextZ++;
+            idMap[el.Id] = copy.Id;
             copies.Add(copy);
+        }
+
+        // A copied group member whose group container is copied too joins the COPY of the container (not the original group). A member
+        // duplicated without its container keeps pointing at the original container - it stays in that group.
+        foreach (var copy in copies)
+        {
+            if (copy.GroupId is not null && idMap.TryGetValue(copy.GroupId, out var newContainerId))
+                copy.GroupId = newContainerId;
         }
 
         var newIds = copies.Select(c => c.Id).ToList();
@@ -760,6 +771,7 @@ public partial class TmWireframeEditor : ComponentBase, IDisposable
             var ids = _selectedConnectorIds.ToArray();
             _commandStack.Push(new Commands.RemoveConnectorsCommand(_document, ids));
             _selectedConnectorIds = [];
+            if (_selectedIds.Length == 0) MobileSelectionCleared();
         }
         await RerenderCanvas();
     }

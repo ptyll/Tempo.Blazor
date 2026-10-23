@@ -1,3 +1,4 @@
+@inherits Tempo.Blazor.Components.TmComponentBase
 @namespace Tempo.Blazor.Components.Wireframe
 @using System.Globalization
 @using System.Text.Json
@@ -13,12 +14,12 @@
         var presetId = SelectedPresetId;
 
         @* ── Canvas: device preset + width / height ───────────────────────── *@
-        <details class="tm-wd-props__section" open data-testid="wd-section-canvas">
+        <details class="tm-wd-props__section" open data-testid="@TestId("wd-section-canvas")">
             <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionCanvas"]</summary>
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label" for="@_presetId">@Loc["TmWireframeProps_DevicePreset"]</label>
-                    <select id="@_presetId" class="tm-wd-props__select" data-testid="wd-device-preset"
+                    <select id="@_presetId" class="tm-wd-props__select" data-testid="@TestId("wd-device-preset")"
                             aria-label="@Loc["TmWireframeProps_DevicePreset"]"
                             disabled="@canvasDisabled"
                             @onchange="OnDevicePresetChanged">
@@ -32,7 +33,7 @@
                     <div class="tm-wd-props__field">
                         <label class="tm-wd-props__label" for="@_canvasWId">@Loc["TmWireframe_CanvasWidth"]</label>
                         <input id="@_canvasWId" class="tm-wd-props__input @(_canvasSizeInvalid ? "tm-wd-props__input--error" : null)" type="number" min="100" max="9999" step="1"
-                               data-testid="wd-canvas-width"
+                               data-testid="@TestId("wd-canvas-width")"
                                aria-invalid="@(_canvasSizeInvalid ? "true" : null)"
                                aria-describedby="@(_canvasSizeInvalid ? _canvasErrorId : null)"
                                value="@_canvasWInput" disabled="@canvasDisabled"
@@ -41,7 +42,7 @@
                     <div class="tm-wd-props__field">
                         <label class="tm-wd-props__label" for="@_canvasHId">@Loc["TmWireframe_CanvasHeight"]</label>
                         <input id="@_canvasHId" class="tm-wd-props__input @(_canvasSizeInvalid ? "tm-wd-props__input--error" : null)" type="number" min="100" max="9999" step="1"
-                               data-testid="wd-canvas-height"
+                               data-testid="@TestId("wd-canvas-height")"
                                aria-invalid="@(_canvasSizeInvalid ? "true" : null)"
                                aria-describedby="@(_canvasSizeInvalid ? _canvasErrorId : null)"
                                value="@_canvasHInput" disabled="@canvasDisabled"
@@ -50,11 +51,11 @@
                 </div>
                 @if (_canvasSizeInvalid)
                 {
-                    <span id="@_canvasErrorId" class="tm-wd-props__error-msg" role="alert" data-testid="wd-canvas-error">@Loc["TmWireframeProps_CanvasSizeRange", MinCanvasSize, MaxCanvasSize]</span>
+                    <span id="@_canvasErrorId" class="tm-wd-props__error-msg" role="alert" data-testid="@TestId("wd-canvas-error")">@Loc["TmWireframeProps_CanvasSizeRange", MinCanvasSize, MaxCanvasSize]</span>
                 }
                 <div class="tm-wd-props__row">
                     <button type="button" class="tm-wd-editor__btn tm-wd-editor__btn--text"
-                            data-testid="wd-canvas-apply"
+                            data-testid="@TestId("wd-canvas-apply")"
                             disabled="@canvasDisabled"
                             @onclick="OnApplyCanvasSize">@Loc["TmWireframe_Apply"]</button>
                 </div>
@@ -62,13 +63,13 @@
         </details>
 
         @* ── Page: name of the active page ────────────────────────────────── *@
-        <details class="tm-wd-props__section" open data-testid="wd-section-page">
+        <details class="tm-wd-props__section" open data-testid="@TestId("wd-section-page")">
             <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionPage"]</summary>
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label" for="@_pageNameId">@Loc["TmWireframeProps_PageName"]</label>
                     <input id="@_pageNameId" class="tm-wd-props__input" type="text"
-                           data-testid="wd-page-name"
+                           data-testid="@TestId("wd-page-name")"
                            value="@(page?.Name ?? "")" disabled="@canvasDisabled"
                            @onchange="OnPageNameChanged" />
                 </div>
@@ -76,12 +77,12 @@
         </details>
 
         @* ── Grid: visibility + snapping size ─────────────────────────────── *@
-        <details class="tm-wd-props__section" open data-testid="wd-section-grid">
+        <details class="tm-wd-props__section" open data-testid="@TestId("wd-section-grid")">
             <summary class="tm-wd-props__section-header">@Loc["TmWireframeProps_SectionGrid"]</summary>
             <div class="tm-wd-props__section-body">
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__toggle">
-                        <input type="checkbox" data-testid="wd-grid-show"
+                        <input type="checkbox" data-testid="@TestId("wd-grid-show")"
                                checked="@_showGrid"
                                @onchange="OnShowGridChanged" />
                         <span class="tm-wd-props__toggle-track"></span>
@@ -91,7 +92,7 @@
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label" for="@_gridSizeId">@Loc["TmWireframeProps_GridSize"]</label>
                     <input id="@_gridSizeId" class="tm-wd-props__input" type="number" min="0" max="128" step="1"
-                           data-testid="wd-grid-size"
+                           data-testid="@TestId("wd-grid-size")"
                            value="@_gridSize.ToString(CultureInfo.InvariantCulture)"
                            @onchange="OnGridSizeChanged" />
                 </div>
@@ -99,7 +100,7 @@
         </details>
 
         @* ── Selection hint (no empty collapsible: the hint is the whole content) ── *@
-        <div class="tm-wd-props__empty" data-testid="wd-selection-hint">
+        <div class="tm-wd-props__empty" data-testid="@TestId("wd-selection-hint")">
             <span class="tm-wd-props__empty-icon" aria-hidden="true"><TmIcon Name="@IconNames.Square" Size="IconSize.Xl" /></span>
             <span>@Loc["TmWireframeProps_NoSelectionHint"]</span>
         </div>
@@ -202,7 +203,7 @@
                 <div class="tm-wd-props__field">
                     <label class="tm-wd-props__label" for="@_elementNameId">@Loc["TmWireframeProps_ElementName"]</label>
                     <input id="@_elementNameId" class="tm-wd-props__input" type="text"
-                           data-testid="wd-element-name"
+                           data-testid="@TestId("wd-element-name")"
                            value="@(_elements[0].Name ?? "")"
                            placeholder="@Loc["TmWireframeProps_ElementNamePlaceholder"]"
                            disabled="@ReadOnly"
@@ -277,7 +278,7 @@
                 </div>
             }
             <div class="tm-wd-props__field">
-                <button type="button" class="tm-wd-props__delete" data-testid="wd-delete-element"
+                <button type="button" class="tm-wd-props__delete" data-testid="@TestId("wd-delete-element")"
                         disabled="@ReadOnly"
                         @onclick="OnDeleteClicked">
                     <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
