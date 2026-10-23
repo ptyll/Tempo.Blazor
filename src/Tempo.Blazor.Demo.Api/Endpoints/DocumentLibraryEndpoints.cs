@@ -148,8 +148,16 @@ public static class DocumentLibraryEndpoints
             return true;
         }
 
+        // Enum.TryParse treats a comma list ("Folder,Library") as a flags combination and the combined value passes
+        // IsDefined for none of the members - but reject it explicitly instead of relying on that.
+        if (raw.Contains(',', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         return Enum.TryParse(raw, ignoreCase: true, out scope) && Enum.IsDefined(scope);
     }
+
     private static TempoDocumentKind ParseKind(string kind)
         => Enum.Parse<TempoDocumentKind>(kind, ignoreCase: true);
 

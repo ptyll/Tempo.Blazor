@@ -62,7 +62,7 @@
   "TmToolbarDemo_FileButtonTitle": "File button (TmToolbarFileButton)",
   "TmToolbarDemo_FileButtonDescription": "A Secondary file button leaves the bar into More like any other button; its More entry opens the same file chooser. Narrow the bar and pick a JSON file from either place.",
   "TmToolbarDemo_FileButtonDisabled": "Disabled file button",
-  "TmToolbarDemo_ImportJson": "Import JSON",
+  "TmToolbarDemo_ImportJson": "Import JSON…",
   "TmToolbarDemo_FileButtonLoaded": "Loaded {0}: a JSON {1}.",
   "TmToolbarDemo_FileButtonInvalidJson": "{0} is not valid JSON.",
   "TmToolbarDemo_FileButtonTooLarge": "{0} could not be read: {1}",

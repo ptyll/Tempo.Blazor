@@ -991,6 +991,7 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
 
     private async Task OnImportFile(InputFileChangeEventArgs e)
     {
+        if (IsReadOnly) return;
         _importError = null;
         var file = e.File;
         if (file is null) return;

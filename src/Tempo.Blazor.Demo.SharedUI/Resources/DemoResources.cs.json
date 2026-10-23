@@ -62,7 +62,7 @@
   "TmToolbarDemo_FileButtonTitle": "Tlačítko pro výběr souboru (TmToolbarFileButton)",
   "TmToolbarDemo_FileButtonDescription": "Sekundární tlačítko pro výběr souboru odchází z lišty do nabídky Více jako každé jiné tlačítko; jeho položka v nabídce otevře stejný výběr souboru. Zúžete lištu a vyberte soubor JSON z kteréhokoli místa.",
   "TmToolbarDemo_FileButtonDisabled": "Zakázané tlačítko pro výběr souboru",
-  "TmToolbarDemo_ImportJson": "Importovat JSON",
+  "TmToolbarDemo_ImportJson": "Importovat JSON…",
   "TmToolbarDemo_FileButtonLoaded": "Načteno {0}: JSON {1}.",
   "TmToolbarDemo_FileButtonInvalidJson": "{0} není platný JSON.",
   "TmToolbarDemo_FileButtonTooLarge": "Soubor {0} se nepodařilo načíst: {1}",

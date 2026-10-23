@@ -815,7 +815,7 @@ public sealed class TokenContrastTests
             PaintedColour("var(--tm-color-primary-subtle)", tokens));
 
         ratio.Should().BeGreaterThanOrEqualTo(4.5,
-            "--tm-color-primary na --tm-color-primary-subtle (aktivní uzel stromu / view toggle) ({0} {1}) musí držet 4.5:1 — změřeno {2:0.00}:1",
+            "--tm-color-primary on --tm-color-primary-subtle (active tree node / view toggle) ({0} {1}) must hold 4.5:1 - measured {2:0.00}:1",
             indigo ? "indigo" : "default", dark ? "dark" : "light", ratio);
     }
 
@@ -839,7 +839,7 @@ public sealed class TokenContrastTests
             PaintedColour("var(--tm-color-primary-subtle)", tokens));
 
         ratio.Should().BeGreaterThanOrEqualTo(4.5,
-            "--tm-text-secondary na --tm-color-primary-subtle (hint vybrané karty Link / Copy) ({0} {1}) — změřeno {2:0.00}:1",
+            "--tm-text-secondary on --tm-color-primary-subtle (hint of the selected Link / Copy card) ({0} {1}) must hold 4.5:1 - measured {2:0.00}:1",
             indigo ? "indigo" : "default", dark ? "dark" : "light", ratio);
     }
 

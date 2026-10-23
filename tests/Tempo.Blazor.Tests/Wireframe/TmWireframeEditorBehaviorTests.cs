@@ -140,6 +140,31 @@ public class TmWireframeEditorBehaviorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void HostReadOnlyTrue_DisablesImportJson_OnTheBarAndInTheMoreMenu()
+    {
+        // Import replaces the whole document, so it is an editing path: the file button, its hidden input and its
+        // "More" entry are all disabled while the editor is read-only.
+        var cut = RenderEditor(p => p.Add(c => c.ReadOnly, true));
+
+        cut.Find("[data-testid='wd-import']").HasAttribute("disabled").Should().BeTrue("the bar button is disabled");
+        cut.Find("[data-testid='wd-import-input']").HasAttribute("disabled").Should().BeTrue("a disabled input can never open a chooser");
+
+        // Force the file button into the "More" menu (the real fit is measured in the browser).
+        cut.InvokeAsync(() => cut.FindComponent<Tempo.Blazor.Components.Toolbar.TmToolbar>().Instance.OnFitChanged(0));
+        OpenMore(cut);
+        cut.WaitForAssertion(() => cut.FindAll("[role='menu'] [role='menuitem']")
+            .First(i => i.TextContent.Trim().StartsWith("Import JSON")).HasAttribute("disabled").Should().BeTrue());
+    }
+
+    [Fact]
+    public void WritableEditor_KeepsImportJsonEnabled()
+    {
+        var cut = RenderEditor();
+
+        cut.Find("[data-testid='wd-import']").HasAttribute("disabled").Should().BeFalse();
+        cut.Find("[data-testid='wd-import-input']").HasAttribute("disabled").Should().BeFalse();
+    }
+    [Fact]
     public void BoundReadOnly_KeepsToggle_AndFollowsHostValue()
     {
         // @bind-ReadOnly: the host accepts the change, so the toggle stays usable in both directions.

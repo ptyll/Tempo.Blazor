@@ -31,10 +31,12 @@ buttons can show their text next to or under the icon.
 | `TmToolbarButton` | `PressedMixed` | renders a `false` toggle as `aria-pressed="mixed"` | `false` |
 | `TmToolbarButton` | `PreserveFocus` | a pointer press does not move focus to the button (an editor selection survives) | `false` |
 | `TmToolbarFileButton` | `Text` / `Icon` / `Tooltip` / `Class` | the visible button (a `TmToolbarButton` underneath) | — |
+| `TmToolbarFileButton` | `Variant` / `LabelPosition` / `PreserveFocus` | passed through to the inner `TmToolbarButton` (same values as above) | `Ghost` / `Inline` / `false` |
 | `TmToolbarFileButton` | `Accept` / `Multiple` | the `accept` / `multiple` of the hidden file input | `null` / `false` |
 | `TmToolbarFileButton` | `OnChange` | `EventCallback<InputFileChangeEventArgs>`; raised only when at least one file was chosen | — |
 | `TmToolbarFileButton` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` — exactly the button's | `Primary` |
-| `TmToolbarFileButton` | `Disabled` | disables the button, its "More" entry and the file input | `false` || `TmToolbarItem` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` | `Primary` |
+| `TmToolbarFileButton` | `Disabled` | disables the button, its "More" entry and the file input | `false` |
+| `TmToolbarItem` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` | `Primary` |
 | `TmToolbarItem` | `MenuLabel` / `MenuIcon` / `OnMenuInvoke` / `MenuKeepOpen` | the single "More" entry | — |
 | `TmToolbarItem` | `MenuItems` | a labelled group of checkable/plain entries instead of one entry | `null` |
 | `TmToolbarItem` | `Disabled` | disables the "More" entry/entries (the bar control stays the host's) | `false` |
@@ -227,6 +229,13 @@ position and the collapsed count sampled every 50 ms for 2.5 s after each width 
 * **Regression net.** `ToolbarFileButtonE2ETests.Wireframe_MoreTrigger_SettlesAtEveryWidth` asserts at most one layout
   change per width and a still trigger for the last second; the Playwright click on the trigger uses a 5 s budget in the
   import specs.
+
+### Not migrated (yet)
+
+* **`TmDiagramEditor` Import** is still a `<label class="tm-dropdown-item">` wrapping a `display:none` `InputFile` inside a view dropdown - not a toolbar button, so it does not use this component.
+* **The Spreadsheet toolbar** keeps its own fixed-id file input and has no overflow menu, so there is nothing to move into "More".
+* **`display:none` file inputs are a WebKit risk**: an input removed from rendering can refuse a programmatic `input.click()` there. `TmToolbarFileButton` therefore hides its input visually (`.tm-toolbar-file-input`: 1px, clipped, `opacity:0`) and never with `display:none`; a migration of the two hosts above has to do the same.
+
 ## PreserveFocus: buttons that do not steal the editor's focus
 
 A formatting toolbar button normally takes focus on a pointer press, collapsing the editor's text

@@ -5492,7 +5492,7 @@
   "TmWireframe_HorizontalRuler": "Vodorovné pravítko",
   "TmWireframe_ImportError_Generic": "Import zlyhal: {0}.",
   "TmWireframe_ImportError_InvalidJson": "Import zlyhal: súbor nie je platný JSON wireframe.",
-  "TmWireframe_ImportJson": "Importovať JSON",
+  "TmWireframe_ImportJson": "Importovať JSON…",
   "TmWireframe_Layer": "Vrstva",
   "TmWireframe_LayersTitle": "Vrstvy",
   "TmWireframe_LayersToggle": "Prepnúť panel vrstiev",

@@ -5466,7 +5466,7 @@
   "TmWireframe_HorizontalRuler": "Règle horizontale",
   "TmWireframe_ImportError_Generic": "Failed to import: {0}.",
   "TmWireframe_ImportError_InvalidJson": "Failed to import: the file is not a valid wireframe JSON.",
-  "TmWireframe_ImportJson": "Import JSON",
+  "TmWireframe_ImportJson": "Import JSON…",
   "TmWireframe_Layer": "Calque",
   "TmWireframe_LayersTitle": "Calques",
   "TmWireframe_LayersToggle": "Afficher/masquer le panneau des calques",

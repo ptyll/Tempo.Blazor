@@ -329,7 +329,7 @@
            Secondary item) and its More entry opens the same chooser (decision TOOLBAR-FILE-BUTTON). *@
         <TmToolbarFileButton Icon="@IconNames.Upload" Text="@Loc["TmWireframe_ImportJson"]" Tooltip="@Loc["TmWireframe_ImportJson"]"
                              Accept=".json,.wireframe.json" Priority="ToolbarButtonPriority.Secondary"
-                             OnChange="OnImportFile" DataTestId="@TestId("wd-import")" />
+                             OnChange="OnImportFile" Disabled="@IsReadOnly" DataTestId="@TestId("wd-import")" />
     </TmToolbarGroup>;
 
     // ── Left panel: Components / Pages / Layers ───────────────────────────────

@@ -337,6 +337,7 @@ public sealed class ToolbarFileButtonE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    [TestCategory("Smoke")]
     [Description("Stability: while the command bar is squeezed through nine widths, the More trigger settles after ONE layout change and never moves again for 2.5 s (the Playwright 'element is not stable' regression)")]
     public async Task Wireframe_MoreTrigger_SettlesAtEveryWidth()
     {

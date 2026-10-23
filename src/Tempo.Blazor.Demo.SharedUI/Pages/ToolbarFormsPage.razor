@@ -381,9 +381,11 @@
                         <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.OverflowOnly" />
                     </TmToolbar>
                 </div>
+                @* The live region is ALWAYS in the DOM: a status region that appears together with its text is not announced
+                   reliably, so only its text changes. *@
+                <p class="text-sm text-slate-600 dark:text-slate-400" role="status" data-testid="toolbar-file-button-result">@_fileButtonResult</p>
                 @if (_fileButtonResult is not null)
                 {
-                    <p class="text-sm text-slate-600 dark:text-slate-400" role="status" data-testid="toolbar-file-button-result">@_fileButtonResult</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="toolbar-file-button-count">@string.Format(Loc["TmToolbarDemo_FileButtonChanges"], _fileButtonChanges)</p>
                 }
             </div>

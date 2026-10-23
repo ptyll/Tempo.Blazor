@@ -199,6 +199,43 @@ public class TmToolbarFileButtonTests : LocalizationTestBase
         cut.Find("input[type='file']").GetAttribute("data-testid").Should().Be("ed1-toolbar-file-button-input");
     }
 
+    [Fact]
+    public void VariantLabelPositionAndPreserveFocus_PassThroughToTheInnerButton()
+    {
+        SetupFileModule();
+        var cut = Render<TmToolbarFileButton>(p => p
+            .Add(c => c.Text, "Import")
+            .Add(c => c.Icon, "upload")
+            .Add(c => c.Variant, Tempo.Blazor.Components.Buttons.ButtonVariant.Secondary)
+            .Add(c => c.LabelPosition, ToolbarLabelPosition.Below)
+            .Add(c => c.PreserveFocus, true));
+
+        var button = cut.Find("button.tm-toolbar-btn");
+        button.ClassList.Should().Contain("tm-toolbar-btn--secondary");
+        button.ClassList.Should().Contain("tm-toolbar-btn--label-below");
+        cut.FindComponent<TmToolbarButton>().Instance.PreserveFocus.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SplattedAttributes_CannotOverrideTheFileTrigger()
+    {
+        SetupFileModule();
+        var cut = Render<TmToolbarFileButton>(p => p
+            .Add(c => c.Text, "Import")
+            .AddUnmatched("data-tm-file-trigger", "hijacked"));
+
+        cut.Find("button.tm-toolbar-btn").GetAttribute("data-tm-file-trigger").Should().Be(cut.Find("input[type='file']").Id);
+    }
+
+    [Fact]
+    public void InputWithoutAnyTestId_WhenTheButtonHasNone()
+    {
+        // RootTestId is null only when neither DataTestId nor a default name resolves; the input must not render "-input".
+        SetupFileModule();
+        var cut = Render<TmToolbarFileButton>(p => p.Add(c => c.Text, "Import"));
+
+        cut.Find("input[type='file']").GetAttribute("data-testid").Should().NotBe("-input");
+    }
     // ── Toolbar integration: priority, rank, collapse ─────────────────────────
 
     [Theory]

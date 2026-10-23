@@ -6,7 +6,7 @@
 //
 // Two things open the chooser, both resolved to the hidden input of the owning TmToolbarFileButton:
 //   - the bar button, which carries the input's id as data-tm-file-trigger;
-//   - its entry in a TmToolbar "More" menu, a button rendered by the menu host with data-action-id = the nested
+//   - its entry in a TmToolbar "More" menu (.tm-toolbar-more__item), a button rendered by the menu host with data-action-id = the nested
 //     TmToolbarButton's menu id, which C# registers once per button through acquire(inputId, entryId).
 // One listener serves every file button on the page; it is installed with the first registration and removed with the last.
 
@@ -21,7 +21,7 @@ let installed = false;
  * @returns {any|null} the input element, or null when the click is not on a file trigger
  */
 export function resolveInput(target, getById) {
-    const trigger = target?.closest?.('[data-tm-file-trigger], [data-action-id]');
+    const trigger = target?.closest?.('[data-tm-file-trigger], .tm-toolbar-more__item[data-action-id]');
     if (!trigger) return null;
     if (trigger.disabled === true || trigger.getAttribute?.('aria-disabled') === 'true') return null;
     const inputId = trigger.getAttribute?.('data-tm-file-trigger')
@@ -55,12 +55,27 @@ function uninstallWhenIdle() {
 }
 
 /**
+ * Drops registrations whose input is no longer in the DOM (a release that never arrived, e.g. a lost circuit), so the
+ * maps and the document listener cannot outlive the buttons. Skipped without a document (node tests, SSR).
+ */
+function pruneDetached() {
+    const doc = globalThis.document;
+    if (!doc?.getElementById) return;
+    for (const [inputId, entryId] of [...byInput]) {
+        if (doc.getElementById(inputId)) continue;
+        byInput.delete(inputId);
+        if (entryId !== undefined) byEntry.delete(entryId);
+    }
+}
+
+/**
  * Registers a file button. Idempotent per input id; a changed entry id replaces the previous one.
  * @param {string} inputId the id of the hidden file input
  * @param {string} entryId the id of the button's "More" menu entry (data-action-id)
  */
 export function acquire(inputId, entryId) {
     if (!inputId) return;
+    pruneDetached();
     const previous = byInput.get(inputId);
     if (previous !== undefined) byEntry.delete(previous);
     byInput.set(inputId, entryId);

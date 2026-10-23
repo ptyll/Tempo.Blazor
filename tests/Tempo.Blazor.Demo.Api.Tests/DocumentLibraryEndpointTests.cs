@@ -76,6 +76,8 @@ public class DocumentLibraryEndpointTests : IClassFixture<WebApplicationFactory<
     [InlineData("99")]
     [InlineData("-1")]
     [InlineData("Everything")]
+    [InlineData("Folder,Library")]
+    [InlineData("1,2")]
     public async Task Browse_UndefinedScope_IsABadRequest(string scope)
     {
         var resp = await _client.GetAsync($"/api/document-library/wireframe/browse?scope={scope}");

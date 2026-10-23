@@ -5492,7 +5492,7 @@
   "TmWireframe_HorizontalRuler": "Vodorovné pravítko",
   "TmWireframe_ImportError_Generic": "Import se nezdařil: {0}.",
   "TmWireframe_ImportError_InvalidJson": "Import se nezdařil: soubor není platný wireframe JSON.",
-  "TmWireframe_ImportJson": "Importovat JSON",
+  "TmWireframe_ImportJson": "Importovat JSON…",
   "TmWireframe_Layer": "Vrstva",
   "TmWireframe_LayersTitle": "Vrstvy",
   "TmWireframe_LayersToggle": "Přepnout panel vrstev",

@@ -62,6 +62,26 @@
       "description": "When true, the button, its \"More\" entry and the file input are disabled."
     },
     {
+      "name": "Variant",
+      "type": "ButtonVariant",
+      "isRequired": false,
+      "default": "Ghost",
+      "description": "Visual style variant of the button (passed to the inner TmToolbarButton)."
+    },
+    {
+      "name": "LabelPosition",
+      "type": "ToolbarLabelPosition",
+      "isRequired": false,
+      "description": "Where the Text label sits: next to the icon (default), under it, or hidden (the text then stays the accessible name)."
+    },
+    {
+      "name": "PreserveFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it, so an editor's text selection survives."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

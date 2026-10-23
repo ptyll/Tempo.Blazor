@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Toolbar
+@using Tempo.Blazor.Components.Buttons
 @inherits Tempo.Blazor.Components.TmComponentBase
 @implements IAsyncDisposable
 @inject IJSRuntime JS
@@ -21,9 +22,12 @@
                  Priority="@Priority"
                  Disabled="@Disabled"
                  Class="@Class"
+                 Variant="@Variant"
+                 LabelPosition="@LabelPosition"
+                 PreserveFocus="@PreserveFocus"
                  data-testid="@ButtonTestId"
-                 data-tm-file-trigger="@_inputId"
-                 @attributes="AdditionalAttributes" />
+                 @attributes="AdditionalAttributes"
+                 data-tm-file-trigger="@_inputId" />
 <InputFile id="@_inputId"
            class="tm-toolbar-file-input"
            OnChange="HandleChangeAsync"
@@ -78,6 +82,21 @@
     /// <summary>When true, the button, its "More" entry and the file input are disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>Visual style variant of the button (see <see cref="TmToolbarButton.Variant"/>). Defaults to Ghost.</summary>
+    [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Ghost;
+
+    /// <summary>
+    /// Where the <see cref="Text"/> label sits: next to the icon (default), under it, or hidden
+    /// (see <see cref="TmToolbarButton.LabelPosition"/>).
+    /// </summary>
+    [Parameter] public ToolbarLabelPosition LabelPosition { get; set; }
+
+    /// <summary>
+    /// When true, pressing the button with a mouse, pen or finger does not move focus to it
+    /// (see <see cref="TmToolbarButton.PreserveFocus"/>). Default <see langword="false"/>.
+    /// </summary>
+    [Parameter] public bool PreserveFocus { get; set; }
+
     /// <summary>Additional CSS class for the button element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -88,7 +107,7 @@
     private string? ButtonTestId => RootTestId("toolbar-file-button");
 
     /// <summary>The hidden input's <c>data-testid</c>: the button's with an <c>-input</c> suffix.</summary>
-    private string? InputTestId => $"{ButtonTestId}-input";
+    private string? InputTestId => ButtonTestId is null ? null : $"{ButtonTestId}-input";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

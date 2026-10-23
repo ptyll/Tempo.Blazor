@@ -25,13 +25,20 @@ function dom() {
 
 const input = (id, extra = {}) => ({ id, value: 'old.json', disabled: false, clicks: 0, click() { this.clicks++; }, ...extra });
 
-/** A trigger element; closest() returns itself when it carries one of the selector's attributes. */
+/**
+ * A trigger element; closest() returns itself when it matches one of the selector's parts: [attr] or .class[attr]
+ * (the class list comes from attrs.class, default none).
+ */
 const trigger = attrs => ({
     disabled: attrs.disabled === true,
     getAttribute: name => attrs[name] ?? null,
     closest(selector) {
-        const wanted = selector.split(',').map(s => s.trim().replace(/^\[|\]$/g, ''));
-        return wanted.some(name => this.getAttribute(name) !== null) ? this : null;
+        const classes = (attrs.class ?? '').split(' ');
+        const matches = selector.split(',').map(s => s.trim()).some(part => {
+            const m = /^(?:\.([\w-]+))?\[([\w-]+)\]$/.exec(part);
+            return !!m && (!m[1] || classes.includes(m[1])) && this.getAttribute(m[2]) !== null;
+        });
+        return matches ? this : null;
     },
 });
 
@@ -44,14 +51,20 @@ test('a click on the bar button opens the input named by data-tm-file-trigger', 
 test('a click on the More entry opens the input registered for its data-action-id', () => {
     const el = input('in1');
     acquire('in1', 'entry-1');
-    const found = resolveInput(trigger({ 'data-action-id': 'entry-1' }), id => (id === 'in1' ? el : null));
+    const found = resolveInput(trigger({ 'data-action-id': 'entry-1', class: 'tm-toolbar-more__item' }), id => (id === 'in1' ? el : null));
     assert.equal(found, el);
 });
 
 test('a More entry nobody registered is not ours', () => {
     const el = input('in1');
     acquire('in1', 'entry-1');
-    assert.equal(resolveInput(trigger({ 'data-action-id': 'other-entry' }), () => el), null);
+    assert.equal(resolveInput(trigger({ 'data-action-id': 'other-entry', class: 'tm-toolbar-more__item' }), () => el), null);
+});
+
+test('a data-action-id outside the More menu (another menu host, a mobile action bar) is not ours', () => {
+    const el = input('in1');
+    acquire('in1', 'entry-1');
+    assert.equal(resolveInput(trigger({ 'data-action-id': 'entry-1' }), () => el), null);
 });
 
 test('a click elsewhere resolves nothing', () => {
@@ -70,7 +83,9 @@ test('a trigger whose input left the DOM resolves nothing', () => {
 });
 
 test('acquire installs ONE capture-phase click listener for any number of buttons; the last release removes it', () => {
-    const { listeners } = dom();
+    const { byId, listeners } = dom();
+    byId.set('a', input('a'));
+    byId.set('b', input('b'));
     acquire('a', 'ea');
     acquire('b', 'eb');
     acquire('a', 'ea');   // idempotent
@@ -112,8 +127,8 @@ test('a re-acquire with a new entry id replaces the old one', () => {
     acquire('in1', 'old-entry');
     acquire('in1', 'new-entry');
     const el = input('in1');
-    assert.equal(resolveInput(trigger({ 'data-action-id': 'old-entry' }), () => el), null);
-    assert.equal(resolveInput(trigger({ 'data-action-id': 'new-entry' }), () => el), el);
+    assert.equal(resolveInput(trigger({ 'data-action-id': 'old-entry', class: 'tm-toolbar-more__item' }), () => el), null);
+    assert.equal(resolveInput(trigger({ 'data-action-id': 'new-entry', class: 'tm-toolbar-more__item' }), () => el), el);
 });
 
 test('a file input that refuses a value write still opens', () => {
@@ -130,4 +145,20 @@ test('a file input that refuses a value write still opens', () => {
 
 test('release of an unknown input is a no-op', () => {
     assert.doesNotThrow(() => release('never-acquired'));
+});
+
+test('acquire prunes registrations whose input left the DOM, so the listener cannot outlive the buttons', () => {
+    const { byId, listeners } = dom();
+    byId.set('a', input('a'));
+    acquire('a', 'ea');
+    assert.equal(listeners.length, 1);
+
+    byId.delete('a');             // the circuit died: release never arrived
+    acquire('b', 'eb');           // the next registration prunes 'a'
+    assert.equal(resolveInput(trigger({ 'data-action-id': 'ea', class: 'tm-toolbar-more__item' }), () => input('a')), null,
+        'the pruned entry id no longer resolves');
+    assert.equal(listeners.length, 1, 'b keeps the single listener');
+
+    release('b');
+    assert.equal(listeners.length, 0);
 });

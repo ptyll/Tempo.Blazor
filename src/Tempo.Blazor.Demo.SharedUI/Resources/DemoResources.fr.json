@@ -62,7 +62,7 @@
   "TmToolbarDemo_FileButtonTitle": "Bouton de sélection de fichier (TmToolbarFileButton)",
   "TmToolbarDemo_FileButtonDescription": "Un bouton de fichier secondaire quitte la barre pour le menu Plus comme tout autre bouton ; son entrée du menu ouvre le même sélecteur de fichier. Réduisez la barre et choisissez un fichier JSON depuis l'un ou l'autre endroit.",
   "TmToolbarDemo_FileButtonDisabled": "Bouton de fichier désactivé",
-  "TmToolbarDemo_ImportJson": "Importer JSON",
+  "TmToolbarDemo_ImportJson": "Importer JSON…",
   "TmToolbarDemo_FileButtonLoaded": "{0} chargé : un JSON {1}.",
   "TmToolbarDemo_FileButtonInvalidJson": "{0} n'est pas un JSON valide.",
   "TmToolbarDemo_FileButtonTooLarge": "{0} n'a pas pu être lu : {1}",

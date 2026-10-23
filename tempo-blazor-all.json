@@ -26410,6 +26410,12 @@
               "description": "Icon name from IconNames. Displayed before the text."
             },
             {
+              "name": "LabelPosition",
+              "type": "ToolbarLabelPosition",
+              "isRequired": true,
+              "description": "Where the Text label sits: next to the icon (default), under it, or hidden (the text then stays the accessible name)."
+            },
+            {
               "name": "Multiple",
               "type": "bool",
               "isRequired": false,
@@ -26422,6 +26428,13 @@
               "isRequired": false,
               "description": "Raised when the user has chosen at least one file. A cancelled chooser raises nothing. Read the file inside the handler: the selection is dropped the next time the chooser opens.",
               "example": "OnChange=\"@ImportAsync\""
+            },
+            {
+              "name": "PreserveFocus",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it, so an editor's text selection survives.",
+              "default": "false"
             },
             {
               "name": "Priority",
@@ -26441,6 +26454,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Tooltip text shown as the native title attribute; the accessible name of an icon button."
+            },
+            {
+              "name": "Variant",
+              "type": "ButtonVariant",
+              "isRequired": false,
+              "default": "ButtonVariant.Ghost",
+              "description": "Visual style variant of the button (passed to the inner TmToolbarButton)."
             }
           ],
           "cssClasses": [

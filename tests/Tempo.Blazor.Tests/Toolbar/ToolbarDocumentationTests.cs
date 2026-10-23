@@ -59,6 +59,60 @@ public class ToolbarDocumentationTests
     }
 
     [Fact]
+    public void ToolbarDoc_TablesHaveBalancedColumnCounts()
+    {
+        // A row glued to the next one ("... | `false` || `TmToolbarItem` | ...") renders as one broken row; every row of
+        // a markdown table must have as many cells as its header.
+        var lines = Read("docs", "toolbar.md").Split('\n');
+        var inFence = false;
+        int? expected = null;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].TrimEnd();
+            if (line.StartsWith("```", StringComparison.Ordinal))
+            {
+                inFence = !inFence;
+                expected = null;
+                continue;
+            }
+
+            if (inFence || !line.StartsWith('|'))
+            {
+                expected = null;
+                continue;
+            }
+
+            var cells = CountCells(line);
+            expected ??= cells;
+            cells.Should().Be(expected.Value, $"docs/toolbar.md line {i + 1} must have the table's column count: {line}");
+        }
+    }
+
+    /// <summary>Counts the cells of a table row; a pipe inside a code span or escaped as <c>\|</c> is not a separator.</summary>
+    private static int CountCells(string row)
+    {
+        var cells = 0;
+        var inCode = false;
+        for (var i = 0; i < row.Length; i++)
+        {
+            var ch = row[i];
+            if (ch == '\\') { i++; continue; }
+            if (ch == '`') { inCode = !inCode; continue; }
+            if (ch == '|' && !inCode) cells++;
+        }
+
+        return cells - 1;
+    }
+
+    [Fact]
+    public void ToolbarDoc_ListsWhatIsNotMigratedToTheFileButton()
+    {
+        var doc = Read("docs", "toolbar.md");
+
+        doc.Should().Contain("Not migrated (yet)");
+        doc.Should().Contain("TmDiagramEditor` Import").And.Contain("Spreadsheet toolbar").And.Contain("WebKit");
+    }
+    [Fact]
     public void ToolbarDoc_DocumentsTheItemTabStopContract()
     {
         var doc = Read("docs", "toolbar.md");

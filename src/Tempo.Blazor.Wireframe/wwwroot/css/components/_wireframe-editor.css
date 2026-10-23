@@ -310,7 +310,6 @@
   overflow-y: auto;
 }
 
-
 .tm-wd-editor__title {
   height: var(--tm-wd-btn-size);
   padding: 0 var(--tm-space-2);
@@ -502,7 +501,6 @@
   margin: var(--tm-space-1) var(--tm-space-2);
   background: var(--tm-wd-border);
 }
-
 
 /* ── Import error banner ── */
 
