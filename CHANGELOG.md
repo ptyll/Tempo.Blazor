@@ -726,6 +726,97 @@
   the last hardcoded English copy an e-mail editor host had to override.
 
 
+### Added
+
+- **TmPdfAnnotator: annotation tools on every page of Continuous mode (FZE-14).** The PD1 pin is
+  lifted: `ViewMode` (two-way, default `PdfViewMode.SinglePage` — additive) and
+  `ShowViewModeToggle` (default `false`) now pass through to the embedded viewer, so hosts can
+  run the annotator in `PdfViewMode.Continuous` and offer the single/continuous segmented control
+  in the merged toolbar. In Continuous the annotator renders its marker layer and interaction
+  surface PER PAGE through the viewer's FZE-13 `PageOverlayContent` slots (one geometry pipeline,
+  no second pinch/drag — the shared `pointer-gesture.js` keeps owning two fingers): a stamp, a
+  comment, a highlight and every ink point normalize against the slot's page box and anchor on
+  THE page whose surface received the event (the annotator's current page is navigation state
+  only), an ink stroke stays confined to the page where it started — a stroke dragged across the
+  boundary is clipped there, and `touch-action: none` stays on the Draw surface only so the other
+  tools keep the native pan/pinch — drafts and composers stay bound to the draft page while its
+  slot is scrolled away and back, and selecting a thread in the panel scrolls to its anchor
+  through the shared `TmPdfViewer.ScrollToAnchorAsync(page, y)` path (new public API) instead of
+  leaving Continuous. Export/print are view-mode independent and cover every page, and the G2
+  mobile rules (Browse + Add comment only) hold in Continuous. `TmRedactionLayer` explicitly
+  pins its own viewer to `SinglePage` with no toggle (redaction measures against THE canvas).
+  The per-page surface carries `pdf-annotator-surface` + `data-page` (see Breaking / Migration).
+
+- **TmPdfViewer: annotations in Continuous mode — PD1 superseded (FZE-13).** The viewer now renders
+  annotation markers and selection-driven threads on every page of the continuous column, not just in
+  single-page mode. The continuous scroll wrap hosts the JS-owned pages container (unchanged lazy
+  render: IntersectionObserver + serial queue, canvas release, the 12-painted-page limit) plus a
+  Blazor-owned overlay-slot container; `pdf-viewer.js` reports the page boxes of the pages inside the
+  ±50% viewport band through the new `OnContinuousPageGeometry` interop callback (deduped, after every
+  build, in-place zoom, rotation, resize and band change), and Blazor mounts one absolutely positioned
+  slot per reported page — a 120-page document with a thread on every page keeps the Blazor diff
+  bounded to the mounted band. Text selection in Continuous resolves the page from the wrap containing
+  the anchor (`enableSelection` grew a continuous branch), normalizes the rects against that page's box
+  and clamps a cross-page selection to the anchor page, so `OnTextSelected` and the sticky CTA create
+  the thread on the correct page. Selecting a thread in Continuous no longer switches to SinglePage —
+  it scrolls (`tmPdfViewer.scrollToPage` + new `tmPdfViewer.scrollToAnchor`, centering the anchor's Y)
+  and highlights the marker once the slot mounts. New templated parameter `PageOverlayContent`
+  (`RenderFragment<PdfPageOverlayContext>` — `PageNumber`, `IsCurrentPage`, `Width`, `Height`,
+  `Rotation`) renders a host overlay per page in BOTH view modes (single-page: the current page only,
+  riding the canvas wrap under the new `pdf-page-overlay` test id). The removed
+  `TmPdfViewer_AnnotationsSinglePageOnly` hint is gone; see Breaking / Migration.
+
+- **TmPdfViewer & TmPdfAnnotator: the "All (N) | Unresolved (M)" thread filter (FZE-12).** A new
+  shared `TmPdfThreadFilter` card (PD4, next to `TmPdfThreadList`) renders as the segmented
+  control in BOTH panels' headers — the docked desktop/tablet chrome and the sheet presentations
+  alike. The segments are native radios sharing one group name (the
+  `TmRadioGroup Appearance=Segmented` model: the browser owns the arrow keys, one activation per
+  key press, no emulation), carry live counts from the `Threads` set — `Loc.Plural` families
+  `TmPdfThread_FilterAll` / `TmPdfThread_FilterUnresolved` — and map onto the panels' unchanged
+  `ShowResolved`/`ShowResolvedChanged` contract (All ↔ `true`; the viewer's
+  `ShowResolvedAnnotations` keeps working). The Unresolved filter has its own localized empty
+  state (`TmPdfThread_EmptyUnresolved`, "No unresolved threads") when it hides every thread.
+  New test ids: `pdf-annotation-filter` / `pdf-annotator-filter` with `-all` / `-unresolved`
+  segments (see Breaking / Migration for the checkbox they replaced). The counts recompute on
+  every render, so a resolve/reopen mutation updates them immediately.
+
+- **TmPdfAnnotator: runtime color picker for new annotations (FZE-12).** The toolbar's color
+  chip became a `pdf-annotator-color-trigger` BUTTON (`aria-haspopup="dialog"`,
+  `aria-expanded`, accessible name = localized `TmPdfAnnotator_ColorLabel` + the current
+  color's name) that opens the core `TmColorPalette` in an overlay panel — an anchored popover
+  on desktop/tablet (44px targets on a coarse pointer) and the F3 bottom sheet on a mobile
+  layout, where a color tile rides the Browse/Add-comment palette row. New parameters:
+  `AnnotationColorChanged` (two-way to the existing `AnnotationColor`), `ColorPalette`
+  (default `PdfAnnotationColorHelper.DefaultPalette` — the helper stays the palette's owner),
+  `ColorNames` (default the localized `TmPdfAnnotator_ColorName_*` names of the default
+  palette) and `AllowColorPicker` (default `true`; `false` restores the pre-2.9.1 static
+  chip + label indicator). The picked color applies ONLY to annotations created afterwards
+  (`CreateStampAsync`, `CreateFromDraftAsync`, the draft/ink `DraftColor`) — existing threads
+  are never recolored (`IPdfAnnotationProvider` has no color update and Abstractions is
+  unchanged). A "Reset to author color" action (`TmPdfAnnotator_ResetColor`) inside the
+  palette returns new annotations to the per-author/role resolution; the selection survives
+  tool switches and is dropped when a new `Url` loads. Swatch colors render as inline
+  `style` from the data palette (allow-list) — never CSS hard-coding.
+
+- **TmPdfAnnotator: per-session undo/redo for annotations (FZE-15).** Every mutation of the
+  annotator — create (comment, highlight, stamp, ink), reply, edit, resolve, reopen and delete —
+  now flows through a package-internal `PdfAnnotationHistory` command stack (100 steps, one per
+  annotator instance, cleared when `Url`/`DocumentId` changes; the redo tail is dropped by every
+  new action) and is undoable/redoable with the new public `UndoAsync()` / `RedoAsync()` /
+  `CanUndo` / `CanRedo`, the `AllowUndo` parameter (default `true`) and the `OnHistoryChanged`
+  callback — without any change to `IPdfAnnotationProvider`. Undoing a delete re-creates the
+  thread with the same anchor, kind, color, ink and stamp and replays its replies (new ids are
+  remapped across the stack); a step whose thread another user changed or deleted in the
+  meantime is SKIPPED with a localized hint (the command is dropped, the stack stays consistent),
+  and any other provider failure leaves the stack untouched. Undo/redo select the affected
+  thread and, in Continuous, scroll to its anchor. The toolbar gains a `history` group (the
+  frozen DiagramEditor group name) BEFORE the tools — undo-2/redo-2 icons, `aria-keyshortcuts`,
+  an action-naming tooltip ("Undo: Delete comment") and an `aria-live` announcement after each
+  step; on a phone the pair rides the shared "More" menu. Keyboard: Ctrl/⌘+Z and Ctrl/⌘+Shift+Z
+  (or Ctrl+Y) on the annotator root (`!e.Repeat`, inert while an editable inside the annotator
+  has the focus — the native text undo wins there). Drafts never enter the stack: in a Draw
+  draft Ctrl+Z removes the last stroke.
+
 ### Fixed
 
 - **Review fix (code + architecture): the canvas token mask, the image gate and the render gate.**
@@ -1710,6 +1801,34 @@
 
 ### Added
 
+- **TmPdfViewer: counter-clockwise rotation (FZE-11).** `RotateCounterClockwiseAsync()` rotates
+  0° → 270° → 180° → 90° — the exact inverse of `RotateAsync()`, which keeps its clockwise
+  behavior. `AllowRotation` now renders both directions in the `data-tm-group="rotate"` group
+  (`rotate-ccw` and `rotate-cw` icons, localized tooltips `TmPdfViewer_RotateCounterClockwise` /
+  `TmPdfViewer_RotateClockwise`); on a mobile layout both are "More"-menu overflow entries.
+  Continuous mode rebuilds the placeholders and preserves the scroll position through the same
+  path as the clockwise rotation, and the text layer follows PDF.js' `data-main-rotation`.
+
+- **TmPdfViewer: the document header's default subtitle can show the file size (FZE-11).** With
+  `ShowHeader` (and no explicit `Subtitle`), the subtitle becomes "Pages: N · 1.4 MB" — the byte
+  size arrives from PDF.js `getDownloadInfo` through the new `OnDocumentLengthKnown` interop
+  callback and is formatted by a package-internal `PdfFileSizeFormatter` (current culture digits,
+  localized `TmPdfViewer_FileSize_B/_KB/_MB/_GB` units). `ShowFileSize` (default `true`) turns the
+  append-off, and a host-supplied `FileSize` (nullable `long`) wins over the JS-reported length;
+  when the size is unknown (a stream without a length) the subtitle keeps its pages-only form.
+
+- **TmPdfViewer: floating search card (FZE-11).** The new `SearchPresentation` parameter
+  (`PdfSearchPresentation`) defaults to `Floating` on desktop and tablet: a `role="search"` card
+  anchored top-right over the page body — outside the scroll area, never covering the toolbar,
+  painted above the docked panels. The card carries the input, the "N of M" counter, prev/next,
+  clear and close; Enter walks forward, Shift+Enter backward, and Escape (or ✕) closes the card
+  and returns focus to the toolbar's search toggle. The card STARTS CLOSED — `ShowSearch="true"`
+  alone does not open it at load (the `Inline` bar and a mobile layout keep opening at load).
+  The `pdf-search-input/-count/-prev/-next/
+  -clear/-close` test ids are unchanged and `pdf-search-card` is new. `Inline` renders the
+  pre-2.9.1 bar unchanged, and a mobile layout keeps the sheet-style bar in both presentations
+  (see Breaking / Migration for the default change).
+
 - **PdfViewer & Annotator redesign — plan summary (phases 1–10).** `Tempo.Blazor.PdfViewer`
   (`TmPdfViewer`, `TmPdfAnnotator`, the two thread panels and the annotation layers) was rebuilt
   against the reference mockups: wave-0 bug/a11y fixes independent of the redesign (phase 1 —
@@ -2038,6 +2157,172 @@
   needs per docs/localization-plurals.md).
 
 ### Breaking / Migration
+
+- **TmPdfAnnotator: the toolbar gains a `history` group BEFORE the tools (FZE-15).** The merged
+  annotator toolbar now renders the undo/redo pair as a `data-tm-group="history"` group ahead of
+  the `tools` pills, so the tab order and every positional CSS/E2E selector that assumed the
+  tools were the group's first children shift by one group. Key hosts off `data-tm-group`
+  instead:
+
+```csharp
+// BEFORE (2.9.0) — the tools group is the first annotator group in the toolbar
+var first = toolbar.QuerySelector("[data-tm-group='tools']");
+
+// AFTER (2.9.1) — history (undo/redo) rides before the tools; select by group name
+var history = toolbar.QuerySelector("[data-tm-group='history']");
+var tools = toolbar.QuerySelector("[data-tm-group='tools']");
+```
+
+- **TmPdfViewer: annotations are no longer single-page only (PD1 superseded, FZE-13).** The
+  `pdf-annotations-single-page-hint` note (localized `TmPdfViewer_AnnotationsSinglePageOnly`) is
+  gone — continuous mode now renders the per-page markers, and selecting a thread from the panel
+  scrolls to its anchor instead of raising `ViewModeChanged(SinglePage)`. Hosts that detected the
+  mode switch (or keyed CSS/E2E off the hint's `.tm-pdf-viewer__annotations-hint` row) should drop
+  that path; the `.tm-pdf-viewer__continuous-wrap` DOM gained a JS-owned
+  `.tm-pdf-viewer__continuous-pages` child (the wraps moved inside it) and a Blazor-owned
+  `.tm-pdf-viewer__continuous-overlays` sibling, so `:scope > .tm-pdf-viewer__page` selectors must
+  become `.tm-pdf-viewer__page` descendant lookups. `OverlayContent` keeps its single-page-only
+  contract (it is aligned to THE canvas and never renders in Continuous) — hosts needing per-page
+  content in either mode move to the new templated `PageOverlayContent`.
+
+```razor
+@* BEFORE (2.9.0) — annotations forced the viewer back to SinglePage *@
+<TmPdfViewer Url="@url" EnableAnnotations="true" ViewMode="PdfViewMode.Continuous"
+             ViewModeChanged="mode => wasSwitched = mode == PdfViewMode.SinglePage" />
+
+@* AFTER (2.9.1) — the thread select scrolls and stays Continuous; per-page host overlays
+   go through the templated slot (context: PageNumber, IsCurrentPage, Width, Height, Rotation) *@
+<TmPdfViewer Url="@url" EnableAnnotations="true" ViewMode="PdfViewMode.Continuous">
+    <PageOverlayContent Context="page">
+        <div style="position:absolute; inset:0; pointer-events:auto;">
+            My page @page.PageNumber overlay (@page.Width×@page.Height, current: @page.IsCurrentPage)
+        </div>
+    </PageOverlayContent>
+</TmPdfViewer>
+```
+
+- **TmPdfAnnotator: the interaction surface is per page in Continuous (FZE-14).** In
+  `PdfViewMode.SinglePage` nothing changes — one `pdf-annotator-surface` over the canvas, one
+  `tm-pdf-annotator-layer`, exactly as before. With `ViewMode="PdfViewMode.Continuous"` the
+  annotator renders a layer + surface pair PER MOUNTED PAGE SLOT instead of a single
+  viewport-aligned pair: each surface keeps the `pdf-annotator-surface` test id and gains a
+  `data-page` attribute, and each pair rides the viewer's
+  `.tm-pdf-viewer__page-overlay-slot[data-page="N"]` (FZE-13) inside a new
+  `.tm-pdf-annotator__page-surface-host` wrapper (fills the slot, `pointer-events: none`).
+  Hosts that located THE annotator surface as `.tm-pdf-annotator__surface` in Continuous must
+  scope the lookup to the page slot (`.tm-pdf-viewer__page-overlay-slot[data-page='4']
+  [data-testid='pdf-annotator-surface']`); E2E selectors keyed on a single surface break the
+  same way. Single-page CSS/hosts are untouched — the default `ViewMode` is additive.
+
+```razor
+@* BEFORE (2.9.0) — the annotator pinned the viewer to SinglePage: ONE surface *@
+<TmPdfAnnotator Url="@url" />
+@* DOM: .tm-pdf-annotator .tm-pdf-annotator__surface  (one, page-agnostic) *@
+
+@* AFTER (2.9.1) — Continuous is opt-in via ViewMode; the tools work per page *@
+<TmPdfAnnotator Url="@url" ViewMode="PdfViewMode.Continuous" ShowViewModeToggle="true" />
+@* DOM: .tm-pdf-viewer__page-overlay-slot[data-page] >
+        .tm-pdf-annotator__page-surface-host > .tm-pdf-annotator-layer + .tm-pdf-annotator__surface[data-page] *@
+```
+
+- **TmPdfViewer + TmPdfAnnotator: the "Show resolved" checkbox became the segmented
+  "All | Unresolved" filter (FZE-12).** The `pdf-annotation-show-resolved` /
+  `pdf-annotator-show-resolved` checkbox (`label.tm-pdf-*-panel__filter` wrapping an
+  `<input type="checkbox">`) is gone. Both panels now render the shared `TmPdfThreadFilter`:
+  a `role="radiogroup"` with the test id `pdf-annotation-filter` / `pdf-annotator-filter` and
+  two native-radio segments `…-filter-all` / `…-filter-unresolved` (`.tm-pdf-thread-filter`
+  BEM block), whose labels carry the live counts ("All (4)" / "Unresolved (3)"). The panel
+  API is unchanged — `ShowResolved`/`ShowResolvedChanged` map All ↔ `true`,
+  Unresolved ↔ `false`, and the viewer's `ShowResolvedAnnotations` still seeds the state — so
+  only host CSS/E2E keyed off the old DOM needs migrating. The removed localization keys are
+  `TmPdfViewer_ShowResolved` and `TmPdfAnnotator_ShowResolved` (replaced by the plural
+  families `TmPdfThread_FilterAll` / `TmPdfThread_FilterUnresolved`, the group label
+  `TmPdfThread_FilterLabel` and the `TmPdfThread_EmptyUnresolved` empty state — all four
+  languages ship them); hosts that overrode the old keys should move the overrides to the
+  new families.
+
+```razor
+@* BEFORE (2.9.0) — a checkbox in the panel header *@
+<label class="tm-pdf-annotation-panel__filter">
+    <input type="checkbox" data-testid="pdf-annotation-show-resolved" checked="@ShowResolved"
+           @onchange="ToggleResolvedAsync" />
+    @Loc["TmPdfViewer_ShowResolved"]
+</label>
+
+@* AFTER (2.9.1) — the shared segmented filter; the panel renders it for you *@
+<TmPdfThreadFilter Threads="@Threads"
+                   ShowResolved="@ShowResolved"
+                   ShowResolvedChanged="@ShowResolvedChanged"
+                   TestIdBase="pdf-annotation" />
+@* DOM: [data-testid='pdf-annotation-filter'] role=radiogroup
+        [data-testid='pdf-annotation-filter-all']        (checked when ShowResolved)
+        [data-testid='pdf-annotation-filter-unresolved']  (checked when !ShowResolved) *@
+```
+
+- **TmPdfAnnotator: the toolbar color chip became a color-picker trigger button (FZE-12).**
+  The static `<span class="tm-pdf-annotator__color-chip"> + <span
+  class="tm-pdf-annotator__color-label">` pair is now wrapped by a
+  `<button class="tm-pdf-annotator__color-trigger" aria-haspopup="dialog" aria-expanded=…>`
+  that opens the palette (pressing it again / Escape closes; the reset action inside is
+  `pdf-annotator-color-reset`). The chip keeps its class and its `aria-hidden`, the label
+  keeps its class and test id, and `AllowColorPicker="false"` restores the exact pre-2.9.1
+  static pair (no button) for hosts that embed their own picker. A host styling the chip or
+  the label now has to survive the extra `button` ancestor (e.g. scope with
+  `.tm-pdf-annotator__color-trigger .tm-pdf-annotator__color-chip`); a host that positioned
+  elements against the old inline pair should target the trigger button instead. On a mobile
+  layout the new `pdf-annotator-color-tile` rides the G2 palette row (a third tile) and opens
+  the palette as the F3 bottom sheet.
+
+- **TmPdfViewer: the search UI defaults to the Floating card (FZE-11).** The new
+  `SearchPresentation` parameter defaults to `PdfSearchPresentation.Floating`: on desktop and
+  tablet the search UI renders as a card anchored top-right over the page body
+  (`data-testid="pdf-search-card"`, `role="search"`) instead of the full-width
+  `.tm-pdf-viewer__search-bar` row under the toolbar. The card STARTS CLOSED — `ShowSearch="true"`
+  alone no longer opens it at load; hosts open it via the toolbar's search toggle (or
+  `OpenSearchAsync()`), and E2E/bUnit flows that typed into `pdf-search-input` right after load
+  must click `pdf-search-toggle` first. `SearchPresentation="Inline"` (the pre-2.9.1 in-flow
+  bar) and a mobile layout keep the bar open at load. A host that keyed off the bar's markup
+  (or its `.tm-pdf-viewer__search-input` row layout) should either opt back with
+  `SearchPresentation="PdfSearchPresentation.Inline"` — which renders the pre-2.9.1 markup
+  unchanged — or restyle against the card (`.tm-pdf-viewer__search-card`). Mobile layouts are
+  unaffected: the sheet-style bar stays in both presentations.
+
+```razor
+@* BEFORE (2.9.0) — the search UI was a full-width bar under the toolbar, open at load *@
+<TmPdfViewer Url="@url" ShowSearch="true" />
+
+@* AFTER (2.9.1) — default Floating card over the page body; starts CLOSED, the
+   toolbar toggle (or OpenSearchAsync) opens it *@
+<TmPdfViewer Url="@url" ShowSearch="true" />
+
+@* AFTER — opt back into the pre-2.9.1 in-flow bar (open at load) *@
+<TmPdfViewer Url="@url" ShowSearch="true" SearchPresentation="PdfSearchPresentation.Inline" />
+```
+
+- **TmPdfViewer: the clockwise rotate tooltip is now `TmPdfViewer_RotateClockwise` (FZE-11).**
+  `AllowRotation` renders two direction buttons, so the single "Rotate" label
+  (`TmPdfViewer_Rotate`, kept as the group's accessible name) was split into
+  `TmPdfViewer_RotateClockwise` and `TmPdfViewer_RotateCounterClockwise`. Hosts that override
+  the old key for custom wording must add the two new keys (all four languages ship them);
+  the `rotate-cw` button no longer reads `TmPdfViewer_Rotate`.
+
+- **TmPdfViewer: the header subtitle appends the file size by default (FZE-11).** With
+  `ShowHeader` and no explicit `Subtitle` the subtitle is no longer the neutral "Pages: N" —
+  once the document length is known it reads "Pages: N · 1.4 MB". Hosts asserting the exact
+  subtitle text (unit tests, E2E snapshots) either turn the append off or assert the extended
+  form; an explicit `Subtitle` is never augmented and a stream without a known length keeps
+  the pages-only form.
+
+```razor
+@* BEFORE (2.9.0) — the subtitle stayed "Pages: N" forever *@
+<TmPdfViewer Url="@url" ShowHeader="true" Title="Contract" />
+
+@* AFTER (2.9.1) — "Pages: N · 1.4 MB" once the size is known *@
+<TmPdfViewer Url="@url" ShowHeader="true" Title="Contract" />
+
+@* AFTER — restore the pages-only subtitle *@
+<TmPdfViewer Url="@url" ShowHeader="true" Title="Contract" ShowFileSize="false" />
+```
 
 - **TmPdfViewer + TmPdfAnnotator: the annotation-card time stamps and counted texts changed
   format (FZE-9).** `TmPdfThread_ReplyCount` is no longer the neutral `"Replies: {0}"`

@@ -18,7 +18,7 @@ namespace Tempo.Blazor.Tests.Components.Files;
 /// panel interactions (create, reply, resolve, reopen, delete), per-author colors,
 /// draft lifecycle, and export/print JS dispatch.
 /// </summary>
-public class TmPdfAnnotatorTests : LocalizationTestBase
+public partial class TmPdfAnnotatorTests : LocalizationTestBase
 {
     private const string DocUrl = "/sample.pdf";
     private const string DocId = "doc-1";
@@ -397,48 +397,24 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
     {
         var cut = Render();
 
-        // The chip is decorative; the visible span next to it is the accessible name.
-        var chip = cut.Find(".tm-pdf-annotator__color-chip");
-        chip.HasAttribute("aria-hidden").Should().BeTrue("the chip is a visual aid only");
-        chip.GetAttribute("role").Should().BeNull("the visible label carries the name, not the chip");
-        chip.GetAttribute("aria-label").Should().BeNull();
+        // The trigger button carries the accessible name: the visible label span is its text
+        // content and the aria-label names the label plus the current color; the chip inside
+        // stays a decorative visual aid (aria-hidden).
+        var trigger = cut.Find("[data-testid='pdf-annotator-color-trigger']");
+        trigger.TagName.Should().Be("BUTTON");
+        trigger.GetAttribute("aria-haspopup").Should().Be("dialog");
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+        trigger.GetAttribute("aria-label").Should().Contain("annotation color",
+            "the accessible name is the localized color label plus the color name");
 
-        cut.Find(".tm-pdf-annotator__color-label").TextContent.Should().NotBeEmpty();
+        var chip = trigger.QuerySelector(".tm-pdf-annotator__color-chip");
+        chip.Should().NotBeNull();
+        chip!.HasAttribute("aria-hidden").Should().BeTrue("the chip is a visual aid only");
+        cut.Find("[data-testid='pdf-annotator-color-label']").TextContent.Should().NotBeEmpty();
     }
 
     // ── Panel: resolve / reopen / reply / delete ─────────────────────────────
 
-    [Fact]
-    public void Panel_ResolveThread_MarksResolvedAndHidesFromDefaultFilter()
-    {
-        var cut = Render(Seeded(Highlight("h1")));
-
-        cut.WaitForElement("[data-testid='pdf-annotator-thread']").Click();
-        cut.WaitForElement("[data-testid='pdf-annotator-resolve']").Click();
-
-        cut.WaitForAssertion(() =>
-            cut.FindAll("[data-testid='pdf-annotator-thread']").Should().BeEmpty());
-
-        cut.Find("[data-testid='pdf-annotator-show-resolved']").Change(true);
-        cut.WaitForAssertion(() =>
-            cut.FindAll("[data-testid='pdf-annotator-thread']").Should().HaveCount(1));
-    }
-
-    [Fact]
-    public void Panel_ReopenResolvedThread_MakesItOpenAgain()
-    {
-        var resolved = Highlight("h1");
-        resolved.Status = DocumentCommentThreadStatus.Resolved;
-        var cut = Render(Seeded(resolved));
-
-        cut.Find("[data-testid='pdf-annotator-show-resolved']").Change(true);
-        cut.WaitForElement("[data-testid='pdf-annotator-thread']").Click();
-        cut.WaitForElement("[data-testid='pdf-annotator-reopen']").Click();
-
-        cut.Find("[data-testid='pdf-annotator-show-resolved']").Change(false);
-        cut.WaitForAssertion(() =>
-            cut.FindAll("[data-testid='pdf-annotator-thread']").Should().HaveCount(1));
-    }
 
     [Fact]
     public void Panel_Reply_AppendsCommentToThread()
@@ -568,8 +544,8 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
     {
         var cut = Render();
 
-        var label = cut.Find(".tm-pdf-annotator__color-label");
-        label.TextContent.Should().NotBeNullOrEmpty("the color indicator carries a visible text label");
+        var label = cut.Find("[data-testid='pdf-annotator-color-label']");
+        label.TextContent.Should().NotBeNullOrEmpty("the color trigger carries a visible text label");
         label.TextContent.Should().Contain("annotation color");
 
         var chip = cut.Find(".tm-pdf-annotator__color-chip");
@@ -657,6 +633,20 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SearchPresentation_PassedToViewer()
+    {
+        // The default is the viewer's own Floating default — the annotator only forwards.
+        Render().FindComponent<TmPdfViewer>().Instance.SearchPresentation
+            .Should().Be(PdfSearchPresentation.Floating);
+
+        var inline = Render(configure: p => p
+            .Add(x => x.ShowSearch, true)
+            .Add(x => x.SearchPresentation, PdfSearchPresentation.Inline));
+        inline.FindComponent<TmPdfViewer>().Instance.SearchPresentation
+            .Should().Be(PdfSearchPresentation.Inline);
+    }
+
+    [Fact]
     public void AllowRotation_PassedToViewer()
     {
         var cut = Render(configure: p => p.Add(x => x.AllowRotation, true));
@@ -668,7 +658,7 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
         cut.InvokeAsync(() => viewer.OnPdfLoaded(4));
         cut.Render();
         cut.Find(".tm-pdf-viewer__toolbar")
-            .QuerySelector("button[aria-label='Rotate']")
+            .QuerySelector("button[aria-label='Rotate clockwise']")
             .Should().NotBeNull("the viewer renders the rotation button inside the merged toolbar");
 
         var off = Render();
@@ -738,16 +728,19 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
         cut.Find("[data-testid='pdf-annotator-panel-toggle']").Should().NotBeNull();
     }
 
-    // ── PD1: the annotator is a single-page annotator and never offers the continuous toggle ──
+    // ── FZE-14: SinglePage stays the default — the additive contract of the PD1 lift ──
 
     [Fact]
-    public void ViewMode_IsAlwaysSinglePage()
+    public void SinglePage_DefaultUnchanged()
     {
         var cut = Render();
 
+        // The PD1 pin is lifted (ViewMode passes through), but the DEFAULT is additive:
+        // hosts that never set ViewMode keep the pre-FZE-14 single-page annotator, and
+        // ShowViewModeToggle stays opt-in.
         var viewer = cut.FindComponent<TmPdfViewer>().Instance;
         viewer.ViewMode.Should().Be(PdfViewMode.SinglePage);
-        viewer.ShowViewModeToggle.Should().BeFalse("the annotator never passes ShowViewModeToggle (PD1)");
+        viewer.ShowViewModeToggle.Should().BeFalse("the toggle is opt-in");
         cut.Find(".tm-pdf-viewer__toolbar").QuerySelector(".tm-pdf-viewer__view-mode").Should().BeNull();
     }
 
@@ -1010,6 +1003,31 @@ public class TmPdfAnnotatorTests : LocalizationTestBase
         var supplied = RenderInLayout(TmLayoutMode.Mobile, Seeded(Highlight("h1")),
             p => p.Add(x => x.ShowPanel, true));
         supplied.Find(".tm-editor-shell__sheet").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task MobileSheet_AutoTransientLayoutFlap_DoesNotCloseThePanel()
+    {
+        // Phase 12 review: under Auto the shell's container measurement can flap while the page
+        // settles (a full-page screenshot, a transient reflow). The mobile sheet auto-close is
+        // debounced, so an intermediate blip must NOT hide the open panel.
+        var cut = Render(Seeded(Highlight("h1")));
+        var observer = cut.FindComponent<TmEditorShell>().FindComponent<TmLayoutObserver>();
+
+        // A transient re-resolve to mobile leaves the panel visible (the close is pending) …
+        await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged("mobile"));
+        cut.Find("[data-testid='pdf-annotator-panel']").Should().NotBeNull("a blip must not close the panel");
+
+        // … and resolving back cancels the pending close for good.
+        await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged("desktop"));
+        await Task.Delay(250);
+        cut.Find("[data-testid='pdf-annotator-panel']")
+            .Should().NotBeNull("the cancelled auto-close must stay cancelled");
+
+        // A STABLE resolution to mobile still starts the sheet closed (after the debounce).
+        await cut.InvokeAsync(() => observer.Instance.OnLayoutModeChanged("mobile"));
+        cut.WaitForState(() => cut.FindAll(".tm-editor-shell__sheet").Count == 0,
+            TimeSpan.FromSeconds(2));
     }
 
     [Fact]

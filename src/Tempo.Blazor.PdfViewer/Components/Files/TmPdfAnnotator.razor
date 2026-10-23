@@ -35,12 +35,77 @@
                    MobileSheetSnapIndex="_mobileSnapIndex"
                    MobileSheetSnapIndexChanged="SilentSnapChangedAsync"
                    MobileSheetSnapPoints="MobileSheetSnapPoints" />
+
+    @* FZE-12: the shared color palette popover/sheet — anchored to whichever control opened
+       it (the toolbar trigger or the mobile palette tile); renders nothing while closed. *@
+    @ColorPickerPanel
+
+    @* FZE-15 review: the short VISIBLE status near the toolbar (conflict / failure hints —
+       the live region below is invisible to sighted users). A floating, dismissible chip that
+       auto-times-out after ~5 s; it overlays the canvas without shifting the layout. *@
+    @if (_statusMessage is not null)
+    {
+        <div class="tm-pdf-annotator__status" role="status" aria-live="polite"
+             data-testid="@TestId("pdf-annotator-status")">
+            <span class="tm-pdf-annotator__status-text">@_statusMessage</span>
+            <button type="button"
+                    class="tm-pdf-annotator__status-dismiss"
+                    aria-label="@Loc["TmPdfAnnotator_Dismiss"]"
+                    data-testid="@TestId("pdf-annotator-status-dismiss")"
+                    @onclick="DismissStatusAsync">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        </div>
+    }
+
+    @* FZE-15: the visually-hidden live region announcing undo/redo results and the
+       conflict hint ("another user has changed the thread") to assistive technology. *@
+    <div class="tm-pdf-annotator__announcer"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("pdf-annotator-announcer")">@_announcement</div>
 </div>
 
 @code {
     /// <summary>
-    /// The annotator's tool group (mode pills, stamp picker, color indicator) shared by the
-    /// merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
+    /// FZE-15: the undo/redo pair as its OWN sibling group — the frozen DiagramEditor
+    /// <c>data-tm-group="history"</c> contract, rendered BEFORE the tools at every call site
+    /// (merged viewer toolbar, tablet/compact row, fallback row). The buttons are core
+    /// <see cref="TmToolbarButton"/>s (Primary priorities), so a merged toolbar can move them
+    /// into its "More" menu when the row runs out of room. On a tablet layout the pair is
+    /// icon-only (<see cref="HistoryLabelPosition"/>) so the labelled Stamp/Draw pills fit.
+    /// </summary>
+    private RenderFragment HistoryGroup => @<div class="tm-pdf-annotator__history"
+                                                   role="group"
+                                                   aria-label="@Loc["TmPdfAnnotator_HistoryGroup"]"
+                                                   data-tm-group="history"
+                                                   data-testid="@TestId("pdf-annotator-history")">
+        <TmToolbarButton Icon="@IconNames.Undo2"
+                         Text="@Loc["TmPdfAnnotator_Undo"]"
+                         Tooltip="@UndoTooltip"
+                         Priority="ToolbarButtonPriority.Primary"
+                         LabelPosition="@HistoryLabelPosition"
+                         Disabled="@(!CanUndo)"
+                         aria-disabled="@(!CanUndo ? "true" : null)"
+                         aria-keyshortcuts="Control+Z"
+                         data-testid="@TestId("pdf-annotator-undo")"
+                         OnClick="UndoAsync" />
+        <TmToolbarButton Icon="@IconNames.Redo2"
+                         Text="@Loc["TmPdfAnnotator_Redo"]"
+                         Tooltip="@RedoTooltip"
+                         Priority="ToolbarButtonPriority.Primary"
+                         LabelPosition="@HistoryLabelPosition"
+                         Disabled="@(!CanRedo)"
+                         aria-disabled="@(!CanRedo ? "true" : null)"
+                         aria-keyshortcuts="Control+Shift+Z Control+Y"
+                         data-testid="@TestId("pdf-annotator-redo")"
+                         OnClick="RedoAsync" />
+    </div>;
+
+    /// <summary>
+    /// The annotator's tool group (mode pills, stamp picker, color picker trigger) shared by
+    /// the merged viewer toolbar (<see cref="TmPdfViewer.ToolbarStart"/>) and the fallback row.
     /// The tools are core <see cref="TmToolbarButton"/>s (Primary priorities), so the merged
     /// toolbar can move them into its "More" menu when the row runs out of room; the group
     /// carries the stable <c>data-tm-group</c> contract value. On a tablet layout with labels
@@ -118,13 +183,40 @@
         }
 
         <div class="tm-pdf-annotator__color">
-            @* The chip is decorative: the visible label span next to it is the
-               color indicator's accessible name, so the chip is aria-hidden. *@
-            <span class="tm-pdf-annotator__color-chip"
-                  style="background:@CurrentAuthorColor"
-                  aria-hidden="true"></span>
-            <span class="tm-pdf-annotator__color-label"
-                  data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+            @if (AllowColorPicker)
+            {
+                @* FZE-12: the runtime color picker. The chip rides the trigger button; the
+                   visible label span keeps the pre-phase-12 accessible name plus the current
+                   color's name in the aria-label. The palette opens in the shared overlay
+                   (bottom sheet on a mobile layout — see the TmOverlayPanel below). *@
+                <button type="button"
+                        class="tm-pdf-annotator__color-trigger"
+                        aria-haspopup="dialog"
+                        aria-expanded="@(_colorPickerOpen ? "true" : "false")"
+                        aria-label="@ColorTriggerAriaLabel"
+                        title="@ColorTriggerAriaLabel"
+                        data-testid="@TestId("pdf-annotator-color-trigger")"
+                        @ref="_colorTriggerRef"
+                        @onclick="OpenColorPickerAsync">
+                    <span class="tm-pdf-annotator__color-chip"
+                          style="background:@CurrentAuthorColor"
+                          aria-hidden="true"></span>
+                    <span class="tm-pdf-annotator__color-label"
+                          data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+                    @* TmIcon renders aria-hidden="true" on the svg itself — the chevron is decorative. *@
+                    <TmIcon Name="chevron-down" Size="IconSize.Xs" Class="tm-pdf-annotator__color-chevron" />
+                </button>
+            }
+            else
+            {
+                @* The static pre-phase-12 indicator: the chip is decorative, the visible label
+                   span is the color indicator's accessible name. *@
+                <span class="tm-pdf-annotator__color-chip"
+                      style="background:@CurrentAuthorColor"
+                      aria-hidden="true"></span>
+                <span class="tm-pdf-annotator__color-label"
+                      data-testid="@TestId("pdf-annotator-color-label")">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+            }
         </div>
     </div>;
 
@@ -213,6 +305,10 @@
                  role="group"
                  aria-label="@Loc["TmPdfAnnotator_ToolbarLabel"]"
                  data-testid="@TestId("pdf-annotator-toolbar")">
+                @if (AllowUndo)
+                {
+                    @HistoryGroup
+                }
                 @ToolsGroup
                 <div class="tm-pdf-annotator__toolbar-end">
                     @if (AllowExport && !ShowHeader)
@@ -224,11 +320,13 @@
             </div>
         }
 
-        @* PD1: the annotator always renders single pages and never offers the continuous
-           toggle, so ViewMode is pinned and ShowViewModeToggle is not passed. On a mobile
-           layout the annotator injects nothing into the viewer's compact row: paging and zoom
-           are the viewer's own F7 chrome and the annotator's commands live in the palette and
-           the action bar. *@
+        @* FZE-14: the PD1 pin is lifted — ViewMode passes through (default SinglePage keeps
+           the pre-FZE-14 behavior) and the host may offer the viewer's toggle. In Continuous
+           the annotator renders its layer and surface per page through the viewer's
+           PageOverlayContent slots (FZE-13); the single-page OverlayContent below stays the
+           one-surface presentation. On a mobile layout the annotator injects nothing into
+           the viewer's compact row: paging and zoom are the viewer's own F7 chrome and the
+           annotator's commands live in the palette and the action bar. *@
         <TmPdfViewer @ref="_viewer"
                      Url="@Url"
                      DocumentId="@DocumentId"
@@ -244,19 +342,32 @@
                      ThumbnailsCollapsed="_thumbnailsCollapsed"
                      ThumbnailsCollapsedChanged="HandleThumbnailsCollapsedChangedAsync"
                      ShowSearch="ShowSearch"
+                     SearchPresentation="SearchPresentation"
                      ShowMobileActionBar="false"
                      AllowRotation="AllowRotation"
                      ZoomMode="_zoomMode"
                      ZoomModeChanged="HandleZoomModeChangedAsync"
-                     ViewMode="PdfViewMode.SinglePage"
+                     ViewMode="@_viewMode"
+                     ViewModeChanged="HandleViewModeChangedAsync"
+                     ShowViewModeToggle="ShowViewModeToggle"
                      ShowTextLayer="true"
                      EnableTextSelectionEvents="true"
                      AllowDownload="false"
                      Page="_currentPage"
                      PageChanged="HandlePageChangedAsync"
                      OnDocumentLoaded="HandleDocumentLoaded"
-                     OnTextSelected="HandleTextSelectedAsync">
-            <ToolbarStart>@(InjectToolbarGroups ? ToolsGroup : null)</ToolbarStart>
+                     OnTextSelected="HandleTextSelectedAsync"
+                     PageOverlayContent="@ContinuousPageOverlay">
+            <ToolbarStart>
+                @if (InjectToolbarGroups)
+                {
+                    @if (AllowUndo)
+                    {
+                        @HistoryGroup
+                    }
+                    @ToolsGroup
+                }
+            </ToolbarStart>
             <ToolbarEnd>@(InjectToolbarGroups ? ToolbarEndFragment : null)</ToolbarEnd>
             @* Row 1 (rendered only when the viewer header is on): the viewer header hosts
                the title/subtitle plus the export group (secondary buttons) followed by the
@@ -281,13 +392,14 @@
                 <div @ref="_surfaceRef"
                      class="tm-pdf-annotator__surface @(SurfaceActive ? "tm-pdf-annotator__surface--active" : "") @(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")"
                      data-testid="@TestId("pdf-annotator-surface")"
-                     @onclick="HandleSurfaceClickAsync"
-                     @onpointerdown="HandlePointerDownAsync"
+                     tabindex="-1"
+                     @onclick="e => HandleSurfaceClickAsync(e)"
+                     @onpointerdown="(PointerEventArgs e) => HandlePointerDownAsync(e)"
                      @onpointerdown:preventDefault="true"
-                     @onpointermove="HandlePointerMoveAsync"
-                     @onpointerup="HandlePointerUpAsync"
+                     @onpointermove="(PointerEventArgs e) => HandlePointerMoveAsync(e)"
+                     @onpointerup="(PointerEventArgs e) => HandlePointerUpAsync(e)"
                      @onpointercancel="HandlePointerCancel"
-                     @onpointerleave="HandlePointerLeaveAsync"></div>
+                     @onpointerleave="(PointerEventArgs e) => HandlePointerLeaveAsync(e)"></div>
             </OverlayContent>
             @* FZE-9 review (M4/UX3): the sticky Highlight CTA (tablet only — G2 keeps the edit
                tools off a phone) rides the viewer's in-flow SelectionCtaContent row, OUTSIDE
@@ -320,6 +432,74 @@
     </div>;
 
     /// <summary>
+    /// FZE-14: the annotator's per-page overlay for <see cref="PdfViewMode.Continuous"/> —
+    /// one marker layer plus one interaction surface per mounted page slot (FZE-13). The slot
+    /// context carries the page number and the page's geometry box, so the pointer handlers
+    /// normalize against THE page and every tool anchors on the slot's page — the annotator's
+    /// current page is navigation state only. Null in SinglePage: the single-surface
+    /// <c>OverlayContent</c> above owns that presentation unchanged.
+    /// </summary>
+    private RenderFragment<PdfPageOverlayContext>? ContinuousPageOverlay
+        => _viewMode == PdfViewMode.Continuous ? ContinuousPageSurface : null;
+
+    /// <summary>The per-page fragment: the layer paints only this page's threads, the active
+    /// stroke and draft render in the page they belong to, and the surface normalizes its
+    /// pointer offsets against the slot's geometry box. Builder code on purpose — a razor
+    /// template cannot be written here (the compiler mis-binds the template's context), and
+    /// the element styling is restored through the `::deep` scoped-CSS descendants (the
+    /// slot renders inside the annotator root, which carries the scope attribute).</summary>
+    private RenderFragment<PdfPageOverlayContext> ContinuousPageSurface => context => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "tm-pdf-annotator__page-surface-host");
+
+        builder.OpenComponent<TmPdfAnnotatorLayer>(2);
+        builder.AddAttribute(3, nameof(TmPdfAnnotatorLayer.Threads), _threads);
+        builder.AddAttribute(4, nameof(TmPdfAnnotatorLayer.PageNumber), context.PageNumber);
+        builder.AddAttribute(5, nameof(TmPdfAnnotatorLayer.SelectedThreadId), _selectedThreadId);
+        builder.AddAttribute(6, nameof(TmPdfAnnotatorLayer.ShowResolved), _showResolved);
+        builder.AddAttribute(7, nameof(TmPdfAnnotatorLayer.ColorResolver), _colorResolver);
+        builder.AddAttribute(8, nameof(TmPdfAnnotatorLayer.Draft), _draft);
+        builder.AddAttribute(9, nameof(TmPdfAnnotatorLayer.ActiveStroke),
+            _activeStrokePage == context.PageNumber ? _activeStroke : null);
+        builder.AddAttribute(10, nameof(TmPdfAnnotatorLayer.DraftColor), CurrentAuthorColor);
+        builder.AddAttribute(11, nameof(TmPdfAnnotatorLayer.OnThreadSelected),
+            EventCallback.Factory.Create<string>(this, SelectThreadAsync));
+        builder.CloseComponent();
+
+        builder.OpenElement(12, "div");
+        builder.AddMultipleAttributes(13, PageSurfaceAttributes(context));
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    /// <summary>The per-page surface's attributes: the stable test id plus the page number,
+    /// and the pointer handlers carrying the slot context (FZE-14). The Draw-only
+    /// <c>touch-action: none</c> rides the class, so the other tools keep the native pan
+    /// and pinch of the wrap beneath.</summary>
+    private Dictionary<string, object> PageSurfaceAttributes(PdfPageOverlayContext page) => new()
+    {
+        ["class"] = PageSurfaceClass,
+        ["data-testid"] = TestId("pdf-annotator-surface"),
+        ["data-page"] = page.PageNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ["tabindex"] = "-1",
+        ["onclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, e => HandleSurfaceClickAsync(page, e)),
+        ["onpointerdown"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerDownAsync(page, e)),
+        ["onpointerdown:preventDefault"] = true,
+        ["onpointermove"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerMoveAsync(page, e)),
+        ["onpointerup"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerUpAsync(page, e)),
+        ["onpointercancel"] = EventCallback.Factory.Create<PointerEventArgs>(this, HandlePointerCancel),
+        ["onpointerleave"] = EventCallback.Factory.Create<PointerEventArgs>(this, e => HandlePointerLeaveAsync(page, e)),
+    };
+
+    /// <summary>The interaction surface classes — the same rule as the single-page surface:
+    /// active for the click/draw tools, <c>touch-action: none</c> in Draw only (the other
+    /// tools keep the native pan and pinch of the wrap beneath).</summary>
+    private string PageSurfaceClass
+        => $"tm-pdf-annotator__surface {(SurfaceActive ? "tm-pdf-annotator__surface--active" : "")} {(_mode == PdfAnnotatorMode.Draw ? "tm-pdf-annotator__surface--draw" : "")}";
+
+    /// <summary>
     /// The annotator's thread panel: the shell's docked Right region on desktop and tablet, the
     /// shell's non-modal bottom sheet on mobile (where the sheet header owns the title and the
     /// close button, so the panel drops its own chrome).
@@ -345,8 +525,10 @@
 
     /// <summary>
     /// The G2 mobile tool palette: a horizontally scrollable track of 44px tiles (the two
-    /// light-edit tools) followed by the localized hint that the editing tools need a larger
-    /// screen. The hint rides at the end of the palette so it never pushes the tiles away.
+    /// light-edit tools plus the color picker tile — FZE-12: the color decides how a new
+    /// comment marker renders too) followed by the localized hint that the editing tools
+    /// need a larger screen. The hint rides at the end of the palette so it never pushes the
+    /// tiles away.
     /// </summary>
     private RenderFragment MobilePalette => @<div class="tm-pdf-annotator__palette"
                                                   role="group"
@@ -369,7 +551,60 @@
                 <TmIcon Name="message-square" Size="IconSize.Sm" />
                 <span class="tm-pdf-annotator__tile-text">@Loc["TmPdfAnnotator_ModeComment"]</span>
             </button>
+            @if (AllowColorPicker)
+            {
+                @* FZE-12: the color makes sense for comments too (it decides how the new
+                   marker renders), so the picker tile rides the Browse/Add-comment row. *@
+                <button type="button"
+                        class="tm-pdf-annotator__tile"
+                        aria-haspopup="dialog"
+                        aria-expanded="@(_colorPickerOpen ? "true" : "false")"
+                        aria-label="@ColorTriggerAriaLabel"
+                        data-testid="@TestId("pdf-annotator-color-tile")"
+                        @ref="_colorTileRef"
+                        @onclick="OpenMobileColorPickerAsync">
+                    <span class="tm-pdf-annotator__tile-swatch"
+                          style="background:@CurrentAuthorColor"
+                          aria-hidden="true"></span>
+                    <span class="tm-pdf-annotator__tile-text">@Loc["TmPdfAnnotator_ColorLabel"]</span>
+                </button>
+            }
         </div>
         <span class="tm-pdf-annotator__palette-hint">@Loc["TmPdfAnnotator_EditOnLargerScreen"]</span>
     </div>;
+
+    /// <summary>
+    /// The shared color palette (FZE-12): the core <see cref="TmColorPalette"/> plus the reset
+    /// action, presented through the overlay panel — an anchored popover on desktop and tablet,
+    /// the F3 bottom sheet on a mobile layout. Rendered once at the annotator root; the anchor
+    /// is whichever control opened it (the toolbar trigger button or the mobile palette tile).
+    /// </summary>
+    private RenderFragment ColorPickerPanel => @<TmOverlayPanel Anchor="@_colorAnchor"
+                                 IsOpen="_colorPickerOpen"
+                                 IsOpenChanged="HandleColorPickerOpenChangedAsync"
+                                 Placement="OverlayPlacement.Bottom"
+                                 Align="OverlayAlign.Start"
+                                 Offset="4"
+                                 Role="dialog"
+                                 AriaLabel="@Loc["TmPdfAnnotator_ChooseColor"]"
+                                 LayoutMode="@_resolved"
+                                 MobilePresentation="PanelPresentation.Auto"
+                                 Class="tm-pdf-annotator__color-panel">
+        @* FZE-12: the display Value is the chip color (the picked color or the per-author/role
+           fallback) — the active swatch is checked even while no explicit color is picked.
+           Selecting that checked swatch is a no-op (HandleColorPickedAsync keeps the implicit
+           resolution); the reset action is disabled while the author color is already shown. *@
+        <TmColorPalette Value="@CurrentAuthorColor"
+                        ValueChanged="HandleColorPickedAsync"
+                        Colors="@EffectiveColorPalette"
+                        ColorNames="@_effectiveColorNames"
+                        ShowClearButton="false" />
+        <button type="button"
+                class="tm-pdf-annotator__color-reset"
+                data-testid="@TestId("pdf-annotator-color-reset")"
+                disabled="@(_annotationColor is null)"
+                @onclick="ResetColorAsync">
+            @Loc["TmPdfAnnotator_ResetColor"]
+        </button>
+    </TmOverlayPanel>;
 }

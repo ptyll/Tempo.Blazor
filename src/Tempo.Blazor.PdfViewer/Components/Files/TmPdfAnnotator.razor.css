@@ -5,6 +5,8 @@
 .tm-pdf-annotator {
     --tm-pdf-annotator-font-size: var(--tm-font-size-xs);
 
+    /* The containing block for the floating status chip and the announcer. */
+    position: relative;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--tm-border-color);
@@ -103,6 +105,81 @@
     gap: var(--tm-space-1);
 }
 
+/* ── History group (FZE-15) ────────────────────────────────────────────────── */
+
+/* The undo/redo pair rides BEFORE the tool pills in the same inline-flex row;
+   it keeps the group contract of the frozen set (`data-tm-group="history"`). */
+.tm-pdf-annotator__history {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+}
+
+/* The aria-live announcer: visually hidden, announced by screen readers only. */
+.tm-pdf-annotator__announcer {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ── Visible status chip (FZE-15 review) ───────────────────────────────────── */
+
+/* The short conflict/failure status near the toolbar — the live region alone is
+   invisible to sighted users. A floating dismissible chip pinned over the stage's
+   top edge (NO layout shift, so nothing re-resolves mid-announcement); the JS timer
+   clears it after ~5 s and the ✕ dismisses it right away. */
+.tm-pdf-annotator__status {
+    position: absolute;
+    top: var(--tm-space-2);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    max-width: min(90%, 32rem);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-md);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-pdf-annotator__status-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-pdf-annotator__status-dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-pdf-annotator__status-dismiss:hover {
+    color: var(--tm-text-primary);
+    background: var(--tm-bg-surface-secondary);
+}
+
 .tm-pdf-annotator__mode {
     display: inline-flex;
     align-items: center;
@@ -163,6 +240,78 @@
     height: 14px;
     border-radius: var(--tm-radius-full);
     flex-shrink: 0;
+}
+
+/* FZE-12: the trigger button wraps the chip + label + chevron (the chip and the chevron are
+   decorative, the label keeps the accessible name). It inherits the toolbar font — a small
+   padding frames the hover surface without pushing the row wider (the label truncates, the
+   chip never shrinks). */
+.tm-pdf-annotator__color-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.tm-pdf-annotator__color-trigger:hover {
+    background: var(--tm-bg-surface-secondary);
+}
+
+/* The open state (aria-expanded="true"): the palette stays anchored to the trigger, so the
+   trigger keeps a pressed surface while the popover is up. */
+.tm-pdf-annotator__color-trigger[aria-expanded="true"] {
+    background: var(--tm-bg-surface-secondary);
+    box-shadow: inset 0 0 0 1px var(--tm-border-color);
+}
+
+.tm-pdf-annotator__color-trigger:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The affordance chevron: decorative (TmIcon renders aria-hidden), shrinks with the label. */
+.tm-pdf-annotator__color-chevron {
+    flex-shrink: 0;
+    color: var(--tm-text-secondary);
+}
+
+/* The reset action under the shared TmColorPalette inside the popover/sheet. */
+.tm-pdf-annotator__color-reset {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: var(--tm-space-2);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-pdf-annotator-font-size);
+    cursor: pointer;
+}
+
+.tm-pdf-annotator__color-reset:hover {
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-pdf-annotator__color-reset:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (pointer: coarse) {
+    .tm-pdf-annotator__color-trigger,
+    .tm-pdf-annotator__color-reset {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 /* The visible span is the color indicator's accessible name (the chip itself is
@@ -428,6 +577,15 @@
     background: var(--tm-color-primary-subtle);
 }
 
+/* FZE-12: the color picker tile's swatch — a data palette color, only an inline style. */
+.tm-pdf-annotator__tile-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--tm-radius-full);
+    border: 1px solid var(--tm-border-color);
+    flex-shrink: 0;
+}
+
 .tm-pdf-annotator__tile-text {
     font-size: var(--tm-pdf-annotator-font-size);
     line-height: 1.2;
@@ -454,7 +612,22 @@
 
 /* ── Interaction surface ─────────────────────────────────────────────────── */
 
-.tm-pdf-annotator__surface {
+/* The surface rules are `::deep` DESCENDANT selectors: the single-page surface is
+   annotated markup (its own scope attribute would match either way), while the FZE-14
+   per-page surface is emitted from RenderTreeBuilder code inside the FZE-13 slot and
+   carries no scope attribute — it matches through the annotator root's scope only. */
+
+/* FZE-14: the per-page continuous host — one layer + surface pair per mounted page slot
+   (inside `.tm-pdf-viewer__page-overlay-slot`, whose box IS the reported page geometry).
+   The host fills the slot and never captures pointers; the surface opts back in while a
+   tool is active, exactly like the single-page surface. */
+::deep .tm-pdf-annotator__page-surface-host {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+::deep .tm-pdf-annotator__surface {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -464,14 +637,14 @@
    stamp surface used to claim the whole gesture space, which blocked one-finger scrolling
    and the pinch on a phone — a tap is not a drag, so Comment/Stamp keep the native
    pan/pinch behaviour of the viewer wrap beneath them. */
-.tm-pdf-annotator__surface--active {
+::deep .tm-pdf-annotator__surface--active {
     pointer-events: auto;
     cursor: crosshair;
 }
 
 /* Draw owns the gesture: one finger (or the pen) draws through the pointer events, two
    fingers hand over to the viewer's core pinch, and the browser must not pan mid-stroke. */
-.tm-pdf-annotator__surface--draw {
+::deep .tm-pdf-annotator__surface--draw {
     cursor: crosshair;
     touch-action: none;
 }

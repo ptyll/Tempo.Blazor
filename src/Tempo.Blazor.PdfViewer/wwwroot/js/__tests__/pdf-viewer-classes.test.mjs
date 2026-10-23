@@ -211,8 +211,12 @@ test('continuous pages carry the tm-pdf-viewer__page class and no inline paint',
     const container = fakeElement('div');
     await env.viewer.renderAllPages(env.rootEl, container, 1, 0);
 
-    assert.equal(container.children.length, 3, 'one page wrap per page');
-    for (const [index, wrap] of container.children.entries()) {
+    // The wraps live in the renderer-owned pages container (a single child of the
+    // scroll wrap — the Blazor overlay slots are a sibling container).
+    const pagesContainer = container.children[0];
+    assert.equal(pagesContainer.className, 'tm-pdf-viewer__continuous-pages');
+    assert.equal(pagesContainer.children.length, 3, 'one page wrap per page');
+    for (const [index, wrap] of pagesContainer.children.entries()) {
         assert.equal(wrap.className, 'tm-pdf-viewer__page');
         assertNoInlinePaint(wrap, 'continuous page wrap');
         // A11y: a named page group; the canvas mirrors the label as an image (no

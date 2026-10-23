@@ -3,7 +3,7 @@
   "kind": "Component",
   "category": "Files",
   "namespace": "Tempo.Blazor.Components.Files",
-  "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen, per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
+  "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen and an All | Unresolved filter, a runtime color picker for NEW annotations (ColorPalette/ColorNames/AllowColorPicker, two-way AnnotationColor), per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
   "packageId": "Tempo.Blazor.PdfViewer",
   "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotator.razor",
   "documentationStatus": "generated",
@@ -69,7 +69,7 @@
       "name": "AnnotationColor",
       "type": "string?",
       "isRequired": false,
-      "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time."
+      "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time. Supports two-way binding: the runtime color picker (phase 12) raises AnnotationColorChanged, and a host-supplied value seeds the picker's selection."
     },
     {
       "name": "Mode",
@@ -140,6 +140,13 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the viewer's search is offered. Default is false; passed through to the embedded viewer."
+    },
+    {
+      "name": "SearchPresentation",
+      "type": "PdfSearchPresentation",
+      "isRequired": false,
+      "default": "PdfSearchPresentation.Floating",
+      "description": "How the embedded viewer presents its search UI on desktop and tablet layouts. Default Floating (a card anchored over the page body); passed through to the embedded viewer. A mobile layout always keeps the in-flow bar."
     },
     {
       "name": "AllowRotation",
@@ -228,10 +235,93 @@
       "description": "How the annotator decides its responsive layout. Auto measures the annotator's own container through the embedded TmEditorShell; a forced value renders that layout without measuring, so a test — or a host — can pin a mode. Default Auto. The mobile layout is the G2 presentation: viewing plus light edits only."
     },
     {
+      "name": "ViewMode",
+      "type": "PdfViewMode",
+      "isRequired": false,
+      "default": "PdfViewMode.SinglePage",
+      "description": "How the embedded viewer presents the document (FZE-14 — the PD1 pin is lifted). Default SinglePage keeps the pre-FZE-14 behavior; Continuous renders the annotator's layer and interaction surface per page of the scroll column through the viewer's PageOverlayContent slots (FZE-13) — every tool anchors on the slot's page. Supports two-way binding."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<PdfViewMode>",
+      "isRequired": false,
+      "description": "Callback invoked when the view mode changes (the embedded viewer's toggle or a host-driven binding)."
+    },
+    {
+      "name": "ShowViewModeToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "False",
+      "description": "Whether the embedded viewer renders its single/continuous segmented control. Default false (the pre-FZE-14 toolbar); when true the segment rides the merged toolbar and flips ViewMode through ViewModeChanged."
+    },
+    {
       "name": "ToolbarLabels",
       "type": "ToolbarLabels",
       "isRequired": false,
       "description": "Whether the toolbar's icon buttons show their text labels. Default Icons (the icon-only tools of the earlier phases); Auto and IconsWithText show the labels — on a tablet layout under the icons (the ribbon style of the tablet reference). The value is passed through to the embedded viewer's toolbar as well."
+    },
+    {
+      "name": "AnnotationColorChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback invoked when the runtime color picker changes the color for NEW annotations (a pick raises the color, the reset raises null — the per-author/role fallback)."
+    },
+    {
+      "name": "ColorPalette",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "default": "PdfAnnotationColorHelper.DefaultPalette",
+      "description": "Colors offered by the runtime color picker. Defaults to PdfAnnotationColorHelper.DefaultPalette (the helper owns the palette data)."
+    },
+    {
+      "name": "ColorNames",
+      "type": "IReadOnlyDictionary<string, string>?",
+      "isRequired": false,
+      "description": "Accessible names for the ColorPalette colors, keyed by the color string (matched case-insensitively, like the core TmColorPalette). Defaults to the localized TmPdfAnnotator_ColorName_* names of the default palette."
+    },
+    {
+      "name": "AllowColorPicker",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the runtime color picker is offered. Default true; when false the toolbar keeps the pre-phase-12 static chip + label indicator and no palette tile renders on mobile."
+    },
+    {
+      "name": "AllowUndo",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the annotator records a per-session undo/redo history (FZE-15). When false the toolbar history group and the Ctrl/⌘+Z shortcuts are hidden and mutations bypass the stack."
+    },
+    {
+      "name": "OnHistoryChanged",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked whenever the history state changes (a step was executed, undone, redone, skipped or the stack was cleared)."
+    }
+  ],
+  "methods": [
+    {
+      "name": "UndoAsync",
+      "signature": "Task UndoAsync()",
+      "description": "Undoes the newest annotation mutation of this session. A step whose thread was changed or deleted by another user is skipped with the localized conflict hint; a provider failure announces 'Undo failed' and leaves the stack unchanged."
+    },
+    {
+      "name": "RedoAsync",
+      "signature": "Task RedoAsync()",
+      "description": "Redoes the most recently undone annotation mutation. A provider failure announces 'Redo failed' and leaves the stack unchanged."
+    }
+  ],
+  "properties": [
+    {
+      "name": "CanUndo",
+      "type": "bool",
+      "description": "Whether there is a recorded step to undo. False when AllowUndo is off or a history operation is currently running (the buttons and the mobile More entries disable while it is)."
+    },
+    {
+      "name": "CanRedo",
+      "type": "bool",
+      "description": "Whether there is a recorded step to redo. False when AllowUndo is off or a history operation is currently running."
     }
   ]
 }

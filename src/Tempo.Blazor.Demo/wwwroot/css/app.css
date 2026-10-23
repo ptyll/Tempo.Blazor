@@ -288,21 +288,11 @@ a:hover {
 /* Full-bleed evidence section (the pdf pages' forced tablet/mobile references): escapes the
    page's horizontal padding so the forced-layout demo measures the full content column of
    main — the tablet reference presents in a container ≥768px wide at a tablet viewport
-   (the fixed 296px sidebar of the lg layout is main's own offset and stays respected). */
+   (the fixed 296px sidebar of the lg layout is main's own offset and stays respected).
+   TmBreakpointsTests debt: no new @media widths — the pad rides the layout's own
+   Tailwind padding scale through --demo-main-pad (px-4 / sm:px-6 / lg:px-8). */
 .demo-full-bleed {
-    margin-inline: -1rem;
-}
-
-@media (width >= 640px) {
-    .demo-full-bleed {
-        margin-inline: -1.5rem;
-    }
-}
-
-@media (width >= 1024px) {
-    .demo-full-bleed {
-        margin-inline: -2rem;
-    }
+    margin-inline: calc(-1 * var(--demo-main-pad, 1rem));
 }
 
 .showcase-card:hover {

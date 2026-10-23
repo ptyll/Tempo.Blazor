@@ -119,6 +119,68 @@ public sealed class PdfRedesignThemeScreenshotTests : WasmTestBase
         }
     }
 
+    /// <summary>
+    /// FZE-14 + FZE-11 review captures: the annotator's Continuous Mode section (per-page
+    /// tools over the scroll column) and the viewer's floating search card — opened via the
+    /// toolbar toggle, because the card starts CLOSED at load — each in every light-dark ×
+    /// default-indigo combination. Visual review evidence; token propagation is asserted by
+    /// <see cref="PdfScreens_CaptureEveryThemeCombination_AndPropagateTokens"/>.
+    /// </summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfScreens_CaptureContinuousAnnotations_AndFloatingSearchCard()
+    {
+        foreach (var dark in new[] { false, true })
+        {
+            foreach (var indigo in new[] { false, true })
+            {
+                var theme = (dark ? "dark" : "light") + "-" + (indigo ? "indigo" : "default");
+
+                // Continuous annotator (FZE-14): per-page layer + surface hosts in the section card.
+                var annotator = await OpenScreenAsync("/pdf-annotator", indigo);
+                if (dark)
+                {
+                    await ToggleDarkAsync(annotator);
+                }
+
+                var continuous = annotator.Locator("[data-testid='pdf-annotator-continuous-card']");
+                await continuous.ScrollIntoViewIfNeededAsync();
+                await annotator.WaitForFunctionAsync(
+                    "() => { const card = document.querySelector('[data-testid=\"pdf-annotator-continuous-card\"]');"
+                    + " return !!card && card.querySelectorAll('.tm-pdf-viewer__page canvas[data-rendered]').length > 0; }",
+                    null, new PageWaitForFunctionOptions { Timeout = 60000 });
+                await SettleAsync(annotator);
+                await CaptureAsync(annotator, "pdf-annotator", $"pdf-annotator-continuous--{theme}--desktop");
+                await annotator.CloseAsync();
+
+                // Floating search card (FZE-11): starts closed, opened via the toolbar toggle.
+                var viewer = await OpenScreenAsync("/pdf-viewer", indigo);
+                if (dark)
+                {
+                    await ToggleDarkAsync(viewer);
+                }
+
+                var searchSection = viewer.Locator("section:has(h2:has-text('Document Search'))");
+                await searchSection.ScrollIntoViewIfNeededAsync();
+                await searchSection.Locator("[data-testid='pdf-search-toggle']").First
+                    .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+                await searchSection.Locator("[data-testid='pdf-search-card']").First
+                    .WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+                await SettleAsync(viewer);
+                await CaptureAsync(viewer, "pdf-viewer", $"pdf-viewer-search-card--{theme}--desktop");
+                await viewer.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task ToggleDarkAsync(IPage page)
+    {
+        await page.Locator("[data-testid='theme-toggle']:visible").First.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-theme=\"dark\"]') !== null",
+            null, new PageWaitForFunctionOptions { Timeout = 15000 });
+    }
+
     private async Task<IPage> OpenScreenAsync(string path, bool indigo)
     {
         var page = await CreatePageAsync();

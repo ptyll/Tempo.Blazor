@@ -1,0 +1,121 @@
+@namespace Tempo.Blazor.Components.Files
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Models
+
+@* PDF-VIEWER-CONTINUOUS-ANNOTATIONS (FZE-13): the Blazor-owned overlay slots for the
+   pages the JS geometry report mounts, riding the scroll content next to the JS-owned
+   `.tm-pdf-viewer__continuous-pages`. The container never captures pointers: the
+   annotation layer's markers and highlights opt back in, everything else (notably the
+   per-page text selection) passes through to the page beneath. *@
+
+<div class="@RootClass">
+    @foreach (var box in _boxes)
+    {
+        var pageNumber = box.PageNumber;
+        <div class="tm-pdf-viewer__page-overlay-slot"
+             @key="pageNumber"
+             data-page="@pageNumber"
+             role="@(EnableAnnotations ? "group" : null)"
+             aria-label="@SlotAriaLabel(pageNumber)"
+             style="@box.ToSlotStyle()">
+            @if (EnableAnnotations)
+            {
+                <TmPdfAnnotationLayer Threads="Threads"
+                                      PageNumber="pageNumber"
+                                      Rotation="@_rotation"
+                                      OverlayWidth="@box.Width"
+                                      OverlayHeight="@box.Height"
+                                      SelectedThreadId="@SelectedThreadId"
+                                      CurrentUserId="@CurrentUserId"
+                                      ShowResolved="@ShowResolved"
+                                      DraftAnchor="DraftAnchorFor(pageNumber)"
+                                      OnThreadSelected="OnThreadSelected" />
+            }
+            @if (PageOverlayContent is not null)
+            {
+                @PageOverlayContent(new PdfPageOverlayContext(
+                    pageNumber,
+                    pageNumber == CurrentPage,
+                    box.Width,
+                    box.Height,
+                    _rotation))
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<PdfPageOverlayBox> _boxes = [];
+    private int _rotation;
+    private bool _stale;
+
+    /// <summary>Whether the per-page annotation layers render (else host overlays only).</summary>
+    [Parameter] public bool EnableAnnotations { get; set; }
+
+    /// <summary>Annotation threads available to render.</summary>
+    [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
+
+    /// <summary>Selected thread id.</summary>
+    [Parameter] public string? SelectedThreadId { get; set; }
+
+    /// <summary>Current user id used for mention styling.</summary>
+    [Parameter] public string? CurrentUserId { get; set; }
+
+    /// <summary>Whether resolved threads should be rendered.</summary>
+    [Parameter] public bool ShowResolved { get; set; }
+
+    /// <summary>The viewer's current page (drives <see cref="PdfPageOverlayContext.IsCurrentPage"/>).</summary>
+    [Parameter] public int CurrentPage { get; set; } = 1;
+
+    /// <summary>The templated per-page overlay rendered in every mounted slot.</summary>
+    [Parameter] public RenderFragment<PdfPageOverlayContext>? PageOverlayContent { get; set; }
+
+    /// <summary>Resolves the draft anchor for one page (the pending selection only paints
+    /// in the slot of the page it was made on).</summary>
+    [Parameter] public Func<int, DocumentCommentAnchor?>? DraftAnchorProvider { get; set; }
+
+    /// <summary>Callback invoked when a thread marker or highlight is selected.</summary>
+    [Parameter] public EventCallback<string> OnThreadSelected { get; set; }
+
+    private string RootClass => _stale
+        ? "tm-pdf-viewer__continuous-overlays tm-pdf-viewer__continuous-overlays--stale"
+        : "tm-pdf-viewer__continuous-overlays";
+
+    private DocumentCommentAnchor? DraftAnchorFor(int pageNumber) => DraftAnchorProvider?.Invoke(pageNumber);
+
+    /// <summary>The overlay slot's accessible name when the annotation layer renders in
+    /// it — a named group per page. Host-only slots (PageOverlayContent without
+    /// annotations) name their own content.</summary>
+    private string? SlotAriaLabel(int pageNumber)
+        => EnableAnnotations ? Loc["TmPdfViewer_PageAnnotations", pageNumber] : null;
+
+    /// <summary>
+    /// Receives the JS geometry report (FZE-13): the mounted band's page boxes in
+    /// scroll-content coordinates. Re-renders THIS component only — the root viewer
+    /// never re-renders for a geometry report, so scrolling and zooming never cost a
+    /// full-viewer Blazor diff.
+    /// </summary>
+    internal void SetGeometry(IReadOnlyList<PdfPageOverlayBox> boxes, int rotation)
+    {
+        _boxes = boxes.ToList();
+        _rotation = rotation;
+        _stale = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Hides the slots until the next <see cref="SetGeometry"/> — an in-place zoom
+    /// relayouts the pages before the fresh report arrives, and stale boxes must never
+    /// paint over the moved pages.
+    /// </summary>
+    internal void MarkStale()
+    {
+        if (_stale)
+        {
+            return;
+        }
+
+        _stale = true;
+        StateHasChanged();
+    }
+}

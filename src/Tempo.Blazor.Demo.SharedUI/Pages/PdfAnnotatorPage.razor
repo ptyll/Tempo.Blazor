@@ -32,7 +32,9 @@
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Alena (role <em>reviewer</em>, amber) and Bedřich (role <em>author</em>, cyan) annotate the same document.
             Both panes share one <code>LocalStoragePdfAnnotationProvider</code>, so annotations appear in the other
-            pane immediately and survive a page reload. Try: pick the comment tool, click into the page, write a note —
+            pane immediately and survive a page reload. The panels' header carries the "All | Unresolved" filter —
+            resolve a thread and it leaves the default Unresolved view — and each pane's toolbar has a color
+            trigger for new annotations. Try: pick the comment tool, click into the page, write a note —
             then resolve it from the other pane.
         </p>
         <div class="grid grid-cols-1 min-[1700px]:grid-cols-2 gap-4">
@@ -66,6 +68,39 @@
     </div>
 </section>
 
+<!-- Undo / Redo (FZE-15) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Undo &amp; Redo</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">FZE-15</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-annotator-undo-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Every annotation mutation of the session is undoable and redoable — with the toolbar
+            buttons, the Ctrl/⌘+Z and Ctrl/⌘+Shift+Z (or Ctrl+Y) shortcuts and on a phone through
+            the "More" menu. Undoing a delete re-creates the thread with its replies; a thread that
+            another user changed or deleted in the meantime is skipped with a hint. Drafts never
+            enter the history: in a Draw draft Ctrl+Z removes the last stroke, and the composer's
+            text keeps its native undo. Turn the toggle off to see <code>AllowUndo="false"</code>
+            hide the history group and shortcuts.
+        </p>
+        <div class="mb-4">
+            <TmToggle @bind-Value="_undoEnabled" Label="AllowUndo" data-testid="pdf-annotator-allow-undo" />
+        </div>
+        <TmPdfAnnotator Url="@_demoPdfUrl"
+                        DocumentId="demo-annotator-undo"
+                        AnnotationProvider="_undoProvider"
+                        CurrentUser="_alice"
+                        Users="_users"
+                        RoleColors="_roleColors"
+                        AllowUndo="_undoEnabled"
+                        ShowHeader="true"
+                        Title="Undo / redo — per-session history"
+                        Height="520px" />
+    </div>
+</section>
+
 <!-- Seeded showcase -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -77,8 +112,11 @@
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             A document seeded with all four annotation kinds — a text highlight, a comment pin, an APPROVED stamp,
             and a freehand drawing — from two different authors with explicit <code>AuthorColors</code>.
-            Use the toolbar to export the annotated PDF (real PDF annotations), export a flattened copy
-            (annotations drawn into the page content plus a comment summary page), or print with annotations.
+            The toolbar's color trigger opens a runtime palette: the picked color applies to NEW annotations only
+            (this instance ships a custom <code>ColorPalette</code>; "Reset to author color" returns to the
+            per-author/role resolution). Use the toolbar to export the annotated PDF (real PDF annotations), export
+            a flattened copy (annotations drawn into the page content plus a comment summary page), or print with
+            annotations.
         </p>
         <div data-testid="pdf-annotator-showcase">
             <TmPdfAnnotator Url="@_demoPdfUrl"
@@ -87,11 +125,43 @@
                             CurrentUser="_alice"
                             Users="_users"
                             AuthorColors="_authorColors"
+                            ColorPalette="_customPalette"
                             ExportFileName="tempo-annotated.pdf"
                             ShowHeader="true"
                             Title="Annotation showcase — seeded document"
                             Height="560px" />
         </div>
+    </div>
+</section>
+
+<!-- Continuous mode (FZE-14) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Continuous Mode</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">FZE-14</span>
+    </div>
+
+    <div class="showcase-card" data-testid="pdf-annotator-continuous-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            The PD1 pin is lifted: with <code>ViewMode="PdfViewMode.Continuous"</code> the annotator renders its
+            layer and interaction surface per page of the scroll column — every tool (comment, stamp, draw,
+            highlight) anchors on the page it was used on, an ink stroke stays confined to the page where it
+            started, and selecting a thread in the panel scrolls to its anchor instead of leaving Continuous.
+            The single/continuous segmented control rides the merged toolbar
+            (<code>ShowViewModeToggle="true"</code>); the SinglePage default keeps the sections above unchanged.
+            The redaction stage (<a href="/redaction">/redaction</a>) stays a single-page tool.
+        </p>
+        <TmPdfAnnotator Url="@_demoPdfUrl"
+                        DocumentId="demo-annotator-continuous"
+                        AnnotationProvider="_continuousStorageProvider"
+                        CurrentUser="_alice"
+                        Users="_users"
+                        RoleColors="_roleColors"
+                        ViewMode="PdfViewMode.Continuous"
+                        ShowViewModeToggle="true"
+                        ShowHeader="true"
+                        Title="Continuous mode — per-page tools"
+                        Height="600px" />
     </div>
 </section>
 
@@ -167,12 +237,24 @@
     private LocalStoragePdfAnnotationProvider? _sharedProvider;
     private InMemoryPdfAnnotationProvider? _seededProvider;
 
+    /// <summary>FZE-15: the undo/redo showcase section — an isolated in-memory provider and a
+    /// toggle for <c>AllowUndo</c> (the E2E lane flips it to verify the group hides).</summary>
+    private InMemoryPdfAnnotationProvider? _undoProvider;
+    private bool _undoEnabled = true;
+
     /// <summary>
     /// Isolated seed for the forced tablet/mobile reference sections (FZE-8): a separate document
     /// id keeps the E2E lane's create/reply/resolve mutations away from the showcase seed above
     /// (which asserts an exact thread count).
     /// </summary>
     private InMemoryPdfAnnotationProvider? _responsiveProvider;
+
+    /// <summary>Isolated seed for the continuous-mode section (FZE-14): a localStorage-backed
+    /// provider under its own document id keeps the section's mutations away from the other
+    /// seeds and survives a reload, so the E2E lane can verify per-page persistence and a
+    /// second "user" session on the same thread. The seeded page-4 thread makes the anchor
+    /// scroll visible (selecting it must not leave Continuous).</summary>
+    private LocalStoragePdfAnnotationProvider? _continuousStorageProvider;
 
     private readonly DocumentCommentUser _alice = new()
     {
@@ -200,6 +282,13 @@
     {
         ["alice"] = "#b45309",
         ["bob"] = "#7c3aed"
+    };
+
+    /// <summary>Custom runtime picker palette for the showcase annotator (phase 12): the host
+    /// owns the color data — the default palette lives in PdfAnnotationColorHelper.</summary>
+    private IReadOnlyList<string> _customPalette = new[]
+    {
+        "#2563eb", "#0e7490", "#15803d", "#b45309", "#b91c1c", "#7c3aed", "#be185d", "#475569"
     };
 
     protected override void OnInitialized()
@@ -290,6 +379,8 @@
                     }
                 ]
             });
+
+        _continuousStorageProvider = new LocalStoragePdfAnnotationProvider(JS);
 
         _responsiveProvider = new InMemoryPdfAnnotationProvider(
             new Dictionary<string, IReadOnlyList<DocumentCommentThread>>

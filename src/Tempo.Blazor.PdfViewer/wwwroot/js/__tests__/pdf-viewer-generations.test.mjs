@@ -75,19 +75,25 @@ function fakeNode(tag) {
     return el;
 }
 
-/** Scrollable continuous container: fixed clientHeight, settable scrollTop. */
+/** Scrollable continuous container: fixed clientHeight, settable scrollTop.
+ * Mirrors the production DOM: the renderer owns a `.tm-pdf-viewer__continuous-pages`
+ * child and builds one page wrap per page inside it. */
 function fakeContainer(scrollTop = 0) {
     const container = fakeNode('container');
     container.scrollTop = scrollTop;
     container.clientHeight = VIEW_H;
+    const pagesEl = fakeNode('div');
+    pagesEl.className = 'tm-pdf-viewer__continuous-pages';
+    container.appendChild(pagesEl);
     container.querySelectorAll = (selector) => (
         typeof selector === 'string' && selector.includes('.tm-pdf-viewer__page')
-            ? container.children.filter(c => c.className === 'tm-pdf-viewer__page')
+            ? pagesEl.children.filter(c => c.className === 'tm-pdf-viewer__page')
             : []
     );
     container.querySelector = (selector) => {
-        const match = typeof selector === 'string' ? selector.match(/\[data-page="(\d+)"\]/) : null;
-        return match ? container.children.find(c => c.dataset?.page === match[1]) ?? null : null;
+        if (typeof selector === 'string' && selector.includes('.tm-pdf-viewer__continuous-pages')) return pagesEl;
+        const match = typeof selector === 'string' ? selector.match(/data-page="(\d+)"/) : null;
+        return match ? pagesEl.children.find(c => c.dataset?.page === match[1]) ?? null : null;
     };
     return container;
 }
@@ -191,7 +197,7 @@ async function loadViewer(testContext, doc) {
             el.getBoundingClientRect = function () {
                 const page = parseInt(this.dataset?.page, 10);
                 if (Number.isFinite(page) && page >= 1 && currentContainer) {
-                    const siblings = currentContainer.children.filter(c => c.className === 'tm-pdf-viewer__page');
+                    const siblings = currentContainer.querySelectorAll('.tm-pdf-viewer__page');
                     const idx = siblings.indexOf(this);
                     const top = idx >= 0
                         ? siblings.slice(0, idx).reduce((sum, s) => sum + (s.__h || hAtCreation), 0)
@@ -247,9 +253,9 @@ async function loadViewer(testContext, doc) {
     return { viewer, registry, docRequest, dotNet, rootEl };
 }
 
-const wrapsOf = (container) => container.children.filter(c => c.className === 'tm-pdf-viewer__page');
+const wrapsOf = (container) => container.querySelectorAll('.tm-pdf-viewer__page');
 const canvasOf = (container, page) => container
-    .querySelector(`:scope > [data-page="${page}"]`)
+    .querySelector(`[data-page="${page}"]`)
     ?.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas') ?? null;
 
 test('a scale update while renderAllPages is still pending does not leave an empty DOM', async (t) => {

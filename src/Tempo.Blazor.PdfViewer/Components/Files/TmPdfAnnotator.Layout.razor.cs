@@ -5,6 +5,7 @@ using System.Text.Json;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Components.Toolbar;
 
@@ -82,6 +83,13 @@ public partial class TmPdfAnnotator
                 ? ToolbarLabelPosition.Below
                 : ToolbarLabelPosition.Inline;
 
+    /// <summary>Where the history pair's labels sit (FZE-15 review). On a TABLET layout the
+    /// undo/redo pair is icon-only — the localized text stays the tooltip and the aria-label —
+    /// so the labelled Stamp/Draw pills keep their room in the ribbon; everywhere else the
+    /// tool rule above applies (ToolbarLabels.Icons keeps them icon-only everywhere).</summary>
+    private ToolbarLabelPosition HistoryLabelPosition
+        => IsTabletLayout ? ToolbarLabelPosition.Hidden : ToolLabelPosition;
+
     /// <summary>
     /// The annotator root height. The root OWNS the height contract (the shell's mobile stage
     /// needs a definite height to lay out against) and the embedded viewer flexes inside it —
@@ -132,7 +140,11 @@ public partial class TmPdfAnnotator
     /// not exist on a phone, so an active edit mode falls back to Browse, and the mobile
     /// sheet STARTS CLOSED on the first resolution to mobile and on every switch from
     /// desktop/tablet to mobile, unless the host explicitly supplied <see cref="ShowPanel"/>
-    /// (phase 8 review 3).
+    /// (phase 8 review 3). Under <see cref="TmLayoutMode.Auto"/> the close is DEBOUNCED: the
+    /// container measurement can flap while the page settles (a full-page screenshot, a
+    /// transient reflow), and hiding a panel the user opened because of an intermediate blip
+    /// is worse than a 150 ms late close — a forced mode is the stable resolution and closes
+    /// synchronously (phase 12 review).
     /// </summary>
     private async Task ApplyResolvedLayoutAsync(TmLayoutMode mode)
     {
@@ -150,8 +162,81 @@ public partial class TmPdfAnnotator
             && !_showPanelSupplied
             && _panelVisible)
         {
-            _panelVisible = false;
-            await ShowPanelChanged.InvokeAsync(false);
+            if (LayoutMode != TmLayoutMode.Auto)
+            {
+                _panelVisible = false;
+                await ShowPanelChanged.InvokeAsync(false);
+            }
+            else
+            {
+                ScheduleMobileSheetClose();
+            }
+        }
+        else
+        {
+            CancelMobileSheetClose();
+        }
+    }
+
+    /// <summary>Debounce for the mobile sheet auto-close under Auto (~150 ms); cancelled when
+    /// the mode resolves away from mobile before it fires.</summary>
+    private static readonly TimeSpan MobileSheetCloseDebounce = TimeSpan.FromMilliseconds(150);
+
+    private CancellationTokenSource? _mobileSheetCloseCts;
+
+    /// <summary>Schedules the mobile sheet auto-close after the debounce window; a resolution
+    /// away from mobile in between cancels it (see <see cref="ApplyResolvedLayoutAsync"/>).</summary>
+    private void ScheduleMobileSheetClose()
+    {
+        CancelMobileSheetClose();
+        var cts = new CancellationTokenSource();
+        _mobileSheetCloseCts = cts;
+        _ = CloseMobileSheetAfterDebounceAsync(cts.Token);
+    }
+
+    private void CancelMobileSheetClose()
+    {
+        _mobileSheetCloseCts?.Cancel();
+        _mobileSheetCloseCts?.Dispose();
+        _mobileSheetCloseCts = null;
+    }
+
+    private async Task CloseMobileSheetAfterDebounceAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(MobileSheetCloseDebounce, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (token.IsCancellationRequested
+                    || !IsMobileLayout
+                    || _showPanelSupplied
+                    || !_panelVisible)
+                {
+                    return;
+                }
+
+                _panelVisible = false;
+                await ShowPanelChanged.InvokeAsync(false);
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // The annotator died while the debounce was pending — nothing to close anymore.
         }
     }
 
@@ -212,6 +297,31 @@ public partial class TmPdfAnnotator
                     Label = Loc["TmPdfViewer_Search"],
                     Icon = "search",
                     OnClick = EventCallback.Factory.Create(this, () => _viewer?.OpenSearchAsync() ?? Task.CompletedTask),
+                });
+            }
+
+            if (AllowUndo)
+            {
+                // FZE-15: undo/redo are light edits a phone MAY offer — but they ride the
+                // "More" menu (ActionOverflow.Always), never the three visible tiles, which
+                // stay reserved for navigation and export.
+                items.Add(new TmActionItem
+                {
+                    Id = "undo",
+                    Label = Loc["TmPdfAnnotator_Undo"],
+                    Icon = IconNames.Undo2,
+                    Disabled = !CanUndo,
+                    Overflow = ActionOverflow.Always,
+                    OnClick = EventCallback.Factory.Create(this, UndoAsync),
+                });
+                items.Add(new TmActionItem
+                {
+                    Id = "redo",
+                    Label = Loc["TmPdfAnnotator_Redo"],
+                    Icon = IconNames.Redo2,
+                    Disabled = !CanRedo,
+                    Overflow = ActionOverflow.Always,
+                    OnClick = EventCallback.Factory.Create(this, RedoAsync),
                 });
             }
 

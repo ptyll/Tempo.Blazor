@@ -2226,6 +2226,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("title",             "Title",              PropType.String, cat: "Content"),
                 P("zoomMode",          "Zoom Mode",          PropType.Enum,   "auto",         cat: "State",
                     opts: ["auto", "custom", "fit-width", "fit-page"]),
+                // FZE-11: the header subtitle carries the localized file size and the search
+                // UI presents as a floating card by default (Inline restores the old bar).
+                P("showFileSize",      "Show File Size",     PropType.Bool,   true,           cat: "Appearance"),
+                P("searchPresentation","Search Presentation",PropType.Enum,   "floating",     cat: "Appearance",
+                    opts: ["floating", "inline"]),
             ]
         };
 

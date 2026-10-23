@@ -1,0 +1,71 @@
+{
+  "itemName": "TmPdfContinuousOverlays",
+  "kind": "Component",
+  "category": "Files",
+  "namespace": "Tempo.Blazor.Components.Files",
+  "description": "Internal child of TmPdfViewer that renders the continuous mode's Blazor-owned annotation overlay slots for the pages the JS geometry report mounts. The [JSInvokable] geometry report forwards to SetGeometry, which re-renders this component only — the root viewer never re-renders for a geometry report. MarkStale hides the slots until the next report arrives (an in-place zoom must not paint stale boxes).",
+  "packageId": "Tempo.Blazor.PdfViewer",
+  "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfContinuousOverlays.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "EnableAnnotations",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the per-page annotation layers render (else host overlays only)."
+    },
+    {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Annotation threads available to render."
+    },
+    {
+      "name": "SelectedThreadId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Selected thread id."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id used for mention styling."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved threads should be rendered."
+    },
+    {
+      "name": "CurrentPage",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "The viewer's current page (drives PdfPageOverlayContext.IsCurrentPage)."
+    },
+    {
+      "name": "PageOverlayContent",
+      "type": "RenderFragment<PdfPageOverlayContext>?",
+      "isRequired": false,
+      "description": "The templated per-page overlay rendered in every mounted slot."
+    },
+    {
+      "name": "DraftAnchorProvider",
+      "type": "Func<int, DocumentCommentAnchor?>?",
+      "isRequired": false,
+      "description": "Resolves the draft anchor for one page (the pending selection only paints in the slot of the page it was made on)."
+    },
+    {
+      "name": "OnThreadSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when a thread marker or highlight is selected."
+    }
+  ]
+}

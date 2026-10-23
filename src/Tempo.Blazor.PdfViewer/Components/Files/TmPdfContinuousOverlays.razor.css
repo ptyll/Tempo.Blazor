@@ -1,0 +1,29 @@
+/* TmPdfContinuousOverlays scoped styles — the Blazor-owned overlay slots of the
+   continuous column (FZE-13). The slots are absolutely positioned from the JS geometry
+   report, so they ride the scroll content and stay over their page through zoom,
+   rotation and resize. */
+
+.tm-pdf-viewer__continuous-overlays {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 0; /* children are absolutely positioned; the pages div owns the scroll height */
+    pointer-events: none;
+    /* Above the per-page text (z-index 1) and search layers so the markers stay
+       clickable; the annotation draft paints inside the slot layer (z-index 2) over
+       the text layer's selection — documented z-order: page canvas < text/search
+       layer (1) < overlay slots (2). */
+    z-index: 2;
+}
+
+/* B4: while a fresh geometry report is in flight (an in-place zoom relayouts the
+   pages first), the stale slots must not paint over the moved pages. visibility keeps
+   the layout — the next report unhides in the same frame it repositions. */
+.tm-pdf-viewer__continuous-overlays--stale {
+    visibility: hidden;
+}
+
+.tm-pdf-viewer__page-overlay-slot {
+    position: absolute;
+}

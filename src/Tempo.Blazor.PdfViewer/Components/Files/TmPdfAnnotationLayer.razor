@@ -1,69 +1,79 @@
 @namespace Tempo.Blazor.Components.Files
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using System.Globalization
 
 <div class="tm-pdf-annotation-layer" data-testid="@TestId("pdf-annotation-layer")" aria-label="@Loc["TmPdfViewer_AnnotationsLayerLabel"]">
-    @foreach (var thread in VisibleThreads)
-    {
-        @if (thread.Anchor.Kind == DocumentCommentAnchorKind.TextRange)
+    @* Rotation (PDF.js data-main-rotation contract): the anchor rectangles are normalized
+       to the UNROTATED page, so the content lives in a plane keeping the unrotated page
+       box — the same [data-main-rotation] transform the per-page text layers use maps it
+       onto the rotated slot/canvas box. Until the overlay box is known (0) the plane
+       stretches over the layer (the unrotated behavior at rotation 0). *@
+    <div class="tm-pdf-annotation-layer__plane"
+         data-main-rotation="@(Rotation == 0 ? null : (int?)Rotation)"
+         style="@PlaneStyle">
+        @foreach (var thread in VisibleThreads)
         {
-            @foreach (var rect in thread.Anchor.Rects)
+            @if (thread.Anchor.Kind == DocumentCommentAnchorKind.TextRange)
+            {
+                @foreach (var rect in thread.Anchor.Rects)
+                {
+                    <button type="button"
+                            class="@HighlightClass(thread)"
+                            style="@DocumentCommentGeometryHelper.ToRectStyle(rect)"
+                            aria-label="@MarkerLabel(thread)"
+                            data-thread-id="@thread.Id"
+                            disabled="@Disabled"
+                            @onclick:stopPropagation="true"
+                            @onclick="() => SelectAsync(thread.Id)"></button>
+                }
+            }
+            else if (thread.Anchor.Kind == DocumentCommentAnchorKind.Area)
             {
                 <button type="button"
-                        class="@HighlightClass(thread)"
-                        style="@DocumentCommentGeometryHelper.ToRectStyle(rect)"
+                        class="@AreaClass(thread)"
+                        style="@DocumentCommentGeometryHelper.ToAreaStyle(thread.Anchor)"
                         aria-label="@MarkerLabel(thread)"
                         data-thread-id="@thread.Id"
                         disabled="@Disabled"
                         @onclick:stopPropagation="true"
                         @onclick="() => SelectAsync(thread.Id)"></button>
             }
-        }
-        else if (thread.Anchor.Kind == DocumentCommentAnchorKind.Area)
-        {
+
             <button type="button"
-                    class="@AreaClass(thread)"
-                    style="@DocumentCommentGeometryHelper.ToAreaStyle(thread.Anchor)"
+                    class="@MarkerClass(thread)"
+                    style="@MarkerStyle(thread)"
                     aria-label="@MarkerLabel(thread)"
                     data-thread-id="@thread.Id"
+                    data-testid="@TestId("pdf-annotation-marker")"
                     disabled="@Disabled"
                     @onclick:stopPropagation="true"
-                    @onclick="() => SelectAsync(thread.Id)"></button>
+                    @onclick="() => SelectAsync(thread.Id)">
+                <span>@ThreadNumber(thread)</span>
+            </button>
         }
 
-        <button type="button"
-                class="@MarkerClass(thread)"
-                style="@MarkerStyle(thread)"
-                aria-label="@MarkerLabel(thread)"
-                data-thread-id="@thread.Id"
-                data-testid="@TestId("pdf-annotation-marker")"
-                disabled="@Disabled"
-                @onclick:stopPropagation="true"
-                @onclick="() => SelectAsync(thread.Id)">
-            <span>@ThreadNumber(thread)</span>
-        </button>
-    }
-
-    @if (DraftAnchor is not null)
-    {
-        @if (DraftAnchor.Kind == DocumentCommentAnchorKind.TextRange)
+        @if (DraftAnchor is not null)
         {
-            @foreach (var rect in DraftAnchor.Rects)
+            @if (DraftAnchor.Kind == DocumentCommentAnchorKind.TextRange)
             {
-                <div class="tm-pdf-annotation-layer__highlight tm-pdf-annotation-layer__highlight--draft"
-                     style="@DocumentCommentGeometryHelper.ToRectStyle(rect)"
+                @foreach (var rect in DraftAnchor.Rects)
+                {
+                    <div class="tm-pdf-annotation-layer__highlight tm-pdf-annotation-layer__highlight--draft"
+                         style="@DocumentCommentGeometryHelper.ToRectStyle(rect)"
+                         data-testid="@TestId("pdf-annotation-draft")"
+                         aria-hidden="true"></div>
+                }
+            }
+            else
+            {
+                <div class="tm-pdf-annotation-layer__area tm-pdf-annotation-layer__area--draft"
+                     style="@DocumentCommentGeometryHelper.ToAreaStyle(DraftAnchor)"
                      data-testid="@TestId("pdf-annotation-draft")"
                      aria-hidden="true"></div>
             }
         }
-        else
-        {
-            <div class="tm-pdf-annotation-layer__area tm-pdf-annotation-layer__area--draft"
-                 style="@DocumentCommentGeometryHelper.ToAreaStyle(DraftAnchor)"
-                 data-testid="@TestId("pdf-annotation-draft")"
-                 aria-hidden="true"></div>
-        }
-    }
+    </div>
 </div>
 
 @code {
@@ -90,6 +100,39 @@
 
     /// <summary>Callback invoked when a thread marker or highlight is selected.</summary>
     [Parameter] public EventCallback<string> OnThreadSelected { get; set; }
+
+    /// <summary>Document rotation in degrees (0/90/180/270). The anchor geometry is
+    /// normalized to the unrotated page, so a non-zero rotation wraps the content in
+    /// the unrotated plane (see <see cref="PlaneStyle"/>).</summary>
+    [Parameter] public int Rotation { get; set; }
+
+    /// <summary>The overlay box's width in CSS pixels — the ROTATED page box the layer
+    /// fills (the canvas box, or the geometry report's slot box). 0 until reported.</summary>
+    [Parameter] public double OverlayWidth { get; set; }
+
+    /// <summary>The overlay box's height in CSS pixels — the ROTATED page box. 0 until reported.</summary>
+    [Parameter] public double OverlayHeight { get; set; }
+
+    /// <summary>
+    /// The rotation plane's inline size: the UNROTATED page box derived from the
+    /// reported overlay box (a quarter turn swaps the axes). Empty until the box is
+    /// known — the plane then stretches over the layer via its CSS inset.
+    /// </summary>
+    private string PlaneStyle
+    {
+        get
+        {
+            if (OverlayWidth <= 0 || OverlayHeight <= 0)
+            {
+                return string.Empty;
+            }
+
+            var width = Rotation is 90 or 270 ? OverlayHeight : OverlayWidth;
+            var height = Rotation is 90 or 270 ? OverlayWidth : OverlayHeight;
+            return string.Create(CultureInfo.InvariantCulture,
+                $"width:{width:0.###}px;height:{height:0.###}px;");
+        }
+    }
 
     private IEnumerable<DocumentCommentThread> VisibleThreads => Threads
         .Where(thread => thread.Anchor.PageNumber == PageNumber)

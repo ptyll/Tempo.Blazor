@@ -165,13 +165,20 @@
 
                         @if (AllowRotation)
                         {
-                            @* Mobile keeps the rotate out of the compact row: it is an
-                               OverflowOnly entry of the "More" menu there. *@
+                            @* FZE-11: both directions. Mobile keeps them out of the compact
+                               row: they are OverflowOnly entries of the "More" menu there. *@
                             @if (IsMobileLayout)
                             {
+                                <TmToolbarButton Icon="rotate-ccw"
+                                                 Text="@Loc["TmPdfViewer_RotateCounterClockwise"]"
+                                                 Tooltip="@Loc["TmPdfViewer_RotateCounterClockwise"]"
+                                                 Priority="ToolbarButtonPriority.OverflowOnly"
+                                                 LabelPosition="@ResolvedLabelPosition"
+                                                 Class="@ToolbarButtonClass"
+                                                 OnClick="RotateCounterClockwiseAsync" />
                                 <TmToolbarButton Icon="rotate-cw"
-                                                 Text="@Loc["TmPdfViewer_Rotate"]"
-                                                 Tooltip="@Loc["TmPdfViewer_Rotate"]"
+                                                 Text="@Loc["TmPdfViewer_RotateClockwise"]"
+                                                 Tooltip="@Loc["TmPdfViewer_RotateClockwise"]"
                                                  Priority="ToolbarButtonPriority.OverflowOnly"
                                                  LabelPosition="@ResolvedLabelPosition"
                                                  Class="@ToolbarButtonClass"
@@ -179,12 +186,23 @@
                             }
                             else
                             {
+                                @* Icon-only on desktop/tablet: the localized full text rides the
+                                   tooltip + aria-label, so the PAIR stays on the 1440 toolbar
+                                   (two labelled buttons would push the later groups into "More").
+                                   If the pair ever does overflow, Text keeps the "More" label. *@
                                 <TmToolbarGroup Label="@Loc["TmPdfViewer_Rotate"]" AdditionalAttributes='new Dictionary<string, object> { ["data-tm-group"] = "rotate" }'>
-                                    <TmToolbarButton Icon="rotate-cw"
-                                                     Text="@Loc["TmPdfViewer_Rotate"]"
-                                                     Tooltip="@Loc["TmPdfViewer_Rotate"]"
+                                    <TmToolbarButton Icon="rotate-ccw"
+                                                     Text="@Loc["TmPdfViewer_RotateCounterClockwise"]"
+                                                     Tooltip="@Loc["TmPdfViewer_RotateCounterClockwise"]"
                                                      Priority="ToolbarButtonPriority.Primary"
-                                                     LabelPosition="@ResolvedLabelPosition"
+                                                     LabelPosition="ToolbarLabelPosition.Hidden"
+                                                     Class="@ToolbarButtonClass"
+                                                     OnClick="RotateCounterClockwiseAsync" />
+                                    <TmToolbarButton Icon="rotate-cw"
+                                                     Text="@Loc["TmPdfViewer_RotateClockwise"]"
+                                                     Tooltip="@Loc["TmPdfViewer_RotateClockwise"]"
+                                                     Priority="ToolbarButtonPriority.Primary"
+                                                     LabelPosition="ToolbarLabelPosition.Hidden"
                                                      Class="@ToolbarButtonClass"
                                                      OnClick="RotateAsync" />
                                 </TmToolbarGroup>
@@ -245,12 +263,17 @@
                     @if (ShowSearch && !IsMobileLayout)
                     {
                         <TmToolbarGroup Label="@Loc["TmPdfViewer_Search"]" AdditionalAttributes='new Dictionary<string, object> { ["data-tm-group"] = "search" }'>
+                            @* data-tm-search-toggle is the prefix-independent focus-restore
+                               target of the floating search card (FZE-11): the card's Escape
+                               path hands focus back here. *@
                             <TmToolbarButton Icon="search"
                                              Text="@Loc["TmPdfViewer_Search"]"
                                              Tooltip="@Loc["TmPdfViewer_Search"]"
                                              Priority="ToolbarButtonPriority.Primary"
                                              LabelPosition="@ResolvedLabelPosition"
                                              Class="@ToolbarButtonClass"
+                                             data-testid="@TestId("pdf-search-toggle")"
+                                             data-tm-search-toggle="true"
                                              Pressed="@_searchVisible"
                                              OnClick="ToggleSearchAsync" />
                         </TmToolbarGroup>
@@ -323,17 +346,33 @@
                 </TmToolbar>
             }
 
-            @if (_searchVisible && !_useFallback)
+            @* FZE-11: two search presentations. `Inline` (and every mobile layout — the
+               sheet-style row is the touch contract) renders the pre-2.9.1 full-width bar
+             unchanged; the default `Floating` on desktop/tablet renders the card anchored
+             over `.tm-pdf-viewer__body` below. *@
+            @if (_searchVisible && !_useFallback && (SearchPresentation == PdfSearchPresentation.Inline || IsMobileLayout))
             {
                 <div class="tm-pdf-viewer__search-bar">
                     <TmIcon Name="search" Size="IconSize.Sm" />
                     <input type="text"
                            class="tm-pdf-viewer__search-input"
                            placeholder="@Loc["Tm_Search"]..."
+                           aria-invalid="@(_searchRanWithNoMatches ? "true" : null)"
                            data-testid="@TestId("pdf-search-input")"
                            @bind="_searchQuery"
                            @bind:event="oninput"
                            @onkeyup="HandleSearchKeyUpAsync" />
+                    @* Same always-present live region as the floating card (FZE-11). *@
+                    <span role="status" aria-live="polite" aria-atomic="true">
+                        @if (_searchTotalMatches > 0)
+                        {
+                            <span class="tm-pdf-viewer__search-count" data-testid="@TestId("pdf-search-count")">@Loc["TmPdfViewer_SearchResults", _searchCurrentMatch, _searchTotalMatches]</span>
+                        }
+                        else if (_searchRanWithNoMatches)
+                        {
+                            <span class="tm-pdf-viewer__search-count tm-pdf-viewer__search-count--empty" data-testid="@TestId("pdf-search-count")">@Loc["TmPdfViewer_SearchNoMatches"]</span>
+                        }
+                    </span>
                     @if (_searchTotalMatches > 0)
                     {
                         <span class="tm-pdf-viewer__search-count" data-testid="@TestId("pdf-search-count")">@Loc["TmPdfViewer_SearchResults", _searchCurrentMatch, _searchTotalMatches]</span>
@@ -362,7 +401,7 @@
                                 title="@Loc["Tm_Clear"]"
                                 data-testid="@TestId("pdf-search-clear")"
                                 @onclick="ClearSearchAsync">
-                            <TmIcon Name="x" Size="IconSize.Sm" />
+                            <TmIcon Name="@IconNames.XCircle" Size="IconSize.Sm" />
                         </button>
                     }
                     @if (IsMobileLayout)
@@ -381,17 +420,11 @@
                 </div>
             }
 
-            @* PD1: annotations (and OverlayContent) render in single-page mode only. In
-               continuous mode the thread panel stays readable, but the viewer shows a hint
-               explaining why the page markers are absent and returns to SinglePage when a
-               thread is selected. *@
-            @if (EnableAnnotations && !_useFallback && _viewMode == PdfViewMode.Continuous)
-            {
-                <div class="tm-pdf-viewer__annotations-hint" role="note" data-testid="@TestId("pdf-annotations-single-page-hint")">
-                    <TmIcon Name="info" Size="IconSize.Sm" />
-                    <span>@Loc["TmPdfViewer_AnnotationsSinglePageOnly"]</span>
-                </div>
-            }
+            @* PDF-VIEWER-CONTINUOUS-ANNOTATIONS: continuous mode renders the annotation
+               markers on every mounted page (the per-page slots inside the scroll wrap
+               below) and text selection creates threads on the selection's page — PD1 is
+               superseded and there is no single-page hint anymore. Selecting a thread
+               scrolls to its anchor instead of switching the mode. *@
 
             <div class="tm-pdf-viewer__body" aria-busy="@(_isLoading ? "true" : "false")">
                 @if (_isLoading && !_useFallback)
@@ -446,12 +479,35 @@
                     @if (_viewMode == PdfViewMode.Continuous)
                     {
                         @* A11y: the scroll region is keyboard-reachable so keyboard users can
-                           scroll the pages (and reach the per-page groups' labels). *@
+                           scroll the pages (and reach the per-page groups' labels). Inside it
+                           live TWO children (PDF-VIEWER-CONTINUOUS-ANNOTATIONS): the JS-owned
+                           `.tm-pdf-viewer__continuous-pages` (renderAllPages builds the page
+                           wraps there — Blazor never diffs inside it) and the Blazor-owned
+                           overlay slots for the pages the JS geometry report mounts. *@
                         <div class="tm-pdf-viewer__continuous-wrap"
                              role="region"
                              tabindex="0"
                              aria-label="@Loc["TmPdfViewer_Pages"]"
-                             @ref="_continuousRef"></div>
+                             @ref="_continuousRef">
+                            <div class="tm-pdf-viewer__continuous-pages"></div>
+                            @if (EnableAnnotations || PageOverlayContent is not null)
+                            {
+                                @* PDF-VIEWER-CONTINUOUS-ANNOTATIONS: the slots live in their own
+                                   child component — the [JSInvokable] geometry report forwards to it
+                                   (SetGeometry re-renders the child only), so the root viewer never
+                                   re-renders for a geometry report. *@
+                                <TmPdfContinuousOverlays @ref="_continuousOverlaysRef"
+                                                         EnableAnnotations="EnableAnnotations"
+                                                         Threads="@_threads"
+                                                         SelectedThreadId="@_selectedThreadId"
+                                                         CurrentUserId="@(CurrentUser?.UserId)"
+                                                         ShowResolved="@_showResolvedAnnotations"
+                                                         CurrentPage="@_currentPage"
+                                                         PageOverlayContent="PageOverlayContent"
+                                                         DraftAnchorProvider="DraftAnchorFor"
+                                                         OnThreadSelected="SelectThreadAsync" />
+                            }
+                        </div>
                     }
                     else
                     {
@@ -470,12 +526,16 @@
 
                             @if (EnableAnnotations)
                             {
+                                var currentBox = _overlayPages.FirstOrDefault(b => b.PageNumber == _currentPage);
                                 <div @ref="_annotationOverlayRef" class="tm-pdf-viewer__annotation-overlay">
-                                    <TmPdfAnnotationLayer Threads="_threads"
+                                    <TmPdfAnnotationLayer Threads="@_threads"
                                                           PageNumber="_currentPage"
+                                                          Rotation="@Rotation"
+                                                          OverlayWidth="@(currentBox?.Width ?? 0)"
+                                                          OverlayHeight="@(currentBox?.Height ?? 0)"
                                                           SelectedThreadId="@_selectedThreadId"
                                                           CurrentUserId="@(CurrentUser?.UserId)"
-                                                          ShowResolved="_showResolvedAnnotations"
+                                                          ShowResolved="@_showResolvedAnnotations"
                                                           DraftAnchor="_pendingSelection?.ToAnchor()"
                                                           OnThreadSelected="SelectThreadAsync" />
                                 </div>
@@ -485,6 +545,21 @@
                             {
                                 <div @ref="_customOverlayRef" class="tm-pdf-viewer__annotation-overlay tm-pdf-viewer__custom-overlay">
                                     @OverlayContent
+                                </div>
+                            }
+
+                            @* FZE-13: the templated per-page overlay rides the canvas wrap in
+                               single-page mode — one slot for the current page only. *@
+                            @if (PageOverlayContent is not null)
+                            {
+                                var currentBox = _overlayPages.FirstOrDefault(b => b.PageNumber == _currentPage);
+                                <div @ref="_pageOverlayRef" class="tm-pdf-viewer__annotation-overlay tm-pdf-viewer__page-overlay" data-testid="@TestId("pdf-page-overlay")">
+                                    @PageOverlayContent(new PdfPageOverlayContext(
+                                        _currentPage,
+                                        true,
+                                        currentBox?.Width ?? 0,
+                                        currentBox?.Height ?? 0,
+                                        Rotation))
                                 </div>
                             }
                         </div>
@@ -508,7 +583,7 @@
 
                 @* The docked comments panel is a desktop presentation; tablet and mobile read the
                    same panel through the sheets below (default closed there). *@
-                @if (EnableAnnotations && !_useFallback && _annotationsPanelVisible && !IsMobileLayout && !IsTabletLayout)
+                @if (!_useFallback && DockedAnnotationsPanelVisible)
                 {
                     <TmPdfAnnotationThreadPanel Threads="_threads"
                                                 SelectedThreadId="@_selectedThreadId"
@@ -525,6 +600,89 @@
                                                 OnDeleteRequested="DeleteCommentAsync"
                                                 OnSelectionDismissed="DismissSelectionAsync"
                                                 OnCloseRequested="CloseAnnotationsPanelAsync" />
+                }
+
+                @* FZE-11: the floating search card — a `role="search"` region anchored
+                   top-right OVER `.tm-pdf-viewer__body`, outside the scroll area (the
+                   wraps below are the only scrollables, so a page scroll never carries
+                   the card away) and never covering the toolbar (it lives below it in
+                   the flex column). Painted last + a z-index. M4: while the comments
+                   panel is DOCKED (its right edge is the body's), the card offsets by
+                   the panel's width so the two never overlap. *@
+                @if (_searchVisible && !_useFallback && SearchPresentation == PdfSearchPresentation.Floating && !IsMobileLayout)
+                {
+                    @* The keydown handler (Escape closes the card) lives on the CARD, not on
+                       the input: Esc must work from prev/next/clear/close too, and the
+                       stopPropagation fence keeps the card's keys out of the host page. *@
+                    <div class="@SearchCardClass"
+                         role="search"
+                         aria-label="@Loc["TmPdfViewer_SearchCardLabel"]"
+                         data-testid="@TestId("pdf-search-card")"
+                         @onkeydown="HandleSearchCardKeyDownAsync"
+                         @onkeydown:stopPropagation="true">
+                        <TmIcon Name="search" Size="IconSize.Sm" />
+                        <input type="text"
+                               class="tm-pdf-viewer__search-input"
+                               placeholder="@Loc["Tm_Search"]..."
+                               aria-label="@Loc["TmPdfViewer_SearchCardLabel"]"
+                               aria-invalid="@(_searchRanWithNoMatches ? "true" : null)"
+                               data-testid="@TestId("pdf-search-input")"
+                               @ref="_searchInputRef"
+                               @bind="_searchQuery"
+                               @bind:event="oninput"
+                               @onkeyup="HandleSearchKeyUpAsync" />
+                        @* A11y: the live region is ALWAYS present — reparenting the node on a
+                           verdict change would silence some screen readers. It carries the
+                           match count or the no-matches text. *@
+                        <span role="status" aria-live="polite" aria-atomic="true">
+                            @if (_searchTotalMatches > 0)
+                            {
+                                <span class="tm-pdf-viewer__search-count" data-testid="@TestId("pdf-search-count")">@Loc["TmPdfViewer_SearchResults", _searchCurrentMatch, _searchTotalMatches]</span>
+                            }
+                            else if (_searchRanWithNoMatches)
+                            {
+                                <span class="tm-pdf-viewer__search-count tm-pdf-viewer__search-count--empty" data-testid="@TestId("pdf-search-count")">@Loc["TmPdfViewer_SearchNoMatches"]</span>
+                            }
+                        </span>
+                        @if (_searchTotalMatches > 0)
+                        {
+                            <button class="tm-pdf-viewer__btn"
+                                    type="button"
+                                    aria-label="@Loc["TmPdfViewer_PreviousMatch"]"
+                                    title="@Loc["TmPdfViewer_PreviousMatch"]"
+                                    data-testid="@TestId("pdf-search-prev")"
+                                    @onclick="PreviousMatchAsync">
+                                <TmIcon Name="chevron-up" Size="IconSize.Sm" />
+                            </button>
+                            <button class="tm-pdf-viewer__btn"
+                                    type="button"
+                                    aria-label="@Loc["TmPdfViewer_NextMatch"]"
+                                    title="@Loc["TmPdfViewer_NextMatch"]"
+                                    data-testid="@TestId("pdf-search-next")"
+                                    @onclick="NextMatchAsync">
+                                <TmIcon Name="chevron-down" Size="IconSize.Sm" />
+                            </button>
+                        }
+                        @if (!string.IsNullOrEmpty(_searchQuery))
+                        {
+                            <button class="tm-pdf-viewer__btn"
+                                    type="button"
+                                    aria-label="@Loc["Tm_Clear"]"
+                                    title="@Loc["Tm_Clear"]"
+                                    data-testid="@TestId("pdf-search-clear")"
+                                    @onclick="ClearSearchAsync">
+                                <TmIcon Name="@IconNames.XCircle" Size="IconSize.Sm" />
+                            </button>
+                        }
+                        <button class="tm-pdf-viewer__btn tm-pdf-viewer__search-close"
+                                type="button"
+                                aria-label="@Loc["TmPdfViewer_CloseSearch"]"
+                                title="@Loc["TmPdfViewer_CloseSearch"]"
+                                data-testid="@TestId("pdf-search-close")"
+                                @onclick="CloseSearchCardAsync">
+                            <TmIcon Name="x" Size="IconSize.Sm" />
+                        </button>
+                    </div>
                 }
             </div>
 
@@ -746,11 +904,35 @@
     ];
 
     /// <summary>
-    /// The header subtitle: an explicit <see cref="TmPdfViewer.Subtitle"/> when given, otherwise
-    /// a neutral page count ("Pages: N") once the document is loaded — never a file name or size.
+    /// The header subtitle: an explicit <see cref="TmPdfViewer.Subtitle"/> when given,
+    /// otherwise the default — "Pages: N" once loaded, extended with the localized file
+    /// size ("Pages: N · 1.4 MB") when <see cref="TmPdfViewer.ShowFileSize"/> is on and a
+    /// size is known (the host's <see cref="TmPdfViewer.FileSize"/> or the PDF.js
+    /// <c>getDownloadInfo</c> report). Never a file name; an explicit subtitle is never
+    /// augmented (FZE-11).
     /// </summary>
     private string? HeaderSubtitle
-        => Subtitle ?? (_totalPages > 0 ? Loc["TmPdfViewer_PageCount", _totalPages] : null);
+    {
+        get
+        {
+            if (Subtitle is not null)
+            {
+                return Subtitle;
+            }
+
+            if (_totalPages <= 0)
+            {
+                return null;
+            }
+
+            if (ShowFileSize && EffectiveFileSize is { } size)
+            {
+                return Loc["TmPdfViewer_PageCountWithSize", _totalPages, PdfFileSizeFormatter.Format(size, Loc)];
+            }
+
+            return Loc["TmPdfViewer_PageCount", _totalPages];
+        }
+    }
 
     /// <summary>"Open in a new tab" secondary link, shared by the toolbar and the header.</summary>
     private RenderFragment OpenLink => @<a class="tm-pdf-viewer__link tm-pdf-viewer__link--secondary"
@@ -778,6 +960,25 @@
         new(Loc["TmPdfViewer_ViewModeSingle"], PdfViewMode.SinglePage),
         new(Loc["TmPdfViewer_ViewModeContinuous"], PdfViewMode.Continuous)
     ];
+
+    /// <summary>The draft anchor for one page's slot: the pending selection only paints
+    /// in the slot of the page it was made on (the single-page layer is the only slot,
+    /// so the guard is a no-op there). Forwarded to the overlays child as a delegate.</summary>
+    private DocumentCommentAnchor? DraftAnchorFor(int pageNumber)
+        => _pendingSelection is { } selection && selection.Page == pageNumber
+            ? selection.ToAnchor()
+            : null;
+
+    /// <summary>Whether the comments panel is docked (desktop presentation, open) — the
+    /// floating search card offsets by the panel's width so the two never overlap (M4).</summary>
+    private bool DockedAnnotationsPanelVisible
+        => EnableAnnotations && _annotationsPanelVisible && !IsMobileLayout && !IsTabletLayout;
+
+    /// <summary>The floating search card's class: the docked-panel offset variant while
+    /// the comments panel is docked (M4).</summary>
+    private string SearchCardClass => DockedAnnotationsPanelVisible
+        ? "tm-pdf-viewer__search-card tm-pdf-viewer__search-card--docked-panel"
+        : "tm-pdf-viewer__search-card";
 
     private async Task HandleViewModeSegmentChangedAsync(PdfViewMode mode)
         => await SetViewModeAsync(mode);

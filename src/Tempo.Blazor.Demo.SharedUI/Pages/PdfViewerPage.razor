@@ -64,10 +64,21 @@
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Full-text search across all pages. Every occurrence is highlighted, the active match is emphasized and scrolled into view, and the up/down buttons (or Enter / Shift+Enter) step through matches with a live counter.
+            The <code>SearchPresentation</code> switch chooses between the default floating card (anchored over the page body, Escape returns focus to the toggle) and the classic inline bar.
         </p>
+        <div class="flex items-center gap-2 mb-3">
+            <label class="text-sm text-slate-600 dark:text-slate-400" for="pdf-demo-search-presentation">Search presentation:</label>
+            <select id="pdf-demo-search-presentation" class="tm-input text-sm" style="max-width: 12rem;"
+                    value="@_searchPresentation.ToString()"
+                    @onchange="OnSearchPresentationChanged">
+                <option value="Floating">Floating (default)</option>
+                <option value="Inline">Inline</option>
+            </select>
+        </div>
         <TmPdfViewer Url="@_demoPdfUrl"
                      ShowToolbar="true"
                      ShowSearch="true"
+                     SearchPresentation="_searchPresentation"
                      AllowDownload="true"
                      ToolbarLabels="ToolbarLabels.Auto"
                      Height="500px" />
@@ -83,7 +94,7 @@
 
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Select text in the document to highlight it and start a comment thread. Threads appear as margin markers and in the side panel, where you can reply, resolve, reopen, and delete. Comments persist through the pluggable <code>IPdfAnnotationProvider</code> — this demo uses an in-memory provider seeded with one thread.
+            Select text in the document to highlight it and start a comment thread. Threads appear as margin markers and in the side panel, where the "All | Unresolved" filter decides whether resolved threads stay visible; you can reply, resolve, reopen, and delete. Comments persist through the pluggable <code>IPdfAnnotationProvider</code> — this demo uses an in-memory provider seeded with one thread.
         </p>
         @if (_lastSelection is not null)
         {
@@ -160,7 +171,8 @@
 
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Rotate the document in 90° increments (0° → 90° → 180° → 270°). The selectable
+            Rotate the document in 90° increments in both directions — counter-clockwise
+            (0° → 270° → 180° → 90°) and clockwise (0° → 90° → 180° → 270°). The selectable
             text layer stays aligned with the rotated canvas at every angle.
         </p>
         <TmPdfViewer Url="@_demoPdfUrl"
@@ -184,8 +196,10 @@
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Optional document header (<code>ShowHeader</code>) with a title and the Open/Download
             actions moved out of the toolbar. The subtitle defaults to a neutral page count once
-            the document is loaded; <code>HeaderStart</code> / <code>HeaderActions</code> slots
-            let hosts compose their own chrome.
+            the document is loaded — extended with the localized file size
+            (<code>ShowFileSize</code>, host <code>FileSize</code> wins over the PDF.js report);
+            an explicit <code>Subtitle</code> is never augmented. <code>HeaderStart</code> /
+            <code>HeaderActions</code> slots let hosts compose their own chrome.
         </p>
         <TmPdfViewer Url="@_demoPdfUrl"
                      ShowToolbar="true"
@@ -272,6 +286,12 @@
     private string EffectiveBasicPdfUrl
         => string.IsNullOrWhiteSpace(UrlOverride) ? _demoPdfUrl : UrlOverride;
 
+    /// <summary>Search presentation of the Document Search viewer (FZE-11 demo switch).</summary>
+    private PdfSearchPresentation _searchPresentation = PdfSearchPresentation.Floating;
+
+    private void OnSearchPresentationChanged(ChangeEventArgs e)
+        => _searchPresentation = Enum.Parse<PdfSearchPresentation>((string)e.Value!);
+
     private readonly DocumentCommentUser _currentUser = new()
     {
         UserId = "demo-user",
@@ -281,31 +301,30 @@
     private readonly InMemoryPdfAnnotationProvider _annotationProvider = new(
         new Dictionary<string, IReadOnlyList<DocumentCommentThread>>
         {
-            // Seed for the Continuous→SinglePage handoff (PD1): a thread on page 3 lets
-            // the E2E lane select it while the "All Features Combined" viewer is in
-            // continuous mode and assert the switch back to the thread's page.
+            // Seed for the continuous annotation lanes (FZE-13): one thread per page of
+            // the 120-page fixture, so the continuous column has markers everywhere and
+            // the E2E edge can prove the Blazor diff stays bounded to the mounted band.
             ["demo-full-pdf"] =
-            [
-                new DocumentCommentThread
+                Enumerable.Range(1, 120).Select(page => new DocumentCommentThread
                 {
-                    Id = "full-seed-thread",
-                    Anchor = DocumentCommentAnchor.TextRange(3,
+                    Id = $"full-band-thread-{page}",
+                    Anchor = DocumentCommentAnchor.TextRange(page,
                         [DocumentCommentRect.Create(0.20, 0.35, 0.25, 0.015)],
-                        "content point"),
+                        $"content point {page}"),
                     Comments =
                     [
                         new DocumentComment
                         {
-                            Id = "full-seed-comment",
+                            Id = $"full-band-comment-{page}",
                             AuthorId = "reviewer",
                             AuthorName = "Reviewer",
-                            Body = "Selecting this thread returns the viewer to single-page mode on page 3.",
+                            Body = $"Page {page} note — the continuous column keeps the markers aligned.",
                             CanEdit = false,
                             CanDelete = false
                         }
                     ]
-                }
-            ],
+                }).ToList(),
+            // A named thread on page 3 the lanes can select by id (thread-select scroll).
             ["demo-annotated-pdf"] =
             [
                 new DocumentCommentThread

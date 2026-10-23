@@ -103,6 +103,20 @@ window.tmPdfViewer = (function () {
         return _downloadModulePromise;
     }
 
+    // The document-length lookup lives in pdf-viewer-filesize.mjs, node-tested the
+    // same way; a null answer (unknown length, rejected getDownloadInfo) reports nothing.
+    let _filesizeModule = null;
+    let _filesizeModulePromise = null;
+    function _ensureFilesizeModule() {
+        if (_filesizeModule) return Promise.resolve(_filesizeModule);
+        if (!_filesizeModulePromise) {
+            _filesizeModulePromise = import(_scriptDir + 'pdf-viewer-filesize.mjs')
+                .then(mod => { _filesizeModule = mod; return mod; })
+                .catch(e => { _filesizeModulePromise = null; throw e; });
+        }
+        return _filesizeModulePromise;
+    }
+
     // ── FZE-9: the pinch lives in the CORE sibling module ───────────────────
     // Multi-pointer gestures are never copied into a package (docs/touch-interaction.md,
     // "Multi-pointer gestures"). Referenced packages' static web assets are served as
@@ -221,6 +235,21 @@ window.tmPdfViewer = (function () {
                 await renderPage(rootEl, 1, 1.0, 0);
             }
             dotNetRef.invokeMethodAsync('OnPdfLoaded', pdfDoc.numPages).catch(console.error);
+            // FZE-11: report the byte length for the header's file-size subtitle. The
+            // lookup runs in the BACKGROUND — init must resolve as soon as page 1 is
+            // painted and never wait on getDownloadInfo (a still-streaming download
+            // would hold the viewer hostage). It normalizes a missing/rejected
+            // getDownloadInfo to null and reports nothing then — the header keeps its
+            // pages-only subtitle. Superseded loads (destroyed or re-initialized root)
+            // stay quiet, exactly like OnPdfLoaded.
+            _ensureFilesizeModule()
+                .then(m => m.documentLength(pdfDoc))
+                .then(len => {
+                    if (len !== null && _docs.get(rootEl)?.token === token) {
+                        dotNetRef.invokeMethodAsync('OnDocumentLengthKnown', len).catch(() => { });
+                    }
+                })
+                .catch(() => { /* unknown length — never report */ });
         } catch (err) {
             // Only the owner of the root reports failures; a superseded load stays quiet.
             if (_docs.get(rootEl)?.token === token) {
@@ -455,6 +484,29 @@ window.tmPdfViewer = (function () {
             const anchor = sel.anchorNode;
             if (!anchor || !textLayerEl.contains(anchor)) return;
 
+            // FZE-13: the continuous renderer builds a text layer PER PAGE — the
+            // page comes from the wrap containing the anchor node, the rects are
+            // normalized against that page's box, and a selection that crosses
+            // into the next page is clamped to the anchor page.
+            if (_isContinuous(doc)) {
+                const page = _continuousModule ? _continuousModule.resolveSelectionPage(anchor) : 0;
+                if (!page) return;
+                const wrap = doc._continuousEl.querySelector(`.tm-pdf-viewer__page[data-page="${page}"]`);
+                if (!wrap) return;
+                const pageBox = wrap.querySelector(':scope > .tm-pdf-viewer__page-inner')
+                    ?? wrap;
+                const pageRect = pageBox.getBoundingClientRect();
+                if (pageRect.width < 1 || pageRect.height < 1) return;
+                const range = sel.getRangeAt(0);
+                const flat = _continuousModule.normalizeSelectionRects(range.getClientRects(), pageRect);
+                if (flat.length === 0) return;
+                const key = _selectionKey(sel.toString(), page, flat);
+                if (key === doc._lastSelectionKey) return;
+                doc._lastSelectionKey = key;
+                doc.dotNetRef.invokeMethodAsync('OnTextSelectionChanged', sel.toString(), page, flat).catch(() => { });
+                return;
+            }
+
             const canvasEl = _getCanvas(rootEl);
             if (!canvasEl) return;
             const canvasRect = canvasEl.getBoundingClientRect();
@@ -638,6 +690,10 @@ window.tmPdfViewer = (function () {
             overlayEl.style.top = canvasEl.offsetTop + 'px';
             overlayEl.style.width = canvasEl.offsetWidth + 'px';
             overlayEl.style.height = canvasEl.offsetHeight + 'px';
+            // FZE-13: the single-page overlay geometry (the templated
+            // PageOverlayContent context) follows the canvas resizes through the
+            // same observer — the deduped report fires only on real changes.
+            if (!_isContinuous(state)) _reportPageGeometry(state, rootEl);
         };
         apply();
         // The canvas is resized asynchronously when a page renders (initial load, zoom,
@@ -757,7 +813,7 @@ window.tmPdfViewer = (function () {
     }
 
     function _drawAllSearchHighlights(state) {
-        state?._continuousEl?.querySelectorAll(':scope > .tm-pdf-viewer__page').forEach(wrap => {
+        state?._continuousEl?.querySelectorAll('.tm-pdf-viewer__page').forEach(wrap => {
             _drawSearchHighlightsIntoPage(state, wrap, parseInt(wrap.dataset.page, 10));
         });
     }
@@ -806,7 +862,7 @@ window.tmPdfViewer = (function () {
             // it becomes visible. Rendering into the single-page canvas would target a
             // node that does not exist in this mode.
             scrollToPage(rootEl, match.page);
-            const wrap = state._continuousEl.querySelector(`:scope > [data-page="${match.page}"]`);
+            const wrap = state._continuousEl.querySelector(`.tm-pdf-viewer__page[data-page="${match.page}"]`);
             _drawSearchHighlightsIntoPage(state, wrap, match.page);
             _scrollToActive(wrap?.querySelector('.tm-pdf-viewer__search-layer'));
         } else {
@@ -842,24 +898,68 @@ window.tmPdfViewer = (function () {
         });
     }
 
+    // The floating search card overlays the body's top strip: a highlight that is inside
+    // the scroller box may still sit UNDER the card. The gap keeps the parked highlight
+    // clear of the card's edge (the card's --tm-space-2 inner rhythm).
+    const SEARCH_CARD_GAP = 8;
+
+    // The card of the VIEWER that owns the search layer (the demo page renders several
+    // viewers at once — a document-wide lookup could steal another viewer's card box).
+    function _searchCardRect(searchLayerEl) {
+        const root = searchLayerEl?.closest?.('.tm-pdf-viewer');
+        return root?.querySelector?.('.tm-pdf-viewer__search-card')?.getBoundingClientRect?.() ?? null;
+    }
+
+    // How far below the container's top edge the card's bottom (+gap) sits — the inset the
+    // wraps' scroll-padding reserves. 0 without a card. The visible-page tracker reads the
+    // same effective top, so scrollIntoView(block:'start') + scroll-padding and the page
+    // indicator always agree on which page the user is actually looking at.
+    function _effectiveTopInset(containerEl) {
+        if (typeof document === 'undefined') return 0;
+        const root = containerEl?.closest?.('.tm-pdf-viewer');
+        const card = root?.querySelector?.('.tm-pdf-viewer__search-card');
+        if (!card) return 0;
+        const cardRect = card.getBoundingClientRect?.();
+        const containerRect = containerEl.getBoundingClientRect?.();
+        if (!cardRect || !containerRect) return 0;
+        const inset = (cardRect.bottom + SEARCH_CARD_GAP) - containerRect.top;
+        return inset > 0 ? Math.min(inset, containerRect.height) : 0;
+    }
+
     // Scrolls the active highlight into view — but only when it is not already
     // fully visible inside its scroll container. `block: 'center'` here used to
     // drag the wrap so far that the viewport's top edge landed on page N−1 and
     // the page indicator regressed; 'nearest' scrolls the minimum distance, and
-    // an already-visible highlight scrolls nothing at all.
+    // an already-visible highlight scrolls nothing at all. When the floating
+    // search card is open, its bottom edge (+gap) counts as the scroller's top:
+    // a highlight hidden behind the card counts as NOT visible and is pushed
+    // below it with an explicit scrollBy (scrollIntoView cannot see the card —
+    // the card is not the scroller and not in the scroll path).
     function _scrollToActive(searchLayerEl) {
         if (!searchLayerEl) return;
         const active = searchLayerEl.querySelector('[data-active="1"]');
         if (!active || typeof active.scrollIntoView !== 'function') return;
         const scroller = _closestScrollContainer(active);
+        const cardRect = _searchCardRect(searchLayerEl);
         if (scroller) {
             const activeRect = active.getBoundingClientRect();
             const scrollerRect = scroller.getBoundingClientRect();
-            if (activeRect.top >= scrollerRect.top && activeRect.bottom <= scrollerRect.bottom) {
-                return; // already visible — keep the scroll position (and page indicator) stable
+            const topLimit = cardRect
+                ? Math.max(scrollerRect.top, cardRect.bottom + SEARCH_CARD_GAP)
+                : scrollerRect.top;
+            if (activeRect.top >= topLimit && activeRect.bottom <= scrollerRect.bottom) {
+                return; // already visible (and clear of the card) — keep scroll stable
             }
         }
         active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (cardRect && scroller && typeof scroller.scrollBy === 'function') {
+            const nowRect = active.getBoundingClientRect();
+            const hiddenByCard = nowRect.top < cardRect.bottom + SEARCH_CARD_GAP
+                && nowRect.bottom > cardRect.top;
+            if (hiddenByCard) {
+                scroller.scrollBy({ top: (cardRect.bottom + SEARCH_CARD_GAP) - nowRect.top });
+            }
+        }
     }
 
     // Nearest ancestor with a scrollable overflow-y (the continuous wrap or the
@@ -888,6 +988,25 @@ window.tmPdfViewer = (function () {
     // outside the viewport are released and re-rendered on demand.
     const MAX_RENDERED_PAGES = 12;
 
+    // The scroll wrap hosts TWO children: the JS-owned pages container this module
+    // builds the page wraps into, and (when the host renders one) a Blazor-owned
+    // overlay-slot container. Blazor never diffs inside the pages container, and this
+    // module never touches its sibling — the boundary keeps the lazy-render DOM stable.
+    function _continuousPagesEl(containerEl) {
+        if (!containerEl?.querySelector) return null;
+        const existing = containerEl.querySelector(':scope > .tm-pdf-viewer__continuous-pages');
+        if (existing) return existing;
+        if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
+        const pagesEl = document.createElement('div');
+        pagesEl.className = 'tm-pdf-viewer__continuous-pages';
+        if (typeof containerEl.insertBefore === 'function') {
+            containerEl.insertBefore(pagesEl, containerEl.firstChild ?? null);
+        } else {
+            containerEl.appendChild?.(pagesEl);
+        }
+        return pagesEl;
+    }
+
     // Page metas for the pure continuous math: offset of each wrap inside the
     // scrolled content. getBoundingClientRect is used because the wrap's
     // offsetParent is not necessarily the scroll container.
@@ -895,11 +1014,102 @@ window.tmPdfViewer = (function () {
         if (!containerEl?.querySelectorAll) return [];
         const containerTop = containerEl.getBoundingClientRect().top;
         const scrollTop = containerEl.scrollTop;
-        return Array.from(containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page'), wrap => ({
+        return Array.from(containerEl.querySelectorAll('.tm-pdf-viewer__page'), wrap => ({
             page: parseInt(wrap.dataset.page, 10),
             top: wrap.getBoundingClientRect().top - containerTop + scrollTop,
             height: wrap.getBoundingClientRect().height
         }));
+    }
+
+    // Per-page overlay geometry (FZE-13): the page boxes in scroll-content
+    // coordinates, computed through the pure module math around DOM reads. The
+    // reported box is the page-INNER's — the actual canvas box. The outer wrap is a
+    // full-width centered flex row, so its width is the column width, not the page's;
+    // the band membership in _reportPageGeometry keeps reading the outer wraps.
+    function _pageInnerRect(wrap) {
+        return (wrap.querySelector(':scope > .tm-pdf-viewer__page-inner') ?? wrap).getBoundingClientRect();
+    }
+
+    function _collectPageGeometry(containerEl) {
+        if (!containerEl?.querySelectorAll || !containerEl.getBoundingClientRect) return [];
+        const containerRect = containerEl.getBoundingClientRect();
+        const scrollTop = containerEl.scrollTop;
+        if (_continuousModule) {
+            return _continuousModule.collectPageGeometry(
+                Array.from(containerEl.querySelectorAll('.tm-pdf-viewer__page'), wrap => ({
+                    page: parseInt(wrap.dataset.page, 10),
+                    rect: _pageInnerRect(wrap),
+                })),
+                { top: containerRect.top, left: containerRect.left },
+                scrollTop);
+        }
+        return Array.from(containerEl.querySelectorAll('.tm-pdf-viewer__page'), wrap => {
+            const rect = _pageInnerRect(wrap);
+            return {
+                page: parseInt(wrap.dataset.page, 10),
+                top: rect.top - containerRect.top + scrollTop,
+                left: rect.left - containerRect.left,
+                width: rect.width,
+                height: rect.height,
+            };
+        });
+    }
+
+    // Reports the pages inside the mount band (the same ±50% band the paint/release
+    // logic uses) with their boxes to Blazor — the overlay slots render for exactly
+    // this subset, so only pages near the viewport ever reach Blazor's diff. A
+    // rounded signature dedupes the report: scroll/zoom/resize call it often, and an
+    // unchanged layout must not cost a dispatcher round-trip. Single-page mode
+    // reports the one canvas box (the templated PageOverlayContent's context).
+    function _sendPageGeometry(state, boxes) {
+        const key = boxes
+            .map(box => `${box.page}:${Math.round(box.top)},${Math.round(box.left)},${Math.round(box.width)},${Math.round(box.height)}`)
+            .join(';') + '|' + (state.rotation ?? 0);
+        if (key === state._lastGeometryKey) return;
+        state._lastGeometryKey = key;
+        state.dotNetRef.invokeMethodAsync('OnContinuousPageGeometry',
+            boxes.map(box => box.page),
+            boxes.map(box => box.top),
+            boxes.map(box => box.left),
+            boxes.map(box => box.width),
+            boxes.map(box => box.height),
+            state.rotation ?? 0,
+        ).catch(() => { });
+    }
+
+    function _reportPageGeometry(state, scopeEl) {
+        if (!state?.dotNetRef || !scopeEl?.isConnected || !_continuousModule) return;
+        if (_isContinuous(state)) {
+            const containerEl = state._continuousEl;
+            if (!(containerEl.clientHeight > 0) || !containerEl.getBoundingClientRect) return;
+            const containerRect = containerEl.getBoundingClientRect();
+            const scrollTop = containerEl.scrollTop;
+            // Band membership reads the OUTER page wraps: the band is a vertical
+            // extent, and the wrap is the element whose top/height the scroll math
+            // (pageIntersectsViewport, the IntersectionObserver) already works with.
+            const bandWraps = Array.from(containerEl.querySelectorAll('.tm-pdf-viewer__page'), wrap => ({
+                page: parseInt(wrap.dataset.page, 10),
+                rect: wrap.getBoundingClientRect(),
+            }));
+            const mounted = _continuousModule.overlayMountedPages(
+                _continuousModule.collectPageGeometry(
+                    bandWraps, { top: containerRect.top, left: containerRect.left }, scrollTop),
+                scrollTop, containerEl.clientHeight);
+            // The reported geometry is the inner canvas box (B1) — the full-width
+            // wrap's width is the column width, not the page's.
+            const boxes = _collectPageGeometry(containerEl);
+            _sendPageGeometry(state, boxes.filter(box => mounted.includes(box.page)));
+            return;
+        }
+        const canvasEl = _getCanvas(scopeEl);
+        if (!canvasEl || !(canvasEl.offsetWidth > 0)) return;
+        _sendPageGeometry(state, [{
+            page: state.currentPage ?? 1,
+            top: canvasEl.offsetTop,
+            left: canvasEl.offsetLeft,
+            width: canvasEl.offsetWidth,
+            height: canvasEl.offsetHeight,
+        }]);
     }
 
     // An odd quarter turn swaps a page box's axes.
@@ -972,13 +1182,16 @@ window.tmPdfViewer = (function () {
             if (state.buildGen !== gen || !containerEl.isConnected) return;
             for (const [pageNum, size] of resolved) {
                 state.pageSizes.set(pageNum, size);
-                const wrap = containerEl.querySelector(`:scope > [data-page="${pageNum}"]`);
+                const wrap = containerEl.querySelector(`.tm-pdf-viewer__page[data-page="${pageNum}"]`);
                 if (wrap) _applyPlaceholderSize(state, wrap, state.scale);
             }
             if (firstChunk || start + chunk > numPages) {
                 _applyScrollAnchor(state, containerEl, anchor);
             }
             firstChunk = false;
+            // The corrections shifted the layout — the overlay slots must follow
+            // (the report dedupes when a chunk changed nothing).
+            _reportPageGeometry(state, containerEl);
         }
         state.pageSizes.__resolved = true;
     }
@@ -1004,7 +1217,7 @@ window.tmPdfViewer = (function () {
     }
 
     function _releasePageCanvas(state, containerEl, pageNum) {
-        const wrap = containerEl.querySelector(`:scope > [data-page="${pageNum}"]`);
+        const wrap = containerEl.querySelector(`.tm-pdf-viewer__page[data-page="${pageNum}"]`);
         const canvas = wrap?.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
         if (!canvas || !canvas.dataset.rendered) return;
         // Cancel an in-flight task first (release wins over the queued render).
@@ -1030,7 +1243,7 @@ window.tmPdfViewer = (function () {
         if (!containerEl?.isConnected) return;
         if (_continuousModule) {
             const metas = _collectPageMetas(containerEl).map(meta => {
-                const canvas = containerEl.querySelector(`:scope > [data-page="${meta.page}"] canvas`);
+                const canvas = containerEl.querySelector(`.tm-pdf-viewer__page[data-page="${meta.page}"] canvas`);
                 return { ...meta, rendered: !!canvas?.dataset.rendered };
             });
             for (const pageNum of _continuousModule.selectCanvasesToRelease(
@@ -1040,7 +1253,7 @@ window.tmPdfViewer = (function () {
             return;
         }
         let rendered = [];
-        for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+        for (const wrap of containerEl.querySelectorAll('.tm-pdf-viewer__page')) {
             if (wrap.querySelector('canvas')?.dataset.rendered) {
                 const rect = wrap.getBoundingClientRect();
                 rendered.push({ page: parseInt(wrap.dataset.page, 10), top: rect.top, height: rect.height });
@@ -1061,17 +1274,21 @@ window.tmPdfViewer = (function () {
     }
 
     // Visible-page report with an inline fallback (mirrors computeVisiblePage: the
-    // page containing the viewport's top edge) for a failed module import.
+    // page containing the viewport's top edge) for a failed module import. The top
+    // edge sits below the floating search card when it is open (the same effective
+    // top the scroll-padding and _scrollToActive use), so page navigation that
+    // aligns with the scroll padding does not report the page one above.
     function _reportVisiblePage(state, containerEl) {
+        const topInset = _effectiveTopInset(containerEl);
         let visible;
         if (_continuousModule) {
             const metas = _collectPageMetas(containerEl);
-            visible = _continuousModule.computeVisiblePage(metas, containerEl.scrollTop, containerEl.clientHeight);
+            visible = _continuousModule.computeVisiblePage(metas, containerEl.scrollTop + topInset, containerEl.clientHeight);
         } else {
             const containerTop = containerEl.getBoundingClientRect().top;
-            const scrollTop = containerEl.scrollTop;
+            const scrollTop = containerEl.scrollTop + topInset;
             visible = 0;
-            for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+            for (const wrap of containerEl.querySelectorAll('.tm-pdf-viewer__page')) {
                 const top = wrap.getBoundingClientRect().top - containerTop + scrollTop;
                 if (top + wrap.getBoundingClientRect().height > scrollTop) {
                     visible = parseInt(wrap.dataset.page, 10);
@@ -1093,7 +1310,7 @@ window.tmPdfViewer = (function () {
         if (!state._renderQueue || !_continuousModule) return;
         const metas = _collectPageMetas(containerEl);
         for (const meta of metas) {
-            const canvas = containerEl.querySelector(`:scope > [data-page="${meta.page}"] canvas`);
+            const canvas = containerEl.querySelector(`.tm-pdf-viewer__page[data-page="${meta.page}"] canvas`);
             if (canvas?.dataset.rendered) continue;
             if (state._renderQueue.has(meta.page)) continue;
             if (_continuousModule.pageIntersectsViewport(meta, containerEl.scrollTop, containerEl.clientHeight)) {
@@ -1105,7 +1322,7 @@ window.tmPdfViewer = (function () {
     // Keeps aria-current="page" on the wrap the user is viewing.
     function _syncAriaCurrent(state, containerEl) {
         if (!containerEl?.querySelectorAll) return;
-        for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+        for (const wrap of containerEl.querySelectorAll('.tm-pdf-viewer__page')) {
             if (parseInt(wrap.dataset.page, 10) === state.currentPage) {
                 wrap.setAttribute('aria-current', 'page');
             } else if (wrap.getAttribute('aria-current')) {
@@ -1133,6 +1350,9 @@ window.tmPdfViewer = (function () {
                 _requeueVisibleUnpainted(state, containerEl);
                 _pumpContinuousQueue(state);
                 _syncAriaCurrent(state, containerEl);
+                // FZE-13: the scroll moved the mount band — the (deduped) geometry
+                // report mounts/releases the Blazor overlay slots for the new band.
+                _reportPageGeometry(state, containerEl);
             });
         };
         containerEl.addEventListener('scroll', onScroll, { signal: controller.signal, passive: true });
@@ -1175,7 +1395,7 @@ window.tmPdfViewer = (function () {
     }
 
     async function _renderContinuousPage(state, pageNum, containerEl) {
-        const wrap = containerEl.querySelector(`:scope > [data-page="${pageNum}"]`);
+        const wrap = containerEl.querySelector(`.tm-pdf-viewer__page[data-page="${pageNum}"]`);
         const canvas = wrap?.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
         if (!canvas) return;
         const gen = state.paintGen;
@@ -1232,7 +1452,13 @@ window.tmPdfViewer = (function () {
         };
         _cancelRenderTasksInside(state, containerEl);
 
-        containerEl.innerHTML = '';
+        // The pages live in their own container; the Blazor overlay-slot sibling is
+        // never touched by the rebuild (FZE-13).
+        const pagesEl = _continuousPagesEl(containerEl);
+        if (pagesEl) {
+            if (typeof pagesEl.replaceChildren === 'function') pagesEl.replaceChildren();
+            else pagesEl.innerHTML = '';
+        }
 
         const total = state.pdfDoc.numPages;
         for (let i = 1; i <= total; i++) {
@@ -1279,7 +1505,7 @@ window.tmPdfViewer = (function () {
             }
 
             wrap.appendChild(inner);
-            containerEl.appendChild(wrap);
+            pagesEl?.appendChild(wrap);
             _applyPlaceholderSize(state, wrap, state.scale);
 
             // Existing matches are drawn into the fresh layer immediately — the
@@ -1310,7 +1536,7 @@ window.tmPdfViewer = (function () {
                 _pumpContinuousQueue(state);
                 _enforceRenderedLimit(state);
             }, { root: containerEl, rootMargin: '50% 0px' });
-            containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page').forEach(wrap => observer.observe(wrap));
+            containerEl.querySelectorAll('.tm-pdf-viewer__page').forEach(wrap => observer.observe(wrap));
             state._pageObserver = observer;
         } else {
             // No observer support: queue everything and let the pump chew through it.
@@ -1358,6 +1584,32 @@ window.tmPdfViewer = (function () {
 
         // Sync the visible page (and aria-current) after the rebuild.
         _syncAriaCurrent(state, containerEl);
+
+        // FZE-13: the fresh layout's overlay geometry reaches Blazor immediately —
+        // the slots mount for the initial band without waiting for a scroll. The
+        // dedupe key resets first: a rebuild at unchanged boxes must still re-report,
+        // because Blazor hides the slots until the fresh report clears the staleness.
+        state._lastGeometryKey = null;
+        _reportPageGeometry(state, containerEl);
+
+        // Track the container's own resizes (a flex sibling growing/shrinking, a sheet
+        // settling): the page boxes change without a scroll, so the report rides the
+        // next frame. One observer per rebuild — the previous one tracked the (possibly
+        // swapped) container; disconnect replaces it wholesale. Cleared in destroy().
+        state._geometryContainerObserver?.disconnect();
+        if (typeof ResizeObserver !== 'undefined') {
+            let geometryFrame = 0;
+            state._geometryContainerObserver = new ResizeObserver(() => {
+                if (geometryFrame) return;
+                geometryFrame = requestAnimationFrame(() => {
+                    geometryFrame = 0;
+                    if (state._continuousEl?.isConnected && state.buildGen === build) {
+                        _reportPageGeometry(state, state._continuousEl);
+                    }
+                });
+            });
+            state._geometryContainerObserver.observe(containerEl);
+        }
     }
 
     /**
@@ -1377,7 +1629,7 @@ window.tmPdfViewer = (function () {
         // build is still pending (or a fresh container arrived) — a full rebuild
         // must run or the viewer would be left with an empty DOM. The rebuild also
         // bumps paintGen, so this older call's work is superseded either way.
-        const wraps = containerEl.querySelectorAll?.(':scope > .tm-pdf-viewer__page');
+        const wraps = containerEl.querySelectorAll?.('.tm-pdf-viewer__page');
         if (!wraps?.length || state._continuousEl !== containerEl) {
             await renderAllPages(rootEl, containerEl, scale, state.rotation, {
                 ...(state._continuousFlags ?? {}),
@@ -1396,7 +1648,7 @@ window.tmPdfViewer = (function () {
             : null;
 
         state._renderQueue?.clear();
-        for (const wrap of containerEl.querySelectorAll(':scope > .tm-pdf-viewer__page')) {
+        for (const wrap of containerEl.querySelectorAll('.tm-pdf-viewer__page')) {
             const canvas = wrap.querySelector(':scope > .tm-pdf-viewer__page-inner > canvas');
             if (!canvas) continue;
             if (canvas.dataset.rendered) {
@@ -1436,15 +1688,23 @@ window.tmPdfViewer = (function () {
             _drawAllSearchHighlights(state);
         }
         _syncAriaCurrent(state, containerEl);
+
+        // FZE-13: the resized boxes reach Blazor so the overlay slots re-scale in place.
+        // The dedupe key resets first — an in-place zoom must ALWAYS re-report (Blazor
+        // hides the slots until the fresh report arrives, so a suppressed identical
+        // report would leave them hidden forever).
+        state._lastGeometryKey = null;
+        _reportPageGeometry(state, containerEl);
     }
 
     function scrollToPage(rootEl, page) {
         if (!rootEl) return;
         const pageNum = parseInt(page, 10);
         if (!Number.isFinite(pageNum) || pageNum < 1) return;
-        // The wrap is a direct child of the continuous container; the thumbnails
-        // sidebar carries data-page too and must not win the lookup.
-        const wrap = rootEl.querySelector(`:scope .tm-pdf-viewer__continuous-wrap > [data-page="${pageNum}"]`)
+        // The wrap is inside the renderer-owned pages container; the thumbnails
+        // sidebar carries data-page too and must not win the lookup, and the
+        // Blazor overlay slots carry data-page as well — hence the class qualifier.
+        const wrap = rootEl.querySelector(`:scope .tm-pdf-viewer__continuous-wrap .tm-pdf-viewer__page[data-page="${pageNum}"]`)
             ?? rootEl.querySelector(`:scope .tm-pdf-viewer__continuous-wrap [data-page="${pageNum}"]`);
         if (wrap && typeof wrap.scrollIntoView === 'function') {
             wrap.scrollIntoView({ block: 'start', behavior: 'auto' });
@@ -1455,6 +1715,35 @@ window.tmPdfViewer = (function () {
                 state.currentPage = pageNum;
             }
         }
+    }
+
+    /**
+     * FZE-13: scrolls the continuous wrap so a thread anchor becomes visible — the
+     * anchor point (normalized `ratio` within the page) lands on the viewport's
+     * middle line (clamped at the document top AND at the anchor page's own top;
+     * the browser clamps the overflow at the end). Used by the viewer when a thread
+     * is selected in continuous mode: the mode stays Continuous and the lazy
+     * renderer paints the page when it scrolls in. The anchor page is recorded as
+     * the tracked current page (and reported to Blazor) BEFORE the scroll so the
+     * scroll tracker's next report cannot land on a stale page and fight the
+     * programmatic scroll away (the F13/F14 bug). Returns whether the scroll
+     * happened — TmPdfViewer falls back to its page-top navigation when it did not.
+     */
+    function scrollToAnchor(rootEl, page, ratio) {
+        const state = _docs.get(rootEl);
+        const containerEl = state?._continuousEl;
+        if (!containerEl?.isConnected || !_continuousModule) return false;
+        const pageNum = parseInt(page, 10);
+        if (!Number.isFinite(pageNum) || pageNum < 1) return false;
+        const top = _continuousModule.anchorScrollTop(
+            _collectPageMetas(containerEl), pageNum, ratio, containerEl.clientHeight);
+        if (top === null) return false;
+        if (state.currentPage !== pageNum) {
+            state.currentPage = pageNum;
+            state.dotNetRef?.invokeMethodAsync('OnVisiblePageChanged', pageNum).catch(() => { });
+        }
+        containerEl.scrollTop = top;
+        return true;
     }
 
     // ── Fit modes (PD2) ──────────────────────────────────────────────────────
@@ -1620,12 +1909,18 @@ window.tmPdfViewer = (function () {
         state._pageObserver = null;
         state._continuousScrollController?.abort();
         state._continuousScrollController = null;
+        // M1: the container-level geometry observer dies with the instance too.
+        state._geometryContainerObserver?.disconnect();
+        state._geometryContainerObserver = null;
         if (state._fitDebounceTimer) {
             clearTimeout(state._fitDebounceTimer);
             state._fitDebounceTimer = null;
         }
         state._renderQueue = new Set();
         state._continuousEl = null;
+        // FZE-13: the geometry report dedupe dies with the instance — a fresh
+        // init on the same root starts with a clean slate.
+        state._lastGeometryKey = null;
         if (state.fitObserver) {
             state.fitObserver.disconnect();
             state.fitObserver = null;
@@ -1688,6 +1983,32 @@ window.tmPdfViewer = (function () {
         return true;
     }
 
+    // Restores focus to the toolbar's search toggle — the Escape path of the floating
+    // search card (FZE-11): the card closes and the keyboard user keeps their place on
+    // the toolbar. The toggle is marked with data-tm-search-toggle (prefix-independent),
+    // not data-testid, whose value can carry a host TestIdPrefix. When the toggle has
+    // overflowed into the "More" menu it renders collapsed (inert) — focusing it would
+    // be a no-op that drops the user on a dead end, so the toolbar's More trigger takes
+    // the focus instead; with no toolbar at all, the viewer root (tabindex=-1) does.
+    function focusSearchToggle(rootEl) {
+        const toggle = rootEl?.querySelector?.('[data-tm-search-toggle="true"]');
+        if (toggle && !toggle.hasAttribute('inert')) {
+            toggle.focus();
+            return true;
+        }
+        const moreTrigger = rootEl?.querySelector?.('.tm-toolbar button.tm-toolbar-more');
+        if (moreTrigger) {
+            moreTrigger.focus();
+            return true;
+        }
+        if (rootEl) {
+            rootEl.tabIndex = -1;
+            rootEl.focus();
+            return true;
+        }
+        return false;
+    }
+
     return {
         isAvailable,
         init,
@@ -1709,10 +2030,12 @@ window.tmPdfViewer = (function () {
         renderAllPages,
         updateContinuousScale,
         scrollToPage,
+        scrollToAnchor,
         fitScale,
         clearFit,
         clearSelection,
         scrollCardIntoView,
+        focusSearchToggle,
         // Internal (test surface): the pure selection-report identity (M3).
         _selectionKey,
         downloadUrl,

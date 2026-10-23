@@ -4,13 +4,14 @@
 @using Tempo.Blazor.Components.Icons
 
 @* Thread panel of TmPdfAnnotator (PdfViewer redesign phase 4): keeps only its own header
-   (resolved filter, ✕ close button — OnCloseRequested, surfaced as two-way ShowPanel on the
+   (thread filter, ✕ close button — OnCloseRequested, surfaced as two-way ShowPanel on the
    annotator) and the draft prompt; the thread cards themselves render through the shared
    TmPdfThreadList (PD4), which composes TmPdfThreadCard / TmPdfCommentItem / TmPdfComposer.
    Comment edits flow through OnEditRequested to the provider. ShowChrome=false drops the
    panel's own title and close button for the mobile bottom-sheet presentation (the shell's
-   sheet header owns them there, FZE-8); the resolved filter stays in both presentations and
-   the draft composer pins to the sheet bottom with full-width buttons. *@
+   sheet header owns them there, FZE-8); the thread filter stays in both presentations (phase
+   12: the shared TmPdfThreadFilter replaced the "Show resolved" checkbox) and the draft
+   composer pins to the sheet bottom with full-width buttons. *@
 
 <aside class="@PanelClass" data-testid="@TestId("pdf-annotator-panel")" aria-label="@Loc["TmPdfAnnotator_PanelLabel"]">
 
@@ -18,14 +19,11 @@
     {
         <header class="tm-pdf-annotator-panel__header">
             <span class="tm-pdf-annotator-panel__title">@Loc["TmPdfAnnotator_Annotations"]</span>
-            <label class="tm-pdf-annotator-panel__filter">
-                <input type="checkbox"
-                       checked="@ShowResolved"
-                       disabled="@Disabled"
-                       data-testid="@TestId("pdf-annotator-show-resolved")"
-                       @onchange="ToggleResolvedAsync" />
-                @Loc["TmPdfAnnotator_ShowResolved"]
-            </label>
+            <TmPdfThreadFilter Threads="Threads"
+                               ShowResolved="ShowResolved"
+                               ShowResolvedChanged="ShowResolvedChanged"
+                               Disabled="Disabled"
+                               TestIdBase="@TestId("pdf-annotator")" />
             <button type="button"
                     class="tm-pdf-annotator-panel__close"
                     data-testid="@TestId("pdf-annotator-close")"
@@ -39,14 +37,11 @@
     else
     {
         <div class="tm-pdf-annotator-panel__header tm-pdf-annotator-panel__header--sheet">
-            <label class="tm-pdf-annotator-panel__filter">
-                <input type="checkbox"
-                       checked="@ShowResolved"
-                       disabled="@Disabled"
-                       data-testid="@TestId("pdf-annotator-show-resolved")"
-                       @onchange="ToggleResolvedAsync" />
-                @Loc["TmPdfAnnotator_ShowResolved"]
-            </label>
+            <TmPdfThreadFilter Threads="Threads"
+                               ShowResolved="ShowResolved"
+                               ShowResolvedChanged="ShowResolvedChanged"
+                               Disabled="Disabled"
+                               TestIdBase="@TestId("pdf-annotator")" />
         </div>
     }
 
@@ -86,7 +81,7 @@
                      Disabled="Disabled"
                      TestIdBase="@TestId("pdf-annotator")"
                      ColorResolver="@ColorResolver"
-                     EmptyText="@Loc["TmPdfAnnotator_NoAnnotations"]"
+                     EmptyText="@EmptyText"
                      ReplyPlaceholder="@Loc["TmPdfAnnotator_ReplyPlaceholder"]"
                      ReplySubmitLabel="@Loc["TmPdfAnnotator_Reply"]"
                      ResolveLabel="@Loc["TmPdfAnnotator_Resolve"]"
@@ -176,11 +171,13 @@
 
     private Task CancelDraftAsync() => OnDraftDismissed.InvokeAsync();
 
-    private Task ToggleResolvedAsync(ChangeEventArgs e)
-    {
-        var value = e.Value is bool b ? b : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
-        return ShowResolvedChanged.InvokeAsync(value);
-    }
+    /// <summary>
+    /// The list's empty-state text: the panel's own "no annotations" text under the All filter,
+    /// the localized "no unresolved" text when the Unresolved filter hides every thread.
+    /// </summary>
+    private string EmptyText => ShowResolved
+        ? Loc["TmPdfAnnotator_NoAnnotations"]
+        : Loc["TmPdfThread_EmptyUnresolved"];
 
     private string DraftPrompt()
         => Draft?.Kind switch

@@ -33,14 +33,10 @@
     font-weight: 600;
 }
 
-.tm-pdf-annotator-panel__filter {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    font-size: var(--tm-font-size-xs);
-    color: var(--tm-text-secondary);
-    cursor: pointer;
-    user-select: none;
+/* The header hosts the shared TmPdfThreadFilter (phase 12) — its own styles live in
+   TmPdfThreadFilter.razor.css; the header only keeps it from being squeezed. */
+.tm-pdf-annotator-panel__header ::deep .tm-pdf-thread-filter {
+    flex-shrink: 0;
 }
 
 .tm-pdf-annotator-panel__close {
@@ -150,15 +146,9 @@
 }
 
 /* ── Coarse pointer: 44px touch targets (phase 8 review 9) ──────────────────
-   The header ✕ and the "Show resolved" label — the label is the checkbox's real touch
-   target (the native checkbox keeps its visual size inside the enlarged label). */
+   The header ✕ (the shared thread filter owns its own touch target). */
 @media (pointer: coarse) {
     .tm-pdf-annotator-panel__close {
-        min-width: var(--tm-touch-target);
-        min-height: var(--tm-touch-target);
-    }
-
-    .tm-pdf-annotator-panel__filter {
         min-width: var(--tm-touch-target);
         min-height: var(--tm-touch-target);
     }

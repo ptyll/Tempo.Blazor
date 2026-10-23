@@ -221,6 +221,62 @@ el => {
         await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "tablet-tools-labeled");
     }
 
+    // ── FZE-15: undo/redo on the tablet row and in the mobile More menu ──────
+
+    /// <summary>FZE-15: the forced-tablet labelled row carries the history group BEFORE the
+    /// tools. Captures <c>history-tablet-row.png</c> (and refreshes the tablet baseline).</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Undo_TabletHistoryRow()
+    {
+        var page = await OpenAsync(1180, 820, touch: true);
+        var section = Section(page, TabletSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+
+        var history = section.Locator("[data-tm-group='history']").First;
+        await history.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var undo = section.Locator("[data-testid='pdf-annotator-undo']").First;
+        StringAssert.Contains(await undo.GetAttributeAsync("aria-disabled") ?? "", "true",
+            "nothing recorded yet on a fresh session");
+        Assert.IsNotNull(await section.Locator("[data-testid='pdf-annotator-redo']").First.ElementHandleAsync(),
+            "redo rides the labelled tablet row too");
+
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "history-tablet-row");
+    }
+
+    /// <summary>FZE-15: on a phone the undo/redo entries ride the shared "More" menu of the
+    /// action bar (light edits are allowed on mobile). Captures
+    /// <c>history-mobile-more.png</c>.</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Undo_MobileMoreMenu()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        var section = Section(page, MobileSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+
+        await section.EvaluateAsync("el => el.scrollIntoView({ block: 'start', behavior: 'instant' })");
+        await page.WaitForTimeoutAsync(400);
+
+        await section.Locator(".tm-mobile-action-bar__more").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        var undo = page.Locator(".tm-overlay-panel-sheet [data-action-id='undo']").First;
+        await undo.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        Assert.IsNotNull(await page.QuerySelectorAsync(".tm-overlay-panel-sheet [data-action-id='redo']"),
+            "redo rides the same More menu");
+        Assert.IsNotNull(await undo.GetAttributeAsync("disabled"),
+            "the More entry is disabled while the stack is empty");
+
+        var path = Path.Combine(ShotDir("pdf-annotator"), "history-mobile-more.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false, Timeout = 60_000 });
+        TestContext.AddResultFile(path);
+
+        // A disabled entry is inert; close the menu with Escape (the sheet owns the focus).
+        await page.Keyboard.PressAsync("Escape");
+    }
+
     // ── Mobile: the bottom sheet reply/resolve flow ──────────────────────────
 
     [TestMethod]
@@ -315,11 +371,12 @@ el => {
         await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "mobile-reply-sheet");
 
         // Resolve through the composer's ghost secondary, then verify the resolved chip under
-        // the "Show resolved" filter (a resolved thread leaves the default filter).
+        // the "All" filter (a resolved thread leaves the default Unresolved view; phase 12
+        // replaced the "Show resolved" checkbox with the segmented filter).
         await resolve.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
-        await panel.Locator("[data-testid='pdf-annotator-show-resolved']").SetCheckedAsync(true);
+        await panel.Locator(".tm-pdf-thread-filter__segment:has(input[data-testid='pdf-annotator-filter-all'])").ClickAsync();
         var chip = panel.Locator(".tm-pdf-thread-card__chip--success").First;
         await chip.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
     }
@@ -463,22 +520,436 @@ el => {
     }");
         Assert.IsFalse(overflow, "the annotator must not introduce horizontal overflow at 320px");
 
-        // Phase 8 review 10: BOTH palette tiles are fully inside the viewport at 320px — the
-        // hint (flex 1 1 0, ellipsized) yields its room to the tiles instead of pushing one
-        // of them off-screen.
+        // Phase 8 review 10 (phase 12: the color tile joined the row): every palette tile is
+        // reachable — inside the scrollable track's coordinate space (never clipped to the
+        // left, never zero-width) — while the annotator ROOT itself never overflows. At 320px
+        // the three tiles exceed the viewport, which is exactly what the scrollable track is
+        // for (the hint yields, the track scrolls).
         var tileBoxes = await section.EvaluateAsync<string>(@"
 el => {
+    const track = el.querySelector('.tm-pdf-annotator__palette-track');
+    if (!track) return 'missing-track';
+    const tr = track.getBoundingClientRect();
     const tiles = [...el.querySelectorAll('.tm-pdf-annotator__tile')];
-    const vw = window.innerWidth;
     return tiles.map(t => {
         const b = t.getBoundingClientRect();
-        return (b.left >= -1 && b.right <= vw + 1 && b.width > 0)
+        return (b.width > 0 && b.left >= tr.left - 1)
             ? 'ok' : (t.getAttribute('data-testid') ?? '') + ':' + Math.round(b.left) + '..' + Math.round(b.right);
     }).join(',');
     }");
-        Assert.AreEqual("ok,ok", tileBoxes,
-            $"both mobile palette tiles must be fully visible at 320px, got '{tileBoxes}'");
+        Assert.AreEqual("ok,ok,ok", tileBoxes,
+            $"all mobile palette tiles (browse, comment, color) must stay reachable in the scrollable track, got '{tileBoxes}'");
 
         await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "mobile-320-annotator");
+    }
+
+    // ── Phase 12: the color palette as the mobile bottom sheet ────────────────
+
+    /// <summary>Phase 12 (G2): the color tile rides the Browse/Add-comment palette row and
+    /// opens the palette as the F3 bottom sheet; a pick applies to new annotations and closes
+    /// the sheet with the tile swatch updated. Ends with the
+    /// <c>color-picker-mobile-sheet</c> screenshot.</summary>
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_ColorPicker_MobileSheet()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        var section = Section(page, MobileSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+
+        var tile = section.Locator("[data-testid='pdf-annotator-color-tile']").First;
+        await tile.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        // Tap the tile: the palette opens as a bottom sheet (never a popover on a phone).
+        await tile.TapAsync();
+        var sheet = section.Locator(".tm-overlay-panel-sheet").First;
+        await sheet.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var palette = sheet.Locator(".tm-color-palette").First;
+        await palette.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "color-picker-mobile-sheet");
+
+        // The reset action rides the sheet too; then pick a swatch — the sheet closes and the
+        // tile's swatch shows the picked color.
+        Assert.IsNotNull(await sheet.Locator("[data-testid='pdf-annotator-color-reset']").First.ElementHandleAsync(),
+            "the reset action is reachable inside the sheet");
+        await sheet.Locator(".tm-color-palette-swatch[style*='#0e7490']").First.TapAsync();
+        await Assertions.Expect(section.Locator(".tm-overlay-panel-sheet"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
+        StringAssert.Contains((await section.Locator(".tm-pdf-annotator__tile-swatch").First
+            .GetAttributeAsync("style")) ?? "", "#0e7490",
+            "the tile swatch shows the picked color after the sheet closes");
+    }
+
+    // ── FZE-14: the annotator in Continuous mode (per-page tools) ────────────
+
+    private const string ContinuousSectionTitle = "Continuous Mode";
+
+    /// <summary>The annotator's interaction surface inside one continuous page slot.</summary>
+    private static ILocator PageSurface(ILocator section, int page)
+        => section.Locator($".tm-pdf-viewer__page-overlay-slot[data-page='{page}'] [data-testid='pdf-annotator-surface']");
+
+    private static ILocator PageSlot(ILocator section, int page)
+        => section.Locator($".tm-pdf-viewer__page-overlay-slot[data-page='{page}']");
+
+    /// <summary>Waits for the continuous column's per-page surfaces (the JS geometry report
+    /// mounted the band) and returns the section locator. The section is centered first, so
+    /// the annotator's 600px stage is inside the viewport for the mouse-driven flows.</summary>
+    private static async Task<ILocator> OpenContinuousSectionAsync(IPage page)
+    {
+        var section = Section(page, ContinuousSectionTitle);
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await WaitForLoadedAnnotatorAsync(section);
+        await section.Locator(".tm-pdf-viewer__page-overlay-slot[data-page] [data-testid='pdf-annotator-surface']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000, State = WaitForSelectorState.Attached });
+        await section.EvaluateAsync("el => el.scrollIntoView({ block: 'center', behavior: 'instant' })");
+        await page.WaitForTimeoutAsync(300);
+        return section;
+    }
+
+    /// <summary>A point on a page slot at relative coordinates — the slot box IS the page
+    /// geometry (the FZE-13 report), so its bounding box is exactly the annotator surface.</summary>
+    private static async Task<(double X, double Y)> SlotPointAsync(ILocator slot, double fx, double fy)
+    {
+        var box = await slot.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The page slot has no bounding box.");
+        return (box.X + box.Width * fx, box.Y + box.Height * fy);
+    }
+
+    /// <summary>
+    /// The visible intersection of a page slot and the continuous wrap: the slot's layout
+    /// rect spans the whole page (taller than the wrap's window), so a fixed-ratio point can
+    /// fall OUTSIDE the wrap's clip — the pointer would land on the chrome above the stage
+    /// and never reach the surface. The intersection is the receivable area.
+    /// </summary>
+    private static async Task<(double X, double Y, double W, double H)> VisibleSlotBoxAsync(
+        ILocator section, int pageNumber)
+    {
+        var slot = await PageSlot(section, pageNumber).BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The page slot has no bounding box.");
+        var wrap = await section.Locator(".tm-pdf-viewer__continuous-wrap").First.BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The continuous wrap has no bounding box.");
+        var left = Math.Max(slot.X, wrap.X);
+        var right = Math.Min(slot.X + slot.Width, wrap.X + wrap.Width);
+        var top = Math.Max(slot.Y, wrap.Y);
+        var bottom = Math.Min(slot.Y + slot.Height, wrap.Y + wrap.Height);
+        Assert.IsTrue(right > left && bottom > top,
+            "the page slot has no visible intersection with the continuous wrap");
+        return (left, top, right - left, bottom - top);
+    }
+
+    /// <summary>
+    /// Scrolls the section's continuous WRAP to a page and waits for that page's slot
+    /// surface AND its painted canvas: the mount band is the wrap's ±50% scroll band, so a
+    /// slot far from the current band appears only after the column scrolls there — and a
+    /// slot-less element could never be scroll-targeted by an element locator.
+    /// </summary>
+    private static async Task<ILocator> GoToPageAsync(IPage page, ILocator section, int pageNumber)
+    {
+        await section.EvaluateAsync(
+            @"(section, target) => {
+                const wrap = section.querySelector('.tm-pdf-viewer__continuous-wrap');
+                wrap?.querySelector('.tm-pdf-viewer__page[data-page=""' + target + '""]')
+                    ?.scrollIntoView({ block: 'start', behavior: 'instant' });
+            }", pageNumber);
+        var slot = PageSlot(section, pageNumber);
+        await PageSurface(section, pageNumber)
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 30000, State = WaitForSelectorState.Attached });
+        await page.WaitForFunctionAsync($@"() => {{
+            const section = [...document.querySelectorAll('section')]
+                .find(s => s.querySelector('h2')?.textContent?.includes('{ContinuousSectionTitle}'));
+            const wrap = section?.querySelector('.tm-pdf-viewer__continuous-wrap');
+            const pageWrap = wrap?.querySelector('.tm-pdf-viewer__page[data-page=""{pageNumber}""]');
+            return !!pageWrap?.querySelector('canvas[data-rendered]');
+        }}", null, new PageWaitForFunctionOptions { Timeout = 60000 });
+        return slot;
+    }
+
+    /// <summary>
+    /// The first viewport-visible text span of a page's layer (the same guarantee the
+    /// viewer's continuous selection E2E uses): a fixed-ratio drag could fall between lines,
+    /// but a picked span always selects text.
+    /// </summary>
+    private static async Task<(double X, double Y, double W, double H)> VisibleSpanAsync(
+        IPage page, ILocator section, int pageNumber)
+    {
+        var json = await section.EvaluateAsync<string>(@"
+(section, target) => {
+    const wrap = section.querySelector('.tm-pdf-viewer__continuous-wrap');
+    const wb = wrap.getBoundingClientRect();
+    const spans = [...wrap.querySelectorAll('.tm-pdf-viewer__page[data-page=""' + target + '""] .tm-pdf-viewer__text-layer span')]
+        .map(s => { const b = s.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; })
+        .filter(b => b.w > 30 && b.h > 5 && b.y > wb.y + 8 && b.y + b.h < wb.y + wb.height - 8
+            && b.x > wb.x && b.x + b.w < wb.x + wb.width);
+    return spans.length ? JSON.stringify(spans[0]) : 'none';
+}", pageNumber);
+        Assert.AreNotEqual("none", json, $"the page-{pageNumber} layer must have a visible text span");
+        var span = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json!);
+        return (span.GetProperty("x").GetSingle(), span.GetProperty("y").GetSingle(),
+                span.GetProperty("w").GetSingle(), span.GetProperty("h").GetSingle());
+    }
+
+    /// <summary>Picks an annotator tool through the merged toolbar (or its "More" overflow on
+    /// a narrow row — the overflow items carry the button's toolbar item id).</summary>
+    private static async Task ClickToolAsync(ILocator section, string testId)
+    {
+        var tool = section.Locator($"[data-testid='{testId}']").First;
+        if (await tool.IsVisibleAsync() && await tool.IsEnabledAsync())
+        {
+            await tool.ClickAsync();
+            return;
+        }
+
+        var menuId = await tool.GetAttributeAsync("data-tm-toolbar-item");
+        Assert.IsNotNull(menuId, $"the overflowed tool {testId} keeps its toolbar item id");
+        await section.Locator("button.tm-toolbar-more").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+        await section.Locator($"[data-action-id='{menuId}']").First
+            .ClickAsync(new LocatorClickOptions { Timeout = 15000 });
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Continuous_HighlightOnPage2()
+    {
+        var page = await OpenAsync(1600, 1000, touch: false);
+        var section = await OpenContinuousSectionAsync(page);
+
+        // The mode toggle rides the merged toolbar (FZE-14): the segmented control is there
+        // and Continuous is the checked segment.
+        Assert.IsTrue(await section.Locator(".tm-pdf-viewer__view-mode input[type='radio']").Last
+            .IsVisibleAsync(), "the single/continuous segment rides the merged toolbar");
+        Assert.IsTrue(await section.Locator(".tm-pdf-viewer__view-mode input[type='radio']").First
+            .EvaluateAsync<bool>("el => !el.checked"), "Continuous is the checked segment");
+
+        // Highlight text on page 2: the selection is reported with the page it was made on.
+        await ClickToolAsync(section, "pdf-annotator-mode-highlight");
+        await GoToPageAsync(page, section, 2);
+        var (sx, sy, sw, sh) = await VisibleSpanAsync(page, section, 2);
+        var dragY = (float)(sy + sh / 2);
+        await page.Mouse.MoveAsync((float)sx + 4, dragY);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(sx + sw * 0.8), dragY, new MouseMoveOptions { Steps = 12 });
+        await page.Mouse.UpAsync();
+
+        var composer = section.Locator("[data-testid='pdf-annotator-new-input']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await composer.FillAsync("Continuous highlight on page 2");
+        await section.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
+
+        // The draft marker lives in the PAGE-2 slot — never on the annotator's current page.
+        await PageSlot(section, 2).Locator("[data-testid='pdf-annotator-highlight']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "continuous-desktop");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Continuous_StampOnPage4_PersistsAfterReload()
+    {
+        var page = await OpenAsync(1600, 1000, touch: false);
+        var section = await OpenContinuousSectionAsync(page);
+
+        await ClickToolAsync(section, "pdf-annotator-mode-stamp");
+        var stampSelect = section.Locator("[data-testid='pdf-annotator-stamp-select']");
+        await stampSelect.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await stampSelect.SelectOptionAsync(new SelectOptionValue { Index = 1 });
+
+        // With Stamp active the segmented view-mode toggle is still a SINGLE row: its height
+        // stays within 1.2× the touch target (a wrapped second row would roughly double it —
+        // the toolbar's narrow-overflow path handles the space, never a stacked segment).
+        var toggleReport = await section.EvaluateAsync<string>(@"el => {
+            const toggle = el.querySelector('.tm-pdf-viewer__view-mode');
+            if (!toggle) return JSON.stringify({ missing: true });
+            const probe = document.createElement('div');
+            probe.style.height = 'var(--tm-touch-target)';
+            toggle.appendChild(probe);
+            const target = probe.getBoundingClientRect().height;
+            probe.remove();
+            return JSON.stringify({ height: toggle.getBoundingClientRect().height, limit: target * 1.2 });
+        }");
+        var report = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(toggleReport!);
+        Assert.IsFalse(report.TryGetProperty("missing", out _), "the view-mode segment rides the merged toolbar");
+        var toggleHeight = report.GetProperty("height").GetSingle();
+        var toggleLimit = report.GetProperty("limit").GetSingle();
+        Assert.IsTrue(toggleHeight <= toggleLimit,
+            $"the view-mode toggle is a single row ({toggleHeight}px ≤ {toggleLimit}px) — it never wraps");
+
+        // The click anchors on the SLOT's page — page 4, not the annotator's current page.
+        await GoToPageAsync(page, section, 4);
+        await PageSurface(section, 4).ClickAsync(new LocatorClickOptions { Position = new Position { X = 120, Y = 60 } });
+
+        var stamp = PageSlot(section, 4).Locator("[data-testid='pdf-annotator-stamp']").First;
+        await stamp.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "continuous-stamp-page4");
+
+        // Reload: the localStorage provider keeps the section's document — the stamp is
+        // still anchored on page 4 (the per-page slot mounts it after the geometry report).
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        var reloaded = await OpenContinuousSectionAsync(page);
+        await GoToPageAsync(page, reloaded, 4);
+        await PageSlot(reloaded, 4).Locator("[data-testid='pdf-annotator-stamp']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Continuous_DrawStrokeAcrossPageBoundary_Edge()
+    {
+        var page = await OpenAsync(1600, 1000, touch: false);
+        var section = await OpenContinuousSectionAsync(page);
+
+        await ClickToolAsync(section, "pdf-annotator-mode-draw");
+
+        // The page 3/4 gap sits MID-VIEWPORT: scrollTop = slot3.offsetTop + slot3.offsetHeight
+        // - wrap.clientHeight/2 puts the slot-3 bottom edge at half the wrap's client height,
+        // so the drag starts inside page 3, crosses the gap and ends 40px INSIDE page 4. The
+        // stroke is clipped at the boundary — every saved point stays normalized to page 3
+        // (Y ≤ 1) and nothing lands on page 4.
+        await GoToPageAsync(page, section, 3);
+        await section.EvaluateAsync(@"el => {
+            const wrap = el.querySelector('.tm-pdf-viewer__continuous-wrap');
+            const slot3 = wrap.querySelector('.tm-pdf-viewer__page-overlay-slot[data-page=""3""]');
+            const slotTop = slot3.getBoundingClientRect().top - wrap.getBoundingClientRect().top + wrap.scrollTop;
+            wrap.scrollTop = slotTop + slot3.offsetHeight - wrap.clientHeight / 2;
+        }");
+        await PageSurface(section, 4)
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 30000, State = WaitForSelectorState.Attached });
+        await page.WaitForTimeoutAsync(300);
+
+        var slot3Box = await PageSlot(section, 3).BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The page-3 slot has no bounding box.");
+        var startX = slot3Box.X + slot3Box.Width * 0.4;
+        var startY = slot3Box.Y + slot3Box.Height - 30;
+        var endY = slot3Box.Y + slot3Box.Height + 40;
+        await page.Mouse.MoveAsync((float)startX, (float)startY);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(startX + 40), (float)(startY + 10), new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.MoveAsync((float)(startX + 60), (float)endY, new MouseMoveOptions { Steps = 8 });
+        await page.Mouse.UpAsync();
+
+        var composer = section.Locator("[data-testid='pdf-annotator-new']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await section.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
+
+        // The persisted stroke: every point stays inside page 3 (Y ≤ 1) and the anchor is
+        // page 3 — the crossing contact never re-anchored the draft onto page 4.
+        await page.WaitForFunctionAsync(@"() => {
+            const threads = JSON.parse(localStorage.getItem('tm-demo-pdf-annotations:demo-annotator-continuous') ?? '[]');
+            const strokes = threads.filter(t => t.kind === 3 && t.anchor?.pageNumber === 3)
+                .flatMap(t => (t.inkStrokes ?? []).map(s => s.points ?? []));
+            return strokes.length > 0 && strokes.every(pts => pts.every(p => p.y <= 1));
+        }", null, new PageWaitForFunctionOptions { Timeout = 15000 });
+        await PageSlot(section, 3).Locator("[data-testid='pdf-annotator-ink']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000, State = WaitForSelectorState.Attached });
+        Assert.AreEqual(0, await PageSlot(section, 4).Locator("[data-testid='pdf-annotator-ink']").CountAsync(),
+            "the stroke is clipped at the page boundary — nothing lands on page 4");
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "continuous-stroke-boundary-edge");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Continuous_TwoUsersSharedThread()
+    {
+        // The two-user flow rides the section's localStorage provider: the first "session"
+        // creates a comment on page 2, the reload is the second session — the thread is
+        // there and a reply lands in the same thread, all inside Continuous.
+        var page = await OpenAsync(1600, 1000, touch: false);
+        var section = await OpenContinuousSectionAsync(page);
+
+        await ClickToolAsync(section, "pdf-annotator-mode-comment");
+        await GoToPageAsync(page, section, 2);
+        await PageSurface(section, 2).ClickAsync(new LocatorClickOptions { Position = new Position { X = 150, Y = 90 } });
+
+        var composer = section.Locator("[data-testid='pdf-annotator-new-input']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await composer.FillAsync("Shared across sessions");
+        await section.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
+
+        await PageSlot(section, 2).Locator("[data-testid='pdf-annotator-marker']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        var second = await OpenContinuousSectionAsync(page);
+
+        // The second session opens the thread from its page-2 marker and replies — the mode
+        // stays Continuous (the anchor scroll, not a mode switch).
+        await GoToPageAsync(page, second, 2);
+        var marker = PageSlot(second, 2).Locator("[data-testid='pdf-annotator-marker']").First;
+        await marker.ClickAsync();
+        var reply = second.Locator("[data-testid='pdf-annotator-reply-input']").First;
+        await reply.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await reply.FillAsync("Second user reply");
+        await second.Locator("[data-testid='pdf-annotator-reply-submit']").First.ClickAsync();
+
+        await second.Locator("[data-testid='pdf-annotator-comment']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        Assert.IsTrue(await second.Locator("[data-testid='pdf-annotator-comment']").CountAsync() >= 2,
+            "the reply landed in the shared thread");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Continuous_TabletPenDraw()
+    {
+        // The tablet layout (coarse pointer) offers the full tool set; the pen's priority is
+        // covered by the bUnit suite — here the stroke on the per-page surface is the
+        // evidence (a stylus dispatches the same pointer events as the emulated pointer).
+        var page = await OpenAsync(1180, 820, touch: true);
+        var section = await OpenContinuousSectionAsync(page);
+
+        await ClickToolAsync(section, "pdf-annotator-mode-draw");
+        await GoToPageAsync(page, section, 2);
+        var (vx, vy, vw, vh) = await VisibleSlotBoxAsync(section, 2);
+        await page.Mouse.MoveAsync((float)(vx + vw * 0.3), (float)(vy + vh * 0.35));
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync((float)(vx + vw * 0.6), (float)(vy + vh * 0.55), new MouseMoveOptions { Steps = 10 });
+        await page.Mouse.UpAsync();
+
+        var composer = section.Locator("[data-testid='pdf-annotator-new']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await section.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
+
+        await PageSlot(section, 2).Locator("[data-testid='pdf-annotator-ink']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000, State = WaitForSelectorState.Attached });
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "continuous-draw-tablet");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PdfAnnotator_Continuous_MobileComment()
+    {
+        // G2 in Continuous: exactly Browse + Add comment tiles; a comment drop opens the
+        // bottom sheet composer and the marker lands on the tapped page's slot.
+        var page = await OpenAsync(390, 844, touch: true);
+        var section = await OpenContinuousSectionAsync(page);
+
+        Assert.AreEqual(0, await section.Locator("[data-testid='pdf-annotator-mode-highlight']").CountAsync(),
+            "G2: the editing tools do not exist on a phone, in Continuous too");
+        Assert.AreEqual(0, await section.Locator("[data-testid='pdf-annotator-mode-draw']").CountAsync(),
+            "G2: draw is a tablet+ tool");
+
+        await section.Locator("[data-testid='pdf-annotator-mode-comment']").First.TapAsync();
+        await GoToPageAsync(page, section, 3);
+        // Tap inside the slot∩wrap intersection: the tap position is relative to the
+        // surface's own top-left, which may sit above the wrap's visible clip.
+        var (vx, vy, vw, vh) = await VisibleSlotBoxAsync(section, 3);
+        var surfaceBox = await PageSurface(section, 3).BoundingBoxAsync()
+            ?? throw new InvalidOperationException("The page-3 surface has no bounding box.");
+        var tapX = (int)((vx + vw * 0.3) - surfaceBox.X);
+        var tapY = (int)((vy + vh * 0.4) - surfaceBox.Y);
+        await PageSurface(section, 3).TapAsync(new LocatorTapOptions { Position = new Position { X = tapX, Y = tapY } });
+
+        var composer = section.Locator("[data-testid='pdf-annotator-new-input']");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await composer.FillAsync("Mobile comment on page 3");
+        await section.Locator("[data-testid='pdf-annotator-new-submit']").ClickAsync();
+
+        await PageSlot(section, 3).Locator("[data-testid='pdf-annotator-marker']")
+            .First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await ParkAndShootAsync(page, section, ShotDir("pdf-annotator"), "continuous-mobile-comment");
     }
 }

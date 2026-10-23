@@ -281,6 +281,14 @@ public partial class TmPdfViewer
                 if (_lastContinuousRender is { } last && last.Url == Url && last.Rotation == Rotation
                     && _totalPages > 0)
                 {
+                    // B4: the in-place zoom relayouts the pages BEFORE the fresh geometry
+                    // report arrives — hide the slots meanwhile so the stale boxes never
+                    // paint over the moved pages (the JS side forces a fresh report).
+                    if (EnableAnnotations || PageOverlayContent is not null)
+                    {
+                        _continuousOverlaysRef?.MarkStale();
+                    }
+
                     // Scale-only change: the per-page DOM, its layers and the
                     // observer/scroll bindings are still valid — update the
                     // placeholders in place instead of rebuilding the wrap.
@@ -313,6 +321,30 @@ public partial class TmPdfViewer
     public async Task RotateAsync()
     {
         Rotation = (Rotation + 90) % 360;
+        await ApplyRotationAsync();
+    }
+
+    /// <summary>
+    /// Rotate the document 90 degrees counter-clockwise (FZE-11) — the inverse of
+    /// <see cref="RotateAsync"/>: 0 → 270 → 180 → 90 → 0. Continuous mode rebuilds the
+    /// placeholders and preserves the scroll position through the same path as the
+    /// clockwise rotation; the text layer follows the rotation attribute PDF.js writes
+    /// (<c>data-main-rotation</c>).
+    /// </summary>
+    public async Task RotateCounterClockwiseAsync()
+    {
+        Rotation = (Rotation + 270) % 360;
+        await ApplyRotationAsync();
+    }
+
+    /// <summary>
+    /// The shared rotation apply path: in Continuous mode the pages re-render (the JS
+    /// side recomputes the placeholders and preserves the scroll position) and an active
+    /// fit mode recomputes for the flipped aspect ratio; single-page re-renders the
+    /// current page (which refits inside <see cref="RenderCurrentPageAsync"/>).
+    /// </summary>
+    private async Task ApplyRotationAsync()
+    {
         if (_viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null)
         {
             await RenderContinuousPagesAsync();
@@ -350,18 +382,28 @@ public partial class TmPdfViewer
             _fitPending = true;
         }
 
+        // The selection handler binds the mode's text layer element (the single-page
+        // layer vs the JS-built per-page layers) — re-arm it for the fresh DOM.
+        _selectionEnabled = false;
+
         if (_viewMode == PdfViewMode.Continuous)
         {
+            // M2: the single-page boxes are meaningless in the continuous column — the
+            // fresh geometry report re-mounts the band's slots (the child is fresh, but
+            // the root list feeds the single-page context only).
+            _overlayPages = [];
+            _overlayRotation = 0;
             _singlePagePending = false;
             await RenderContinuousPagesAsync();
         }
         else
         {
-            // PD1: the annotation overlay and the text-selection setup live in the
-            // canvas-wrap layout only. The canvas/text-layer refs still point at the
-            // torn-down continuous DOM until the swap has been rendered — defer the
-            // render + selection/overlay setup to OnAfterRenderAsync
-            // (_singlePagePending), exactly like the deferred fit recompute.
+            // The annotation slots and per-page geometry die with the continuous DOM;
+            // the canvas/text-layer/overlay refs still point at the torn-down wrap
+            // until the swap has been rendered — defer the render + selection/overlay
+            // setup to OnAfterRenderAsync (_singlePagePending), exactly like the
+            // deferred fit recompute.
+            _overlayPages = [];
             _singlePagePending = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -370,14 +412,14 @@ public partial class TmPdfViewer
     /// <summary>
     /// Rebuilds the continuous pages at the current scale/rotation. The JS side keeps
     /// placeholders for every page and paints lazily; the flags decide which per-page
-    /// layers the wraps carry. PD1: annotations never render in continuous mode, so
-    /// the text layer follows only the viewer's own <see cref="ShowTextLayer"/> and the
-    /// search layer follows <see cref="ShowSearch"/> — annotation-driven selection
-    /// (EnableAnnotations / EnableTextSelectionEvents) stays single-page.
+    /// layers the wraps carry. Annotations render per page (FZE-13), so the text layer
+    /// — the selection surface — follows the viewer's own <see cref="ShowTextLayer"/>
+    /// OR any annotation-driven selection need; the search layer follows
+    /// <see cref="ShowSearch"/>.
     /// </summary>
     private async Task RenderContinuousPagesAsync()
     {
-        var textLayer = ShowTextLayer;
+        var textLayer = ShowTextLayer || EnableAnnotations || EnableTextSelectionEvents;
         var searchLayer = ShowSearch;
         try
         {
@@ -445,8 +487,32 @@ public partial class TmPdfViewer
     private async Task ToggleSearchAsync()
     {
         _searchVisible = !_searchVisible;
+        // The floating card is focus-managed: once it renders, its input takes the caret
+        // (OnAfterRenderAsync consumes the flag). The Inline bar and the mobile sheet keep
+        // their own flow — no focus move there.
+        _pendingSearchInputFocus = _searchVisible && !_useFallback
+            && SearchPresentation == PdfSearchPresentation.Floating
+            && !IsMobileLayout;
         await InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>
+    /// Closes the floating search card and returns focus to the toolbar's search toggle
+    /// (FZE-11) — both the Escape path and the card's ✕ button share it, so a keyboard
+    /// user never drops to <c>document.body</c> when the card disappears. The restore is
+    /// best-effort: without the JS module (the fallback embed) the card still closes.
+    /// </summary>
+    private async Task CloseSearchCardAsync()
+    {
+        _searchVisible = false;
+        await InvokeAsync(StateHasChanged);
+        try { await JS.InvokeVoidAsync("tmPdfViewer.focusSearchToggle", _rootRef); }
+        catch { }
+    }
+
+    /// <summary>Escape inside the floating search card closes it and restores the focus.</summary>
+    private Task HandleSearchCardKeyDownAsync(KeyboardEventArgs e)
+        => e.Key == "Escape" ? CloseSearchCardAsync() : Task.CompletedTask;
 
     // ── Search ────────────────────────────────────────────────────────────────
 
@@ -521,6 +587,7 @@ public partial class TmPdfViewer
         _lastSearchedQuery = null;
         _searchTotalMatches = 0;
         _searchCurrentMatch = 0;
+        _searchRanWithNoMatches = false;
         try { await JS.InvokeVoidAsync("tmPdfViewer.clearSearch", _rootRef, _searchLayerRef); }
         catch { }
         await InvokeAsync(StateHasChanged);

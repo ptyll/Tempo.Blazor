@@ -217,3 +217,148 @@ export function formatPageLabel(template, page, total) {
     const t = typeof template === 'string' && template.includes('{0}') ? template : 'Page {0} of {1}';
     return t.replace('{0}', String(page)).replace('{1}', String(total));
 }
+
+// ── FZE-13: per-page overlay slots ─────────────────────────────────────────
+//
+// Continuous annotations render as Blazor-owned overlay slots placed next to the
+// JS-owned page wraps. JavaScript owns the geometry: it collects the page boxes
+// relative to the scroll content, decides which pages sit inside the mount band
+// (the same ±50% band the paint/release logic uses, so the lazy-render contract
+// and the painted-page limit keep holding) and reports the mounted subset to
+// Blazor, which diffs only those few slots. The helpers below are the pure part.
+
+/** A page box in scroll-content coordinates: `{ page, top, left, width, height }`. */
+
+/**
+ * Builds the geometry report from DOM rects (node-tested): every wrap's client
+ * box mapped into the scroll content's coordinate space — the same convention
+ * {@link pageIntersectsViewport} already uses for `top`. Collapsed boxes
+ * (display:none, not yet laid out) are dropped.
+ * @param {{page: number, rect: {top: number, left: number, width: number, height: number}}[]|undefined} wraps
+ *   One entry per page wrap, in document order.
+ * @param {{top: number, left: number}} containerRect The scroll container's own client rect.
+ * @param {number} scrollTop Current content offset of the container.
+ * @returns {{page: number, top: number, left: number, width: number, height: number}[]}
+ */
+export function collectPageGeometry(wraps, containerRect, scrollTop) {
+    const containerTop = containerRect?.top ?? 0;
+    const containerLeft = containerRect?.left ?? 0;
+    return (wraps ?? [])
+        .map(wrap => ({
+            page: wrap.page,
+            top: wrap.rect.top - containerTop + (scrollTop || 0),
+            left: wrap.rect.left - containerLeft,
+            width: wrap.rect.width,
+            height: wrap.rect.height,
+        }))
+        .filter(box => box.width > 0 && box.height > 0);
+}
+
+/**
+ * The pages whose overlay slots Blazor mounts: every page box intersecting the
+ * margin-extended viewport band ({@link bandExtents}, the same band
+ * `selectCanvasesToRelease` protects and the IntersectionObserver watches with
+ * `rootMargin: '50% 0px'`). Only these pages ever reach Blazor's diff, so a
+ * 120-page document never produces 120 overlay components and the painted-page
+ * limit keeps holding.
+ * @param {{page: number, top: number, height: number}[]|undefined} boxes Page boxes in content coordinates.
+ * @param {number} scrollTop Content offset of the viewport top edge.
+ * @param {number} viewportHeight Viewport height.
+ * @param {number} [marginRatio=BAND_MARGIN_RATIO] Extra viewport fraction per side.
+ * @returns {number[]} Mounted page numbers, ascending.
+ */
+export function overlayMountedPages(boxes, scrollTop, viewportHeight, marginRatio = BAND_MARGIN_RATIO) {
+    if (!Array.isArray(boxes)) return [];
+    const band = bandExtents(scrollTop, viewportHeight, marginRatio);
+    return boxes
+        .filter(box => box.height > 0 && box.top < band.bottom && box.top + box.height > band.top)
+        .map(box => box.page)
+        .sort((a, b) => a - b);
+}
+
+/**
+ * Resolves the page a selection belongs to by walking from the selection's
+ * anchor node up to the nearest element carrying `data-page` — the continuous
+ * renderer's page wrap (the per-page text layer spans are its descendants).
+ * Returns 0 when the anchor lives outside any page (nothing to report).
+ * @param {Node|null} anchorNode The DOM selection's `anchorNode`.
+ * @returns {number} One-based page number, or 0.
+ */
+export function resolveSelectionPage(anchorNode) {
+    let node = anchorNode;
+    while (node) {
+        if (node.nodeType === 1 && node.dataset && node.dataset.page !== undefined) {
+            // Only the renderer-owned wraps count (the closest() check needs a real
+            // DOM node — the fake harnesses carry no closest and keep the old walk).
+            const page = parseInt(node.dataset.page, 10);
+            if (page >= 1 && (typeof node.closest !== 'function' || node.closest('.tm-pdf-viewer__continuous-pages'))) {
+                return page;
+            }
+        }
+        node = node.parentElement ?? node.parentNode ?? null;
+    }
+    return 0;
+}
+
+/**
+ * Normalizes client-space selection rectangles against the anchor page's wrap
+ * box: each rect is clamped to the page (a selection that crosses into the next
+ * page is cut at the boundary — the anchor page wins) and mapped to 0..1
+ * coordinates, returning the flat `[x, y, w, h, …]` report `OnTextSelectionChanged`
+ * consumes. Rects that do not intersect the page at all are dropped.
+ * @param {DOMRect[]|{left:number,top:number,width:number,height:number}[]|undefined} rects Client-space rects.
+ * @param {{left:number,top:number,width:number,height:number}|null} pageRect The anchor page wrap's client box.
+ * @returns {number[]} Flat normalized rectangles.
+ */
+export function normalizeSelectionRects(rects, pageRect) {
+    // getClientRects() returns a DOMRectList, not an Array — accept any iterable
+    // array-like so the live selection report works unchanged.
+    const items = rects == null ? [] : (Array.isArray(rects) ? rects : Array.from(rects));
+    if (!pageRect || !(pageRect.width > 0) || !(pageRect.height > 0)) return [];
+    const flat = [];
+    for (const rect of items) {
+        const left = Math.max(rect.left, pageRect.left);
+        const top = Math.max(rect.top, pageRect.top);
+        const right = Math.min(rect.left + rect.width, pageRect.left + pageRect.width);
+        const bottom = Math.min(rect.top + rect.height, pageRect.top + pageRect.height);
+        const width = right - left;
+        const height = bottom - top;
+        if (width < 1 || height < 1) continue; // outside the anchor page
+        flat.push(
+            _clampUnit((left - pageRect.left) / pageRect.width),
+            _clampUnit((top - pageRect.top) / pageRect.height),
+            _clampUnit(width / pageRect.width),
+            _clampUnit(height / pageRect.height),
+        );
+    }
+    return flat;
+}
+
+function _clampUnit(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(Math.max(value, 0), 1);
+}
+
+/**
+ * The scroll offset that centers a thread anchor inside the viewport: the anchor
+ * point (`page.top + ratio * page.height`) lands on the viewport's middle line,
+ * clamped at the document top. The browser clamps the overflow at the document
+ * end, so no bottom clamp is needed here.
+ * @param {{page: number, top: number, height: number}[]|undefined} pages Page metas in document order.
+ * @param {number} page One-based anchor page.
+ * @param {number} anchorRatio Normalized 0..1 vertical position within the page.
+ * @param {number} viewportHeight Viewport height.
+ * @returns {number|null} The target scrollTop, or null when the page is unknown.
+ */
+export function anchorScrollTop(pages, page, anchorRatio, viewportHeight) {
+    if (!Array.isArray(pages) || pages.length === 0) return null;
+    const meta = pages.find(candidate => candidate.page === page);
+    if (!meta) return null;
+    const ratio = Math.min(Math.max(Number.isFinite(anchorRatio) ? anchorRatio : 0, 0), 1);
+    const anchorY = meta.top + ratio * meta.height;
+    // Clamped at the document top AND at the anchor page's own top: a target above
+    // meta.top would leave the PREVIOUS page occupying the viewport, the scroll
+    // tracker would report that page and the anchor scroll would be fought away
+    // (the F13/F14 continuous bug).
+    return Math.max(0, meta.top, anchorY - (viewportHeight || 0) / 2);
+}

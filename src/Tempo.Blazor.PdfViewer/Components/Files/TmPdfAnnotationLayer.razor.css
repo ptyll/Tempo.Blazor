@@ -7,6 +7,31 @@
     z-index: 2;
 }
 
+/* ── Rotation plane ──────────────────────────────────────────────────────── */
+
+/* The content plane keeps the UNROTATED page box — the anchor percentages are
+   normalized to the unrotated page — and the same [data-main-rotation] transforms the
+   per-page text layers use (TmPdfViewer.razor.css) map it onto the rotated slot/canvas
+   box. At rotation 0 (and until the overlay box is reported) the plane simply stretches
+   over the layer, exactly the pre-rotation behavior. */
+.tm-pdf-annotation-layer__plane {
+    position: absolute;
+    inset: 0;
+    transform-origin: 0 0;
+}
+
+.tm-pdf-annotation-layer__plane[data-main-rotation="90"] {
+    transform: rotate(90deg) translateY(-100%);
+}
+
+.tm-pdf-annotation-layer__plane[data-main-rotation="180"] {
+    transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.tm-pdf-annotation-layer__plane[data-main-rotation="270"] {
+    transform: rotate(270deg) translateX(-100%);
+}
+
 /* ── Text-range highlights ───────────────────────────────────────────────── */
 
 .tm-pdf-annotation-layer__highlight {

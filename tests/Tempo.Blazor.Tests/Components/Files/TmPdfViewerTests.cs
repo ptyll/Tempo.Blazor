@@ -464,9 +464,12 @@ public partial class TmPdfViewerTests : LocalizationTestBase
     [Fact]
     public void Render_WithShowSearchTrue_DisplaysSearchBar()
     {
+        // FZE-11: the default presentation is the Floating card; this is the Inline
+        // (pre-2.9.1) contract the test was written against.
         var cut = Render<TmPdfViewer>(parameters =>
             parameters.Add(p => p.Url, "https://example.com/test.pdf")
-                      .Add(p => p.ShowSearch, true));
+                      .Add(p => p.ShowSearch, true)
+                      .Add(p => p.SearchPresentation, PdfSearchPresentation.Inline));
 
         cut.Find(".tm-pdf-viewer__search-bar").Should().NotBeNull();
     }
@@ -508,7 +511,7 @@ public partial class TmPdfViewerTests : LocalizationTestBase
         cut.Instance.Rotation.Should().Be(0);
     }
 
-    // ── PDF-53: search input existuje v search baru ─────────────────────────
+    // ── PDF-53: search input existuje v search baru (FZE-11: starts closed) ──
 
     [Fact]
     public void Render_WithShowSearchTrue_HasSearchInput()
@@ -517,6 +520,9 @@ public partial class TmPdfViewerTests : LocalizationTestBase
             parameters.Add(p => p.Url, "https://example.com/test.pdf")
                       .Add(p => p.ShowSearch, true));
 
+        // FZE-11: the floating card starts closed — the toolbar toggle opens it.
+        cut.FindAll(".tm-pdf-viewer__search-input").Should().BeEmpty();
+        cut.Find("[data-testid='pdf-search-toggle']").Click();
         cut.Find(".tm-pdf-viewer__search-input").Should().NotBeNull();
     }
 
@@ -556,10 +562,13 @@ public partial class TmPdfViewerTests : LocalizationTestBase
     [Fact]
     public void ClickSearchToggle_TogglesSearchBarVisibility()
     {
+        // FZE-11: pinned to Inline — this verifies the toggle behaviour of the in-flow
+        // bar; the Floating card toggle has its own FZE-11 tests.
         var cut = Render<TmPdfViewer>(parameters =>
             parameters.Add(p => p.Url, "https://example.com/test.pdf")
                       .Add(p => p.ShowToolbar, true)
-                      .Add(p => p.ShowSearch, true));
+                      .Add(p => p.ShowSearch, true)
+                      .Add(p => p.SearchPresentation, PdfSearchPresentation.Inline));
 
         cut.InvokeAsync(() => cut.Instance.OnPdfLoaded(5));
         cut.Render();

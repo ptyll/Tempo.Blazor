@@ -209,7 +209,7 @@ frozen and may only grow.
 
 | Value | Owner |
 |-------|-------|
-| `history` | TmDiagramEditor undo/redo |
+| `history` | TmDiagramEditor undo/redo; the PDF annotator's undo/redo pair |
 | `clipboard` | TmDiagramEditor copy/paste |
 | `tools` | TmDiagramEditor tool palette; the PDF annotator's mode pills (`TmPdfAnnotator`) |
 | `format` | TmDiagramEditor formatting |

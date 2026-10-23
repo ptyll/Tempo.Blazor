@@ -42,14 +42,10 @@
     font-weight: 600;
 }
 
-.tm-pdf-annotation-panel__filter {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-1);
-    font-size: var(--tm-font-size-xs);
-    color: var(--tm-text-secondary);
-    cursor: pointer;
-    user-select: none;
+/* The header hosts the shared TmPdfThreadFilter (phase 12) — its own styles live in
+   TmPdfThreadFilter.razor.css; the header only keeps it from being squeezed. */
+.tm-pdf-annotation-panel__header ::deep .tm-pdf-thread-filter {
+    flex-shrink: 0;
 }
 
 .tm-pdf-annotation-panel__close {

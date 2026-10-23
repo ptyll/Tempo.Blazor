@@ -463,15 +463,18 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `ShowTextLayer` | `bool` | `false` | Render a selectable text layer over the canvas |
 | `ShowViewModeToggle` | `bool` | `false` | Show the single/continuous segmented control |
 | `ShowMobileActionBar` | `bool` | `true` | Render the mobile `TmMobileActionBar` (Pages \| Search \| Comments); hosts folding these entries into their own bar pass `false` and use `OpenThumbnailsSheetAsync()` / `OpenSearchAsync()` |
-| `AllowRotation` | `bool` | `false` | Show the rotation button |
+| `AllowRotation` | `bool` | `false` | Show the rotation button (both directions, icon-only on desktop/tablet with the localized text in tooltip + aria-label) |
 | `AllowDownload` | `bool` | `true` | Show the Download action (primary; moves into the header with `ShowHeader`) |
 | `ShowOpenLink` | `bool` | `true` | Show the "Open in new tab" link |
+| `SearchPresentation` | `PdfSearchPresentation` | `Floating` | Desktop/tablet search presentation: `Floating` (card anchored over the body; Escape restores the toolbar focus) or `Inline` (the pre-2.9.1 in-flow bar); mobile always keeps the in-flow bar |
+| `ShowFileSize` | `bool` | `true` | Append the formatted file size to the default header subtitle (with `ShowHeader`) |
+| `FileSize` | `long?` | `null` | Host-supplied byte size; wins over the PDF.js-reported length (`getDownloadInfo`) |
 | `ShowHeader` | `bool` | `false` | Show the document header above the toolbar |
 | `Title` / `Subtitle` | `string?` | `null` | Header text; the subtitle defaults to a neutral page count ("Pages: N") |
 | `ThumbnailsCollapsed` / `ThumbnailsCollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | Two-way collapsed thumbnails (toolbar "Pages" toggle + sidebar button drive it) |
 | `Height` | `string?` | `"600px"` | Viewer height (CSS value; `100%`/`100dvh` resolve through the flex chain) |
 | `Class` | `string?` | `null` | Additional CSS classes |
-| `EnableAnnotations` | `bool` | `false` | Enable the annotation layer and comments panel (single-page only, PD1) |
+| `EnableAnnotations` | `bool` | `false` | Enable the annotation layer and comments panel (markers render per page in both view modes; FZE-13) |
 | `AnnotationProvider` | `IPdfAnnotationProvider?` | `null` | Persistence; in-memory provider when omitted |
 | `DocumentId` | `string?` | `null` | Provider document id (falls back to `Url`) |
 | `CurrentUser` | `DocumentCommentUser?` | `null` | Author of annotations created in this viewer |
@@ -479,14 +482,16 @@ notes — lives in [docs/pdf-viewer.md](docs/pdf-viewer.md); the demo pages are 
 | `Annotations` / `AnnotationsChanged` | `IReadOnlyList<DocumentCommentThread>?` / `EventCallback<...>` | `null` | Seed threads when no provider is supplied |
 | `OnTextSelected` | `EventCallback<PdfTextSelection>` | — | Text selection in the text layer (`EnableTextSelectionEvents` without annotations) |
 | `EnableTextSelectionEvents` | `bool` | `false` | Raise `OnTextSelected` without enabling the annotation layer |
-| `OverlayContent` | `RenderFragment?` | `null` | Overlay aligned with the current page canvas (single-page only, PD1) |
+| `OverlayContent` | `RenderFragment?` | `null` | Overlay aligned with the current page canvas (single-page only) |
+| `PageOverlayContent` | `RenderFragment<PdfPageOverlayContext>?` | `null` | Templated per-page overlay (context: `PageNumber`, `IsCurrentPage`, `Width`, `Height`, `Rotation`); every mounted page in Continuous, the current page in SinglePage (FZE-13) |
 | `OnDocumentLoaded` | `EventCallback<int>` | — | Total page count once loaded |
 | `ToolbarStart` / `ToolbarEnd` | `RenderFragment?` | `null` | Host groups composed into the toolbar (the annotator injects its tools) |
 | `HeaderStart` / `HeaderActions` | `RenderFragment?` | `null` | Header slots (used only with `ShowHeader`) |
 | `SelectionCtaContent` | `RenderFragment?` | `null` | Content of the sticky in-flow selection CTA row (outside the scroll area) |
 
 Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
-`NextMatchAsync()` / `PreviousMatchAsync()`, `OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`.
+`RotateCounterClockwiseAsync()`, `NextMatchAsync()` / `PreviousMatchAsync()`,
+`OpenThumbnailsSheetAsync()`, `OpenSearchAsync()`.
 
 ### Toolbar, layout and zoom
 
@@ -494,7 +499,9 @@ Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
   `.tm-pdf-viewer__toolbar`, test id `pdf-viewer-toolbar`. Groups carry the stable
   `data-tm-group` values `navigation`, `zoom`, `rotate`, `view`, `panels`, `search`,
   `comments`, `export` (see [docs/toolbar.md](docs/toolbar.md)); hosts key off these, never
-  positional selectors. The page is an editable `<input type="number">` (Enter/blur navigates,
+  positional selectors. The annotator injects an additional `history` group (its undo/redo
+  pair) through `ToolbarStart`, rendered before the tool pills. The page is an editable
+  `<input type="number">` (Enter/blur navigates,
   out-of-range reverts), the zoom label is a `TmDropdown` with presets 50/75/100/125/150/200 %
   plus Fit width / Fit page, and the comments toggle shows the open-thread count.
 - **Layout modes** — resolved from the viewer's own container (`container-type: inline-size`):
@@ -516,9 +523,13 @@ Public methods: `GoToPageAsync(int)`, `SetScaleAsync(double)`, `RotateAsync()`,
   (a 100+ page document never blocks the UI), canvases released outside the ±50 % viewport band
   (limit 12 painted), `OnVisiblePageChanged` updating `Page`/`PageChanged` + the active
   thumbnail, per-page text layer and search, and the scroll position preserved across zoom /
-  rotation / view-mode switches. **PD1: annotations, `OverlayContent` and selection-driven
-  annotation creation are single-page only** — the thread panel stays readable in Continuous
-  (localized hint) and selecting a thread switches back to `SinglePage` on its page.
+  rotation / view-mode switches. **Annotations in Continuous (FZE-13; decision
+  `PDF-VIEWER-CONTINUOUS-ANNOTATIONS`)**: pages inside the ±50 % viewport band get a Blazor-owned
+  overlay slot next to the JS-owned pages DOM (geometry reported via `OnContinuousPageGeometry`,
+  so the lazy render and the 12-painted-page limit keep holding), markers render per mounted
+  page, text selection resolves the anchor page and clamps cross-page selections, and selecting
+  a thread scrolls to its anchor instead of switching the mode. `OverlayContent` stays
+  single-page only; the templated `PageOverlayContent` works in both modes.
 
 ### TmPdfAnnotator
 
@@ -528,11 +539,26 @@ Comment / Stamp / Draw — `PdfAnnotatorMode`, two-way `Mode`), the color label
 merge into the embedded viewer's toolbar through `ToolbarStart`/`ToolbarEnd`; the export group
 ("Export PDF | Export flattened | Print" — `AllowExport`, `ExportFileName`, `ExportAsync(flatten)`,
 `PrintAsync()`) lives in the header row when `ShowHeader` is true. Pass-through parameters:
-`ShowThumbnails`, `ShowSearch`, `AllowRotation`, `ThumbnailsCollapsed` (two-way),
-`ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`. The annotator pins the viewer to
-`SinglePage` (PD1) and never offers the continuous toggle. `ShowViewerToolbar` (default `true`)
+`ShowThumbnails`, `ShowSearch`, `SearchPresentation`, `AllowRotation`,
+`ThumbnailsCollapsed` (two-way), `ZoomMode` (two-way), `ShowOpenLink`, `ToolbarLabels`,
+`ViewMode`/`ViewModeChanged` (two-way, default `SinglePage` — additive, FZE-14) and
+`ShowViewModeToggle` (default `false`, FZE-14). With
+`ViewMode.Continuous` the annotator's layer and interaction surface render per page of the
+scroll column through the viewer's `PageOverlayContent` slots — every tool anchors on the
+slot's page, an ink stroke stays confined to its start page (clipped at the boundary), drafts
+and composers stay bound to the draft page, and panel thread selection scrolls to the anchor
+(the shared `TmPdfViewer.ScrollToAnchorAsync` path) without leaving Continuous; export/print
+are view-mode independent. `TmRedactionLayer` keeps its viewer explicitly pinned to
+`SinglePage` with no toggle. `ShowViewerToolbar` (default `true`)
 is kept for compatibility: when `false`, the viewer chrome is hidden and the annotator renders a
-compact tools row of its own. Responsive (`LayoutMode`, default `Auto`): **desktop** keeps the
+compact tools row of its own. **Runtime color picker (FZE-12)**: `AllowColorPicker` (default
+`true`) turns the color label into a trigger for a `TmColorPalette` popover (a bottom sheet on a
+mobile layout); `ColorPalette` overrides the offered colors and `ColorNames` names the swatches.
+The chip/palette display color is the picked color or the per-author/role fallback — selecting
+the already-checked fallback swatch raises nothing, and the reset action is disabled while the
+author color is shown. `AnnotationColorChanged` is two-way: a pick raises the color, the reset
+raises `null`, and a new document resets the pick back to the parameter baseline.
+Responsive (`LayoutMode`, default `Auto`): **desktop** keeps the
 merged toolbar and the docked thread panel; **tablet** renders the tools as a full-width labelled
 row and the panel as a docked aside; **mobile is G2 — viewing + light edits only**: the tool
 palette offers exactly Browse and Add comment (highlight/stamp/draw are hidden, an active edit
@@ -541,7 +567,15 @@ entries and the thread panel is a non-modal bottom sheet (peek/half/full) that s
 at load. `ShowPanel`/`ShowPanelChanged` two-way; the panel renders with `ShowChrome=false`
 inside the sheet. Touch: one finger or pen draws, two fingers pinch/pan (the in-progress stroke
 is cancelled on the second finger; `pen` has priority), and a tablet-only sticky "Highlight"
-CTA surfaces a touch-selection draft.
+CTA surfaces a touch-selection draft. **Undo/redo (FZE-15)**: `AllowUndo` (default `true`)
+records every annotation mutation on a command stack (`PdfAnnotationHistory`) and renders an
+undo/redo pair as its own `data-tm-group="history"` group before the tool pills at every call
+site (merged toolbar, tablet/compact row, mobile "More" entries); the buttons disable while a
+step is in flight and carry `Ctrl+Z` / `Ctrl+Shift+Z`|`Ctrl+Y` via `aria-keyshortcuts`.
+`UndoAsync()`/`RedoAsync()` with `CanUndo`/`CanRedo` are public, `OnHistoryChanged` fires on
+every stack transition, and a visually-hidden live region announces the localized result
+("Undo: {action}") plus the conflict hint. Undoing a delete re-creates the thread from its
+snapshot with a fresh id remapped through the stack, so later steps keep targeting it.
 
 ### Architecture
 

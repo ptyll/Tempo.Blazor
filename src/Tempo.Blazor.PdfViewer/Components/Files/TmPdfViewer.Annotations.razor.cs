@@ -40,25 +40,32 @@ public partial class TmPdfViewer
             return;
         }
 
-        // PD1: the selection handler reads the single-page canvas, which does not
-        // exist in continuous mode. Skip without consuming the one-shot flag —
-        // returning to SinglePage re-runs the setup (SwitchViewModeAsync).
-        if (_viewMode == PdfViewMode.Continuous)
-        {
-            return;
-        }
-
         // The text-layer element must exist in the rendered DOM — during a deferred
         // (or torn-down) layout the ref is stale and the handler would bind to nothing.
-        if (_textLayerRef.Context is null)
+        // Continuous mode binds the scroll wrap instead: the per-page text layers are
+        // its descendants, and the handler resolves the anchor's page from the wrap
+        // that contains it (FZE-13).
+        var isContinuous = _viewMode == PdfViewMode.Continuous;
+        if (isContinuous)
+        {
+            if (_continuousRef.Context is null)
+            {
+                return;
+            }
+        }
+        else if (_textLayerRef.Context is null)
         {
             return;
         }
 
         try
         {
-            await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation);
-            await JS.InvokeVoidAsync("tmPdfViewer.enableSelection", _rootRef, _textLayerRef, _dotNetRef);
+            if (!isContinuous)
+            {
+                await JS.InvokeVoidAsync("tmPdfViewer.renderTextLayer", _rootRef, _textLayerRef, _currentPage, _scale, Rotation);
+            }
+            await JS.InvokeVoidAsync("tmPdfViewer.enableSelection", _rootRef,
+                isContinuous ? _continuousRef : _textLayerRef, _dotNetRef);
             _selectionEnabled = true;
         }
         catch { }
@@ -116,6 +123,13 @@ public partial class TmPdfViewer
             if (OverlayContent is not null && _customOverlayRef.Context is not null)
             {
                 await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _rootRef, _customOverlayRef);
+            }
+
+            // FZE-13: the templated per-page overlay is kept over the canvas the same
+            // way (and its sync fires the single-page geometry report).
+            if (PageOverlayContent is not null && _pageOverlayRef.Context is not null)
+            {
+                await JS.InvokeVoidAsync("tmPdfViewer.syncOverlay", _rootRef, _pageOverlayRef);
             }
         }
         catch { }
@@ -237,22 +251,11 @@ public partial class TmPdfViewer
     {
         _selectedThreadId = threadId;
         // Selecting a thread anchored on another page navigates to that page.
-        var page = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal))?.Anchor.PageNumber ?? 0;
-        if (page >= 1)
+        var thread = _threads.FirstOrDefault(t => string.Equals(t.Id, threadId, StringComparison.Ordinal));
+        var page = thread?.Anchor.PageNumber ?? 0;
+        if (page >= 1 && (page != _currentPage || _viewMode == PdfViewMode.Continuous))
         {
-            // PD1: the annotation overlay only exists in single-page mode, so a thread
-            // picked from the (still readable) panel returns the viewer to SinglePage
-            // on the thread's page — the selection stays functional. The page state is
-            // synced first (no render); the switch below renders it.
-            if (_viewMode == PdfViewMode.Continuous)
-            {
-                await SetPageAsync(page);
-                await SetViewModeAsync(PdfViewMode.SinglePage);
-            }
-            else if (page != _currentPage)
-            {
-                await GoToPageAsync(page);
-            }
+            await ScrollToAnchorAsync(page, thread!.Anchor.Y);
         }
         await InvokeAsync(StateHasChanged);
     }

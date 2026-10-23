@@ -82,6 +82,13 @@
    "description": "Whether to show a search input. Default is false."
   },
   {
+   "name": "SearchPresentation",
+   "type": "PdfSearchPresentation",
+   "isRequired": false,
+   "default": "PdfSearchPresentation.Floating",
+   "description": "How the search UI is presented on desktop and tablet layouts. Default Floating (since 2.9.1): a card anchored top-right over the page body, outside the scroll area; Escape closes it and returns focus to the toolbar's search toggle. Set Inline to restore the pre-2.9.1 in-flow bar under the toolbar. A mobile layout always keeps the in-flow bar."
+  },
+  {
    "name": "ShowMobileActionBar",
    "type": "bool",
    "isRequired": false,
@@ -99,7 +106,7 @@
    "type": "PdfViewMode",
    "isRequired": false,
    "default": "SinglePage",
-   "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) — selecting a thread returns the viewer to SinglePage on the thread's page."
+   "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. Annotations render on every mounted page (PDF-VIEWER-CONTINUOUS-ANNOTATIONS); selecting a thread scrolls to its anchor instead of switching the mode."
   },
   {
    "name": "ViewModeChanged",
@@ -137,6 +144,19 @@
    "type": "string?",
    "isRequired": false,
    "description": "Document subtitle rendered in the header. Used only when ShowHeader is true. When omitted, a neutral page count (\"Pages: N\") is rendered once the document is loaded (since 2.9.1)."
+  },
+  {
+   "name": "ShowFileSize",
+   "type": "bool",
+   "isRequired": false,
+   "default": "true",
+   "description": "Whether the document header's default subtitle appends the formatted file size (\"Pages: N \\u00b7 1.4 MB\"). Only applies when ShowHeader is true and no explicit Subtitle is given. Default is true."
+  },
+  {
+   "name": "FileSize",
+   "type": "long?",
+   "isRequired": false,
+   "description": "The document's byte size shown in the header. When set, this host-supplied value wins over the length the viewer obtains from PDF.js getDownloadInfo; when omitted and the size is unknown, the subtitle keeps its pages-only form."
   },
   {
    "name": "ShowOpenLink",
@@ -217,7 +237,7 @@
    "name": "EnableAnnotations",
    "type": "bool",
    "isRequired": false,
-   "description": "Whether the annotation layer and comments panel are enabled. Default is false."
+   "description": "Whether the annotation layer and comments panel are enabled. Default is false. The markers render per page in both view modes — in Continuous every page inside the ±50% viewport band gets an overlay slot (the same band the lazy renderer uses), and text selection creates threads on the selection's page."
   },
   {
    "name": "AnnotationProvider",
@@ -265,7 +285,13 @@
    "name": "OverlayContent",
    "type": "RenderFragment?",
    "isRequired": false,
-   "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer)."
+   "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer). Single-page only: the overlay is aligned to THE canvas, so in Continuous view mode it is not rendered — use PageOverlayContent for per-page overlays."
+  },
+  {
+   "name": "PageOverlayContent",
+   "type": "RenderFragment<PdfPageOverlayContext>?",
+   "isRequired": false,
+   "description": "Templated per-page overlay (FZE-13). In Continuous it renders for every mounted page — the pages inside the ±50% viewport band the JS renderer reports — as an absolutely positioned slot over the page box, next to the annotation markers. In SinglePage it renders once, aligned to the current page canvas. The slot itself is not interactive (pointer-events: none); hosts opt their content back in. The context carries PageNumber, IsCurrentPage, Width, Height and Rotation."
   },
   {
    "name": "OnDocumentLoaded",

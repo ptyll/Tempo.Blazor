@@ -41,6 +41,43 @@ public enum PdfZoomMode
 }
 
 /// <summary>
+/// How the viewer presents its search UI on desktop and tablet layouts. Driven by
+/// <see cref="TmPdfViewer.SearchPresentation"/>; a mobile layout always keeps the
+/// in-flow search bar (the sheet-style presentation).
+/// </summary>
+public enum PdfSearchPresentation
+{
+    /// <summary>
+    /// The pre-2.9.1 in-flow search bar under the toolbar (a full-width row with the
+    /// input, the match counter and the prev/next buttons).
+    /// </summary>
+    Inline,
+    /// <summary>
+    /// Default. A floating search card anchored top-right over the page body — outside
+    /// the scroll area, never covering the toolbar. Escape closes it and returns focus
+    /// to the toolbar's search toggle.
+    /// </summary>
+    Floating
+}
+
+/// <summary>
+/// The context handed to <see cref="TmPdfViewer.PageOverlayContent"/> for every rendered
+/// page overlay slot: the one-based page, whether the viewer currently shows it, the page
+/// box in CSS pixels (0 until the JS geometry report arrives) and the document rotation.
+/// </summary>
+/// <param name="PageNumber">One-based page number the slot overlays.</param>
+/// <param name="IsCurrentPage">Whether the viewer's current page is this page.</param>
+/// <param name="Width">Page box width in CSS pixels at the current zoom.</param>
+/// <param name="Height">Page box height in CSS pixels at the current zoom.</param>
+/// <param name="Rotation">Document rotation in degrees (0, 90, 180, 270).</param>
+public sealed record PdfPageOverlayContext(
+    int PageNumber,
+    bool IsCurrentPage,
+    double Width,
+    double Height,
+    int Rotation);
+
+/// <summary>
 /// A reusable PDF viewer component powered by PDF.js v5.
 /// Supports page navigation, zoom, rotation, text layer, thumbnails, search, and continuous scroll.
 /// </summary>
@@ -82,8 +119,35 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// <summary>Whether to show a thumbnails sidebar. Default is false.</summary>
     [Parameter] public bool ShowThumbnails { get; set; }
 
-    /// <summary>Whether to show a search input. Default is false.</summary>
+    /// <summary>Whether to show a search input. Default is false. With the default
+    /// <see cref="PdfSearchPresentation.Floating"/> the card starts closed (open it via the
+    /// toolbar toggle or <see cref="OpenSearchAsync"/>); the <see cref="PdfSearchPresentation.Inline"/>
+    /// bar and a mobile layout open at load.</summary>
     [Parameter] public bool ShowSearch { get; set; }
+
+    /// <summary>
+    /// How the search UI is presented on desktop and tablet layouts. Default
+    /// <see cref="PdfSearchPresentation.Floating"/> (since 2.9.1): a card anchored
+    /// top-right over the page body, outside the scroll area. Set
+    /// <see cref="PdfSearchPresentation.Inline"/> to restore the pre-2.9.1 in-flow bar
+    /// under the toolbar. A mobile layout always keeps the in-flow bar.
+    /// </summary>
+    [Parameter] public PdfSearchPresentation SearchPresentation { get; set; } = PdfSearchPresentation.Floating;
+
+    /// <summary>
+    /// Whether the document header's default subtitle appends the formatted file size
+    /// ("Pages: N · 1.4 MB"). Only applies when <see cref="ShowHeader"/> is true and
+    /// no explicit <see cref="Subtitle"/> is given. Default is true.
+    /// </summary>
+    [Parameter] public bool ShowFileSize { get; set; } = true;
+
+    /// <summary>
+    /// The document's byte size shown in the header. When set, this host-supplied value
+    /// wins over the length the viewer obtains from PDF.js
+    /// (<c>getDownloadInfo</c> → <see cref="OnDocumentLengthKnown"/>); when omitted and
+    /// the size is unknown, the subtitle keeps its pages-only form.
+    /// </summary>
+    [Parameter] public long? FileSize { get; set; }
 
     /// <summary>
     /// Whether the viewer renders its own mobile action bar (Pages | Search | Comments).
@@ -236,7 +300,22 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// Optional content rendered in an overlay that is kept aligned with the current page
     /// canvas (used by TmPdfAnnotator to draw its own annotation layer).
     /// </summary>
+    /// <remarks>
+    /// Single-page only (PDF-VIEWER-CONTINUOUS-ANNOTATIONS): the overlay is aligned to THE
+    /// canvas, so in <see cref="PdfViewMode.Continuous"/> it is not rendered. Hosts that
+    /// need per-page content in either mode use <see cref="PageOverlayContent"/>.
+    /// </remarks>
     [Parameter] public RenderFragment? OverlayContent { get; set; }
+
+    /// <summary>
+    /// Templated per-page overlay (FZE-13). In <see cref="PdfViewMode.Continuous"/> it renders
+    /// for every mounted page — the pages inside the ±50% viewport band that the JS renderer
+    /// reports — as an absolutely positioned slot over the page box, next to the annotation
+    /// markers. In <see cref="PdfViewMode.SinglePage"/> it renders once, aligned to the current
+    /// page canvas. The slot itself is not interactive (<c>pointer-events: none</c>); hosts
+    /// opt their content back in.
+    /// </summary>
+    [Parameter] public RenderFragment<PdfPageOverlayContext>? PageOverlayContent { get; set; }
 
     /// <summary>Callback invoked with the total page count once the document is loaded.</summary>
     [Parameter] public EventCallback<int> OnDocumentLoaded { get; set; }
@@ -257,14 +336,23 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private ElementReference _searchLayerRef;
     private ElementReference _annotationOverlayRef;
     private ElementReference _customOverlayRef;
+    private ElementReference _pageOverlayRef;
     private ElementReference _canvasWrapRef;
     private bool _customOverlaySynced;
+    private bool _pageOverlaySynced;
     private DotNetObjectReference<TmPdfViewer>? _dotNetRef;
     private bool _pdfInitialized;
     private bool _useFallback;
     private bool _isLoading;
     private int _currentPage = 1;
     private int _totalPages;
+    /// <summary>
+    /// The byte length reported by JavaScript once the document has loaded
+    /// (<see cref="OnDocumentLengthKnown"/>). Null when the length is unknown —
+    /// a failed or missing <c>getDownloadInfo</c> reports nothing and the header
+    /// keeps its pages-only subtitle.
+    /// </summary>
+    private long? _reportedLength;
     private double _scale = 1.0;
     /// <summary>
     /// Scale bounds shared with the JS fit computation (pdf-viewer.js clamps to the same
@@ -318,6 +406,16 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private string? _lastSearchedQuery;
     private int _searchTotalMatches;
     private int _searchCurrentMatch;
+    /// <summary>The last executed search completed with zero matches: the localized
+    /// no-matches verdict renders in the live region and the input flags aria-invalid
+    /// until a new search runs or the query is cleared.</summary>
+    private bool _searchRanWithNoMatches;
+    /// <summary>The floating search card's input; focused when the card opens so typing
+    /// can start immediately (bUnit has no live element — the focus is best-effort).</summary>
+    private ElementReference _searchInputRef;
+    /// <summary>The search input must be focused in the next OnAfterRenderAsync pass
+    /// (the card has to render first).</summary>
+    private bool _pendingSearchInputFocus;
 
     // Annotation state
     private bool _annotationsLoaded;
@@ -328,6 +426,19 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     private PdfTextSelection? _pendingSelection;
     private List<DocumentCommentThread> _threads = [];
     private InMemoryPdfAnnotationProvider? _fallbackProvider;
+
+    // FZE-13: the per-page overlay geometry JS reports for the mounted band
+    // (continuous) or the current canvas (single-page). Empty until the first report.
+    // In continuous mode the SLOTS render in the TmPdfContinuousOverlays child (the
+    // report forwards to it); the root list only feeds the single-page overlay context.
+    /// <summary>The mounted pages' overlay boxes from the last geometry report.</summary>
+    private List<PdfPageOverlayBox> _overlayPages = [];
+    /// <summary>The document rotation the last geometry report carried.</summary>
+    private int _overlayRotation;
+    /// <summary>The continuous overlays child (the slot renderer) — the [JSInvokable]
+    /// geometry report forwards to it, so the root viewer does not re-render on every
+    /// geometry report and the slots hide while a fresh report is in flight.</summary>
+    private TmPdfContinuousOverlays? _continuousOverlaysRef;
 
     // Responsive state (FZE-7)
     /// <summary>
@@ -421,6 +532,7 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _isLoading = true;
             _loadError = null;
             _totalPages = 0;
+            _reportedLength = null;
             _singlePagePending = false;
             _fitPending = false;
             // Render keys are per document: a new Url must re-render thumbnails
@@ -428,7 +540,9 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _lastContinuousRender = null;
             _lastThumbnailUrl = null;
             _customOverlaySynced = false;
-            _searchVisible = ShowSearch;
+            // FZE-11: the floating search card starts closed — only the Inline
+            // presentation (and the mobile in-flow bar) opens with the viewer.
+            _searchVisible = ShowSearch && (SearchPresentation == PdfSearchPresentation.Inline || IsMobileLayout);
             _searchQuery = null;
             _lastSearchedQuery = null;
             _searchTotalMatches = 0;
@@ -436,6 +550,9 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             _annotationsLoaded = false;
             _selectionEnabled = false;
             _pinchWiredRefId = null;
+            _overlayPages = [];
+            _overlayRotation = 0;
+            _pageOverlaySynced = false;
             _showResolvedAnnotations = ShowResolvedAnnotations;
             _selectedThreadId = null;
             _pendingSelection = null;
@@ -662,6 +779,18 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             await RenderContinuousPagesAsync();
         }
 
+        // FZE-13: a view-mode switch re-arms the selection handler for the fresh DOM —
+        // the mode decides which element the JS handler binds (the single-page text
+        // layer vs the continuous wrap). The continuous direction runs here, after the
+        // rebuild put the fresh pages into the wrap; the single-page direction runs in
+        // the deferred _singlePagePending block below.
+        if (_pdfInitialized && !_useFallback && (EnableAnnotations || EnableTextSelectionEvents)
+            && !_selectionEnabled && _viewMode == PdfViewMode.Continuous && _continuousRef.Context is not null
+            && _totalPages > 0)
+        {
+            await SetupSelectionAsync();
+        }
+
         // A fit recompute deferred by a view-mode switch runs here: the swapped
         // container exists only after the switch was rendered, so the render above has
         // already put the fresh pages into it before the fit math observes it.
@@ -671,6 +800,20 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             if (EffectiveZoomMode is not PdfZoomMode.Custom && !_useFallback && _totalPages > 0)
             {
                 await ApplyZoomModeAsync();
+            }
+        }
+
+        // The floating search card just opened: move the caret into its input. Runs
+        // BEFORE the loading short-circuit — the card renders while the document is
+        // still downloading and focusing must not wait for the load. Best-effort: bUnit
+        // (no live element) and a card disposed before the pass both throw harmlessly.
+        if (_pendingSearchInputFocus)
+        {
+            _pendingSearchInputFocus = false;
+            if (_searchInputRef.Context is not null)
+            {
+                try { await _searchInputRef.FocusAsync(); }
+                catch { /* no live element — skip the focus move */ }
             }
         }
 
@@ -719,6 +862,14 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
             await RefreshAnnotationOverlayAsync();
         }
 
+        // The templated per-page overlay (FZE-13) needs its single-page sync too — the
+        // geometry report rides the same ResizeObserver-driven syncOverlay apply.
+        if (PageOverlayContent is not null && !_useFallback && !_pageOverlaySynced && _pageOverlayRef.Context is not null)
+        {
+            _pageOverlaySynced = true;
+            await RefreshAnnotationOverlayAsync();
+        }
+
         // The pinch zoom binds to the active wrap; a fresh wrap element (the view-mode
         // swap, a re-created sheet container) re-wires it, everything else is a no-op.
         await SetupPinchAsync();
@@ -730,6 +881,43 @@ public partial class TmPdfViewer : TmComponentBase, IAsyncDisposable
     /// scrolled into view instead of re-rendering a single canvas. A fit mode recomputes
     /// inside <see cref="RenderCurrentPageAsync"/> for the new page size.</summary>
     public Task GoToPageAsync(int page) => NavigateToPageAsync(page);
+
+    /// <summary>
+    /// Scrolls to a thread anchor (PDF-VIEWER-CONTINUOUS-ANNOTATIONS). In
+    /// <see cref="PdfViewMode.Continuous"/> the page scrolls into view and the anchor's
+    /// normalized <paramref name="y"/> lands on the viewport's middle line — the exact path
+    /// the viewer's own thread selection uses (the lazy renderer paints the page when it
+    /// scrolls in, the two-way <see cref="Page"/> updates through the scroll tracker's
+    /// report, and the marker highlights as soon as the geometry report mounts its slot).
+    /// In <see cref="PdfViewMode.SinglePage"/> the page is navigated to. Hosts share this
+    /// path — the annotator's panel (FZE-14) selects threads through it. A no-op for a
+    /// page outside the loaded document.
+    /// </summary>
+    public async Task ScrollToAnchorAsync(int page, double y)
+    {
+        if (page < 1 || page > _totalPages) return;
+        if (_viewMode == PdfViewMode.Continuous)
+        {
+            // The JS scroll is the precise path (the anchor lands mid-viewport, the page
+            // tracker records the anchor page) and reports whether it actually scrolled.
+            // The page-top navigation is the FALLBACK — running it first would scroll to
+            // the page top and the tracker would report from there, fighting the anchor
+            // scroll away (the F13/F14 continuous bug).
+            var scrolled = false;
+            try { scrolled = await JS.InvokeAsync<bool>("tmPdfViewer.scrollToAnchor", _rootRef, page, y); }
+            catch { }
+
+            if (!scrolled)
+            {
+                await SetPageAsync(page);
+                await ScrollToPageInContinuousAsync(page);
+            }
+
+            return;
+        }
+
+        await NavigateToPageAsync(page);
+    }
 
     /// <summary>
     /// Opens the mobile thumbnails sheet. Public API for hosts that fold the viewer's

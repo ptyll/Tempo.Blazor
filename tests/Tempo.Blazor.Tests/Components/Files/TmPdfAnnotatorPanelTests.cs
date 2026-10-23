@@ -101,4 +101,57 @@ public class TmPdfAnnotatorPanelTests : LocalizationTestBase
         cut.Find(".tm-pdf-composer--sticky").Should().NotBeNull();
         cut.Find("[data-testid='pdf-annotator-resolve']").Should().NotBeNull();
     }
+
+    // ── FZE-12: the segmented thread filter ───────────────────────────────────
+
+    private static DocumentCommentThread OpenThread(string id) => new()
+    {
+        Id = id,
+        Anchor = DocumentCommentAnchor.Point(1, 0.1, 0.1),
+        Comments = [new DocumentComment { Id = id + "-c", AuthorId = "a", AuthorName = "Alice", Body = "note" }]
+    };
+
+    private static DocumentCommentThread ResolvedThread(string id)
+    {
+        var thread = OpenThread(id);
+        thread.Status = DocumentCommentThreadStatus.Resolved;
+        return thread;
+    }
+
+    [Fact]
+    public void ThreadFilter_SheetChrome_RendersSameFilter()
+    {
+        // ShowChrome=false is the mobile sheet presentation: the SAME segmented filter renders
+        // there (the sheet header owns only the title and the close button).
+        using var cut = Render<TmPdfAnnotatorPanel>(parameters => parameters
+            .Add(p => p.ShowChrome, false)
+            .Add(p => p.Threads, new[] { OpenThread("t1") }));
+
+        cut.Find("[data-testid='pdf-annotator-filter']").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotator-filter-all']").Should().NotBeNull();
+        cut.Find("[data-testid='pdf-annotator-filter-unresolved']").Should().NotBeNull();
+        cut.FindAll("[data-testid='pdf-annotator-show-resolved']").Should().BeEmpty(
+            "the FZE-12 checkbox is gone in the sheet presentation too");
+    }
+
+    [Fact]
+    public void ThreadFilter_EmptyUnresolved_ShowsLocalizedEmptyState()
+    {
+        // Unresolved filter + only resolved threads: the list shows the localized
+        // "no unresolved" empty state instead of the plain "no annotations" text.
+        using var cut = Render<TmPdfAnnotatorPanel>(parameters => parameters
+            .Add(p => p.ShowChrome, false)
+            .Add(p => p.ShowResolved, false)
+            .Add(p => p.Threads, new[] { ResolvedThread("t1") }));
+
+        cut.Find("[data-testid='pdf-annotator-empty']").TextContent
+            .Should().Contain("No unresolved", "the unresolved filter has its own empty state");
+
+        // The All filter keeps the panel's original empty text.
+        using var all = Render<TmPdfAnnotatorPanel>(parameters => parameters
+            .Add(p => p.ShowChrome, false)
+            .Add(p => p.ShowResolved, true)
+            .Add(p => p.Threads, Array.Empty<DocumentCommentThread>()));
+        all.Find("[data-testid='pdf-annotator-empty']").TextContent.Should().Contain("No annotations");
+    }
 }

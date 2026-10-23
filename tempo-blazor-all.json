@@ -28134,6 +28134,26 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "PdfPageOverlayContext",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Files",
+          "description": "The context handed to TmPdfViewer.PageOverlayContent for every rendered page overlay slot: the one-based page, whether the viewer currently shows it, the page box in CSS pixels at the current zoom (0 until the JS geometry report arrives) and the document rotation in degrees.",
+          "packageId": "Tempo.Blazor.PdfViewer",
+          "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "PdfSearchPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Files",
+          "description": "How the viewer presents its search UI on desktop and tablet layouts, driven by TmPdfViewer.SearchPresentation. Floating (the default since 2.9.1) anchors a role=search card top-right over the page body — outside the scroll area and never covering the toolbar; Escape closes it and returns focus to the toolbar's search toggle. Inline restores the pre-2.9.1 full-width bar under the toolbar. A mobile layout always keeps the in-flow (sheet-style) bar regardless of this value.",
+          "packageId": "Tempo.Blazor.PdfViewer",
+          "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfViewer.razor.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "PdfTextSelection",
           "kind": "Record",
           "category": "Components",
@@ -28263,11 +28283,32 @@
               "description": "Callback invoked when a thread marker or highlight is selected."
             },
             {
+              "name": "OverlayHeight",
+              "type": "double",
+              "isRequired": false,
+              "description": "The overlay box's height in CSS pixels — the ROTATED page box. 0 until reported.",
+              "default": "0"
+            },
+            {
+              "name": "OverlayWidth",
+              "type": "double",
+              "isRequired": false,
+              "description": "The overlay box's width in CSS pixels — the ROTATED page box the layer fills (the canvas box, or the geometry report's slot box). 0 until reported.",
+              "default": "0"
+            },
+            {
               "name": "PageNumber",
               "type": "int",
               "isRequired": false,
               "default": "1",
               "description": "One-based current page number."
+            },
+            {
+              "name": "Rotation",
+              "type": "int",
+              "isRequired": false,
+              "description": "Document rotation in degrees (0/90/180/270). The anchor geometry is normalized to the unrotated page, so a non-zero rotation wraps the content in the unrotated plane.",
+              "default": "0"
             },
             {
               "name": "SelectedThreadId",
@@ -28295,7 +28336,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "Side panel listing PDF annotation threads with per-thread comment detail, reply, resolve/reopen, delete, a resolved filter, and a composer for commenting on the current text selection. Used internally by TmPdfViewer when annotations are enabled.",
+          "description": "Side panel listing PDF annotation threads with per-thread comment detail, reply, resolve/reopen, delete, a thread filter (TmPdfThreadFilter, phase 12: the All | Unresolved segmented control), and a composer for commenting on the current text selection. Used internally by TmPdfViewer when annotations are enabled.",
           "packageId": "Tempo.Blazor.PdfViewer",
           "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotationThreadPanel.razor",
           "documentationStatus": "merged",
@@ -28414,7 +28455,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen, per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
+          "description": "Standalone PDF annotation workbench built on top of TmPdfViewer. Offers highlight, comment, stamp, and freehand drawing tools in a single hierarchical toolbar (the annotator's groups are merged into the viewer toolbar through its ToolbarStart/ToolbarEnd slots, with an optional header row for the title/subtitle and the export group), a comment thread panel with resolve/reopen and an All | Unresolved filter, a runtime color picker for NEW annotations (ColorPalette/ColorNames/AllowColorPicker, two-way AnnotationColor), per-author or per-role annotation colors, pass-through access to the viewer's thumbnails, search, rotation, zoom mode and open link, export of annotations into the PDF (as real PDF annotations or flattened into the page content), and a print variant with a comment summary. Persistence is pluggable through IPdfAnnotationProvider.",
           "packageId": "Tempo.Blazor.PdfViewer",
           "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotator.razor",
           "documentationStatus": "merged",
@@ -28422,6 +28463,13 @@
             "@using Tempo.Blazor.Components.Files"
           ],
           "parameters": [
+            {
+              "name": "AllowColorPicker",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the runtime color picker is offered. Default true; when false the toolbar keeps the pre-phase-12 static chip + label indicator and no palette tile renders on mobile."
+            },
             {
               "name": "AllowExport",
               "type": "bool",
@@ -28436,10 +28484,23 @@
               "description": "Whether the viewer's rotation button is offered. Default is false; passed through to the embedded viewer."
             },
             {
+              "name": "AllowUndo",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the annotator records a per-session undo/redo history (FZE-15). When false the toolbar history group and the Ctrl/⌘+Z shortcuts are hidden and mutations bypass the stack."
+            },
+            {
               "name": "AnnotationColor",
               "type": "string?",
               "isRequired": false,
-              "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time."
+              "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time. Supports two-way binding: the runtime color picker (phase 12) raises AnnotationColorChanged, and a host-supplied value seeds the picker's selection."
+            },
+            {
+              "name": "AnnotationColorChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Callback invoked when the runtime color picker changes the color for NEW annotations (a pick raises the color, the reset raises null — the per-author/role fallback)."
             },
             {
               "name": "AnnotationProvider",
@@ -28464,6 +28525,19 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS classes for the root element."
+            },
+            {
+              "name": "ColorNames",
+              "type": "IReadOnlyDictionary<string, string>?",
+              "isRequired": false,
+              "description": "Accessible names for the ColorPalette colors, keyed by the color string (matched case-insensitively, like the core TmColorPalette). Defaults to the localized TmPdfAnnotator_ColorName_* names of the default palette."
+            },
+            {
+              "name": "ColorPalette",
+              "type": "IReadOnlyList<string>?",
+              "isRequired": false,
+              "description": "Colors offered by the runtime color picker. Defaults to PdfAnnotationColorHelper.DefaultPalette (the helper owns the palette data).",
+              "default": "PdfAnnotationColorHelper.DefaultPalette"
             },
             {
               "name": "CurrentUser",
@@ -28522,10 +28596,23 @@
               "description": "Callback invoked when the active tool changes."
             },
             {
+              "name": "OnHistoryChanged",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Callback invoked whenever the history state changes (a step was executed, undone, redone, skipped or the stack was cleared)."
+            },
+            {
               "name": "RoleColors",
               "type": "IReadOnlyDictionary<string, string>?",
               "isRequired": false,
               "description": "Annotation colors per role, keyed by role."
+            },
+            {
+              "name": "SearchPresentation",
+              "type": "PdfSearchPresentation",
+              "isRequired": false,
+              "default": "PdfSearchPresentation.Floating",
+              "description": "How the embedded viewer presents its search UI on desktop and tablet layouts. Default Floating (a card anchored over the page body); passed through to the embedded viewer. A mobile layout always keeps the in-flow bar."
             },
             {
               "name": "ShowHeader",
@@ -28585,6 +28672,13 @@
               "description": "Kept for backward compatibility. When true (default) the annotator has no toolbar of its own: its tool groups merge into the embedded viewer's single toolbar through the viewer's ToolbarStart/ToolbarEnd slots, and the export group lives in the header row when ShowHeader is true. When false the viewer's chrome (navigation, zoom, rotation) is hidden and the annotator renders a compact tools row of its own instead."
             },
             {
+              "name": "ShowViewModeToggle",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the embedded viewer renders its single/continuous segmented control. Default false (the pre-FZE-14 toolbar); when true the segment rides the merged toolbar and flips ViewMode through ViewModeChanged.",
+              "default": "False"
+            },
+            {
               "name": "StampOptions",
               "type": "IReadOnlyList<string>?",
               "isRequired": false,
@@ -28634,6 +28728,19 @@
               "description": "Known users, used to resolve author roles for role-based colors."
             },
             {
+              "name": "ViewMode",
+              "type": "PdfViewMode",
+              "isRequired": false,
+              "default": "PdfViewMode.SinglePage",
+              "description": "How the embedded viewer presents the document (FZE-14 — the PD1 pin is lifted). Default SinglePage keeps the pre-FZE-14 behavior; Continuous renders the annotator's layer and interaction surface per page of the scroll column through the viewer's PageOverlayContent slots (FZE-13) — every tool anchors on the slot's page. Supports two-way binding."
+            },
+            {
+              "name": "ViewModeChanged",
+              "type": "EventCallback<PdfViewMode>",
+              "isRequired": false,
+              "description": "Callback invoked when the view mode changes (the embedded viewer's toggle or a host-driven binding)."
+            },
+            {
               "name": "ZoomMode",
               "type": "PdfZoomMode",
               "isRequired": false,
@@ -28645,6 +28752,30 @@
               "type": "EventCallback<PdfZoomMode>",
               "isRequired": false,
               "description": "Callback when the zoom mode changes in the viewer."
+            }
+          ],
+          "methods": [
+            {
+              "name": "UndoAsync",
+              "signature": "Task UndoAsync()",
+              "description": "Undoes the newest annotation mutation of this session. A step whose thread was changed or deleted by another user is skipped with the localized conflict hint; a provider failure announces 'Undo failed' and leaves the stack unchanged."
+            },
+            {
+              "name": "RedoAsync",
+              "signature": "Task RedoAsync()",
+              "description": "Redoes the most recently undone annotation mutation. A provider failure announces 'Redo failed' and leaves the stack unchanged."
+            }
+          ],
+          "properties": [
+            {
+              "name": "CanUndo",
+              "type": "bool",
+              "description": "Whether there is a recorded step to undo. False when AllowUndo is off or a history operation is currently running (the buttons and the mobile More entries disable while it is)."
+            },
+            {
+              "name": "CanRedo",
+              "type": "bool",
+              "description": "Whether there is a recorded step to redo. False when AllowUndo is off or a history operation is currently running."
             }
           ]
         },
@@ -28731,7 +28862,7 @@
           "kind": "Component",
           "category": "Files",
           "namespace": "Tempo.Blazor.Components.Files",
-          "description": "Side panel of TmPdfAnnotator listing annotation threads with kind badges and author colors. Hosts the draft composer and supports reply, resolve, reopen, delete, and a resolved-threads filter. Used internally by TmPdfAnnotator.",
+          "description": "Side panel of TmPdfAnnotator listing annotation threads with kind badges and author colors, filtered through the shared TmPdfThreadFilter (phase 12: the All | Unresolved segmented control). Hosts the draft composer and supports reply, resolve, reopen, and delete. Used internally by TmPdfAnnotator.",
           "packageId": "Tempo.Blazor.PdfViewer",
           "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfAnnotatorPanel.razor",
           "documentationStatus": "merged",
@@ -29011,6 +29142,77 @@
           ]
         },
         {
+          "itemName": "TmPdfContinuousOverlays",
+          "kind": "Component",
+          "category": "Files",
+          "namespace": "Tempo.Blazor.Components.Files",
+          "description": "Internal child of TmPdfViewer that renders the continuous mode's Blazor-owned annotation overlay slots for the pages the JS geometry report mounts. The [JSInvokable] geometry report forwards to SetGeometry, which re-renders this component only — the root viewer never re-renders for a geometry report. MarkStale hides the slots until the next report arrives (an in-place zoom must not paint stale boxes).",
+          "packageId": "Tempo.Blazor.PdfViewer",
+          "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfContinuousOverlays.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Files"
+          ],
+          "parameters": [
+            {
+              "name": "CurrentPage",
+              "type": "int",
+              "isRequired": false,
+              "default": "1",
+              "description": "The viewer's current page (drives PdfPageOverlayContext.IsCurrentPage)."
+            },
+            {
+              "name": "CurrentUserId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Current user id used for mention styling."
+            },
+            {
+              "name": "DraftAnchorProvider",
+              "type": "Func<int, DocumentCommentAnchor?>?",
+              "isRequired": false,
+              "description": "Resolves the draft anchor for one page (the pending selection only paints in the slot of the page it was made on)."
+            },
+            {
+              "name": "EnableAnnotations",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the per-page annotation layers render (else host overlays only)."
+            },
+            {
+              "name": "OnThreadSelected",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Callback invoked when a thread marker or highlight is selected."
+            },
+            {
+              "name": "PageOverlayContent",
+              "type": "RenderFragment<PdfPageOverlayContext>?",
+              "isRequired": false,
+              "description": "The templated per-page overlay rendered in every mounted slot."
+            },
+            {
+              "name": "SelectedThreadId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Selected thread id."
+            },
+            {
+              "name": "ShowResolved",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether resolved threads should be rendered."
+            },
+            {
+              "name": "Threads",
+              "type": "IReadOnlyList<DocumentCommentThread>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Annotation threads available to render."
+            }
+          ]
+        },
+        {
           "itemName": "TmPdfThreadCard",
           "kind": "Component",
           "category": "Files",
@@ -29121,6 +29323,54 @@
               "isRequired": false,
               "default": "\"\"",
               "description": "Stable thread identifier, exposed as data-thread-id."
+            }
+          ]
+        },
+        {
+          "itemName": "TmPdfThreadFilter",
+          "kind": "Component",
+          "category": "Files",
+          "namespace": "Tempo.Blazor.Components.Files",
+          "description": "Shared thread filter of the PDF annotation panels (TmPdfViewer and TmPdfAnnotator, phase 12): the 'All (N) | Unresolved (M)' segmented control rendered in both panels' headers. It replaced the phase-4 'Show resolved' checkbox — the All segment maps onto ShowResolved=true and Unresolved onto false, so the public panel contract is unchanged. The segments are native radios sharing one group name (the TmRadioGroup Appearance=Segmented model): the browser owns the arrow keys and there is no keyboard emulation. Counts recompute from Threads on every render, so resolve/reopen mutations update them live.",
+          "packageId": "Tempo.Blazor.PdfViewer",
+          "sourcePath": "src/Tempo.Blazor.PdfViewer/Components/Files/TmPdfThreadFilter.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Files"
+          ],
+          "parameters": [
+            {
+              "name": "Disabled",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether panel interaction is disabled.",
+              "default": "false"
+            },
+            {
+              "name": "ShowResolved",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether resolved threads are shown — All (true) or Unresolved only (false).",
+              "default": "false"
+            },
+            {
+              "name": "ShowResolvedChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Callback invoked when the filter changes: All raises true, Unresolved raises false."
+            },
+            {
+              "name": "TestIdBase",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Base of the owning panel's testid contract (e.g. pdf-annotation or pdf-annotator); the group renders {base}-filter with the segments {base}-filter-all and {base}-filter-unresolved."
+            },
+            {
+              "name": "Threads",
+              "type": "IReadOnlyList<DocumentCommentThread>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Annotation threads whose All/Unresolved counts are shown."
             }
           ]
         },
@@ -29320,13 +29570,19 @@
               "name": "EnableAnnotations",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether the annotation layer and comments panel are enabled. Default is false."
+              "description": "Whether the annotation layer and comments panel are enabled. Default is false. The markers render per page in both view modes — in Continuous every page inside the ±50% viewport band gets an overlay slot (the same band the lazy renderer uses), and text selection creates threads on the selection's page."
             },
             {
               "name": "EnableTextSelectionEvents",
               "type": "bool",
               "isRequired": false,
               "description": "Enables text selection events (OnTextSelected) without turning on the built-in annotation layer and panel. Default is false."
+            },
+            {
+              "name": "FileSize",
+              "type": "long?",
+              "isRequired": false,
+              "description": "The document's byte size shown in the header. When set, this host-supplied value wins over the length the viewer obtains from PDF.js getDownloadInfo; when omitted and the size is unknown, the subtitle keeps its pages-only form."
             },
             {
               "name": "HeaderActions",
@@ -29369,7 +29625,7 @@
               "name": "OverlayContent",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer)."
+              "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer). Single-page only: the overlay is aligned to THE canvas, so in Continuous view mode it is not rendered — use PageOverlayContent for per-page overlays."
             },
             {
               "name": "Page",
@@ -29385,6 +29641,12 @@
               "description": "Callback when the page changes."
             },
             {
+              "name": "PageOverlayContent",
+              "type": "RenderFragment<PdfPageOverlayContext>?",
+              "isRequired": false,
+              "description": "Templated per-page overlay (FZE-13). In Continuous it renders for every mounted page — the pages inside the ±50% viewport band the JS renderer reports — as an absolutely positioned slot over the page box, next to the annotation markers. In SinglePage it renders once, aligned to the current page canvas. The slot itself is not interactive (pointer-events: none); hosts opt their content back in. The context carries PageNumber, IsCurrentPage, Width, Height and Rotation."
+            },
+            {
               "name": "Scale",
               "type": "double",
               "isRequired": false,
@@ -29398,10 +29660,24 @@
               "description": "Callback when the scale changes."
             },
             {
+              "name": "SearchPresentation",
+              "type": "PdfSearchPresentation",
+              "isRequired": false,
+              "default": "PdfSearchPresentation.Floating",
+              "description": "How the search UI is presented on desktop and tablet layouts. Default Floating (since 2.9.1): a card anchored top-right over the page body, outside the scroll area; Escape closes it and returns focus to the toolbar's search toggle. Set Inline to restore the pre-2.9.1 in-flow bar under the toolbar. A mobile layout always keeps the in-flow bar."
+            },
+            {
               "name": "SelectionCtaContent",
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "Content rendered in the in-flow sticky selection CTA row, outside the scroll area (since 2.9.1). Hosts (the annotator) supply their own sticky selection actions here; the viewer's own comment CTA is independent and may render in the same row."
+            },
+            {
+              "name": "ShowFileSize",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the document header's default subtitle appends the formatted file size (\"Pages: N \\u00b7 1.4 MB\"). Only applies when ShowHeader is true and no explicit Subtitle is given. Default is true."
             },
             {
               "name": "ShowHeader",
@@ -29514,7 +29790,7 @@
               "type": "PdfViewMode",
               "isRequired": false,
               "default": "PdfViewMode.SinglePage",
-              "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. The annotation overlay and OverlayContent are single-page only (PD1) — selecting a thread returns the viewer to SinglePage on the thread's page."
+              "description": "Current view mode. Default is SinglePage. In Continuous the document renders as a lazily painted vertical column: pages entering the viewport are painted one at a time, canvases scrolled far out of view are released, scrolling updates the current page (and the two-way Page binding), and navigation, thumbnails and search scroll the wrap. Annotations render on every mounted page (PDF-VIEWER-CONTINUOUS-ANNOTATIONS); selecting a thread scrolls to its anchor instead of switching the mode."
             },
             {
               "name": "ViewModeChanged",
@@ -29644,6 +29920,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-filesize.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/pdf-viewer-fit.mjs",
           "kind": "JavaScript"
         },
@@ -29668,6 +29948,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-annotator-shortcuts.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-classes.test.mjs",
           "kind": "JavaScript"
         },
@@ -29677,6 +29961,10 @@
         },
         {
           "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-download.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.PdfViewer/wwwroot/js/__tests__/pdf-viewer-filesize.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -29709,12 +29997,12 @@
         }
       ],
       "summary": {
-        "itemCount": 17,
-        "manualItemCount": 17,
-        "generatedItemCount": 17,
+        "itemCount": 21,
+        "manualItemCount": 21,
+        "generatedItemCount": 21,
         "generatedOnlyItemCount": 0,
-        "componentCount": 11,
-        "publicApiTypeCount": 6
+        "componentCount": 13,
+        "publicApiTypeCount": 8
       }
     },
     {
@@ -120302,10 +120590,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3295,
-    "manualItemCount": 3295,
+    "itemCount": 3299,
+    "manualItemCount": 3299,
     "generatedOnlyItemCount": 0,
-    "componentCount": 484,
-    "publicApiTypeCount": 2758
+    "componentCount": 486,
+    "publicApiTypeCount": 2760
   }
 }
