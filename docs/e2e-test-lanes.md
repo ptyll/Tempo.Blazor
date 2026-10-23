@@ -84,6 +84,8 @@ load stops guarding anything. Run the perf lane on its own (no build, no other l
 (`BenchmarkPage_RunsCanvasBenchmark`, `BenchmarkPage_ExposesPasteLatency*`) assert that the page runs and exposes a
 metric, not a budget, so they stay in the full lane without the `Performance` category.
 
+**Decision DEC-TEMPO-PERF-LANE-BUDGETS.** Wall-clock budgets are kept at their product value and moved to a dedicated serial lane rather than loosened for the shared full lane. Every perf spec logs its measured number (`[perf] ...` line) so the lane produces evidence even when green, and a red run is judged from the logged breakdown (FCP/navigation timings, render-blocking CDN resources of the demo) rather than by raising the threshold.
+
 ## Regression screenshots
 
 **Regression-screenshot convention:** a `before`/`after` PNG pair may enter the

@@ -38,3 +38,7 @@ Scenario note: the phase names `Virtualize=true`; that parameter does not exist 
 2. For hunks marked **approved**: write `golden/<scenario>.approved.html` (only the decision-1 edits) and the matching changelog marker. `mvl-table`, `mvl-card`, `mvl-list` are done.
 3. Grid `aria-rowcount` / `aria-colcount` in Rows mode is explicitly **not** approved — revert it.
 4. Do not touch the golden files except through that classification. The comparison test prefers `.approved.html` when it exists.
+
+## Void-element normalization step
+
+`MarkupSnapshot.NormalizeVoidElements` writes every HTML void element as `<tag attrs />` before the comparison, so the bUnit 2.x / AngleSharp spelling `<input ...></input>` no longer counts as drift against the goldens captured with a self-closing serializer. The matcher requires a real tag-name boundary (`(?=[\s/>])`, so `<colgroup>` and `<link-card>` are untouched) and skips quoted attribute values (`(?:[^>"']|"[^"]*"|'[^']*')*?`, so `<input value="a>b">` keeps its `>`). Pinned by `MarkupSnapshotTests`.

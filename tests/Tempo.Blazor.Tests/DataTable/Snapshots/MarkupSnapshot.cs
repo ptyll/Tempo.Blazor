@@ -83,11 +83,11 @@ public static partial class MarkupSnapshot
     private static partial Regex InstanceId();
 
     // <input ...></input> (bUnit 2.x / AngleSharp) -> <input ... />
-    [GeneratedRegex(@"(<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*?)\s*/?>\s*</(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)>", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)(?=[\s/>])(?:[^>""']|""[^""]*""|'[^']*')*?)\s*/?>\s*</(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)>", RegexOptions.CultureInvariant)]
     private static partial Regex VoidElementWithEndTag();
 
     // <input ...> or <input ... /> -> <input ... /> (no end tag follows any more)
-    [GeneratedRegex(@"(<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b[^>]*?)\s*/?>", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(<(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)(?=[\s/>])(?:[^>""']|""[^""]*""|'[^']*')*?)\s*/?>", RegexOptions.CultureInvariant)]
     private static partial Regex VoidElementOpenTag();
 
     [GeneratedRegex(@">\s+<", RegexOptions.CultureInvariant)]
