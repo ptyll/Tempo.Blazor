@@ -125,11 +125,13 @@ public sealed class LocalEmailPreviewRenderer : IEmailPreviewRenderer
 
         try
         {
-            return new TemplateRenderOptions { Culture = CultureInfo.GetCultureInfo(request.CultureName) };
+            return new TemplateRenderOptions { Culture = CultureInfo.GetCultureInfo(request.CultureName, predefinedOnly: true) };
         }
         catch (ArgumentException)
         {
-            // An unknown culture name is not a render failure: fall back to the renderer default.
+            // An unknown culture name is not a render failure: fall back to the renderer default. predefinedOnly:
+            // Windows NLS otherwise synthesizes a custom culture for ANY well-formed name (it inherited the
+            // machine's number format for "not-a-culture"), so the fallback only fired on ICU platforms.
             return null;
         }
     }

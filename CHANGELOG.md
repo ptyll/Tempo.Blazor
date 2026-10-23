@@ -819,6 +819,28 @@
 
 ### Fixed
 
+- **Phase 2 test-suite stabilisation: culture fallback, security-patched packages and test-only fixes.**
+  * **Unknown culture names fall back on every platform (`LocalEmailPreviewRenderer`, `EmailTemplateRenderer`).**
+    `CultureInfo.GetCultureInfo(name)` on Windows NLS synthesizes a *custom* culture for any well-formed
+    name (`"not-a-culture"` came back with the machine's number format), so the documented "unknown culture →
+    renderer default" fallback only fired on ICU platforms. Both call sites now pass `predefinedOnly: true`,
+    which makes an unknown preview `CultureName` / document `Language` fall back to the invariant culture
+    everywhere. No API change; a host that relied on a Windows-only synthesized custom culture must pass a
+    real culture name.
+  * **NuGetAudit NU1902/NU1903/NU1904 closed.** `Microsoft.AspNetCore.SignalR.Client` (Collaboration,
+    Demo.SharedUI) 10.0.5 → 10.0.13 (SignalR.Common GHSA-334f-vvp4-7g6p),
+    `Microsoft.AspNetCore.Components.WebAssembly.Server` (Demo.InteractiveAuto, ReportServer.Web) 10.0.3 →
+    10.0.13 (GHSA-g27p-qf6j-c96c, GHSA-qjpx-jqm5-h2c4) and `System.Security.Cryptography.Pkcs` pinned to
+    10.0.13 in Demo.Api, ReportServer.Api and the Demo.Api tests (transitive through MailKit /
+    Microsoft.Data.SqlClient; GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7). A consumer of `Tempo.Blazor.Collaboration`
+    now resolves SignalR.Client 10.0.13 or newer.
+  * **`TmPdfAnnotator` mobile-sheet auto-close debounce runs on `TimeProvider`.** Behaviour is unchanged
+    (150 ms, `TimeProvider.System` when none is registered); tests drive it with a `FakeTimeProvider`.
+  * **`DefaultMarkupSnapshotTests` compare void elements in one canonical spelling.** The 13 red scenarios
+    were a serializer difference (bUnit 2.x / AngleSharp writes `<input ...></input>`, the goldens carry
+    `<input ... />`); the markup itself is unchanged, so no golden file was regenerated.
+
+
 - **Review fix (code + architecture): the canvas token mask, the image gate and the render gate.**
   Four defects the WYSIWYG canvas shipped with:
   * **A template token inside an attribute destroyed the tag around it.** Tokens are now masked

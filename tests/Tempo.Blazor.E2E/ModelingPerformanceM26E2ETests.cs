@@ -51,6 +51,7 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
             Timeout = 60000
         });
         await WaitForLoadedPerformanceModelAsync(page);
+        var firstLoadFcp = await page.EvaluateAsync<double>("() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? -1");
         await page.ReloadAsync(new PageReloadOptions
         {
             WaitUntil = WaitUntilState.Load,
@@ -74,7 +75,19 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
             Assert.Inconclusive("The browser did not expose an LCP entry for the modeling editor route.");
         }
 
-        Assert.IsTrue(lcp < 2000, $"LCP should stay under 2000 ms. Actual: {lcp:0.0} ms.");
+        var detail = await page.EvaluateAsync<string>(
+            """
+            () => JSON.stringify({
+                lcp: performance.getEntriesByType('largest-contentful-paint').map(e => ({ t: Math.round(e.startTime), tag: e.element?.tagName, cls: (e.element?.className?.baseVal ?? e.element?.className ?? '').toString().slice(0, 60), size: e.size })),
+                fcp: performance.getEntriesByName('first-contentful-paint').map(e => Math.round(e.startTime)),
+                
+                nav: performance.getEntriesByType('navigation').map(e => ({ type: e.type, reqStart: Math.round(e.requestStart), respStart: Math.round(e.responseStart), respEnd: Math.round(e.responseEnd), unloadStart: Math.round(e.unloadEventStart), unloadEnd: Math.round(e.unloadEventEnd), domInteractive: Math.round(e.domInteractive), dcl: Math.round(e.domContentLoadedEventEnd), load: Math.round(e.loadEventEnd), proto: e.nextHopProtocol })),
+            })
+            """);
+
+        // Always logged: the number is the evidence the Performance lane records (DEC-TEMPO-PERF-LANE-BUDGETS).
+        Console.WriteLine($"[perf] modeling LCP={lcp:0} ms firstLoadFcp={firstLoadFcp:0} ms {detail}");
+        Assert.IsTrue(lcp < 2000, $"LCP should stay under 2000 ms. Actual: {lcp:0.0} ms. firstLoadFcp={firstLoadFcp:0} {detail}");
     }
 
     [TestMethod]

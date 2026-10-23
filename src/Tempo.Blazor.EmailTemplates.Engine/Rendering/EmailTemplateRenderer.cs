@@ -226,7 +226,7 @@ public sealed class EmailTemplateRenderer : IEmailTemplateRenderer
 
         try
         {
-            return CultureInfo.GetCultureInfo(language);
+            return CultureInfo.GetCultureInfo(language, predefinedOnly: true);
         }
         catch (ArgumentException)
         {
