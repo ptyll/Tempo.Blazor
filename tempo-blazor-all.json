@@ -103988,7 +103988,7 @@
         "dependencies": [
           {
             "name": "Microsoft.AspNetCore.SignalR.Client",
-            "version": "10.0.5"
+            "version": "10.0.13"
           },
           {
             "name": "StackExchange.Redis",
@@ -104017,7 +104017,7 @@
         "dependencies": [
           {
             "name": "Microsoft.AspNetCore.SignalR.Client",
-            "version": "10.0.5"
+            "version": "10.0.13"
           },
           {
             "name": "StackExchange.Redis",

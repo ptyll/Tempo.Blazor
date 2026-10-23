@@ -184,6 +184,19 @@ public partial class TmPdfAnnotator
 
     private CancellationTokenSource? _mobileSheetCloseCts;
 
+    /// <summary>
+    /// Resolves the clock of the mobile-sheet auto-close debounce lazily: a consumer that never
+    /// registers a <see cref="TimeProvider"/> still gets <see cref="TimeProvider.System"/> (a bare
+    /// <c>[Inject] TimeProvider</c> would throw for exactly those consumers). Tests register a
+    /// <c>FakeTimeProvider</c> so the debounce is driven by <c>Advance</c>, not by wall-clock sleeps.
+    /// </summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+
+    private TimeProvider? _clock;
+
     /// <summary>Schedules the mobile sheet auto-close after the debounce window; a resolution
     /// away from mobile in between cancels it (see <see cref="ApplyResolvedLayoutAsync"/>).</summary>
     private void ScheduleMobileSheetClose()
