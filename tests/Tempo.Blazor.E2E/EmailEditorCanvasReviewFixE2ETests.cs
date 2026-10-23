@@ -46,24 +46,8 @@ public sealed class EmailEditorCanvasReviewFixE2ETests : EmailTemplateE2ETestBas
 
         // A new E2E class that boots the WASM demo fails intermittently on a cold boot; one reload of the
         // same page is the documented stabiliser.
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                await page.GotoAsync($"{BaseUrl}{WelcomeRoute}", new PageGotoOptions
-                {
-                    WaitUntil = WaitUntilState.Load,
-                    Timeout = 60000,
-                });
-                await WaitForAppReadyAsync(page);
-                await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
-                break;
-            }
-            catch (TimeoutException) when (attempt == 0)
-            {
-                await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            }
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{WelcomeRoute}");
+        await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
 
         await page.WaitForSelectorAsync("[data-tm-canvas-paper]", new() { Timeout = 30000 });
 

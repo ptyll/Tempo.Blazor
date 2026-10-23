@@ -21,17 +21,7 @@ public sealed class TmChartAreaE2ETests : WasmTestBase
         await context.AddInitScriptAsync("localStorage.setItem('tm-demo-culture', 'en');");
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        try
-        {
-            await page.GotoAsync($"{BaseUrl}/charts",
-                new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
         await page.Locator("[data-testid='charts-area-section']").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 90_000 });
         return page;

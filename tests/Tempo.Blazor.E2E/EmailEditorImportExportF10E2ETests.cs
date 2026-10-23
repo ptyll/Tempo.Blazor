@@ -54,22 +54,7 @@ public sealed class EmailEditorImportExportF10E2ETests : EmailTemplateE2ETestBas
         RegisterContext(context);
 
         var page = await context.NewPageAsync();
-        // Cold boot of the self-hosted apps occasionally exceeds the readiness window: one reload of the same
-        // page is the documented recovery.
-        for (var attempt = 0; ; attempt++)
-        {
-            await page.GotoAsync($"{BaseUrl}{WelcomeEditorRoute}",
-                new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            try
-            {
-                await WaitForAppReadyAsync(page);
-                break;
-            }
-            catch (TimeoutException) when (attempt < 1)
-            {
-                await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            }
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{WelcomeEditorRoute}");
 
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
         await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 60000 });

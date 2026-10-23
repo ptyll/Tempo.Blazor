@@ -33,17 +33,7 @@ public sealed class TmChartWaterfallE2ETests : WasmTestBase
             }
         };
 
-        try
-        {
-            await page.GotoAsync($"{BaseUrl}/charts",
-                new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 90_000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}/charts");
 
         await page.Locator($"{SectionSelector} rect.tm-chart__bar").First.WaitForAsync(
             new LocatorWaitForOptions { Timeout = 90_000 });

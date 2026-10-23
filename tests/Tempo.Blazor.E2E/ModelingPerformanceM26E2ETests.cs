@@ -13,6 +13,7 @@ namespace Tempo.Blazor.E2E;
 /// </remarks>
 [TestClass]
 [TestCategory("WASM")]
+[TestCategory("Performance")]
 [DoNotParallelize]
 public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
 {

@@ -43,23 +43,7 @@ public sealed class EmailEditorItemDialogF9E2ETests : EmailTemplateE2ETestBase
         // The WASM boot occasionally exceeds the harness's 60 s readiness window on a loaded machine (the
         // self-hosted demo apps start with the first test of the class). One reload of the SAME context is
         // the documented recovery: the app is up by then, only the first boot was slow.
-        for (var attempt = 0; ; attempt++)
-        {
-            await page.GotoAsync($"{BaseUrl}{OrderEditorRoute}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.Load,
-                Timeout = 60000,
-            });
-            try
-            {
-                await WaitForAppReadyAsync(page);
-                break;
-            }
-            catch (TimeoutException) when (attempt < 1)
-            {
-                await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            }
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{OrderEditorRoute}");
 
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
         await page.WaitForSelectorAsync("[data-tm-canvas-doc]", new() { Timeout = 60000 });

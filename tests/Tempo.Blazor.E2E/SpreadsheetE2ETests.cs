@@ -5059,6 +5059,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_RunsCanvasBenchmark()
     {
         var page = await CreatePageAsync();
@@ -5079,6 +5080,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_ExposesPasteLatencyForCanvasAndCanvasJsEngine()
     {
         var page = await CreatePageAsync();
@@ -5104,6 +5106,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase11ReadinessMetricsPass()
     {
         var page = await CreatePageAsync();
@@ -5166,6 +5169,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_CanvasKeyboardUsableOnLargeDataset()
     {
         var page = await CreatePageAsync();
@@ -5198,6 +5202,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_CanvasResizeUsableOnLargeDataset()
     {
         var page = await CreatePageAsync();
@@ -5315,6 +5320,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase12LatencyProbeMatchesHotPathCriteria()
     {
         var page = await CreatePageAsync();
@@ -5349,6 +5355,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_Phase12BenchmarkRowExposesReadinessMetrics()
     {
         var page = await CreatePageAsync();
@@ -5408,6 +5415,7 @@ public partial class SpreadsheetE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task BenchmarkPage_ResizeReadinessMetricsPass()
     {
         var page = await CreatePageAsync();

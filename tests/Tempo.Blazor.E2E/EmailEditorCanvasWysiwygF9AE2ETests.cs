@@ -46,26 +46,8 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
         await page.AddInitScriptAsync(
             "try { localStorage.setItem('tm-demo-editor-layout', 'Auto'); } catch (e) { }");
 
-        // A new E2E class that boots the WASM demo fails intermittently on a cold boot; one reload of the
-        // same page is the documented stabiliser.
-        for (var attempt = 0; attempt < 2; attempt++)
-        {
-            try
-            {
-                await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions
-                {
-                    WaitUntil = WaitUntilState.Load,
-                    Timeout = 60000,
-                });
-                await WaitForAppReadyAsync(page);
-                await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
-                break;
-            }
-            catch (TimeoutException) when (attempt == 0)
-            {
-                await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            }
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
+        await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
 
         await page.WaitForSelectorAsync(".tm-editor-shell[data-layout]", new() { Timeout = 30000 });
         await page.WaitForSelectorAsync("[data-tm-canvas-paper]", new() { Timeout = 30000 });
@@ -228,6 +210,7 @@ public sealed class EmailEditorCanvasWysiwygF9AE2ETests : EmailTemplateE2ETestBa
     // ── The production performance contract (ShouldRender) ───────────────────────────────
 
     [TestMethod]
+    [TestCategory("Performance")]
     public async Task Typing_in_the_inspector_repaints_only_the_edited_block()
     {
         // A document with 50+ blocks: insert text blocks through the palette until the canvas is big.

@@ -33,19 +33,7 @@ public class DeadlineCalculatorE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}{DemoPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        try
-        {
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            // Cold WASM boot on a freshly built host can exceed the ready timeout on the
-            // first hit; a reload serves the framework assets from cache and boots fast.
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DemoPage}");
 
         return new DemoPageHandle(page, errors);
     }

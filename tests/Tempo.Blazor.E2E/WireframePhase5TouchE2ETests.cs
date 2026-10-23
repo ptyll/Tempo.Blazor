@@ -448,17 +448,7 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
                 document.head.appendChild(style);
             });
             """);
-        try
-        {
-            await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            // Cold boot of the self-hosted apps: one reload of the same page is enough once the app is up.
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{EditorUrl}");
 
         // The toolbox is docked on a desktop container but lives in an overlay drawer on a tablet one: wait for the canvas instead.
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-canvas__svg",

@@ -140,23 +140,7 @@ public sealed class EmailTemplateReferenceShotsE2ETests : EmailTemplateE2ETestBa
     {
         // Cold boot of a self-hosted WASM app occasionally exceeds the readiness window: one reload of the
         // same context is the documented recovery (see the F9A/F10 specs).
-        for (var attempt = 0; ; attempt++)
-        {
-            await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.Load,
-                Timeout = 60000,
-            });
-            try
-            {
-                await WaitForAppReadyAsync(page);
-                return;
-            }
-            catch (TimeoutException) when (attempt < 1)
-            {
-                await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            }
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
     }
 
     private static async Task WaitForEditorAsync(IPage page)

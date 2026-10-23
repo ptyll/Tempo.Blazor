@@ -38,25 +38,7 @@ public sealed class EmailEditorResponsiveF8E2ETests : EmailTemplateE2ETestBase
         RegisterContext(context);
 
         var page = await context.NewPageAsync();
-        for (var attempt = 0; ; attempt++)
-        {
-            await page.GotoAsync($"{BaseUrl}{EditorRoute}", new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.Load,
-                Timeout = 60000,
-            });
-            try
-            {
-                await WaitForAppReadyAsync(page);
-                await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 30000 });
-                break;
-            }
-            catch (TimeoutException) when (attempt < 1)
-            {
-                // Cold boot of the self-hosted apps occasionally exceeds the readiness window: one reload of
-                // the SAME context is the documented recovery (see the F9A/F10 specs).
-            }
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{EditorRoute}");
 
         await page.WaitForSelectorAsync("[data-tm-email-editor]", new() { Timeout = 60000 });
         await page.WaitForSelectorAsync(".tm-editor-shell[data-layout]", new() { Timeout = 30000 });

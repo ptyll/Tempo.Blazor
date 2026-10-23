@@ -229,9 +229,25 @@ public abstract class PlaywrightTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync(BaseUrl);
-        await WaitForAppReadyAsync(page);
+        await GotoAppReadyAsync(page, BaseUrl);
         return page;
+    }
+
+    /// <summary>
+    /// Navigates to <paramref name="url"/> and waits for the app to be ready, with the ONE controlled recovery from
+    /// a slow cold boot: when the readiness gate times out the SAME page is reloaded once (the app and its cached
+    /// framework assets are up by then; only the first boot was slow) and gated again. This is the only place that
+    /// recovery lives — specs and per-feature harnesses call this instead of keeping a local retry copy
+    /// ("ReadinessInfrastructureTests.NoSpecKeepsALocalColdBootRecoveryCopy" enforces it). A second timeout is a real
+    /// failure and propagates. The wait budgets come from <see cref="ReadinessTimeouts"/> (<c>TM_E2E_READY_TIMEOUT_MS</c>).
+    /// </summary>
+    protected async Task GotoAppReadyAsync(IPage page, string url, WaitUntilState waitUntil = WaitUntilState.Load)
+    {
+        var timeouts = ReadinessTimeouts.FromEnvironment();
+        await page.GotoAsync(url, new PageGotoOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs });
+        await ColdBootRecovery.RunAsync(
+            () => WaitForAppReadyAsync(page),
+            () => page.ReloadAsync(new PageReloadOptions { WaitUntil = waitUntil, Timeout = timeouts.DomContentLoadedMs }));
     }
 
     /// <summary>
@@ -294,16 +310,22 @@ public abstract class PlaywrightTestBase
     /// </summary>
     protected async Task WaitForAppReadyAsync(IPage page)
     {
+        // Every budget derives from TM_E2E_READY_TIMEOUT_MS (default 120 s; the former hard-coded 60 s / 15 s / 45 s
+        // windows were too tight for a cold WASM boot under full-lane CPU load). All waits are on a STATE, so a
+        // longer cap only extends the wait of a slow boot, it never sleeps. Boots past 15 s are logged so a
+        // creeping regression is visible in the test output instead of only in the duration. A cold-boot TIMEOUT is
+        // recovered by GotoAppReadyAsync (one controlled reload), never by a per-spec copy.
+        var timeouts = ReadinessTimeouts.FromEnvironment();
         await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded, new PageWaitForLoadStateOptions
         {
-            Timeout = 60000
+            Timeout = timeouts.DomContentLoadedMs
         });
 
         try
         {
             await page.WaitForSelectorAsync(".tm-app-loaded, main, [data-testid='app-ready']", new PageWaitForSelectorOptions
             {
-                Timeout = 15000
+                Timeout = timeouts.SelectorMs
             });
         }
         catch (TimeoutException)
@@ -322,37 +344,25 @@ public abstract class PlaywrightTestBase
                 }
                 """,
                 null,
-                new PageWaitForFunctionOptions { Timeout = 45000 });
+                new PageWaitForFunctionOptions { Timeout = timeouts.FallbackMs });
         }
 
         // Stateful readiness instead of the former fixed 1000 ms sleep (N193): the shared demo
         // MainLayout sets [data-blazor-ready] on <body> from OnAfterRenderAsync(firstRender) —
         // which prerendering never calls — so the attribute lands exactly when an interactive
         // runtime has rendered (WASM boot finished / server circuit up). A host whose runtime
-        // never comes up now fails this wait instead of silently passing under the sleep.
-        // The budget is generous on purpose: this is the authoritative gate, and a cold WASM boot
-        // in Firefox under full-suite CPU load can exceed 15 s without anything being broken —
-        // the wait is on a state attribute, so a longer cap only extends the wait, never sleeps.
-        // TM_E2E_READY_TIMEOUT_MS overrides the cap for slow hosts; boots past 15 s are logged so
-        // a creeping regression is visible in the test output instead of only in the duration.
-        var readyTimeoutMs = 60_000;
-        if (int.TryParse(Environment.GetEnvironmentVariable("TM_E2E_READY_TIMEOUT_MS"), out var envTimeout) && envTimeout > 0)
-        {
-            readyTimeoutMs = envTimeout;
-        }
-
+        // never comes up fails this wait instead of silently passing under a sleep.
         var bootWatch = System.Diagnostics.Stopwatch.StartNew();
         await page.WaitForFunctionAsync(
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null,
-            new PageWaitForFunctionOptions { Timeout = readyTimeoutMs });
+            new PageWaitForFunctionOptions { Timeout = timeouts.ReadyMs });
         bootWatch.Stop();
         if (bootWatch.Elapsed > TimeSpan.FromSeconds(15))
         {
-            TestContext.WriteLine($"[e2e] slow boot: data-blazor-ready after {bootWatch.Elapsed.TotalSeconds:F1}s (timeout {readyTimeoutMs}ms)");
+            TestContext.WriteLine($"[e2e] slow boot: data-blazor-ready after {bootWatch.Elapsed.TotalSeconds:F1}s (timeout {timeouts.ReadyMs}ms)");
         }
     }
-
     /// <summary>
     /// Waits until fonts are loaded, no CSS transition runs, no smooth scroll is in flight and the boxes of
     /// <paramref name="selector"/> are identical across 3 consecutive frames (15 s budget).

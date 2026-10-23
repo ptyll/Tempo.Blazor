@@ -492,16 +492,7 @@ public sealed class WireframePhase7MobileE2ETests : WasmTestBase
                   });
                   """
                 : string.Empty));
-        try
-        {
-            await page.GotoAsync($"{BaseUrl}{EditorUrl}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{EditorUrl}");
 
         await page.WaitForSelectorAsync(".tm-wd-editor .tm-wd-canvas__svg", new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 30_000 });
         var editor = page.Locator(".tm-wd-editor").First;

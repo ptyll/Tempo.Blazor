@@ -34,19 +34,7 @@ public class AuditLogViewerE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}{AuditPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        try
-        {
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            // Cold WASM boot on a freshly built host can exceed the ready timeout on the
-            // first hit; a reload serves the framework assets from cache and boots fast.
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{AuditPage}");
 
         return new AuditPageHandle(page, errors);
     }

@@ -109,20 +109,9 @@ public abstract class EmailTemplateE2ETestBase : WasmTestBase
                 "try { localStorage.setItem('tm-demo-editor-layout', 'Auto'); } catch (e) { }");
         }
 
-        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-        // The self-hosted WASM demo occasionally exceeds the harness's readiness window on a loaded machine
-        // (the documented recovery in the F9/F10/F11 specs). ONE reload of the same context is the recovery —
-        // by now the app is up and only the first boot was slow — and centralizing it here also covers the
-        // specs that never had it (a cold boot used to fail a whole class at `OpenAsync`).
-        try
-        {
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
-            await WaitForAppReadyAsync(page);
-        }
+        // Cold-boot recovery (ONE controlled reload) lives in PlaywrightTestBase.GotoAppReadyAsync, so every
+        // email spec — not only the ones that kept a local copy — survives a slow first boot.
+        await GotoAppReadyAsync(page, $"{BaseUrl}{route}");
 
         if (isEditorRoute)
         {

@@ -506,27 +506,38 @@ public class SandboxAuditParityTests
     [Fact]
     public void Audit_RenderTimeout_IsEnforcedEvenWhenTheTemplateWritesNoOutput()
     {
-        // 21 "a" + "!" against ^(a+)+$ backtracks for ~0.4 s but finishes within RegexTimeOut, so the
-        // regex guard never fires; the loop only assigns (no Write), so the output guard never fires.
-        // Only the context's own cancellation token can stop this render.
+        // Root cause of the former flake (Fáze 1): the old template raced the wall-clock budget against the
+        // machine's SPEED — 50 backtracking regex matches (~100 ms each on the author's machine) were meant to
+        // outlast a 2 s budget, but on a faster host / Release build / .NET with better regex optimisations the
+        // whole loop finished BEFORE the budget (render succeeded, "musí být zastaven" went red), and on a loaded
+        // host a single match could cross RegexTimeOut instead (the audit event became "regex", not "render time
+        // budget"). The test asserted a property of the render's duration, not of the cancellation path.
+        //
+        // The workload must be unbounded relative to ANY budget so that the context's own cancellation token is
+        // the only thing that can stop it: a pure-assignment loop (no Write, so the output guard never fires; no
+        // regex, so the regex guard never fires) over a range no CPU can finish (2 billion steps) with the loop
+        // limit raised out of the way. The security limit under test (Timeout) stays at a production-like
+        // value — nothing is relaxed; the test only stops depending on how fast the machine is.
         var sink = new SpySink();
+        var budget = TimeSpan.FromMilliseconds(500);
         var engine = Engine(sink, new TemplateSecurityOptions
         {
-            Timeout = TimeSpan.FromSeconds(2),
-            RegexTimeOut = TimeSpan.FromSeconds(1),
+            Timeout = budget,
+            LoopLimit = int.MaxValue,
         });
 
         var stopwatch = Stopwatch.StartNew();
         var result = engine.Render(
-            "{{ for i in 1..50 }}{{ x = \"aaaaaaaaaaaaaaaaaaaaa!\" | regex.match \"^(a+)+$\" }}{{ end }}done",
+            "{{ for i in 1..2000000000 }}{{ x = i }}{{ end }}done",
             new { });
         stopwatch.Stop();
 
         result.IsSuccess.Should().BeFalse("render musí být zastaven časovým rozpočtem");
 
-        // The render is stopped by its own budget (2 s), and the bound here is deliberately generous: the
-        // exact wall clock depends on how loaded the host is and on Debug vs Release. A tight bound next to
-        // the budget itself is the classic flaky test — a render that never stopped would still blow 30 s.
+        // Lower bound: the render can only end through the token, so it cannot end much before the budget
+        // (half of it absorbs timer granularity). Upper bound: deliberately generous — a render that never
+        // stopped would run for hours, so 30 s separates "stopped" from "not stopped" on any loaded host.
+        stopwatch.Elapsed.Should().BeGreaterThan(budget / 2);
         stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(30));
         sink.Events.Should().ContainSingle();
         sink.Events[0].Kind.Should().Be(TemplateSecurityEventKind.Timeout);

@@ -32,17 +32,7 @@ public class NewChartTypesE2ETests : WasmTestBase
             }
         };
 
-        await page.GotoAsync($"{BaseUrl}{DemoPage}",
-            new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-        try
-        {
-            await WaitForAppReadyAsync(page);
-        }
-        catch (TimeoutException)
-        {
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
-            await WaitForAppReadyAsync(page);
-        }
+        await GotoAppReadyAsync(page, $"{BaseUrl}{DemoPage}");
 
         await page.Locator("[data-testid='charts-demo-funnel'] .tm-chart__funnel-segment").First
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
