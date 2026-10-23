@@ -181,6 +181,12 @@ managed hosts instead, start the four apps above and set
 | TreeView | `TmTreeView` |
 | Workflow | `TmStepper`, `TmWorkflowDesignerCanvas`, `TmWorkflowToolbox`, `TmWorkflowPropertiesPanel`, `TmWorkflowMinimap` |
 
+Components of the split packages live in their own projects rather than in this folder —
+`Tempo.Blazor.EmailTemplates` (`TmEmailTemplateEditor`, `TmEmailTemplatePreview`, `TmEmailPropertyPanel`,
+`TmEmailToolbox`, `TmEmailTemplateCanvas`, `TmEmailCanvasBlock`, `TmEmailImportDialog`,
+`TmEmailExportDialog`, `TmEmailValidationPanel`, `TmEmailItemDialog`, `TmEmailObjectFields` and the
+sub-editors), `Tempo.Blazor.DiagramEditor`, `Tempo.Blazor.Spreadsheet`, `Tempo.Blazor.Signing`, and so on.
+
 ### CSS Architecture
 
 ```
@@ -584,6 +590,55 @@ Key consequences:
 - **Edge Selection Outline** — Selected edges render a dashed `tm-diagram-edge-path--selected-outline` path behind the visible stroke.
 - **Virtual Bend Transaction** — Clicking an edge segment to insert a virtual bend + dragging it is captured as a single `DiagramCommandTransaction` (one undo/redo step). Escape during the drag rolls back the transaction.
 
+## Email Template Editor
+
+The email editor is the 2.10.0 split into three packages, and the split is a **contract**, not an
+implementation detail (decisions D11/D17 of `planning/tm-email-template-editor-2.10.md`):
+
+```
+Tempo.Blazor.EmailTemplates.Abstractions   model, DTOs, IEmailPreviewRenderer, IEmailTemplateStore,
+                                           IEmailSender, save contract, TemplateSecurityOptions,
+                                           URL/colour/CSS policy, JSON localization tables
+        ↑                                  (no Blazor, no Scriban/Mjml.Net/AngleSharp)
+Tempo.Blazor.EmailTemplates                editor UI + model half; no engine, so it runs in WASM
+        ↑
+Tempo.Blazor.EmailTemplates.Engine         Scriban sandbox, Mjml.Net compiler, AngleSharp sanitizer,
+                                           render pipeline, LocalEmailPreviewRenderer
+```
+
+Rules that keep it that way:
+
+- **The editor package must never reference the Engine.** `PackageBoundaryTests`
+  (`tests/Tempo.Blazor.EmailTemplates.Engine.Tests`) walks the transitive `ProjectReference` closure of
+  the editor, of the WASM demo and of `Tempo.Blazor.All`; the single documented exception is
+  `Tempo.ReportServer.Web.Client` (`IsPackable=false`).
+- **The Engine pins `Abstractions` to an exact version** (`[2.10.0]`) through the
+  `PinAbstractionsToTheExactVersion` MSBuild target, because the two share `internal` types through
+  `InternalsVisibleTo`. `PackageBoundaryTests.PackedEngineNuspec_PinsAbstractionsToTheExactVersion` packs
+  the project and reads the `.nuspec`, so the pin cannot regress to a `>=` range.
+- **Two registrations, never one:** `AddTempoEmailTemplateEditor()` (UI + model) and
+  `AddTempoEmailTemplateEngine()` (rendering). `AddTempoEmailTemplates()` is `[Obsolete]` and registers
+  no engine.
+- **The preview and the HTML export go through `IEmailPreviewRenderer`** — the only seam a WASM host has
+  to implement. A missing registration renders `EmailPreviewStatus.Unavailable`, never an empty iframe.
+- **Saving is host-reported:** `OnSave` is `Func<EmailSaveRequest, Task<EmailSaveResult>>?`, there is no
+  `OnAutoSave` (auto-save is `EmailSaveTrigger.AutoSave`), and `SaveAsync()` is public so a
+  `TmNavigationGuard` can drive it.
+- **Escaping is on by default** for the HTML/MJML body (subject/preheader/text stay raw); the only opt-out
+  is `{{ value | html.trusted }}` and the result still passes the sanitizer. The URL allow-list replaces a
+  refused scheme with `#` and audits `TemplateSecurityEventKind.BlockedUrlScheme`. Never weaken either —
+  see the security rules in the plan.
+- **Strings are embedded JSON** (`Resources/TmEmailResources[.cs|.sk|.fr].json`) resolved through a closed
+  `IStringLocalizer<TmEmailResources>`; the package does not call `AddLocalization()`. A host replaces the
+  wording through `ITmEmailLocalizer` / `IStringLocalizer<TmEmailResources>`.
+
+Docs: [docs/email-templates/HOSTING.md](docs/email-templates/HOSTING.md) (registration, preview seam, save
+contract, dirty guard, `ReadOnly`, `ItemEditingMode`, layout parameters, audit sink, limits),
+[docs/email-templates/TEMPLATE_SYNTAX.md](docs/email-templates/TEMPLATE_SYNTAX.md) (Scriban, escaping, URL
+policy, culture), [docs/email-templates/MIGRATION-2.9-to-2.10.md](docs/email-templates/MIGRATION-2.9-to-2.10.md)
+(every breaking change with a before/after) and
+[docs/email-templates/MJML_ATTRIBUTE_PARITY.md](docs/email-templates/MJML_ATTRIBUTE_PARITY.md).
+
 ## JavaScript Interop
 
 Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host pages when using the related core components:
@@ -695,6 +750,9 @@ Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` 
 | `Tempo.Blazor.NotionEditor` | Notion-style editor and block/database UI |
 | `Tempo.Blazor.Signing` | Signing workflows, document page overlays, PDF template designer, CSS, and JS |
 | `Tempo.Blazor.FluentValidation` | FluentValidation integration for EditForm |
+| `Tempo.Blazor.EmailTemplates` | Email template editor UI, preview, import/export dialogs, CSS and three ES modules. **No** Scriban/Mjml.Net/AngleSharp, so it runs in WebAssembly |
+| `Tempo.Blazor.EmailTemplates.Abstractions` | Email model, DTOs, render/save/localization contracts, security policy. No Blazor, no engine |
+| `Tempo.Blazor.EmailTemplates.Engine` | Local render engine: Scriban sandbox, Mjml.Net, AngleSharp sanitizer, local preview renderer. Reference it only in the process that renders |
 
 ---
 

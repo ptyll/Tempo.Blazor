@@ -43,6 +43,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 33. [Přehled enumů](#přehled-enumů)
 34. [Design Token System](#design-token-system)
 35. [Diagram Editor](#diagram-editor)
+36. [Email Templates](#email-templates) — TmEmailTemplateEditor, TmEmailTemplatePreview, TmEmailTemplateToolbox, TmEmailTemplateCanvas, TmEmailPropertyPanel, TmEmailImportDialog, TmEmailExportDialog, TmEmailValidationPanel, TmEmailItemDialog, TmEmailTableCellDialog, TmEmailObjectFields a podobory
 
 ---
 
@@ -8031,4 +8032,195 @@ události pro save draft/publish.
 
 ---
 
-*Dokumentace komponent byla aktualizována o Diagram Editor a Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP).*
+## Email Templates
+
+Editor e-mailových šablon žije ve **třech balíčcích** (rozhodnutí D11/D17 plánu 2.10.0), ne v jádru:
+
+| Balíček | Co obsahuje |
+|---|---|
+| `Tempo.Blazor.EmailTemplates.Abstractions` | model dokumentu, DTO, `IEmailPreviewRenderer`, `IEmailTemplateStore`, `IEmailSender`, ukládací kontrakt, `TemplateSecurityOptions`, URL/barvy/CSS politika, JSON lokalizace. Žádné Blazor, žádný Scriban/Mjml.Net/AngleSharp. |
+| `Tempo.Blazor.EmailTemplates` | UI editoru (komponenty níže), náhled, dialogy import/export/validace, CSS a tři ES moduly. **Bez** enginu, takže funguje ve WebAssembly. |
+| `Tempo.Blazor.EmailTemplates.Engine` | sandboxovaný Scriban, Mjml.Net, AngleSharp sanitizer, render pipeline a `LocalEmailPreviewRenderer`. Referencuje se jen v procesu, který skutečně renderuje. |
+
+Hostitelský kontrakt (registrace, náhled na serveru, ukládání, dirty guard, `ReadOnly`, `ItemEditingMode`,
+rozvržení, lokalizace, audit, limity) je v [docs/email-templates/HOSTING.md](docs/email-templates/HOSTING.md),
+šablonovací jazyk v [docs/email-templates/TEMPLATE_SYNTAX.md](docs/email-templates/TEMPLATE_SYNTAX.md) a
+migrace 2.9 → 2.10 v [docs/email-templates/MIGRATION-2.9-to-2.10.md](docs/email-templates/MIGRATION-2.9-to-2.10.md).
+
+### TmEmailTemplateEditor
+
+Hlavní komponenta: renderuje se přes jádrový `TmEditorShell` (desktop ≥ 1200 px a tablet 768–1199 px drží
+paletu i inspektor, pod 768 px jde jedno z panelů do spodního sheetu nebo do tablistu). WYSIWYG plátno
+maluje e-mail, ne seznam bloků; ukládání hlásí hostitel.
+
+#### Parametry
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Document` / `DocumentChanged` | `EmailTemplateDocument?` | `null` | Dvoucestné pole dokumentu. Nová **instance** resetuje baseline, dirty stav, konflikt a undo historii; mutace stejné instance je editace. |
+| `OnSave` | `Func<EmailSaveRequest, Task<EmailSaveResult>>?` | `null` | Hostitel hlásí výsledek uložení. `Saved()` vyčistí dirty, `Failed(message)` ho nechá a zobrazí zprávu, `Conflict(message)` navíc pozastaví auto-save. `null` = editor neumí uložit (Save se nerenderuje). |
+| `AutoSave` | `AutoSaveOptions?` | `null` | Debounced auto-save (`Enabled`, `Interval`). Používá stejný `OnSave` s `Trigger = AutoSave`. |
+| `IsDirtyChanged` | `EventCallback<bool>` | — | Změna dirty stavu pro hostitele (podklad pro `TmNavigationGuard`). |
+| `ReadOnly` | `bool` | `false` | Zablokuje všechny editační cesty (paleta, plátno, inspektor, import, undo/redo, zkratky); náhled, validace i export zůstávají. `SaveAsync()` vrátí `Failed` bez volání hostitele. |
+| `ItemEditingMode` | `EmailItemEditingMode` | `Inline` | `Inline` = pole položek v inspektoru; `Dialog` = kompaktní seznam a dialog nad **kopií** (jeden undo krok, Cancel/Escape beze změny). |
+| `Variables` | `IReadOnlyList<TemplateVariableInfo>` | prázdné | Katalog proměnných hostitele (`Path`, `Kind`, `Description`, `Group`) — picker podle něj zobrazuje popis a skupiny. |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | `Auto` měří kontejner, `Desktop`/`Tablet`/`Mobile` vynutí rozvržení (E2E a screenshoty). |
+| `InitialMode` | `TmLayoutMode` | `Desktop` | Rozvržení pro první render, než existuje měření. |
+| `Breakpoints` | `TmLayoutBreakpoints?` | `null` | Hranice kontejneru (výchozí 768 / 1200). |
+| `ResolvedLayoutChanged` | `EventCallback<TmLayoutMode>` | — | Vyřešené rozvržení. |
+| `MobilePanelPresentation` | `MobilePanelPresentation` | `Sheet` | Pod 768 px: `Sheet` (spodní panel Bloky / Vlastnosti) nebo `Tabs` (tablist Bloky / Plátno / Vlastnosti). |
+| `ActiveMobilePanel` / `ActiveMobilePanelChanged` | `EditorShellPanel` | `None` | Která mobilní plocha je otevřená (dvoucestné). |
+| `ToolboxCollapsed` / `ToolboxCollapsedChanged` | `bool` | `false` | Paleta jako ikonová lišta. |
+| `ShowSaveButton` / `ShowSaveStatus` | `bool` | `true` | Save tlačítko / badge stavu uložení. |
+| `FooterActions` | `RenderFragment?` | `null` | Akce hostitele ve stavovém řádku. |
+| `ToolbarStart` / `ToolbarEnd` | `RenderFragment?` | `null` | Slot hostitele v liště; na telefonu jde `ToolbarStart` do hlavičky a `ToolbarEnd` do „⋮“ menu. |
+| `ImportOptions` | `EmailImportOptions?` | `null` | Limity importu (výchozí 5 MB, 200 sekcí, 2000 bloků, hloubka 8). |
+| `ImageUpload` | `ImageUploadOptions?` | `null` | `Accept`, `MaxBytes` pro vybíraný obrázek. |
+| `OnImageUpload` | `Func<IBrowserFile, Task<string>>?` | `null` | Nahraje obrázek a vrátí URL. |
+| `CanvasImageLoading` | `CanvasImageLoading` | `Load` | `Load` = plátno stahuje obrázky, `Placeholder` = jen zástupný rámec. |
+| `TimeProvider` | `TimeProvider` | `System` | Hodiny pro relativní časy badge (testy). |
+
+#### Veřejné metody a stabilní háčky
+
+`SaveAsync()` vrací `Task<EmailSaveResult>` a je určené pro `TmNavigationGuard.OnSaveAndLeave`. `Suppress()` na
+guardu obejde jedno navazující přesměrování. Selektoruj podle atributů, nikdy podle pozice:
+`[data-tm-email-editor]`, `[data-tm-group="history|review|file|help"]`, `[data-tm-save]`,
+`[data-tm-save-badge]` (`data-tm-save-state`), `[data-tm-save-alert]`, `[data-tm-save-retry]`,
+`[data-tm-readonly-badge]`, `[data-tm-mjml-btn]` (tlačítko „Export“).
+
+```razor
+<TmEmailTemplateEditor @ref="_editor" @bind-Document="_document"
+                       OnSave="SaveAsync"
+                       AutoSave="new AutoSaveOptions { Enabled = true, Interval = TimeSpan.FromSeconds(3) }"
+                       Variables="_variables"
+                       ItemEditingMode="EmailItemEditingMode.Dialog"
+                       IsDirtyChanged="dirty => _dirty = dirty" />
+
+<TmNavigationGuard IsDirty="_dirty"
+                   OnSaveAndLeave="@(async () => _editor is not null && (await _editor.SaveAsync()).IsSaved)" />
+```
+
+### TmEmailTemplatePreview
+
+Náhled dokumentu přes vyměnitelný `IEmailPreviewRenderer` (ve WASM typicky HTTP volání na server), se
+sandboxovaným iframe, přepínačem zařízení a HTML/text pohledem. Chybějící registrace rendereru zobrazí
+`Unavailable` s výzvou k opakování — nikdy prázdný iframe.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Document` | `EmailTemplateDocument` | `new()` | Povinný dokument k náhledu. |
+| `VariablesJson` / `VariablesJsonChanged` | `string?` | `null` | Ukázková data; `null` = generují se z šablony. Externí změna se adoptuje, lokální editace se drží. |
+| `InitialDevice` | `EmailPreviewDevice` | `Desktop` | Počáteční zařízení (`Desktop`, `Tablet`, `Mobile`); uživatel může přepnout. |
+| `ShowSampleDataEditor` | `bool` | `true` | Tlačítko „Upravit data“. |
+| `ShowViewToggle` | `bool` | `true` | Přepínač HTML / prostý text. |
+| `CultureName` | `string?` | `null` | Kultura renderu; `null` = jazyk dokumentu, jinak invariant. |
+| `FooterActions` | `RenderFragment?` | `null` | Akce hostitele v liště náhledu (náhled sám nic neodesílá). |
+| `TimeProvider` | `TimeProvider` | `System` | Hodiny pro debounce (testy). |
+
+### TmEmailTemplateToolbox
+
+Paleta bloků a sekcí: dlaždice s ikonou a popiskem, hledání (funguje i v `ReadOnly`, dlaždice jsou inertní),
+collapse na ikonovou lištu.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Collapsed` / `CollapsedChanged` | `bool` | `false` | Sbalená paleta. |
+| `ShowCollapseToggle` | `bool` | `true` | Vlastní tlačítko sbalení (vypne hostitel, který chrome vlastní). |
+| `ReadOnly` | `bool` | `false` | Dlaždice jsou inertní. |
+| `OnAddBlock` / `OnAddSection` / `OnDragBlockStart` | callbacky | — | Vložení bloku, vložení sekce, začátek drag & drop. |
+
+### TmEmailTemplateCanvas a TmEmailCanvasBlock
+
+WYSIWYG plátno. Blok nese `[data-tm-block-id]` (wrapper) a `[data-tm-block-body][data-tm-block-kind]`
+(obsah), vybraný blok má `aria-current="true"` a roving tabindex; vnořený blok je `[data-tm-nested-block]`
+a není cílem výběru. Akční lišta je na `(pointer: coarse)` v toku, na desktopu plave nad blokem.
+
+| Parametr (`TmEmailTemplateCanvas`) | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Document` | `EmailTemplateDocument` | `new()` | Vykreslovaný dokument. |
+| `SelectedId` / `SelectedIdChanged` | `string?` | `null` | Vybraný blok (`null` = kořen plátna). |
+| `ReadOnly` | `bool` | `false` | Bez výběru, drag & drop i akční lišty. |
+| `CanvasImageLoading` | `CanvasImageLoading` | `Load` | Načítat obrázky, nebo malovat zástupný rámec. |
+| `DragActive` | `bool` | `false` | Zvýraznit cíle dropu během drag & drop. |
+| `OnDocumentChanged` / `OnDropInColumn` / `OnBlockDragStart` | callbacky | — | Změny dokumentu, drop do sloupce, začátek dragu. |
+
+### TmEmailPropertyPanel
+
+Inspektor vlastností: záložky Obsah / Styl, typované editory (barva, délka, Choice), lokalizované popisky
+polí (od 2.10.0 místo `Humanize` názvu vlastnosti) a `ItemEditingMode`.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Document` | `EmailTemplateDocument` | `new()` | Dokument, jehož blok se edituje. |
+| `SelectedId` | `string?` | `null` | Vybraný blok. |
+| `ReadOnly` | `bool` | `false` | Všechna pole jsou neaktivní. |
+| `ItemEditingMode` | `EmailItemEditingMode` | `Inline` | Inline pole, nebo seznam + dialog. |
+| `Variables` | `IReadOnlyList<TemplateVariableInfo>` | prázdné | Katalog proměnných pro picker. |
+| `OnChanged` / `OnDelete` / `OnDuplicate` / `OnImageUpload` / `ImageUpload` | callbacky / `ImageUploadOptions?` | — | Změna, smazání, duplikace, nahrání obrázku. |
+
+### TmEmailImportDialog / TmEmailExportDialog
+
+Modální dialogy postavené na jádrovém `TmModal` (patička Zrušit/Importovat, Zavřít/Stáhnout, `TmCodeEditor`
+místo holého `<textarea>`). Režim se řídí **oběma** osami: příponou souboru i obsahem vloženého textu.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Show` | `bool` | `false` | Otevřený dialog. |
+| `ImportOptions` (`TmEmailImportDialog`) | `EmailImportOptions?` | `null` | Limity importu; měří se před parsováním. |
+| `Document` (`TmEmailExportDialog`) | `EmailTemplateDocument` | `new()` | Exportovaný dokument (MJML / JSON / HTML). |
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Rozvržení, které editor už vyřešil (na telefonu jádrový sheet). |
+| `OnClose` / `OnImport` | callbacky | — | Zavření, import dokumentu. |
+
+### TmEmailValidationPanel
+
+Nálezy validace jako `<button>` (klávesnicově ovladatelné) s počty podle závažnosti, popisem a skokem na
+místo. `LayoutSeverity.Info` je od 2.10.0 třetí závažnost (první pravidlo: dlouhý preheader > 100 znaků).
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Document` | `EmailTemplateDocument` | `new()` | Validovaný dokument. |
+| `ImportOptions` | `EmailImportOptions?` | `null` | Limity, vůči kterým se validuje. |
+| `OnNavigate` | `EventCallback<string>` | — | Skok na cestu uzlu (`"sections/0/blocks/2"`). |
+
+### TmEmailItemDialog / TmEmailTableCellDialog
+
+Dialogový režim editace položky (seznam, tabulka, klíč–hodnota, HTML atributy) a dialog buňky tabulky.
+Oba pracují nad **kopií**: Save aplikuje kopii jako jeden undo krok, Cancel/Escape/klik mimo nechá dokument
+beze změny a fokus se vrací na tlačítko, které dialog otevřelo.
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Show` | `bool` | `false` | Otevřený dialog. |
+| `Title` / `ChildContent` (`TmEmailItemDialog`) | `string?` / `RenderFragment?` | `null` | Titulek a tělo dialogu. |
+| `PreviewContent` (`TmEmailItemDialog`) | `RenderFragment?` | `null` | Náhled položky nad formulářem. |
+| `Block` (`TmEmailTableCellDialog`) | `EmailTableBlock` | `new()` | Editovaná tabulka. |
+| `RowIndex` / `CellIndex` | `int` | `0` | Editovaná buňka. |
+| `Errors` (`TmEmailItemDialog`) | `IReadOnlyList<string>` | prázdné | Chyby validace zobrazené v dialogu. |
+| `ReadOnly` | `bool` | `false` | Pole jsou neaktivní. |
+| `OnSave` / `OnCancel` | callbacky | — | Potvrzení / zrušení. |
+
+### TmEmailObjectFields a podobory
+
+`TmEmailObjectFields` vykresluje formulář vlastností objektu z reflexe (`Target`, `State`, `Placement`,
+`Primary`, `Exclude`, `Variables`, `ReadOnly`, `OnChanged`) a používá typované podobory:
+`TmEmailListEditor`, `TmEmailTableEditor`, `TmEmailClassesEditor`, `TmEmailKeyValueEditor`,
+`TmEmailHtmlAttributesEditor`, `TmEmailItemList`, `TmEmailVariablePicker`. Každé pole nese
+`[data-tm-prop="<PropertyName>"]`, `[data-tm-field-kind]` a `[data-tm-field-placement]` — na ty se odkazují
+hostitelské testy (popisky jsou lokalizované, ne odvozené z názvu vlastnosti).
+
+### Přehled enumů balíčku
+
+| Enum | Hodnoty | Význam |
+|------|---------|--------|
+| `EmailPreviewDevice` | `Desktop`, `Tablet`, `Mobile` | Zařízení náhledu. |
+| `EmailItemEditingMode` | `Inline`, `Dialog` | Editace položek seznamu/tabulky. |
+| `CanvasImageLoading` | `Load`, `Placeholder` | Načítání obrázků na plátně. |
+| `EmailSaveTrigger` | `Manual`, `Shortcut`, `AutoSave`, `Programmatic` | Co vyvolalo uložení. |
+| `EmailSaveStatus` | `Saved`, `Failed`, `Conflict` | Výsledek uložení hlášený hostitelem. |
+| `EmailPreviewStatus` | `Rendered`, `RenderFailed`, `Unavailable` | Odkud náhled přišel. |
+| `LayoutSeverity` | `Warning = 0`, `Error = 1`, `Info = 2` | Závažnost nálezu (Info je nové v 2.10.0). |
+| `TemplateEscapeMode` | `Html`, `None` | Escapování výstupu výrazů (HTML/MJML tělo vs. subject/preheader/text). |
+
+---
+
+*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP) a Email Templates 2.10.0.*

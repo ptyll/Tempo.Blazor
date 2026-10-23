@@ -47,6 +47,32 @@ public partial class EditorShellE2ETests : WasmTestBase
         return path;
     }
 
+    /// <summary>
+    /// Number of line boxes the label of each sheet tab occupies; every count must be 1, because a
+    /// tab label stays on ONE line (the worst case is the fr "Propriétés" at 320).
+    /// <para>
+    /// Measured with a DOM Range over the tab's text instead of the tab's bounding-box height:
+    /// since U3 (<c>f989453c</c>) a coarse pointer gives <c>.tm-editor-shell__tab</c>
+    /// <c>min-block-size: var(--tm-touch-target)</c> = 44 px, so the element is legitimately taller
+    /// than the one-line label it paints.
+    /// </para>
+    /// </summary>
+    private static Task<int[]> MeasureTabLineCountsAsync(IPage page)
+        => page.EvaluateAsync<int[]>(
+            """
+            () => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")]
+                .map(t => {
+                    const range = document.createRange();
+                    range.selectNodeContents(t);
+                    return range.getClientRects().length;
+                })
+            """);
+
+    /// <summary>Tab heights in CSS px — only ever bounded by the 44 px touch target, never by wrap.</summary>
+    private static Task<double[]> MeasureTabHeightsAsync(IPage page)
+        => page.EvaluateAsync<double[]>(
+            """() => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")].map(t => t.getBoundingClientRect().height)""");
+
     private static async Task<IBrowserContext> CreateTouchContextAsync(int width, int height, string locale = "en-US")
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
@@ -290,8 +316,12 @@ public partial class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator("[data-testid='editor-shell'] .tm-mobile-action-bar__bar")).ToBeVisibleAsync();
         // A tab label stays on ONE line (no mid-word break of the fr "Propriétés").
-        var tabHeights = await page.EvaluateAsync<double[]>("""() => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")].map(t => t.getBoundingClientRect().height)""");
-        Assert.IsTrue(tabHeights.Length == 2 && tabHeights.All(h => h < 40), $"tab labels must not wrap: {string.Join(',', tabHeights)}");
+        var tabLines = await MeasureTabLineCountsAsync(page);
+        Assert.IsTrue(tabLines.Length == 2 && tabLines.All(lines => lines == 1),
+            $"tab labels must not wrap (line boxes per tab): {string.Join(',', tabLines)}");
+        // The coarse-pointer touch target heights the element (44px), so only bound it from above.
+        var tabHeights = await MeasureTabHeightsAsync(page);
+        Assert.IsTrue(tabHeights.All(h => h <= 44.5), $"a tab is at most the 44px touch target tall: {string.Join(',', tabHeights)}");
         await CaptureViewportOnlyAsync(page, "320-mobile-fr");
     }
 
@@ -401,10 +431,11 @@ public partial class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 320, 700);
         RegisterContext(context);
 
-        var heights = await page.EvaluateAsync<double[]>(
-            """() => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")].map(t => t.getBoundingClientRect().height)""");
-        Assert.AreEqual(2, heights.Length);
-        Assert.IsTrue(heights.All(h => h < 40), $"tab labels must not wrap: {string.Join(',', heights)}");
+        var lines = await MeasureTabLineCountsAsync(page);
+        Assert.AreEqual(2, lines.Length);
+        Assert.IsTrue(lines.All(n => n == 1), $"tab labels must not wrap (line boxes per tab): {string.Join(',', lines)}");
+        var heights = await MeasureTabHeightsAsync(page);
+        Assert.IsTrue(heights.All(h => h <= 44.5), $"a tab is at most the 44px touch target tall: {string.Join(',', heights)}");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= 320"));
         await CaptureViewportOnlyAsync(page, "320-mobile-cs");
     }

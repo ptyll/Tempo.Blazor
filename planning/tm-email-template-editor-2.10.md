@@ -1503,3 +1503,218 @@ během `EmailTemplateReferenceShotsE2ETests`.
 | Pickerské hledání nalepené na první skupinu | `email-variable-picker--*.png` | `margin-block-end: var(--tm-space-2)` na `TmSearchInput` pickeru |
 | `EmailEditor_Validation_Subtitle` bez uvozovek kolem „Go to“ | en/cs/sk/fr tabulky | en „Select “Go to” to jump to the spot.“, cs „Tlačítkem „Přejít“…“, sk „Tlačidlom „Prejsť“…“, fr „Utilisez « Aller à »…“ |
 | Render-mode E2E (Server/IA) neresetovaly seed | `EmailTemplateRenderModesE2ETests` | `[TestInitialize]` volá sdílený `EmailTemplateE2ETestBase.ResetEmailStoreCoreAsync` (nově `internal`) |
+
+---
+
+## 8. Fáze 12 — release 2.10.0: dokumentace, balíčky a celá testová sada
+
+Fáze 12 je poslední fáze plánu. Neimplementuje novou funkci: uzavírá kontrakt, dokumentuje ho, sladí
+verze, zabalí balíčky, ověří release gate a **jednou** pustí celou testovou sadu repa (unit testy po
+projektech + celou E2E lane).
+
+### 8.1 Verze a release gate
+
+| kontrola | výsledek |
+|---|---|
+| `git tag --sort=-v:refname` (2026-10-12) | `v2.9.0` — cílová verze `2.10.0` je volná, potvrzeno zadáním plánu (jedno vydání 2.10.0 se vším) |
+| `<Version>` ve všech `src/**/*.csproj` | `2.9.1` → **`2.10.0`** (27 projektů; jediný zdroj pravdy, žádný `Directory.Build.props` version) |
+| `ReleaseContractTests` (csproj vs. první semver hlavička CHANGELOGu) | před fází **RED** (2.9.1 vs. 2.10.0), po synchronizaci **zelené** |
+| základový plán `faf503eb-bf08-4f5f-8c33-08df2362aa32` — F0 | `fze-1-f0-smantick-tokeny-indigo-tma-psn-audit-css-isolation-test-a-rychl-opravy-jdra` — status **Completed**, reviewStage `Finalized`, commit `3189b85a` |
+| — F1 | `fze-2-f1-konvence-kontejneru-dotyku-a-tmlayoutmode` — **Completed**, `Finalized`, `7f5ad9dc` |
+| — F2 | `fze-3-f2-bottom-sheet-mobiln-prezentace-tmmodaltmdialog-a-veejn-focus-trap` — **Completed**, `Finalized`, `dc75a1e4` |
+| — F6 | `fze-6-f6-tmeditorshell-a-tmsidepanel-kritick-pro-release-2100` — **Completed**, `Finalized`, `72a12b6b` |
+| použití primitiv základu v editoru | `TmEditorShell` (`TmEmailTemplateEditor.razor`), `TmLayoutMode` (`LayoutMode`/`InitialMode`/`Breakpoints`), `TmModal.MobilePresentation` (dialogy přes `LayoutMode` shellu); žádný lokální `EmailEditorLayout` ani vlastní sheet — `Feedback/OverlayPanel` jádra |
+| **release gate** | **SPLNĚN** — všechny čtyři fáze základu jsou Completed a jejich primitiva editor používá |
+
+Tag `v2.10.0` ani publikace na NuGet **nebyly provedeny** — vyžadují výslovné potvrzení uživatele
+(hard blocker, plan rule 24). Strom je ve stavu „připraveno k vydání“.
+
+### 8.2 `dotnet pack` a obsah balíčků
+
+Všech **27** projektů z `eng/nuget-packages.txt` zabaleno `-c Release` do `/tmp/pk-2100`
+(`Tempo.Blazor.2.10.0.nupkg` … `Tempo.Blazor.Proofing.LanguageTool.2.10.0.nupkg`). Ověřeno rozbalením
+(`zipfile`, čtení `.nuspec`):
+
+| kontrola | výsledek |
+|---|---|
+| verze všech balíčků | `2.10.0` |
+| **Engine → Abstractions** | `version="[2.10.0]"` — **přesný rozsah**, ne `>=` (carry-forward z F3/F6) |
+| `Tempo.Blazor.EmailTemplates` obsahuje `__tests__` | **ne** (0 záznamů; `tm-email-save-shortcut.js`, `tm-email-variable-insert.js`, `tm-email-panel-focus.js` jsou přibaleny, `__tests__/*.test.mjs` ne) |
+| `Abstractions` závislosti | FluentValidation, Microsoft.Extensions.{DependencyInjection,Localization,Logging}.Abstractions — **žádný Scriban / Mjml.Net / AngleSharp** |
+| README v každém z e-mailových balíčků | ano (`README.md`) |
+| XML doc | ano (`lib/net10.0/*.xml` u všech tří) |
+| JSON lokalizace | `content/Resources/TmEmailResources{,.cs,.sk,.fr}.json` + `contentFiles/any/net10.0/…` v `Tempo.Blazor.EmailTemplates` |
+
+**Nový packaging test** (carry-forward F3/F6): `PackageBoundaryTests.PackedEngineNuspec_PinsAbstractionsToTheExactVersion`
+(`tests/Tempo.Blazor.EmailTemplates.Engine.Tests`) projekt skutečně zabalí a čte `.nuspec` — zdrojová
+kontrola csproj nestačí, protože NuGet `Version` metadata na `ProjectReference` ignoruje.
+**Červená fáze doložena:** s dočasně vypnutým targetem `PinAbstractionsToTheExactVersion`
+(`AfterTargets` změněn) test spadl na
+`Expected dependencies["Tempo.Blazor.EmailTemplates.Abstractions"] to be "[2.10.0]" … but "2.10.0" … differs near "2.1" (index 0)`;
+po obnovení targetu zelený (15/15 v `PackageBoundaryTests`).
+
+### 8.3 TmNavigationGuard — poslední natvrdo anglické texty v jádru (carry-forward z F11)
+
+`TmNavigationGuard` (jádro) měl výchozí texty dialogu jako anglické konstanty na parametrech
+(`ConfirmTitle = "Unsaved changes"`, …), takže aplikace v cs/sk/fr bez explicitních parametrů zobrazila
+angličtinu. Fáze 11 lokalizovala jen odpovědi dema.
+
+**Oprava (aditivní, `string?` s null default):** `ConfirmTitle ?? Loc["TmNavigationGuard_ConfirmTitle"]`,
+`ConfirmMessage ?? …_ConfirmMessage`, `ConfirmLeaveText ?? …_Leave`, `CancelText ?? …_Stay`,
+`SaveAndLeaveText ?? …_SaveAndLeave`. Klíče přidány do všech čtyř `TmResources*.json` a do
+`MockTmLocalizer` (anglická i česká mapa); anglické texty jsou **bajtově shodné** s původními defaulty,
+takže E2E, které hledá dialog podle viditelného textu („Leave“, „Stay“, „Save and leave“), zůstává platné.
+
+**Červená fáze doložena** (`TmNavigationGuardLocalizationTests`, 6 testů, 3 selhaly před opravou):
+
+- `Defaults_ComeFromTheConfiguredCulture_NotFromHardcodedEnglish`:
+  `Expected .tm-dialog-title to be "Neuložené změny" … ↓ (actual) "Unsaved changes"`
+- `Defaults_ResolveWhenTheHostPassesNull_AndNotTheKey`:
+  `Bunit.ElementNotFoundException : No elements were found that matches the selector '.tm-dialog-title'`
+- `SaveAndLeaveText_ResolvesFromTheCzechResources`:
+  `Expected … to be equal to {"Zůstat", "Uložit a odejít", "Odejít"}, but {"Stay", "Save and leave", "Leave"} differs at index 0`
+
+Po opravě 6/6 zelených (spolu s `TmResourceCompletenessTests` 34/34 v daném filtru).
+
+### 8.4 Celá testová sada repa (unit testy po projektech)
+
+Spuštěno po jednom projektu (nikdy celá solution paralelně, kvůli OOM), `LANG/LC_ALL=en_US.UTF-8`,
+`-v:q`, TRX do `/tmp/tr-2100`:
+
+| projekt | výsledek |
+|---|---|
+| Tempo.Blazor.EmailTemplates.Abstractions.Tests | **469/469** |
+| Tempo.Blazor.EmailTemplates.Engine.Tests | **496/496** |
+| Tempo.Blazor.EmailTemplates.Tests | **1246/1246** |
+| Tempo.Blazor.FluentValidation.Tests | **44/44** |
+| Tempo.Blazor.DocumentFormats.Tests | **365/365** |
+| Tempo.Blazor.Reporting.Tests | **29/29** |
+| Tempo.Reporting.Abstractions.Tests | **37/37** |
+| Tempo.Reporting.Engine.Tests | **94/94** |
+| Tempo.Blazor.Demo.Api.Tests | **237/237** |
+| Tempo.Blazor.Mcp.Tests | **410/410** |
+| Tempo.ReportServer.Api.Tests | **185/185** (+1 přeskočený) |
+| Tempo.ReportServer.Web.Tests | **102/102** |
+| Tempo.Blazor.Tests | **12706/12720** — 13 failů, 1 přeskočený |
+
+**13 failů v `Tempo.Blazor.Tests` = PŘEDEXISTUJÍCÍ, ne z tohoto plánu.** Všechny jsou
+`DataTable.Snapshots.DefaultMarkupSnapshotTests.DefaultMarkup_MatchesGoldenSnapshot` s datovými řádky
+`dt-basic`, `dt-paged`, `dt-selectable`, `dt-virtualized`, `dt-grouping`, `dt-cardmode`, `dt-export`,
+`dt-filters`, `dt-viewmanager`, `mvl-card`, `mvl-list`, `mvl-table`, `mvl-grouped`
+(zpráva: „default markup … drifted from the pre-redesign snapshot“).
+
+**Důkaz, že jsou pre-existující:** `git worktree add --detach tmp/wt-head HEAD` (HEAD `d331b5ef`, tj. stav
+**před** necommitovanými změnami této fáze) a stejný filtr:
+
+```text
+cd tmp/wt-head && dotnet test tests/Tempo.Blazor.Tests/Tempo.Blazor.Tests.csproj \
+    --filter "FullyQualifiedName~DefaultMarkupSnapshotTests"
+→ Failed!  - Failed: 13, Passed: 3, Skipped: 0, Total: 16
+```
+
+Tedy stejných 13 scénářů padá i bez jediné změny této fáze. Patří plánu DataTable (golden snapshoty
+z redesignu), ne e-mailovému plánu, a **podle zadání se cizí kód neopravuje** — zapsáno jako remaining.
+
+Dvě položky, které F11 hlásila jako červené, jsou po této fázi zelené: `ReleaseContractTests` (opraveno
+synchronizací verze na 2.10.0) a `PluralAdoptionTests` / `CultureAssignmentGuardTests` (v době běhu F12 už
+neselhaly — počet failů klesl z F11 hlášených 16 na 13, všechny zbývající jsou DataTable snapshoty).
+
+### 8.5 Celá E2E sada
+
+`scripts/run-e2e-full.ps1` vyžaduje `pwsh`, který na tomto stroji **není**; proto byl použitý stejný
+příkaz, který skript spouští, jen bez PowerShellu (docs/e2e-test-lanes.md, sekce „Full lane“):
+
+```bash
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 TM_E2E_TRACE_ON_FAILURE=false \
+dotnet test tests/Tempo.Blazor.E2E/Tempo.Blazor.E2E.csproj \
+  --logger "trx;LogFileName=e2e-full.trx" --logger "console;verbosity=minimal" \
+  --results-directory /tmp/tr-2100
+```
+
+Běží se **jednou, bez filtru** — celá sada (assembly je `[assembly: DoNotParallelize]`, takže sada je
+seriální; demo aplikace si testy self-hostují samy). Výsledek: **viz 8.6**.
+
+### 8.6 Výsledek celé E2E sady
+
+**Výsledek běhu:** `Failed: 27, Passed: 2036, Skipped: 92, Total: 2155, Duration: 9 h 9 m`
+(start 2026-10-22T19:11:24Z, end 2026-10-23T04:20:54Z; `TestResults/host-restarts.jsonl` **nepřibyl** —
+žádná resurrection hostů, 7 řádků v souboru je historie z 2026-10-07/08).
+
+#### 8.6.1 Klasifikace 27 failů (izolovaný běh + srovnání s pre-plan baseline `11ae3552`)
+
+Každý fail byl znovu spuštěn **izolovaně** (samostatný `dotnet test --filter`, self-hostované demo apps)
+na stromě této fáze; ty, které padly i izolovaně, byly spuštěny na **`tmp/wt-head`** = `git worktree
+add --detach tmp/wt-head HEAD` (`d331b5ef`, strom **bez** necommitovaných změn fáze 12).
+
+> **Oprava baseline (release review F12):** `d331b5ef` je poslední commit plánu, takže obsahuje
+> **všechny** commity plánu i souběžných prací — mimo jiné U3 `f989453c`. „Padá i na HEAD“ proto
+> dokazuje jen „není to z necommitovaných změn fáze 12“, **ne** „není to regrese plánu“. Skutečný
+> pre-plan baseline je `11ae3552` (merge `origin/main` před plánem):
+> `git worktree add --detach /tmp/wt-base 11ae3552`. Proti němu byly v release review znovu ověřeny
+> U18, U19 a U20 (viz tabulka níže).
+
+| # | test | izolovaně na této fázi | na HEAD | na 11ae3552 (pre-plan) | klasifikace |
+|---|---|---|---|---|---|
+| 1 | `EmailTemplateF11DemoE2ETests.F11_4_LeaveGuard_SavesThePendingEdit_AndThenLeaves` | **PASS** | — | — | **flaky při zátěži** (timeout navigace, ne aserce) |
+| 2 | `EmailTemplateReferenceShotsE2ETests.ReferenceShots_Tablet1024` | **PASS** | — | — | **flaky při zátěži** (klik blokován překryvem) |
+| 3 | `EmailTemplatesE2ETests.E11_8_FullSendFlow_DeliversSubstitutedEmail` | **PASS** | — | — | **flaky při zátěži** (timeout na `[data-tm-send-success]`) |
+| 4 | `DocumentEditorHeadlessExportParityE2ETests.BrowserAndServerExports_AgreeOnPaginationAndTextLayer_AndOpenInTmPdfViewer` | PASS | — | — | **flaky při zátěži** (dokumentovaný env fail — fontconfig) |
+| 5 | `DocumentEditorLegalFilingE2ETests.LegalFiling_RendersLineNumbersAndCaseFileHeader` | PASS | — | — | **flaky při zátěži** |
+| 6 | `DocumentEditorLocalizationE2ETests.CultureSwitch_RendersEditorToolbarInCzechAndEnglish` | PASS | — | — | **flaky při zátěži** |
+| 7 | `DocumentEditorPageBreakE2ETests.Phase6_PageBreakContextMenu_DeleteRestoresPaginationAndPersists` | PASS | — | — | **flaky při zátěži** |
+| 8 | `SpreadsheetE2ETests.CanvasJsEngine_KeyboardNavigationKeepsGridFocusAndUpdatesAccessibilityState` | PASS | — | — | **flaky při zátěži** |
+| 9 | `WireframeEditorE2ETests.DeletePage_RemovesTab` | PASS | — | — | **flaky při zátěži** |
+| 10 | `WireframeEditorE2ETests.DeleteSelectedElement_RemovesIt` | PASS | — | — | **flaky při zátěži** |
+| 11 | `WireframeEditorE2ETests.SelectElement_PropertiesPanelShowsFields` | PASS | — | — | **flaky při zátěži** |
+| 12 | `RelativeTimeE2ETests.Timeline_English_ShowsHoursAgo_NotARawKey` | PASS | — | — | **flaky při zátěži** |
+| 13 | `RelativeTimeE2ETests.Timeline_Czech_And_French_UseTheirOwnWords` | PASS | — | — | **flaky při zátěži** |
+| 14 | `Feedback.SheetRound4E2ETests.ViewManager_CreateModal_OpensOnThatInstanceNameField(390,2)` | PASS (390,2) | — | — | **flaky při zátěži** (řádky 1440/390,0 prošly i v plném běhu) |
+| 15 | `DocumentEditorPageSearchE2ETests.PageSearch_Enter_NavigatesToPage` | PASS (1×) | PASS | — | **flaky** (stav/pořadí; 2× fail, 2× pass) |
+| 16 | `DashboardF6SelectorE2ETests.Selector_Desktop1440_SidebarFilter_AddedState_AndKeyboardOnly` | FAIL | **FAIL** | — | **předexitující** — aserce `'Added (1)'` vs `Přidáno` |
+| 17 | `DashboardF6SelectorE2ETests.Selector_Mobile390_Sheet_ChipFilter` | FAIL | **FAIL** | — | **předexitující** — timeout na `Hotovo` |
+| 18 | `EditorShellE2ETests.Demo_320_Mobile_NoHorizontalOverflow` | FAIL | FAIL | **PASS** | **regrese testu z U3 — opraveno ve F12** — U3 `f989453c` dal na `(pointer: coarse)` tabům `min-block-size: var(--tm-touch-target)` = 44 px, test ale assertoval výšku `< 40` („tab labels must not wrap: 44,44“); F12 měří zalomení textu (`document.createRange().getClientRects().length == 1`) a výšku už jen shora (≤ 44,5 px) |
+| 19 | `EditorShellE2ETests.Demo_320_Czech_TabLabelsStayOnOneLine` | FAIL | FAIL | **PASS** | **regrese testu z U3 — opraveno ve F12** — stejná aserce výšky tabu, stejná oprava (měření zalomení + strop 44,5 px) |
+| 20 | `EditorShellE2ETests.Demo_390_SwipeClose_DoesNotStealFocusFromAnActionBarButton_ButEscapeReturnsItToTheToggle` | FAIL | FAIL | **FAIL** | **předexitující — ověřeno i na pre-plan baseline**: stejná `PlaywrightException: Execution context was destroyed, most likely because of a navigation` při `sheet.Locator('.tm-sheet__handle').EvaluateAsync` na HEAD i na `11ae3552`, takže to není regrese U3 ani plánu; oprava patří vlastníkovi `TmDrawer`/swipe-close, ne tomuto plánu |
+| 21 | `ModelingPerformanceM26E2ETests.ModelingEditor_LcpStaysUnderBudget` | FAIL | **FAIL** | — | **předexitující** — performance budget |
+| 22 | `ModelingPerformanceM26E2ETests.LargeModel_LoadAndGenerateStayWithinBudgets` | FAIL | **FAIL** | — | **předexitující** — 4202 ms vs limit 3000 ms |
+| 23 | `ModelingPerformanceM26E2ETests.LargeSurfaces_ScrollWithoutJank` | FAIL | **FAIL** | — | **předexitující** |
+| 24 | `ModelingPerformanceM26E2ETests.NotationSwitch_RepaintsTreeUnderBudget` | FAIL | **FAIL** | — | **předexitující** |
+| 25 | `OverlayMobilePresentationE2ETests.DatePicker_At390_InModalSheet_OpensNestedSheet` | FAIL | **FAIL** | — | **předexitující** — „modal must survive the calendar's Escape“ |
+| 26 | `OverlayRound2FixE2ETests.NestedSheet_FromPromotedModal_PaintsAboveTheModal` | FAIL | **FAIL** | — | **předexitující** |
+| 27 | `UserTimeZoneServerE2ETests.UserTimeZone_Server_FormatsInTheBrowserZone` | FAIL | **FAIL** | — | **předexitující** |
+
+**Závěr (po release review):** z 27 failů je **10 předexitujících** (padají i na pre-plan baseline
+`11ae3552`, všechny mimo e-mailové balíčky) a **15 flaky při zátěži** plného běhu (izolovaně zelené).
+**Dva faily (U18, U19) byly regrese testu z U3** — U3 `f989453c` (schválené uživatelem) dal tabům na
+`(pointer: coarse)` `min-block-size: var(--tm-touch-target)` = 44 px, zatímco oba testy assertovaly
+výšku `< 40`; ve F12 jsou opravené (měří se zalomení textu přes `Range.getClientRects().length == 1`,
+výška se jen shora omezuje na ≤ 44,5 px) a na `11ae3552` procházejí. **Žádný fail tedy není regrese
+e-mailového kódu plánu** — tři e-mailové specy (F11_4 leave guard, ReferenceShots_Tablet1024,
+E11_8 send flow), tedy jediné, které
+procházejí kódem změněným v této fázi, jsou izolovaně **zelené**; F11_4 navíc cvičí právě
+`TmNavigationGuard` s „Save and leave“, takže lokalizace jeho textů cestu ne rozbila.
+
+Všech 10 předexitujících failů je mimo e-mailové balíčky (Dashboard selector, `EditorShellE2ETests` U20 —
+swipe-close padá i na `11ae3552`, modeling
+performance, overlay sheets, user time zone) — podle zadání se cizí kód neopravuje, zapsáno jako remaining.
+
+**Re-run třídy `EditorShellE2ETests` po opravě** (`--filter FullyQualifiedName~EditorShellE2ETests`, 42
+testů, self-hostované demo apps): **41/42** — U18 i U19 zelené, jediný fail zůstává U20
+`Demo_390_SwipeClose…`, který padá i na `11ae3552`.
+
+**E-mailová lane znovu celá** (filtr `EmailTemplate|EmailEditor|EmailWorkspace`, 113 testů, stejný
+příkaz jako F11):
+
+| běh | výsledek | poznámka |
+|---|---|---|
+| 1 | 105/113 | 6× `Timeout 60000ms exceeded` (host readiness — `F5_1`, `F11_5`, `F11_7`, `Tablet_1024`, `Drop_ButtonBlock`, `Dark_mode_keeps_the_paper_white`) + 1× `net::ERR_NETWORK_CHANGED` (`F11_6`) + `F11_3` (čekal `.tm-modal--sheet`, našel 0) — **kontaminace ze stale hostů** předchozích izolovaných běhů (přesně ten stav, před kterým varuje docs/e2e-test-lanes.md); `TestResults/host-restarts.jsonl` přitom nevzrostl |
+| 2 (čistý, po `rm -rf tests/Tempo.Blazor.E2E/TestResults`) | **113/113** | 23:36 — celá e-mailová lane zelená se změnami této fáze (včetně `F11_4` leave guard, `F11_5`, `F5_1`, `F11_3`) |
+
+Tím je splněn i požadavek F10/F11 „před uzavřením F12 znovu spustit celý email lane“ — a to dvakrát
+(plný běh sady 2036/2155 a čistý lane běh 113/113).
+
+**Poznámka k artefaktům:** plný běh přegeneroval 339 trackovaných PNG v `__screenshots__/` (a 3 v
+`screenshots/`) — jsou to **nestabilní artefakty** (obsahují náhodná GUID a relativní časy; ověřeno
+porovnáním `08-send-form.png` mezi HEAD a během: jediný rozdíl je náhodné GUID příjemce, layout je
+identický). Fáze 12 nemění UI, takže byly vráceny (`git checkout --`), aby diff neobsahoval 339 binárních
+souborů; kdo je chce aktualizovat, ať tak učiní samostatným commitem z vlastního běhu.

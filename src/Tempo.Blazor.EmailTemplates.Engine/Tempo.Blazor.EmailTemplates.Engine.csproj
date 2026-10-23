@@ -10,7 +10,7 @@
     <!-- NuGet Package Metadata -->
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.EmailTemplates.Engine</PackageId>
-    <Version>2.9.1</Version>
+    <Version>2.10.0</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.EmailTemplates.Engine</Title>
     <Description>Local render engine for the Tempo.Blazor email template editor: the sandboxed Scriban template engine (member policy, escaping, audit, limits), the Mjml.Net compiler, the AngleSharp HTML sanitizer, the render pipeline and the local preview renderer. Reference this package on the server (or anywhere a local render is acceptable); the editor itself (Tempo.Blazor.EmailTemplates) runs without it, e.g. in Blazor WebAssembly with a server-side IEmailPreviewRenderer.</Description>

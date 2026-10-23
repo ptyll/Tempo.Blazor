@@ -10,7 +10,7 @@
     <!-- NuGet Package Metadata -->
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.EmailTemplates.Abstractions</PackageId>
-    <Version>2.9.1</Version>
+    <Version>2.10.0</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.EmailTemplates.Abstractions</Title>
     <Description>Logic and contracts for the Tempo.Blazor email template editor: block model, MJML generation and import, template/validation/preview contracts, variable extraction, DTOs and validators. No Blazor dependency, no Scriban/Mjml.Net/AngleSharp dependency (the local engine ships separately as Tempo.Blazor.EmailTemplates.Engine) – safe to reference from API/service projects and usable from Blazor WebAssembly.</Description>

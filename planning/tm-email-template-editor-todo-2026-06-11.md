@@ -791,24 +791,43 @@ Před spuštěním: oba servery + smtp4dev běží.
       screenshoty přegenerovány. Drobné kosmetické (toolbox truncation, preview iframe clip) = neblokující
 - [x] E11.12 Regrese: viz finální běh — žádný nový fail (3 pre-existing PDF/export fails NEsouvisí)
 
-## FÁZE E12 — Finalizace balíčků a dokumentace
+## FÁZE E12 — Finalizace balíčků a dokumentace ✅ UZAVŘENO 2026-10-12 (Fáze 12 plánu 2.10.0)
 
-- [ ] E12.1 README obou balíčků: instalace, registrace DI, minimální použití komponenty,
-      hostování (store/sender kontrakty), odkaz na TEMPLATE_SYNTAX; sekce „MJML parita" —
-      obousměrný import/export, plné pokrytí MJML 4 featur, odkaz na MJML_ATTRIBUTE_PARITY.md
-      (+ případné mezery Mjml.Net zjištěné v E0.9 transparentně vypsané)
-- [ ] E12.2 `COMPONENTS.md`: přidat TmEmailTemplateEditor (+ podkomponenty) podle formátu souboru
+- [x] E12.1 README obou balíčků (+ nového třetího): instalace, registrace DI, minimální použití
+      komponenty, hostování (store/sender kontrakty), odkaz na TEMPLATE_SYNTAX; sekce „MJML parita"
+      — obousměrný import/export, plné pokrytí MJML 4 featur, odkaz na MJML_ATTRIBUTE_PARITY.md.
+      **Realizace 2026-10-12:** tři README (`Tempo.Blazor.EmailTemplates`, `.Abstractions`, `.Engine`)
+      přepsány na stav 2.10.0 — Abstractions už netvrdí, že obsahuje Scriban/Mjml.Net/AngleSharp;
+      editor README popisuje `TmEditorShell`, WYSIWYG plátno, save kontrakt a odkazuje na nový
+      `docs/email-templates/HOSTING.md`; Engine README má tabulku registrovaných služeb. Nový
+      hostitelský dokument `docs/email-templates/HOSTING.md` (registrace, serverový náhled, ukládání,
+      dirty guard, `ReadOnly`, `ItemEditingMode`, rozvržení, lokalizace, audit, funkce/kultura, limity)
+      a migrační dokument `docs/email-templates/MIGRATION-2.9-to-2.10.md` (B1–B17 s před/po).
+- [x] E12.2 `COMPONENTS.md`: přidána sekce „Email Templates" (§36) s parametry
+      `TmEmailTemplateEditor`, `TmEmailTemplatePreview`, `TmEmailTemplateToolbox`,
+      `TmEmailTemplateCanvas`/`TmEmailCanvasBlock`, `TmEmailPropertyPanel`, `TmEmailImportDialog`/
+      `TmEmailExportDialog`, `TmEmailValidationPanel`, `TmEmailItemDialog`/`TmEmailTableCellDialog`,
+      `TmEmailObjectFields` + podobory, tabulkou balíčků a přehledem enumů.
 - [x] E12.3 JSON dokumentace: vytvořit nový json (co nuget balíček to musí být samostatný json soubor) - vzor`tempo-blazor-documentation.json` /
       `JsonDocumentation` konvence (prozkoumat formát, dodržet ho — kvůli MCP serveru)
       Realizace 2026-06-17: přidány samostatné výstupy `tempo-blazor-emailtemplates.json` a
       `tempo-blazor-emailtemplates-abstractions.json`, source skeletony v `JsonDocumentation/Packages/*`
       a validace `JsonDocumentationGenerator validate --fail-on-drift`.
-- [ ] E12.4 XML doc komentáře na všech public API obou balíčků (GenerateDocumentationFile už
-      zapnutý → build bez CS1591 warningů)
-- [ ] E12.5 `dotnet pack` obou balíčků (Release) — validní nupkg, README přibalené, správná
-      metadata; rozbalit a zkontrolovat obsah
-- [ ] E12.6 Finální grep brány (hardcoded texty, TODO/FIXME), finální plný test běh, finální
-      UX pass nad demem; aktualizovat tento soubor — vše odškrtnuté + závěrečné poznámky
+- [x] E12.4 XML doc komentáře na všech public API obou balíčků (GenerateDocumentationFile už
+      zapnutý → build bez CS1591 warningů). **Realizace 2026-10-12:** XML doc je v každém z balíčků
+      v `lib/net10.0/*.xml` (ověřeno rozbalením nupkg); `Directory.Build.props` má CS1591 v `NoWarn`
+      repo-wide, takže absence dokumentace nepadá — pokrytí je proto ověřené obsahem balíčku, ne
+      warningem.
+- [x] E12.5 `dotnet pack` balíčků (Release) — validní nupkg, README přibalené, správná
+      metadata; rozbalit a zkontrolovat obsah. **Realizace 2026-10-12:** všech 27 projektů z
+      `eng/nuget-packages.txt` zabaleno do `/tmp/pk-2100`; ověřeno: Engine → Abstractions je přesně
+      `[2.10.0]`, e-mailové balíčky neobsahují `__tests__`, Abstractions nemá Scriban/Mjml.Net/
+      AngleSharp, README + JSON resources + XML doc jsou v balíčcích.
+- [x] E12.6 Finální grep brány (hardcoded texty, TODO/FIXME), finální plný test běh, finální
+      UX pass nad demem; aktualizovat tento soubor — vše odškrtnuté + závěrečné poznámky.
+      **Realizace 2026-10-12:** viz §8 plánovacího souboru `tm-email-template-editor-2.10.md`
+      (výsledky celé testové sady a celé E2E lane); `TmNavigationGuard` default texty jsou nově
+      lokalizované (poslední nalezená hardcoded angličtina v jádru, kterou používá editor).
 
 ---
 

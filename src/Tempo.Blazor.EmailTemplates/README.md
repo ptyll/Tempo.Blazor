@@ -5,13 +5,20 @@ Built entirely on Tempo.Blazor components — no MudBlazor or Syncfusion depende
 
 ## Features
 
-- **`TmEmailTemplateEditor`** — three-panel editor (toolbox · canvas · properties).
-- **Full MJML 4 parity** — every block, every attribute, the complete `<mj-head>` section.
-- **Bidirectional MJML** — import existing MJML templates and export back losslessly.
-- **Scriban variables** — variable picker, live preview, sample-data generation.
-- **Live preview** — sandboxed desktop / mobile preview with plain-text view.
-- Save contract (host-reported outcome, dirty state, single-flight, `ReadOnly`), grouped command bar
-  with host slots, save-status badge, undo/redo, copy/paste, autosave, keyboard shortcuts
+- **`TmEmailTemplateEditor`** — a responsive editor built on the core `TmEditorShell`: docked
+  palette + inspector on desktop and tablet, a bottom sheet (or a tablist) on a phone. Layout follows the
+  container (`LayoutMode="Auto"`) or is pinned for tests and screenshots.
+- **WYSIWYG canvas** — the canvas paints the e-mail itself (typography, colours, images, tables, buttons),
+  not a list of block types, and the action bar of the selected block is in flow on a touch device.
+- **Full MJML 4 parity** — every block, every attribute, the complete `<mj-head>` section;
+  bidirectional import/export.
+- **Scriban variables** — a variable picker with host-supplied descriptions and groups, sample-data
+  generation, and a sandboxed engine with per-pass HTML escaping, limits and an audit trail.
+- **Live preview** — sandboxed desktop / tablet / mobile preview with a plain-text view, rendered through a
+  replaceable `IEmailPreviewRenderer` (so a WASM host previews through its server).
+- **Save contract** — the host reports the outcome (`EmailSaveResult`), dirty state, single-flight saving,
+  autosave as a trigger, conflict handling, `ReadOnly`, and a public `SaveAsync()` for a leave guard.
+- Grouped command bar with host slots, save-status badge, undo/redo, copy/paste, keyboard shortcuts
   (incl. Ctrl/⌘+S), localization (EN/CS/SK/FR) and design-token theming.
 
 ## Installation
@@ -23,9 +30,19 @@ dotnet add package Tempo.Blazor.EmailTemplates
 ## Registration
 
 ```csharp
-services.AddTempoEmailTemplateEditor();   // the editor UI (no render engine needed)
-services.AddTempoEmailTemplateEngine();   // optional: local MJML renderer/validator (Engine package)
+// the editor UI — no template engine, so this works in Blazor WebAssembly
+services.AddTempoEmailTemplateEditor();
+
+// in the process that renders (API / worker): the Engine package
+services.AddTempoEmailTemplateEngine();
+
+// in a process that does NOT render locally: supply the seam yourself
+services.AddScoped<IEmailPreviewRenderer, MyApiPreviewRenderer>();
 ```
+
+`AddTempoEmailTemplates()` still compiles but is `[Obsolete]` and no longer registers the engine.
+The full story — preview seam, save contract, dirty guard, `ReadOnly`, `ItemEditingMode`, layout
+parameters, localization replacement, audit sink, limits — is in **`docs/email-templates/HOSTING.md`**.
 
 ## Usage
 
@@ -125,4 +142,17 @@ groups are private `RenderFragment`s inside the editor (`HistoryGroup`, `ReviewG
 `HelpGroup`, `SaveButton`, `SaveBadge`), so a later phase can move them into an overflow menu or a mobile
 action bar without breaking a host or a test.
 
-> Quick-start and full API docs are filled in as the package matures (see the implementation plan).
+## Documentation
+
+- `docs/email-templates/HOSTING.md` — hosting, registration, preview, saving, layout, localization, limits
+- `docs/email-templates/TEMPLATE_SYNTAX.md` — the template language, escaping and URL policy
+- `docs/email-templates/MIGRATION-2.9-to-2.10.md` — every breaking change with a before/after
+- `docs/email-templates/MJML_ATTRIBUTE_PARITY.md` — the MJML 4 attribute table
+
+## Static assets
+
+The package ships three ES modules under `_content/Tempo.Blazor.EmailTemplates/`:
+`tm-email-save-shortcut.js` (cancels the browser's Save-page default for Ctrl/⌘+S, one listener per
+editor), `tm-email-variable-insert.js` (caret insertion for the variable picker) and
+`tm-email-panel-focus.js` (focus recovery after a host-owned rail button unmounts). No `<script>` tag is
+needed — they are imported on demand.

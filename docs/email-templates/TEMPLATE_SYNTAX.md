@@ -8,6 +8,10 @@ reflection is not exposed, and loops/recursion/output/time are bounded.
 > Variable access is **snake_case**. A C# property `FirstName` (or a JSON field `firstName`) is
 > referenced as `{{ first_name }}`.
 
+Related documents: [HOSTING.md](HOSTING.md) (how the engine is registered, the sandbox limits as
+configuration, the audit sink) and [MIGRATION-2.9-to-2.10.md](MIGRATION-2.9-to-2.10.md) (every breaking
+change of 2.10.0 with a before/after).
+
 ---
 
 ## Variables
@@ -302,11 +306,22 @@ wraps the block in `{{ if <expr> }} … {{ end }}`, so it only renders when the 
 | `LoopLimit` | 5000 | Aborts runaway / infinite loops |
 | `RecursiveLimit` | 100 | Aborts infinite recursion |
 | `MaxOutputLength` | 5,000,000 | Caps rendered output size |
+| `LimitToString` | 1,048,576 | Caps a single `object → string` conversion |
+| `ObjectRecursionLimit` | 20 | Caps the depth of that conversion |
 | `Timeout` | 5 s | Cooperative wall-clock limit |
+| `RegexTimeOut` | 1 s | Caps a single `regex` filter call (catastrophic backtracking) |
 | `StrictVariables` | false | Undefined variable → error when true |
+| `FunctionNamespaces` | empty | Extra namespaces a template may call (host providers) |
+
+Every limit is validated when the engine is constructed and at `AddTempoEmailTemplateEngine`: a zero or
+negative value (which Scriban reads as "unlimited") throws `ArgumentOutOfRangeException` instead of
+silently disabling the guard.
 
 `include` is always disabled (no template loader is configured) and no .NET types/reflection are
-reachable from a template.
+reachable from a template. A refused operation is a **render error** (not an empty string) and is
+reported to every `ITemplateSecurityAuditSink` as `TemplateSecurityEventKind.BlockedMember` /
+`BlockedNamespace` / `BlockedFunction` / `BlockedUrlScheme` / `LimitExceeded` / `Timeout` — see
+[HOSTING.md](HOSTING.md) §9.
 
 ---
 
@@ -322,3 +337,10 @@ after:   {{ description }}                                → &lt;b&gt;Hi&lt;/b&
 
 Use `html.trusted` only for values your application produced as trusted HTML; a plain text field must
 stay without the filter.
+
+The second half of the same change is the **raw block (B17)**: a `mj-raw` block is an opt-in to raw
+*markup*, not to markup that *runs*. `script`, `iframe`, `frame`, `frameset`, `object`, `embed`, `applet`,
+`base`, `form` and `portal` are always removed (a raw-text element together with its content), with a
+`RenderKeys.UnsafeElementRemoved` warning and a `BlockedMember` audit event, and links outside the URL
+allow-list are replaced with `#` (`RenderKeys.BlockedUrlScheme`). Interactive content belongs on a hosted
+page, linked from the e-mail.

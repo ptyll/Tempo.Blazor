@@ -2,7 +2,7 @@
   "itemName": "TmNavigationGuard",
   "kind": "Component",
   "category": "Navigation",
-  "description": "Guards a form or working area against losing unsaved changes. Registers a router LocationChanging handler so internal navigation while dirty shows a TmDialog confirmation instead of navigating away silently, and optionally arms a browser beforeunload prompt for tab close/refresh. Does not manage locks or working copies itself — it only gates navigation. While a Save-and-leave callback is in flight the dialog is fully inert: its buttons disable, CloseOnEscape drops to false, and the result handler early-returns, so the save cannot be orphaned from the surface it reports through.",
+  "description": "Guards a form or working area against losing unsaved changes. Registers a router LocationChanging handler so internal navigation while dirty shows a TmDialog confirmation instead of navigating away silently, and optionally arms a browser beforeunload prompt for tab close/refresh. Does not manage locks or working copies itself — it only gates navigation. Its dialog texts resolve from the application localization (`TmNavigationGuard_ConfirmTitle`, `_ConfirmMessage`, `_Leave`, `_Stay`, `_SaveAndLeave`) since 2.10.0, so an app that passes nothing still shows its own language; every text parameter is `string?` and overrides the resource value. While a Save-and-leave callback is in flight the dialog is fully inert: its buttons disable, CloseOnEscape drops to false, and the result handler early-returns, so the save cannot be orphaned from the surface it reports through.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
   ],
@@ -29,31 +29,27 @@
     },
     {
       "name": "ConfirmTitle",
-      "type": "string",
+      "type": "string?",
       "isRequired": false,
-      "default": "Unsaved changes",
-      "description": "Title shown in the leave-confirmation dialog."
+      "description": "Title shown in the leave-confirmation dialog. When null (the default) the localized `TmNavigationGuard_ConfirmTitle` text is used, so the dialog follows the application's culture without the host passing anything."
     },
     {
       "name": "ConfirmMessage",
-      "type": "string",
+      "type": "string?",
       "isRequired": false,
-      "default": "You have unsaved changes. If you leave now, they will be lost.",
-      "description": "Message shown in the leave-confirmation dialog."
+      "description": "Message shown in the leave-confirmation dialog. When null (the default) the localized `TmNavigationGuard_ConfirmMessage` text is used."
     },
     {
       "name": "ConfirmLeaveText",
-      "type": "string",
+      "type": "string?",
       "isRequired": false,
-      "default": "Leave",
-      "description": "Text for the button that confirms leaving (discarding unsaved work)."
+      "description": "Text for the button that confirms leaving (discarding unsaved work). When null (the default) the localized `TmNavigationGuard_Leave` text is used."
     },
     {
       "name": "CancelText",
-      "type": "string",
+      "type": "string?",
       "isRequired": false,
-      "default": "Stay",
-      "description": "Text for the button that cancels navigation and stays on the page."
+      "description": "Text for the button that cancels navigation and stays on the page. When null (the default) the localized `TmNavigationGuard_Stay` text is used."
     },
     {
       "name": "BeforeUnloadPrompt",
@@ -94,10 +90,9 @@
     },
     {
       "name": "SaveAndLeaveText",
-      "type": "string",
+      "type": "string?",
       "isRequired": false,
-      "default": "Save and leave",
-      "description": "Text of the third button. Rendered only when OnSaveAndLeave is set."
+      "description": "Text of the third button. Rendered only when `OnSaveAndLeave` is set. When null (the default) the localized `TmNavigationGuard_SaveAndLeave` text is used."
     }
   ],
   "cssClasses": [],

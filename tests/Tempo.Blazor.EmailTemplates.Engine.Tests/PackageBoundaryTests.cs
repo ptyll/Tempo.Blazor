@@ -69,6 +69,66 @@ public class PackageBoundaryTests
             e.Name.LocalName == "ProjectVersion" && e.Value.Contains("[$(Version)]", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// The exact pin exists in the csproj (previous test) — this one reads the artefact the pin is FOR.
+    /// </summary>
+    /// <remarks>
+    /// The two tests are not redundant, and the difference is the whole reason this one exists: 2.9.x
+    /// already carried a <c>Version</c> metadata attribute on the <c>ProjectReference</c>, which NuGet's pack
+    /// task IGNORES — the produced nuspec said <c>2.9.1</c>, a MINIMUM range, while the csproj looked
+    /// exactly as it does now. A source-level guard is therefore satisfiable by a tree that still ships the
+    /// drifting range; only the packed artefact answers "what will the consumer restore".
+    /// </remarks>
+    [Fact]
+    public void PackedEngineNuspec_PinsAbstractionsToTheExactVersion()
+    {
+        var root = RepositoryRoot();
+        var engineVersion = ProjectMetadata("src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj");
+        var abstractionsVersion = ProjectMetadata("src/Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj");
+        var output = Path.Combine(Path.GetTempPath(), "tm-pack-" + Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var pack = RunDotnet(root,
+                "pack",
+                "src/Tempo.Blazor.EmailTemplates.Engine/Tempo.Blazor.EmailTemplates.Engine.csproj",
+                "-c", "Release",
+                "-o", output,
+                "--nologo");
+            pack.ExitCode.Should().Be(0, "pack must succeed; output:\n" + pack.Output);
+
+            var package = Directory.EnumerateFiles(output, "Tempo.Blazor.EmailTemplates.Engine.*.nupkg")
+                .Single(path => !path.Contains(".symbols.", StringComparison.Ordinal));
+
+            using var archive = System.IO.Compression.ZipFile.OpenRead(package);
+            var nuspecEntry = archive.Entries.Single(entry => entry.FullName.EndsWith(".nuspec", StringComparison.Ordinal));
+            using var stream = nuspecEntry.Open();
+            var nuspec = XDocument.Load(stream);
+
+            var packageVersion = nuspec.Descendants().Single(e => e.Name.LocalName == "version").Value;
+            packageVersion.Should().Be(engineVersion,
+                "the packed package must carry the version the release announces");
+
+            var dependencies = nuspec.Descendants()
+                .Where(e => e.Name.LocalName == "dependency")
+                .ToDictionary(e => (string)e.Attribute("id")!, e => (string?)e.Attribute("version"));
+
+            dependencies.Should().ContainKey("Tempo.Blazor.EmailTemplates.Abstractions");
+            dependencies["Tempo.Blazor.EmailTemplates.Abstractions"].Should().Be(
+                "[" + abstractionsVersion + "]",
+                "an open range (>=) lets restore pick an Abstractions whose internals no longer match "
+                + "the InternalsVisibleTo grant, which silently degrades the render pipeline instead of "
+                + "failing loudly — at release this must read [2.10.0]");
+        }
+        finally
+        {
+            if (Directory.Exists(output))
+            {
+                Directory.Delete(output, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public void EngineAndAbstractions_DeclareTheSameVersion()
     {
@@ -241,8 +301,34 @@ public class PackageBoundaryTests
         return closure;
     }
 
-    private static (string Path, string? Version)[] ProjectReferences(XDocument csproj)
-        => csproj.Descendants()
+    /// <summary>
+    /// Runs the SDK in <paramref name="workingDirectory"/> and returns its exit code plus combined output.
+    /// No shell is involved: the arguments are passed as a list, so a path with a space cannot split.
+    /// </summary>
+    private static (int ExitCode, string Output) RunDotnet(string workingDirectory, params string[] arguments)
+    {
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (var argument in arguments)
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        using var process = System.Diagnostics.Process.Start(start)
+            ?? throw new InvalidOperationException("dotnet could not be started");
+        var stdout = process.StandardOutput.ReadToEnd();
+        var stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        return (process.ExitCode, stdout + stderr);
+    }
+
+    private static (string Path, string? Version)[] ProjectReferences(XDocument csproj)        => csproj.Descendants()
             .Where(e => e.Name.LocalName == "ProjectReference")
             .Select(e => (
                 Path: Normalize(e.Attribute("Include")?.Value ?? string.Empty),

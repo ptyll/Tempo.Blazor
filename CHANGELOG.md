@@ -2,8 +2,13 @@
 
 ## 2.10.0 (unreleased)
 
-> Email template editor plan (`planning/tm-email-template-editor-2.10.md`). Phases land here as they
-> complete; the full breaking-change summary is B1–B15 in §3.11 of that document.
+> 2.10.0 also ships every 2.9.1 entry below; when upgrading from 2.9.0 read both Breaking / Migration
+> sections.
+>
+> Email template editor plan (`planning/tm-email-template-editor-2.10.md`). The full breaking-change
+> summary is **B1–B17** in §3.11 of that document; a task-oriented before/after for every item is
+> `docs/email-templates/MIGRATION-2.9-to-2.10.md` and the hosting contract is
+> `docs/email-templates/HOSTING.md`.
 
 ### Added
 
@@ -11,8 +16,8 @@
   `ITemplateSecurityAuditSink` + `TemplateSecurityEvent` (`Kind`, `Detail`, `TemplateHash`,
   `TemplateExcerpt`, `Timestamp`) report every refused sandbox operation:
   `BlockedMember`, `BlockedNamespace`, `BlockedFunction`, `BlockedUrlScheme`, `LimitExceeded`,
-  `Timeout`. `BlockedUrlScheme` is emitted from the URL allow-list in phase 3; the enum value exists
-  from phase 2 so the contract (§3.6) is stable. Register zero to many sinks in DI
+  `Timeout`. `BlockedUrlScheme` is emitted from the URL allow-list (B3); the enum value predates that
+  pipeline so the audit contract stays stable. Register zero to many sinks in DI
   (`AddTempoEmailTemplateEngine` forwards all
   `IEnumerable<ITemplateSecurityAuditSink>`) or pass them to the `ScribanTemplateEngine`
   constructor. `Detail` names only the refused member/namespace/function — never a model value —
@@ -397,7 +402,7 @@
   `OnImageUpload` runs; a rejected file, a handler exception and an empty URL all produce a localized error
   in the panel and leave the block's `Src` untouched.
 
-- **Inspector metadata types (Fáze 7A, additive — contract §3.10).** `PropertyFieldPlacement`
+- **Inspector metadata types (additive).** `PropertyFieldPlacement`
   (`Content`/`Style`/`Padding`/`Advanced`: which tab and which collapsible group a field belongs to),
   `PropertyChoice` (`Value` + `LabelKey` of one `Choice`/`Alignment` option), and `EmailInspectorState`
   (the state one editor remembers: the folded groups **per block type** plus `LastFocusedField`, the target
@@ -425,7 +430,7 @@
   no action would be an unreachable set of commands). The email template editor sets it to `4` so
   its D20 actions (Zpět / Znovu / Náhled / Validovat) sit on the bar instead of behind "More".
 
-- **Dialog item editing + table-cell link/background (Fáze 9, `Tempo.Blazor.EmailTemplates`).**
+- **Dialog item editing + table-cell link/background (`Tempo.Blazor.EmailTemplates`).**
   `EmailItemEditingMode { Inline, Dialog }` and `[Parameter] ItemEditingMode` on
   `TmEmailTemplateEditor` and `TmEmailPropertyPanel` (default `Inline` = the 2.9.x behaviour). In
   `Dialog`, the social / navbar / carousel / accordion block renders a compact list
@@ -449,7 +454,7 @@
 - **`EmailTableCell.Href` + `EmailTableCell.BackgroundColor` and the policies behind them
   (`Tempo.Blazor.EmailTemplates.Abstractions`, additive — `SchemaVersion` stays `1`).**
   `Href` is emitted as `<a href>` around the cell text, `BackgroundColor` as the `bgcolor`
-  attribute. Both follow the phase-3 rules: `EmailUrlPolicy` (the public view of the one URL
+  attribute. Both follow the same URL rules (B3): `EmailUrlPolicy` (the public view of the one URL
   allow-list — `http`/`https`/`mailto`/`tel`, a relative path without an authority, `#`; anything
   else becomes `#` with a `render.url.blocked_scheme` warning and a `BlockedUrlScheme` audit event)
   and `EmailColorPolicy` (`#rgb`, `#rrggbb`, or a named colour from a fixed safe set — an invalid
@@ -515,7 +520,7 @@
   now tells its host when the text really reached the clipboard (never when the clipboard refuses the
   write), so a read-only surface can confirm the copy in its OWN live region instead of hanging a
   handler on the box around it — a click in the box is not a copy.
-- **Copy / retry / large-export affordances of the export dialog (Fáze 10 review).** The copy
+- **Copy / retry / large-export affordances of the export dialog.** The copy
   confirmation comes from `TmCopyButton.OnCopied` and is reset before it is set, so a SECOND copy is
   announced again; the HTML tab explains a renderer that is not configured
   (`EmailEditor_Export_HtmlNotConfiguredHelp`) or unreachable (`EmailEditor_Export_HtmlUnreachableHelp`)
@@ -523,13 +528,13 @@
   characters is still complete but renders without syntax highlighting, with a line saying so
   (`EmailEditor_Export_LargeNoHighlight`). Each format's content lives in the `TmTabPanel` it belongs
   to, so the strip's `aria-controls` points at a panel that exists.
-- **Import dialog: the mode follows the file/content (Fáze 10 review).** The drop zone accepts
+- **Import dialog: the mode follows the file/content.** The drop zone accepts
   `.mjml,.html,.json,.txt` on BOTH tabs, a `.json` file switches the mode, and a pasted document that
   starts with `{` is parsed as JSON instead of failing as MJML. The pasted text is measured against
   `EmailImportOptions.MaxInputBytes` BEFORE parsing (`EmailEditor_Import_InputTooLarge`, with the
   actual limit), and the state card carries the replace note (`EmailEditor_Import_ReplaceNote`) so the
   destructive step is stated before the user presses Import.
-- **Validation panel: the good outcome and the quiet counts (Fáze 10 review).** “No issues found” is a
+- **Validation panel: the good outcome and the quiet counts.** “No issues found” is a
   success card with the check icon and the success text token, a severity whose count is zero drops its
   severity colour (`tm-email-validation__count--zero`), the “syntax was not checked” note sits under the
   findings it qualifies, and “Go to” on a DOCUMENT finding opens the e-mail settings (nothing selected)
@@ -554,7 +559,7 @@
 
 ### Changed
 
-- **The MJML HEAD is emitted through the same gate as the body (Fáze 10 review, security blocker).**
+- **The MJML HEAD is emitted through the same gate as the body (security blocker).**
   `mj-attributes` carries a TAG NAME and attribute NAMES, `mj-font` a URL and `mj-html-attributes` a raw
   name and value — all of them used to be written verbatim, so `<mj-all x" onclick="alert(2)="1">`, a
   per-component default keyed `mj-text><script>…`, an `mj-html-attribute name="onclick"` or an
@@ -564,16 +569,16 @@
   accepts (plus inert `data-*`), a colour has to be a colour (`CssColourValue`), a URL goes through
   `EmailUrlPolicy` and an HTML attribute name may not be `style`, `srcdoc` or an `on*` handler. The
   export therefore always stays well-formed XML.
-- **An imported attribute is re-emitted only when this pipeline may write it (Fáze 10 review,
-  security 2).** The DENY filter (reject `on*`/`style`) is replaced by the ALLOW-list
-  `MjmlKnownAttributes.For(tag)` — a deny filter is one invented name away from a live handler
+- **An imported attribute is re-emitted only when this pipeline may write it (security 2).** The DENY
+  filter (reject `on*`/`style`) is replaced by the ALLOW-list `MjmlKnownAttributes.For(tag)` — a deny
+  filter is one invented name away from a live handler
   (`srcdoc`, `formaction`, `xlink:href`). The value is judged by the kind of the attribute (URL →
   scheme allow-list, colour → `CssColourValue`, style-bound → `CssStyleValue`, anything else → a value
   that may not open a CSS declaration: no `; { } < > " ' \`, no `url(`, no `expression(`), a duplicate
   attribute is emitted once (two of the same name made the export unparsable and let the last one win),
   and the importer drops the ones it cannot keep WITH a warning. `css-class`/`mj-class` keep only safe
   class tokens.
-- **Style-bound attribute values are validated at emission (Fáze 10 review, security 3).** `padding`
+- **Style-bound attribute values are validated at emission (security 3).** `padding`
   (and its sides), `border*`, `border-radius`, `font-family`, `font-size`, `width`, `height`,
   `line-height`, `letter-spacing` and the rest of `MjmlKnownAttributes`' style-bound set are copied into
   the element's inline `style` by the MJML compiler, so `"0;background:url(https://tracker)"` used to
@@ -581,12 +586,12 @@
   percentage, hex colour, keyword or font stack needs — a value outside it is dropped and reported
   (`RenderKeys.InvalidAttributeValue`), never "cleaned up". `container-background-color` is a colour
   (`MjmlAttributeBuffer.Colour`) and a carousel's `thumbnails-src` a URL (`MjmlAttributeBuffer.Url`).
-- **A `<mj-style>` payload may not carry script-in-CSS constructs (Fáze 10 review, security 6).** The
+- **A `<mj-style>` payload may not carry script-in-CSS constructs (security 6).** The
   payload used to lose only `<`; `CssSafety` now refuses the whole block when the stylesheet contains
   `expression(`, `behavior:`, `-moz-binding`, `@import` or a `url(…)`/`image-set(…)` target with a
   refused scheme (normalised first, so a comment or a CSS escape cannot hide it). Legitimate CSS —
   including an `https` background image — is unchanged.
-- **The MJML generator now fail-closes every link and filters imported attributes (Fáze 10, export
+- **The MJML generator now fail-closes every link and filters imported attributes (export
   hardening).** `MjmlGenerator` emits `href` / `src` / `background-url` through
   `EmailUrlPolicy` (`MjmlAttributeBuffer.Url`), so a blocked scheme (`javascript:`, `data:`,
   `vbscript:`, …) becomes `#` in the generated MJML — the export path runs without `MarkupGuard`, and
@@ -600,7 +605,7 @@
   safe class tokens. A `<mj-style>` CSS payload has every `<` removed (CSS never contains one), which
   closes a `</style><script>` injection into the compiled HTML; a `<mj-raw>` payload can no longer
   close its own element early.
-- **Headings `h1`–`h6` are allow-listed by the inline-HTML sanitizer (Fáze 9A review, D28).**
+- **Headings `h1`–`h6` are allow-listed by the inline-HTML sanitizer (D28).**
   `HtmlSanitizerPolicy.AllowedTags` — the ONE source both the AngleSharp and the BCL conservative sanitizer
   read — now contains `h1`…`h6`. They are FORMATTING elements exactly like `b`/`i`: both implementations
   emit the tag and its text and drop **every** attribute, so `onclick`, `style` and `class` still never
@@ -651,13 +656,13 @@
   `RightTitle` or their localized default), so the strip of block icons it may carry is announced as the
   palette's group instead of a run of unnamed buttons.
 
-- **The table grid's DOM and styling (Fáze 9).** `TmEmailTableEditor` gained a `<caption>`, a
+- **The table grid's DOM and styling.** `TmEmailTableEditor` gained a `<caption>`, a
   header section, per-cell edit buttons and a scoped stylesheet; the cell input keeps
   `[data-tm-table-cell]` and the row controls keep `[data-tm-table-row-remove]` /
   `[data-tm-table-add-row]` / `[data-tm-table-add-col]` / `[data-tm-table-remove-col]`. A host that
   styled the old bare `<table>` needs to target the new BEM classes (see Breaking / Migration).
 
-- **The editor canvas is WYSIWYG (Fáze 9A).** `TmEmailTemplateCanvas` paints each block the way it will
+- **The editor canvas is WYSIWYG (B16).** `TmEmailTemplateCanvas` paints each block the way it will
   look in the inbox instead of printing "type + 80 characters of text": a text block renders its
   sanitized inline HTML, a button its pill with background/border radius/alignment, an image a real
   `<img>` with `src`/`alt`/`width`, a divider its rule, a spacer its height, a table a header row and its
@@ -673,7 +678,7 @@
   values, every `Src`/`Href`/`BackgroundUrl` passes the URL allow-list, and **no link on the canvas is
   navigable** — a click selects the block.
 
-- **The canvas no longer renders a block's structural label (Fáze 9A, breaking DOM).** The
+- **The canvas no longer renders a block's structural label (B16, breaking DOM).** The
   `.tm-email-canvas-block__kind` and `.tm-email-canvas-block__detail` spans are gone (the email itself is
   the content now) and the block's floating action bar gained a drag grip
   (`[data-tm-block-grip]`); the block wrapper keeps `[data-tm-block-id]`, `role="listitem"`, its
@@ -681,7 +686,7 @@
   `[data-tm-block-action]`. On a coarse pointer the actions of the SELECTED block stay visible (no hover
   to reveal them) and their targets are `--tm-touch-target` (44 px). See Breaking / Migration.
 
-- **`CanvasImageLoading` on `TmEmailTemplateEditor` / `TmEmailTemplateCanvas` (Fáze 9A, additive).** The
+- **`CanvasImageLoading` on `TmEmailTemplateEditor` / `TmEmailTemplateCanvas` (additive).** The
   canvas is the one place where a template's remote images become requests from the AUTHOR's browser (an
   imported template can carry a per-recipient tracking pixel). `CanvasImageLoading.Load` (default) keeps
   the faithful preview; `CanvasImageLoading.Placeholder` issues no request at all and paints a framed
@@ -692,8 +697,8 @@
                         CanvasImageLoading="CanvasImageLoading.Placeholder" />
   ```
 
-- **`TmEmailCanvasBlock` + `CanvasImageLoading` as the phase's public canvas surface (Fáze 9A, additive;
-  contract §3.10).** `TmEmailCanvasBlock` (`Block`, `CanvasImageLoading`, `Nested`) is the block renderer a
+- **`TmEmailCanvasBlock` + `CanvasImageLoading` as the public canvas surface (additive).**
+  `TmEmailCanvasBlock` (`Block`, `CanvasImageLoading`, `Nested`) is the block renderer a
   host may now mount directly — e.g. a print/PDF host that wants the canvas approximation of one block —
   and it is `public` because Razor cannot open an `internal` component from markup (`RZ10012` is an error
   in this repo). `Nested` is for CONTENT inside a wrapper/hero/group frame: a nested block carries
@@ -704,17 +709,27 @@
   <TmEmailCanvasBlock Block="@block" CanvasImageLoading="CanvasImageLoading.Placeholder" />
   ```
 
-- **`--tm-paper-danger-ink` (Fáze 9A, additive token).** The paper family (`--tm-paper*`) is theme-invariant
+- **`--tm-paper-danger-ink` (additive token).** The paper family (`--tm-paper*`) is theme-invariant
   by design, so it needs a danger ink that does NOT flip in dark mode: `--tm-color-danger-text` becomes
   `#fca5a5` there (≈2.3:1 on the white paper). `--tm-paper-danger-ink: #991b1b` (8.3:1) is declared next to
   `--tm-paper-ink` and, like the rest of the family, deliberately not re-declared in `tokens-dark.css`.
   The canvas paints a refused link with it. A host that rebrands the paper palette should define it too.
 
+- **`TmNavigationGuard`'s dialog texts now resolve from the application localization (core, additive).**
+  The five text parameters (`ConfirmTitle`, `ConfirmMessage`, `ConfirmLeaveText`, `CancelText`,
+  `SaveAndLeaveText`) became `string?` with a `null` default and fall back to
+  `TmNavigationGuard_ConfirmTitle` / `_ConfirmMessage` / `_Leave` / `_Stay` / `_SaveAndLeave` in all four
+  `TmResources` tables. A Czech/Slovak/French application that renders the guard without passing every
+  string therefore shows its own language instead of English — previously the ONLY way to translate the
+  dialog was to re-type the copy the library already ships. The English values are byte-identical to the
+  2.9.x defaults, and an explicit parameter still wins, so no host changes and no selector moves. This is
+  the last hardcoded English copy an e-mail editor host had to override.
+
 
 ### Fixed
 
-- **Fáze 9A review (code+arch): the canvas token mask, the image gate and the render gate.** Four defects
-  the WYSIWYG canvas shipped with:
+- **Review fix (code + architecture): the canvas token mask, the image gate and the render gate.**
+  Four defects the WYSIWYG canvas shipped with:
   * **A template token inside an attribute destroyed the tag around it.** Tokens are now masked
     POSITIONALLY (`U+E000{index}U+E001`) BEFORE the markup is reduced to the allow-listed tag stream, and
     restored to a chip in the same pass — so `<a href="{{ unsubscribe_url }}">Unsubscribe</a>` renders the
@@ -745,7 +760,7 @@
     list block visible and selectable; the image placeholder is styled through `::deep` (a
     `RenderTreeBuilder` fragment carries no scope attribute, so it painted as run-together text).
 
-- **Fáze 9A review (UX): typing into the inspector no longer reorders the characters.** `TmRichEditorSimple`
+- **Review fix (UX): typing into the inspector no longer reorders the characters.** `TmRichEditorSimple`
   (core) re-synced the whole editor on EVERY parent re-render: it read the contenteditable and, when the
   HTML differed from the parameter, wrote the parameter back with `setHtml` — which moves the caret to the
   start, so the next character landed in front of the previous one (" EDIT" became "TIDE"). The component
@@ -755,7 +770,7 @@
   when the editor OPENS on a block and when the model changes externally (the F9 stored-XSS guard), and
   hands the author's own emission back verbatim. No public API changed.
 
-- **Fáze 9A review (UX): canvas contrast, focus and the desktop action bar.** The canvas re-points the chrome
+- **Review fix (UX): canvas contrast, focus and the desktop action bar.** The canvas re-points the chrome
   tokens it inherits (`--tm-color-text`, `--tm-color-text-muted`, `--tm-color-surface-secondary`,
   `--tm-border-color-strong`, `--tm-color-primary*`) at their paper values on `.tm-email-canvas-doc`, so a
   dark chrome no longer paints a dark-theme token chip or placeholder on the WHITE paper (measured 2.1:1 →
@@ -766,7 +781,7 @@
   document's `BackgroundColor`/`FontFamily` are painted on the paper; and the empty-column/raw-block texts
   now say what to do (`EmailEditor_Canvas_EmptyColumn`, `EmailEditor_Canvas_RawBlock`).
 
-- **Inspector (Fáze 7A review): an optional colour can be unset; the required one is never cleared.** A
+- **Inspector: an optional colour can be unset; the required one is never cleared.** A
   nullable colour property (a section's `BackgroundColor`, say) now renders the picker for an EMPTY value
   instead of a text field with a false "enter a color" error, the picker offers its clear button
   (`ShowClearButton` follows `PropertyField.IsNullable()`) and clearing it stores `null`. Clearing a
@@ -777,27 +792,27 @@
   became localized Choice editors while a stored value outside the option set (`600`, `oblique`) stays an
   editable text field instead of disappearing. `Rel` moved to the Advanced group.
 
-- **Inspector CSS actually applies now (Fáze 7A review).** The field markup is built with
+- **Inspector CSS actually applies now.** The field markup is built with
   `RenderTreeBuilder`, so its elements never carry the component's CSS-isolation scope attribute — every
   `.tm-email-fields__*` rule silently matched nothing (the label typography and the number + unit row
   measured as if unstyled). All rules are now `.tm-email-fields ::deep .tm-email-fields__*`, labels share
   one typography (`--tm-font-size-sm`, `--tm-font-weight-medium`, `--tm-text-primary`), the unit sits beside
   the number, and the Delete action of the inspector header stays danger-tinted.
 
-- **Validation panel: severity is spoken, findings are operable, Info/Warning meet contrast (Fáze 7A
-  review).** Every finding carries a screen-reader-only severity word
+- **Validation panel: severity is spoken, findings are operable, Info/Warning meet contrast.**
+  Every finding carries a screen-reader-only severity word
   (`EmailEditor_Validation_Severity_{Error|Warning|Info}` — Error/Warning/Suggestion), a finding that
   points at a node is a real `<button class="tm-email-validation__link">` (the row keeps its pointer
   handler), and the Info/Warning icon and strip use the accessible `--tm-color-info-strong` /
   `--tm-color-warning-strong` tokens instead of the pale fill colours (~2.3:1 measured).
 
-- **Import dialog: the preheader warning names the limit, not „{0}“ (Fáze 7A review).** Import warnings
+- **Import dialog: the preheader warning names the limit, not „{0}“.** Import warnings
   were rendered with the one-argument localizer indexer, so a rule that carries its threshold printed a
   literal placeholder. Both the validation panel and the import dialog now resolve such keys through
   `ValidationMessageText.Of` (internal), the dialog shows the warnings at all
   (`[data-tm-import-warnings]`), and a message with a detail formats that detail.
 
-- **Variable picker (Fáze 7A review): keyboard, diacritics, width and a non-button trigger.** The search
+- **Variable picker: keyboard, diacritics, width and a non-button trigger.** The search
   folds diacritics through the shared `EmailSearchText.Fold` („krestni“ finds „Křestní jméno“, „uzivatel“
   finds the group), an empty result says `EmailEditor_Variables_NoMatch` with the searched term, the search
   takes focus when the picker opens, ArrowDown reaches the first row and ArrowUp/ArrowDown walk a roving
@@ -806,11 +821,11 @@
   `--tm-color-text`, the panel is `min(26rem, 90vw)` wide, and the "Insert variable" affordance is a styled
   span inside the popover's own trigger — never a nested `<button>`.
 
-- **Deleting a block announces itself and keeps focus (Fáze 7A review).** The editor's live region says
+- **Deleting a block announces itself and keeps focus.** The editor's live region says
   `EmailEditor_Announce_BlockDeleted` (with the undo chord) and focus moves to the neighbouring block, or
   to the canvas root when the column is now empty, instead of falling to `<body>` with the removed header.
 
-- **Palette (Fáze 7A review): the Spacer and Social tiles have icons, the search works read-only, and the
+- **Palette: the Spacer and Social tiles have icons, the search works read-only, and the
   title pairs with the arrow.** The registry named two icons the core set does not ship (`move-vertical`,
   `share-2`), so those tiles rendered an empty box; they now use `between-horizontal-start` and `share`.
   Searching is reading, not editing, so it stays enabled in `ReadOnly` (the tiles stay inert), the palette
@@ -822,8 +837,9 @@
   `StringInfo.LengthInTextElements` now counts what the inbox shows.
 
 - **Every key the packages hand to the localizer now resolves (en / cs / sk / fr) — previously the bare
-  key was rendered.** The editor showed the *key* for the diagnostics phases 2–4 introduced: the import
-  messages (`import.empty`, `import.parse_error`, `import.not_mjml`, `import.unknown_element`,
+  key was rendered.** The editor showed the *key* of the diagnostics the import and validation work
+  introduced: the import messages
+  (`import.empty`, `import.parse_error`, `import.not_mjml`, `import.unknown_element`,
   `import.wrapper_flattened`, `import.element_wrapped`, `import.include_unresolved`,
   `import.input_too_large`), the document limits (`validation.limits.sections|blocks|nesting`) and the
   serializer failures (`serialization.malformed`, `serialization.schema_version.invalid`,
@@ -843,7 +859,7 @@
   sibling's freshly parsed description, or that description with characters deleted) and repairs it from
   the source; `validate --fail-on-drift` reports any that remain. **Description-only change** — no
   parameter, type or default moved — and the same regeneration catches up the missing
-  `DataTableExportScope` overlay (earlier phases added public types without one, which made
+  `DataTableExportScope` overlay (public types had been added without one, which made
   `validate --fail-on-drift` fail).
 
 - **Scriban code inside block content renders again (regression from 2.9.0).** `MjmlGenerator` sanitized
@@ -872,7 +888,7 @@
   (`14 + 6 × MaxNestingDepth`, decision `EMAIL-IMPORT-JSON-DEPTH`); a plain `Deserialize(json)` without
   options keeps `max(64, …)`, i.e. it is never stricter than `System.Text.Json`'s own default.
 
-- **Responsive editor chrome on the core `TmEditorShell` (Fáze 8).** `TmEmailTemplateEditor` renders
+- **Responsive editor chrome on the core `TmEditorShell` (D20).** `TmEmailTemplateEditor` renders
   through `TmEditorShell` (Header / Toolbar / Left + LeftRail / Canvas / Right / StatusBar /
   MobileActions): desktop ≥ 1200 px and tablet 768–1199 px keep the docked palette + inspector (the
   shell rails one of them on a tablet, `F6-TABLET-DOCKED-PANELS`), and below 768 px the canvas keeps the
@@ -889,7 +905,7 @@
   into "More" — it needs no `Pinned` priority and keeps its `data-tm-save` hook.
 
 
-- **Fáze 8 review — the mobile/tablet chrome is readable and operable at 390 px and 320 px.** Seven
+- **Review fix — the mobile/tablet chrome is readable and operable at 390 px and 320 px.** Seven
   defects found in review, all measured in a browser:
 
   * The **save state is readable again**: below the desktop layout the pill kept only a 24 px severity
@@ -914,7 +930,7 @@
     already names the panel, so the properties tab showed three titles for one surface. The docked
     layouts keep both.
 
-- **Fáze 8 review — inserting on a phone always reveals the new content, and "add section" focuses it.**
+- **Review fix — inserting on a phone always reveals the new content, and "add section" focuses it.**
   In the `Tabs` presentation there is no sheet to close, so "add block" used to leave the user on the
   palette tab while the block landed on a canvas they could not see; it now switches to the CANVAS tab
   (`ActiveMobilePanel = EditorShellPanel.None`). `TmEmailTemplateCanvas` keeps section element references
@@ -922,20 +938,18 @@
   back to the canvas root, and the editor's focus helper swallows `TaskCanceledException` (a cancelled
   render mid-focus must not tear down the insert that armed it).
 
-- **Fáze 8 review — a one-way `ActiveMobilePanel` is adopted when the parameter changes.** The editor kept
+- **Review fix — a one-way `ActiveMobilePanel` is adopted when the parameter changes.** The editor kept
   its own shadow (`_activeMobilePanel`) and only the host's FIRST value ever won: a host that drives the
   mobile tab without binding `ActiveMobilePanelChanged` could not move the sheet again. It now adopts the
   parameter whenever it differs from the last value seen (the shell's own `_activeParamSeen` pattern).
 
-### Fixed
-
-- **Email import / export / validation dialogs (Fáze 10).** The import dialog no longer hard-codes a
+- **Email import / export / validation dialogs.** The import dialog no longer hard-codes a
   5 MB limit, no longer shows a raw `ex.Message` for broken JSON, and no longer shows the parse and
   warning lists only as a count; the export dialog no longer regenerates the whole MJML on every
   parent render, no longer offers a bare read-only `<textarea>` without copy or download, and no
   longer lacks a footer; the validation panel no longer renders findings as `<li @onclick>` (not
   keyboard operable) and no longer revalidates every template-bearing string on every parent render.
-- **Server-side template JSON applies the import limits (Fáze 10, carry-forward).**
+- **Server-side template JSON applies the import limits.**
   `EmailTemplateMapper.ToDocument(contentJson, EmailImportOptions?)` (plus the `ApplyCreate` /
   `ApplyUpdate` overloads) makes the server path enforce the same limits as the editor, and
   `Demo.Api`'s email-template endpoints answer `422` ProblemDetails whose `errors` values are
@@ -946,7 +960,7 @@
 
 ### Breaking / Migration
 
-- **No implicit Google Fonts import in rendered HTML (Fáze 10 review).** `MjmlNetCompiler` turns off
+- **No implicit Google Fonts import in rendered HTML.** `MjmlNetCompiler` turns off
   Mjml.Net's built-in font table, so a render no longer emits `<link>`/`@import` for Ubuntu (or any other
   font the document did not declare), and the markup guard drops every `@import` that is not the `href` of a
   document `mj-font`. Impact: a template that relied on the implicit Ubuntu webfont now renders with the
@@ -960,7 +974,7 @@
   (in the model: add an `EmailFont { Name = "Ubuntu", Href = "https://fonts.googleapis.com/css?family=Ubuntu" }`
   to `EmailTemplateDocument.Styles.Fonts`). Inline `style`/`<style>` content carrying `expression(`, `behavior:`,
   `-moz-binding` or a foreign `@import` is now dropped with a `RenderKeys.UnsafeElementRemoved` warning.
-- **A raw block is an opt-in to raw MARKUP, not to markup that RUNS (Fáze 10 review, U1).** The render
+- **A raw block is an opt-in to raw MARKUP, not to markup that RUNS (B17).** The render
   pipeline's markup guard now ALWAYS removes `script`, `iframe`, `frame`, `frameset`, `object`, `embed`,
   `applet`, `base`, `form` and `portal` — a raw-text element (`script`) together with its content, up to
   its closing tag — with a `RenderKeys.UnsafeElementRemoved` warning and a `BlockedMember` audit event.
@@ -974,15 +988,15 @@
 
   An author who needs interactive content in an e-mail is out of scope for a message body: link to a
   hosted page instead.
-- **An imported attribute outside its tag's allow-list is dropped at import (Fáze 10 review,
-  security 2), which makes a foreign template's round-trip lossy — with a warning.** This is the
+- **An imported attribute outside its tag's allow-list is dropped at import (security 2),
+  which makes a foreign template's round-trip lossy — with a warning.** This is the
   deliberate cost of replacing the deny filter with an allow-list (`MjmlKnownAttributes`).
 
   | Před (before) | Po (after) |
   | --- | --- |
   | `<mj-text some-future-attr="x">` kept the attribute in `ExtraAttributes` and re-emitted it | the attribute is dropped from the model and reported as `ImportKeys.DroppedAttribute` (`import.dropped_attribute`, detail `mj-text some-future-attr`); `data-*` and every known MJML attribute still survive |
   | `<mj-text onclick="alert(1)">` was re-emitted verbatim | dropped at import and never emitted (the generator refuses it too) |
-- **Fáze 9A — the canvas renders the E-MAIL, not a structural list (breaking DOM + behaviour).** The
+- **The canvas renders the E-MAIL, not a structural list (B16, breaking DOM + behaviour).** The
   canvas used to draw every block as a card with a type label and up to 80 characters of stripped text
   (`.tm-email-canvas-block__kind` / `.tm-email-canvas-block__detail`), with a button that looked like a
   chip and an image that looked like a caption. It now paints the block's real approximation of the MJML
@@ -1276,8 +1290,8 @@
   await renderer.RenderAsync(document, model, cancellationToken: ct);
   ```
 
-- **`RenderError` grew two optional parameters — breaking for positional deconstruction.** `Key`
-  (phase 3) and `Severity` were appended to the positional record, so its deconstructor has five
+- **`RenderError` grew two optional parameters — breaking for positional deconstruction.** `Key` and
+  `Severity` were appended to the positional record, so its deconstructor has five
   components instead of three and the type is **binary incompatible – recompile**. A host that only reads
   the properties is source compatible; a host that deconstructed the record is not.
 
@@ -1313,8 +1327,8 @@
   `ScribanTemplateEngine(TemplateSecurityOptions? options = null, IEnumerable<ITemplateSecurityAuditSink>? auditSinks = null)`.
   Source-compatible (existing `new ScribanTemplateEngine()`, `(options)` and `(options, sinks)` calls
   keep compiling) but **binary-incompatible**: a library compiled against the removed one-parameter
-  overload must be recompiled. Phase 4 extends this same constructor with
-  `functionProviders` — no additional overload is added.
+  overload must be recompiled. The same constructor also takes `functionProviders` — no
+  additional overload is added.
 
 - **The render time budget is enforced even when a template writes no output.** The context now arms
   Scriban's `CancellationToken` with `TemplateSecurityOptions.Timeout` (and clamps `RegexTimeOut` to
@@ -1378,6 +1392,16 @@
   existing imports keep working; raise or lower it per call. The limit is measured in **UTF-8 bytes**,
   so multi-byte content is judged by its transported size.
 
+- **B15 — the API-extraction changes are ADDITIVE overloads, not a rewrite.** No migration is required:
+  the 2.9.x signatures remain and keep their meaning, and the new ones only add an injectable seam.
+
+  | 2.9.x (still compiles) | 2.10.0 (new overload) |
+  | --- | --- |
+  | `new MjmlGenerator()` | `new MjmlGenerator(IHtmlContentSanitizer sanitizer)` |
+  | `EmailDocumentVariableExtractor.Extract(document)` | `EmailDocumentVariableExtractor.Extract(document, ITemplateVariableExtractor extractor)` |
+  | `MjmlImporter.Import(mjml, includeResolver)` | `MjmlImporter.Import(mjml, includeResolver, EmailImportOptions options)` |
+  | `EmailTemplateSerializer.Deserialize(json)` | `EmailTemplateSerializer.Deserialize(json, EmailImportOptions options)` |
+
 - **The email packages' strings are embedded JSON and `AddTempoEmailTemplates()` no longer calls
   `AddLocalization()` (B6).** `TmEmailResources*.resx` and `EmailTemplateValidationResources*.resx` are
   gone; the editor and the request validators resolve their strings from flat `Resources/*.json` tables
@@ -1437,7 +1461,7 @@
   must use the stable `[data-tm-prop="<Property>"]` attribute instead (unchanged) or the translated text.
   Nothing on the document model or the save contract changed.
 
-- **The inspector is split into Obsah/Styl tabs and its field surface moved (B11, same phase).** The
+- **The inspector is split into Obsah/Styl tabs and its field surface moved (B11).** The
   property panel now renders a `TmTabs` strip (`#tab-content` / `#tab-style`) whose Content tab holds
   texts, URLs, alt texts and the item editors, and whose Style tab holds colours, fonts, alignment,
   dimensions, the collapsible „Odsazení“ (spacing) and „Pokročilé“ (advanced) groups, `mj-class` and the
@@ -1455,9 +1479,10 @@
     remember its state per selection.
   * `TmEmailPropertyPanel` gained `OnDuplicate` / `OnDelete` (rendered only when the host handles them; the
     editor wires them to one undo step each) and `TmEmailTemplateEditor` gained `ToolboxCollapsed` /
-    `ToolboxCollapsedChanged` (D10) — Fáze 8 maps the same parameter onto `TmEditorShell.CollapsedPanels`.
+    `ToolboxCollapsedChanged` (D10) — the editor maps the same parameter onto
+    `TmEditorShell.CollapsedPanels`.
 
-- **Typed inspector editors: a stored value the editor refuses is now visible (B11, same phase).** A colour
+- **Typed inspector editors: a stored value the editor refuses is now visible (B11).** A colour
   is edited with `TmColorPicker` (swatch + hex), alignment with a `[data-tm-align-option]` toggle group
   (`aria-pressed`), enum-like MJML attributes (`Mode`, `BorderStyle`, `IconPosition`, `Direction`,
   `VerticalAlign`, `Target`) with a `TmSelect`, and a length as number + unit. A stored value that is not
@@ -1466,7 +1491,7 @@
   half-typed value. A host that relied on the old free-text field for these properties now gets the
   validated editor — the stored string format (`13px`, `#1a1a1a`, `left`) is unchanged.
 
-- **The blocks palette gained search, wrapping tiles and a collapse toggle (same phase).** The toolbox
+- **The blocks palette gained search, wrapping tiles and a collapse toggle.** The toolbox
   renders a search field (`[data-tm-toolbox-search]`, placeholder „Hledat bloky…“) that filters tiles by
   their **localized** name with diacritics and case folded, a localized empty state
   (`[data-tm-toolbox-empty]`), Escape clears the filter, tiles show the icon above a wrapping label whose
@@ -1499,11 +1524,21 @@
   `validation.preheader.too_long` with `Info` severity, and the validation dialog now renders an icon per
   finding (`[data-tm-validation-icon]`) so severity is not colour-only.
 
+  | Před (before) | Po (after) |
+  | --- | --- |
+  | `switch (severity) { case LayoutSeverity.Warning: … case LayoutSeverity.Error: … }` — exhaustive, compiled | add a `default:` arm (or a `case LayoutSeverity.Info:`), otherwise the switch is a compile error |
+  | `severity > LayoutSeverity.Warning` was the "is an error" test | unchanged — `Info = 2` is ABOVE `Error`, so order by `LayoutSeverityRank.Of(severity)`, never by the numeric value |
+
 - **`TemplateVariableInfo.Description` / `Group` are part of the record's equality (B9).** Host-supplied
   metadata for the variable picker (the picker searches both, and shows the description next to the
   token); variables extracted from a document keep them `null`. A host that compared `TemplateVariableInfo`
   instances or used them as dictionary keys sees a different `Equals`/`GetHashCode` than before — the
   compiler-visible shape is unchanged.
+
+  | Před (before) | Po (after) |
+  | --- | --- |
+  | `new TemplateVariableInfo("order.total", VariableKind.Text)` — two members, equality over both | the positional members are unchanged; `Description` and `Group` default to `null` and now take part in `Equals`/`GetHashCode` |
+  | two instances differing only in host metadata compared equal | they compare unequal; a dictionary/lookup keyed by `TemplateVariableInfo` must include the metadata (or key by `Path`) |
 
 - **`TmEmailTemplateEditor` renders the core `TmEditorShell` instead of its own `TmSplitter` 20/60/20.**
   The editor used to lay itself out: a `TmSplitter` with a 20 % palette, a 60 % canvas and a 20 %
@@ -1579,7 +1614,7 @@
   the mapping onto `TmEditorShell.CollapsedPanels` (`EditorShellPanel.Left`); a collapse the shell
   imposes itself (the tablet one-expanded-panel rule) raises `ToolboxCollapsedChanged` too.
 
-- **`TmEmailTableEditor` markup and stylesheet (Fáze 9).** The grid is no longer a bare `<table>`:
+- **`TmEmailTableEditor` markup and stylesheet.** The grid is no longer a bare `<table>`:
   it is a `<table>` with a `<caption>`, a sticky first `<th scope="row">` control column, one
   "Edit cell" action per `<td>`, a header section and a rows-and-columns section, all inside
   `.tm-email-table-editor__scroll`. The package now ships `.razor.css` scoped styles for it, so the
@@ -1600,7 +1635,7 @@
 
 
 
-## 2.9.1 (unreleased)
+## 2.9.1 (not released separately — shipped in 2.10.0)
 
 ### Fixed
 

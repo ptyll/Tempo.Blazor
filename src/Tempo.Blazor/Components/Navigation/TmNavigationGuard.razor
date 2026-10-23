@@ -17,8 +17,8 @@
            reports through this surface (CloseOnOverlayClick stays false as before). *@
         <TmDialog Show="@_showConfirm"
                   Type="DialogType.Custom"
-                  Title="@ConfirmTitle"
-                  Message="@ConfirmMessage"
+                  Title="@ResolvedConfirmTitle"
+                  Message="@ResolvedConfirmMessage"
                   CloseOnEscape="@(!_saving)"
                   OnResult="HandleDialogResultAsync">
             <FooterContent>
@@ -26,13 +26,13 @@
                    Leave would abandon the pending write, Stay would dismiss the dialog the save
                    still reports through. *@
                 <TmButton Variant="ButtonVariant.Ghost" Disabled="@_saving" OnClick="() => HandleDialogResultAsync(false)">
-                    @CancelText
+                    @ResolvedCancelText
                 </TmButton>
                 <TmButton Variant="ButtonVariant.Primary" Disabled="@_saving" OnClick="HandleSaveAndLeaveAsync">
-                    @SaveAndLeaveText
+                    @ResolvedSaveAndLeaveText
                 </TmButton>
                 <TmButton Variant="ButtonVariant.Danger" Disabled="@_saving" OnClick="() => HandleDialogResultAsync(true)">
-                    @ConfirmLeaveText
+                    @ResolvedConfirmLeaveText
                 </TmButton>
             </FooterContent>
         </TmDialog>
@@ -41,10 +41,10 @@
     {
         <TmDialog Show="@_showConfirm"
                   Type="DialogType.Confirm"
-                  Title="@ConfirmTitle"
-                  Message="@ConfirmMessage"
-                  OkButtonText="@ConfirmLeaveText"
-                  CancelButtonText="@CancelText"
+                  Title="@ResolvedConfirmTitle"
+                  Message="@ResolvedConfirmMessage"
+                  OkButtonText="@ResolvedConfirmLeaveText"
+                  CancelButtonText="@ResolvedCancelText"
                   CloseOnEscape="@(!_saving)"
                   OnResult="HandleDialogResultAsync" />
     }
@@ -73,23 +73,58 @@
     /// <summary>When false, the guard never blocks navigation or the browser unload prompt.</summary>
     [Parameter] public bool Enabled { get; set; } = true;
 
-    /// <summary>Title shown in the leave-confirmation dialog.</summary>
-    [Parameter] public string ConfirmTitle { get; set; } = "Unsaved changes";
+    /// <summary>
+    /// Title shown in the leave-confirmation dialog. When null (the default) the localized
+    /// <c>TmNavigationGuard_ConfirmTitle</c> text is used, so the dialog follows the application's culture
+    /// without the host passing anything.
+    /// </summary>
+    [Parameter] public string? ConfirmTitle { get; set; }
 
-    /// <summary>Message shown in the leave-confirmation dialog.</summary>
-    [Parameter] public string ConfirmMessage { get; set; } = "You have unsaved changes. If you leave now, they will be lost.";
+    /// <summary>
+    /// Message shown in the leave-confirmation dialog. When null (the default) the localized
+    /// <c>TmNavigationGuard_ConfirmMessage</c> text is used.
+    /// </summary>
+    [Parameter] public string? ConfirmMessage { get; set; }
 
-    /// <summary>Text for the button that confirms leaving (discarding unsaved work).</summary>
-    [Parameter] public string ConfirmLeaveText { get; set; } = "Leave";
+    /// <summary>
+    /// Text for the button that confirms leaving (discarding unsaved work). When null (the default) the
+    /// localized <c>TmNavigationGuard_Leave</c> text is used.
+    /// </summary>
+    [Parameter] public string? ConfirmLeaveText { get; set; }
 
-    /// <summary>Text for the button that cancels navigation and stays on the page.</summary>
-    [Parameter] public string CancelText { get; set; } = "Stay";
+    /// <summary>
+    /// Text for the button that cancels navigation and stays on the page. When null (the default) the
+    /// localized <c>TmNavigationGuard_Stay</c> text is used.
+    /// </summary>
+    [Parameter] public string? CancelText { get; set; }
 
     /// <summary>
     /// Text for the optional third button that saves the pending work and then leaves. The button is only
     /// rendered when <see cref="OnSaveAndLeave"/> is set, so existing two-choice usages are unchanged.
+    /// When null (the default) the localized <c>TmNavigationGuard_SaveAndLeave</c> text is used.
     /// </summary>
-    [Parameter] public string SaveAndLeaveText { get; set; } = "Save and leave";
+    [Parameter] public string? SaveAndLeaveText { get; set; }
+
+    /// <summary>
+    /// Resolved texts of the confirmation dialog. Every text falls back to the application's localization
+    /// (<see cref="ITmLocalizer"/>) instead of a hardcoded English default — the guard used to ship English
+    /// copy that a Czech/Slovak/French host could only fix by re-typing the strings the library already
+    /// carries in its own resources. The English resources hold the 2.9.x defaults byte-identically, so a
+    /// host (or test) that matches the dialog by its visible wording is unaffected.
+    /// </summary>
+    private string ResolvedConfirmTitle => ConfirmTitle ?? Loc["TmNavigationGuard_ConfirmTitle"];
+
+    /// <summary>Localized fallback for <see cref="ConfirmMessage"/>.</summary>
+    private string ResolvedConfirmMessage => ConfirmMessage ?? Loc["TmNavigationGuard_ConfirmMessage"];
+
+    /// <summary>Localized fallback for <see cref="ConfirmLeaveText"/>.</summary>
+    private string ResolvedConfirmLeaveText => ConfirmLeaveText ?? Loc["TmNavigationGuard_Leave"];
+
+    /// <summary>Localized fallback for <see cref="CancelText"/>.</summary>
+    private string ResolvedCancelText => CancelText ?? Loc["TmNavigationGuard_Stay"];
+
+    /// <summary>Localized fallback for <see cref="SaveAndLeaveText"/>.</summary>
+    private string ResolvedSaveAndLeaveText => SaveAndLeaveText ?? Loc["TmNavigationGuard_SaveAndLeave"];
 
     /// <summary>
     /// Optional callback that persists the pending work before navigation continues. When set, the
