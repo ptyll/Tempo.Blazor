@@ -2501,6 +2501,7 @@
   "TmEditorShell_ExpandLeftPanel": "Développer le panneau gauche",
   "TmEditorShell_ExpandRightPanel": "Développer le panneau droit",
   "TmEditorShell_ClosePanels": "Fermer les panneaux",
+  "TmEditorShell_ClosePanel": "Fermer le panneau",
   "TmEditorShell_Canvas": "Canevas",
   "TmEditorShell_ResizeLeftPanel": "Redimensionner le panneau gauche",
   "TmEditorShell_ResizeRightPanel": "Redimensionner le panneau droit",

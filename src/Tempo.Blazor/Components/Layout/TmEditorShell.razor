@@ -11,7 +11,9 @@
 @* F6 editor shell. The shell is a container-owned component: it resolves its own layout from its
    root (TmLayoutObserver), so a host can embed it at any width and a test can force a mode. It never
    copies sheet, gesture, focus or top-layer logic. Desktop AND tablet render docked panels (tablet:
-   at most one expanded, the other a rail — never a modal, decision F6-SHELL-PANEL-STATES); mobile
+   at most one expanded, the other a rail — never a modal, decision F6-SHELL-PANEL-STATES) unless the host asks for
+   TabletPanelPresentation.Overlay (an overlay drawer / non-modal side sheet over a full-width canvas, decision
+   EDITOR-SHELL-TABLET-PRESENTATION); mobile
    renders the canvas with an inline non-modal TmDrawer bottom sheet (Sheet) or a Left | Canvas |
    Right tablist (Tabs), plus the F5 action bar. *@
 
@@ -35,10 +37,22 @@
         @if (!layout.IsMobile)
         {
             var collapsed = EffectiveCollapsed(layout.Resolved);
-            <div class="tm-editor-shell__main" data-region="main" @ref="_main">
-                @RenderDockedSide(EditorShellPanel.Left, collapsed)
-                <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
-                @RenderDockedSide(EditorShellPanel.Right, collapsed)
+            var overlay = IsOverlay(layout.Resolved);
+            @* The canvas keeps its position in the tree across the docked <-> overlay switch, so its content is never remounted. *@
+            <div class="@(overlay ? "tm-editor-shell__main tm-editor-shell__main--overlay" : "tm-editor-shell__main")" data-region="main" @ref="_main">
+                @if (!overlay)
+                {
+                    @RenderDockedSide(EditorShellPanel.Left, collapsed)
+                }
+                <div class="tm-editor-shell__canvas" data-region="canvas" @ref="_canvasRegion">@Canvas</div>
+                @if (overlay)
+                {
+                    @RenderOverlay()
+                }
+                else
+                {
+                    @RenderDockedSide(EditorShellPanel.Right, collapsed)
+                }
             </div>
         }
         else if (MobilePanelPresentation == MobilePanelPresentation.Tabs)
@@ -285,6 +299,7 @@
     /// measures is final). Forced modes never measure, so they never carry the class.
     /// </summary>
     private string? FittingClass => _resolved == TmLayoutMode.Tablet
+        && !IsOverlay(_resolved)
         && LayoutMode == TmLayoutMode.Auto
         && !_fitComputed
         ? "tm-editor-shell--fitting"
@@ -413,7 +428,7 @@
     };
 
     private EditorShellPanel EffectiveCollapsed(TmLayoutMode resolved)
-        => resolved == TmLayoutMode.Tablet ? _effectiveCollapsed : CollapsedPanels;
+        => resolved == TmLayoutMode.Tablet && !IsOverlay(resolved) ? _effectiveCollapsed : CollapsedPanels;
 
     private bool IsExpanded(EditorShellPanel side, EditorShellPanel collapsed) => side == EditorShellPanel.Left
         ? LeftOpen && Left is not null && !collapsed.HasFlag(EditorShellPanel.Left)
@@ -627,7 +642,7 @@
         var leftExpanded = LeftOpen && Left is not null && !CollapsedPanels.HasFlag(EditorShellPanel.Left);
         var rightExpanded = RightOpen && Right is not null && !CollapsedPanels.HasFlag(EditorShellPanel.Right);
         var effective = CollapsedPanels;
-        if (resolved == TmLayoutMode.Tablet && leftExpanded && rightExpanded)
+        if (resolved == TmLayoutMode.Tablet && !IsOverlay(resolved) && leftExpanded && rightExpanded)
         {
             effective |= _tabletWinner == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
         }
@@ -909,6 +924,7 @@
             raiseCollapsed = true;
         }
 
+        await SyncOverlayAsync(resolved, flipped);
         _stateInitialised = true;
 
         if (raiseSnap) await MobileSheetSnapIndexChanged.InvokeAsync(0);
@@ -967,6 +983,7 @@
         }
 
         await RestoreFocusAsync();
+        await FocusOverlayAsync();
         await SyncResizersAsync();
         await SyncCanvasWidthAsync();
 

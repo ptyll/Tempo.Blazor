@@ -2488,6 +2488,7 @@
   "TmEditorShell_ExpandLeftPanel": "Expand left panel",
   "TmEditorShell_ExpandRightPanel": "Expand right panel",
   "TmEditorShell_ClosePanels": "Close panels",
+  "TmEditorShell_ClosePanel": "Close panel",
   "TmEditorShell_Canvas": "Canvas",
   "TmEditorShell_ResizeLeftPanel": "Resize left panel",
   "TmEditorShell_ResizeRightPanel": "Resize right panel",

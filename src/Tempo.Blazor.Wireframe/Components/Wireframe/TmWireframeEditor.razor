@@ -42,8 +42,12 @@
                    RightOpenChanged="OnShellRightOpenChanged"
                    CollapsedPanels="_collapsedPanels"
                    CollapsedPanelsChanged="OnShellCollapsedPanelsChanged"
-                   LeftTitle="@(IsMobile ? Loc["TmWireframe_MobileAdd"] : Loc["TmWireframe_PanelComponents"])"
-                   RightTitle="@(IsMobile ? Loc["TmWireframe_SheetInspectorTitle"] : Loc["TmWireframe_PanelProperties"])"
+                   TabletPanelPresentation="TabletPanelPresentation.Overlay"
+                   LeftOverlayTestId="@TestId("wd-left-drawer")"
+                   RightOverlayTestId="@TestId("wd-inspector-sheet")"
+                   OverlayCloseTestId="@TestId("wd-sheet-close")"
+                   LeftTitle="@(IsMobile ? Loc["TmWireframe_MobileAdd"] : IsTablet ? Loc["TmWireframe_SheetLeftTitle"] : Loc["TmWireframe_PanelComponents"])"
+                   RightTitle="@(IsMobile || IsTablet ? Loc["TmWireframe_SheetInspectorTitle"] : Loc["TmWireframe_PanelProperties"])"
                    LeftWidth="260px" MinLeftWidth="220" MaxLeftWidth="400"
                    RightWidth="300px" MinRightWidth="260" MaxRightWidth="480" />
 
@@ -543,33 +547,7 @@
             </div> @* canvas-inner *@
         </div> @* canvas-area *@
 
-        @* ── Tablet: ONE side sheet at a time (left overlay drawer OR inspector), both non-modal ── *@
-        @if (LeftSheetOpen)
-        {
-            @Sheet(TestId("wd-left-drawer"), "tm-wd-sheet--left", Loc["TmWireframe_SheetLeftTitle"], LeftSlot)
-        }
-        else if (InspectorSheetOpen)
-        {
-            @Sheet(TestId("wd-inspector-sheet"), "tm-wd-sheet--right", Loc["TmWireframe_SheetInspectorTitle"], RightSlot)
-        }
     </div>;
-
-    private RenderFragment Sheet(string testId, string modifier, string title, RenderFragment? content) => @<TmFocusScope Active="true"
-                                                                                                                  Modal="false"
-                                                                                                                  CloseOnEscape="true"
-                                                                                                                  OnEscape="CloseSheet"
-                                                                                                                  RestoreFocusTarget="CanvasFocusTarget"
-                                                                                                                  AriaLabelledBy="@_sheetTitleId"
-                                                                                                                  DataTestId="@testId"
-                                                                                                                  Class="@($"tm-wd-sheet {modifier}")">
-        <div class="tm-wd-sheet__header">
-            <span class="tm-wd-sheet__title" id="@_sheetTitleId">@title</span>
-            <button type="button" class="tm-wd-sheet__close" aria-label="@Loc["TmWireframe_SheetClose"]" title="@Loc["TmWireframe_SheetClose"]" data-testid="@TestId("wd-sheet-close")" @ref="_sheetCloseRef" @onclick="CloseSheet">
-                <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
-            </button>
-        </div>
-        <div class="tm-wd-sheet__body">@content</div>
-    </TmFocusScope>;
 
     // ── Inspector ──────────────────────────────────────────────────────────────
 

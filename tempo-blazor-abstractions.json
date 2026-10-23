@@ -11802,6 +11802,27 @@
       ]
     },
     {
+      "itemName": "TabletPanelPresentation",
+      "kind": "Enum",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "How an editor shell presents its Left and Right panels on a Tablet layout. Docked keeps the docked columns (rails, at most one expanded); Overlay turns the Left panel into an overlay drawer and the Right panel into a non-modal side sheet over a full-width canvas, at most one open. Desktop and mobile are not affected.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TabletPanelPresentation.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Docked",
+          "description": "The panels stay docked columns (a slim rail when collapsed, at most one expanded, resizable). The behaviour of every earlier version."
+        },
+        {
+          "name": "Overlay",
+          "description": "The Left panel is an overlay drawer, the Right panel a non-modal side sheet, over a canvas that keeps its full width. At most one is open, there are no rails and no resize separators, and Escape closes the open one."
+        }
+      ],
+      "usageExample": "<TmEditorShell TabletPanelPresentation=\"TabletPanelPresentation.Overlay\" @bind-LeftOpen=\"toolboxOpen\" @bind-RightOpen=\"inspectorOpen\" …>…</TmEditorShell>"
+    },
+    {
       "itemName": "TmBreakpoints",
       "kind": "Class",
       "category": "Layout",
@@ -37334,11 +37355,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1491,
-    "manualItemCount": 1491,
-    "generatedItemCount": 1474,
+    "itemCount": 1492,
+    "manualItemCount": 1492,
+    "generatedItemCount": 1475,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1474
+    "publicApiTypeCount": 1475
   }
 }

@@ -19546,6 +19546,12 @@
               "description": "Raised when the left panel should open or close (every close path funnels through here)."
             },
             {
+              "name": "LeftOverlayTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The data-testid of the Left overlay drawer root (Overlay only). Null uses editor-shell-left-overlay, namespaced by TestIdPrefix."
+            },
+            {
               "name": "LeftRail",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -19645,6 +19651,12 @@
               "description": "Fractions (0-1] of the shell's stage the mobile panels sheet snaps to, ascending; MobileSheetSnapIndex indexes this list (0 = the lowest). Default [0.5, 1.0]. Invalid values are dropped and the list is sorted (the TmDrawer rules); an empty result falls back to the default. The lowest snap is also the fraction of the stage the canvas reserves while the sheet is open. On a short stage the 14rem floor applies to the whole sheet panel, capped at the stage height (--tm-editor-shell-sheet-min-block)."
             },
             {
+              "name": "OverlayCloseTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The data-testid of the overlay close button. Null uses the open overlay's test id with a -close suffix."
+            },
+            {
               "name": "PersistWidthsKey",
               "type": "string?",
               "isRequired": false,
@@ -19674,6 +19686,12 @@
               "type": "EventCallback<bool>",
               "isRequired": false,
               "description": "Raised when the right panel should open or close."
+            },
+            {
+              "name": "RightOverlayTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The data-testid of the Right overlay side sheet root (Overlay only). Null uses editor-shell-right-overlay, namespaced by TestIdPrefix."
             },
             {
               "name": "RightRail",
@@ -19712,6 +19730,14 @@
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "Optional status bar content, rendered below the main region (inside it, above the panels sheet, on mobile)."
+            },
+            {
+              "name": "TabletPanelPresentation",
+              "type": "TabletPanelPresentation",
+              "isRequired": false,
+              "default": "TabletPanelPresentation.Docked",
+              "description": "How the open panels present on a TABLET layout, one value for both sides. Docked (default): the docked columns with rails, at most one expanded. Overlay: the Left panel is an overlay drawer and the Right panel a non-modal side sheet over a full-width canvas - at most one open (opening one closes the other and raises its LeftOpenChanged / RightOpenChanged with false), driven by LeftOpen / RightOpen, no rails, no resize, Escape or the close button closes it and returns the focus to the opener. Desktop and mobile ignore it.",
+              "example": "TabletPanelPresentation=\"TabletPanelPresentation.Overlay\""
             },
             {
               "name": "Toolbar",
@@ -78299,6 +78325,27 @@
           ]
         },
         {
+          "itemName": "TabletPanelPresentation",
+          "kind": "Enum",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Abstractions.Layout",
+          "description": "How an editor shell presents its Left and Right panels on a Tablet layout. Docked keeps the docked columns (rails, at most one expanded); Overlay turns the Left panel into an overlay drawer and the Right panel into a non-modal side sheet over a full-width canvas, at most one open. Desktop and mobile are not affected.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TabletPanelPresentation.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Docked",
+              "description": "The panels stay docked columns (a slim rail when collapsed, at most one expanded, resizable). The behaviour of every earlier version."
+            },
+            {
+              "name": "Overlay",
+              "description": "The Left panel is an overlay drawer, the Right panel a non-modal side sheet, over a canvas that keeps its full width. At most one is open, there are no rails and no resize separators, and Escape closes the open one."
+            }
+          ],
+          "usageExample": "<TmEditorShell TabletPanelPresentation=\"TabletPanelPresentation.Overlay\" @bind-LeftOpen=\"toolboxOpen\" @bind-RightOpen=\"inspectorOpen\" …>…</TmEditorShell>"
+        },
+        {
           "itemName": "TmBreakpoints",
           "kind": "Class",
           "category": "Layout",
@@ -103831,12 +103878,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1491,
-        "manualItemCount": 1491,
-        "generatedItemCount": 1474,
+        "itemCount": 1492,
+        "manualItemCount": 1492,
+        "generatedItemCount": 1475,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1474
+        "publicApiTypeCount": 1475
       }
     },
     {
@@ -120721,10 +120768,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3301,
-    "manualItemCount": 3301,
+    "itemCount": 3302,
+    "manualItemCount": 3302,
     "generatedOnlyItemCount": 0,
     "componentCount": 487,
-    "publicApiTypeCount": 2761
+    "publicApiTypeCount": 2762
   }
 }

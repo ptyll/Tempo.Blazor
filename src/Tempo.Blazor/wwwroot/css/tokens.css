@@ -447,6 +447,8 @@
   --tm-shadow-popover:         var(--tm-shadow-lg);
   /* WCAG 2.5.5 target size. A minimum, not a height: a control may be taller. */
   --tm-touch-target:           2.75rem;
+  /* TmEditorShell TabletPanelPresentation.Overlay: the width of the overlay drawer / side sheet (capped at 60 % of the editor in the component). A host overrides it on an ancestor. */
+  --tm-editor-shell-overlay-width: 20rem;
   /* A whole box-shadow value: a 2px surface gap, then a 2px primary ring. The gap
      keeps the ring visible on any fill, and the primary step clears 3:1 against the
      surface in both themes. */

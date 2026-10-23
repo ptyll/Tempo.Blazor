@@ -93,7 +93,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
     public async Task Tablet_TouchFlow_Drawer_Insert_Inspector_Pages_Layers(int width, int height, bool keepSidebar)
     {
         var (page, editor) = await OpenAsync(width, height, keepSidebar, dark: false);
-        Assert.AreEqual(0, await editor.Locator(".tm-wd-sheet").CountAsync(), "no sheet at load");
+        Assert.AreEqual(0, await editor.Locator(".tm-editor-shell__overlay").CountAsync(), "no sheet at load");
         Assert.AreEqual(0, await editor.Locator(".tm-editor-shell__panel").CountAsync(), "no docked panel on a tablet");
         Assert.AreEqual(0, await editor.Locator(".tm-wd-editor__minimap-wrap").CountAsync(), "the minimap is hidden on a tablet");
 
@@ -113,7 +113,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
         var inspector = editor.Locator("[data-testid='wd-inspector-sheet']");
         await inspector.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
         Assert.AreEqual(0, await editor.Locator("[data-testid='wd-left-drawer']").CountAsync(), "the drawer closed by the insertion");
-        Assert.AreEqual(1, await editor.Locator(".tm-wd-sheet").CountAsync(), "exactly one sheet is open");
+        Assert.AreEqual(1, await editor.Locator(".tm-editor-shell__overlay").CountAsync(), "exactly one sheet is open");
 
         // 3. Edit a property in the sheet.
         var name = inspector.Locator("[data-testid='wd-element-name']");
@@ -125,7 +125,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
 
         // 4. Close the sheet with the ×: the canvas gets its width back.
         await inspector.Locator("[data-testid='wd-sheet-close']").TapAsync();
-        await editor.Locator(".tm-wd-sheet").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+        await editor.Locator(".tm-editor-shell__overlay").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
 
         // 5. Switch page: the Pages tab of the drawer.
         await editor.Locator("[data-testid='wd-toggle-left']").TapAsync();
@@ -166,22 +166,22 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
         await right.TapAsync();
         await editor.Locator("[data-testid='wd-inspector-sheet']").WaitForAsync();
         await editor.Locator("[data-testid='wd-left-drawer']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
-        Assert.AreEqual(1, await editor.Locator(".tm-wd-sheet").CountAsync());
+        Assert.AreEqual(1, await editor.Locator(".tm-editor-shell__overlay").CountAsync());
         Assert.AreEqual("false", await left.GetAttributeAsync("aria-pressed"));
         Assert.AreEqual("true", await right.GetAttributeAsync("aria-pressed"));
 
         await left.TapAsync();
         await editor.Locator("[data-testid='wd-left-drawer']").WaitForAsync();
-        Assert.AreEqual(1, await editor.Locator(".tm-wd-sheet").CountAsync(), "still exactly one sheet");
+        Assert.AreEqual(1, await editor.Locator(".tm-editor-shell__overlay").CountAsync(), "still exactly one sheet");
 
         await left.TapAsync();
-        await editor.Locator(".tm-wd-sheet").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        await editor.Locator(".tm-editor-shell__overlay").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
     }
 
     [TestMethod]
     [TestCategory("WASM")]
-    [Description("Edge: Escape closes the sheet that holds the focus and returns the focus to the canvas, not to the toolbar toggle")]
-    public async Task Tablet_Escape_ClosesSheet_AndRestoresFocusToCanvas()
+    [Description("Edge: Escape closes the sheet that holds the focus and returns the focus to the control that opened it (the toolbar toggle) - the core shell's overlay contract")]
+    public async Task Tablet_Escape_ClosesSheet_AndRestoresFocusToTheToggle()
     {
         var (page, editor) = await OpenAsync(1024, 768, keepSidebar: false, dark: false);
         await editor.Locator("[data-testid='wd-toggle-inspector']").TapAsync();
@@ -193,10 +193,31 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Escape");
 
         await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
-        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('.tm-wd-canvas-wrap')",
+        await page.WaitForFunctionAsync("() => document.activeElement?.getAttribute('data-testid') === 'wd-toggle-inspector'",
             null, new PageWaitForFunctionOptions { Timeout = 5_000 });
     }
 
+    [TestMethod]
+    [TestCategory("WASM")]
+    [Description("Edge: the sheet is a core shell overlay - the left drawer paints over the canvas without narrowing it, and the toolbar toggle that is pressed is the only way back besides × / Escape")]
+    public async Task Tablet_LeftDrawer_IsACoreOverlay_AndDoesNotNarrowTheCanvas()
+    {
+        var (_, editor) = await OpenAsync(1024, 768, keepSidebar: false, dark: false);
+        var svg = editor.Locator(".tm-wd-canvas__svg");
+        var before = (await svg.BoundingBoxAsync())!.Width;
+
+        await editor.Locator("[data-testid='wd-toggle-left']").TapAsync();
+        var drawer = editor.Locator("[data-testid='wd-left-drawer']");
+        await drawer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+
+        Assert.IsTrue(await drawer.EvaluateAsync<bool>("e => e.classList.contains('tm-editor-shell__overlay') && e.classList.contains('tm-editor-shell__overlay--left')"), "the drawer is the core overlay");
+        Assert.AreEqual("false", await drawer.GetAttributeAsync("aria-modal"), "non-modal");
+        Assert.AreEqual(0, await editor.Locator(".tm-drawer, [popover]").CountAsync(), "no modal drawer, nothing in the top layer");
+        Assert.AreEqual(before, (await svg.BoundingBoxAsync())!.Width, 2, "the overlay drawer never narrows the canvas");
+        var box = (await drawer.BoundingBoxAsync())!;
+        var editorBox = (await editor.BoundingBoxAsync())!;
+        Assert.IsTrue(box.Width <= editorBox.Width * 0.6 + 1, $"the drawer covers at most 60 % of the editor ({box.Width:0} of {editorBox.Width:0})");
+    }
     // ── Canvas viewport ───────────────────────────────────────────────────────
 
     [TestMethod]
@@ -229,7 +250,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
             "the canvas svg is the same node: the sheet did not rebuild it");
 
         await editor.Locator("[data-testid='wd-sheet-close']").TapAsync();
-        await editor.Locator(".tm-wd-sheet").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        await editor.Locator(".tm-editor-shell__overlay").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
         await page.WaitForTimeoutAsync(500);
         Assert.AreEqual(wide, (await svg.BoundingBoxAsync())!.Width, 2, "the canvas gets its width back");
     }
@@ -250,7 +271,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
             null, new PageWaitForFunctionOptions { Timeout = 10_000 });
         await page.WaitForTimeoutAsync(800);
 
-        Assert.AreEqual(0, await editor.Locator(".tm-wd-sheet").CountAsync(), "the sheets are gone");
+        Assert.AreEqual(0, await editor.Locator(".tm-editor-shell__overlay").CountAsync(), "the sheets are gone");
         Assert.IsTrue(await editor.Locator("[data-region='left'] .tm-wd-toolbox").CountAsync() > 0, "the left panel is docked again");
         Assert.IsTrue(await editor.Locator("[data-region='right'] .tm-wd-props").CountAsync() > 0, "the inspector is docked again");
         Assert.AreEqual(0, await editor.Locator("[data-testid^='wd-toolbar-row-']").CountAsync(), "one toolbar on desktop");
@@ -270,7 +291,7 @@ public sealed class WireframePhase6TabletE2ETests : WasmTestBase
         Assert.AreEqual(0, await editor.Locator(".tm-wd-toolbox--single-column").CountAsync(), "3-column tiles on desktop");
         Assert.IsTrue(await editor.Locator("[data-region='right'] .tm-wd-props").IsVisibleAsync(), "docked inspector");
         Assert.AreEqual(1, await editor.Locator(".tm-wd-editor__minimap-wrap").CountAsync(), "the minimap card");
-        Assert.AreEqual(0, await editor.Locator(".tm-wd-sheet, [data-testid='wd-toggle-left']").CountAsync(), "no tablet sheets or toggles");
+        Assert.AreEqual(0, await editor.Locator(".tm-editor-shell__overlay, [data-testid='wd-toggle-left']").CountAsync(), "no tablet sheets or toggles");
         var overflow = await editor.Locator(".tm-toolbar").EvaluateAsync<int>("b => b.scrollWidth - b.clientWidth");
         Assert.IsTrue(overflow <= 0, $"the desktop toolbar is not clipped ({overflow}px)");
     }

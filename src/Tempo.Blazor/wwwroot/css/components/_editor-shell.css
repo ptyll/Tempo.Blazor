@@ -361,11 +361,117 @@
     min-block-size: 0;
 }
 
+/* ── Tablet overlay presentation (TabletPanelPresentation.Overlay) ──────────────────────────
+   On a tablet layout the open panel is an overlay drawer (Left) or a non-modal side sheet (Right) over a
+   canvas that keeps its full width. The main region is the positioned host; at most ONE overlay exists. The
+   width is a host knob (--tm-editor-shell-overlay-width) and never exceeds 60 % of the editor, so the canvas
+   always stays reachable. Surface, border, text and shadow are theme tokens: dark mode needs no extra block. */
+.tm-editor-shell__main--overlay {
+    position: relative;
+}
+
+.tm-editor-shell__overlay {
+    position: absolute;
+    inset-block: 0;
+    z-index: var(--tm-z-inline-sheet, 10);
+    display: flex;
+    flex-direction: column;
+    inline-size: min(var(--tm-editor-shell-overlay-width, 20rem), 60%);
+    min-block-size: 0;
+    background: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-editor-shell__overlay--left {
+    inset-inline-start: 0;
+    border-inline-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__overlay--right {
+    inset-inline-end: 0;
+    border-inline-start: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__overlay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-1) var(--tm-space-3);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__overlay-title {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__overlay-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    inline-size: var(--tm-space-8);
+    block-size: var(--tm-space-8);
+    padding: 0;
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-editor-shell__overlay-close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-editor-shell__overlay-close:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The host's panel content fills the body; the body is the one scroller unless the content scrolls itself. */
+.tm-editor-shell__overlay-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-editor-shell__overlay-body > [data-region] {
+    block-size: 100%;
+    min-block-size: 0;
+    overflow: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .tm-editor-shell__overlay {
+        animation: tm-editor-shell-overlay-in 0.18s ease-out;
+    }
+}
+
+@keyframes tm-editor-shell-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
 /* ── Touch ──────────────────────────────────────────────── */
 
 @media (pointer: coarse) {
     .tm-editor-shell__panel-toggle {
         inline-size: var(--tm-touch-target);
+    }
+
+    /* The overlay's close button is a finger target. */
+    .tm-editor-shell__overlay-close {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
     }
 
     /* A sheet / Tabs tab is primary navigation on a phone (Bloky | Vlastnosti): it gets the full

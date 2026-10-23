@@ -478,7 +478,7 @@ public sealed class WireframePhase5TouchE2ETests : WasmTestBase
         if (await sheetClose.CountAsync() > 0)
         {
             await sheetClose.First.ClickAsync();
-            await editor.Locator(".tm-wd-sheet").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
+            await editor.Locator(".tm-editor-shell__overlay").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
             await page.WaitForTimeoutAsync(800);   // the canvas re-measures (relayout) once the sheet is gone; read the view box only after that
         }
 

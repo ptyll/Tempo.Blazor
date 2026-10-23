@@ -70,6 +70,29 @@ public partial class TmEditorShell
     /// <summary>How the open panels present on a mobile layout. <see cref="MobilePanelPresentation.Sheet"/> (default) keeps the canvas visible with a bottom sheet — a Left/Right tab strip inside it when both panels are open; <see cref="MobilePanelPresentation.Tabs"/> is a full-region Left | Canvas | Right tablist with no sheet.</summary>
     [Parameter] public MobilePanelPresentation MobilePanelPresentation { get; set; } = MobilePanelPresentation.Sheet;
 
+    /// <summary>
+    /// How the open panels present on a TABLET layout, one value for both sides.
+    /// <see cref="TabletPanelPresentation.Docked"/> (default) keeps the docked columns with rails (at most one
+    /// expanded). <see cref="TabletPanelPresentation.Overlay"/> turns the Left panel into an overlay drawer and the
+    /// Right panel into a non-modal side sheet over a full-width canvas: at most one is open (opening one closes the
+    /// other and raises its <see cref="LeftOpenChanged"/> / <see cref="RightOpenChanged"/> with <c>false</c>), they are
+    /// driven by <see cref="LeftOpen"/> / <see cref="RightOpen"/> (the host renders the toggles), have no rail and no
+    /// resize separator, and Escape or the close button closes the open one and returns the focus to its trigger.
+    /// Desktop and mobile layouts ignore it.
+    /// </summary>
+    [Parameter] public TabletPanelPresentation TabletPanelPresentation { get; set; } = TabletPanelPresentation.Docked;
+    /// <summary>
+    /// The <c>data-testid</c> of the Left overlay drawer root (<see cref="TabletPanelPresentation.Overlay"/> only). Null uses
+    /// <c>editor-shell-left-overlay</c>; either way <see cref="TmComponentBase.TestIdPrefix"/> namespaces the default, while
+    /// an explicit value is used as given (the host namespaces it itself).
+    /// </summary>
+    [Parameter] public string? LeftOverlayTestId { get; set; }
+
+    /// <summary>The <c>data-testid</c> of the Right overlay side sheet root (<see cref="TabletPanelPresentation.Overlay"/> only). Null uses <c>editor-shell-right-overlay</c>.</summary>
+    [Parameter] public string? RightOverlayTestId { get; set; }
+
+    /// <summary>The <c>data-testid</c> of the overlay's close button. Null uses the open overlay's test id with a <c>-close</c> suffix.</summary>
+    [Parameter] public string? OverlayCloseTestId { get; set; }
     /// <summary>The left panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label.</summary>
     [Parameter] public string? LeftTitle { get; set; }
 

@@ -23,7 +23,7 @@ public partial class TmEditorShell
         var collapsed = EffectiveCollapsed(_resolved);
         foreach (var side in new[] { EditorShellPanel.Left, EditorShellPanel.Right })
         {
-            var wanted = _resolved != TmLayoutMode.Mobile && IsExpanded(side, collapsed);
+            var wanted = _resolved != TmLayoutMode.Mobile && !IsOverlay(_resolved) && IsExpanded(side, collapsed);
             var id = ResizerId(side);
             if (!wanted)
             {

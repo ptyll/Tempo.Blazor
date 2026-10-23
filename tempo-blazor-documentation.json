@@ -19544,6 +19544,12 @@
           "description": "Raised when the left panel should open or close (every close path funnels through here)."
         },
         {
+          "name": "LeftOverlayTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The data-testid of the Left overlay drawer root (Overlay only). Null uses editor-shell-left-overlay, namespaced by TestIdPrefix."
+        },
+        {
           "name": "LeftRail",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -19643,6 +19649,12 @@
           "description": "Fractions (0-1] of the shell's stage the mobile panels sheet snaps to, ascending; MobileSheetSnapIndex indexes this list (0 = the lowest). Default [0.5, 1.0]. Invalid values are dropped and the list is sorted (the TmDrawer rules); an empty result falls back to the default. The lowest snap is also the fraction of the stage the canvas reserves while the sheet is open. On a short stage the 14rem floor applies to the whole sheet panel, capped at the stage height (--tm-editor-shell-sheet-min-block)."
         },
         {
+          "name": "OverlayCloseTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The data-testid of the overlay close button. Null uses the open overlay's test id with a -close suffix."
+        },
+        {
           "name": "PersistWidthsKey",
           "type": "string?",
           "isRequired": false,
@@ -19672,6 +19684,12 @@
           "type": "EventCallback<bool>",
           "isRequired": false,
           "description": "Raised when the right panel should open or close."
+        },
+        {
+          "name": "RightOverlayTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The data-testid of the Right overlay side sheet root (Overlay only). Null uses editor-shell-right-overlay, namespaced by TestIdPrefix."
         },
         {
           "name": "RightRail",
@@ -19710,6 +19728,14 @@
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Optional status bar content, rendered below the main region (inside it, above the panels sheet, on mobile)."
+        },
+        {
+          "name": "TabletPanelPresentation",
+          "type": "TabletPanelPresentation",
+          "isRequired": false,
+          "default": "TabletPanelPresentation.Docked",
+          "description": "How the open panels present on a TABLET layout, one value for both sides. Docked (default): the docked columns with rails, at most one expanded. Overlay: the Left panel is an overlay drawer and the Right panel a non-modal side sheet over a full-width canvas - at most one open (opening one closes the other and raises its LeftOpenChanged / RightOpenChanged with false), driven by LeftOpen / RightOpen, no rails, no resize, Escape or the close button closes it and returns the focus to the opener. Desktop and mobile ignore it.",
+          "example": "TabletPanelPresentation=\"TabletPanelPresentation.Overlay\""
         },
         {
           "name": "Toolbar",

@@ -260,6 +260,8 @@
   "TmEditorShellDemo_PresentationSheet": "Mobile sheet presentation",
   "TmEditorShellDemo_ThresholdsTitle": "Custom thresholds",
   "TmEditorShellDemo_ThresholdsIntro": "The same shell with its own thresholds (desktop from 1200, mobile below 768, like the e-mail editor). On a tablet the toolbox collapses to an icon rail and one panel stays expanded.",
+  "TmEditorShellDemo_OverlayTitle": "Tablet overlay panels",
+  "TmEditorShellDemo_OverlayIntro": "The same shell with TabletPanelPresentation.Overlay (desktop from 1200, mobile below 768). On a tablet the toolbox is an overlay drawer and the properties a non-modal side sheet over a full-width canvas - at most one open, driven by the toolbar buttons, closed by the x or Escape. Desktop keeps the docked panels.",
   "TmSidePanelDemo_Title": "Side panel",
   "TmSidePanelDemo_Intro": "A standalone responsive inspector: docked in-flow on a desktop container, a modal side sheet on a narrower container, a bottom sheet on a phone viewport. Shrink the window to watch it adapt.",
   "TmSidePanelDemo_InspectorTitle": "Event detail",

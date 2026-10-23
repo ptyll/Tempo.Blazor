@@ -15,7 +15,7 @@ Read [responsive-conventions.md](responsive-conventions.md) first: the shell fol
 | Layout (container width, default thresholds) | Panels | Canvas | Actions |
 |---|---|---|---|
 | **Desktop** (≥ 1024 default, ≥ 1200 with `Breakpoints(768, 1200)`) | Docked, resizable columns. A strip toggle per panel hides it, collapses it to a 44px rail, or expands it again. | Fills the remaining width. | Toolbar slot. |
-| **Tablet** (640–1023 default, 768–1199 with `Breakpoints(768, 1200)`) | The **same docked panels**: `CollapsedPanels` is honoured, and **at most one** panel is expanded — expanding (or opening) one rails the other and raises `CollapsedPanelsChanged`. **No modal, nothing inert.** | Always visible and operable. | Toolbar slot. |
+| **Tablet** (640–1023 default, 768–1199 with `Breakpoints(768, 1200)`) | `TabletPanelPresentation.Docked` (default): the **same docked panels**: `CollapsedPanels` is honoured, and **at most one** panel is expanded — expanding (or opening) one rails the other and raises `CollapsedPanelsChanged`. **No modal, nothing inert.** `TabletPanelPresentation.Overlay`: an **overlay drawer** (Left) / **non-modal side sheet** (Right) over a full-width canvas, at most one open — see [Tablet overlay](#tablet-overlay-tabletpanelpresentationoverlay). | Always visible and operable (full width with the overlay). | Toolbar slot. |
 | **Mobile** (< 640 default, < 768 with the editor's `Breakpoints(768, 1200)`) | `MobilePanelPresentation.Sheet` (default): the canvas plus one **inline, non-modal bottom sheet** (snap points configurable through `MobileSheetSnapPoints`, default 50 % / 100 %, body floor 14rem on short stages); with two open panels the sheet shows a Left / Right tab strip. `MobilePanelPresentation.Tabs`: a full-region `tablist` **Left \| Canvas \| Right**, no sheet. | Keeps the pointer and its own scroll outside the sheet panel. | `MobileActions` through `TmMobileActionBar`; when set, the **Toolbar slot is not rendered** on mobile (the actions replace it). |
 
 `LeftOpen` / `RightOpen` mean the same on desktop and tablet (hidden vs shown); on tablet a panel
@@ -26,7 +26,32 @@ usable (the inline drawer root is click-through).
 
 > **Mobile of `TmWireframeEditor`.** The wireframe editor uses the mobile Sheet presentation with `Extra` (Pages | Layers), `MobileActions` (Add, Pages & layers, Export, More), `ShowMobilePanelsToggle="false"` and snap points 35 / 70 / 100 %, and puts its select / pan / undo / redo tool row in the `Header` slot (the `Toolbar` slot is dropped while mobile actions exist) - see [wireframe-editor.md](wireframe-editor.md#mobile-layout-phase-7).
 
-> **Editors that do not dock on a tablet.** `TmDiagramEditor` uses the docked tablet panels above. `TmWireframeEditor` instead gives the shell no `Left` / `Right` content on a tablet and renders the left panel and the inspector itself as non-modal overlay sheets (hidden minimap), because its docked panels do not fit a 768–1199 canvas. The shell has no overlay / sheet presentation for tablet yet; adding one is a recorded follow-up (see [wireframe-editor.md](wireframe-editor.md#tablet-layout-phase-6)).
+> **Editors on a tablet.** `TmDiagramEditor` and the e-mail editor keep `TabletPanelPresentation.Docked` (the docked panels above, one expanded, the other a rail). `TmWireframeEditor` uses `TabletPanelPresentation.Overlay` because its docked panels do not fit a 768–1199 canvas (see [wireframe-editor.md](wireframe-editor.md#tablet-layout-phase-6)).
+
+### Tablet overlay (`TabletPanelPresentation.Overlay`)
+
+`TabletPanelPresentation` (`Tempo.Blazor.Abstractions.Layout`, `Docked = 0` default, `Overlay = 1`; decision `EDITOR-SHELL-TABLET-PRESENTATION`) is ONE value for both sides and applies to the **tablet layout only** — desktop and mobile never change.
+
+| | `Overlay` on a tablet |
+|---|---|
+| Left | an **overlay drawer** from the left edge (`.tm-editor-shell__overlay--left`, `data-testid` `editor-shell-left-overlay`, `LeftOverlayTestId`) |
+| Right | a **non-modal side sheet** from the right edge (`.tm-editor-shell__overlay--right`, `editor-shell-right-overlay`, `RightOverlayTestId`) |
+| Canvas | keeps its **full width** — the panel floats over it (`--tm-editor-shell-overlay-width`, default `20rem`, never more than 60 % of the editor) |
+| Open state | the existing two-way `LeftOpen` / `RightOpen`; **at most one** is open — when the host opens both the most recently opened wins and the other raises its own `…OpenChanged(false)` once |
+| Chrome | **no rails, no strip toggles, no resize separators**: the host renders the toggles (a toolbar button bound to `LeftOpen` / `RightOpen`); `CollapsedPanels` is ignored and `CollapsedPanelsChanged` is never raised |
+| Close | the × button (`OverlayCloseTestId`, localized `TmEditorShell_ClosePanel`) and **Escape** raise `LeftOpenChanged(false)` / `RightOpenChanged(false)`; closing is the host's state change |
+| Focus | a panel opened from a toolbar control moves the focus to its × (so Escape works from the keyboard) and Escape / × returns it to the opener; a focus that sits on the canvas (a selection opened the panel) is never taken away; nothing moves at load |
+| Semantics | `TmFocusScope` with `Modal=false` (`aria-modal="false"`, nothing inert, no top layer, no `TmDrawer`), named by `aria-labelledby` its non-heading title |
+| Touch / motion | the × is `--tm-touch-target` (44 px) on `(pointer: coarse)`; the entrance fade runs only under `prefers-reduced-motion: no-preference` |
+
+```razor
+<TmEditorShell TabletPanelPresentation="TabletPanelPresentation.Overlay"
+               @bind-LeftOpen="_toolboxOpen" @bind-RightOpen="_inspectorOpen"
+               LeftTitle="Components" RightTitle="Properties">
+    <Toolbar><button @onclick="() => _toolboxOpen = !_toolboxOpen">Components</button></Toolbar>
+    <Left>…</Left><Canvas>…</Canvas><Right>…</Right>
+</TmEditorShell>
+```
 
 ## Using it
 

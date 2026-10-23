@@ -1800,8 +1800,8 @@ window.tmWireframeDesigner = {
         // Only handle if SVG or a child has focus (or SVG is inside an active editor)
         if (!inst.svg.closest(':focus-within') && document.activeElement !== document.body) return;
         // The layers and pages panels own every key typed inside them (radio roaming, Alt+Arrow reorder, F2,
-        // Delete/Escape on a control): none of them may also act on the canvas selection (nudge, delete, clear).
-        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-wd-sheet')) return;
+        // Delete/Escape on a control), and so do the tablet overlay panels of the shell: none of them may also act on the canvas selection (nudge, delete, clear).
+        if (e.target.closest?.('.tm-wd-layers, .tm-wd-pages, .tm-editor-shell__overlay')) return;
 
         const ids = [...inst.selectedIds];
 

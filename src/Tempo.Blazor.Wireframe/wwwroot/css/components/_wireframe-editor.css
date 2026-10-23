@@ -2201,7 +2201,6 @@
   .tm-wd-props__toggle-track,
   .tm-wd-props__toggle-track::after,
   .tm-wd-quick-actions,
-  .tm-wd-sheet,
   .tm-wd-toolbox__category-header,
   .tm-wd-toolbox__category-header::before,
   .tm-wd-toolbox__filter-btn,
@@ -2360,9 +2359,10 @@
   max-width: calc(var(--tm-space-16) * 3);
 }
 
-/* The sheets live in the canvas region: it is their positioning box and clips them to the canvas column. */
-.tm-wd-editor__canvas-region {
-  position: relative;
+/* The tablet panels (left drawer, inspector side sheet) are the core TmEditorShell's TabletPanelPresentation.Overlay
+   (.tm-editor-shell__overlay, decision EDITOR-SHELL-TABLET-PRESENTATION); the editor only sets their width and fills them. */
+.tm-wd-editor {
+  --tm-editor-shell-overlay-width: var(--tm-wd-sheet-w);
 }
 
 /* An open inspector sheet takes its width from the canvas, so the page never ends up under it. The left drawer is an
@@ -2373,86 +2373,10 @@
   padding-inline-end: min(var(--tm-wd-sheet-w), 60%);
 }
 
-.tm-wd-sheet {
-  position: absolute;
-  inset-block: 0;
-  z-index: var(--tm-z-inline-sheet, 10);
-  display: flex;
-  flex-direction: column;
-  inline-size: min(var(--tm-wd-sheet-w), 60%);
-  min-height: 0;
-  background: var(--tm-wd-bg-surface);
-  color: var(--tm-wd-text);
-  box-shadow: var(--tm-shadow-lg);
-}
-
-.tm-wd-sheet--left {
-  inset-inline-start: 0;
-  border-inline-end: 1px solid var(--tm-wd-border);
-}
-
-.tm-wd-sheet--right {
-  inset-inline-end: 0;
-  border-inline-start: 1px solid var(--tm-wd-border);
-}
-
-.tm-wd-sheet__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--tm-space-2);
-  flex-shrink: 0;
-  padding: var(--tm-space-1) var(--tm-space-2) var(--tm-space-1) var(--tm-space-3);
-  border-block-end: 1px solid var(--tm-wd-border);
-}
-
-.tm-wd-sheet__title {
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--tm-font-size-sm);
-  font-weight: var(--tm-font-weight-semibold);
-  color: var(--tm-wd-text);
-}
-
-.tm-wd-sheet__close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: var(--tm-wd-btn-size);
-  height: var(--tm-wd-btn-size);
-  padding: 0;
-  border: none;
-  border-radius: var(--tm-wd-radius);
-  background: transparent;
-  color: var(--tm-wd-text-muted);
-  cursor: pointer;
-}
-
-.tm-wd-sheet__close:hover {
-  background: var(--tm-wd-bg-muted);
-  color: var(--tm-wd-text);
-}
-
-.tm-wd-sheet__close:focus-visible {
-  outline: 2px solid transparent;
-  box-shadow: var(--tm-focus-ring);
-}
-
-.tm-wd-sheet__body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.tm-wd-sheet__body > .tm-wd-side,
-.tm-wd-sheet__body > .tm-wd-props {
+.tm-wd-editor .tm-editor-shell__overlay [data-region] > .tm-wd-side,
+.tm-wd-editor .tm-editor-shell__overlay [data-region] > .tm-wd-props {
   height: 100%;
 }
-
 /* The toolbox in the drawer: a single column of named rows instead of the 3-column tile grid. */
 .tm-wd-toolbox--single-column .tm-wd-toolbox__category-items {
   grid-template-columns: minmax(0, 1fr);
@@ -2507,7 +2431,6 @@
   }
 
   .tm-wd-editor__page-tab-close,
-  .tm-wd-sheet__close,
   .tm-wd-toolbox__search-clear {
     inline-size: var(--tm-touch-target);
     block-size: var(--tm-touch-target);
@@ -2518,18 +2441,12 @@
   }
 
   /* The inspector in the tablet sheet is a finger form: fields, selects, buttons and the toggle / checkbox rows reach the touch target. */
-  .tm-wd-sheet .tm-wd-props input:not([type="checkbox"]):not([type="color"]),
-  .tm-wd-sheet .tm-wd-props select,
-  .tm-wd-sheet .tm-wd-props button,
-  .tm-wd-sheet .tm-wd-props .tm-wd-props__toggle,
-  .tm-wd-sheet .tm-wd-props .tm-wd-props__color-swatch {
+  .tm-editor-shell__overlay .tm-wd-props input:not([type="checkbox"]):not([type="color"]),
+  .tm-editor-shell__overlay .tm-wd-props select,
+  .tm-editor-shell__overlay .tm-wd-props button,
+  .tm-editor-shell__overlay .tm-wd-props .tm-wd-props__toggle,
+  .tm-editor-shell__overlay .tm-wd-props .tm-wd-props__color-swatch {
     min-block-size: var(--tm-touch-target);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .tm-wd-sheet {
-    animation: tm-wd-sheet-in 0.18s ease-out;
   }
 }
 

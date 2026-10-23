@@ -82,7 +82,32 @@
             </TmEditorShell>
         </div>
     </section>
-    <section class="es-side-panel-section" data-testid="side-panel-section">
+    <section class="es-overlay-section" data-testid="overlay-section">
+        <h2>@Loc["TmEditorShellDemo_OverlayTitle"]</h2>
+        <p>@Loc["TmEditorShellDemo_OverlayIntro"]</p>
+        <div class="es-shell-host es-shell-host--short" data-testid="editor-shell-overlay-host">
+            <TmEditorShell Breakpoints="_emailBreakpoints"
+                           TabletPanelPresentation="TabletPanelPresentation.Overlay"
+                           @bind-LeftOpen="_overlayLeftOpen"
+                           @bind-RightOpen="_overlayRightOpen"
+                           LeftTitle="@Loc["TmEditorShellDemo_Blocks"]"
+                           RightTitle="@Loc["TmEditorShellDemo_Properties"]"
+                           data-testid="editor-shell-overlay">
+                <Header>
+                    <h2>@Loc["TmEditorShellDemo_EditorTitle"]</h2>
+                </Header>
+                <Toolbar>
+                    <div class="es-editor-toolbar" role="group" aria-label="@Loc["TmEditorShellDemo_ToolbarLabel"]">
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayLeft" aria-pressed="@(_overlayLeftOpen ? "true" : "false")" data-testid="es-overlay-toggle-left">@Loc["TmEditorShellDemo_Blocks"]</TmButton>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleOverlayRight" aria-pressed="@(_overlayRightOpen ? "true" : "false")" data-testid="es-overlay-toggle-right">@Loc["TmEditorShellDemo_Properties"]</TmButton>
+                    </div>
+                </Toolbar>
+                <Left>@Toolbox("-overlay")</Left>
+                <Canvas>@EmailCanvas("-overlay")</Canvas>
+                <Right>@Properties("-overlay")</Right>
+            </TmEditorShell>
+        </div>
+    </section>    <section class="es-side-panel-section" data-testid="side-panel-section">
         <h2>@Loc["TmSidePanelDemo_Title"]</h2>
         <p>@Loc["TmSidePanelDemo_Intro"]</p>
         <div class="es-side-panel-host @(_inspectorSide == SidePanelSide.Right ? "es-side-panel-host--right" : null)">
@@ -130,6 +155,10 @@
     // two-sheet E2E has teeth; CollapsedPanels stays UNBOUND on purpose — the G1 imposed-rail case.
     private bool _thresholdsLeftOpen = true;
     private bool _thresholdsRightOpen = true;
+
+    // The overlay shell: both panels start closed (a tablet overlay covers the canvas), the toolbar buttons drive them.
+    private bool _overlayLeftOpen;
+    private bool _overlayRightOpen;
 
     private EditorShellPanel _collapsed;
     private EditorShellPanel _activePanel;
@@ -333,6 +362,10 @@
     }
 
     private void ToggleCustomSnaps() => _customSnaps = !_customSnaps;
+
+    private void ToggleOverlayLeft() => _overlayLeftOpen = !_overlayLeftOpen;
+
+    private void ToggleOverlayRight() => _overlayRightOpen = !_overlayRightOpen;
 
     private void ToggleInspector()
     {

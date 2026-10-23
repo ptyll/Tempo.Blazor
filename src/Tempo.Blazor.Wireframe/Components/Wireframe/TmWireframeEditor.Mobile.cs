@@ -54,17 +54,17 @@ public partial class TmWireframeEditor
 
     private bool RendersHeader => HasHeader || HasMobileChrome;
 
-    private bool ShellLeftOpen => IsMobile ? _mobileOpen : _leftOpen;
+    private bool ShellLeftOpen => IsMobile ? _mobileOpen : IsTablet ? LeftSheetOpen : _leftOpen;
 
-    private bool ShellRightOpen => IsMobile ? _mobileOpen : _rightOpen;
+    private bool ShellRightOpen => IsMobile ? _mobileOpen : IsTablet ? InspectorSheetOpen : _rightOpen;
 
     private bool MobileHasSelection => _selectedIds.Length > 0 || _selectedConnectorIds.Length > 0;
 
     // ── Slots ─────────────────────────────────────────────────────────────────
 
-    private RenderFragment? ShellLeftSlot => IsTablet ? null : IsMobile ? MobileComponentsSlot : LeftSlot;
+    private RenderFragment? ShellLeftSlot => IsMobile ? MobileComponentsSlot : LeftSlot;
 
-    private RenderFragment? ShellRightSlot => IsTablet ? null : IsMobile ? MobileInspectorSlot : RightSlot;
+    private RenderFragment? ShellRightSlot => IsMobile ? MobileInspectorSlot : RightSlot;
 
     private RenderFragment? MobileComponentsSlot => !ShowToolbox ? null : SidePanel(components: true, pages: false, layers: false, singleColumn: true);
 

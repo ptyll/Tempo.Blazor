@@ -260,6 +260,8 @@
   "TmEditorShellDemo_PresentationSheet": "Mobilní prezentace: sheet",
   "TmEditorShellDemo_ThresholdsTitle": "Vlastní prahy",
   "TmEditorShellDemo_ThresholdsIntro": "Stejný rámec s vlastními prahy (desktop od 1200, mobil pod 768, jako e-mailový editor). Na tabletu se sada bloků sbalí do lišty ikon a jeden panel zůstane rozbalený.",
+  "TmEditorShellDemo_OverlayTitle": "Překryvné panely na tabletu",
+  "TmEditorShellDemo_OverlayIntro": "Stejný rámec s TabletPanelPresentation.Overlay (desktop od 1200, mobil pod 768). Na tabletu je sada bloků překryvná zásuvka a vlastnosti nemodální boční panel přes plátno v plné šířce - nejvýš jeden otevřený, ovládaný tlačítky v liště, zavřený křížkem nebo klávesou Escape. Desktop si ponechává ukotvené panely.",
   "TmSidePanelDemo_Title": "Postranní panel",
   "TmSidePanelDemo_Intro": "Samostatný responzivní inspektor: na desktopu ukotven v kontejneru, v užším kontejneru jako modální postranní sheet, na telefonu jako spodní sheet. Zmenšujte okno a sledujte, jak se přizpůsobí.",
   "TmSidePanelDemo_InspectorTitle": "Detail události",

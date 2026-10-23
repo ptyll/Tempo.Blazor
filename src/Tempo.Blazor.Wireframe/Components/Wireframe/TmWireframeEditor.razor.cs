@@ -847,12 +847,14 @@ public partial class TmWireframeEditor : TmComponentBase, IDisposable
     private void OnShellLeftOpenChanged(bool open)
     {
         if (IsMobile) OnMobileShellOpenChanged(open);
+        else if (IsTablet) OnTabletLeftOpenChanged(open);
         else _leftOpen = open;
     }
 
     private void OnShellRightOpenChanged(bool open)
     {
         if (IsMobile) OnMobileShellOpenChanged(open);
+        else if (IsTablet) OnTabletRightOpenChanged(open);
         else _rightOpen = open;
     }
 

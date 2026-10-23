@@ -116,6 +116,31 @@
       "description": "How the open panels present on a mobile layout: Sheet (canvas + bottom sheet, with a Left/Right tab strip when both panels are open) or Tabs (a full-region Left | Canvas | Right tablist, no sheet)."
     },
     {
+      "name": "TabletPanelPresentation",
+      "type": "TabletPanelPresentation",
+      "isRequired": false,
+      "default": "Docked",
+      "description": "How the open panels present on a TABLET layout, one value for both sides. Docked (default): the docked columns with rails, at most one expanded. Overlay: the Left panel is an overlay drawer and the Right panel a non-modal side sheet over a full-width canvas - at most one open (opening one closes the other and raises its LeftOpenChanged / RightOpenChanged with false), driven by LeftOpen / RightOpen, no rails, no resize, Escape or the close button closes it and returns the focus to the opener. Desktop and mobile ignore it.",
+      "example": "TabletPanelPresentation=\"TabletPanelPresentation.Overlay\""
+    },
+    {
+      "name": "LeftOverlayTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The data-testid of the Left overlay drawer root (Overlay only). Null uses editor-shell-left-overlay, namespaced by TestIdPrefix."
+    },
+    {
+      "name": "RightOverlayTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The data-testid of the Right overlay side sheet root (Overlay only). Null uses editor-shell-right-overlay, namespaced by TestIdPrefix."
+    },
+    {
+      "name": "OverlayCloseTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The data-testid of the overlay close button. Null uses the open overlay's test id with a -close suffix."
+    },    {
       "name": "LeftTitle",
       "type": "string?",
       "isRequired": false,

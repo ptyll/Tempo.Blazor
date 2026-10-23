@@ -260,6 +260,8 @@
   "TmEditorShellDemo_PresentationSheet": "Prezentácia hárka na mobile",
   "TmEditorShellDemo_ThresholdsTitle": "Vlastné prahové hodnoty",
   "TmEditorShellDemo_ThresholdsIntro": "Ten istý obal s vlastnými prahovými hodnotami (desktop od 1200, mobil pod 768, ako editor e-mailov). Na tablete sa panel nástrojov zbalí na lištu s ikonami a jeden panel zostane rozbalený.",
+  "TmEditorShellDemo_OverlayTitle": "Prekryvné panely na tablete",
+  "TmEditorShellDemo_OverlayIntro": "Rovnaký rámec s TabletPanelPresentation.Overlay (desktop od 1200, mobil pod 768). Na tablete je sada blokov prekryvná zásuvka a vlastnosti nemodálny bočný panel cez plátno v plnej šírke - najviac jeden otvorený, ovládaný tlačidlami v lište, zatvorený krížikom alebo klávesom Escape. Desktop si ponecháva ukotvené panely.",
   "TmSidePanelDemo_Title": "Bočný panel",
   "TmSidePanelDemo_Intro": "Samostatný responzívny inšpektor: na počítačovom kontajneri ukotvený v toku, na užšom kontajneri ako modálny bočný hárok, na telefóne ako spodný hárok. Zmenšite okno a sledujte, ako sa prispôsobuje.",
   "TmSidePanelDemo_InspectorTitle": "Detail udalosti",

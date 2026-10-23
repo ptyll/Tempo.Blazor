@@ -168,7 +168,7 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
         var titleId = sheet.GetAttribute("aria-labelledby");
         titleId.Should().NotBeNullOrWhiteSpace();
         var title = cut.Find("#" + titleId);
-        title.ClassList.Should().Contain("tm-wd-sheet__title");
+        title.ClassList.Should().Contain("tm-editor-shell__overlay-title");
         title.TagName.Should().NotBe("H2", "a host page outline must not gain a heading from the editor");
     }
 
@@ -242,14 +242,13 @@ public class TmWireframeEditorTabletTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Escape_ClosesSheet_AndRestoresFocusToCanvas()
+    public void Escape_ClosesSheet_AndRestoresFocusToTheOpener()
     {
         var cut = RenderEditor();
         ToggleInspector(cut).Click();
         var scope = cut.FindComponent<TmFocusScope>().Instance;
-        var canvasWrap = cut.FindComponent<TmWireframeDesignerCanvas>().Instance.WrapElement;
-        scope.RestoreFocusTarget.Should().NotBeNull("closing a sheet hands the focus back to the canvas, not the toolbar toggle");
-        scope.RestoreFocusTarget!.Value.Id.Should().Be(canvasWrap.Id);
+        scope.RestoreFocus.Should().BeTrue("closing a sheet hands the focus back to the control that opened it (decision EDITOR-SHELL-TABLET-PRESENTATION)");
+        scope.RestoreFocusTarget.Should().BeNull("the opener is recorded by the focus scope itself: a toolbar toggle, or the canvas when a selection opened the sheet");
 
         cut.InvokeAsync(() => scope.HandleFocusTrapEscapeAsync()).GetAwaiter().GetResult();
 

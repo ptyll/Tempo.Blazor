@@ -1105,7 +1105,7 @@ test('keys typed inside a side sheet (the tablet drawer / inspector) never act o
     const c = await canvas({ gridSize: 8 });
     element(c.svg, 'a', { x: 40, y: 40 });
     engine.setSelection(c.svg, ['a']);
-    const inSheet = { tagName: 'BUTTON', closest: (selector) => (selector.includes('.tm-wd-sheet') ? {} : null), matches: () => false };
+    const inSheet = { tagName: 'BUTTON', closest: (selector) => (selector.includes('.tm-editor-shell__overlay') ? {} : null), matches: () => false };
 
     key(c, 'ArrowRight', { target: inSheet });
     key(c, 'Delete', { target: inSheet });

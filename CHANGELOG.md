@@ -728,6 +728,22 @@
 
 ### Added
 
+- **`TmEditorShell.TabletPanelPresentation` (`Docked` | `Overlay`): one shared tablet overlay for the editors.**
+  `TabletPanelPresentation` (`Tempo.Blazor.Abstractions.Layout`, `Docked = 0`, `Overlay = 1`; decision
+  `EDITOR-SHELL-TABLET-PRESENTATION`) is a new shell parameter, one value for both sides, **default `Docked` = today's
+  behaviour** (nothing changes for `TmDiagramEditor`, Modeling or the e-mail editor). With `Overlay`, on a tablet layout only,
+  the Left panel is an overlay drawer and the Right panel a non-modal side sheet over a full-width canvas; at most one is open
+  (opening one closes the other and raises its `LeftOpenChanged` / `RightOpenChanged` with `false`), they follow the existing
+  two-way `LeftOpen` / `RightOpen`, have no rail and no resize separator, close with a localized × (`TmEditorShell_ClosePanel`,
+  en/cs/sk/fr) or Escape and return the focus to the opener, the × is 44 px on `(pointer: coarse)` and the entrance fade is
+  `prefers-reduced-motion: no-preference` only. Width is the `--tm-editor-shell-overlay-width` token (default `20rem`, at most
+  60 % of the editor); `LeftOverlayTestId`, `RightOverlayTestId` and `OverlayCloseTestId` name the test ids. Documented in
+  [docs/editor-shell.md](docs/editor-shell.md#tablet-overlay-tabletpanelpresentationoverlay).
+
+  ```razor
+  <TmEditorShell TabletPanelPresentation="TabletPanelPresentation.Overlay"
+                 @bind-LeftOpen="toolboxOpen" @bind-RightOpen="inspectorOpen" …>
+  ```
 - **`TmToolbarFileButton`: a toolbar button that opens a file chooser and can leave the bar into "More".**
   Import JSON (and any "attach a file" command) used to be a `<label class="tm-toolbar-btn">` around an `InputFile`
   inside a `TmToolbarItem`; such an item has no menu entry that can open the chooser, so it had to stay `Pinned` and
@@ -1157,6 +1173,28 @@
 
 ### Breaking / Migration
 
+- **`TmWireframeEditor`: the tablet sheets are the core shell's overlay (`.tm-wd-sheet` is gone).** The left drawer and the
+  inspector side sheet are now rendered by `TmEditorShell` with `TabletPanelPresentation.Overlay` instead of by the editor
+  inside its canvas region. Impact: (1) the classes `.tm-wd-sheet`, `.tm-wd-sheet--left`, `.tm-wd-sheet--right`,
+  `.tm-wd-sheet__header`, `.tm-wd-sheet__title`, `.tm-wd-sheet__close` and `.tm-wd-sheet__body` no longer exist - use
+  `.tm-editor-shell__overlay`, `.tm-editor-shell__overlay--left|right`, `.tm-editor-shell__overlay-header`,
+  `.tm-editor-shell__overlay-title`, `.tm-editor-shell__overlay-close` and `.tm-editor-shell__overlay-body`; (2) the sheet is now a
+  child of the shell's `main` region (a sibling of the canvas) instead of the canvas region, so a descendant selector such as
+  `.tm-wd-editor__canvas-region .tm-wd-sheet` must be rewritten; (3) the focus returns to the control that OPENED the sheet (the
+  toolbar toggle, or the canvas when a selection opened the inspector) after Escape / ×, no longer always to the canvas wrapper;
+  (4) the keyframes `tm-wd-sheet-in` stay (the mobile zoom overlay and quick actions use them). The `data-testid`s
+  `wd-left-drawer`, `wd-inspector-sheet`, `wd-sheet-close`, `wd-toggle-left` and `wd-toggle-inspector`, the 44 px coarse-pointer
+  targets, `--tm-wd-sheet-w` and the one-sheet-at-a-time behaviour are unchanged.
+  ```css
+  /* before */ .my-host .tm-wd-sheet--right { box-shadow: none; }
+  /* after  */ .my-host .tm-wd-editor .tm-editor-shell__overlay--right { box-shadow: none; }
+  ```
+  ```csharp
+  // before
+  await editor.Locator(".tm-wd-sheet").WaitForAsync(new() { State = WaitForSelectorState.Detached });
+  // after (or keep using the data-testids, which did not change)
+  await editor.Locator(".tm-editor-shell__overlay").WaitForAsync(new() { State = WaitForSelectorState.Detached });
+  ```
 - **`TmWireframeEditor`: Import JSON is a `Secondary` file button and moves into "More" first.** The *Import JSON* control used to be
   a `Pinned` `TmToolbarItem` holding `<label class="tm-toolbar-btn tm-wd-editor__import">` + `<input class="tm-wd-editor__file-input">`;
   it is now a `TmToolbarFileButton Priority="Secondary"`. Impact: (1) on a toolbar without room the command leaves the bar

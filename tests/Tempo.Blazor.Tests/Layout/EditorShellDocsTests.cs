@@ -17,7 +17,7 @@ public class EditorShellDocsTests
     {
         var doc = Read("docs", "editor-shell.md");
 
-        doc.Should().NotContain("modal side sheet", "tablet is docked panels, never a modal (Q1=A)");
+        doc.Should().NotMatchRegex(@"(?<!non-)modal side sheet", "tablet is docked panels (or the non-modal overlay), never a modal (Q1=A)");
         doc.Should().NotContain("tablet one side sheet");
         foreach (var term in new[]
         {
@@ -30,6 +30,36 @@ public class EditorShellDocsTests
         }
     }
 
+    [Fact]
+    public void EditorShellDoc_DocumentsTheTabletOverlay_AndTheWireframeDocNoLongerClaimsAFollowUp()
+    {
+        var doc = Read("docs", "editor-shell.md");
+        foreach (var term in new[]
+        {
+            "TabletPanelPresentation", "Overlay", "LeftOverlayTestId", "RightOverlayTestId", "OverlayCloseTestId",
+            "--tm-editor-shell-overlay-width", "TmEditorShell_ClosePanel", "at most one",
+        })
+        {
+            doc.Should().Contain(term, $"docs/editor-shell.md must document the overlay: {term}");
+        }
+        doc.Should().NotContain("The shell has no overlay / sheet presentation for tablet yet");
+
+        var wireframe = Read("docs", "wireframe-editor.md");
+        wireframe.Should().Contain("TabletPanelPresentation").And.Contain("wd-left-drawer");
+        wireframe.Should().NotContain("Follow-up (recorded in the redesign plan): add an overlay / sheet presentation");
+        wireframe.Should().NotContain("``.tm-wd-sheet``", "the local sheet classes are gone");
+    }
+
+    [Fact]
+    public void Changelog_RecordsTheTabletOverlay_AndTheWireframeSheetClassMigration()
+    {
+        var changelog = Read("CHANGELOG.md");
+        var unreleased = changelog[..changelog.IndexOf("## 2.9.1 ", StringComparison.Ordinal)];
+
+        unreleased.Should().Contain("TabletPanelPresentation").And.Contain("EDITOR-SHELL-TABLET-PRESENTATION");
+        unreleased.Should().Contain(".tm-wd-sheet").And.Contain(".tm-editor-shell__overlay",
+            "the Breaking / Migration entry names the removed classes and their replacements");
+    }
     [Fact]
     public void ObsoleteTabletSideSheetWording_IsGoneFromSourceComments()
     {

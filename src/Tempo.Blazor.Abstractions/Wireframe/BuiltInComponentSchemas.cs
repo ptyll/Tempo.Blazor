@@ -1572,6 +1572,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("rightOpen",    "Right Panel Open",    PropType.Bool,   true,         cat: "State"),
                 P("mobilePanels", "Mobile Presentation", PropType.Enum, "sheet", cat: "Appearance",
                     opts: ["sheet", "tabs"]),
+                P("tabletPanels", "Tablet Panels", PropType.Enum, "docked", cat: "Appearance",
+                    opts: ["docked", "overlay"]),
             ]
         };
 

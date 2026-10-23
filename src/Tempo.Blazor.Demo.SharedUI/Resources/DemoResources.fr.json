@@ -260,6 +260,8 @@
   "TmEditorShellDemo_PresentationSheet": "Présentation mobile : feuille",
   "TmEditorShellDemo_ThresholdsTitle": "Seuils personnalisés",
   "TmEditorShellDemo_ThresholdsIntro": "La même coquille avec ses propres seuils (desktop dès 1200, mobile sous 768, comme l'éditeur d'e-mails). Sur tablette, la boîte à outils se réduit à une barre d'icônes et un seul panneau reste déployé.",
+  "TmEditorShellDemo_OverlayTitle": "Panneaux en superposition sur tablette",
+  "TmEditorShellDemo_OverlayIntro": "Le même cadre avec TabletPanelPresentation.Overlay (bureau à partir de 1200, mobile sous 768). Sur tablette, la boîte à outils est un tiroir en superposition et les propriétés un panneau latéral non modal au-dessus d'un canevas pleine largeur - un seul ouvert à la fois, piloté par les boutons de la barre, fermé par la croix ou Échap. Le bureau garde les panneaux ancrés.",
   "TmSidePanelDemo_Title": "Panneau latéral",
   "TmSidePanelDemo_Intro": "Un inspecteur réactif autonome : ancré dans le conteneur sur desktop, panneau latéral modal dans un conteneur plus étroit, feuille en bas sur téléphone. Réduisez la fenêtre pour voir l'adaptation.",
   "TmSidePanelDemo_InspectorTitle": "Détail de l'événement",

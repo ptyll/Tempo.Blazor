@@ -2514,6 +2514,7 @@
   "TmEditorShell_ExpandLeftPanel": "Rozbaliť ľavý panel",
   "TmEditorShell_ExpandRightPanel": "Rozbaliť pravý panel",
   "TmEditorShell_ClosePanels": "Zavrieť panely",
+  "TmEditorShell_ClosePanel": "Zavrieť panel",
   "TmEditorShell_Canvas": "Plátno",
   "TmEditorShell_ResizeLeftPanel": "Zmeniť veľkosť ľavého panela",
   "TmEditorShell_ResizeRightPanel": "Zmeniť veľkosť pravého panela",
